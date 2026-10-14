@@ -1,7 +1,8 @@
 //! Closed rings: area, winding, planar boolean, offset.
 use crate::tessellation::FillRule;
 use crate::{Result, check};
-use std::collections::{BTreeSet, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeSet;
 
 pub type Rings = Vec<Vec<math_core::V2>>;
 pub use math_core::{cross2, sub2};
@@ -235,7 +236,7 @@ fn planar_rule(
         }
     };
     let mut points = Vec::<[f64; 2]>::new();
-    let mut ids: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
+    let mut ids: FxHashMap<(i64, i64), Vec<usize>> = FxHashMap::default();
     let mut boundary = BTreeSet::new();
     let mut visited_atoms = BTreeSet::new();
     // Each edge pair is tested once. Bounding-box rejection avoids expensive
@@ -469,7 +470,7 @@ fn planar_rule(
     Ok(out)
 }
 fn balanced_boundary(boundary: &BTreeSet<(usize, usize)>) -> bool {
-    let mut degree = HashMap::<usize, i32>::new();
+    let mut degree = FxHashMap::<usize, i32>::default();
     for &(a, b) in boundary {
         *degree.entry(a).or_default() += 1;
         *degree.entry(b).or_default() -= 1;

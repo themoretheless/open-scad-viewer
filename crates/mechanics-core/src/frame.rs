@@ -505,7 +505,7 @@ fn validate_structure(
     if nodes_mm.iter().any(|v| !finite3(v)) {
         return Err(invalid("Node coordinates must be finite"));
     }
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::HashSet::with_capacity(members.len());
     let mut beams = Vec::with_capacity(members.len());
     for member in members {
         let [a, b] = member.nodes;
@@ -819,10 +819,11 @@ fn assemble_stiffness(
     let ndof = n * 6;
     let global_dof = |beam: &Beam, local: usize| beam.nodes[local / 6] * 6 + local % 6;
     let mut stiffness = DMatrix::<f64>::zeros(ndof, ndof);
+    let mut k_full = DMatrix::<f64>::zeros(12, 12);
     for beam in &beams {
         let t = transformation(&beam.rotation);
         // Scatter the condensed local system into a full 12-system, then rotate.
-        let mut k_full = DMatrix::<f64>::zeros(12, 12);
+        k_full.fill(0.);
         for (i, &di) in beam.kept.iter().enumerate() {
             for (j, &dj) in beam.kept.iter().enumerate() {
                 k_full[(di, dj)] = beam.k_eff[(i, j)];

@@ -9,6 +9,12 @@ pub use boolean_ops::boolean;
 #[path = "bezier_profile_normalize.rs"]
 mod normalize_ops;
 pub use normalize_ops::normalize;
+#[path = "bezier_profile_coincidence.rs"]
+mod coincidence_ops;
+#[path = "bezier_profile_departure.rs"]
+mod departure_ops;
+#[path = "bezier_profile_joint.rs"]
+mod joint_ops;
 fn refused(message: &str) -> Error {
     Error::new("BREP_UNSUPPORTED_BEZIER_PROFILE", message)
 }
@@ -37,19 +43,10 @@ fn controls(curve: &Curve) -> Result<Vec<[f64; 2]>> {
     }
     Ok(curve.control_points.iter().map(|p| [p[0], p[1]]).collect())
 }
-fn injective(p: &[[f64; 2]], tolerance: f64) -> bool {
-    // Nonnegative Bernstein derivative coefficients, with positive endpoint
-    // difference, imply strict coordinate monotonicity in the open span.
+fn injective(c: &Curve, tolerance: f64) -> bool {
     (0..2).any(|axis| {
-        let delta = p.last().unwrap()[axis] - p[0][axis];
-        delta.abs() > 8. * tolerance
-            && p.windows(2).all(|q| {
-                if delta > 0. {
-                    q[1][axis] >= q[0][axis]
-                } else {
-                    q[1][axis] <= q[0][axis]
-                }
-            })
+        let delta = c.control_points.last().unwrap()[axis] - c.control_points[0][axis];
+        delta.abs() > 8. * tolerance && nurbs_core::intersection::planar_scalar::monotone(c, axis)
     })
 }
 fn hull_side(points: &[[f64; 2]], origin: [f64; 2], n: [f64; 2]) -> Option<i8> {
@@ -103,6 +100,19 @@ fn shared_hulls_separate(a: &[[f64; 2]], b: &[[f64; 2]], point: [f64; 2]) -> boo
     } else {
         b[0]
     };
+    // A positive-weight Bernstein span with one endpoint off a supporting
+    // plane has its complete open interior off that plane, even at a cusp.
+    for k in 0..2 {
+        for (flat, curved, other) in [(a, b, other_b), (b, a, other_a)] {
+            let plane = point[k];
+            if flat.iter().all(|p| p[k] == plane)
+                && ((other[k] > plane && curved.iter().all(|p| p[k] >= plane))
+                    || (other[k] < plane && curved.iter().all(|p| p[k] <= plane)))
+            {
+                return true;
+            }
+        }
+    }
     let mut candidates = vec![
         [1., 0.],
         [0., 1.],
@@ -126,6 +136,8 @@ fn shared_hulls_separate(a: &[[f64; 2]], b: &[[f64; 2]], point: [f64; 2]) -> boo
     candidates
         .into_iter()
         .any(|n| matches!((hull_side(a,point,n),hull_side(b,point,n)),(Some(x),Some(y)) if x!=y))
+        || joint_ops::shared_line_separates(a, b, point)
+        || joint_ops::opposite_halfplanes(a, b, point)
 }
 fn choose(n: usize, k: usize) -> f64 {
     let mut value = 1.;
@@ -188,7 +200,7 @@ pub fn validate_single_wire(wire: &[Curve], tolerance: f64) -> Result<f64> {
     }
     let points = wire.iter().map(controls).collect::<Result<Vec<_>>>()?;
     for (i, p) in points.iter().enumerate() {
-        if !injective(p, tolerance) {
+        if !injective(&wire[i], tolerance) {
             return Err(refused(
                 "Bézier span injectivity is unresolved; split the span at an extremum",
             ));
@@ -213,6 +225,16 @@ pub fn validate_single_wire(wire: &[Curve], tolerance: f64) -> Result<f64> {
                     ));
                 }
             } else {
+                if let Some(nurbs_core::intersection::planar_scalar::Relation::Points(points)) =
+                    nurbs_core::intersection::planar_scalar::intersect(
+                        &wire[i], &wire[j], tolerance,
+                    )?
+                {
+                    if points.is_empty() {
+                        continue;
+                    }
+                    return Err(refused("Bézier boundary has an intersection"));
+                }
                 let lift = |curve: &Curve| {
                     let mut c = curve.clone();
                     for p in &mut c.control_points {
@@ -379,9 +401,41 @@ fn boundaries_separate(a: &[Curve], b: &[Curve], tolerance: f64) -> Result<bool>
                 });
                 continue;
             }
+            if [pa[0], *pa.last().unwrap()].iter().any(|p| {
+                [pb[0], *pb.last().unwrap()]
+                    .iter()
+                    .any(|q| p == q && shared_hulls_separate(&pa, &pb, *p))
+            }) {
+                touching = true;
+                continue;
+            }
             work += 1;
             if work > 8192 {
                 return Err(refused("Bézier boundary separation budget exceeded"));
+            }
+            let endpoint = |c: &Curve, t: f64| {
+                c.domain()
+                    .iter()
+                    .any(|u| (t - u).abs() <= 1e-9 * (c.domain()[1] - c.domain()[0]))
+            };
+            if let Some(relation) =
+                nurbs_core::intersection::planar_scalar::intersect(ca, cb, tolerance)?
+            {
+                match relation {
+                    nurbs_core::intersection::planar_scalar::Relation::Points(points) => {
+                        if points
+                            .iter()
+                            .any(|p| !endpoint(ca, p.first) || !endpoint(cb, p.second))
+                        {
+                            return Err(refused(
+                                "Bézier boundaries intersect away from their endpoints",
+                            ));
+                        }
+                        touching |= !points.is_empty();
+                        continue;
+                    }
+                    _ => return Err(refused("Bézier boundaries overlap")),
+                }
             }
             let lift = |c: &Curve| {
                 let mut c = c.clone();
@@ -396,11 +450,6 @@ fn boundaries_separate(a: &[Curve], b: &[Curve], tolerance: f64) -> Result<bool>
                 return Err(refused("Bézier boundary separation is unresolved"));
             }
             for event in audit.report.components {
-                let endpoint = |c: &Curve, t: f64| {
-                    c.domain()
-                        .iter()
-                        .any(|u| (t - u).abs() <= 1e-9 * (c.domain()[1] - c.domain()[0]))
-                };
                 if event.kind != nurbs_core::intersection::CurveCurveComponentKind::Point
                     || !endpoint(ca, event.first)
                     || !endpoint(cb, event.second)
@@ -517,6 +566,441 @@ mod tests {
                 PathSegment::Line { to: [0., 6.] },
                 PathSegment::Line { to: [0., 0.] },
             ],
+        }
+    }
+    #[test]
+    fn curved_partial_overlap_boolean_retains_source_cubics() {
+        let top = crate::Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 2.], vec![2., 1.], vec![3., 3.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let region = |c: crate::Curve| {
+            let a = c.control_points[0].clone();
+            let b = c.control_points.last().unwrap().clone();
+            vec![
+                crate::Curve::from_polyline(vec![vec![a[0], -2.], vec![b[0], -2.]]).unwrap(),
+                crate::Curve::from_polyline(vec![vec![b[0], -2.], b]).unwrap(),
+                c.reverse().unwrap(),
+                crate::Curve::from_polyline(vec![a.clone(), vec![a[0], -2.]]).unwrap(),
+            ]
+        };
+        let a = vec![region(top.clone())];
+        let b = vec![region(top.trim(0.25, 0.75).unwrap())];
+        let aa = super::validate_profile(&a, 1e-7).unwrap();
+        let bb = super::validate_profile(&b, 1e-7).unwrap();
+        for (op, expected) in [("union", aa), ("intersection", bb), ("difference", aa - bb)] {
+            let result = super::boolean(&a, &b, op, 1e-7).unwrap_or_else(|e| panic!("{op}: {e:?}"));
+            assert!((super::validate_profile(&result, 1e-7).unwrap() - expected).abs() < 1e-5);
+            assert!(result.iter().flatten().any(|c| c.degree == 3));
+        }
+        let normalized = super::normalize(&[a[0].clone(), b[0].clone()], 1e-7).unwrap();
+        assert_eq!(normalized.len(), 2);
+        assert!((super::validate_profile(&normalized, 1e-7).unwrap() - (aa - bb)).abs() < 1e-5);
+    }
+    #[test]
+    fn partial_curved_coincidence_with_different_injective_axes_keeps_material() {
+        let c = crate::Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![6., -2.], vec![11., -1.], vec![7., 11.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let ac = c.trim(0., 0.625).unwrap();
+        let bc = c.trim(0.375, 1.).unwrap();
+        let line = |a: Vec<f64>, b: Vec<f64>| crate::Curve::from_polyline(vec![a, b]).unwrap();
+        let ap = ac.control_points[0].clone();
+        let az = ac.control_points.last().unwrap().clone();
+        let bp = bc.control_points[0].clone();
+        let bz = bc.control_points.last().unwrap().clone();
+        let a = vec![vec![
+            line(vec![ap[0], -3.], vec![az[0], -3.]),
+            line(vec![az[0], -3.], az),
+            ac.reverse().unwrap(),
+            line(ap.clone(), vec![ap[0], -3.]),
+        ]];
+        let b = vec![vec![
+            line(vec![-2., bp[1]], bp),
+            bc,
+            line(bz.clone(), vec![-2., bz[1]]),
+            line(vec![-2., bz[1]], vec![-2., -0.5625]),
+        ]];
+        let aa = super::validate_profile(&a, 1e-7).unwrap();
+        let bb = super::validate_profile(&b, 1e-7).unwrap();
+        let union = super::boolean(&a, &b, "union", 1e-7).unwrap();
+        let intersection = super::boolean(&a, &b, "intersection", 1e-7).unwrap();
+        let difference = super::boolean(&a, &b, "difference", 1e-7).unwrap();
+        let ia = super::validate_profile(&intersection, 1e-7).unwrap();
+        assert!((super::validate_profile(&union, 1e-7).unwrap() + ia - aa - bb).abs() < 1e-5);
+        assert!((super::validate_profile(&difference, 1e-7).unwrap() + ia - aa).abs() < 1e-5);
+        crate::prism::extrude(&union, 0., 2.)
+            .unwrap()
+            .validate()
+            .unwrap();
+        let xy = |t: f64| {
+            [
+                18. * t - 3. * t * t - 8. * t * t * t,
+                -6. * t + 9. * t * t + 8. * t * t * t,
+            ]
+        };
+        let inverse = |axis: usize, value: f64, mut lo: f64, mut hi: f64| {
+            for _ in 0..60 {
+                let mid = (lo + hi) * 0.5;
+                if xy(mid)[axis] < value {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+            (lo + hi) * 0.5
+        };
+        for i in 0..20 {
+            for j in 0..20 {
+                let p = [-2. + i as f64 * 0.57 + 0.137, -3. + j as f64 * 0.69 + 0.193];
+                let ina = p[0] > 0.
+                    && p[0] < 8.125
+                    && p[1] > -3.
+                    && p[1] < xy(inverse(0, p[0], 0., 0.625))[1];
+                let inb = p[1] > -0.5625
+                    && p[1] < 11.
+                    && p[0] > -2.
+                    && p[0] < xy(inverse(1, p[1], 0.375, 1.))[0];
+                for (result, expected) in [
+                    (&union, ina || inb),
+                    (&intersection, ina && inb),
+                    (&difference, ina && !inb),
+                ] {
+                    let spans = result.iter().flatten().cloned().collect::<Vec<_>>();
+                    assert_eq!(
+                        super::point_inside(&spans, p, 1e-7).unwrap(),
+                        expected,
+                        "{p:?}"
+                    );
+                }
+            }
+        }
+    }
+    #[test]
+    fn tangent_cusp_components_use_departure_order_instead_of_equal_tangents() {
+        let lobe = |sign: f64| {
+            crate::sketch::bezier_wire(BezierPath {
+                start: [0., 0.],
+                closed: true,
+                segments: vec![
+                    PathSegment::Cubic {
+                        c1: [sign * 2. / 3., 0.],
+                        c2: [sign * 4. / 3., 4. / 3.],
+                        to: [sign * 2., 4.],
+                    },
+                    PathSegment::Line {
+                        to: [sign * 2., -4.],
+                    },
+                    PathSegment::Cubic {
+                        c1: [sign * 4. / 3., -4. / 3.],
+                        c2: [sign * 2. / 3., 0.],
+                        to: [0., 0.],
+                    },
+                ],
+            })
+            .unwrap()
+        };
+        let mut source = lobe(1.);
+        source.extend(lobe(-1.));
+        let result = super::normalize(&[source], 1e-7).unwrap();
+        assert_eq!(result.len(), 2);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 32. / 3.).abs() < 1e-5);
+        assert!(result.iter().flatten().filter(|c| c.degree == 3).count() >= 4);
+    }
+    #[test]
+    fn zero_first_jets_at_self_touching_cusps_keep_separate_regions() {
+        let lobe = |sign: f64| {
+            crate::sketch::bezier_wire(BezierPath {
+                start: [0., 0.],
+                closed: true,
+                segments: vec![
+                    PathSegment::Cubic {
+                        c1: [0., 0.],
+                        c2: [sign, 0.],
+                        to: [sign * 2., 4.],
+                    },
+                    PathSegment::Line {
+                        to: [sign * 2., -4.],
+                    },
+                    PathSegment::Cubic {
+                        c1: [sign, 0.],
+                        c2: [0., 0.],
+                        to: [0., 0.],
+                    },
+                ],
+            })
+            .unwrap()
+        };
+        let mut source = lobe(1.);
+        source.extend(lobe(-1.));
+        let result = super::normalize(&[source], 1e-7).unwrap();
+        assert_eq!(result.len(), 2);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 11.2).abs() < 1e-5);
+        crate::prism::extrude(&result, 0., 2.)
+            .unwrap()
+            .validate()
+            .unwrap();
+    }
+    #[test]
+    fn diagonal_self_touching_cusps_keep_the_same_topology_after_affine_transform() {
+        let lobe = |sign: f64| {
+            crate::sketch::bezier_wire(BezierPath {
+                start: [0., 0.],
+                closed: true,
+                segments: vec![
+                    PathSegment::Cubic {
+                        c1: [0., 0.],
+                        c2: [sign, 0.],
+                        to: [sign * 2., 4.],
+                    },
+                    PathSegment::Line {
+                        to: [sign * 2., -4.],
+                    },
+                    PathSegment::Cubic {
+                        c1: [sign, 0.],
+                        c2: [0., 0.],
+                        to: [0., 0.],
+                    },
+                ],
+            })
+            .unwrap()
+        };
+        let mut wire = lobe(1.);
+        wire.extend(lobe(-1.));
+        for c in &mut wire {
+            for p in &mut c.control_points {
+                let [x, y] = [p[0], p[1]];
+                p[0] = 17. + x - y;
+                p[1] = -9. + x + y;
+            }
+        }
+        let result = super::normalize(&[wire], 1e-7).unwrap();
+        assert_eq!(result.len(), 2);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 22.4).abs() < 1e-5);
+    }
+    #[test]
+    fn monotone_cubic_with_reversing_controls_keeps_exact_profile_and_overlap() {
+        use crate::Curve;
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 1.1], vec![0.9, 0.8], vec![1.9, 2.1]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let region = |c: &Curve| {
+            let a = c.control_points[0].clone();
+            let b = c.control_points.last().unwrap().clone();
+            let line = |a, b| Curve::from_polyline(vec![a, b]).unwrap();
+            vec![
+                line(vec![a[0], -1.], vec![b[0], -1.]),
+                line(vec![b[0], -1.], b),
+                c.reverse().unwrap(),
+                line(a.clone(), vec![a[0], -1.]),
+            ]
+        };
+        let a = vec![region(&c)];
+        assert!((super::validate_profile(&a, 1e-7).unwrap() - 3.811).abs() < 1e-10);
+        let normalized = super::normalize(&a, 1e-7).unwrap();
+        assert!((super::validate_profile(&normalized, 1e-7).unwrap() - 3.811).abs() < 1e-10);
+        crate::prism::extrude(&normalized, 0., 1.5)
+            .unwrap()
+            .validate()
+            .unwrap();
+        let b = vec![region(&c.trim(0.25, 0.75).unwrap())];
+        let aa = super::validate_profile(&a, 1e-7).unwrap();
+        let bb = super::validate_profile(&b, 1e-7).unwrap();
+        for (op, area) in [("union", aa), ("intersection", bb), ("difference", aa - bb)] {
+            let result = super::boolean(&a, &b, op, 1e-7).unwrap();
+            assert!((super::validate_profile(&result, 1e-7).unwrap() - area).abs() < 1e-6);
+            assert!(result.iter().flatten().any(|c| c.degree == 3));
+        }
+    }
+    #[test]
+    fn interior_semicubical_cusp_splits_original_curve_without_chords() {
+        let c = crate::Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![3., -1.], vec![-1., 1.], vec![-1., -1.], vec![3., 1.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let line = crate::Curve::from_polyline(vec![vec![3., 1.], vec![3., -1.]]).unwrap();
+        let result = super::normalize(&[vec![c, line]], 1e-7).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 2.4).abs() < 1e-5);
+        assert_eq!(result[0].iter().filter(|c| c.degree == 3).count(), 2);
+        crate::prism::extrude(&result, 0., 2.)
+            .unwrap()
+            .validate()
+            .unwrap();
+    }
+    #[test]
+    fn non_dyadic_cusp_keeps_its_material_area() {
+        let c = crate::Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![1., -1.], vec![-1., 2.], vec![0., -4.], vec![4., 8.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let line = crate::Curve::from_polyline(vec![vec![4., 8.], vec![1., -1.]]).unwrap();
+        let result = super::normalize(&[vec![c, line]], 1e-7).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 2.7).abs() < 1e-5);
+    }
+    #[test]
+    fn a_retraced_spur_cancels_without_removing_the_curved_region() {
+        let mut wire =
+            crate::sketch::bezier_wire(BezierPath::from_circle([0., 0.], 2.).unwrap()).unwrap();
+        let expected = super::validate_single_wire(&wire, 1e-7).unwrap().abs();
+        let spur = crate::Curve::from_polyline(vec![vec![2., 0.], vec![3., 1.]]).unwrap();
+        wire.extend([spur.clone(), spur.reverse().unwrap()]);
+        let result = super::normalize(&[wire], 1e-7).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - expected).abs() < 1e-5);
+    }
+    #[test]
+    fn constant_cubic_passes_have_no_even_odd_material() {
+        let point = crate::Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![2., 0.]; 4],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        assert!(
+            super::normalize(&[vec![point.clone()]], 1e-7)
+                .unwrap()
+                .is_empty()
+        );
+        let mut circle =
+            crate::sketch::bezier_wire(BezierPath::from_circle([0., 0.], 2.).unwrap()).unwrap();
+        let expected = super::validate_single_wire(&circle, 1e-7).unwrap().abs();
+        circle.push(point);
+        let result = super::normalize(&[circle], 1e-7).unwrap();
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - expected).abs() < 1e-5);
+    }
+    #[test]
+    fn retraced_straight_cubic_with_nonlinear_speed_cancels_a_line() {
+        let a = crate::sketch::bezier_wire(BezierPath {
+            start: [0., 0.],
+            closed: true,
+            segments: vec![
+                PathSegment::Cubic {
+                    c1: [0.5, 0.],
+                    c2: [2.5, 0.],
+                    to: [3., 0.],
+                },
+                PathSegment::Line { to: [3., 2.] },
+                PathSegment::Line { to: [0., 2.] },
+                PathSegment::Line { to: [0., 0.] },
+            ],
+        })
+        .unwrap();
+        let b = crate::sketch::bezier_wire(
+            BezierPath::from_polygon(&[[0., 0.], [3., 0.], [3., 2.], [0., 2.]], true).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            super::normalize(&[a.clone(), b.clone()], 1e-7)
+                .unwrap()
+                .is_empty()
+        );
+        let result = super::normalize(&[a, b.clone(), b], 1e-7).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - 6.).abs() < 1e-5);
+    }
+    #[test]
+    fn repeated_curved_boundaries_cancel_by_even_odd_multiplicity() {
+        let a = crate::sketch::bezier_wire(BezierPath::from_circle([0., 0.], 2.).unwrap()).unwrap();
+        let expected = super::validate_single_wire(&a, 1e-7).unwrap().abs();
+        assert!(
+            super::normalize(&[a.clone(), a.clone()], 1e-7)
+                .unwrap()
+                .is_empty()
+        );
+        let reversed = a
+            .iter()
+            .rev()
+            .map(|c| c.reverse().unwrap())
+            .collect::<Vec<_>>();
+        let result = super::normalize(&[a.clone(), reversed, a.clone()], 1e-7).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((super::validate_profile(&result, 1e-7).unwrap() - expected).abs() < 1e-5);
+    }
+    #[test]
+    fn third_order_contact_boolean_preserves_cubic_cusp_and_area() {
+        let a = vec![
+            crate::sketch::bezier_wire(BezierPath {
+                start: [0., -2.],
+                closed: true,
+                segments: vec![
+                    PathSegment::Line { to: [3., -2.] },
+                    PathSegment::Line { to: [3., 1.] },
+                    PathSegment::Cubic {
+                        c1: [2., -1.],
+                        c2: [1., 1.],
+                        to: [0., -1.],
+                    },
+                    PathSegment::Line { to: [0., -2.] },
+                ],
+            })
+            .unwrap(),
+        ];
+        let b = vec![
+            crate::sketch::bezier_wire(
+                BezierPath::from_polygon(&[[0., -2.], [3., -2.], [3., 0.], [0., 0.]], true)
+                    .unwrap(),
+            )
+            .unwrap(),
+        ];
+        for (op, expected) in [
+            ("union", 6.375),
+            ("intersection", 5.625),
+            ("difference", 0.375),
+        ] {
+            let result = super::boolean(&a, &b, op, 1e-7).unwrap_or_else(|e| panic!("{op}: {e:?}"));
+            let area = super::validate_profile(&result, 1e-7).unwrap();
+            assert!((area - expected).abs() < 1e-5, "{op}: {area}");
+            assert!(result.iter().flatten().any(|c| c.degree == 3));
+        }
+    }
+    #[test]
+    fn partial_line_cubic_overlap_deduplicates_different_degrees() {
+        let a = vec![
+            crate::sketch::bezier_wire(BezierPath {
+                start: [0., 0.],
+                closed: true,
+                segments: vec![
+                    PathSegment::Cubic {
+                        c1: [2., 0.],
+                        c2: [4., 0.],
+                        to: [6., 0.],
+                    },
+                    PathSegment::Line { to: [6., 4.] },
+                    PathSegment::Line { to: [0., 4.] },
+                    PathSegment::Line { to: [0., 0.] },
+                ],
+            })
+            .unwrap(),
+        ];
+        let b = vec![
+            crate::sketch::bezier_wire(
+                BezierPath::from_polygon(&[[2., 0.], [8., 0.], [8., 4.], [2., 4.]], true).unwrap(),
+            )
+            .unwrap(),
+        ];
+        for (op, expected) in [("union", 32.), ("intersection", 16.), ("difference", 8.)] {
+            let result = super::boolean(&a, &b, op, 1e-7).unwrap_or_else(|e| panic!("{op}: {e:?}"));
+            assert!((super::validate_profile(&result, 1e-7).unwrap() - expected).abs() < 1e-5);
         }
     }
     #[test]

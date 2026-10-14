@@ -298,16 +298,14 @@ pub fn tessellate_surfaces(
         uv: None,
     };
     let mut ids = Vec::new();
-    for (i, s) in patches.iter().enumerate() {
-        let built = tessellate_nurbs(
-            s,
-            &tessellation::Options {
-                segments_u: segments,
-                segments_v: segments,
-                trim: None,
-                max_triangles: Some(20_000),
-            },
-        )?;
+    let opts = tessellation::Options {
+        segments_u: segments,
+        segments_v: segments,
+        trim: None,
+        max_triangles: Some(20_000),
+    };
+    let built_patches = math_core::par_try_map(patches, 2, |s| tessellate_nurbs(s, &opts))?;
+    for (i, built) in built_patches.into_iter().enumerate() {
         let offset = mesh.positions.len() / 3;
         ids.extend(vec![face_ids[i]; built.mesh.indices.len() / 3]);
         mesh.indices

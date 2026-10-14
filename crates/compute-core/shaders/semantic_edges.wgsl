@@ -56,41 +56,68 @@ fn compute_triangle_normal(tri_idx: u32) -> vec3<f32> {
   let d1 = p1 - p0;
   let d2 = p2 - p0;
   let n = cross(d1, d2);
-  let len = length(n);
-  if (len > 1e-7) {
-    return n / len;
+  let len_sq = dot(n, n);
+  if (len_sq > 1e-14) {
+    return n * inverseSqrt(len_sq);
   }
   return vec3<f32>(0.0, 0.0, 1.0);
 }
 
 const WG: u32 = 256;
+var<workgroup> wg_counter: atomic<u32>;
+var<workgroup> wg_base: u32;
 
 @compute @workgroup_size(WG)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  let edge_idx = id.x;
-  if (edge_idx >= params.total_edges) {
-    return;
+fn main(
+  @builtin(global_invocation_id) id: vec3<u32>,
+  @builtin(local_invocation_id) lid: vec3<u32>
+) {
+  if (lid.x == 0u) {
+    atomicStore(&wg_counter, 0u);
   }
+  workgroupBarrier();
 
-  let edge = edges[edge_idx];
+  let edge_idx = id.x;
   var is_semantic = false;
+  var edge = EdgeInput(0u, 0u, 0u, 0u);
 
-  if (edge.tri1 == 0xFFFFFFFFu) {
-    // 1. Boundary edge (only 1 incident triangle)
-    is_semantic = true;
-  } else {
-    // 2. Manifold interior edge: inspect dihedral angle
-    let n0 = compute_triangle_normal(edge.tri0);
-    let n1 = compute_triangle_normal(edge.tri1);
-    let dot_prod = dot(n0, n1);
-
-    if (dot_prod < params.crease_dot_threshold) {
+  if (edge_idx < params.total_edges) {
+    edge = edges[edge_idx];
+    if (edge.tri1 == 0xFFFFFFFFu) {
+      // 1. Boundary edge (only 1 incident triangle)
       is_semantic = true;
+    } else {
+      // 2. Manifold interior edge: inspect dihedral angle
+      let n0 = compute_triangle_normal(edge.tri0);
+      let n1 = compute_triangle_normal(edge.tri1);
+      let dot_prod = dot(n0, n1);
+
+      if (dot_prod < params.crease_dot_threshold) {
+        is_semantic = true;
+      }
     }
   }
 
+  var local_slot = 0u;
   if (is_semantic) {
-    let slot = atomicAdd(&edge_counter[0], 1u);
+    local_slot = atomicAdd(&wg_counter, 1u);
+  }
+  workgroupBarrier();
+
+  if (lid.x == 0u) {
+    let wg_total = atomicLoad(&wg_counter);
+    if (wg_total == 1u) {
+      wg_base = atomicAdd(&edge_counter[0], 1u);
+    } else if (wg_total > 1u) {
+      wg_base = atomicAdd(&edge_counter[0], wg_total);
+    } else {
+      wg_base = 0u;
+    }
+  }
+  workgroupBarrier();
+
+  if (is_semantic) {
+    let slot = wg_base + local_slot;
     if (slot < params.max_output_edges) {
       let out_off = slot * 2u;
       out_edge_indices[out_off + 0u] = edge.v0;

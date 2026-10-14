@@ -381,8 +381,20 @@ impl<'a, T: Deserialize<'a>> Deserialize<'a> for Vec<T> {
 }
 impl<'a, T: Deserialize<'a>, const N: usize> Deserialize<'a> for [T; N] {
     fn from_value(v: Value) -> Result<Self> {
-        Vec::<T>::from_value(v)?
-            .try_into()
+        let Value::Array(v) = v else {
+            return Err(error("Expected array"));
+        };
+        if v.len() != N {
+            for item in v {
+                T::from_value(item)?;
+            }
+            return Err(error(format!("Expected array length {N}")));
+        }
+        let mut out = Vec::with_capacity(N);
+        for item in v {
+            out.push(T::from_value(item)?);
+        }
+        out.try_into()
             .map_err(|_| error(format!("Expected array length {N}")))
     }
 }
@@ -446,29 +458,42 @@ pub fn to_string<T: Serialize + ?Sized>(v: &T) -> Result<String> {
 pub fn to_string_pretty<T: Serialize + ?Sized>(v: &T) -> Result<String> {
     to_string(v)
 }
+fn fmt_json_str(s: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str("\"")?;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        let esc = match c {
+            '"' => Some("\\\""),
+            '\\' => Some("\\\\"),
+            '\n' => Some("\\n"),
+            '\r' => Some("\\r"),
+            '\t' => Some("\\t"),
+            '\u{8}' => Some("\\b"),
+            '\u{c}' => Some("\\f"),
+            c if c < ' ' => None,
+            _ => continue,
+        };
+        if start < i {
+            f.write_str(&s[start..i])?;
+        }
+        match esc {
+            Some(e) => f.write_str(e)?,
+            None => write!(f, "\\u{:04x}", c as u32)?,
+        }
+        start = i + c.len_utf8();
+    }
+    if start < s.len() {
+        f.write_str(&s[start..])?;
+    }
+    f.write_str("\"")
+}
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Null => f.write_str("null"),
             Self::Bool(v) => write!(f, "{v}"),
             Self::Number(v) => write!(f, "{v}"),
-            Self::String(s) => {
-                f.write_str("\"")?;
-                for c in s.chars() {
-                    match c {
-                        '"' => f.write_str("\\\""),
-                        '\\' => f.write_str("\\\\"),
-                        '\n' => f.write_str("\\n"),
-                        '\r' => f.write_str("\\r"),
-                        '\t' => f.write_str("\\t"),
-                        '\u{8}' => f.write_str("\\b"),
-                        '\u{c}' => f.write_str("\\f"),
-                        c if c < ' ' => write!(f, "\\u{:04x}", c as u32),
-                        c => write!(f, "{c}"),
-                    }?
-                }
-                f.write_str("\"")
-            }
+            Self::String(s) => fmt_json_str(s, f),
             Self::Array(v) => {
                 f.write_str("[")?;
                 for (i, v) in v.iter().enumerate() {
@@ -485,7 +510,9 @@ impl fmt::Display for Value {
                     if i > 0 {
                         f.write_str(",")?
                     }
-                    write!(f, "{}:{v}", Self::String(k.clone()))?
+                    fmt_json_str(k, f)?;
+                    f.write_str(":")?;
+                    write!(f, "{v}")?
                 }
                 f.write_str("}")
             }
@@ -789,10 +816,18 @@ pub fn encode_binary(value: &Value) -> Result<Vec<u8>> {
                 }
             }
             Value::Object(a) => {
+                if d + 1 > 128 && !a.is_empty() {
+                    return Err(error("Binary nesting limit"));
+                }
                 o.push(6);
-                o.extend((a.len() as u32).to_le_bytes());
+                o.extend_from_slice(&(a.len() as u32).to_le_bytes());
                 for (k, v) in a {
-                    put(&Value::String(k.clone()), o, d + 1)?;
+                    o.push(4);
+                    o.extend_from_slice(&(k.len() as u32).to_le_bytes());
+                    o.extend_from_slice(k.as_bytes());
+                    if o.len() > 32 * 1024 * 1024 {
+                        return Err(error("Binary size limit"));
+                    }
                     put(v, o, d + 1)?
                 }
             }

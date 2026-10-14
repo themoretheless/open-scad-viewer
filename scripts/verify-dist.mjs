@@ -90,7 +90,12 @@ const limits = new Map([
 // Integrated Storytold native trace, profiles, patterns, animation and vector PDF:
 // Concave/crossing Bézier profiles, color trace, retained projections and embedded text PDF:
 // measured 3,829,162 packed bytes; retain 10,838 bytes of bounded headroom.
-const geometryChunkBudget = 3_840_000
+// Curved B-rep occlusion, scalar contact predicates and durable drawing references:
+// measured 3,883,867 bytes on 2026-10-14; retain 16,133 bytes of bounded headroom.
+// Retained curved coincidence, exact stationary roots and interval departure
+// ordering: measured 3,953,958 packed bytes on 2026-10-14.
+// Integrated geometry budget retains 16,042 bytes of bounded headroom.
+const geometryChunkBudget = 3_970_000
 const jsChunkBudgets = [
   // CAD worker with lazy RushGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
   // Storytold drawing, animation, action and contour dispatch: measured 142,259 bytes.

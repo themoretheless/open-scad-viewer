@@ -129,11 +129,21 @@ impl ThreadMesh<'_> {
             self.o.diameter / 2. - depth
                 + (if self.o.internal { 1. } else { -1. }) * self.o.clearance / 2.
         };
-        let round = |v: f64| format!("{v:.12e}").parse::<f64>().unwrap();
+        let (sin_a, cos_a) = angle.sin_cos();
+        let round = |v: f64| {
+            use std::io::Write;
+            let mut buf = [0u8; 32];
+            let mut cursor = std::io::Cursor::new(&mut buf[..]);
+            write!(cursor, "{v:.12e}").unwrap();
+            let len = cursor.position() as usize;
+            unsafe { std::str::from_utf8_unchecked(&buf[..len]) }
+                .parse::<f64>()
+                .unwrap()
+        };
         let id = self.points.len();
         self.points.push([
-            round(radius * angle.cos()),
-            round(radius * angle.sin()),
+            round(radius * cos_a),
+            round(radius * sin_a),
             round(y * self.o.pitch),
         ]);
         self.ids.insert(key, id);
@@ -234,19 +244,21 @@ pub fn thread_mesh(o: &ThreadOptions) -> Result<ThreadGeometry> {
         .filter(|(i, t)| *i == 0 || **t - angles[i - 1] > 1e-10)
         .map(|(_, t)| *t)
         .collect();
+    let est_faces = ((columns.len() * (turns.ceil() as usize + 2) * 8).min(3501)).max(64);
     let mut mesh = ThreadMesh {
         o,
         turns,
-        points: Vec::new(),
-        faces: Vec::new(),
-        ids: HashMap::new(),
+        points: Vec::with_capacity(est_faces),
+        faces: Vec::with_capacity(est_faces),
+        ids: HashMap::with_capacity(est_faces),
         path,
     };
+    let mut breaks = Vec::new();
     for col in 0..columns.len() - 1 {
         let (a, b) = (columns[col], columns[col + 1]);
         let min = (-slope * a).min(-slope * b);
         let max = (turns - slope * a).max(turns - slope * b);
-        let mut breaks = Vec::new();
+        breaks.clear();
         for k in min.floor() as i32 - 1..=max.ceil() as i32 {
             for corner in BREAKS {
                 breaks.push(k as f64 + corner);
@@ -263,29 +275,35 @@ pub fn thread_mesh(o: &ThreadOptions) -> Result<ThreadGeometry> {
                 hi,
                 false,
             );
-            let all: Vec<usize> = poly
-                .iter()
-                .map(|[t, y]| {
-                    mesh.point(
-                        if (*t - a).abs() < 1e-10 {
-                            a
-                        } else if (*t - b).abs() < 1e-10 {
-                            b
-                        } else {
-                            *t
-                        },
-                        *y,
-                        false,
-                    )
-                })
-                .collect();
-            let ids: Vec<usize> = all
-                .iter()
-                .enumerate()
-                .filter(|(i, id)| **id != all[(i + all.len() - 1) % all.len()])
-                .map(|(_, id)| *id)
-                .collect();
-            for k in 1..ids.len().saturating_sub(1) {
+            let mut ids = [0usize; 8];
+            let mut ids_len = 0usize;
+            let mut first_id = None;
+            let mut prev_id = None;
+            for &[t, y] in &poly {
+                let id = mesh.point(
+                    if (t - a).abs() < 1e-10 {
+                        a
+                    } else if (t - b).abs() < 1e-10 {
+                        b
+                    } else {
+                        t
+                    },
+                    y,
+                    false,
+                );
+                if prev_id != Some(id) {
+                    ids[ids_len] = id;
+                    ids_len += 1;
+                    prev_id = Some(id);
+                }
+                if first_id.is_none() {
+                    first_id = Some(id);
+                }
+            }
+            if ids_len > 1 && ids[0] == ids[ids_len - 1] {
+                ids_len -= 1;
+            }
+            for k in 1..ids_len.saturating_sub(1) {
                 mesh.triangle(ids[0], ids[k], ids[k + 1], !internal)?;
             }
         }
@@ -322,13 +340,13 @@ pub fn thread_mesh(o: &ThreadOptions) -> Result<ThreadGeometry> {
             }
         }
     }
+    let mut indices = Vec::with_capacity(mesh.faces.len() * 3);
+    for [a, b, c] in mesh.faces {
+        indices.extend_from_slice(&[c, b, a]);
+    }
     Ok(ThreadGeometry {
         positions: mesh.points,
-        indices: mesh
-            .faces
-            .into_iter()
-            .flat_map(|f| f.into_iter().rev())
-            .collect(),
+        indices,
         options: o.clone(),
         angular_columns: columns.len() - 1,
     })

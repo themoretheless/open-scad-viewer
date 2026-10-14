@@ -58,12 +58,14 @@ export function applyDirectExtrusion(document: DirectDocument, sketchId: string,
   return parseDirectDocument(stringifyMeshJson(next))
 }
 export function circularDirectCopies(sketch: DirectSketch, count: number, center: Point2, sweep: number, makeId: () => string): DirectSketch[] {
-  if (!Number.isInteger(count) || count < 2 || count > 64 || !center.every(Number.isFinite) || !Number.isFinite(sweep) || Math.abs(sweep) < .01 || Math.abs(sweep) > 360) throw new Error('Use 2–64 instances and an angle up to 360 degrees.')
+  if (!Number.isInteger(count) || count < 2 || count > 64 || !Number.isFinite(center[0]) || !Number.isFinite(center[1]) || !Number.isFinite(sweep) || Math.abs(sweep) < .01 || Math.abs(sweep) > 360) throw new Error('Use 2–64 instances and an angle up to 360 degrees.')
   const closed = Math.abs(sweep) === 360
-  return Array.from({ length: count - 1 }, (_, i) => {
-    const a = (i + 1) * sweep / (closed ? count : count - 1) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a)
-    return { ...transformSketch(sketch,[0,0],a*180/Math.PI,1,center), id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0,100) }
-  })
+  const out = new Array<DirectSketch>(count - 1)
+  for (let i = 0; i < count - 1; i++) {
+    const a = (i + 1) * sweep / (closed ? count : count - 1) * Math.PI / 180
+    out[i] = { ...transformSketch(sketch,[0,0],a*180/Math.PI,1,center), id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0,100) }
+  }
+  return out
 }
 const SCRATCH_NORMAL: [number, number, number] = [0, 0, 0]
 export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera, project?: (p: number[]) => [number, number, number]): number {

@@ -8,8 +8,9 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
 
-export interface SemanticEdgesOptions {
+export interface SemanticEdgesOptions extends CooperativeAsyncOptions {
   creaseAngleDegrees?: number
   creaseDotThreshold?: number
   strideFloats?: number
@@ -24,19 +25,17 @@ export interface SemanticEdgesResult {
 }
 
 import SEMANTIC_EDGES_WGSL from '../../crates/compute-core/shaders/semantic_edges.wgsl?raw'
+import { packUndirectedEdgeKey } from './math3d'
 export { SEMANTIC_EDGES_WGSL }
-
 
 /**
  * Builds edge adjacency from triangle index buffer.
  * Output is packed as [v0, v1, tri0, tri1] (stride 4 uint32s).
  */
-const EDGE_KEY_STRIDE = 67108864 // 2^26
-
 export function buildMeshEdgeAdjacency(indices: Uint32Array): Uint32Array {
   const triCount = (indices.length / 3) | 0
   // Map packed edge key -> offset in flat buffer (stride 4 uint32s)
-  const edgeIndexMap = new Map<number, number>()
+  const edgeIndexMap = new Map<number | string, number>()
   const buf = new Uint32Array(triCount * 3 * 4)
   let ptr = 0
 
@@ -51,7 +50,7 @@ export function buildMeshEdgeAdjacency(indices: Uint32Array): Uint32Array {
       const vb = e === 0 ? i1 : e === 1 ? i2 : i0
       const minV = va < vb ? va : vb
       const maxV = va < vb ? vb : va
-      const key = minV * EDGE_KEY_STRIDE + maxV
+      const key = packUndirectedEdgeKey(minV, maxV)
 
       const existingOff = edgeIndexMap.get(key)
       if (existingOff === undefined) {
@@ -71,6 +70,9 @@ export function buildMeshEdgeAdjacency(indices: Uint32Array): Uint32Array {
 }
 
 
+const semanticEdgesUniformBuffer = new ArrayBuffer(32)
+const semanticEdgesUniformView = new DataView(semanticEdgesUniformBuffer)
+
 function buildParamsUniform(
   totalEdges: number,
   totalTriangles: number,
@@ -79,20 +81,17 @@ function buildParamsUniform(
   posOffset: number,
   maxOutputEdges: number
 ): ArrayBuffer {
-  const buffer = new ArrayBuffer(32)
-  const view = new DataView(buffer)
+  semanticEdgesUniformView.setUint32(0, totalEdges, true)
+  semanticEdgesUniformView.setUint32(4, totalTriangles, true)
+  semanticEdgesUniformView.setFloat32(8, threshold, true)
+  semanticEdgesUniformView.setUint32(12, strideFloats, true)
 
-  view.setUint32(0, totalEdges, true)
-  view.setUint32(4, totalTriangles, true)
-  view.setFloat32(8, threshold, true)
-  view.setUint32(12, strideFloats, true)
+  semanticEdgesUniformView.setUint32(16, posOffset, true)
+  semanticEdgesUniformView.setUint32(20, maxOutputEdges, true)
+  semanticEdgesUniformView.setUint32(24, 0, true)
+  semanticEdgesUniformView.setUint32(28, 0, true)
 
-  view.setUint32(16, posOffset, true)
-  view.setUint32(20, maxOutputEdges, true)
-  view.setUint32(24, 0, true)
-  view.setUint32(28, 0, true)
-
-  return buffer
+  return semanticEdgesUniformBuffer
 }
 
 /**
@@ -114,7 +113,9 @@ export async function runGpuSemanticEdges(
   const maxEdges = opts.maxEdges ?? totalEdges
 
   if (typeof navigator === 'undefined' || !navigator.gpu) {
-    return referenceSemanticEdges(vertices, indices, opts)
+    return totalEdges >= 1024
+      ? referenceSemanticEdgesAsync(vertices, indices, opts, edgeAdjacency)
+      : referenceSemanticEdges(vertices, indices, opts, edgeAdjacency)
   }
 
   try {
@@ -128,7 +129,6 @@ export async function runGpuSemanticEdges(
     )
 
     const counterInit = new Uint32Array([0])
-    const outIndicesBuffer = new Uint32Array(maxEdges * 2)
 
     const results = await runGpuCompute({
       wgsl: SEMANTIC_EDGES_WGSL,
@@ -141,7 +141,7 @@ export async function runGpuSemanticEdges(
             { binding: 2, data: indices },
             { binding: 3, data: edgeAdjacency },
             { binding: 4, data: counterInit, output: true, outputBytes: 4 },
-            { binding: 5, data: outIndicesBuffer, output: true, outputBytes: maxEdges * 2 * 4 },
+            { binding: 5, data: new Uint32Array(0), output: true, outputBytes: maxEdges * 2 * 4 },
           ],
           outputBytes: maxEdges * 2 * 4,
           workgroups: [Math.ceil(totalEdges / 256), 1, 1],
@@ -162,7 +162,47 @@ export async function runGpuSemanticEdges(
     // Fallback if WebGPU compute is not available
   }
 
-  return referenceSemanticEdges(vertices, indices, opts)
+  return totalEdges >= 1024
+    ? referenceSemanticEdgesAsync(vertices, indices, opts, edgeAdjacency)
+    : referenceSemanticEdges(vertices, indices, opts, edgeAdjacency)
+}
+
+function computeTriNormalInto(
+  tIdx: number,
+  vertices: Float32Array,
+  indices: Uint32Array,
+  strideFloats: number,
+  posOffset: number,
+  out: Float64Array,
+  outOffset: number
+): void {
+  const b = tIdx * 3
+  const b0 = indices[b]! * strideFloats + posOffset
+  const b1 = indices[b + 1]! * strideFloats + posOffset
+  const b2 = indices[b + 2]! * strideFloats + posOffset
+
+  const p0x = vertices[b0]!, p0y = vertices[b0 + 1]!, p0z = vertices[b0 + 2]!
+  const d1x = vertices[b1]! - p0x
+  const d1y = vertices[b1 + 1]! - p0y
+  const d1z = vertices[b1 + 2]! - p0z
+  const d2x = vertices[b2]! - p0x
+  const d2y = vertices[b2 + 1]! - p0y
+  const d2z = vertices[b2 + 2]! - p0z
+
+  let nx = d1y * d2z - d1z * d2y
+  let ny = d1z * d2x - d1x * d2z
+  let nz = d1x * d2y - d1y * d2x
+
+  const lenSq = nx * nx + ny * ny + nz * nz
+  if (lenSq > 1e-14) {
+    const invLen = 1.0 / Math.sqrt(lenSq)
+    nx *= invLen; ny *= invLen; nz *= invLen
+  } else {
+    nx = 0; ny = 0; nz = 1
+  }
+  out[outOffset] = nx
+  out[outOffset + 1] = ny
+  out[outOffset + 2] = nz
 }
 
 /**
@@ -171,9 +211,10 @@ export async function runGpuSemanticEdges(
 export function referenceSemanticEdges(
   vertices: Float32Array,
   indices: Uint32Array,
-  opts: SemanticEdgesOptions = {}
+  opts: SemanticEdgesOptions = {},
+  precomputedAdjacency?: Uint32Array
 ): SemanticEdgesResult {
-  const edgeAdjacency = buildMeshEdgeAdjacency(indices)
+  const edgeAdjacency = precomputedAdjacency ?? buildMeshEdgeAdjacency(indices)
   const totalEdges = edgeAdjacency.length / 4
 
   const creaseAngle = opts.creaseAngleDegrees ?? 30.0
@@ -181,58 +222,85 @@ export function referenceSemanticEdges(
   const strideFloats = opts.strideFloats ?? 3
   const posOffset = opts.posOffset ?? 0
 
-  function getPos(vIdx: number): [number, number, number] {
-    const base = vIdx * strideFloats + posOffset
-    return [vertices[base + 0]!, vertices[base + 1]!, vertices[base + 2]!]
-  }
-
-  function getTriNormal(tIdx: number): [number, number, number] {
-    const i0 = indices[tIdx * 3 + 0]!
-    const i1 = indices[tIdx * 3 + 1]!
-    const i2 = indices[tIdx * 3 + 2]!
-
-    const p0 = getPos(i0)
-    const p1 = getPos(i1)
-    const p2 = getPos(i2)
-
-    const d1x = p1[0] - p0[0], d1y = p1[1] - p0[1], d1z = p1[2] - p0[2]
-    const d2x = p2[0] - p0[0], d2y = p2[1] - p0[1], d2z = p2[2] - p0[2]
-
-    let nx = d1y * d2z - d1z * d2y
-    let ny = d1z * d2x - d1x * d2z
-    let nz = d1x * d2y - d1y * d2x
-
-    const len = Math.hypot(nx, ny, nz)
-    if (len > 1e-7) {
-      nx /= len; ny /= len; nz /= len
-    } else {
-      nx = 0; ny = 0; nz = 1
-    }
-    return [nx, ny, nz]
-  }
-
+  const nScratch = new Float64Array(6)
   const resultEdges: number[] = []
 
   for (let e = 0; e < totalEdges; e++) {
-    const v0 = edgeAdjacency[e * 4 + 0]!
-    const v1 = edgeAdjacency[e * 4 + 1]!
-    const tri0 = edgeAdjacency[e * 4 + 2]!
-    const tri1 = edgeAdjacency[e * 4 + 3]!
+    const base = e * 4
+    const v0 = edgeAdjacency[base]!
+    const v1 = edgeAdjacency[base + 1]!
+    const tri0 = edgeAdjacency[base + 2]!
+    const tri1 = edgeAdjacency[base + 3]!
 
     if (tri1 === 0xffffffff) {
       // Boundary edge
       resultEdges.push(v0, v1)
     } else {
       // Manifold interior edge: check dihedral angle
-      const n0 = getTriNormal(tri0)
-      const n1 = getTriNormal(tri1)
-      const dot = n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2]
+      computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
+      computeTriNormalInto(tri1, vertices, indices, strideFloats, posOffset, nScratch, 3)
+      const dot =
+        nScratch[0]! * nScratch[3]! +
+        nScratch[1]! * nScratch[4]! +
+        nScratch[2]! * nScratch[5]!
 
       if (dot < threshold) {
         resultEdges.push(v0, v1)
       }
     }
   }
+
+  return {
+    indices: new Uint32Array(resultEdges),
+    edgeCount: resultEdges.length / 2,
+  }
+}
+
+/**
+ * Cooperative non-blocking async CPU reference evaluator for semantic edge extraction.
+ */
+export async function referenceSemanticEdgesAsync(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  opts: SemanticEdgesOptions = {},
+  precomputedAdjacency?: Uint32Array
+): Promise<SemanticEdgesResult> {
+  const edgeAdjacency = precomputedAdjacency ?? buildMeshEdgeAdjacency(indices)
+  const totalEdges = edgeAdjacency.length / 4
+
+  const creaseAngle = opts.creaseAngleDegrees ?? 30.0
+  const threshold = opts.creaseDotThreshold ?? Math.cos((creaseAngle * Math.PI) / 180.0)
+  const strideFloats = opts.strideFloats ?? 3
+  const posOffset = opts.posOffset ?? 0
+
+  const nScratch = new Float64Array(6)
+  const resultEdges: number[] = []
+
+  await forEachChunkedAsync(
+    totalEdges,
+    e => {
+      const base = e * 4
+      const v0 = edgeAdjacency[base]!
+      const v1 = edgeAdjacency[base + 1]!
+      const tri0 = edgeAdjacency[base + 2]!
+      const tri1 = edgeAdjacency[base + 3]!
+
+      if (tri1 === 0xffffffff) {
+        resultEdges.push(v0, v1)
+      } else {
+        computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
+        computeTriNormalInto(tri1, vertices, indices, strideFloats, posOffset, nScratch, 3)
+        const dot =
+          nScratch[0]! * nScratch[3]! +
+          nScratch[1]! * nScratch[4]! +
+          nScratch[2]! * nScratch[5]!
+        if (dot < threshold) {
+          resultEdges.push(v0, v1)
+        }
+      }
+    },
+    opts
+  )
 
   return {
     indices: new Uint32Array(resultEdges),

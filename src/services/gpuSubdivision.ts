@@ -13,14 +13,10 @@ import type { SubdivisionCage, SubdivisionRefined } from './geometry/subdivision
 import type { GeometryBrush } from './geometryEditing'
 
 import CATMULL_CLARK_WGSL from '../../crates/compute-core/shaders/catmull_clark.wgsl?raw'
+import { packUndirectedEdgeKey } from './math3d'
 export { CATMULL_CLARK_WGSL }
 
-
-const EDGE_KEY_STRIDE = 67108864 // 2^26
-function edgeKey(a: number, b: number): number {
-  return a < b ? a * EDGE_KEY_STRIDE + b : b * EDGE_KEY_STRIDE + a
-}
-
+const edgeKey = packUndirectedEdgeKey
 
 interface EdgeUse {
   a: number
@@ -28,6 +24,12 @@ interface EdgeUse {
   faces: number[]
   edgeIndex: number
 }
+
+const subdivUniformBuffer = new ArrayBuffer(48)
+const subdivUniformView = new DataView(subdivUniformBuffer)
+const dummyFloat4 = new Float32Array(4)
+const dummyUint1 = new Uint32Array([0])
+const emptyFloat0 = new Float32Array(0)
 
 function buildSubdivUniform(
   mode: number,
@@ -39,21 +41,19 @@ function buildSubdivUniform(
   disp: [number, number, number] = [0, 0, 0],
   strength = 0
 ): ArrayBuffer {
-  const buf = new ArrayBuffer(48)
-  const v = new DataView(buf)
-  v.setUint32(0, mode, true)
-  v.setUint32(4, numItems, true)
-  v.setUint32(8, brushFalloff, true)
-  v.setUint32(12, brushKind, true)
-  v.setFloat32(16, center[0], true)
-  v.setFloat32(20, center[1], true)
-  v.setFloat32(24, center[2], true)
-  v.setFloat32(28, radius, true)
-  v.setFloat32(32, disp[0], true)
-  v.setFloat32(36, disp[1], true)
-  v.setFloat32(40, disp[2], true)
-  v.setFloat32(44, strength, true)
-  return buf
+  subdivUniformView.setUint32(0, mode, true)
+  subdivUniformView.setUint32(4, numItems, true)
+  subdivUniformView.setUint32(8, brushFalloff, true)
+  subdivUniformView.setUint32(12, brushKind, true)
+  subdivUniformView.setFloat32(16, center[0], true)
+  subdivUniformView.setFloat32(20, center[1], true)
+  subdivUniformView.setFloat32(24, center[2], true)
+  subdivUniformView.setFloat32(28, radius, true)
+  subdivUniformView.setFloat32(32, disp[0], true)
+  subdivUniformView.setFloat32(36, disp[1], true)
+  subdivUniformView.setFloat32(40, disp[2], true)
+  subdivUniformView.setFloat32(44, strength, true)
+  return subdivUniformBuffer
 }
 
 /**
@@ -83,7 +83,7 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
       throw new Error('Subdivision face budget exceeded')
     }
 
-    const edgeMap = new Map<number, EdgeUse>()
+    const edgeMap = new Map<number | string, EdgeUse>()
     const edgeList: EdgeUse[] = []
 
     for (let fi = 0; fi < currentFaces.length; fi++) {
@@ -94,7 +94,7 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
         const w = f[(i + 1) % flen]!
         const a = u < w ? u : w
         const b = u < w ? w : u
-        const key = a * EDGE_KEY_STRIDE + b
+        const key = edgeKey(a, b)
         let entry = edgeMap.get(key)
         if (!entry) {
           entry = { a, b, faces: [], edgeIndex: edgeList.length }
@@ -270,7 +270,7 @@ export async function runGpuSubdivisionRefine(
         inPos[i * 3 + 2] = p[2]!
       }
 
-      const edgeMap = new Map<number, EdgeUse>()
+      const edgeMap = new Map<number | string, EdgeUse>()
       const edgeList: EdgeUse[] = []
 
       const faceMeta = new Uint32Array(numF * 2)
@@ -305,10 +305,10 @@ export async function runGpuSubdivisionRefine(
             buffers: [
               { binding: 0, data: buildSubdivUniform(0, numF), uniform: true },
               { binding: 1, data: inPos },
-              { binding: 2, data: new Float32Array(4) },
+              { binding: 2, data: dummyFloat4 },
               { binding: 3, data: faceMeta },
               { binding: 4, data: new Uint32Array(faceCornerList) },
-              { binding: 5, data: new Float32Array(numF * 3), output: true, outputBytes: faceOutBytes },
+              { binding: 5, data: emptyFloat0, output: true, outputBytes: faceOutBytes },
             ],
             outputBytes: faceOutBytes,
             workgroups: [Math.ceil(numF / 256), 1, 1],
@@ -339,8 +339,8 @@ export async function runGpuSubdivisionRefine(
               { binding: 1, data: inPos },
               { binding: 2, data: facePosBuf },
               { binding: 3, data: edgeMeta },
-              { binding: 4, data: new Uint32Array([0]) },
-              { binding: 5, data: new Float32Array(numE * 3), output: true, outputBytes: edgeOutBytes },
+              { binding: 4, data: dummyUint1 },
+              { binding: 5, data: emptyFloat0, output: true, outputBytes: edgeOutBytes },
             ],
             outputBytes: edgeOutBytes,
             workgroups: [Math.ceil(numE / 256), 1, 1],
@@ -395,8 +395,8 @@ export async function runGpuSubdivisionRefine(
               { binding: 1, data: inPos },
               { binding: 2, data: facePosBuf },
               { binding: 3, data: vertMeta },
-              { binding: 4, data: new Uint32Array(vertStencilIndices.length ? vertStencilIndices : [0]) },
-              { binding: 5, data: new Float32Array(numV * 3), output: true, outputBytes: vertOutBytes },
+              { binding: 4, data: vertStencilIndices.length ? new Uint32Array(vertStencilIndices) : dummyUint1 },
+              { binding: 5, data: emptyFloat0, output: true, outputBytes: vertOutBytes },
             ],
             outputBytes: vertOutBytes,
             workgroups: [Math.ceil(numV / 256), 1, 1],
@@ -406,15 +406,15 @@ export async function runGpuSubdivisionRefine(
       const vertPosBuf = vertRes[0]
       if (!vertPosBuf) return referenceRefineSubdivision(cage, levels)
 
-      const nextVertices: number[][] = []
+      const nextVertices: number[][] = new Array(numV + numE + numF)
       for (let i = 0; i < numV; i++) {
-        nextVertices.push([vertPosBuf[i * 3]!, vertPosBuf[i * 3 + 1]!, vertPosBuf[i * 3 + 2]!])
+        nextVertices[i] = [vertPosBuf[i * 3]!, vertPosBuf[i * 3 + 1]!, vertPosBuf[i * 3 + 2]!]
       }
       for (let i = 0; i < numE; i++) {
-        nextVertices.push([edgePosBuf[i * 3]!, edgePosBuf[i * 3 + 1]!, edgePosBuf[i * 3 + 2]!])
+        nextVertices[numV + i] = [edgePosBuf[i * 3]!, edgePosBuf[i * 3 + 1]!, edgePosBuf[i * 3 + 2]!]
       }
       for (let i = 0; i < numF; i++) {
-        nextVertices.push([facePosBuf[i * 3]!, facePosBuf[i * 3 + 1]!, facePosBuf[i * 3 + 2]!])
+        nextVertices[numV + numE + i] = [facePosBuf[i * 3]!, facePosBuf[i * 3 + 1]!, facePosBuf[i * 3 + 2]!]
       }
 
       const edgeOffset = numV
@@ -463,11 +463,15 @@ export function referenceBrushSubdivision(
     throw new Error('Invalid subdivision brush')
   }
 
+  const rSq = r * r
+  const invR = 1 / r
   const nextVertices = cage.vertices.map((p) => {
     const px = p[0]!, py = p[1]!, pz = p[2]!
-    const dist = Math.hypot(px - cx, py - cy, pz - cz)
-    if (dist >= r) return [px, py, pz]
-    const u = 1 - dist / r
+    const vx = px - cx, vy = py - cy, vz = pz - cz
+    const distSq = vx * vx + vy * vy + vz * vz
+    if (distSq >= rSq) return [px, py, pz]
+    const dist = Math.sqrt(distSq)
+    const u = 1 - dist * invR
     const w = u * u * (3 - 2 * u)
     return [px + w * dx, py + w * dy, pz + w * dz]
   })
@@ -520,10 +524,10 @@ export async function runGpuBrushSubdivision(
               uniform: true,
             },
             { binding: 1, data: inPos },
-            { binding: 2, data: new Float32Array(4) },
-            { binding: 3, data: new Uint32Array([0]) },
-            { binding: 4, data: new Uint32Array([0]) },
-            { binding: 5, data: new Float32Array(numV * 3), output: true, outputBytes: outBytes },
+            { binding: 2, data: dummyFloat4 },
+            { binding: 3, data: dummyUint1 },
+            { binding: 4, data: dummyUint1 },
+            { binding: 5, data: emptyFloat0, output: true, outputBytes: outBytes },
           ],
           outputBytes: outBytes,
           workgroups: [Math.ceil(numV / 256), 1, 1],

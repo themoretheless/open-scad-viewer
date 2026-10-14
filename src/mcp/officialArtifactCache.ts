@@ -77,7 +77,7 @@ export class OfficialArtifactCache {
       this.artifacts.delete(id)
       this.totalBytes -= existing.byteLength
     }
-    const data = Uint8Array.from(input.data)
+    const data = input.data.slice()
     const artifact: CachedArtifact = Object.freeze({
       id,
       format: input.format,
@@ -99,7 +99,7 @@ export class OfficialArtifactCache {
     // Reading also refreshes LRU order without changing the content address.
     this.artifacts.delete(id)
     this.artifacts.set(id, artifact)
-    return Object.freeze({ ...this.toSummary(artifact), data: Uint8Array.from(artifact.data) })
+    return Object.freeze({ ...this.toSummary(artifact), data: artifact.data.slice() })
   }
 
   list(): OfficialArtifactSummary[] {

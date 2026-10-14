@@ -1,36 +1,34 @@
-use crate::{Acceleration, V3, dot, nearest_two_accelerated, sub};
+use crate::{Acceleration, V3, dot, nearest_two_accelerated, par_map, sub};
 
 pub type FourNearest = [crate::Neighbor; 4];
 
 /// Brute-force exact top-4 nearest-neighbor search for every query point.
 pub fn nearest_four(queries: &[V3], targets: &[V3]) -> Vec<FourNearest> {
-    queries
-        .iter()
-        .map(|&q| {
-            let mut best = [(u32::MAX, f64::INFINITY); 4];
-            for (i, &t) in targets.iter().enumerate() {
-                let d = sub(q, t);
-                let dist = dot(d, d);
-                let candidate = (i as u32, dist);
-                if dist < best[0].1 {
-                    best[3] = best[2];
-                    best[2] = best[1];
-                    best[1] = best[0];
-                    best[0] = candidate;
-                } else if dist < best[1].1 {
-                    best[3] = best[2];
-                    best[2] = best[1];
-                    best[1] = candidate;
-                } else if dist < best[2].1 {
-                    best[3] = best[2];
-                    best[2] = candidate;
-                } else if dist < best[3].1 {
-                    best[3] = candidate;
-                }
+    let min_chunk = (16_384usize).checked_div(targets.len().max(1)).unwrap_or(16_384).max(32);
+    par_map(queries, min_chunk, |&q| {
+        let mut best = [(u32::MAX, f64::INFINITY); 4];
+        for (i, &t) in targets.iter().enumerate() {
+            let d = sub(q, t);
+            let dist = dot(d, d);
+            let candidate = (i as u32, dist);
+            if dist < best[0].1 {
+                best[3] = best[2];
+                best[2] = best[1];
+                best[1] = best[0];
+                best[0] = candidate;
+            } else if dist < best[1].1 {
+                best[3] = best[2];
+                best[2] = best[1];
+                best[1] = candidate;
+            } else if dist < best[2].1 {
+                best[3] = best[2];
+                best[2] = candidate;
+            } else if dist < best[3].1 {
+                best[3] = candidate;
             }
-            best
-        })
-        .collect()
+        }
+        best
+    })
 }
 
 /// WGSL source for the exact top-4 nearest-neighbor compute shader.

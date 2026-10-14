@@ -20,12 +20,21 @@ export function exportAssemblyFrames(document:DirectDocument,animation:AssemblyA
  const viewBox=`${(bounds[0]+bounds[2]-viewWidth)/2} ${(bounds[1]+bounds[3]-viewHeight)/2} ${viewWidth} ${viewHeight}`
  return {fps:steps/(last-first),width,height,frames:frames.map(f=>({time:f.time,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${viewBox}"><rect x="${(bounds[0]+bounds[2]-viewWidth)/2}" y="${(bounds[1]+bounds[3]-viewHeight)/2}" width="${viewWidth}" height="${viewHeight}" fill="#f4f5f7"/>${f.paths}</svg>`}))}
 }
+const CRC_TABLE = (() => {
+ const table = new Uint32Array(256)
+ for (let i = 0; i < 256; i++) {
+  let n = i
+  for (let b = 0; b < 8; b++) n = (n >>> 1) ^ ((n & 1) ? 0xedb88320 : 0)
+  table[i] = n >>> 0
+ }
+ return table
+})()
+
 /** Stored ZIP: bounded, lossless archive of rasterized frames and their timestamps. */
 export function frameArchive(files:{name:string;bytes:Uint8Array}[]):Uint8Array {
  if(!files.length||files.length>301)throw Error('Expected 1–301 archive entries.')
  const enc=new TextEncoder(),chunks:Uint8Array[]=[],central:Uint8Array[]=[];let offset=0,total=0
- const table=Uint32Array.from({length:256},(_,n)=>{for(let i=0;i<8;i++)n=(n>>>1)^((n&1)?0xedb88320:0);return n>>>0})
- const crc=(bytes:Uint8Array)=>{let v=0xffffffff;for(const b of bytes)v=(v>>>8)^table[(v^b)&255];return (v^0xffffffff)>>>0}
+ const crc=(bytes:Uint8Array)=>{let v=0xffffffff;for(const b of bytes)v=(v>>>8)^CRC_TABLE[(v^b)&255];return (v^0xffffffff)>>>0}
  const names=new Set<string>()
  for(const file of files){
   if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(file.name)||names.has(file.name))throw Error('Invalid or duplicate frame filename.');names.add(file.name)

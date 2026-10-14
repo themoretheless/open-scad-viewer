@@ -10,8 +10,9 @@
 
 import { runGpuCompute } from './webgpuCompute'
 import { dot3, cross3, normalizeVec3 } from './math3d'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
 
-export interface SlicerOptions {
+export interface SlicerOptions extends CooperativeAsyncOptions {
   /** Slicing plane normal vector (default: [0, 0, 1] for Z-slicing) */
   planeNormal?: [number, number, number]
   /** Distance d of the first slicing plane (n . p = d) */
@@ -47,6 +48,9 @@ export interface SlicerResult {
 import MESH_SLICER_WGSL from '../../crates/compute-core/shaders/mesh_slicer.wgsl?raw'
 export { MESH_SLICER_WGSL }
 
+const slicerUniformBuffer = new ArrayBuffer(48)
+const slicerUniformView = new DataView(slicerUniformBuffer)
+
 function buildSlicerUniform(
   totalTriangles: number,
   numLayers: number,
@@ -57,39 +61,36 @@ function buildSlicerUniform(
   layerStep: number,
   maxSegments: number
 ): ArrayBuffer {
-  const buffer = new ArrayBuffer(48)
-  const view = new DataView(buffer)
-
   const n = normalizeVec3(planeNormal)
 
-  view.setUint32(0, totalTriangles, true)
-  view.setUint32(4, numLayers, true)
-  view.setUint32(8, strideFloats, true)
-  view.setUint32(12, posOffset, true)
+  slicerUniformView.setUint32(0, totalTriangles, true)
+  slicerUniformView.setUint32(4, numLayers, true)
+  slicerUniformView.setUint32(8, strideFloats, true)
+  slicerUniformView.setUint32(12, posOffset, true)
 
-  view.setFloat32(16, n[0], true)
-  view.setFloat32(20, n[1], true)
-  view.setFloat32(24, n[2], true)
-  view.setFloat32(28, firstLayerDistance, true)
+  slicerUniformView.setFloat32(16, n[0], true)
+  slicerUniformView.setFloat32(20, n[1], true)
+  slicerUniformView.setFloat32(24, n[2], true)
+  slicerUniformView.setFloat32(28, firstLayerDistance, true)
 
-  view.setFloat32(32, layerStep, true)
-  view.setUint32(36, maxSegments, true)
-  view.setUint32(40, 0, true)
-  view.setUint32(44, 0, true)
+  slicerUniformView.setFloat32(32, layerStep, true)
+  slicerUniformView.setUint32(36, maxSegments, true)
+  slicerUniformView.setUint32(40, 0, true)
+  slicerUniformView.setUint32(44, 0, true)
 
-  return buffer
+  return slicerUniformBuffer
 }
 
 function unpackSegments(raw: Float32Array, count: number): SliceSegment[] {
-  const segments: SliceSegment[] = []
+  const segments: SliceSegment[] = new Array(count)
   for (let i = 0; i < count; i++) {
     const off = i * 8
-    segments.push({
+    segments[i] = {
       p0: [raw[off + 0]!, raw[off + 1]!, raw[off + 2]!],
       layerIndex: Math.round(raw[off + 3]!),
       p1: [raw[off + 4]!, raw[off + 5]!, raw[off + 6]!],
       triangleIndex: Math.round(raw[off + 7]!),
-    })
+    }
   }
   return segments
 }
@@ -111,7 +112,9 @@ export async function runGpuMeshSlicer(
   const maxSegments = opts.maxSegments ?? Math.max(1024, totalTriangles * Math.min(numLayers, 16))
 
   if (typeof navigator === 'undefined' || !navigator.gpu) {
-    return referenceMeshSlicer(vertices, indices, opts)
+    return totalTriangles >= 512
+      ? referenceMeshSlicerAsync(vertices, indices, opts)
+      : referenceMeshSlicer(vertices, indices, opts)
   }
 
   try {
@@ -139,7 +142,7 @@ export async function runGpuMeshSlicer(
             { binding: 1, data: vertices },
             { binding: 2, data: indices },
             { binding: 3, data: counterInit, output: true, outputBytes: 4 },
-            { binding: 4, data: new Float32Array(maxSegments * 8), output: true, outputBytes: segOutBytes },
+            { binding: 4, data: new Float32Array(0), output: true, outputBytes: segOutBytes },
           ],
           outputBytes: segOutBytes,
           workgroups: [Math.ceil(totalTriangles / 256), 1, 1],
@@ -161,25 +164,136 @@ export async function runGpuMeshSlicer(
     // Fallback to CPU reference when WebGPU adapter is unavailable
   }
 
-  return referenceMeshSlicer(vertices, indices, opts)
+  return totalTriangles >= 512
+    ? referenceMeshSlicerAsync(vertices, indices, opts)
+    : referenceMeshSlicer(vertices, indices, opts)
 }
 
 function interpEdge(
-  p0: [number, number, number],
+  x0: number, y0: number, z0: number,
   s0: number,
-  p1: [number, number, number],
+  x1: number, y1: number, z1: number,
   s1: number
 ): [number, number, number] {
   const denom = s1 - s0
   if (Math.abs(denom) < 1e-9) {
-    return [(p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5, (p0[2] + p1[2]) * 0.5]
+    return [(x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5]
   }
   const t = Math.max(0, Math.min(1, -s0 / denom))
   return [
-    p0[0] + t * (p1[0] - p0[0]),
-    p0[1] + t * (p1[1] - p0[1]),
-    p0[2] + t * (p1[2] - p0[2]),
+    x0 + t * (x1 - x0),
+    y0 + t * (y1 - y0),
+    z0 + t * (z1 - z0),
   ]
+}
+
+function sliceSingleTriangle(
+  t: number,
+  vertices: Float32Array,
+  indices: Uint32Array,
+  strideFloats: number,
+  posOffset: number,
+  planeN: [number, number, number],
+  firstD: number,
+  layerStep: number,
+  numLayers: number,
+  rawList: number[],
+  segments: SliceSegment[]
+): void {
+  const i0 = indices[t * 3 + 0]!
+  const i1 = indices[t * 3 + 1]!
+  const i2 = indices[t * 3 + 2]!
+
+  const b0 = i0 * strideFloats + posOffset
+  const b1 = i1 * strideFloats + posOffset
+  const b2 = i2 * strideFloats + posOffset
+
+  const p0x = vertices[b0]!, p0y = vertices[b0 + 1]!, p0z = vertices[b0 + 2]!
+  const p1x = vertices[b1]!, p1y = vertices[b1 + 1]!, p1z = vertices[b1 + 2]!
+  const p2x = vertices[b2]!, p2y = vertices[b2 + 1]!, p2z = vertices[b2 + 2]!
+
+  const nx = planeN[0], ny = planeN[1], nz = planeN[2]
+  const d0 = nx * p0x + ny * p0y + nz * p0z
+  const d1 = nx * p1x + ny * p1y + nz * p1z
+  const d2 = nx * p2x + ny * p2y + nz * p2z
+
+  const dMin = Math.min(d0, d1, d2)
+  const dMax = Math.max(d0, d1, d2)
+
+  let lStart = 0
+  let lEnd = numLayers - 1
+
+  if (layerStep > 1e-7 && numLayers > 1) {
+    lStart = Math.max(0, Math.ceil((dMin - firstD) / layerStep))
+    lEnd = Math.min(numLayers - 1, Math.floor((dMax - firstD) / layerStep))
+  } else {
+    if (firstD < dMin || firstD > dMax) return
+    lStart = 0
+    lEnd = 0
+  }
+
+  if (lStart > lEnd) return
+
+  const e1x = p1x - p0x, e1y = p1y - p0y, e1z = p1z - p0z
+  const e2x = p2x - p0x, e2y = p2y - p0y, e2z = p2z - p0z
+  const triNx = e1y * e2z - e1z * e2y
+  const triNy = e1z * e2x - e1x * e2z
+  const triNz = e1x * e2y - e1y * e2x
+  const ccwX = ny * triNz - nz * triNy
+  const ccwY = nz * triNx - nx * triNz
+  const ccwZ = nx * triNy - ny * triNx
+
+  for (let layer = lStart; layer <= lEnd; layer++) {
+    const planeD = firstD + layer * layerStep
+    const s0 = d0 - planeD
+    const s1 = d1 - planeD
+    const s2 = d2 - planeD
+
+    const n0 = s0 < 0
+    const n1 = s1 < 0
+    const n2 = s2 < 0
+    const negCount = (n0 ? 1 : 0) + (n1 ? 1 : 0) + (n2 ? 1 : 0)
+    if (negCount === 0 || negCount === 3) continue
+
+    let soloX: number, soloY: number, soloZ: number, soloS: number
+    let pair0X: number, pair0Y: number, pair0Z: number, pair0S: number
+    let pair1X: number, pair1Y: number, pair1Z: number, pair1S: number
+
+    const soloIsNeg = negCount === 1
+    if (n0 === soloIsNeg) {
+      soloX = p0x; soloY = p0y; soloZ = p0z; soloS = s0
+      pair0X = p1x; pair0Y = p1y; pair0Z = p1z; pair0S = s1
+      pair1X = p2x; pair1Y = p2y; pair1Z = p2z; pair1S = s2
+    } else if (n1 === soloIsNeg) {
+      soloX = p1x; soloY = p1y; soloZ = p1z; soloS = s1
+      pair0X = p0x; pair0Y = p0y; pair0Z = p0z; pair0S = s0
+      pair1X = p2x; pair1Y = p2y; pair1Z = p2z; pair1S = s2
+    } else {
+      soloX = p2x; soloY = p2y; soloZ = p2z; soloS = s2
+      pair0X = p0x; pair0Y = p0y; pair0Z = p0z; pair0S = s0
+      pair1X = p1x; pair1Y = p1y; pair1Z = p1z; pair1S = s1
+    }
+
+    let q1 = interpEdge(soloX, soloY, soloZ, soloS, pair0X, pair0Y, pair0Z, pair0S)
+    let q2 = interpEdge(soloX, soloY, soloZ, soloS, pair1X, pair1Y, pair1Z, pair1S)
+
+    const dx = q2[0] - q1[0], dy = q2[1] - q1[1], dz = q2[2] - q1[2]
+    if (ccwX * dx + ccwY * dy + ccwZ * dz < 0) {
+      const tmp = q1
+      q1 = q2
+      q2 = tmp
+    }
+
+    if (dx * dx + dy * dy + dz * dz < 1e-14) continue
+
+    rawList.push(q1[0], q1[1], q1[2], layer, q2[0], q2[1], q2[2], t)
+    segments.push({
+      p0: q1,
+      p1: q2,
+      layerIndex: layer,
+      triangleIndex: t,
+    })
+  }
 }
 
 /**
@@ -198,102 +312,70 @@ export function referenceMeshSlicer(
   const firstD = opts.firstLayerDistance
   const layerStep = opts.layerStep ?? 0.2
 
-  function getPos(vIdx: number): [number, number, number] {
-    const base = vIdx * strideFloats + posOffset
-    return [vertices[base + 0]!, vertices[base + 1]!, vertices[base + 2]!]
-  }
-
   const rawList: number[] = []
   const segments: SliceSegment[] = []
 
   for (let t = 0; t < totalTriangles; t++) {
-    const i0 = indices[t * 3 + 0]!
-    const i1 = indices[t * 3 + 1]!
-    const i2 = indices[t * 3 + 2]!
-
-    const p0 = getPos(i0)
-    const p1 = getPos(i1)
-    const p2 = getPos(i2)
-
-    const d0 = dot3(planeN, p0)
-    const d1 = dot3(planeN, p1)
-    const d2 = dot3(planeN, p2)
-
-    const dMin = Math.min(d0, d1, d2)
-    const dMax = Math.max(d0, d1, d2)
-
-    let lStart = 0
-    let lEnd = numLayers - 1
-
-    if (layerStep > 1e-7 && numLayers > 1) {
-      lStart = Math.max(0, Math.ceil((dMin - firstD) / layerStep))
-      lEnd = Math.min(numLayers - 1, Math.floor((dMax - firstD) / layerStep))
-    } else {
-      if (firstD < dMin || firstD > dMax) continue
-      lStart = 0
-      lEnd = 0
-    }
-
-    if (lStart > lEnd) continue
-
-    const e1: [number, number, number] = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]]
-    const e2: [number, number, number] = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]]
-    const triN = cross3(e1, e2)
-    const ccwDir = cross3(planeN, triN)
-
-    for (let layer = lStart; layer <= lEnd; layer++) {
-      const planeD = firstD + layer * layerStep
-      const s0 = d0 - planeD
-      const s1 = d1 - planeD
-      const s2 = d2 - planeD
-
-      const n0 = s0 < 0
-      const n1 = s1 < 0
-      const n2 = s2 < 0
-      const negCount = (n0 ? 1 : 0) + (n1 ? 1 : 0) + (n2 ? 1 : 0)
-      if (negCount === 0 || negCount === 3) continue
-
-      let soloP: [number, number, number], soloS: number
-      let pair0P: [number, number, number], pair0S: number
-      let pair1P: [number, number, number], pair1S: number
-
-      const soloIsNeg = negCount === 1
-      if (n0 === soloIsNeg) {
-        soloP = p0; soloS = s0
-        pair0P = p1; pair0S = s1
-        pair1P = p2; pair1S = s2
-      } else if (n1 === soloIsNeg) {
-        soloP = p1; soloS = s1
-        pair0P = p0; pair0S = s0
-        pair1P = p2; pair1S = s2
-      } else {
-        soloP = p2; soloS = s2
-        pair0P = p0; pair0S = s0
-        pair1P = p1; pair1S = s1
-      }
-
-      let q1 = interpEdge(soloP, soloS, pair0P, pair0S)
-      let q2 = interpEdge(soloP, soloS, pair1P, pair1S)
-
-      const dx = q2[0] - q1[0], dy = q2[1] - q1[1], dz = q2[2] - q1[2]
-      if (ccwDir[0] * dx + ccwDir[1] * dy + ccwDir[2] * dz < 0) {
-        const tmp = q1
-        q1 = q2
-        q2 = tmp
-      }
-
-      const segLen = Math.hypot(dx, dy, dz)
-      if (segLen < 1e-7) continue
-
-      rawList.push(q1[0], q1[1], q1[2], layer, q2[0], q2[1], q2[2], t)
-      segments.push({
-        p0: q1,
-        p1: q2,
-        layerIndex: layer,
-        triangleIndex: t,
-      })
-    }
+    sliceSingleTriangle(
+      t,
+      vertices,
+      indices,
+      strideFloats,
+      posOffset,
+      planeN,
+      firstD,
+      layerStep,
+      numLayers,
+      rawList,
+      segments
+    )
   }
+
+  return {
+    rawSegments: new Float32Array(rawList),
+    segments,
+    segmentCount: segments.length,
+  }
+}
+
+/**
+ * Cooperative non-blocking async CPU reference for multi-plane mesh slicing.
+ */
+export async function referenceMeshSlicerAsync(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  opts: SlicerOptions
+): Promise<SlicerResult> {
+  const totalTriangles = Math.floor(indices.length / 3)
+  const numLayers = Math.max(1, opts.numLayers ?? 1)
+  const strideFloats = opts.strideFloats ?? 3
+  const posOffset = opts.posOffset ?? 0
+  const planeN = normalizeVec3(opts.planeNormal ?? [0, 0, 1])
+  const firstD = opts.firstLayerDistance
+  const layerStep = opts.layerStep ?? 0.2
+
+  const rawList: number[] = []
+  const segments: SliceSegment[] = []
+
+  await forEachChunkedAsync(
+    totalTriangles,
+    t => {
+      sliceSingleTriangle(
+        t,
+        vertices,
+        indices,
+        strideFloats,
+        posOffset,
+        planeN,
+        firstD,
+        layerStep,
+        numLayers,
+        rawList,
+        segments
+      )
+    },
+    opts
+  )
 
   return {
     rawSegments: new Float32Array(rawList),

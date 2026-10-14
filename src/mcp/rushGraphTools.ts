@@ -17,6 +17,23 @@ import type { McpGeometryService } from './geometryService'
 import { createStaticToolRegistration } from './staticToolSchemas'
 
 const staticToolRegistration = createStaticToolRegistration()
+const RUSH_COMBINED_GUIDE = RUSH_GRAPH_GUIDE + '\n\n' + RUSH_GRAPH_FUNCTIONAL_GUIDE + '\n\n' + RUSH_GRAPH_UNITS_GUIDE + '\n\n' + RUSH_GRAPH_SKETCH_GUIDE
+const RUSH_GRAPH_JSON_SCHEMA = z.toJSONSchema(rushGraphSchema)
+const RUSH_LANGUAGE_DOCUMENT = {
+  text_guide: RUSH_FRONTEND_GUIDE,
+  language: 'rush/ir-1',
+  mechanical_examples: MECHANICAL_GENERATOR_EXAMPLES,
+  guide: RUSH_COMBINED_GUIDE,
+  sketch_example: RUSH_GRAPH_SKETCH_EXAMPLE,
+  assembly_example: RUSH_GRAPH_ASSEMBLY_EXAMPLE,
+  loft_example: RUSH_GRAPH_LOFT_EXAMPLE,
+  units_example: RUSH_GRAPH_UNITS_EXAMPLE,
+  functional_example: RUSH_GRAPH_FUNCTIONAL_EXAMPLE,
+  schema: RUSH_GRAPH_JSON_SCHEMA,
+  example: RUSH_GRAPH_EXAMPLE,
+  instructions: RUSH_GRAPH_INSTRUCTIONS,
+}
+const RUSH_LANGUAGE_RESOURCE_TEXT = JSON.stringify(RUSH_LANGUAGE_DOCUMENT)
 
 export function registerRushGraphTools(server: McpServer, geometry: McpGeometryService) {
   server = staticToolRegistration(server)
@@ -33,8 +50,7 @@ export function registerRushGraphTools(server: McpServer, geometry: McpGeometryS
     ? result({ error: { code: error.code, path: error.path, message: error.message, ...(error.details === undefined ? {} : { details: error.details }) } }, true)
     : result({ error: { code: 'geometry_check_failed', path: '/', message: 'Geometry execution failed; check generated source with openscad_check for engine diagnostics.' } }, true)
   const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-  const languageDocument = () => ({ text_guide: RUSH_FRONTEND_GUIDE, language: 'rush/ir-1', mechanical_examples: MECHANICAL_GENERATOR_EXAMPLES, guide: RUSH_GRAPH_GUIDE + '\n\n' + RUSH_GRAPH_FUNCTIONAL_GUIDE + '\n\n' + RUSH_GRAPH_UNITS_GUIDE + '\n\n' + RUSH_GRAPH_SKETCH_GUIDE, sketch_example: RUSH_GRAPH_SKETCH_EXAMPLE, assembly_example: RUSH_GRAPH_ASSEMBLY_EXAMPLE, loft_example: RUSH_GRAPH_LOFT_EXAMPLE, units_example: RUSH_GRAPH_UNITS_EXAMPLE, functional_example: RUSH_GRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(rushGraphSchema), example: RUSH_GRAPH_EXAMPLE })
-  server.registerTool('rush_language', { description: 'Read the complete RushGraph language, JSON Schema, examples and workflow before modeling.', inputSchema: z.object({}).strict(), annotations }, async () => result({ ...languageDocument(), instructions: RUSH_GRAPH_INSTRUCTIONS }))
+  server.registerTool('rush_language', { description: 'Read the complete RushGraph language, JSON Schema, examples and workflow before modeling.', inputSchema: z.object({}).strict(), annotations }, async () => result(RUSH_LANGUAGE_DOCUMENT))
   server.registerTool('rush_frontend_compile', {
     description: 'Compile compact Rush/1 to canonical RushGraph JSON and SCAD. Read rush_language text_guide. Route by execution_target: own-nurbs documents go to rush_nurbs_build/evaluate/export; legacy documents go to rush_check/report/export. Compile alone does not build geometry.',
     inputSchema: z.object({ source: z.string().max(262144) }).strict(), annotations,
@@ -45,7 +61,7 @@ export function registerRushGraphTools(server: McpServer, geometry: McpGeometryS
   server.registerResource('rush-language', 'openscad://language/rush-1', {
     title: 'Rush IR/1 language for AI modeling', mimeType: 'application/json',
     description: 'Complete model prompt, JSON Schema, example and execution limitations.',
-  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify({ ...languageDocument(), instructions: RUSH_GRAPH_INSTRUCTIONS }) }] }))
+  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: RUSH_LANGUAGE_RESOURCE_TEXT }] }))
   server.registerTool('rush_compile', {
     title: 'Compile RushGraph document', description: 'Preferred structured frontend for new MCP models. Validate Rush IR/1 JSON and return normalized document, revision hash, generated SCAD and node-to-line map. Does not build geometry or save data. Read openscad://language/rush-1 first.',
     inputSchema: z.object({ document: rushGraphSchema }).strict(), annotations,

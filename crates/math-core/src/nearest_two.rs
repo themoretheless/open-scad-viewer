@@ -1,28 +1,26 @@
-use crate::{Acceleration, V3, dot, nearest_neighbor_accelerated, sub};
+use crate::{Acceleration, V3, dot, nearest_neighbor_accelerated, par_map, sub};
 
 pub type Neighbor = (u32, f64);
 pub type TwoNearest = [Neighbor; 2];
 
 /// Brute-force exact top-2 nearest-neighbor search for every query point.
 pub fn nearest_two(queries: &[V3], targets: &[V3]) -> Vec<TwoNearest> {
-    queries
-        .iter()
-        .map(|&q| {
-            let mut best = (u32::MAX, f64::INFINITY);
-            let mut second = (u32::MAX, f64::INFINITY);
-            for (i, &t) in targets.iter().enumerate() {
-                let d = sub(q, t);
-                let dist = dot(d, d);
-                if dist < best.1 {
-                    second = best;
-                    best = (i as u32, dist);
-                } else if dist < second.1 {
-                    second = (i as u32, dist);
-                }
+    let min_chunk = (16_384usize).checked_div(targets.len().max(1)).unwrap_or(16_384).max(32);
+    par_map(queries, min_chunk, |&q| {
+        let mut best = (u32::MAX, f64::INFINITY);
+        let mut second = (u32::MAX, f64::INFINITY);
+        for (i, &t) in targets.iter().enumerate() {
+            let d = sub(q, t);
+            let dist = dot(d, d);
+            if dist < best.1 {
+                second = best;
+                best = (i as u32, dist);
+            } else if dist < second.1 {
+                second = (i as u32, dist);
             }
-            [best, second]
-        })
-        .collect()
+        }
+        [best, second]
+    })
 }
 
 /// WGSL source for the exact top-2 nearest-neighbor compute shader.

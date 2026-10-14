@@ -219,16 +219,48 @@ pub fn raycast(
     if !finite(o) || !finite(d) || d == [0.; 3] || near(&bvh.bounds, 0, o, d, lo, hi).is_none() {
         return Ok(None);
     }
-    let mut visited = BTreeSet::new();
-    let mut stack = vec![0];
+    let mut visited_inline = [0u64; 16];
+    let mut visited_heap = if count > 1024 {
+        vec![0u64; count.div_ceil(64)]
+    } else {
+        Vec::new()
+    };
+    let visited = if count > 1024 {
+        &mut visited_heap[..]
+    } else {
+        &mut visited_inline[..]
+    };
+    let mut stack_inline = [0usize; 64];
+    let mut stack_sp = 1usize;
+    let mut stack_overflow: Vec<usize> = Vec::new();
+    macro_rules! push_node {
+        ($n:expr) => {
+            if stack_overflow.is_empty() && stack_sp < stack_inline.len() {
+                stack_inline[stack_sp] = $n;
+                stack_sp += 1;
+            } else {
+                stack_overflow.push($n);
+            }
+        };
+    }
     let mut hit: Option<Hit> = None;
-    while let Some(node) = stack.pop() {
+    while let Some(node) = stack_overflow.pop().or_else(|| {
+        if stack_sp > 0 {
+            stack_sp -= 1;
+            Some(stack_inline[stack_sp])
+        } else {
+            None
+        }
+    }) {
         if node >= count {
             continue;
         }
-        if !visited.insert(node) {
+        let word = &mut visited[node >> 6];
+        let mask = 1u64 << (node & 63);
+        if *word & mask != 0 {
             return Err(QueryError::InvalidTree);
         }
+        *word |= mask;
         if near(&bvh.bounds, node, o, d, lo, hi).is_none() {
             continue;
         }
@@ -265,15 +297,15 @@ pub fn raycast(
             };
             match (left_near, right_near) {
                 (Some(a), Some(b)) if a <= b => {
-                    stack.push(right);
-                    stack.push(first);
+                    push_node!(right);
+                    push_node!(first);
                 }
                 (Some(_), Some(_)) => {
-                    stack.push(first);
-                    stack.push(right);
+                    push_node!(first);
+                    push_node!(right);
                 }
-                (Some(_), None) => stack.push(first),
-                (None, Some(_)) => stack.push(right),
+                (Some(_), None) => push_node!(first),
+                (None, Some(_)) => push_node!(right),
                 _ => {}
             }
         }

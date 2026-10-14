@@ -12,7 +12,8 @@ function decodeBase64(value: string): Uint8Array {
   if (!/^[A-Za-z0-9+/]*={0,2}$/u.test(normalized) || normalized.length % 4 !== 0) {
     throw new MeshImportError('invalid-data', 'data_base64 must be standard base64.')
   }
-  return Uint8Array.from(Buffer.from(normalized, 'base64'))
+  const buf = Buffer.from(normalized, 'base64')
+  return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 
 export function registerMeshConvertTool(server: McpServer) {

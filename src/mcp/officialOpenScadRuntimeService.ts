@@ -696,7 +696,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
         format,
         mimeType: terminal.output.mimeType,
         fileName: `model.${format}`,
-        data: new Uint8Array(data),
+        data: new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
         sha256: terminal.output.sha256,
         durationMs: terminal.durationMs,
         logs: terminal.logs,

@@ -970,3 +970,6 @@ mod original_curve_exclusion_tests {
 
 #[path="intersection/planar_scalar.rs"]
 pub mod planar_scalar;
+
+#[path = "intersection/planar_coincidence.rs"]
+pub mod planar_coincidence;

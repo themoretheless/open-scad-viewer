@@ -62,9 +62,11 @@ impl DistanceBvh {
         let axis = (0..3)
             .max_by(|&a, &b| (max[a] - min[a]).total_cmp(&(max[b] - min[b])))
             .unwrap();
-        triangles
-            .sort_by(|a, b| (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis])));
-        let right = triangles.split_off(triangles.len() / 2);
+        let mid = triangles.len() / 2;
+        triangles.select_nth_unstable_by(mid, |a, b| {
+            (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis]))
+        });
+        let right = triangles.split_off(mid);
         Self {
             min,
             max,

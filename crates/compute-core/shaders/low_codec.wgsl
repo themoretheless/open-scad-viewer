@@ -11,9 +11,17 @@ fn low_encode(bits: u32, dtype: u32) -> u32 {
         return sign | select(0x7c00u, 0x7e00u, magnitude > 0x7f800000u);
     }
     let exponent = (bits >> 23u) & 0xffu;
-    let mantissa = bits & 0x7fffffu;
     if exponent >= 143u { return sign | 0x7c00u; }
     if exponent < 102u { return sign; }
+    // Fast hardware path for normal f16 range [2^-14, 65504] where pack2x16float is exact IEEE 754 round-to-nearest-even
+    if exponent >= 113u && exponent <= 142u {
+        let f = bitcast<f32>(bits);
+        let packed = pack2x16float(vec2<f32>(f, 0.0)) & 0xffffu;
+        if (packed & 0x7c00u) != 0u {
+            return packed;
+        }
+    }
+    let mantissa = bits & 0x7fffffu;
     var significand = mantissa;
     var shift = 13u;
     var result = 0u;
@@ -34,11 +42,13 @@ fn low_encode(bits: u32, dtype: u32) -> u32 {
 
 fn low_decode(bits: u32, dtype: u32) -> u32 {
     if dtype == 1u { return bits << 16u; }
-    let sign = (bits & 0x8000u) << 16u;
     let exponent = (bits >> 10u) & 0x1fu;
+    if exponent != 0u && exponent != 0x1fu {
+        return bitcast<u32>(unpack2x16float(bits & 0xffffu).x);
+    }
+    let sign = (bits & 0x8000u) << 16u;
     let mantissa = bits & 0x3ffu;
     if exponent == 0x1fu { return sign | 0x7f800000u | (mantissa << 13u); }
-    if exponent != 0u { return sign | ((exponent + 112u) << 23u) | (mantissa << 13u); }
     if mantissa == 0u { return sign; }
     let highest = 31u - countLeadingZeros(mantissa);
     return sign | ((highest + 103u) << 23u) | ((mantissa << (23u - highest)) & 0x7fffffu);

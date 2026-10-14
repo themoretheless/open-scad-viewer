@@ -1,6 +1,6 @@
 //! Exact-coordinate welding in first-use order; nearby points stay distinct.
 use crate::{MeshView, Result};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct Welded {
     pub positions: Vec<f64>,
@@ -15,8 +15,9 @@ impl Welded {
 /// identical coordinates. Signed zeros share identity; first-use values survive.
 pub fn exact(mesh: &MeshView<'_>) -> Result<Welded> {
     mesh.validate()?;
-    let mut positions = Vec::new();
-    let mut map = BTreeMap::new();
+    let vertex_count = mesh.positions.len() / 3;
+    let mut positions = Vec::with_capacity(mesh.positions.len());
+    let mut map = HashMap::with_capacity(vertex_count);
     let mut indices = Vec::with_capacity(mesh.indices.len());
     for &index in mesh.indices {
         let point = &mesh.positions[index * 3..index * 3 + 3];

@@ -1,12 +1,14 @@
 #![doc = include_str!("../README.md")]
 //! Validated mesh serialization, 3MF OPC packaging and transactional scene export.
 //! Algorithms borrow buffers and do not depend on polygon-core or transport.
+pub mod dxf;
 pub mod export_file;
 pub mod import;
 pub mod export_prepare;
 pub mod mesh_export;
 pub mod model_3mf;
 pub mod package_3mf;
+pub use dxf::{export_dxf_mesh, export_dxf_polylines, import_dxf_polylines};
 pub use math_core::{Error, Result};
 use math_core::{cross, norm, sub};
 pub use mesh_export::{export, export_print_mesh};

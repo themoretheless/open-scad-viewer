@@ -142,12 +142,15 @@ fn plan(v: &Value) -> Result<(Vec<ToolpathLayer>, ToolpathSettings, Mesh)> {
     }
     let index =
         mesh_section::MeshSectionIndex::new(&mesh.view()).map_err(crate::legacy_mesh_error)?;
-    let mut visits = 0usize;
-    let layers = slicer_core::schedule_layers(
+    let visits = std::sync::atomic::AtomicUsize::new(0);
+    let layers = slicer_core::schedule_layers_parallel(
         |z| {
             let section = index.section(z).map_err(crate::legacy_mesh_error)?;
-            visits += section.candidate_triangles;
-            if visits > MAX_SLICE_TRIANGLE_VISITS {
+            let prev = visits.fetch_add(
+                section.candidate_triangles,
+                std::sync::atomic::Ordering::Relaxed,
+            );
+            if prev.saturating_add(section.candidate_triangles) > MAX_SLICE_TRIANGLE_VISITS {
                 return Err(Error::new(
                     "TOOLPATH_WORK_LIMIT",
                     "Slicing exceeded 10000000 triangle visits",
@@ -189,6 +192,7 @@ pub(crate) fn toolpaths(v: &Value) -> Result<Value> {
                     slicer_core::PathRole::Outline => "outline",
                     slicer_core::PathRole::Inset => "inset",
                     slicer_core::PathRole::Hatch => "hatch",
+                    slicer_core::PathRole::SolidSkin => "solid_skin",
                 },
                 "closed": path.closed,
                 "points": path.points,

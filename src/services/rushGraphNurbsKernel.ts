@@ -1,4 +1,5 @@
 import {packNativeGeometrySnapshot} from './nativeGeometrySnapshot'
+import {readNativeSweepPlanarCapFaces} from './geometry/brep'
 import type {ProgressiveBodyBoundaryEvidence} from './geometry/brep'
 import {transformNurbsCurve} from './nurbsCurve';
 import {transformNurbsSurface,transformNurbsSurfacePatches} from './nurbsSurface';
@@ -728,7 +729,8 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
         }:undefined;
         const replayOwner=exactMiterPlacements.get(sourceNode)?.body
         const sweepMiterReplay=replayOwner?readMiterAffineReplayRouting(replayOwner):null
-        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceConstruction&&'stationReconstruction' in sourceConstruction?{sweepStationReconstruction:sourceConstruction.stationReconstruction}:{}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document,packNativeGeometrySnapshot);
+        const sweepPlanarCapFaces=sourceValue.kind==='brep'?readNativeSweepPlanarCapFaces(sourceValue.data):undefined
+        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepPlanarCapFaces!==undefined?{sweepPlanarCapFaces}:{}),...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceConstruction&&'stationReconstruction' in sourceConstruction?{sweepStationReconstruction:sourceConstruction.stationReconstruction}:{}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document,packNativeGeometrySnapshot);
         return {...base,...(mesh?{mesh}:{}),nativeGeometry};
     }
     return { ...base, ...(request.action === 'build' && root.kind === 'mesh' ? { mesh: root.data } : {}) };

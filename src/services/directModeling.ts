@@ -393,7 +393,20 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
     return {id,name:sketch.name+' · 3D',brep,mesh:tessellateNurbsBrep(brep,16)}
   }
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
-  return { id, name: sketch.name + ' · 3D', mesh: { positions: Float64Array.from(worldPoints(Array.from({length:built.positions.length/3},(_,i)=>Array.from(built.positions.slice(i*3,i*3+3))),sketch.plane).flat()), indices: built.indices.slice() } }
+  const count = built.positions.length / 3
+  const pts = new Array<number[]>(count)
+  for (let i = 0, j = 0; i < count; i++, j += 3) {
+    pts[i] = [built.positions[j], built.positions[j + 1], built.positions[j + 2]]
+  }
+  const world = worldPoints(pts, sketch.plane)
+  const positions = new Float64Array(built.positions.length)
+  for (let i = 0, j = 0; i < world.length; i++, j += 3) {
+    const wp = world[i]
+    positions[j] = wp[0]
+    positions[j + 1] = wp[1]
+    positions[j + 2] = wp[2]
+  }
+  return { id, name: sketch.name + ' · 3D', mesh: { positions, indices: built.indices.slice() } }
 }
 
 /** Author the sketch extrusion before deriving a display mesh. */

@@ -37,7 +37,7 @@ export function materializeOpenScadRange(
   context: OpenScadValueSemanticsContext,
 ): Value[] {
   const output: Value[] = []
-  if (range.step === 0 || ![range.start, range.step, range.end].every(Number.isFinite)) {
+  if (range.step === 0 || !(Number.isFinite(range.start) && Number.isFinite(range.step) && Number.isFinite(range.end))) {
     context.warn('Invalid range bounds produce an empty range')
     return register(output, 'range', context)
   }

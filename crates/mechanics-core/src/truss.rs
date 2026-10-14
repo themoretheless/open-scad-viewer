@@ -90,7 +90,7 @@ fn validate(model: &Model) -> Result<Vec<Bar>> {
     {
         return Err(invalid("Node coordinates and loads must be finite"));
     }
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::HashSet::with_capacity(model.members.len());
     let mut bars = Vec::with_capacity(model.members.len());
     for member in &model.members {
         let [a, b] = member.nodes;

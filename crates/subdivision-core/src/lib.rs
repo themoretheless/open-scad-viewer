@@ -39,7 +39,7 @@ impl Cage {
     /// Edge map without any validation. Only for cages already proven valid:
     /// malformed indices or nonmanifold edges are the caller's responsibility.
     fn build_edges(&self) -> Edges {
-        let mut edges = Edges::default();
+        let mut edges = Edges::with_capacity_and_hasher(self.faces.len() * 2, Default::default());
         for (fi, f) in self.faces.iter().enumerate() {
             for i in 0..f.len() {
                 let a = f[i];
@@ -145,25 +145,23 @@ impl Cage {
                 return Err(error("Subdivision face budget exceeded"));
             }
             let edges = c.build_edges();
-            let fp: Vec<_> = c
-                .faces
-                .iter()
-                .map(|f| avg(f.iter().map(|&i| c.vertices[i]), f.len()))
-                .collect();
-            let mut vertices = Vec::with_capacity(c.vertices.len() + edges.len() + fp.len());
+            let fp: Vec<_> = math_core::par_map(&c.faces, 64, |f| {
+                avg(f.iter().map(|&i| c.vertices[i]), f.len())
+            });
             let mut adjacency = vec![Vec::new(); c.vertices.len()];
             for entry in &edges {
                 adjacency[entry.0.0].push(entry);
                 adjacency[entry.0.1].push(entry);
             }
-            for (v, &p) in c.vertices.iter().enumerate() {
+            let mut vertices = math_core::par_map_index(c.vertices.len(), 64, |v| {
+                let p = c.vertices[v];
                 let adjacent = &adjacency[v];
                 let boundary: Vec<_> = adjacent
                     .iter()
                     .filter(|(_, u)| u.len() == 1)
                     .map(|((a, b), _)| c.vertices[if *a == v { *b } else { *a }])
                     .collect();
-                let q = if boundary.len() == 2 {
+                if boundary.len() == 2 {
                     std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
                 } else {
                     let faces: FxHashSet<_> = adjacent
@@ -179,22 +177,26 @@ impl Cage {
                         n,
                     );
                     std::array::from_fn(|k| (f[k] + 2. * r[k] + (n as f64 - 3.) * p[k]) / n as f64)
-                };
-                vertices.push(q);
-            }
-            let mut ei = FxHashMap::default();
+                }
+            });
+            vertices.reserve(edges.len() + fp.len());
+            let mut ei = FxHashMap::with_capacity_and_hasher(edges.len(), Default::default());
             for (&(a, b), u) in &edges {
                 ei.insert((a, b), vertices.len());
-                let mut pts = vec![c.vertices[a], c.vertices[b]];
-                if u.len() == 2 {
-                    pts.extend(u.iter().map(|(f, _)| fp[*f]));
-                }
-                vertices.push(avg(pts.iter().copied(), pts.len()));
+                let ep = if u.len() == 2 {
+                    avg(
+                        [c.vertices[a], c.vertices[b], fp[u[0].0], fp[u[1].0]].into_iter(),
+                        4,
+                    )
+                } else {
+                    avg([c.vertices[a], c.vertices[b]].into_iter(), 2)
+                };
+                vertices.push(ep);
             }
             let offset = vertices.len();
             vertices.extend(fp);
-            let mut faces = Vec::new();
-            let mut next_ids = Vec::new();
+            let mut faces = Vec::with_capacity(count);
+            let mut next_ids = Vec::with_capacity(count);
             for (fi, f) in c.faces.iter().enumerate() {
                 for i in 0..f.len() {
                     faces.push(vec![
@@ -214,9 +216,270 @@ impl Cage {
             face_ids: ids,
         })
     }
+
+    /// Catmull–Clark subdivision with DeRose semi-sharp edge and vertex creases.
+    /// `edge_creases` maps `(a, b)` vertex indices to sharpness $s \in (0, 10]$,
+    /// and `vertex_creases` maps vertex indices to sharpness $s \in (0, 10]$.
+    /// At each refinement level, sharpness decays by $s \leftarrow \max(s - 1, 0)$,
+    /// interpolating smoothly between sharp ($s \ge 1$) and smooth ($s = 0$) rules.
+    pub fn subdivide_with_creases(
+        &self,
+        levels: usize,
+        edge_creases: &[(usize, usize, f64)],
+        vertex_creases: &[(usize, f64)],
+    ) -> Result<Refined> {
+        if levels > 5 {
+            return Err(error("Subdivision levels must be 0..5"));
+        }
+        self.validate()?;
+        let mut edge_sharp = FxHashMap::default();
+        for &(a, b, s) in edge_creases {
+            if a >= self.vertices.len()
+                || b >= self.vertices.len()
+                || a == b
+                || !s.is_finite()
+                || !(0.0..=10.0).contains(&s)
+            {
+                return Err(error("Invalid edge crease specification"));
+            }
+            if s > 0.0 {
+                edge_sharp.insert(edge(a, b), s);
+            }
+        }
+        let mut vert_sharp = FxHashMap::default();
+        for &(v, s) in vertex_creases {
+            if v >= self.vertices.len() || !s.is_finite() || !(0.0..=10.0).contains(&s) {
+                return Err(error("Invalid vertex crease specification"));
+            }
+            if s > 0.0 {
+                vert_sharp.insert(v, s);
+            }
+        }
+
+        let mut c = self.clone();
+        let mut ids: Vec<_> = (0..c.faces.len()).collect();
+        for _ in 0..levels {
+            let count: usize = c.faces.iter().map(Vec::len).sum();
+            if count > 25_000 {
+                return Err(error("Subdivision face budget exceeded"));
+            }
+            let edges = c.build_edges();
+            let fp: Vec<_> = c
+                .faces
+                .iter()
+                .map(|f| avg(f.iter().map(|&i| c.vertices[i]), f.len()))
+                .collect();
+            let mut vertices = Vec::with_capacity(c.vertices.len() + edges.len() + fp.len());
+            let mut adjacency = vec![Vec::new(); c.vertices.len()];
+            for entry in &edges {
+                adjacency[entry.0.0].push(entry);
+                adjacency[entry.0.1].push(entry);
+            }
+            for (v, &p) in c.vertices.iter().enumerate() {
+                let adjacent = &adjacency[v];
+                let boundary: Vec<_> = adjacent
+                    .iter()
+                    .filter(|(_, u)| u.len() == 1)
+                    .map(|((a, b), _)| c.vertices[if *a == v { *b } else { *a }])
+                    .collect();
+                let faces: FxHashSet<_> = adjacent
+                    .iter()
+                    .flat_map(|(_, u)| u.iter().map(|(f, _)| *f))
+                    .collect();
+                let n = adjacent.len();
+                let f = avg(faces.iter().map(|&i| fp[i]), faces.len());
+                let r = avg(
+                    adjacent.iter().map(|((a, b), _)| {
+                        avg([c.vertices[*a], c.vertices[*b]].into_iter(), 2)
+                    }),
+                    n,
+                );
+                let smooth_q: Point = if boundary.len() == 2 {
+                    std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
+                } else {
+                    std::array::from_fn(|k| (f[k] + 2. * r[k] + (n as f64 - 3.) * p[k]) / n as f64)
+                };
+
+                let sharp_incident: Vec<_> = adjacent
+                    .iter()
+                    .filter_map(|&(&(a, b), _)| {
+                        edge_sharp.get(&(a, b)).copied().filter(|&s| s > 0.0).map(|s| {
+                            let neighbor = c.vertices[if a == v { b } else { a }];
+                            (neighbor, s)
+                        })
+                    })
+                    .collect();
+                let v_sharp = vert_sharp.get(&v).copied().unwrap_or(0.0);
+                let q = if v_sharp > 0.0 || sharp_incident.len() >= 3 {
+                    let s = if v_sharp > 0.0 {
+                        v_sharp
+                    } else {
+                        sharp_incident.iter().map(|x| x.1).sum::<f64>() / sharp_incident.len() as f64
+                    };
+                    let t = s.clamp(0.0, 1.0);
+                    std::array::from_fn(|k| (1.0 - t) * smooth_q[k] + t * p[k])
+                } else if sharp_incident.len() == 2 {
+                    let s = 0.5 * (sharp_incident[0].1 + sharp_incident[1].1);
+                    let t = s.clamp(0.0, 1.0);
+                    let crease_q: Point = std::array::from_fn(|k| {
+                        (6.0 * p[k] + sharp_incident[0].0[k] + sharp_incident[1].0[k]) / 8.0
+                    });
+                    std::array::from_fn(|k| (1.0 - t) * smooth_q[k] + t * crease_q[k])
+                } else {
+                    smooth_q
+                };
+                vertices.push(q);
+            }
+            let mut ei = FxHashMap::with_capacity_and_hasher(edges.len(), Default::default());
+            let mut next_edge_sharp = FxHashMap::default();
+            for (&(a, b), u) in &edges {
+                let e_idx = vertices.len();
+                ei.insert((a, b), e_idx);
+                let mid = avg([c.vertices[a], c.vertices[b]].into_iter(), 2);
+                let smooth_e = if u.len() == 2 {
+                    avg(
+                        [c.vertices[a], c.vertices[b], fp[u[0].0], fp[u[1].0]].into_iter(),
+                        4,
+                    )
+                } else {
+                    mid
+                };
+                let s = edge_sharp.get(&(a, b)).copied().unwrap_or(0.0);
+                let t = s.clamp(0.0, 1.0);
+                let ep = std::array::from_fn(|k| (1.0 - t) * smooth_e[k] + t * mid[k]);
+                vertices.push(ep);
+                if s > 1.0 {
+                    next_edge_sharp.insert(edge(a, e_idx), s - 1.0);
+                    next_edge_sharp.insert(edge(b, e_idx), s - 1.0);
+                }
+            }
+            let mut next_vert_sharp = FxHashMap::default();
+            for (&v, &s) in &vert_sharp {
+                if s > 1.0 {
+                    next_vert_sharp.insert(v, s - 1.0);
+                }
+            }
+            let offset = vertices.len();
+            vertices.extend(fp);
+            let mut faces = Vec::with_capacity(count);
+            let mut next_ids = Vec::with_capacity(count);
+            for (fi, f) in c.faces.iter().enumerate() {
+                for i in 0..f.len() {
+                    faces.push(vec![
+                        f[i],
+                        ei[&edge(f[i], f[(i + 1) % f.len()])],
+                        offset + fi,
+                        ei[&edge(f[(i + f.len() - 1) % f.len()], f[i])],
+                    ]);
+                    next_ids.push(ids[fi]);
+                }
+            }
+            c = Cage { vertices, faces };
+            ids = next_ids;
+            edge_sharp = next_edge_sharp;
+            vert_sharp = next_vert_sharp;
+        }
+        Ok(Refined {
+            cage: c,
+            face_ids: ids,
+        })
+    }
+
+    /// Loop subdivision for triangle control cages ($C^2$ continuous on regular meshes).
+    /// Each triangle is split into 4 triangles per refinement level.
+    pub fn subdivide_loop(&self, levels: usize) -> Result<Refined> {
+        if levels > 5 {
+            return Err(error("Subdivision levels must be 0..5"));
+        }
+        self.validate()?;
+        if self.faces.iter().any(|f| f.len() != 3) {
+            return Err(error("Loop subdivision requires a pure triangle cage"));
+        }
+        let mut c = self.clone();
+        let mut ids: Vec<_> = (0..c.faces.len()).collect();
+        for _ in 0..levels {
+            let count: usize = c.faces.iter().map(Vec::len).sum();
+            if count > 25_000 {
+                return Err(error("Subdivision face budget exceeded"));
+            }
+            let edges = c.build_edges();
+            let mut adjacency = vec![Vec::new(); c.vertices.len()];
+            for entry in &edges {
+                adjacency[entry.0.0].push(entry);
+                adjacency[entry.0.1].push(entry);
+            }
+            let mut vertices = math_core::par_map_index(c.vertices.len(), 64, |v| {
+                let p = c.vertices[v];
+                let adjacent = &adjacency[v];
+                let boundary: Vec<_> = adjacent
+                    .iter()
+                    .filter(|(_, u)| u.len() == 1)
+                    .map(|((a, b), _)| c.vertices[if *a == v { *b } else { *a }])
+                    .collect();
+                if boundary.len() == 2 {
+                    std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
+                } else {
+                    let n = adjacent.len();
+                    let beta = if n == 3 {
+                        3.0 / 16.0
+                    } else {
+                        let cos_term = 3.0 / 8.0 + 0.25 * (2.0 * std::f64::consts::PI / n as f64).cos();
+                        (5.0 / 8.0 - cos_term * cos_term) / n as f64
+                    };
+                    let mut sum = [0.0; 3];
+                    for &(&(a, b), _) in adjacent {
+                        let nb = c.vertices[if a == v { b } else { a }];
+                        for k in 0..3 {
+                            sum[k] += nb[k];
+                        }
+                    }
+                    std::array::from_fn(|k| (1.0 - n as f64 * beta) * p[k] + beta * sum[k])
+                }
+            });
+            vertices.reserve(edges.len());
+            let mut ei = FxHashMap::default();
+            for (&(a, b), u) in &edges {
+                ei.insert((a, b), vertices.len());
+                let ep = if u.len() == 2 {
+                    let opp = |fi: usize| -> Point {
+                        let f = &c.faces[fi];
+                        let idx = *f.iter().find(|&&v| v != a && v != b).unwrap();
+                        c.vertices[idx]
+                    };
+                    let o0 = opp(u[0].0);
+                    let o1 = opp(u[1].0);
+                    std::array::from_fn(|k| {
+                        0.375 * (c.vertices[a][k] + c.vertices[b][k]) + 0.125 * (o0[k] + o1[k])
+                    })
+                } else {
+                    avg([c.vertices[a], c.vertices[b]].into_iter(), 2)
+                };
+                vertices.push(ep);
+            }
+            let mut faces = Vec::with_capacity(c.faces.len() * 4);
+            let mut next_ids = Vec::with_capacity(c.faces.len() * 4);
+            for (fi, f) in c.faces.iter().enumerate() {
+                let (v0, v1, v2) = (f[0], f[1], f[2]);
+                let e01 = ei[&edge(v0, v1)];
+                let e12 = ei[&edge(v1, v2)];
+                let e20 = ei[&edge(v2, v0)];
+                faces.push(vec![v0, e01, e20]);
+                faces.push(vec![v1, e12, e01]);
+                faces.push(vec![v2, e20, e12]);
+                faces.push(vec![e01, e12, e20]);
+                next_ids.extend([ids[fi]; 4]);
+            }
+            c = Cage { vertices, faces };
+            ids = next_ids;
+        }
+        Ok(Refined {
+            cage: c,
+            face_ids: ids,
+        })
+    }
 }
 impl Refined {
-    /// Fan triangulation of convex faces. Concave/folded faces are not certified.
+    /// Triangulate faces with ear-clipping fallback for concave polygons.
     pub fn triangulate(&self) -> Result<(geometry_ops::Triangles, Vec<usize>)> {
         // `Refined` fields are public, so callers may have mutated the cage:
         // this is a public entry point and keeps the full input validation.
@@ -227,9 +490,71 @@ impl Refined {
             return Err(error("Invalid face identity count"));
         }
         for (fi, f) in self.cage.faces.iter().enumerate() {
-            for i in 1..f.len() - 1 {
-                indices.extend([f[0], f[i], f[i + 1]]);
-                ids.push(self.face_ids[fi]);
+            if f.len() <= 4 {
+                for i in 1..f.len() - 1 {
+                    indices.extend([f[0], f[i], f[i + 1]]);
+                    ids.push(self.face_ids[fi]);
+                }
+            } else {
+                // Ear-clipping along dominant Newell normal projection for N-gons
+                let mut n = [0.0; 3];
+                for i in 0..f.len() {
+                    let p = self.cage.vertices[f[i]];
+                    let q = self.cage.vertices[f[(i + 1) % f.len()]];
+                    n[0] += (p[1] - q[1]) * (p[2] + q[2]);
+                    n[1] += (p[2] - q[2]) * (p[0] + q[0]);
+                    n[2] += (p[0] - q[0]) * (p[1] + q[1]);
+                }
+                let (ax, ay, sign) = if n[2].abs() >= n[0].abs() && n[2].abs() >= n[1].abs() {
+                    (0, 1, n[2].signum())
+                } else if n[1].abs() >= n[0].abs() {
+                    (2, 0, n[1].signum())
+                } else {
+                    (1, 2, n[0].signum())
+                };
+                let proj = |vi: usize| -> [f64; 2] {
+                    let p = self.cage.vertices[vi];
+                    [p[ax], p[ay] * sign]
+                };
+                let cross2 = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| {
+                    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+                };
+                let in_tri = |p: [f64; 2], a: [f64; 2], b: [f64; 2], c: [f64; 2]| {
+                    cross2(a, b, p) >= -1e-12 && cross2(b, c, p) >= -1e-12 && cross2(c, a, p) >= -1e-12
+                };
+                let mut rem = f.clone();
+                while rem.len() > 3 {
+                    let m = rem.len();
+                    let mut clipped = false;
+                    for i in 0..m {
+                        let prev = rem[(i + m - 1) % m];
+                        let curr = rem[i];
+                        let next = rem[(i + 1) % m];
+                        let (pa, pb, pc) = (proj(prev), proj(curr), proj(next));
+                        if cross2(pa, pb, pc) <= 1e-12 {
+                            continue;
+                        }
+                        if rem
+                            .iter()
+                            .all(|&v| v == prev || v == curr || v == next || !in_tri(proj(v), pa, pb, pc))
+                        {
+                            indices.extend([prev, curr, next]);
+                            ids.push(self.face_ids[fi]);
+                            rem.remove(i);
+                            clipped = true;
+                            break;
+                        }
+                    }
+                    if !clipped {
+                        indices.extend([rem[0], rem[1], rem[2]]);
+                        ids.push(self.face_ids[fi]);
+                        rem.remove(1);
+                    }
+                }
+                if rem.len() == 3 {
+                    indices.extend([rem[0], rem[1], rem[2]]);
+                    ids.push(self.face_ids[fi]);
+                }
             }
         }
         Ok((
@@ -389,6 +714,46 @@ mod tests {
             }
         }
         edges.values().filter(|&&n| n == 1).count()
+    }
+    #[test]
+    fn semi_sharp_creases_pin_corners_and_edges() {
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let smooth = cage.subdivide(2).unwrap();
+        let creased = cage
+            .subdivide_with_creases(
+                2,
+                &[(0, 1, 10.0), (1, 2, 10.0), (2, 3, 10.0), (3, 0, 10.0)],
+                &[(0, 10.0)],
+            )
+            .unwrap();
+        // Vertex 0 has sharpness 10.0 so it stays pinned at [0., 0., 0.]
+        assert_eq!(creased.cage.vertices[0], [0., 0., 0.]);
+        assert_ne!(smooth.cage.vertices[0], [0., 0., 0.]);
+    }
+    #[test]
+    fn loop_subdivision_refines_triangle_cage() {
+        let tetra = Cage {
+            vertices: vec![
+                [0., 0., 0.],
+                [2., 0., 0.],
+                [1., 2., 0.],
+                [1., 0.8, 2.],
+            ],
+            faces: vec![
+                vec![0, 2, 1],
+                vec![0, 1, 3],
+                vec![1, 2, 3],
+                vec![2, 0, 3],
+            ],
+        };
+        let refined = tetra.subdivide_loop(2).unwrap();
+        assert_eq!(refined.cage.faces.len(), 64);
+        assert!(refined.cage.faces.iter().all(|f| f.len() == 3));
+        assert!(refined.triangulate().is_ok());
     }
 }
 

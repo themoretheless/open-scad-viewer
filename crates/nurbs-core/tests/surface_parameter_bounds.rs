@@ -56,3 +56,27 @@ fn rational_quarter_cylinder_bounds_cover_independent_quotient_derivatives() {
         assert!(b.derivative_norm_upper_bounds[0] >= dx.hypot(dy));
     }
 }
+
+#[test]
+fn short_knot_spans_convert_local_jets_to_authored_parameter_units() {
+    let s = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![2., 2., 2.125, 2.125],
+        knots_v: vec![-1., -1., -0.75, -0.75],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 3., 4.]],
+            vec![vec![2., 0., 0.], vec![2., 3., 4.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let b = surface_parameter_bounds::inspect(&s, 1).unwrap();
+    for (bound, exact) in b.derivative_norm_upper_bounds.into_iter().zip([16., 20.]) {
+        assert!(
+            exact <= bound && bound < exact * (1. + 1e-10),
+            "{bound} vs {exact}"
+        );
+    }
+}

@@ -11,11 +11,21 @@ pub mod geometry {
     pub use crate::coordinate_frame;
     pub use crate::interval_eval;
     pub use crate::polynomial;
+    pub use crate::bezier_extraction;
+    pub use crate::compensated;
+    pub use crate::convex_distance;
+    pub use crate::core;
+    pub use crate::dual;
+    pub use crate::interval_newton;
+    pub use crate::normal_cone;
+    pub use crate::numerics;
+    pub use crate::obb_tree;
+    pub use crate::robust_solvers;
+    pub use crate::sturm;
 }
 
 /// Existing modules for curves.
 pub mod curves {
-    pub use crate::curve_reconstruction;
     pub use crate::primitives;
     pub use crate::paths;
     pub use crate::closed_spline;
@@ -38,10 +48,15 @@ pub mod curves {
     pub use crate::rack;
     pub use crate::thread;
     pub use crate::formula;
+    pub use crate::curve_reconstruction;
 }
 
 /// Existing modules for surfaces.
 pub mod surfaces {
+    pub use crate::wave_surface;
+    pub use crate::superellipsoid;
+    pub use crate::optical_shapes;
+    pub use crate::wing_loft;
     pub use crate::function_surface;
     pub use crate::boundary_fill;
     pub use crate::coons;
@@ -70,6 +85,12 @@ pub mod surfaces {
     pub use crate::sections;
     pub use crate::section_projection;
     pub use crate::section_phase;
+    pub use crate::circle_sweep_repair;
+    pub use crate::construct;
+    pub use crate::miter_section_correction;
+    pub use crate::section_circle_repair;
+    pub use crate::sweep_section_projection;
+    pub use crate::sweeps;
 }
 
 /// Existing modules for editing.
@@ -83,6 +104,7 @@ pub mod editing {
     pub use crate::morph;
     pub use crate::fairing;
     pub use crate::curve_extension;
+    pub use crate::editing;
 }
 
 /// Existing modules for joining.
@@ -96,6 +118,7 @@ pub mod joining {
     pub use crate::circle_transition;
     pub use crate::ellipse_transition;
     pub use crate::circle_rectangle_transition;
+    pub use crate::join;
 }
 
 /// Existing modules for offsets.
@@ -104,11 +127,11 @@ pub mod offsets {
     pub use crate::curve_offset_join;
     pub use crate::curve_offset_wire;
     pub use crate::surface_offset;
+    pub use crate::offset;
 }
 
 /// Existing modules for queries.
 pub mod queries {
-    pub use crate::frechet;
     pub use crate::curve_differential;
     pub use crate::surface_differential;
     pub use crate::curve_measure;
@@ -129,10 +152,15 @@ pub mod queries {
     pub use crate::radial_bounds;
     pub use crate::geodesic;
     pub use crate::unrolling;
+    pub use crate::frechet;
+    pub use crate::analysis;
+    pub use crate::distance;
+    pub use crate::surface_occlusion;
 }
 
 /// Existing modules for parameterization.
 pub mod parameterization {
+    pub use crate::periodic_trim;
     pub use crate::curve_pullback;
     pub use crate::periodic_seam;
     pub use crate::trim_point;
@@ -146,6 +174,7 @@ pub mod parameterization {
     pub use crate::chord_fill_selection;
     pub use crate::surface_parameter_bounds;
     pub use crate::trimmed_surface_distance;
+    pub use crate::trim;
 }
 
 /// Existing modules for validation.
@@ -167,6 +196,9 @@ pub mod validation {
     pub use crate::sweep_seam_audit;
     pub use crate::trim_region_audit;
     pub use crate::trim_simplicity;
+    pub use crate::certificates;
+    pub use crate::retained_wall_coefficients;
+    pub use crate::retained_wall_domain_certificate;
 }
 
 /// Existing modules for meshing.
@@ -174,4 +206,5 @@ pub mod meshing {
     pub use crate::curve_tessellation;
     pub use crate::surface_tessellation;
     pub use crate::shared_tessellation;
+    pub use crate::tessellation;
 }

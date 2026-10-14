@@ -18,10 +18,10 @@ impl value_codec::Serialize for Circle {
 
 impl<'de> value_codec::Deserialize<'de> for Circle {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
+        let mut object = match value {
+            value_codec::Value::Object(map) => map,
+            _ => return Err(value_codec::error("Expected object")),
+        };
         let center: usize = value_codec::Deserialize::from_value(
             object
                 .remove("center")
@@ -156,18 +156,108 @@ impl value_codec::Serialize for Constraint {
                 );
                 value_codec::Value::Object(object)
             }
+            Self::Angle {
+                a,
+                b,
+                c,
+                d,
+                radians,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("c".into(), value_codec::Serialize::to_value(c));
+                object.insert("d".into(), value_codec::Serialize::to_value(d));
+                object.insert("radians".into(), value_codec::Serialize::to_value(radians));
+                object.insert("kind".into(), value_codec::Value::String("angle".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::PointToLineDistance {
+                point,
+                a,
+                b,
+                value,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("point".into(), value_codec::Serialize::to_value(point));
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("value".into(), value_codec::Serialize::to_value(value));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("point_to_line_distance".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::Midpoint { point, a, b } => {
+                let mut object = value_codec::Map::new();
+                object.insert("point".into(), value_codec::Serialize::to_value(point));
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("kind".into(), value_codec::Value::String("midpoint".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Symmetric {
+                a,
+                b,
+                axis_a,
+                axis_b,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("axis_a".into(), value_codec::Serialize::to_value(axis_a));
+                object.insert("axis_b".into(), value_codec::Serialize::to_value(axis_b));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("symmetric".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::Collinear { a, b, c } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("c".into(), value_codec::Serialize::to_value(c));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("collinear".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::Concentric { a, b } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("concentric".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::EqualRadius { a, b } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("equal_radius".into()),
+                );
+                value_codec::Value::Object(object)
+            }
         }
     }
 }
 
 impl<'de> value_codec::Deserialize<'de> for Constraint {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value["kind"].as_str().unwrap_or("") {
+        let mut object = match value {
+            value_codec::Value::Object(map) => map,
+            _ => return Err(value_codec::error("Expected object")),
+        };
+        let kind = object.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+        match kind {
             "fix" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let point: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("point")
@@ -181,10 +271,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Fix { point, at })
             }
             "horizontal" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -198,10 +284,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Horizontal { a, b })
             }
             "vertical" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -215,10 +297,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Vertical { a, b })
             }
             "coincident" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -232,10 +310,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Coincident { a, b })
             }
             "distance" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -254,10 +328,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Distance { a, b, value })
             }
             "parallel" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -281,10 +351,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Parallel { a, b, c, d })
             }
             "perpendicular" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -308,10 +374,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Perpendicular { a, b, c, d })
             }
             "equal_length" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -335,10 +397,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::EqualLength { a, b, c, d })
             }
             "radius" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let circle: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("circle")
@@ -352,10 +410,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::Radius { circle, value })
             }
             "point_on_circle" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let point: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("point")
@@ -369,10 +423,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::PointOnCircle { point, circle })
             }
             "tangent_line_circle" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -391,10 +441,6 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                 Ok(Self::TangentLineCircle { a, b, circle })
             }
             "tangent_circles" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
                 let a: usize = value_codec::Deserialize::from_value(
                     object
                         .remove("a")
@@ -411,6 +457,158 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                         .ok_or_else(|| value_codec::error("Missing field internal"))?,
                 )?;
                 Ok(Self::TangentCircles { a, b, internal })
+            }
+            "angle" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let c: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("c")
+                        .ok_or_else(|| value_codec::error("Missing field c"))?,
+                )?;
+                let d: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("d")
+                        .ok_or_else(|| value_codec::error("Missing field d"))?,
+                )?;
+                let radians: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radians")
+                        .ok_or_else(|| value_codec::error("Missing field radians"))?,
+                )?;
+                Ok(Self::Angle {
+                    a,
+                    b,
+                    c,
+                    d,
+                    radians,
+                })
+            }
+            "point_to_line_distance" => {
+                let point: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("point")
+                        .ok_or_else(|| value_codec::error("Missing field point"))?,
+                )?;
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let value: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("value")
+                        .ok_or_else(|| value_codec::error("Missing field value"))?,
+                )?;
+                Ok(Self::PointToLineDistance {
+                    point,
+                    a,
+                    b,
+                    value,
+                })
+            }
+            "midpoint" => {
+                let point: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("point")
+                        .ok_or_else(|| value_codec::error("Missing field point"))?,
+                )?;
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                Ok(Self::Midpoint { point, a, b })
+            }
+            "symmetric" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let axis_a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("axis_a")
+                        .ok_or_else(|| value_codec::error("Missing field axis_a"))?,
+                )?;
+                let axis_b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("axis_b")
+                        .ok_or_else(|| value_codec::error("Missing field axis_b"))?,
+                )?;
+                Ok(Self::Symmetric {
+                    a,
+                    b,
+                    axis_a,
+                    axis_b,
+                })
+            }
+            "collinear" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let c: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("c")
+                        .ok_or_else(|| value_codec::error("Missing field c"))?,
+                )?;
+                Ok(Self::Collinear { a, b, c })
+            }
+            "concentric" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                Ok(Self::Concentric { a, b })
+            }
+            "equal_radius" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                Ok(Self::EqualRadius { a, b })
             }
             _ => Err(value_codec::error("Unknown enum variant")),
         }
@@ -438,10 +636,10 @@ impl value_codec::Serialize for Sketch {
 
 impl<'de> value_codec::Deserialize<'de> for Sketch {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
+        let mut object = match value {
+            value_codec::Value::Object(map) => map,
+            _ => return Err(value_codec::error("Expected object")),
+        };
         let points: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
             object
                 .remove("points")

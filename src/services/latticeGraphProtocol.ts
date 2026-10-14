@@ -9,6 +9,13 @@ export interface NominalLatticeGraph {
   nodes: TrussVector[]
   edges: [number, number][]
 }
+function allFinite(values: ArrayLike<number>): boolean {
+  for (let i = 0; i < values.length; i++) {
+    if (!Number.isFinite(values[i])) return false
+  }
+  return true
+}
+
 export function checkLatticeGraphMeshInput(mesh: LatticeGraphMesh): void {
   const meshError='Nominal lattice analysis requires a triangle mesh within 100000 triangles and 16 MiB of owned buffers.'
   if (!mesh || !(mesh.vertices instanceof Float32Array) || !(mesh.indices instanceof Uint32Array)
@@ -18,7 +25,7 @@ export function checkLatticeGraphMeshInput(mesh: LatticeGraphMesh): void {
     throw new Error(meshError)
   }
   if (!fitsClonedBufferBudget([mesh.vertices, mesh.indices, mesh.transform], 16 * 1024 * 1024)) throw new Error(meshError)
-  if (!mesh.transform.every(Number.isFinite) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) {
+  if (!allFinite(mesh.transform) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) {
     throw new Error('Nominal graph placement must be finite and affine.')
   }
 }
@@ -39,8 +46,8 @@ export function isNominalLatticeGraph(value: unknown): value is NominalLatticeGr
     || !graph.edges.length || graph.edges.length > 400) return false
   const coordinates = new Set<string>(), members = new Set<string>()
   for (const node of graph.nodes) {
-    if (!Array.isArray(node) || node.length !== 3 || ![...node].every(Number.isFinite)) return false
-    const key = node.join(',')
+    if (!Array.isArray(node) || node.length !== 3 || !Number.isFinite(node[0]) || !Number.isFinite(node[1]) || !Number.isFinite(node[2])) return false
+    const key = `${node[0]},${node[1]},${node[2]}`
     if (coordinates.has(key)) return false
     coordinates.add(key)
   }
@@ -49,9 +56,9 @@ export function isNominalLatticeGraph(value: unknown): value is NominalLatticeGr
     if (!(Math.max(...values) > Math.min(...values))) return false
   }
   for (const edge of graph.edges) {
-    if (!Array.isArray(edge) || edge.length !== 2 || ![...edge].every(index => Number.isInteger(index) && index >= 0 && index < graph.nodes.length)
+    if (!Array.isArray(edge) || edge.length !== 2 || !Number.isInteger(edge[0]) || edge[0] < 0 || edge[0] >= graph.nodes.length || !Number.isInteger(edge[1]) || edge[1] < 0 || edge[1] >= graph.nodes.length
       || edge[0] === edge[1]) return false
-    const key = `${Math.min(...edge)},${Math.max(...edge)}`
+    const key = `${Math.min(edge[0], edge[1])},${Math.max(edge[0], edge[1])}`
     if (members.has(key)) return false
     members.add(key)
   }

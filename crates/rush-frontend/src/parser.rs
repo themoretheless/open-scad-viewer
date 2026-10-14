@@ -36,7 +36,7 @@ fn lex(source: &str) -> R<Vec<Token>> {
             return Err(crate::error("Unsupported Rush source header; use // @rush/1."));
         }
     }
-    if source.encode_utf16().count() > 262144 {
+    if source.len() > 262144 && source.encode_utf16().count() > 262144 {
         return Err(crate::error("Rush exceeds 256 KiB."));
     }
     // Rush owns string/comment boundaries. CAD numeric units and range/fluent
@@ -46,7 +46,7 @@ fn lex(source: &str) -> R<Vec<Token>> {
     let mut token_index = 0;
     let b = source.as_bytes();
     let mut p = 0;
-    let mut out = Vec::new();
+    let mut out = Vec::with_capacity(lexed.tokens.len() + 1);
     while p < b.len() {
         let start = p;
         if b[p] == b' ' || b[p] == b'\t' || b[p] == b'\r' {

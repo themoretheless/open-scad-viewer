@@ -26,11 +26,18 @@ export type GcodePreviewResponse =
   | { version: 1; id: number; ok: true; result: GcodePreviewDocument }
   | { version: 1; id: number; ok: false; error: string }
 
+function allFinite(values: ArrayLike<number>): boolean {
+  for (let i = 0; i < values.length; i++) {
+    if (!Number.isFinite(values[i])) return false
+  }
+  return true
+}
+
 function checkMesh(mesh: GcodeSceneMesh, zMin: number, zMax: number): GcodeSceneMesh {
   if (!mesh || !(mesh.vertices instanceof Float32Array) || !(mesh.indices instanceof Uint32Array)
     || !(mesh.transform instanceof Float32Array) || !mesh.vertices.length || mesh.vertices.length % 6
     || !mesh.indices.length || mesh.indices.length % 3 || mesh.transform.length !== 16) throw new Error('Select a valid triangle mesh.')
-  if (!mesh.transform.every(Number.isFinite) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) throw new Error('Mesh transform must be finite and affine.')
+  if (!allFinite(mesh.transform) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) throw new Error('Mesh transform must be finite and affine.')
   if (mesh.indices.length > 300000 || !fitsClonedBufferBudget([mesh.vertices, mesh.indices, mesh.transform], GCODE_PREVIEW_MAX_MESH_BYTES)) {
     throw new Error('G-code slicing is limited to 100000 triangles and 16 MiB of owned mesh buffers.')
   }
@@ -99,5 +106,5 @@ export function isGcodePreviewDocument(value: unknown): value is GcodePreviewDoc
   return typeof document.gcode === 'string' && typeof document.dialect === 'string' && !!preview
     && Number.isInteger(preview.layers) && preview.layers >= 0 && Array.isArray(preview.moves)
     && [preview.extrusionMm, preview.depositedVolumeMm3, preview.travelDistanceMm, preview.printDistanceMm, preview.estimatedTimeS].every(value => Number.isFinite(value) && value >= 0)
-    && (preview.bounds === null || (!!preview.bounds && [preview.bounds.min, preview.bounds.max].every(point => Array.isArray(point) && point.length === 3 && point.every(Number.isFinite))))
+    && (preview.bounds === null || (!!preview.bounds && [preview.bounds.min, preview.bounds.max].every(point => Array.isArray(point) && point.length === 3 && Number.isFinite(point[0]) && Number.isFinite(point[1]) && Number.isFinite(point[2]))))
 }

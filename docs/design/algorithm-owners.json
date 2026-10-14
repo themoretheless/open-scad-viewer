@@ -147,9 +147,25 @@
       "files": [
         "src/services/webgpuRenderer.ts",
         "src/services/viewportController.ts",
-        "src/services/cpuOrbitPaint.ts"
+        "src/services/cpuOrbitPaint.ts",
+        "src/services/meshInspection.ts"
       ],
-      "reason": "Keep WebGPU resources, gestures, camera and overlay deduplication in TS. Geometry picking already native; model measurement distance belongs to native query result rather than renderer calculation."
+      "reason": "Keep WebGPU resources, gestures, camera, display readouts and overlay deduplication in TS. Geometry picking already native; model measurement distance belongs to native query result rather than renderer calculation."
+    },
+    {
+      "id": "gpu-compute",
+      "owner": "application-gpu + raster-core",
+      "action": "retain",
+      "files": [
+        "src/services/gpuCsgPreview.ts",
+        "src/services/gpuMarchingCubes.ts",
+        "src/services/gpuNurbsTessellate.ts",
+        "src/services/gpuSemanticEdges.ts",
+        "src/services/gpuSlicer.ts",
+        "src/services/gpuSubdivision.ts",
+        "src/services/gpuTrussSolver.ts"
+      ],
+      "reason": "WebGPU compute pipeline dispatch, uniform packing and CPU fallback orchestration remain in the browser host; WGSL shader kernels are owned by raster-core."
     },
     {
       "id": "mixed-modeling-ui",
@@ -350,6 +366,7 @@
       "owner": "application-gpu + raster-core",
       "patterns": [
         "src/services/shaders/",
+        "src/services/gpu",
         "src/services/webgpu",
         "src/services/textureResources"
       ]

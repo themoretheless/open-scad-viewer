@@ -730,21 +730,37 @@ pub fn draft_angle_enclosure(surface: &Surface, pull_dir: [f64; 3]) -> Result<In
     surface.validate()?;
     // Bound each local normal ball against the pull direction directly.
     // A single global cone loses directional information on curved strips.
-    let mut result = None;
-    for [u, v] in subdivision(surface, 96) {
+    let cells = subdivision(surface, 96);
+    if cells.is_empty() {
+        return Err(numeric_err("Surface has no nonempty knot cells"));
+    }
+    let full_range = Interval::new(0., std::f64::consts::PI.next_up())?;
+    let local_intervals = math_core::par_try_map(&cells, 8, |&[u, v]| -> Result<Option<Interval>> {
         let Some(bb) = box_bounds(surface, u, v)? else {
-            return Interval::new(0., std::f64::consts::PI.next_up());
+            return Ok(None);
         };
-        let (mid, radius) = cross_ball(&bb, (u.hi-u.lo)/2., (v.hi-v.lo)/2.);
+        let (mid, radius) = cross_ball(&bb, (u.hi - u.lo) / 2., (v.hi - v.lo) / 2.);
         let magnitude = norm(mid);
         if magnitude <= radius {
-            return Interval::new(0., std::f64::consts::PI.next_up());
+            return Ok(None);
         }
         let theta = angle_between(mid, pull_dir);
-        let alpha = up((radius/magnitude).min(1.).asin());
-        let local = Interval::new((theta-alpha).max(0.).next_down(),
-            (theta+alpha).min(std::f64::consts::PI).next_up())?;
-        result = Some(match result {None => local, Some(previous) => union(previous, local)?});
+        let alpha = up((radius / magnitude).min(1.).asin());
+        let local = Interval::new(
+            (theta - alpha).max(0.).next_down(),
+            (theta + alpha).min(std::f64::consts::PI).next_up(),
+        )?;
+        Ok(Some(local))
+    })?;
+    let mut result = None;
+    for item in local_intervals {
+        let Some(local) = item else {
+            return Ok(full_range);
+        };
+        result = Some(match result {
+            None => local,
+            Some(previous) => union(previous, local)?,
+        });
     }
     result.ok_or_else(|| numeric_err("Surface has no nonempty knot cells"))
 }

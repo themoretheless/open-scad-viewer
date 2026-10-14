@@ -232,6 +232,35 @@ fn min_wall_mm(section: &LayerSection) -> f64 {
         }
         y += step;
     }
+    let mut x = min_x + step * 0.5;
+    while x <= max_x - step * 0.25 {
+        let mut hits = Vec::new();
+        for ring in &section.contours {
+            for i in 0..ring.len() {
+                let a = ring[i];
+                let b = ring[(i + 1) % ring.len()];
+                let (x0, x1) = (a[0], b[0]);
+                if (x0 <= x && x < x1) || (x1 <= x && x < x0) {
+                    let t = (x - x0) / (x1 - x0);
+                    if t.is_finite() {
+                        hits.push(a[1] + (b[1] - a[1]) * t);
+                    }
+                }
+            }
+        }
+        hits.sort_by(|a, b| a.total_cmp(b));
+        let mut pair = 0;
+        while pair + 1 < hits.len() {
+            let y0 = hits[pair];
+            let y1 = hits[pair + 1];
+            let mid = [x, (y0 + y1) * 0.5];
+            if winding(mid, &section.contours) != 0 {
+                min_wall = min_wall.min((y1 - y0).abs());
+            }
+            pair += 2;
+        }
+        x += step;
+    }
     if min_wall.is_finite() { min_wall } else { 0.0 }
 }
 
@@ -326,10 +355,7 @@ pub fn analyze_layers(sections: &[LayerSection], load: &LoadCase) -> Result<Stre
             "Strength plan exceeded 2048 layers",
         ));
     }
-    let mut layers = Vec::with_capacity(sections.len());
-    for section in sections {
-        layers.push(analyze_section(section, load)?);
-    }
+    let layers = math_core::par_try_map(sections, 2, |section| analyze_section(section, load))?;
     let weakest_index = layers
         .iter()
         .enumerate()

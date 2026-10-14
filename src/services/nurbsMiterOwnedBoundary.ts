@@ -61,6 +61,58 @@ export interface MiterOwnedBoundaryReport {
 export type DirectMiterOwnedSourceRequest=Pick<MiterOwnedSourceRequest,
  'loops'|'points'|'normal'|'closed'|'miterLimit'|'maxDeviation'|'circleCorrection'|'capCorrection'|'limits'> & {direct:true;capEndpoints?:[boolean,boolean]}
 export type MiterOwnedRequest=MiterOwnedSourceRequest|DirectMiterOwnedSourceRequest
+/** No approximation tolerance is invented for the unchanged direct source.
+ * Explicit cap repair retains its own budget; circle repair requires the
+ * separately authored whole-boundary tolerance and is excluded here. */
+export type UnbudgetedDirectMiterSourceRequest=Omit<DirectMiterOwnedSourceRequest,'maxDeviation'|'circleCorrection'> & {
+ maxDeviation?:never;circleCorrection?:never;automaticCaps?:true
+}
+export interface AnnularMiterOwnedBoundaryReport extends MiterOwnedBoundaryReport {
+ capRepresentation:'radial-annular'|'legacy'
+ /** Two logical end caps; a cap can own multiple retained faces. */
+ capFaceGroups:[number[],number[]]
+ capFaces:number[]
+ /** Separate selection for the optional exact planar-cap optimization. */
+ planarCapFaces:number[]
+ retainedSmoothness:{
+  walls:import('./miterProfileSmoothness').MiterProfileSmoothness
+  maxWork:number;totalExactWork:number
+  capInternalSeams:{method:'retained-annular-cap-internal-jets';edgeIds:number[];extractionComplete:boolean;
+   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number}[]
+  capWallContinuity:'C0';fullBoundarySmoothnessCertified:false
+ }|null
+ retainedAnnularFilling:{
+  method:'authored-affine-endpoint-annular-filling'
+  sourceFillingCovered:boolean
+  filledCapErrorUpper:[number,number]|null
+  withinBudget:boolean
+  exactWork:number
+  fillingExactWork:number
+  capConstructionExactWork:number
+  products:number
+  endpointCells:number
+  projectiveReparameterizedPatches:number
+  sourceUvFacesInjective:boolean
+  sourceUvPairsClassified:boolean
+  reason:string
+  solidGeometryCertified:false
+ }|null
+}
+/** Rust derives the filled source bound and both complete cap groups. This
+ * transport does not infer cap faces from array position or authorize Solid. */
+export const constructAnnularMiterOwnedBoundary=(source:MiterOwnedRequest,audits:{smoothnessMaxWork?:number}={}):AnnularMiterOwnedBoundaryReport=>
+ callGeometryRust<AnnularMiterOwnedBoundaryReport>('brep_miter_annular_owned_construct',{...source,...audits})
+export type UnbudgetedAnnularMiterBoundaryReport=Omit<AnnularMiterOwnedBoundaryReport,'budget'|'boundaryCertificate'|'retainedAnnularFilling'> & {
+ budget:null
+ boundaryCertificate:Omit<SweepBoundaryCertificate,'budget'|'withinBudget'|'reason'> & {
+  budget:null;withinBudget:null;reason:SweepBoundaryCertificate['reason']|'no-authored-tolerance'
+ }
+ retainedAnnularFilling:(Omit<NonNullable<AnnularMiterOwnedBoundaryReport['retainedAnnularFilling']>,'withinBudget'> & {withinBudget:null})|null
+}
+/** Constructor selection, numerical bounds and null tolerance semantics are
+ * all derived in Rust. This function only transports the original request. */
+export const constructUnbudgetedDirectMiterBoundary=(source:UnbudgetedDirectMiterSourceRequest,audits:{smoothnessMaxWork?:number}={}):UnbudgetedAnnularMiterBoundaryReport=>
+ callGeometryRust<UnbudgetedAnnularMiterBoundaryReport>('brep_miter_annular_owned_construct',{...source,...audits})
 export const constructMiterOwnedBoundary=(source:MiterOwnedRequest):MiterOwnedBoundaryReport=>{
  const body=callGeometryRust<MiterOwnedBoundaryReport>('brep_miter_owned_construct',source)
  if('direct' in source){

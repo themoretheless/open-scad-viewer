@@ -156,7 +156,7 @@ fn weld(positions: &[f64], epsilon: f64) -> (Vec<f64>, Vec<usize>, usize) {
 
     if epsilon == 0.0 {
         // Exact weld on bit patterns.
-        let mut canonical: HashMap<[u64; 3], usize> = HashMap::new();
+        let mut canonical: HashMap<[u64; 3], usize> = HashMap::with_capacity(vertex_count);
         for v in 0..vertex_count {
             let key = [
                 positions[v * 3].to_bits(),
@@ -175,7 +175,8 @@ fn weld(positions: &[f64], epsilon: f64) -> (Vec<f64>, Vec<usize>, usize) {
         // (conservative; points straddling a boundary stay separate unless
         // identical). Deterministic and O(n).
         let inv = 1.0 / epsilon;
-        let mut canonical: HashMap<(i64, i64, i64), Vec<usize>> = HashMap::new();
+        let mut canonical: HashMap<(i64, i64, i64), Vec<usize>> =
+            HashMap::with_capacity(vertex_count);
         for v in 0..vertex_count {
             let p = &positions[v * 3..v * 3 + 3];
             let cell = (
@@ -220,7 +221,8 @@ fn unify_orientation(triangles: &mut [[usize; 3]]) -> usize {
     use std::collections::HashMap;
     // Edge -> incident (triangle, direction of traversal: true if a->b
     // with a < b... store actual (from, to) of the directed half-edge).
-    let mut half_edges: HashMap<EdgeKey, Vec<(usize, usize, usize)>> = HashMap::new();
+    let mut half_edges: HashMap<EdgeKey, Vec<(usize, usize, usize)>> =
+        HashMap::with_capacity(triangles.len() * 3 / 2);
     for (ti, t) in triangles.iter().enumerate() {
         for i in 0..3 {
             let (a, b) = (t[i], t[(i + 1) % 3]);
@@ -233,7 +235,7 @@ fn unify_orientation(triangles: &mut [[usize; 3]]) -> usize {
     // Dual adjacency with the constraint: for edge used by triangles
     // (t1, a, b) and (t2, c, d), orientations agree iff the directed
     // half-edges are opposite, i.e. a == d && b == c.
-    let mut dual: HashMap<usize, Vec<(usize, bool)>> = HashMap::new();
+    let mut dual: HashMap<usize, Vec<(usize, bool)>> = HashMap::with_capacity(triangles.len());
     for uses in half_edges.values() {
         if uses.len() != 2 {
             continue;
@@ -304,7 +306,8 @@ fn duplicate_vertex(positions: &mut Vec<f64>, v: usize) -> usize {
 fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]) -> usize {
     use std::collections::HashMap;
     // Edge -> incident triangle ids.
-    let mut edge_tris: HashMap<EdgeKey, Vec<usize>> = HashMap::new();
+    let mut edge_tris: HashMap<EdgeKey, Vec<usize>> =
+        HashMap::with_capacity(triangles.len() * 3 / 2);
     for (ti, t) in triangles.iter().enumerate() {
         for i in 0..3 {
             edge_tris
@@ -314,13 +317,18 @@ fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3
         }
     }
     let mut duplicated = 0usize;
+    let mut parent: HashMap<usize, usize> = HashMap::new();
+    let mut tri_set: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut link_owner: HashMap<EdgeKey, usize> = HashMap::new();
+    let mut shells: Vec<(usize, Vec<usize>)> = Vec::new();
     for (&edge, tris) in &edge_tris {
         if tris.len() <= 2 {
             continue;
         }
         // Union-find over incident triangles, joined by shared edges other
         // than `edge` itself.
-        let mut parent: HashMap<usize, usize> = tris.iter().map(|&t| (t, t)).collect();
+        parent.clear();
+        parent.extend(tris.iter().map(|&t| (t, t)));
         fn find(parent: &mut HashMap<usize, usize>, x: usize) -> usize {
             let mut r = x;
             while parent[&r] != r {
@@ -334,8 +342,9 @@ fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3
             }
             r
         }
-        let tri_set: std::collections::HashSet<usize> = tris.iter().copied().collect();
-        let mut link_owner: HashMap<EdgeKey, usize> = HashMap::new();
+        tri_set.clear();
+        tri_set.extend(tris.iter().copied());
+        link_owner.clear();
         for &ti in &tri_set {
             for i in 0..3 {
                 let key = edge_key(triangles[ti][i], triangles[ti][(i + 1) % 3]);
@@ -355,7 +364,7 @@ fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3
             }
         }
         // Group triangle ids by shell root, preserving first-shell-wins order.
-        let mut shells: Vec<(usize, Vec<usize>)> = Vec::new();
+        shells.clear();
         for &ti in tris {
             let root = find(&mut parent, ti);
             match shells.iter_mut().find(|(r, _)| *r == root) {
@@ -397,12 +406,16 @@ fn split_pinched_vertices(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]
         }
     }
     let mut duplicated = 0usize;
+    let mut parent: Vec<usize> = Vec::new();
+    let mut node_owner: HashMap<usize, usize> = HashMap::new();
+    let mut seen_roots: HashMap<usize, usize> = HashMap::new();
     for (v, list) in corners.iter().enumerate() {
         if list.len() < 2 {
             continue;
         }
         // Union corners whose link edges share a node.
-        let mut parent: Vec<usize> = (0..list.len()).collect();
+        parent.clear();
+        parent.extend(0..list.len());
         fn find(parent: &mut [usize], x: usize) -> usize {
             let mut r = x;
             while parent[r] != r {
@@ -416,7 +429,7 @@ fn split_pinched_vertices(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]
             }
             r
         }
-        let mut node_owner: HashMap<usize, usize> = HashMap::new();
+        node_owner.clear();
         for (ci, &(_, _, next, prev)) in list.iter().enumerate() {
             for node in [next, prev] {
                 if let Some(&other) = node_owner.get(&node) {
@@ -430,7 +443,7 @@ fn split_pinched_vertices(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]
             }
         }
         // Components beyond the first get a private vertex copy.
-        let mut seen_roots: HashMap<usize, usize> = HashMap::new();
+        seen_roots.clear();
         for (ci, &(ti, slot, _, _)) in list.iter().enumerate() {
             let root = find(&mut parent, ci);
             if seen_roots.is_empty() {

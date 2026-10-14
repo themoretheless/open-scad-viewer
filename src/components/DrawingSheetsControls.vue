@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import {stringifyMeshJson} from '../services/meshJson'
-import {ref,computed,onUnmounted} from 'vue'
+import {ref,shallowRef,toRaw,computed,onUnmounted} from 'vue'
 import type {DirectDocument} from '../services/directModeling'
 import {type DrawingSheet,type DrawingDimension,parseDrawingDimensions} from '../services/drawingSheets'
 import {type DrawingPartMetadata,parseDrawingParts} from '../services/drawingSpecification'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 const props=defineProps<{document:DirectDocument;locale?:string}>()
-const open=ref(false),template=ref<'A5'|'A4'|'A3'|'A2'|'Letter'>('A4'),portrait=ref(false),hidden=ref<'show'|'hide'|'dash'>('dash'),dimensions=ref(true),scale=ref(.5),title=ref('Drawing'),author=ref(''),perBody=ref(true),pending=ref(false),error=ref(''),sheets=ref<DrawingSheet[]>([]),page=ref(0),pdfUrl=ref('')
-const occlusion=ref<'mesh'|'brep'>('mesh'),frame=ref<'simple'|'detail'|'assembly'>('simple'),drawingNumber=ref(''),revision=ref(''),material=ref('')
+function clonePlain<T>(value:T):T{
+ const raw=toRaw(value)
+ if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
+ if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
+  const out:Record<string,unknown>={}
+  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
+  return out as T
+ }
+ return raw
+}
+const open=ref(false),template=ref<'A5'|'A4'|'A3'|'A2'|'Letter'>('A4'),portrait=ref(false),hidden=ref<'show'|'hide'|'dash'>('dash'),dimensions=ref(true),scale=ref(.5),title=ref('Drawing'),author=ref(''),perBody=ref(true),pending=ref(false),error=ref(''),sheets=shallowRef<DrawingSheet[]>([]),page=ref(0),pdfUrl=ref('')
+const occlusion=shallowRef<'mesh'|'brep'>('mesh'),frame=ref<'simple'|'detail'|'assembly'>('simple'),drawingNumber=ref(''),revision=ref(''),material=ref('')
 const vertexLabels=ref(false)
 const linkedDimensions=ref<DrawingDimension[]>([]),dimensionBody=ref(''),dimensionA=ref(0),dimensionB=ref(1),dimensionView=ref<'top'|'front'|'right'>('top'),dimensionAxis=ref<'horizontal'|'vertical'>('horizontal')
+const brepBodies=computed(()=>props.document.bodies.filter(b=>b.brep))
 const dimensionReference=computed(()=>sheets.value.flatMap(s=>s.references??[]).find(r=>r.bodyId===dimensionBody.value))
 function addDimension(){const r=dimensionReference.value;if(!r?.vertexIds?.[dimensionA.value]||!r.vertexIds[dimensionB.value])return;linkedDimensions.value.push({bodyId:r.bodyId,vertices:[dimensionA.value,dimensionB.value],topologySignature:r.topologySignature,vertexIds:[r.vertexIds[dimensionA.value],r.vertexIds[dimensionB.value]],view:dimensionView.value,axis:dimensionAxis.value})}
 const dimensionUrl=computed(()=>'data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(linkedDimensions.value)))
@@ -24,8 +35,8 @@ async function importParts(event:Event){const input=event.target as HTMLInputEle
 let disposed=false
 function clearPdf(){if(pdfUrl.value)URL.revokeObjectURL(pdfUrl.value);pdfUrl.value=''}
 const worker=createSolidPreviewWorker(),label=(ru:string,en:string)=>props.locale==='en'?en:ru
-async function preview(){pending.value=true;error.value='';clearPdf();const before=stringifyMeshJson(props.document);try{const prepared=await worker.run({kind:'drawingSheets',bodies:JSON.parse(stringifyMeshJson(props.document.bodies)),options:{template:template.value,scale:scale.value,title:title.value,author:author.value,perBody:perBody.value,portrait:portrait.value,hidden:hidden.value,dimensions:dimensions.value,vertexLabels:vertexLabels.value,occlusion:occlusion.value,frame:frame.value,drawingNumber:drawingNumber.value,revision:revision.value,material:material.value,linkedDimensions:JSON.parse(JSON.stringify(linkedDimensions.value)),specification:specification.value,parts:JSON.parse(JSON.stringify(parts.value)),locale:props.locale==='en'?'en':'ru'}});if(disposed)return;if(stringifyMeshJson(props.document)!==before)throw Error(label('Модель изменилась. Подготовьте листы заново.','The model changed. Prepare the sheets again.'));sheets.value=prepared;page.value=0;if(!dimensionBody.value)dimensionBody.value=prepared[0]?.references?.[0]?.bodyId??''}catch(e){error.value=String(e)}finally{pending.value=false}}
-async function pdf(){pending.value=true;error.value='';try{const bytes=await worker.run({kind:'drawingPdf',sheets:JSON.parse(JSON.stringify(sheets.value))});if(disposed)return;if(pdfUrl.value)URL.revokeObjectURL(pdfUrl.value);pdfUrl.value=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}))}catch(e){error.value=String(e)}finally{pending.value=false}}
+async function preview(){pending.value=true;error.value='';clearPdf();const before=stringifyMeshJson(props.document);try{const prepared=await worker.run({kind:'drawingSheets',bodies:JSON.parse(stringifyMeshJson(props.document.bodies)),options:{template:template.value,scale:scale.value,title:title.value,author:author.value,perBody:perBody.value,portrait:portrait.value,hidden:hidden.value,dimensions:dimensions.value,vertexLabels:vertexLabels.value,occlusion:occlusion.value,frame:frame.value,drawingNumber:drawingNumber.value,revision:revision.value,material:material.value,linkedDimensions:clonePlain(linkedDimensions.value),specification:specification.value,parts:clonePlain(parts.value),locale:props.locale==='en'?'en':'ru'}});if(disposed)return;if(stringifyMeshJson(props.document)!==before)throw Error(label('Модель изменилась. Подготовьте листы заново.','The model changed. Prepare the sheets again.'));sheets.value=prepared;page.value=0;if(!dimensionBody.value)dimensionBody.value=prepared[0]?.references?.[0]?.bodyId??''}catch(e){error.value=String(e)}finally{pending.value=false}}
+async function pdf(){pending.value=true;error.value='';try{const bytes=await worker.run({kind:'drawingPdf',sheets:clonePlain(sheets.value)});if(disposed)return;if(pdfUrl.value)URL.revokeObjectURL(pdfUrl.value);pdfUrl.value=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}))}catch(e){error.value=String(e)}finally{pending.value=false}}
 onUnmounted(()=>{disposed=true;worker.dispose();clearPdf()})
 </script>
 <template>
@@ -58,7 +69,7 @@ onUnmounted(()=>{disposed=true;worker.dispose();clearPdf()})
    <button type="button" :disabled="pending||!document.bodies.length" @click="preview">{{label('Подготовить листы','Prepare sheets')}}</button>
    <fieldset v-if="sheets.length"><legend>{{label('Размеры по вершинам','Vertex dimensions')}}</legend>
     <label><input v-model="vertexLabels" type="checkbox">{{label('Номера вершин на листе','Vertex numbers on sheet')}}</label>
-    <label>{{label('Тело размера','Dimension body')}}<select v-model="dimensionBody"><option v-for="b in document.bodies.filter(b=>b.brep)" :key="b.id" :value="b.id">{{b.name}}</option></select></label>
+    <label>{{label('Тело размера','Dimension body')}}<select v-model="dimensionBody"><option v-for="b in brepBodies" :key="b.id" :value="b.id">{{b.name}}</option></select></label>
     <template v-if="dimensionReference"><label>{{label('Первая вершина','First vertex')}}<select v-model.number="dimensionA"><option v-for="(_,i) in dimensionReference.vertices" :key="i" :value="i">{{i+1}}</option></select></label><label>{{label('Вторая вершина','Second vertex')}}<select v-model.number="dimensionB"><option v-for="(_,i) in dimensionReference.vertices" :key="i" :value="i">{{i+1}}</option></select></label></template>
     <label>{{label('Проекция размера','Dimension view')}}<select v-model="dimensionView"><option value="top">XY</option><option value="front">XZ</option><option value="right">YZ</option></select></label>
     <label>{{label('Направление размера','Dimension direction')}}<select v-model="dimensionAxis"><option value="horizontal">{{label('По горизонтали','Horizontal')}}</option><option value="vertical">{{label('По вертикали','Vertical')}}</option></select></label>

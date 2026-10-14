@@ -15,7 +15,7 @@ export function pathPoints(path:number[][],fractions:number[]):number[][] {
 export function pathPoint(path:number[][],fraction:number):number[]{return pathPoints(path,[fraction])[0]}
 export function cadOperation(input:DirectDocument,o:CadOptions):DirectDocument{
  const d=structuredClone(input),selected=o.ids.map(id=>d.bodies.find(b=>b.id===id)).filter((b):b is DirectBody=>!!b)
- if(![...o.origin,o.amount,o.width,o.height,o.depth,o.pitch,o.secondary].every(Number.isFinite))throw Error('Enter finite parameters.')
+ if(!(Number.isFinite(o.origin[0])&&Number.isFinite(o.origin[1])&&Number.isFinite(o.origin[2])&&Number.isFinite(o.amount)&&Number.isFinite(o.width)&&Number.isFinite(o.height)&&Number.isFinite(o.depth)&&Number.isFinite(o.pitch)&&Number.isFinite(o.secondary)))throw Error('Enter finite parameters.')
  const replace=(b:DirectBody)=>{d.bodies[d.bodies.findIndex(old=>old.id===b.id)]=b}
  if(o.action==='mirror'){
   if(!selected.length)throw Error('Select bodies.')

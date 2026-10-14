@@ -97,14 +97,14 @@ pub fn point_bounds_accelerated(
             "point_bounds_accelerated expects at least one point",
         ));
     }
-    if points.iter().flatten().any(|value| !value.is_finite()) {
-        return Err(Error::new(
-            "invalid_point_bounds_input",
-            "point_bounds_accelerated expects finite point coordinates",
-        ));
-    }
     #[cfg(feature = "gpu")]
     if acceleration.is_gpu() && acceleration != Acceleration::Auto {
+        if points.iter().flatten().any(|value| !value.is_finite()) {
+            return Err(Error::new(
+                "invalid_point_bounds_input",
+                "point_bounds_accelerated expects finite point coordinates",
+            ));
+        }
         #[cfg(feature = "cuda")]
         if acceleration == Acceleration::Cuda
             && let Some(bounds) = crate::cuda::point_bounds_cuda(points)
@@ -131,16 +131,16 @@ pub fn transformed_point_bounds_accelerated(
             "transformed_point_bounds_accelerated expects at least one point",
         ));
     }
-    if points.iter().flatten().any(|value| !value.is_finite()) {
-        return Err(Error::new(
-            "invalid_point_bounds_input",
-            "transformed_point_bounds_accelerated expects finite point coordinates",
-        ));
-    }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_transformed_point_bounds(points.len());
     #[cfg(feature = "gpu")]
     if acceleration.is_gpu() {
+        if points.iter().flatten().any(|value| !value.is_finite()) {
+            return Err(Error::new(
+                "invalid_point_bounds_input",
+                "transformed_point_bounds_accelerated expects finite point coordinates",
+            ));
+        }
         #[cfg(feature = "cuda")]
         if acceleration == Acceleration::Cuda
             && let Some(bounds) = crate::cuda::transformed_point_bounds_cuda(points, m, t)

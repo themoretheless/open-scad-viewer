@@ -3,6 +3,36 @@
 use super::{Result, controls, injective, point_inside, refused};
 use crate::Curve;
 use nurbs_core::intersection::{CurveCurveComponentKind, intersect_curve_curve_report};
+/// Remove only roundoff-sized endpoint jet noise from a represented trim.
+/// Positive weights bound the complete curve displacement by the maximum
+/// Euclidean control displacement, independently of sampling or tangent size.
+fn conform_endpoint_jets(c: &mut Curve, tolerance: f64) {
+    let original = c.control_points.clone();
+    let scale = original
+        .iter()
+        .flatten()
+        .map(|v| v.abs())
+        .fold(1., f64::max);
+    let limit = (512. * f64::EPSILON * scale).min(tolerance * 0.001);
+    for endpoint in [original[0].clone(), original.last().unwrap().clone()] {
+        for i in 1..original.len() - 1 {
+            for axis in 0..2 {
+                if (c.control_points[i][axis] - endpoint[axis]).abs().next_up() > limit * 0.5 {
+                    continue;
+                }
+                let mut candidate = c.control_points[i].clone();
+                candidate[axis] = endpoint[axis];
+                let displacement = ((candidate[0] - original[i][0]).abs().next_up()
+                    + (candidate[1] - original[i][1]).abs().next_up())
+                .next_up();
+                if displacement <= limit {
+                    c.control_points[i] = candidate;
+                }
+            }
+        }
+    }
+}
+
 pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>> {
     if wires.is_empty() {
         return Ok(Vec::new());
@@ -20,15 +50,56 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
             if c.control_points.last() != wire[(i + 1) % wire.len()].control_points.first() {
                 return Err(refused("Authored boundary is open"));
             }
+            if c.control_points.iter().all(|p| p == &c.control_points[0]) {
+                continue;
+            }
             let mut cuts = c.domain().to_vec();
             for k in 0..2 {
-                cuts.extend(nurbs_core::curve_extrema::axis_extrema(c, k)?);
+                cuts.extend(
+                    nurbs_core::intersection::planar_scalar::stationary(c, k)?.ok_or_else(
+                        || refused("Authored stationary parameter completeness is unresolved"),
+                    )?,
+                );
             }
             cuts.sort_by(f64::total_cmp);
             cuts.dedup_by(|a, b| (*a - *b).abs() < 1e-12);
             for interval in cuts.windows(2) {
-                let piece = c.trim(interval[0], interval[1])?;
-                if !injective(&controls(&piece)?, tolerance) {
+                let mut piece = c.trim(interval[0], interval[1])?;
+                // A shared cut is evaluated once by the same source definition,
+                // so independent trim roundoff cannot split a cusp into two
+                // almost-coincident vertices. This is only endpoint conformance.
+                let scale = c
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .map(|v| v.abs())
+                    .fold(1., f64::max);
+                let limit = (512. * f64::EPSILON * scale).min(tolerance * 0.001);
+                for (index, t) in [
+                    (0, interval[0]),
+                    (piece.control_points.len() - 1, interval[1]),
+                ] {
+                    let point = if t == c.domain()[0] {
+                        c.control_points[0].clone()
+                    } else if t == c.domain()[1] {
+                        c.control_points.last().unwrap().clone()
+                    } else {
+                        c.evaluate(t)?.point
+                    };
+                    let p = &piece.control_points[index];
+                    let displacement = ((p[0] - point[0]).abs().next_up()
+                        + (p[1] - point[1]).abs().next_up())
+                    .next_up();
+                    if displacement > limit {
+                        return Err(refused(
+                            "Stationary trim endpoint conformance exceeds roundoff budget",
+                        ));
+                    }
+                    piece.control_points[index] = point;
+                }
+
+                conform_endpoint_jets(&mut piece, tolerance);
+                if !injective(&piece, tolerance) {
                     return Err(refused("Authored cusp/injectivity remains unresolved"));
                 }
                 curves.push(piece);
@@ -40,6 +111,8 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
     }
     let mut cuts: Vec<_> = curves.iter().map(|c| c.domain().to_vec()).collect();
     let mut work = 0;
+    let mut aliases: Vec<_> = (0..curves.len()).collect();
+    let mut linear = vec![false; curves.len()];
     for i in 0..curves.len() {
         for j in i + 1..curves.len() {
             let a = controls(&curves[i])?;
@@ -62,13 +135,56 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
             if work > 8192 {
                 return Err(refused("Bézier normalization pair budget exceeded"));
             }
+            use nurbs_core::intersection::planar_scalar::Relation;
+            if let Some(relation) = nurbs_core::intersection::planar_scalar::intersect(
+                &curves[i], &curves[j], tolerance,
+            )? {
+                let (first, second, straight) = match relation {
+                    Relation::Points(points) => {
+                        for point in points {
+                            cuts[i].push(point.first);
+                            cuts[j].push(point.second);
+                        }
+                        continue;
+                    }
+                    Relation::Coincident { linear, .. } => {
+                        (curves[i].domain(), curves[j].domain(), linear)
+                    }
+                    Relation::Overlap {
+                        points,
+                        first,
+                        second,
+                        linear,
+                        ..
+                    } => {
+                        for point in points {
+                            cuts[i].push(point[0]);
+                            cuts[j].push(point[1]);
+                        }
+                        (first, second, linear)
+                    }
+                };
+                cuts[i].extend(first);
+                cuts[j].extend(second);
+                let old = aliases[j];
+                let new = aliases[i];
+                linear[new] = straight || linear[new] || linear[old];
+                for alias in &mut aliases {
+                    if *alias == old {
+                        *alias = new;
+                    }
+                }
+                continue;
+            }
             let report = intersect_curve_curve_report(
                 &super::boolean_ops::lift(&curves[i]),
                 &super::boolean_ops::lift(&curves[j]),
                 None,
             )?;
             if !report.report.unresolved.is_empty() {
-                return Err(refused("Self-intersection normalization is unresolved"));
+                return Err(refused(&format!(
+                    "Self-intersection normalization is unresolved for spans {i} and {j}"
+                )));
             }
             for event in report.report.components {
                 if event.kind != CurveCurveComponentKind::Point || event.residual > tolerance {
@@ -81,126 +197,217 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
             }
         }
     }
-    let all: Vec<_> = wires.iter().flatten().cloned().collect();
-    let mut pieces = Vec::new();
+    // Share every proposed cut across admitted carriers before comparing
+    // fragments. This also handles a third curve crossing a shared subspan.
+    super::coincidence_ops::synchronize(&curves, &aliases, &mut cuts, tolerance, &mut work)?;
+    let mut fragments: Vec<(Curve, usize, bool)> = Vec::new();
     for (i, source) in curves.iter().enumerate() {
         cuts[i].sort_by(f64::total_cmp);
         cuts[i].dedup_by(|a, b| (*a - *b).abs() < 1e-12);
-        for interval in cuts[i].windows(2) {
-            if interval[1] - interval[0] <= 1e-12 {
+        for range in cuts[i].windows(2) {
+            if range[1] - range[0] <= 1e-12 {
                 continue;
             }
-            let mut c = source.trim(interval[0], interval[1])?;
-            let e = c.evaluate((interval[0] + interval[1]) * 0.5)?;
-            let d =
-                e.d1.ok_or_else(|| refused("Normalization tangent is unresolved"))?;
-            let length = d[0].hypot(d[1]);
-            if length <= tolerance {
-                return Err(refused("Normalization cusp is unresolved"));
-            }
-            let n = [-d[1] / length, d[0] / length];
-            let mut decision = None;
-            // Two distances must agree. Each winding call admits its decision
-            // only after complete control-hull separation from the probe.
-            for distance in [32. * tolerance, 64. * tolerance] {
-                // The source span crosses the normal probe exactly once if
-                // its tangent-coordinate Bernstein controls are monotone.
-                let source_hull = controls(source)?;
-                let monotone = source_hull.windows(2).all(|p| {
-                    if p[0] == p[1] {
-                        return true;
+            let piece = source.trim(range[0], range[1])?;
+            let mut duplicate = None;
+            for (j, (other, alias, _)) in fragments.iter().enumerate() {
+                if *alias != aliases[i] {
+                    continue;
+                }
+                let scale = piece
+                    .control_points
+                    .iter()
+                    .chain(&other.control_points)
+                    .flatten()
+                    .map(|v| v.abs())
+                    .fold(1., f64::max);
+                let limit = (4096. * f64::EPSILON * scale).min(tolerance * 0.001);
+                if linear[*alias] {
+                    for reversed in [false, true] {
+                        let a = [
+                            piece.control_points.first().unwrap(),
+                            piece.control_points.last().unwrap(),
+                        ];
+                        let b = if reversed {
+                            [
+                                other.control_points.last().unwrap(),
+                                other.control_points.first().unwrap(),
+                            ]
+                        } else {
+                            [
+                                other.control_points.first().unwrap(),
+                                other.control_points.last().unwrap(),
+                            ]
+                        };
+                        if a.iter().zip(b).all(|(p, q)| {
+                            ((p[0] - q[0]).abs().next_up() + (p[1] - q[1]).abs().next_up())
+                                .next_up()
+                                <= limit
+                        }) {
+                            duplicate = Some(j);
+                            break;
+                        }
                     }
-                    let value = (p[1][0] - p[0][0]) * d[0] + (p[1][1] - p[0][1]) * d[1];
-                    let round = 256.
-                        * f64::EPSILON
-                        * ((p[0][0].abs() + p[1][0].abs()) * d[0].abs()
-                            + (p[0][1].abs() + p[1][1].abs()) * d[1].abs());
-                    value > round
-                });
-                if !monotone {
+                    if duplicate.is_some() {
+                        break;
+                    }
+                }
+                for reversed in [false, true] {
+                    let b = if reversed {
+                        other.reverse()?
+                    } else {
+                        other.clone()
+                    };
+                    if nurbs_core::intersection::planar_coincidence::agreement(&piece, &b)?
+                        .is_some_and(|e| e <= limit)
+                    {
+                        duplicate = Some(j);
+                        break;
+                    }
+                }
+                if duplicate.is_some() {
+                    break;
+                }
+            }
+            if let Some(j) = duplicate {
+                fragments[j].2 = !fragments[j].2;
+            } else {
+                fragments.push((piece, aliases[i], true));
+            }
+            if fragments.len() > 2048 {
+                return Err(refused("Normalization fragment budget exceeded"));
+            }
+        }
+    }
+    let curves: Vec<_> = fragments
+        .into_iter()
+        .filter_map(|(c, _, odd)| odd.then_some(c))
+        .collect();
+    let all = curves.clone();
+    let mut pieces = Vec::new();
+    for (i, source) in curves.iter().enumerate() {
+        let mut c = source.clone();
+        let interval = source.domain();
+        let e = c.evaluate((interval[0] + interval[1]) * 0.5)?;
+        let d =
+            e.d1.ok_or_else(|| refused("Normalization tangent is unresolved"))?;
+        let length = d[0].hypot(d[1]);
+        if length <= tolerance {
+            return Err(refused("Normalization cusp is unresolved"));
+        }
+        let n = [-d[1] / length, d[0] / length];
+        let mut decision = None;
+        // Two distances must agree. Each winding call admits its decision
+        // only after complete control-hull separation from the probe.
+        for distance in [32. * tolerance, 64. * tolerance] {
+            // Ordered tangent-coordinate controls give a fast uniqueness
+            // proof. Unordered controls need not mean an ambiguous curve.
+            let source_hull = controls(source)?;
+            let monotone = source_hull.windows(2).all(|p| {
+                if p[0] == p[1] {
+                    return true;
+                }
+                let value = (p[1][0] - p[0][0]) * d[0] + (p[1][1] - p[0][1]) * d[1];
+                let round = 256.
+                    * f64::EPSILON
+                    * ((p[0][0].abs() + p[1][0].abs()) * d[0].abs()
+                        + (p[0][1].abs() + p[1][1].abs()) * d[1].abs());
+                value > round
+            });
+            let endpoints = [
+                [e.point[0] - n[0] * distance, e.point[1] - n[1] * distance],
+                [e.point[0] + n[0] * distance, e.point[1] + n[1] * distance],
+            ];
+            if !monotone {
+                // Count intersections with the actual represented finite
+                // probe. This uses original curve coordinates and weights,
+                // not rounded rotated controls. An uncertain census cannot
+                // become an empty or unique intersection report.
+                let probe = Curve::from_polyline(endpoints.iter().map(|p| p.to_vec()).collect())?;
+                let unique = matches!(
+                    nurbs_core::intersection::planar_scalar::intersect(source, &probe, tolerance)?,
+                    Some(nurbs_core::intersection::planar_scalar::Relation::Points(points))
+                        if points.len() == 1 && points[0].multiplicity == 1
+                );
+                if !unique {
                     return Err(refused(
                         "Normalization normal-probe uniqueness is unresolved",
                     ));
                 }
-                let endpoints = [
-                    [e.point[0] - n[0] * distance, e.point[1] - n[1] * distance],
-                    [e.point[0] + n[0] * distance, e.point[1] + n[1] * distance],
-                ];
-                for (other_id, other) in curves.iter().enumerate() {
-                    if other_id == i {
+            }
+            for (other_id, other) in curves.iter().enumerate() {
+                if other_id == i {
+                    continue;
+                }
+                let mut pending = vec![(other.clone(), 0usize)];
+                while let Some((part, depth)) = pending.pop() {
+                    work += 1;
+                    if work > 100000 || depth > 40 {
+                        return Err(refused("Normalization probe separation budget exceeded"));
+                    }
+                    let hull = controls(&part)?;
+                    let separated = [[1., 0.], [0., 1.], [d[0] / length, d[1] / length]]
+                        .into_iter()
+                        .any(|axis| {
+                            let bounds = |points: &[[f64; 2]]| {
+                                points
+                                    .iter()
+                                    .fold([f64::INFINITY, f64::NEG_INFINITY], |r, p| {
+                                        let v = p[0] * axis[0] + p[1] * axis[1];
+                                        [r[0].min(v), r[1].max(v)]
+                                    })
+                            };
+                            let a = bounds(&hull);
+                            let b = bounds(&endpoints);
+                            let round = 512.
+                                * f64::EPSILON
+                                * hull
+                                    .iter()
+                                    .flatten()
+                                    .chain(endpoints.iter().flatten())
+                                    .map(|v| v.abs())
+                                    .fold(1., f64::max);
+                            a[1] + 8. * tolerance + round < b[0]
+                                || b[1] + 8. * tolerance + round < a[0]
+                        });
+                    if separated {
                         continue;
                     }
-                    let mut pending = vec![(other.clone(), 0usize)];
-                    while let Some((part, depth)) = pending.pop() {
-                        work += 1;
-                        if work > 100000 || depth > 40 {
-                            return Err(refused("Normalization probe separation budget exceeded"));
-                        }
-                        let hull = controls(&part)?;
-                        let separated = [[1., 0.], [0., 1.], [d[0] / length, d[1] / length]]
-                            .into_iter()
-                            .any(|axis| {
-                                let bounds = |points: &[[f64; 2]]| {
-                                    points.iter().fold(
-                                        [f64::INFINITY, f64::NEG_INFINITY],
-                                        |r, p| {
-                                            let v = p[0] * axis[0] + p[1] * axis[1];
-                                            [r[0].min(v), r[1].max(v)]
-                                        },
-                                    )
-                                };
-                                let a = bounds(&hull);
-                                let b = bounds(&endpoints);
-                                let round = 512.
-                                    * f64::EPSILON
-                                    * hull
-                                        .iter()
-                                        .flatten()
-                                        .chain(endpoints.iter().flatten())
-                                        .map(|v| v.abs())
-                                        .fold(1., f64::max);
-                                a[1] + 8. * tolerance + round < b[0]
-                                    || b[1] + 8. * tolerance + round < a[0]
-                            });
-                        if separated {
-                            continue;
-                        }
-                        let [a, b] = part.domain();
-                        let [left, right] = part.split((a + b) * 0.5)?;
-                        pending.push((right, depth + 1));
-                        pending.push((left, depth + 1));
-                    }
+                    let [a, b] = part.domain();
+                    let [left, right] = part.split((a + b) * 0.5)?;
+                    pending.push((right, depth + 1));
+                    pending.push((left, depth + 1));
                 }
-                let left = point_inside(
-                    &all,
-                    [e.point[0] + n[0] * distance, e.point[1] + n[1] * distance],
-                    tolerance,
-                )?;
-                let right = point_inside(
-                    &all,
-                    [e.point[0] - n[0] * distance, e.point[1] - n[1] * distance],
-                    tolerance,
-                )?;
-                if decision.is_some_and(|v| v != (left, right)) {
-                    return Err(refused(
-                        "Normalization material side is tolerance-ambiguous",
-                    ));
-                }
-                decision = Some((left, right));
             }
-            let (left, right) = decision.unwrap();
-            if left == right {
+            let left = point_inside(
+                &all,
+                [e.point[0] + n[0] * distance, e.point[1] + n[1] * distance],
+                tolerance,
+            )?;
+            let right = point_inside(
+                &all,
+                [e.point[0] - n[0] * distance, e.point[1] - n[1] * distance],
+                tolerance,
+            )?;
+            if decision.is_some_and(|v| v != (left, right)) {
                 return Err(refused(
-                    "Normalization side probes do not resolve the material boundary",
+                    "Normalization material side is tolerance-ambiguous",
                 ));
             }
-            if !left {
-                c = c.reverse()?;
-            }
-            pieces.push((c, i));
-            if pieces.len() > 2048 {
-                return Err(refused("Normalization fragment budget exceeded"));
-            }
+            decision = Some((left, right));
+        }
+        let (left, right) = decision.unwrap();
+        if left == right {
+            return Err(refused(
+                "Normalization side probes do not resolve the material boundary",
+            ));
+        }
+        if !left {
+            c = c.reverse()?;
+        }
+        pieces.push((c, i));
+        if pieces.len() > 2048 {
+            return Err(refused("Normalization fragment budget exceeded"));
         }
     }
     super::boolean_ops::assemble(pieces, tolerance, true)

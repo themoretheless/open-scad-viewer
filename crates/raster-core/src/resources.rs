@@ -132,15 +132,22 @@ impl Rasterizer {
                 slot.try_into().expect("instance record slot");
             record.write_f32(slot);
         }
+        let bytes = pack_f32(&floats);
+        let size = (bytes.len().max(4) as u64).div_ceil(4) * 4;
         let buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("raster instance pool"),
-            size: (floats.len() * 4).max(4) as u64,
+            size,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: true,
         });
-        self.context
-            .queue
-            .write_buffer(&buffer, 0, &pack_f32(&floats));
+        if !bytes.is_empty() {
+            buffer
+                .slice(..bytes.len() as u64)
+                .get_mapped_range_mut()
+                .expect("mapped instance pool")
+                .copy_from_slice(&bytes);
+        }
+        buffer.unmap();
         let bind_group = self
             .context
             .device
@@ -210,15 +217,22 @@ impl Rasterizer {
     }
 
     fn upload_vertex_data(&self, floats: &[f32], label: &str) -> wgpu::Buffer {
+        let bytes = pack_f32(floats);
+        let size = (bytes.len().max(4) as u64).div_ceil(4) * 4;
         let buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(label),
-            size: (floats.len() * 4).max(4) as u64,
+            size,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: true,
         });
-        self.context
-            .queue
-            .write_buffer(&buffer, 0, &pack_f32(floats));
+        if !bytes.is_empty() {
+            buffer
+                .slice(..bytes.len() as u64)
+                .get_mapped_range_mut()
+                .expect("mapped vertex buffer")
+                .copy_from_slice(&bytes);
+        }
+        buffer.unmap();
         buffer
     }
 
@@ -228,15 +242,22 @@ impl Rasterizer {
         indices: &[u32],
     ) -> (wgpu::Buffer, wgpu::Buffer, u32) {
         let vertex_buffer = self.upload_vertex_data(vertices, "raster mesh vertices");
+        let bytes = pack_u32(indices);
+        let size = (bytes.len().max(4) as u64).div_ceil(4) * 4;
         let index_buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("raster mesh indices"),
-            size: (indices.len() * 4).max(4) as u64,
+            size,
             usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: true,
         });
-        self.context
-            .queue
-            .write_buffer(&index_buffer, 0, &pack_u32(indices));
+        if !bytes.is_empty() {
+            index_buffer
+                .slice(..bytes.len() as u64)
+                .get_mapped_range_mut()
+                .expect("mapped index buffer")
+                .copy_from_slice(&bytes);
+        }
+        index_buffer.unmap();
         (vertex_buffer, index_buffer, indices.len() as u32)
     }
 
@@ -245,17 +266,21 @@ impl Rasterizer {
     }
 
     fn upload_object_uniform(&self, uniform: &ObjectUniform) -> (wgpu::Buffer, wgpu::BindGroup) {
+        let mut floats = [0.0f32; OBJECT_UNIFORM_FLOATS];
+        uniform.write_f32(&mut floats);
+        let bytes = pack_f32(&floats);
         let uniform_buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("raster object uniform"),
             size: OBJECT_UNIFORM_BYTES,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: true,
         });
-        let mut floats = [0.0f32; OBJECT_UNIFORM_FLOATS];
-        uniform.write_f32(&mut floats);
-        self.context
-            .queue
-            .write_buffer(&uniform_buffer, 0, &pack_f32(&floats));
+        uniform_buffer
+            .slice(..)
+            .get_mapped_range_mut()
+            .expect("mapped object uniform")
+            .copy_from_slice(&bytes);
+        uniform_buffer.unmap();
         let bind_group = self
             .context
             .device

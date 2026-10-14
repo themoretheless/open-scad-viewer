@@ -9,6 +9,7 @@ import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 import {createNativeCancelProbe} from './sweep-native-cancel-probe.mjs'
+import {traceWorkerWasmFingerprint} from './worker-wasm-fingerprint.mjs'
 
 const dist=path.resolve(process.argv.find(a=>a.startsWith('--dist-directory='))?.slice('--dist-directory='.length)??'dist')
 const output=path.resolve(process.argv[2]??'docs/qualification/sweep-ui-matrix-2026-10-03')
@@ -16,6 +17,9 @@ const filter=process.argv.find(a=>a.startsWith('--mode='))?.slice(7)
 const widthFilter=Number(process.argv.find(a=>a.startsWith('--width='))?.slice(8))
 const startAt=process.argv.find(a=>a.startsWith('--start-at='))?.slice('--start-at='.length)
 const nativeRunningCancel=process.argv.includes('--native-running-cancel')
+const unbudgetedSourceMode=process.argv.includes('--unbudgeted-source')
+const lazyWorkbenchCheck=process.argv.includes('--lazy-workbench')
+if(unbudgetedSourceMode)assert.equal(filter,'miter-hollow-body.r','Unbudgeted source qualification must explicitly select the unchanged original example')
 const nativeCancel=process.argv.includes('--native-cancel')||nativeRunningCancel
 const closedFrenetStationMatrixMode=process.argv.includes('--closed-frenet-station-matrix')
 const periodicFixedNormalStationMatrixMode=process.argv.includes('--periodic-fixed-normal-station-matrix')
@@ -97,12 +101,14 @@ assert.equal(sha(await readFile(path.join(dist,'wasm/geometry-kernel.wasm'))),wa
 assert.ok((await readFile('src/generated/geometry-kernels/identity.ts','utf8')).includes(wasmSha),'Generated identity must match public WASM')
 const workerFiles=(await readdir(path.join(dist,'assets'))).filter(name=>/^geometry\.worker-.*\.js$/.test(name))
 assert.ok(workerFiles.length,'Built geometry worker asset must exist')
-for(const file of workerFiles)assert.ok((await readFile(path.join(dist,'assets',file),'utf8')).includes(wasmSha),'Geometry worker must embed the current WASM fingerprint')
+const workerModuleProvenance=[]
+for(const file of workerFiles)workerModuleProvenance.push(await traceWorkerWasmFingerprint(dist,file,wasmSha))
 const report={schema:'sweep-miter-ui-matrix/1' ,recordedAt:new Date().toISOString(),
  scope:(progressiveStationMatrixMode?'Finite owned progressive station reconstruction UI scenarios; ':bodyBoundaryMode?'Finite constructor-owned progressive body boundary UI scenarios; ':surfaceMode?'Finite progressive surface UI scenarios; ':'Finite retained-miter UI scenarios; ')+' held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.',
  nativeCancelProbe:nativeCancel,nativeRunningCancelProbe:nativeRunningCancel,
+ unbudgetedSourceMode,
  geometryWasmSha256:wasmSha,
- artifactProvenance:{sha256:wasmSha,byteLength:wasm.length,sourcePublicDistVerified:true,geometryWorkerFiles:workerFiles},
+ artifactProvenance:{sha256:wasmSha,byteLength:wasm.length,sourcePublicDistVerified:true,geometryWorkerFiles:workerFiles,workerModuleProvenance},
  appSourceSha256:sha(await readFile('src/App.vue')),distIndexSha256:sha(await readFile(path.join(dist,'index.html'))),cases:[]}
 if(nativeRunningCancel)report.scope+=' Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.'
 else if(nativeCancel)report.scope+=' Native probes pause actual geometry abi_request activations and verify Worker destruction; they do not measure unconstrained cancellation latency.'
@@ -121,7 +127,7 @@ report.sourceHashes = Object.fromEntries(await Promise.all([
  'src/services/nurbsSectionProjection.ts','src/services/nurbsCircleSectionRepair.ts',
  'src/services/miterBodyLayout.ts','src/services/sweepBoundaryCertificate.ts',
  'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
- 'scripts/check-sweep-miter-matrix-browser.mjs','scripts/sweep-native-cancel-probe.mjs','scripts/sweep-body-matrix-sources.mjs',
+ 'scripts/check-sweep-miter-matrix-browser.mjs','scripts/worker-wasm-fingerprint.mjs','scripts/sweep-native-cancel-probe.mjs','scripts/sweep-body-matrix-sources.mjs',
  'crates/geometry-bridge/src/brep.rs',
  'crates/brep-core/src/face_contact_groups.rs','crates/brep-core/src/face_contacts.rs',
  'crates/brep-core/src/boundary_embedding.rs','crates/brep-core/src/sweep_cap_contacts.rs',
@@ -152,6 +158,7 @@ try {
  for(const viewport of viewports)for(const file of sources){
   if(!plannedCaseSet.has(caseKey(viewport,file)))continue
   const source=await readFile(path.join(sourceDirectory,file),'utf8')
+  if(unbudgetedSourceMode)assert.ok(!/\bmax_deviation\s*:/.test(source),'The unchanged hollow example must have no authored tolerance')
   const name=viewport.width+'-'+file.replace(/\.r$/,'')
   const directory=path.join(output,name);await mkdir(directory,{recursive:true})
   const context=await browser.newContext({viewport,acceptDownloads:true})
@@ -219,6 +226,27 @@ try {
    const waitSolidFinished=()=>page.waitForFunction(()=>![...document.querySelectorAll('.editor-toolbar button')].some(b=>b.textContent.trim()==='…'),{},{timeout:120000})
    await load(source);await build();await assertBuilt()
    entry.assertions.push({case:'build',status:'passed'})
+   if(lazyWorkbenchCheck){
+    await openSource()
+    const before=await page.locator('.editor-toolbar').innerText()
+    await page.getByRole('button',{name:'Команды',exact:true}).click()
+    entry.lazyWorkbenchCommands=await page.getByRole('option').allTextContents()
+    await page.getByRole('combobox',{name:'Search commands / Поиск команд'}).fill('Операции CAD')
+    await page.getByRole('option').filter({hasText:'Операции CAD'}).click()
+    const workbench=page.locator('.cad-workbench')
+    await workbench.waitFor({state:'visible',timeout:30000})
+    const action=workbench.locator('select').first()
+    assert.equal(await action.inputValue(),'union')
+    assert.ok(await action.locator('option').count()>=10,'Lazy workbench must retain its operation controls')
+    entry.assertions.push({case:'lazy-workbench-open-with-controls',status:'passed'})
+    await action.selectOption('texture')
+    assert.ok(await workbench.getByText('Настоящий рельеф для экспорта STL.',{exact:false}).isVisible())
+    entry.assertions.push({case:'lazy-workbench-operation-switch',status:'passed'})
+    await workbench.locator('header button').click()
+    await workbench.waitFor({state:'hidden'})
+    assert.equal(await page.locator('.editor-toolbar').innerText(),before,'Opening and closing the panel must preserve build state')
+    entry.assertions.push({case:'lazy-workbench-close-preserves-build',status:'passed'})
+   }
    if(gpuBackend!=='auto'&&!surfaceMode){
     await page.locator('.no-gpu').waitFor({state:'hidden',timeout:30000})
     await page.locator('canvas.gpu-canvas').waitFor({state:'visible'})
@@ -318,7 +346,7 @@ try {
      await load(source);await build();await assertBuilt()
      assert.match(await patchEvidence.innerText(),/C2 замкнутого исходного кадра:\s*доказана/)
      entry.assertions.push({case:'closed-path-source-C2-single-bit-refusal-and-restoration',status:'passed'})
-     if(file==='closed-planar-guided-frame-c2-progressive-sweep.r')assert.match(await patchEvidence.innerText(),/Ошибка sweep-поверхностей относительно исходного переноса профиля:\s*не доказана/)
+     if(file==='closed-planar-guided-frame-c2-progressive-sweep.r')assert.match(await patchEvidence.innerText(),/Ошибка sweep-поверхностей относительно исходного переноса профиля:\s*доказана\s*·\s*≤[0-9.]+ \/ 2\.00000 mm/)
     }
     if(file==='authored-closed-cartesian-c2-progressive-sweep.r'){
      const bad=source.replace('[-0.28125,0.125,1]','[-0.28124999999999994,0.125,1]')
@@ -367,8 +395,10 @@ try {
       assert.match(entry.correctedSpatialRefusal,/Progressive sweep .* exceeds /)
       assert.equal(await patchEvidence.count(),0,'Spatial refinement refusal must clear the old planar C2 proof')
      }else{
-      await assertBuilt()
-      assert.match(await patchEvidence.innerText(),/C2 исходного кадра:\s*не доказана/)
+      const refusal=page.locator('.message.error');await refusal.waitFor()
+      entry.correctedSpatialRefusal=await refusal.innerText()
+      assert.match(entry.correctedSpatialRefusal,/continuous retained-patch error is unproved \(frame-regularity-subdivision-unresolved\)/)
+      assert.equal(await patchEvidence.count(),0,'Unproved spatial refinement must clear the old planar C2 proof')
      }
      await load(source);await build();await assertBuilt()
      assert.match(await patchEvidence.innerText(),/C2 исходного кадра:\s*доказана/)
@@ -399,7 +429,10 @@ try {
      assert.notEqual(strict,source,'Strict closed fixture must change the error budget')
      await load(strict);await build()
      const refusal=page.locator('.message.error');await refusal.waitFor()
-     assert.match(await refusal.innerText(),/continuous retained-patch error/i)
+     const strictRefusal=await refusal.innerText()
+     if(file==='closed-planar-rmf-full-turn-progressive-sweep.r')assert.match(strictRefusal,/continuous retained-patch error/i)
+     else assert.match(strictRefusal,/Progressive sweep (?:continuous retained-patch error|sampled refinement [^\n]+ exceeds)/i)
+     entry.strictBoundRefusal=strictRefusal
      assert.equal(await page.getByTestId('sweep-patch-final-evidence').count(),0,'Refused source must clear final patch proof')
      await load(source);await build();await assertBuilt()
      await patchEvidence.waitFor({state:'visible'})
@@ -439,6 +472,12 @@ try {
    if(file==='miter-g1-profile-frame-guide-affine.r'){
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\/\s*\?/.test(text)), 'Independent G1 must survive unproved G2')
     entry.assertions.push({case:'independent-G1-with-unproved-G2',status:'passed'})
+   }
+   if(unbudgetedSourceMode){
+    assert.ok(entry.viewportEvidence.some(text=>/Непрерывная ошибка границы:\s*доказана/.test(text)),'Unbudgeted numerical boundary bound must reach the viewport')
+    assert.ok(entry.viewportEvidence.some(text=>text.includes('допуск не задан')),'Viewport must preserve the absence of an authored tolerance')
+    assert.ok(!entry.viewportEvidence.some(text=>text.includes('в допуске')),'Unbudgeted source must not acquire tolerance admission')
+    entry.assertions.push({case:'unbudgeted-boundary-presentation',status:'passed'})
    }
    if(file!=='miter-hollow-body.r'&&file!=='miter-hollow-corrected.r'&&file!=='closed-miter-hollow-body.r'){
     assert.ok(entry.viewportEvidence.some(text=>/Непрерывная ошибка границы:\s*доказана/.test(text)), 'Complete progressive boundary proof must reach the viewport')
@@ -619,7 +658,7 @@ try {
    entry.assertions.push({case:'source-change',status:'passed',fault:'held worker dispatch'})
    await page.evaluate(()=>window.sweepHoldExact=false)
    await load(source);await toSolid()
-   if(surfaceMode||file==='miter-hollow-body.r'||boundedFixedRefusalMode){
+   if(surfaceMode||file==='miter-hollow-body.r'&&!unbudgetedSourceMode||boundedFixedRefusalMode){
     await waitSolidFinished()
     const error=page.locator('.message.error');await error.waitFor()
     assert.match(await error.innerText(),surfaceMode?/Solid source requires native B-rep bodies/i:/Solid geometry.*boundary embedding/i)
@@ -656,6 +695,7 @@ try {
    const document=await download('solid')
    assert.equal(document.bodies.length,1)
    assert.ok(document.bodies[0].brep?.faces.length>0)
+   if(unbudgetedSourceMode)assert.equal(document.bodies[0].brep.faces.length,32,'Solid must receive both complete native annular cap groups')
    entry.solid={faces:document.bodies[0].brep.faces.length,shells:document.bodies[0].brep.shells.length,
     geometrySha256:sha(JSON.stringify(document.bodies[0].brep))}
    entry.assertions.push({case:'solid-publication',status:'passed'})

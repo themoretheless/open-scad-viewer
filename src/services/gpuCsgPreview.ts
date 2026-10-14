@@ -141,19 +141,39 @@ export function rotationZMat4(rad: number): Float32Array {
 
 export function rotationEulerMat4(rxDeg: number, ryDeg: number, rzDeg: number): Float32Array {
   const deg2rad = Math.PI / 180
-  const rx = rotationXMat4(rxDeg * deg2rad)
-  const ry = rotationYMat4(ryDeg * deg2rad)
-  const rz = rotationZMat4(rzDeg * deg2rad)
-  // Euler Z * Y * X
-  return multiplyMat4(rz, multiplyMat4(ry, rx))
+  const ax = rxDeg * deg2rad
+  const ay = ryDeg * deg2rad
+  const az = rzDeg * deg2rad
+
+  const cx = Math.cos(ax), sx = Math.sin(ax)
+  const cy = Math.cos(ay), sy = Math.sin(ay)
+  const cz = Math.cos(az), sz = Math.sin(az)
+
+  // Direct composition of Euler Z * Y * X
+  const m = new Float32Array(16)
+  m[0] = cz * cy
+  m[1] = cz * sy * sx - sz * cx
+  m[2] = cz * sy * cx + sz * sx
+  m[4] = sz * cy
+  m[5] = sz * sy * sx + cz * cx
+  m[6] = sz * sy * cx - cz * sx
+  m[8] = -sy
+  m[9] = cy * sx
+  m[10] = cy * cx
+  m[15] = 1
+  return m
 }
 
-export function normalMatrixFromModel(model: Float32Array): Float32Array {
+export function normalMatrixFromModel(model: Float32Array, out?: Float32Array): Float32Array {
   // Transpose of inverse of 3x3 upper-left block, padded to 4x4
-  const n = identityMat4()
-  const m00 = model[0], m01 = model[1], m02 = model[2]
-  const m10 = model[4], m11 = model[5], m12 = model[6]
-  const m20 = model[8], m21 = model[9], m22 = model[10]
+  const n = out ?? identityMat4()
+  if (out) {
+    n.fill(0)
+    n[0] = n[5] = n[10] = n[15] = 1
+  }
+  const m00 = model[0]!, m01 = model[1]!, m02 = model[2]!
+  const m10 = model[4]!, m11 = model[5]!, m12 = model[6]!
+  const m20 = model[8]!, m21 = model[9]!, m22 = model[10]!
 
   const c00 = m11 * m22 - m12 * m21
   const c01 = -(m10 * m22 - m12 * m20)
@@ -164,15 +184,15 @@ export function normalMatrixFromModel(model: Float32Array): Float32Array {
 
   const invDet = 1 / det
   n[0] = c00 * invDet
-  n[1] = (-(m01 * m22 - m02 * m21)) * invDet
+  n[1] = -(m01 * m22 - m02 * m21) * invDet
   n[2] = (m01 * m12 - m02 * m11) * invDet
 
   n[4] = c01 * invDet
   n[5] = (m00 * m22 - m02 * m20) * invDet
-  n[6] = (-(m00 * m12 - m02 * m10)) * invDet
+  n[6] = -(m00 * m12 - m02 * m10) * invDet
 
   n[8] = c02 * invDet
-  n[9] = (-(m00 * m21 - m01 * m20)) * invDet
+  n[9] = -(m00 * m21 - m01 * m20) * invDet
   n[10] = (m00 * m11 - m01 * m10) * invDet
   return n
 }
@@ -186,17 +206,25 @@ export interface GeometryData {
   indices: Uint32Array
 }
 
+let cachedUnitCubeCentered: GeometryData | null = null
+let cachedUnitCubeUncentered: GeometryData | null = null
+let cachedUnitCylinder32Centered: GeometryData | null = null
+let cachedUnitSphere32x16: GeometryData | null = null
+
 /**
  * Generates a unit cube [-0.5, 0.5]^3 or [0, 1]^3.
  * 24 vertices with sharp perpendicular face normals, 36 indices.
  */
 export function generateUnitCube(center = true): GeometryData {
+  if (center && cachedUnitCubeCentered) return cachedUnitCubeCentered
+  if (!center && cachedUnitCubeUncentered) return cachedUnitCubeUncentered
+
   const min = center ? -0.5 : 0
   const max = center ? 0.5 : 1
 
   // 6 faces * 4 vertices = 24 vertices
   // Format: [px, py, pz, nx, ny, nz]
-  const v = [
+  const vertices = new Float32Array([
     // Front face (Z+)
     min, min, max,  0, 0, 1,
     max, min, max,  0, 0, 1,
@@ -227,7 +255,7 @@ export function generateUnitCube(center = true): GeometryData {
     max, min, min,  0, -1, 0,
     max, min, max,  0, -1, 0,
     min, min, max,  0, -1, 0,
-  ]
+  ])
 
   const indices = new Uint32Array(36)
   for (let f = 0; f < 6; f++) {
@@ -241,93 +269,129 @@ export function generateUnitCube(center = true): GeometryData {
     indices[i + 5] = base + 3
   }
 
-  return { vertices: new Float32Array(v), indices }
+  const data: GeometryData = { vertices, indices }
+  if (center) cachedUnitCubeCentered = data
+  else cachedUnitCubeUncentered = data
+  return data
 }
 
 /**
  * Generates a unit cylinder (radius = 1, height = 1, along Z-axis).
  */
 export function generateUnitCylinder(segments = 32, center = true): GeometryData {
+  if (segments === 32 && center && cachedUnitCylinder32Centered) {
+    return cachedUnitCylinder32Centered
+  }
+
   const zMin = center ? -0.5 : 0
   const zMax = center ? 0.5 : 1
 
-  const vertices: number[] = []
-  const indices: number[] = []
+  const totalVerts = 2 + segments * 2 + (segments + 1) * 2
+  const vertices = new Float32Array(totalVerts * 6)
+  const indices = new Uint32Array(segments * 12)
+  let vPtr = 0
+  let iPtr = 0
 
   // Top cap center
   const topCenterIdx = 0
-  vertices.push(0, 0, zMax,  0, 0, 1)
+  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = zMax
+  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = 1
+
   // Top cap perimeter
   const topStartIdx = 1
+  const twoPiOverSegs = (Math.PI * 2) / segments
   for (let i = 0; i < segments; i++) {
-    const theta = (i / segments) * Math.PI * 2
+    const theta = i * twoPiOverSegs
     const x = Math.cos(theta)
     const y = Math.sin(theta)
-    vertices.push(x, y, zMax,  0, 0, 1)
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMax
+    vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = 1
   }
   for (let i = 0; i < segments; i++) {
     const next = (i + 1) % segments
-    indices.push(topCenterIdx, topStartIdx + i, topStartIdx + next)
+    indices[iPtr++] = topCenterIdx
+    indices[iPtr++] = topStartIdx + i
+    indices[iPtr++] = topStartIdx + next
   }
 
   // Bottom cap center
-  const bottomCenterIdx = vertices.length / 6
-  vertices.push(0, 0, zMin,  0, 0, -1)
+  const bottomCenterIdx = vPtr / 6
+  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = zMin
+  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = -1
+
   // Bottom cap perimeter
   const bottomStartIdx = bottomCenterIdx + 1
   for (let i = 0; i < segments; i++) {
-    const theta = (i / segments) * Math.PI * 2
+    const theta = i * twoPiOverSegs
     const x = Math.cos(theta)
     const y = Math.sin(theta)
-    vertices.push(x, y, zMin,  0, 0, -1)
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMin
+    vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = -1
   }
   for (let i = 0; i < segments; i++) {
     const next = (i + 1) % segments
-    indices.push(bottomCenterIdx, bottomStartIdx + next, bottomStartIdx + i)
+    indices[iPtr++] = bottomCenterIdx
+    indices[iPtr++] = bottomStartIdx + next
+    indices[iPtr++] = bottomStartIdx + i
   }
 
   // Side wall (quads with radial normals)
-  const sideStartIdx = vertices.length / 6
+  const sideStartIdx = vPtr / 6
   for (let i = 0; i <= segments; i++) {
-    const theta = (i / segments) * Math.PI * 2
+    const theta = i * twoPiOverSegs
     const x = Math.cos(theta)
     const y = Math.sin(theta)
     // Top vertex
-    vertices.push(x, y, zMax,  x, y, 0)
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMax
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = 0
     // Bottom vertex
-    vertices.push(x, y, zMin,  x, y, 0)
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMin
+    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = 0
   }
   for (let i = 0; i < segments; i++) {
     const iTop = sideStartIdx + i * 2
     const iBot = iTop + 1
     const nTop = sideStartIdx + (i + 1) * 2
     const nBot = nTop + 1
-    indices.push(iTop, nTop, iBot)
-    indices.push(iBot, nTop, nBot)
+    indices[iPtr++] = iTop; indices[iPtr++] = nTop; indices[iPtr++] = iBot
+    indices[iPtr++] = iBot; indices[iPtr++] = nTop; indices[iPtr++] = nBot
   }
 
-  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) }
+  const data: GeometryData = { vertices, indices }
+  if (segments === 32 && center) cachedUnitCylinder32Centered = data
+  return data
 }
 
 /**
  * Generates a unit UV sphere (radius = 1).
  */
 export function generateUnitSphere(segments = 32, rings = 16): GeometryData {
-  const vertices: number[] = []
-  const indices: number[] = []
+  if (segments === 32 && rings === 16 && cachedUnitSphere32x16) {
+    return cachedUnitSphere32x16
+  }
+
+  const totalVerts = (rings + 1) * (segments + 1)
+  const vertices = new Float32Array(totalVerts * 6)
+  const indices = new Uint32Array(rings * segments * 6)
+  let vPtr = 0
+  let iPtr = 0
+
+  const piOverRings = Math.PI / rings
+  const twoPiOverSegs = (Math.PI * 2) / segments
 
   for (let r = 0; r <= rings; r++) {
-    const phi = (r / rings) * Math.PI
+    const phi = r * piOverRings
     const sinPhi = Math.sin(phi)
     const cosPhi = Math.cos(phi)
 
     for (let s = 0; s <= segments; s++) {
-      const theta = (s / segments) * Math.PI * 2
+      const theta = s * twoPiOverSegs
       const x = Math.cos(theta) * sinPhi
       const y = Math.sin(theta) * sinPhi
       const z = cosPhi
       // Normalized position doubles as normal
-      vertices.push(x, y, z,  x, y, z)
+      vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = z
+      vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = z
     }
   }
 
@@ -335,12 +399,14 @@ export function generateUnitSphere(segments = 32, rings = 16): GeometryData {
     for (let s = 0; s < segments; s++) {
       const first = r * (segments + 1) + s
       const second = first + segments + 1
-      indices.push(first, second, first + 1)
-      indices.push(second, second + 1, first + 1)
+      indices[iPtr++] = first; indices[iPtr++] = second; indices[iPtr++] = first + 1
+      indices[iPtr++] = second; indices[iPtr++] = second + 1; indices[iPtr++] = first + 1
     }
   }
 
-  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) }
+  const data: GeometryData = { vertices, indices }
+  if (segments === 32 && rings === 16) cachedUnitSphere32x16 = data
+  return data
 }
 
 /* ── CSG Tree Flattening & Normalization ──────────────── */
@@ -949,6 +1015,9 @@ export class GpuCsgRenderer {
   readonly geometryCache = new GpuCsgGeometryCache()
   private sceneUB: GPUBuffer | null = null
   private sceneBG: GPUBindGroup | null = null
+  private readonly sceneScratch = new Float32Array(64)
+  private readonly objScratch = new Float32Array(64)
+  private readonly nmatScratch = new Float32Array(16)
 
   constructor(colorFormat: GPUTextureFormat = 'bgra8unorm') {
     this.pipelineManager = new GpuCsgPipelineManager(colorFormat)
@@ -966,7 +1035,7 @@ export class GpuCsgRenderer {
       })
     }
 
-    const data = new Float32Array(64)
+    const data = this.sceneScratch
     // viewProjection: mat4x4f (16 floats)
     data.set(opts.viewProjection, 0)
     // eyePosition: vec4f (4 floats)
@@ -1008,11 +1077,11 @@ export class GpuCsgRenderer {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     })
 
-    const data = new Float32Array(64)
+    const data = this.objScratch
     // model: mat4x4f (16 floats)
     data.set(prim.transform, 0)
     // normalMatrix: mat4x4f (16 floats)
-    data.set(normalMatrixFromModel(prim.transform), 16)
+    data.set(normalMatrixFromModel(prim.transform, this.nmatScratch), 16)
     // color: vec4f
     data[32] = prim.color[0]
     data[33] = prim.color[1]

@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
+import {computed,onBeforeUnmount,onMounted,ref,shallowRef,toRaw,watch} from 'vue'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
 import type {CurveOffsetDiagnostics} from '../services/curveOffsetDiagnostics'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 const emit=defineEmits<{result:[{curves:SolidNurbsCurve[];diagnostics:CurveOffsetDiagnostics}|null]}>()
 const props=defineProps<{curves:SolidNurbsCurve[];ids:string[];locale:string}>()
+function clonePlain<T>(value:T):T{
+ const raw=toRaw(value)
+ if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
+ if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
+  const out:Record<string,unknown>={}
+  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
+  return out as T
+ }
+ return raw
+}
 const selected=computed(()=>props.ids.map(id=>props.curves.find(c=>c.id===id)))
 const enabled=computed(()=>selected.value.length>0&&selected.value.every(c=>c?.curve.degree===1&&!c.curve.periodic))
 const client=createSolidPreviewWorker(),pending=ref(false),error=ref(''),result=shallowRef<CurveOffsetDiagnostics|null>(null)
@@ -14,7 +24,8 @@ function cancel(){generation++;client.cancel();pending.value=false;result.value=
 watch(()=>[props.ids,selected.value.map(c=>c?.curve)],cancel,{deep:true,flush:'sync'})
 async function inspect(){
  cancel();const current=generation;pending.value=true
- try{const value=await client.run({kind:'curveChainInspection',document:{version:1,bodies:[],sketches:[],curves:JSON.parse(JSON.stringify(selected.value.filter((c):c is SolidNurbsCurve=>!!c)))},ids:[...props.ids],maxPairs:1000000});if(current===generation){result.value=value;emit('result',{curves:selected.value.filter((c):c is SolidNurbsCurve=>!!c),diagnostics:value})}}
+ const validCurves=selected.value.filter((c):c is SolidNurbsCurve=>!!c)
+ try{const value=await client.run({kind:'curveChainInspection',document:{version:1,bodies:[],sketches:[],curves:clonePlain(validCurves)},ids:[...props.ids],maxPairs:1000000});if(current===generation){result.value=value;emit('result',{curves:validCurves,diagnostics:value})}}
  catch(e){if(current===generation)error.value=text('Проверка не выполнена. Выберите соединённые отрезки по порядку в плоскости XY с постоянной Z.','Inspection failed. Select connected segments in order in XY with constant Z.')}
  finally{if(current===generation)pending.value=false}
 }

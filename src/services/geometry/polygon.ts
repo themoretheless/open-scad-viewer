@@ -14,12 +14,12 @@ export interface PolygonMesh {
  * instead of silently wrapping. */
 const MAX_MESH_VERTICES = 0xffffffff
 export function toPolygonPositions(values: ArrayLike<number>): Float64Array {
-  return values instanceof Float64Array ? values : Float64Array.from(values)
+  return values instanceof Float64Array ? values : new Float64Array(values)
 }
 export function toPolygonIndices(values: ArrayLike<number>): Uint32Array {
   if (values instanceof Uint32Array) return values
   if (values.length > MAX_MESH_VERTICES * 3) throw new Error('Mesh index buffer exceeds u32 range.')
-  return Uint32Array.from(values)
+  return new Uint32Array(values)
 }
 /** Normalize an arbitrary mesh-like payload (freshly JSON/binary-decoded plain
  * arrays, or already typed views) into the canonical typed PolygonMesh fields. */

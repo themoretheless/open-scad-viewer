@@ -1,4 +1,4 @@
-use crate::{Acceleration, Error, Result, V3, nearest_neighbor_accelerated};
+use crate::{Acceleration, Error, Result, V3};
 
 /// WGSL template for directed Chamfer partial reduction.
 pub const CHAMFER_WGSL: &str = include_str!("chamfer.wgsl");
@@ -48,12 +48,21 @@ pub fn directed_chamfer_distance(
             return Ok(summary);
         }
     }
-    let distances = nearest_neighbor_accelerated(queries, targets, acceleration);
     let mut sum = 0.;
     let mut max_squared_distance = 0.;
-    for (_, distance) in distances {
-        sum += distance;
-        max_squared_distance = f64::max(max_squared_distance, distance);
+    for &q in queries {
+        let mut best_distance = f64::INFINITY;
+        for &t in targets {
+            let dx = q[0] - t[0];
+            let dy = q[1] - t[1];
+            let dz = q[2] - t[2];
+            let d = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
+            if d < best_distance {
+                best_distance = d;
+            }
+        }
+        sum += best_distance;
+        max_squared_distance = f64::max(max_squared_distance, best_distance);
     }
     let mean_squared_distance = sum / queries.len() as f64;
     Ok(DirectedChamfer {

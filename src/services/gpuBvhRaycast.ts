@@ -9,6 +9,7 @@
 
 import { runGpuCompute } from './webgpuCompute'
 import type { Ray3 } from './math3d'
+import { mapChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
 
 export interface AabbItem {
   id: string
@@ -326,18 +327,39 @@ export function referenceBatchedBvhRaycast(
 }
 
 /**
+ * Cooperative non-blocking async CPU reference for batched BVH raycasting.
+ */
+export async function referenceBatchedBvhRaycastAsync(
+  bvh: FlatBvhTree,
+  rays: readonly BatchedRayInput[],
+  options: CooperativeAsyncOptions = {}
+): Promise<(RayHit | null)[]> {
+  if (bvh.nodeCount === 0 || rays.length === 0) {
+    return rays.map(() => null)
+  }
+  return mapChunkedAsync(
+    rays,
+    ray => referenceBatchedBvhRaycast(bvh, [ray])[0] ?? null,
+    { checkStride: 64, ...options }
+  )
+}
+
+/**
  * Evaluates N rays in parallel on WebGPU Compute against a FlatBvhTree.
  * Falls back to deterministic CPU traversal when WebGPU is unavailable.
  */
 export async function runGpuBatchedBvhRaycast(
   bvh: FlatBvhTree,
-  rays: readonly BatchedRayInput[]
+  rays: readonly BatchedRayInput[],
+  options: CooperativeAsyncOptions = {}
 ): Promise<(RayHit | null)[]> {
   if (rays.length === 0) return []
   if (bvh.nodeCount === 0) return rays.map(() => null)
 
   if (typeof navigator === 'undefined' || !navigator.gpu) {
-    return referenceBatchedBvhRaycast(bvh, rays)
+    return rays.length >= 256
+      ? referenceBatchedBvhRaycastAsync(bvh, rays, options)
+      : referenceBatchedBvhRaycast(bvh, rays)
   }
 
   try {
@@ -402,7 +424,9 @@ export async function runGpuBatchedBvhRaycast(
     // Fallback to CPU reference when WebGPU adapter is unavailable
   }
 
-  return referenceBatchedBvhRaycast(bvh, rays)
+  return rays.length >= 256
+    ? referenceBatchedBvhRaycastAsync(bvh, rays, options)
+    : referenceBatchedBvhRaycast(bvh, rays)
 }
 
 /**

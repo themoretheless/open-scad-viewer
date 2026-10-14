@@ -480,7 +480,7 @@ export function isBoundaryConnectivity(value:unknown,triangles:number,vertices:n
     if(!c||c.id!==i||!Number.isFinite(c.signedVolumeMm3)||!Array.isArray(c.sourceTriangles)
       ||!c.sourceTriangles.length||c.sourceTriangles.length>triangles
       ||!Array.isArray(c.boundsMm)||c.boundsMm.length!==2
-      ||!c.boundsMm.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))
+      ||!c.boundsMm.every(p=>Array.isArray(p)&&p.length===3&&Number.isFinite(p[0])&&Number.isFinite(p[1])&&Number.isFinite(p[2]))
       ||c.boundsMm[0].some((x,k)=>x>c.boundsMm[1][k]))return false
     for(const t of c.sourceTriangles){
       if(!Number.isInteger(t)||t<0||t>=triangles||seen.has(t))return false

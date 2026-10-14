@@ -8,9 +8,11 @@ const props=defineProps<{plane:SketchPlane;locale:string;authored?:boolean}>(),e
 const opened=ref(false),width=ref(100),threshold=ref(.5),resolution=ref(512),tolerance=ref(.1),mode=ref<'dark'|'alpha'|'color'>('dark'),colors=ref(4),ignoreWhite=ref(true),minArea=ref(.1),file=ref<File|null>(null),busy=ref(false),error=ref('')
 const worker=createSvgWorkerClient();let generation=0
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en
+const sameVec3=(a:readonly number[],b:readonly number[])=>a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]
+const sameSketchPlane=(a:SketchPlane,b:SketchPlane)=>sameVec3(a.origin,b.origin)&&sameVec3(a.u,b.u)&&sameVec3(a.v,b.v)
 onBeforeUnmount(()=>{generation++;worker.dispose()})
 function cancel(){generation++;worker.cancel();busy.value=false}
-async function trace(){if(!file.value||busy.value)return;const token=++generation,basis=JSON.parse(JSON.stringify(props.plane)) as SketchPlane,image=file.value;busy.value=true;error.value=''
+async function trace(){if(!file.value||busy.value)return;const token=++generation,basis:SketchPlane={origin:[...props.plane.origin],u:[...props.plane.u],v:[...props.plane.v]},image=file.value;busy.value=true;error.value=''
  try{
   if(image.size>2_800_000)throw Error('Image exceeds 2.8 MiB.')
   const bitmap=await createImageBitmap(image),w=bitmap.width,h=bitmap.height;bitmap.close()
@@ -19,7 +21,7 @@ async function trace(){if(!file.value||busy.value)return;const token=++generatio
   const options={widthMm:width.value,pixelWidth:w,pixelHeight:h,threshold:threshold.value,resolution:resolution.value,tolerance:tolerance.value,mode:mode.value==='dark'?'dark' as const:'alpha' as const}
   const job=mode.value==='color'?imageTraceColorJob(dataUrl,options,colors.value,ignoreWhite.value,minArea.value):imageTraceJob(dataUrl,options)
   const result=await worker.run(job),sketches=mode.value==='color'?imageTraceColorSketches(result.layers??[],tolerance.value,basis,image.name):imageTraceSketches(result.contours??[],tolerance.value,basis,image.name)
-  if(token!==generation||JSON.stringify(basis)!==JSON.stringify(props.plane))return
+  if(token!==generation||!sameSketchPlane(basis,props.plane))return
   emit('trace',props.authored?sketches:sketches.map(s=>{const {editablePath:_path,...polygon}=s;return polygon}));opened.value=false
  }catch(e){if(token===generation)error.value=e instanceof Error?e.message:String(e)}finally{if(token===generation)busy.value=false}
 }

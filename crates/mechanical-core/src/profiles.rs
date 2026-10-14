@@ -80,7 +80,8 @@ fn round7(v: f64) -> f64 {
     (v * 1e7 + 0.5).floor() / 1e7
 }
 fn polar(r: f64, a: f64) -> Point {
-    [round7(r * a.cos()), round7(r * a.sin())]
+    let (s, c) = a.sin_cos();
+    [round7(r * c), round7(r * s)]
 }
 fn area(points: &[Point]) -> f64 {
     points
@@ -331,7 +332,14 @@ pub(crate) fn rounded10(v: f64) -> f64 {
     if v.abs() < 1e-10 {
         0.
     } else {
-        format!("{v:.10}").parse().unwrap()
+        use std::io::Write;
+        let mut buf = [0u8; 64];
+        let mut cursor = std::io::Cursor::new(&mut buf[..]);
+        write!(cursor, "{v:.10}").unwrap();
+        let len = cursor.position() as usize;
+        unsafe { std::str::from_utf8_unchecked(&buf[..len]) }
+            .parse()
+            .unwrap()
     }
 }
 pub(crate) fn angle(v: f64) -> f64 {
@@ -394,7 +402,7 @@ pub fn planetary_profiles(o: &PlanetaryOptions) -> Result<PlanetaryProfiles> {
     }
     let sun_angle = (1. + ring_count / sun_teeth) * carrier;
     let ring_angle = (planet_teeth % 2.) * 180. / ring_count;
-    let mut parts = Vec::new();
+    let mut parts = Vec::with_capacity(2 + o.planet_count);
     let mut place = |id: String, role, profile: GearProfile, x: f64, y: f64, rotation: f64| {
         parts.push(GearInstance {
             id,
@@ -406,7 +414,7 @@ pub fn planetary_profiles(o: &PlanetaryOptions) -> Result<PlanetaryProfiles> {
     };
     place("sun".into(), "sun", sun, 0., 0., sun_angle);
     place("ring".into(), "ring", ring, 0., 0., ring_angle);
-    let mut planet_angles = Vec::new();
+    let mut planet_angles = Vec::with_capacity(o.planet_count);
     for i in 0..o.planet_count {
         let orbit_angle = carrier + 360. * i as f64 / count;
         let planet_angle = (1. + sun_teeth / planet_teeth) * orbit_angle
@@ -414,13 +422,13 @@ pub fn planetary_profiles(o: &PlanetaryOptions) -> Result<PlanetaryProfiles> {
             + 180.
             - 180. / planet_teeth;
         planet_angles.push(planet_angle);
-        let polar = angle(orbit_angle) * PI / 180.;
+        let (sin_p, cos_p) = (angle(orbit_angle) * PI / 180.).sin_cos();
         place(
             format!("planet_{}", i + 1),
             "planet",
             planet.clone(),
-            orbit * polar.cos(),
-            orbit * polar.sin(),
+            orbit * cos_p,
+            orbit * sin_p,
             planet_angle,
         );
     }

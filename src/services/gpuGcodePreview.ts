@@ -8,8 +8,9 @@
 
 import { runGpuCompute } from './webgpuCompute'
 import { GCODE_MOVE_ROW_WIDTH } from './gcodePreviewTransport'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
 
-export interface GcodeFilterOptions {
+export interface GcodeFilterOptions extends CooperativeAsyncOptions {
   minLayer?: number
   maxLayer?: number
   includeTravel?: boolean
@@ -109,6 +110,70 @@ export function referenceFilterGcodeSegments(
 }
 
 /**
+ * Cooperative non-blocking async CPU reference for G-Code move segment filtering.
+ */
+export async function referenceFilterGcodeSegmentsAsync(
+  moveRows: Float64Array | Float32Array,
+  opts: GcodeFilterOptions = {}
+): Promise<GcodeSegmentFilterResult> {
+  const numMoves = Math.floor(moveRows.length / GCODE_MOVE_ROW_WIDTH)
+  if (numMoves <= 1) return referenceFilterGcodeSegments(moveRows, opts)
+
+  const minLayer = opts.minLayer ?? 0
+  const maxLayer = opts.maxLayer ?? 2048
+  const includeTravel = opts.includeTravel ?? true
+  const includeExtrusion = opts.includeExtrusion ?? true
+  const minFeed = opts.minFeedrateMmS ?? 10
+  const maxFeed = opts.maxFeedrateMmS ?? 120
+  const maxSegments = opts.maxSegments ?? Math.max(1, numMoves)
+  const span = Math.max(1e-6, maxFeed - minFeed)
+
+  const rawList: number[] = []
+  const segments: GcodeToolpathSegment[] = []
+
+  await forEachChunkedAsync(
+    numMoves - 1,
+    idx => {
+      const m = idx + 1
+      const cur = m * GCODE_MOVE_ROW_WIDTH
+      const prev = (m - 1) * GCODE_MOVE_ROW_WIDTH
+      const layer = Math.round(moveRows[cur + 5]!)
+      if (layer < minLayer || layer > maxLayer) return
+
+      const isExtrusion = moveRows[cur + 6]! >= 0.5
+      if (isExtrusion && !includeExtrusion) return
+      if (!isExtrusion && !includeTravel) return
+
+      const x0 = moveRows[prev + 0]!, y0 = moveRows[prev + 1]!, z0 = moveRows[prev + 2]!
+      const x1 = moveRows[cur + 0]!, y1 = moveRows[cur + 1]!, z1 = moveRows[cur + 2]!
+      const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0
+      if (dx * dx + dy * dy + dz * dz <= 1e-12) return
+
+      const feed = moveRows[cur + 4]!
+      const feedNorm = Math.max(0, Math.min(1, (feed - minFeed) / span))
+      const extFlag = isExtrusion ? 1 : 0
+
+      if (segments.length < maxSegments) {
+        rawList.push(x0, y0, z0, feedNorm, x1, y1, z1, extFlag)
+        segments.push({
+          p0: [x0, y0, z0],
+          p1: [x1, y1, z1],
+          feedrateNorm: feedNorm,
+          extruded: isExtrusion,
+        })
+      }
+    },
+    opts
+  )
+
+  return {
+    rawSegments: new Float32Array(rawList),
+    segments,
+    segmentCount: segments.length,
+  }
+}
+
+/**
  * Filters G-Code move rows in parallel on WebGPU Compute.
  * Falls back to deterministic CPU reference when WebGPU is unavailable.
  */
@@ -118,7 +183,9 @@ export async function runGpuFilterGcodeSegments(
 ): Promise<GcodeSegmentFilterResult> {
   const numMoves = Math.floor(moveRows.length / GCODE_MOVE_ROW_WIDTH)
   if (numMoves <= 1 || typeof navigator === 'undefined' || !navigator.gpu) {
-    return referenceFilterGcodeSegments(moveRows, opts)
+    return numMoves >= 1024
+      ? referenceFilterGcodeSegmentsAsync(moveRows, opts)
+      : referenceFilterGcodeSegments(moveRows, opts)
   }
 
   try {
@@ -175,5 +242,7 @@ export async function runGpuFilterGcodeSegments(
     // Fallback to CPU reference
   }
 
-  return referenceFilterGcodeSegments(moveRows, opts)
+  return numMoves >= 1024
+    ? referenceFilterGcodeSegmentsAsync(moveRows, opts)
+    : referenceFilterGcodeSegments(moveRows, opts)
 }

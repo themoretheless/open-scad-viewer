@@ -250,12 +250,18 @@ const officialProjectPathSchema = z.string().min(1).max(1_024)
       return false
     }
   }, 'Path must be a normalized relative POSIX project path')
+function base64DecodedLength(value: string): number {
+  if (value.length === 0) return 0
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0
+  return (value.length / 4) * 3 - padding
+}
+
 const strictBase64Schema = z.string()
   .max(Math.ceil(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES / 3) * 4)
   .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
   .refine(value => Buffer.from(value, 'base64').toString('base64') === value, 'Data must use canonical base64')
   .refine(
-    value => Buffer.from(value, 'base64').byteLength <= OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+    value => base64DecodedLength(value) <= OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
     `Decoded data must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES} bytes`,
   )
 const officialProjectFileSchema = z.union([
@@ -294,7 +300,7 @@ const independentProjectBase64Schema = z.string()
   .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
   .refine(value => Buffer.from(value, 'base64').toString('base64') === value, 'Data must use canonical base64')
   .refine(
-    value => Buffer.from(value, 'base64').byteLength <= OPENSCAD_PROJECT_MAX_BLOB_BYTES,
+    value => base64DecodedLength(value) <= OPENSCAD_PROJECT_MAX_BLOB_BYTES,
     `Decoded data must not exceed ${OPENSCAD_PROJECT_MAX_BLOB_BYTES} bytes`,
   )
 const independentProjectFileSchema = z.union([
@@ -2754,7 +2760,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
     if (!artifact) throw new ResourceNotFoundError(uri.href)
     return artifact.format === 'obj'
       ? { contents: [{ uri: uri.href, mimeType: artifact.mimeType, text: new TextDecoder().decode(artifact.data) }] }
-      : { contents: [{ uri: uri.href, mimeType: artifact.mimeType, blob: Buffer.from(artifact.data).toString('base64') }] }
+      : { contents: [{ uri: uri.href, mimeType: artifact.mimeType, blob: Buffer.from(artifact.data.buffer, artifact.data.byteOffset, artifact.data.byteLength).toString('base64') }] }
   })
 
   const independentArtifactTemplate = new ResourceTemplate(
@@ -2797,7 +2803,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
           contents: [{
             uri: uri.href,
             mimeType: artifact.mimeType,
-            blob: Buffer.from(artifact.data).toString('base64'),
+            blob: Buffer.from(artifact.data.buffer, artifact.data.byteOffset, artifact.data.byteLength).toString('base64'),
           }],
         }
   })
@@ -2828,7 +2834,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
       contents: [{
         uri: uri.href,
         mimeType: artifact.mimeType,
-        blob: Buffer.from(artifact.data).toString('base64'),
+        blob: Buffer.from(artifact.data.buffer, artifact.data.byteOffset, artifact.data.byteLength).toString('base64'),
       }],
     }
   })

@@ -508,6 +508,13 @@ function isMeshBvh(
   return reachedCount === nodeCount && coveredCount === triangles.length
 }
 
+function allFinite(values: ArrayLike<number>): boolean {
+  for (let i = 0; i < values.length; i++) {
+    if (!Number.isFinite(values[i])) return false
+  }
+  return true
+}
+
 function isMeshData(value: unknown): value is MeshData {
   if (!isRecord(value)) return false
   if (!hasExactKeys(value, [
@@ -538,13 +545,13 @@ function isMeshData(value: unknown): value is MeshData {
     && optionalKey(value, 'nativeGeometry', isNativeGeometryArtifact)
     && Number.isInteger(vertexCount)
     && Number.isInteger(triangleCount)
-    && value.vertices.every(Number.isFinite)
+    && allFinite(value.vertices)
     && value.edgeIndices.length % 2 === 0
     && hasOnlyVertexReferences(value.indices, vertexCount)
     && hasOnlyVertexReferences(value.edgeIndices, vertexCount)
     && value.faceIds.length === triangleCount
     && value.transform.length === 16
-    && value.transform.every(Number.isFinite)
+    && allFinite(value.transform)
     && isDenseExactArray(value.color, 4)
     && value.color.length === 4
     && value.color.every(component => typeof component === 'number' && Number.isFinite(component)

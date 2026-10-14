@@ -46,15 +46,35 @@ fn normalize(p: &mut Poly, ctx: &mut PredicateContext<'_>) -> Result<(), Reason>
     trim(p);
     Expansion::normalize_common(p, ctx)
 }
+const BINOMIAL: [[u64; 17]; 17] = {
+    let mut table = [[0u64; 17]; 17];
+    let mut n = 0;
+    while n < 17 {
+        table[n][0] = 1;
+        let mut k = 1;
+        while k <= n {
+            table[n][k] = table[n - 1][k - 1] + table[n - 1][k];
+            k += 1;
+        }
+        n += 1;
+    }
+    table
+};
+#[inline(always)]
 fn choose(n: usize, k: usize) -> u64 {
-    (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
+    if n < 17 && k < 17 {
+        BINOMIAL[n][k]
+    } else {
+        (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
+    }
 }
-fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
+pub(crate) fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     let n = b.len() - 1;
     let mut out = vec![Expansion::scalar(0.); n + 1];
     for (i, value) in b.iter().enumerate() {
+        let c_n_i = choose(n, i);
         for k in i..=n {
-            let factor = Expansion::integer(choose(n, i) * choose(n - i, k - i), ctx)?;
+            let factor = Expansion::integer(c_n_i * choose(n - i, k - i), ctx)?;
             let term = value.mul(&factor, ctx)?;
             out[k] = if (k - i) % 2 == 0 {
                 out[k].add(&term, ctx)?
@@ -162,8 +182,10 @@ fn pseudo_divide(
 fn sturm(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Vec<Poly>, Reason> {
     let mut p = p.clone();
     normalize(&mut p, ctx)?;
+    let p_len = p.len();
     let mut d = derivative(&p, ctx)?;
     normalize(&mut d, ctx)?;
+    let max_chain = p.len() + 1;
     let mut chain = vec![p];
     if zero(&d) {
         return Ok(chain);
@@ -180,7 +202,7 @@ fn sturm(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Vec<Poly>, Reason> 
         }
         normalize(&mut next, ctx)?;
         chain.push(next);
-        if chain.len() > 8 {
+        if chain.len() > p_len + 1 {
             return Err(Reason::MissingProof);
         }
     }
@@ -226,7 +248,7 @@ fn count(
     let b = variations(chain, hi, ctx)?;
     a.checked_sub(b).ok_or(Reason::MissingProof)
 }
-fn isolate(
+pub(crate) fn isolate(
     p: &Poly,
     tolerance: f64,
     ctx: &mut PredicateContext<'_>,
@@ -256,11 +278,11 @@ fn isolate(
             boxes.push([hi, hi]);
             continue;
         }
-        if number == 1 && hi - lo <= tolerance {
+        if number == 1 && hi - lo <= tolerance && at(&chain[0], lo, ctx)? != Sign::Zero {
             boxes.push([lo, hi]);
             continue;
         }
-        if depth >= 52 {
+        if depth >= 1074 {
             return Err(Reason::PrecisionExhausted);
         }
         let mid = lo * 0.5 + hi * 0.5;
@@ -515,6 +537,114 @@ mod tests {
                 }
             ),
             PlanarScalarOutcome::Indeterminate(Reason::ResourceLimit)
+        ));
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum PlanarStationaryOutcome {
+    Roots(Vec<PlanarScalarRoot>),
+    Constant,
+    Indeterminate(Reason),
+}
+#[derive(Clone, Debug)]
+pub struct PlanarStationaryDecision {
+    pub outcome: PlanarStationaryOutcome,
+    pub work_used: u64,
+    pub context: ContextIdentity,
+}
+/// Exact roots of d(X/W)/dt on one original rational Bézier definition.
+pub fn planar_bezier_stationary_roots(
+    ctx: &mut PredicateContext<'_>,
+    source: &[[LeafRef; 3]],
+    axis: usize,
+    tolerance: f64,
+) -> Result<PlanarStationaryDecision, InputError> {
+    if !(2..=4).contains(&source.len())
+        || axis >= 2
+        || !tolerance.is_finite()
+        || tolerance <= 0.
+        || tolerance >= 1.
+    {
+        return Err(InputError::InvalidInput(
+            "Invalid planar stationary root input",
+        ));
+    }
+    let values = source
+        .iter()
+        .flatten()
+        .map(|r| ctx.resolve(*r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    let outcome = (|| -> Result<PlanarStationaryOutcome, Reason> {
+        let exact = exact_inputs(&values, ctx)?;
+        let points: Vec<[Expansion; 3]> = exact
+            .chunks_exact(3)
+            .map(|p| std::array::from_fn(|k| p[k].clone()))
+            .collect();
+        if points.iter().any(|p| p[2].sign() != Sign::Positive) {
+            return Err(Reason::MissingProof);
+        }
+        let h = homogeneous(&points, ctx)?;
+        let equation = sub(
+            &mul(&derivative(&h[axis], ctx)?, &h[2], ctx)?,
+            &mul(&h[axis], &derivative(&h[2], ctx)?, ctx)?,
+            ctx,
+        )?;
+        if zero(&equation) {
+            Ok(PlanarStationaryOutcome::Constant)
+        } else {
+            Ok(PlanarStationaryOutcome::Roots(isolate(
+                &equation, tolerance, ctx,
+            )?))
+        }
+    })()
+    .and_then(|v| ctx.charge(0).map(|_| v));
+    Ok(PlanarStationaryDecision {
+        outcome: outcome.unwrap_or_else(PlanarStationaryOutcome::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+#[cfg(test)]
+mod stationary_tests {
+    use super::*;
+    use crate::{Limits, SourceArena, ToleranceContext};
+    fn cusp(axis: usize, limits: Limits) -> PlanarStationaryOutcome {
+        let points = [[1., -1., 1.], [-1., 2., 1.], [0., -4., 1.], [4., 8., 1.]];
+        let source = SourceArena::authored(
+            "stationary-cusp-test",
+            1,
+            points
+                .iter()
+                .flatten()
+                .map(|v: &f64| AuthoredScalar::Binary64Bits(v.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let refs = (0..4)
+            .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
+            .collect::<Vec<_>>();
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&source, &tolerance, limits, None);
+        planar_bezier_stationary_roots(&mut ctx, &refs, axis, 1e-14)
+            .unwrap()
+            .outcome
+    }
+    #[test]
+    fn stationary_cusp_preserves_distinct_derivative_multiplicities_and_uncertainty() {
+        for (axis, multiplicity) in [(0, 1), (1, 2)] {
+            let PlanarStationaryOutcome::Roots(roots) = cusp(axis, Limits::default()) else {
+                panic!("stationary proof absent")
+            };
+            assert_eq!(roots.len(), 1);
+            assert_eq!(roots[0].multiplicity, multiplicity);
+            assert!(roots[0].interval[0] <= 1. / 3. && roots[0].interval[1] >= 1. / 3.);
+        }
+        let mut limits = Limits::default();
+        limits.max_work = 0;
+        assert!(matches!(
+            cusp(0, limits),
+            PlanarStationaryOutcome::Indeterminate(Reason::ResourceLimit)
         ));
     }
 }

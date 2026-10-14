@@ -14,8 +14,23 @@ export function registerRushGraphReport(server: McpServer, geometry: McpGeometry
       const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
       const checks = await evaluateRushGraphGeometry(compiled.geometry_assertions, built.meshes, async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes)
       const references = built.meshes.flatMap((mesh, meshIndex) => mesh.provenance.map(run => {
-        const line = run.source ? compiled.source.slice(0, run.source.start).split('\n').length : null
-        const match = line === null ? undefined : [...compiled.source_map].reverse().find(item => item.line <= line)
+        let line: number | null = null
+        if (run.source) {
+          line = 1
+          const end = Math.min(run.source.start, compiled.source.length)
+          for (let i = 0; i < end; i++) {
+            if (compiled.source.charCodeAt(i) === 10) line++
+          }
+        }
+        let match: (typeof compiled.source_map)[number] | undefined
+        if (line !== null) {
+          for (let i = compiled.source_map.length - 1; i >= 0; i--) {
+            if (compiled.source_map[i].line <= line) {
+              match = compiled.source_map[i]
+              break
+            }
+          }
+        }
         return { mesh: meshIndex, triangle_start: run.triangleStart, triangle_end: run.triangleEnd, node_id: match?.node_id ?? null, instance_path: match?.instance_path ?? null }
       }))
       let previews: ReturnType<typeof renderRushGraphPreviews> = [], imageError: string | null = null

@@ -7,15 +7,16 @@ pub fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
     let ab = sub(b, a);
     let ac = sub(c, a);
     let ap = sub(p, a);
-    if !ab.iter().chain(&ac).chain(&ap).all(|v| v.is_finite()) {
-        return [f64::NAN; 3];
+    let vals = [
+        ab[0], ab[1], ab[2], ac[0], ac[1], ac[2], ap[0], ap[1], ap[2],
+    ];
+    let mut scale = 0.0f64;
+    for v in vals {
+        if !v.is_finite() {
+            return [f64::NAN; 3];
+        }
+        scale = scale.max(v.abs());
     }
-    let scale = ab
-        .iter()
-        .chain(&ac)
-        .chain(&ap)
-        .map(|v| v.abs())
-        .fold(0., f64::max);
     if scale == 0. {
         return a;
     }
@@ -141,17 +142,22 @@ pub fn sample_deviation(a: &MeshView<'_>, b: &MeshView<'_>) -> Result<Deviation>
     let mut sum = 0.;
     let mut samples = 0;
     for (source, target) in [(a, b), (b, a)] {
-        let points = source
+        let sample_points: Vec<Point> = source
             .positions
             .as_chunks::<3>()
             .0
             .iter()
-            .map(|p| [p[0], p[1], p[2]]);
-        let centers = source.indices.as_chunks::<3>().0.iter().map(|t| {
-            std::array::from_fn(|k| t.iter().map(|&i| source.positions[i * 3 + k] / 3.).sum())
+            .map(|p| [p[0], p[1], p[2]])
+            .chain(source.indices.as_chunks::<3>().0.iter().map(|t| {
+                std::array::from_fn(|k| t.iter().map(|&i| source.positions[i * 3 + k] / 3.).sum())
+            }))
+            .collect();
+        let target_tris = (target.indices.len() / 3).max(1);
+        let min_chunk = (8_192usize).checked_div(target_tris).unwrap_or(8_192).max(16);
+        let distances = math_core::par_map(&sample_points, min_chunk, |&p| {
+            closest_point_validated(target, p).1
         });
-        for p in points.chain(centers) {
-            let d = closest_point_validated(target, p).1;
+        for d in distances {
             max = max.max(d);
             sum += d * d;
             samples += 1;

@@ -2,6 +2,7 @@
 pub mod profile_domain_certificate;
 pub mod cap_retained_plane_certificate;
 pub mod cap_endpoint_certificate;
+pub mod endpoint_point_certificate;
 pub mod cap_projection_certificate;
 pub mod frame_certificate;
 pub mod authored_frame_certificate;
@@ -10,6 +11,7 @@ pub mod scalar_certificate;
 pub mod trigonometric_certificate;
 pub mod vector_certificate;
 mod law;
+#[cfg(feature = "codec")]
 mod serialization;
 use crate::{Result, check, core::vec3_ext::norm, curve::Curve, foundation::guards::{Budget, require_finite_point}};
 use law::{law, scalar_bounds, validate_law};

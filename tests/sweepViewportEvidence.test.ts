@@ -43,6 +43,23 @@ it('presents complete boundary certification only with matching union scope and 
  expect(readSweepViewportEvidence(artifact(certificate))).toMatchObject({continuousBound:true,boundaryErrorWithinBudget:true})
  for(const c of [null,{...certificate,scope:'wall'},{...certificate,errorUpper:.2},{...certificate,budget:1},{...certificate,withinBudget:false},{...certificate,continuousBound:false}])expect(readSweepViewportEvidence(artifact(c))?.continuousBound).toBe(false)
 })
+it('presents an explicitly unbudgeted native union without inventing tolerance or Solid admission',()=>{
+ // Transport/presentation fixtures only. Native constructor and material
+ // qualification are independent; these flags never admit actual geometry.
+ const certificate={method:'retained-sweep-boundary-union',scope:'boundary-set-hausdorff',
+  continuousBound:true,errorUpper:.001,budget:null,withinBudget:null,reason:'no-authored-tolerance'}
+ const artifact=(c:unknown,changes:Record<string,unknown>={})=>createNativeGeometryArtifact('sweep','brep',{geometry:{},sweepEvidence:{
+  volume:{solidGeometryCertified:false},continuousBound:true,boundaryErrorUpper:.001,
+  boundaryErrorBudget:null,boundaryErrorWithinBudget:null,boundaryCertificate:c,...changes}},{})
+ expect(readSweepViewportEvidence(artifact(certificate))).toMatchObject({continuousBound:true,
+  boundaryErrorUpper:.001,boundaryErrorBudget:null,boundaryErrorWithinBudget:null,solidGeometryCertified:false})
+ for(const c of [{...certificate,reason:'invalid-budget'},{...certificate,budget:.01},
+  {...certificate,withinBudget:true},{...certificate,errorUpper:.002},{...certificate,scope:'wall'},
+  {...certificate,continuousBound:false}])expect(readSweepViewportEvidence(artifact(c))?.continuousBound).toBe(false)
+ for(const changes of [{boundaryErrorBudget:.01},{boundaryErrorBudget:undefined},
+  {boundaryErrorWithinBudget:true},{boundaryErrorWithinBudget:undefined},{boundaryErrorUpper:null}])
+  expect(readSweepViewportEvidence(artifact(certificate,changes))?.continuousBound).toBe(false)
+})
 it('presents scoped profile G2 only with complete extraction and every exact seam, keeping path and cap C0',()=>{
  const smoothness={method:'retained-miter-profile-joins',scope:'wall-profile-seams',edgeIds:[3],extractionComplete:true,unclassifiedFaces:[],unpairedEdges:[],stationContinuity:'C0',capContinuity:'C0',fullBoundarySmoothnessCertified:false,
   profile:{method:'constant-projective-strip-jets',exactG1G2Certified:true,certifiedOrder:2,exactWork:100,unresolvedSeams:[],seams:[{certified:true,exactIdentity:true,regularityCertified:true,certifiedOrder:2}]}}

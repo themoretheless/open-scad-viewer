@@ -5,6 +5,12 @@ use crate::{
     exact_inputs, Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
     InputError, LeafRef, PredicateContext, Reason, Sign,
 };
+#[path = "bspline_plane_roots.rs"]
+mod plane_roots;
+pub use plane_roots::*;
+#[path = "bspline_plane_incidence.rs"]
+mod plane_incidence;
+pub use plane_incidence::{rational_bspline_plane_incidence, rational_quadratic_plane_discriminant};
 #[derive(Clone)]
 struct Rational {
     n: Expansion,

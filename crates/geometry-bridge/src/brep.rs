@@ -742,31 +742,41 @@ fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freeform_note:Free
     let mut registry = EdgeSamplingRegistry::new(model, segments, reduce_linear_rulings)?;
     let mut face_ids = Vec::new();
     let mut closed_triangles = Vec::new();
+    let mut shell_uses = Vec::new();
     for shell in &model.shells {
         for use_ in &shell.faces {
+            shell_uses.push((shell, use_));
+        }
+    }
+    let built_faces = {
+        let reg_ref = &registry;
+        math_core::par_try_map(&shell_uses, 2, |&(_shell, use_)| -> Result<FaceMesh> {
             let face = &model.faces[use_.face];
-            let outer = registry.sample_wire(model, face, face.outer)?;
+            let outer = reg_ref.sample_wire(model, face, face.outer)?;
             let holes = face
                 .holes
                 .iter()
-                .map(|&wire| registry.sample_wire(model, face, wire))
+                .map(|&wire| reg_ref.sample_wire(model, face, wire))
                 .collect::<Result<Vec<_>>>()?;
-            let built = if is_affine_plane(&face.surface, model.tolerance_mm) {
-                triangulate_boundary(&outer, &holes)?
-            } else if let Some(rectangular) = rectangular_face(model, face, segments, &registry)? {
-                rectangular
-            } else if let Some(quarter) = quarter_disk_face(model, face, segments, &registry)? {
-                quarter
+            if is_affine_plane(&face.surface, model.tolerance_mm) {
+                triangulate_boundary(&outer, &holes)
+            } else if let Some(rectangular) = rectangular_face(model, face, segments, reg_ref)? {
+                Ok(rectangular)
+            } else if let Some(quarter) = quarter_disk_face(model, face, segments, reg_ref)? {
+                Ok(quarter)
             } else {
                 clamp_interior_to_trims(
                     model,
                     face,
                     refine_trimmed_face(face, triangulate_boundary(&outer, &holes)?, segments)?,
-                )?
-            };
-            registry.append(face, use_, built, &mut face_ids)?;
-            closed_triangles.resize(face_ids.len(), shell.closed);
-        }
+                )
+            }
+        })?
+    };
+    for ((shell, use_), built) in shell_uses.into_iter().zip(built_faces) {
+        let face = &model.faces[use_.face];
+        registry.append(face, use_, built, &mut face_ids)?;
+        closed_triangles.resize(face_ids.len(), shell.closed);
     }
     registry.verify_boundary_uses(model, &face_ids)?;
     let topology_face_ids = face_ids

@@ -1,10 +1,15 @@
 #![doc = include_str!("../README.md")]
 //! Native mechanical profiles and meshes with optional SCAD/Value compatibility.
 mod profiles;
+pub mod standard_parts;
 mod threads;
 pub use profiles::{
     GearInstance, GearOptions, GearProfile, GearReport, PlanetaryOptions, PlanetaryProfiles,
     gear_profile, planetary_profiles,
+};
+pub use standard_parts::{
+    MetricFastenerSpec, RackOptions, TimingPulleyOptions, hex_nut_profile, involute_rack_profile,
+    iso_metric_fastener, timing_pulley_profile,
 };
 pub use threads::{ThreadGeometry, ThreadOptions, thread_mesh, thread_radius_at};
 pub type Point = [f64; 2];

@@ -171,15 +171,24 @@ impl Surface {
         let derivatives = [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)];
         let mut homogeneous = [[0.; 4]; 6];
         for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
-            for (i, basis_u) in uj[ou].iter().enumerate() {
-                for (j, basis_v) in vj[ov].iter().enumerate() {
-                    let coefficient = basis_u * basis_v * (self.weights[i][j] / scale);
+            for (i, &basis_u) in uj[ou].iter().enumerate() {
+                if basis_u == 0. {
+                    continue;
+                }
+                let w_row = &self.weights[i];
+                let cp_row = &self.control_points[i];
+                for (j, &basis_v) in vj[ov].iter().enumerate() {
+                    if basis_v == 0. {
+                        continue;
+                    }
+                    let coefficient = basis_u * basis_v * (w_row[j] / scale);
                     if coefficient == 0. {
                         continue;
                     }
                     out[3] += coefficient;
+                    let cp = &cp_row[j];
                     for d in 0..3 {
-                        out[d] += coefficient * (self.control_points[i][j][d] - origin[d]);
+                        out[d] += coefficient * (cp[d] - origin[d]);
                     }
                 }
             }

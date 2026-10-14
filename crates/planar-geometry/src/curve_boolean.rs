@@ -6,7 +6,8 @@
 use crate::curve::{BezPath, CurveSegment, PathEl, Point, Rect, Shape};
 pub use crate::tessellation::FillRule;
 use crate::{Result, check};
-use std::collections::{BTreeSet, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
@@ -407,7 +408,7 @@ pub fn binary_op(
     }
     let mut parameters = vec![vec![0., 1.]; curves.len()];
     let mut checked_pairs = BTreeSet::new();
-    let mut coincident_pairs = HashMap::new();
+    let mut coincident_pairs = FxHashMap::default();
     let mut order: Vec<_> = (0..chords.len()).collect();
     order.sort_by(|&i, &j| {
         chords[i]
@@ -538,7 +539,7 @@ pub fn binary_op(
         }
     };
     let mut vertices = Vec::<Point>::new();
-    let mut grid = HashMap::<(i64, i64), Vec<usize>>::new();
+    let mut grid = FxHashMap::<(i64, i64), Vec<usize>>::default();
     let mut boundary = Vec::new();
     let mut seen = BTreeSet::new();
     for (i, mut ts) in parameters.into_iter().enumerate() {
@@ -781,7 +782,7 @@ fn vertex_id(
     p: Point,
     eps: f64,
     points: &mut Vec<Point>,
-    grid: &mut HashMap<(i64, i64), Vec<usize>>,
+    grid: &mut FxHashMap<(i64, i64), Vec<usize>>,
 ) -> usize {
     let key = ((p.x / eps).round() as i64, (p.y / eps).round() as i64);
     for dx in -1..=1 {

@@ -190,6 +190,7 @@ pub fn certify_atan2(y: [f64; 2], x: [f64; 2]) -> Result<Option<[f64; 2]>> {
     Ok(Some([lo, hi]))
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     fn contains(range: [f64; 2], value: f64) {

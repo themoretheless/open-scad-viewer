@@ -111,8 +111,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     for (var n = 0u; n < params.n_nodes; n++) {
         let base = n * 8u;
         let kind = kinds[n];
-        if (kind <= 2u || kind == 10u) {
-            // Leaves: sphere / box / torus / capsule with translate-folded parameters.
+        if (kind <= 2u || kind == 10u || (kind >= 12u && kind <= 15u)) {
+            // Leaves: sphere / box / torus / capsule / cylinder / TPMS with translate-folded parameters.
             var v = 0.0;
             if (kind == 10u) {
                 let a = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
@@ -133,10 +133,36 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 let h = vec3f(node_params[base + 3u], node_params[base + 4u], node_params[base + 5u]);
                 let q = abs(p - c) - h;
                 v = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
-            } else {
+            } else if (kind == 2u) {
                 let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
                 let q = p - c;
                 v = length(vec2f(length(q.xy) - node_params[base + 3u], q.z)) - node_params[base + 4u];
+            } else if (kind == 12u) {
+                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
+                let q = p - c;
+                let d = vec2f(length(q.xy) - node_params[base + 3u], abs(q.z) - node_params[base + 4u]);
+                v = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
+            } else {
+                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
+                let period = node_params[base + 3u];
+                let thickness = node_params[base + 4u];
+                let k = 6.283185307179586 / period;
+                let q = (p - c) * k;
+                let sx = sin(q.x);
+                let sy = sin(q.y);
+                let sz = sin(q.z);
+                let cx = cos(q.x);
+                let cy = cos(q.y);
+                let cz = cos(q.z);
+                var iso = 0.0;
+                if (kind == 13u) {
+                    iso = sx * cy + sy * cz + sz * cx;
+                } else if (kind == 14u) {
+                    iso = cx + cy + cz;
+                } else {
+                    iso = sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz;
+                }
+                v = abs(iso) / k - 0.5 * thickness;
             }
             stack[sp] = v;
             sp++;
@@ -240,6 +266,26 @@ pub enum Field {
         major_radius: f64,
         minor_radius: f64,
     },
+    Cylinder {
+        center: Point,
+        radius: f64,
+        half_height: f64,
+    },
+    Gyroid {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
+    SchwarzP {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
+    Diamond {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
     Capsule {
         a: Point,
         b: Point,
@@ -316,7 +362,10 @@ fn triangles_ok(mesh: &Triangles) -> bool {
         })
 }
 fn triangles_closed(mesh: &Triangles) -> bool {
-    let mut edges = BTreeMap::new();
+    let mut edges = rustc_hash::FxHashMap::with_capacity_and_hasher(
+        mesh.indices.len() / 2,
+        Default::default(),
+    );
     for t in mesh.indices.as_chunks::<3>().0 {
         for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
             *edges.entry((a.min(b), a.max(b))).or_insert(0) += 1;
@@ -457,6 +506,31 @@ impl Field {
                         && positive(*minor_radius)
                         && minor_radius < major_radius
                 }
+                Field::Cylinder {
+                    center,
+                    radius,
+                    half_height,
+                } => finite(*center) && positive(*radius) && positive(*half_height),
+                Field::Gyroid {
+                    origin,
+                    period,
+                    thickness,
+                }
+                | Field::SchwarzP {
+                    origin,
+                    period,
+                    thickness,
+                }
+                | Field::Diamond {
+                    origin,
+                    period,
+                    thickness,
+                } => {
+                    finite(*origin)
+                        && positive(*period)
+                        && positive(*thickness)
+                        && thickness < period
+                }
                 Field::Union { a, b }
                 | Field::Intersection { a, b }
                 | Field::Difference { a, b } => {
@@ -519,6 +593,47 @@ impl Field {
             } => {
                 let q = sub(p, *center);
                 (q[0].hypot(q[1]) - major_radius).hypot(q[2]) - minor_radius
+            }
+            Self::Cylinder {
+                center,
+                radius,
+                half_height,
+            } => {
+                let q = sub(p, *center);
+                let dx = q[0].hypot(q[1]) - radius;
+                let dy = q[2].abs() - half_height;
+                dx.max(dy).min(0.) + dx.max(0.).hypot(dy.max(0.))
+            }
+            Self::Gyroid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchwarzP {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Diamond {
+                origin,
+                period,
+                thickness,
+            } => {
+                let k = std::f64::consts::TAU / period;
+                let q = [
+                    (p[0] - origin[0]) * k,
+                    (p[1] - origin[1]) * k,
+                    (p[2] - origin[2]) * k,
+                ];
+                let (sx, cx) = q[0].sin_cos();
+                let (sy, cy) = q[1].sin_cos();
+                let (sz, cz) = q[2].sin_cos();
+                let iso = match self {
+                    Self::Gyroid { .. } => sx * cy + sy * cz + sz * cx,
+                    Self::SchwarzP { .. } => cx + cy + cz,
+                    _ => sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz,
+                };
+                iso.abs() / k - 0.5 * thickness
             }
             Self::Capsule { a, b, radius } => {
                 let ab = sub(*b, *a);
@@ -639,14 +754,18 @@ pub fn polygonize_tile(
             }
         }
     }
+    let cell_estimate = (nx * ny + ny * nz + nz * nx) * 2;
     let mut mesh = Triangles {
-        positions: Vec::new(),
-        indices: Vec::new(),
+        positions: Vec::with_capacity(cell_estimate * 3),
+        indices: Vec::with_capacity(cell_estimate * 6),
     };
     // Edge cache is only ever probed by key (entry API); iteration order never
     // reaches the mesh, so a hash map keeps the output bit-identical while
     // avoiding per-entry tree comparisons.
-    let mut cache = rustc_hash::FxHashMap::default();
+    let mut cache = rustc_hash::FxHashMap::with_capacity_and_hasher(
+        cell_estimate,
+        Default::default(),
+    );
     for z in 0..nz {
         for y in 0..ny {
             for x in 0..nx {
@@ -669,7 +788,8 @@ pub fn polygonize_tile(
                     [0, 5, 1, 6],
                 ] {
                     let t = tet.map(|i| cube[i]);
-                    let mut polygon = Vec::new();
+                    let mut polygon = [0usize; 4];
+                    let mut poly_len = 0usize;
                     let mut outward = [0.; 3];
                     let mut ni = 0.;
                     let mut no = 0.;
@@ -718,13 +838,15 @@ pub fn polygonize_tile(
                             );
                             id
                         });
-                        if !polygon.contains(&id) {
-                            polygon.push(id);
+                        if !polygon[..poly_len].contains(&id) {
+                            polygon[poly_len] = id;
+                            poly_len += 1;
                         }
                     }
-                    if polygon.len() < 3 {
+                    if poly_len < 3 {
                         continue;
                     }
+                    let polygon = &mut polygon[..poly_len];
                     let point = |i: usize| {
                         [
                             mesh.positions[i * 3],
@@ -733,7 +855,7 @@ pub fn polygonize_tile(
                         ]
                     };
                     let mut center = [0.; 3];
-                    for &i in &polygon {
+                    for &i in &*polygon {
                         for (k, v) in center.iter_mut().enumerate() {
                             *v += point(i)[k] / polygon.len() as f64;
                         }
@@ -787,6 +909,63 @@ pub fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
 }
 pub fn polygonize(field: &Field, grid: &Grid) -> Result<Triangles> {
     check_grid_budget(field, grid)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if finite(grid.min)
+            && finite(grid.max)
+            && grid.cells.iter().all(|&n| (1..=64).contains(&n))
+            && (0..3).all(|i| grid.max[i] > grid.min[i])
+        {
+            let [nx, ny, nz] = grid.cells;
+            let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
+            let total_work = sample_count.saturating_mul(field.sample_work());
+            let threads = std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1);
+            if threads > 1 && nz >= 2 && total_work >= 4_096 {
+                let plane_size = (nx + 1) * (ny + 1);
+                let z_count = nz + 1;
+                let chunk_z = z_count.div_ceil(threads).max(1);
+                let mut precomputed = Vec::with_capacity(sample_count);
+                std::thread::scope(|s| {
+                    let mut handles = Vec::with_capacity(z_count.div_ceil(chunk_z));
+                    let mut z_start = 0usize;
+                    while z_start < z_count {
+                        let z_end = (z_start + chunk_z).min(z_count);
+                        handles.push(s.spawn(move || {
+                            let mut chunk_vals = Vec::with_capacity((z_end - z_start) * plane_size);
+                            for z in z_start..z_end {
+                                for y in 0..=ny {
+                                    for x in 0..=nx {
+                                        let p = std::array::from_fn(|i| {
+                                            grid.min[i]
+                                                + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
+                                                    / grid.cells[i] as f64
+                                        });
+                                        chunk_vals.push(field.sample(p));
+                                    }
+                                }
+                            }
+                            chunk_vals
+                        }));
+                        z_start = z_end;
+                    }
+                    for handle in handles {
+                        precomputed.extend(handle.join().expect("sdf worker panicked"));
+                    }
+                });
+                let cursor = std::cell::Cell::new(0usize);
+                return polygonize_with(
+                    |_| {
+                        let i = cursor.get();
+                        cursor.set(i + 1);
+                        precomputed[i]
+                    },
+                    grid,
+                );
+            }
+        }
+    }
     polygonize_with(|p| field.sample(p), grid)
 }
 /// Rebuilds the mesh from externally computed grid samples (GPU shader or the

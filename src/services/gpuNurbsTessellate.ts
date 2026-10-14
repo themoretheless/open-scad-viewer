@@ -8,6 +8,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
 
 export interface GpuNurbsSurface {
   degreeU: number
@@ -37,46 +38,47 @@ import NURBS_TESSELLATE_WGSL from '../../crates/compute-core/shaders/nurbs_tesse
 export { NURBS_TESSELLATE_WGSL }
 
 
+const nurbsUniformBuffer = new ArrayBuffer(64)
+const nurbsUniformView = new DataView(nurbsUniformBuffer)
+const quadIndexCache = new Map<number, Uint32Array>()
+
 function buildNurbsUniform(
   surface: GpuNurbsSurface,
   samplesU: number,
   samplesV: number
 ): ArrayBuffer {
-  const buffer = new ArrayBuffer(64)
-  const view = new DataView(buffer)
-
   const ku = surface.knotsU
   const kv = surface.knotsV
-  const uMin = surface.domainU?.[0] ?? (Array.isArray(ku) ? ku[surface.degreeU] : ku[surface.degreeU]) ?? 0
-  const uMax = surface.domainU?.[1] ?? (Array.isArray(ku) ? ku[surface.numCpU] : ku[surface.numCpU]) ?? 1
-  const vMin = surface.domainV?.[0] ?? (Array.isArray(kv) ? kv[surface.degreeV] : kv[surface.degreeV]) ?? 0
-  const vMax = surface.domainV?.[1] ?? (Array.isArray(kv) ? kv[surface.numCpV] : kv[surface.numCpV]) ?? 1
+  const uMin = surface.domainU?.[0] ?? ku[surface.degreeU] ?? 0
+  const uMax = surface.domainU?.[1] ?? ku[surface.numCpU] ?? 1
+  const vMin = surface.domainV?.[0] ?? kv[surface.degreeV] ?? 0
+  const vMax = surface.domainV?.[1] ?? kv[surface.numCpV] ?? 1
 
   const isRational = surface.weights && surface.weights.length > 0 ? 1 : 0
   const totalVertices = samplesU * samplesV
   const totalQuads = (samplesU - 1) * (samplesV - 1)
 
-  view.setUint32(0, surface.degreeU, true)
-  view.setUint32(4, surface.degreeV, true)
-  view.setUint32(8, surface.numCpU, true)
-  view.setUint32(12, surface.numCpV, true)
+  nurbsUniformView.setUint32(0, surface.degreeU, true)
+  nurbsUniformView.setUint32(4, surface.degreeV, true)
+  nurbsUniformView.setUint32(8, surface.numCpU, true)
+  nurbsUniformView.setUint32(12, surface.numCpV, true)
 
-  view.setUint32(16, surface.knotsU.length, true)
-  view.setUint32(20, surface.knotsV.length, true)
-  view.setUint32(24, samplesU, true)
-  view.setUint32(28, samplesV, true)
+  nurbsUniformView.setUint32(16, surface.knotsU.length, true)
+  nurbsUniformView.setUint32(20, surface.knotsV.length, true)
+  nurbsUniformView.setUint32(24, samplesU, true)
+  nurbsUniformView.setUint32(28, samplesV, true)
 
-  view.setFloat32(32, uMin, true)
-  view.setFloat32(36, uMax, true)
-  view.setFloat32(40, vMin, true)
-  view.setFloat32(44, vMax, true)
+  nurbsUniformView.setFloat32(32, uMin, true)
+  nurbsUniformView.setFloat32(36, uMax, true)
+  nurbsUniformView.setFloat32(40, vMin, true)
+  nurbsUniformView.setFloat32(44, vMax, true)
 
-  view.setUint32(48, isRational, true)
-  view.setUint32(52, totalVertices, true)
-  view.setUint32(56, totalQuads, true)
-  view.setUint32(60, 0, true) // pad
+  nurbsUniformView.setUint32(48, isRational, true)
+  nurbsUniformView.setUint32(52, totalVertices, true)
+  nurbsUniformView.setUint32(56, totalQuads, true)
+  nurbsUniformView.setUint32(60, 0, true) // pad
 
-  return buffer
+  return nurbsUniformBuffer
 }
 
 function packControlPoints(surface: GpuNurbsSurface): Float32Array {
@@ -117,14 +119,17 @@ function packControlPoints(surface: GpuNurbsSurface): Float32Array {
 export async function runGpuNurbsTessellate(
   surface: GpuNurbsSurface,
   samplesU = 32,
-  samplesV = 32
+  samplesV = 32,
+  options: CooperativeAsyncOptions = {}
 ): Promise<GpuNurbsTessellationResult> {
   const totalVertices = samplesU * samplesV
   const totalQuads = (samplesU - 1) * (samplesV - 1)
   const triangleCount = totalQuads * 2
 
   if (typeof navigator === 'undefined' || !navigator.gpu) {
-    return referenceNurbsTessellate(surface, samplesU, samplesV)
+    return totalVertices >= 1024
+      ? referenceNurbsTessellateAsync(surface, samplesU, samplesV, options)
+      : referenceNurbsTessellate(surface, samplesU, samplesV)
   }
 
   try {
@@ -146,8 +151,8 @@ export async function runGpuNurbsTessellate(
             { binding: 1, data: knotsU },
             { binding: 2, data: knotsV },
             { binding: 3, data: cpPacked },
-            { binding: 4, data: new Float32Array(totalVertices * 8), output: true, outputBytes: vertOutputBytes },
-            { binding: 5, data: new Uint32Array(totalQuads * 6), output: true, outputBytes: indexOutputBytes },
+            { binding: 4, data: new Float32Array(0), output: true, outputBytes: vertOutputBytes },
+            { binding: 5, data: new Uint32Array(0), output: true, outputBytes: indexOutputBytes },
           ],
           outputBytes: vertOutputBytes,
           workgroups: [Math.ceil(samplesU / 16), Math.ceil(samplesV / 16), 1],
@@ -156,8 +161,13 @@ export async function runGpuNurbsTessellate(
     })
 
     const rawVerts = results[0]
+    const rawIndices = results[1]
     if (rawVerts && rawVerts.length >= totalVertices * 8) {
-      const indices = generateQuadIndices(samplesU, samplesV)
+      const indexCount = totalQuads * 6
+      const indices =
+        rawIndices && rawIndices.byteLength >= indexOutputBytes
+          ? new Uint32Array(rawIndices.buffer, rawIndices.byteOffset, indexCount).slice()
+          : generateQuadIndices(samplesU, samplesV)
       return {
         vertices: rawVerts.slice(0, totalVertices * 8),
         indices,
@@ -169,13 +179,21 @@ export async function runGpuNurbsTessellate(
     // Fallback if WebGPU compute fails or device is unsupported
   }
 
-  return referenceNurbsTessellate(surface, samplesU, samplesV)
+  return totalVertices >= 1024
+    ? referenceNurbsTessellateAsync(surface, samplesU, samplesV, options)
+    : referenceNurbsTessellate(surface, samplesU, samplesV)
 }
 
 /**
  * Fast quad index generator for a regular (samplesU x samplesV) parametric grid.
  */
 export function generateQuadIndices(samplesU: number, samplesV: number): Uint32Array {
+  const key = (samplesU << 16) | (samplesV & 0xffff)
+  if (samplesU <= 256 && samplesV <= 256) {
+    const cached = quadIndexCache.get(key)
+    if (cached) return cached.slice()
+  }
+
   const totalQuads = (samplesU - 1) * (samplesV - 1)
   const indices = new Uint32Array(totalQuads * 6)
   let ptr = 0
@@ -199,7 +217,86 @@ export function generateQuadIndices(samplesU: number, samplesV: number): Uint32A
     }
   }
 
+  if (samplesU <= 256 && samplesV <= 256) {
+    if (quadIndexCache.size >= 32) {
+      const firstKey = quadIndexCache.keys().next().value
+      if (firstKey !== undefined) quadIndexCache.delete(firstKey)
+    }
+    quadIndexCache.set(key, indices)
+    return indices.slice()
+  }
+
   return indices
+}
+
+function findSpan(n: number, deg: number, u: number, knots: number[] | Float32Array): number {
+  if (u >= knots[n + 1]!) return n
+  if (u <= knots[deg]!) return deg
+  let low = deg
+  let high = n + 1
+  let mid = (low + high) >> 1
+  while (u < knots[mid]! || u >= knots[mid + 1]!) {
+    if (u < knots[mid]!) high = mid
+    else low = mid
+    mid = (low + high) >> 1
+  }
+  return mid
+}
+
+function createBasisEvaluator(maxDeg: number) {
+  const stride = maxDeg + 1
+  const ndu = new Float64Array(stride * stride)
+  const left = new Float64Array(stride)
+  const right = new Float64Array(stride)
+
+  return function evaluateBasisFunsDers(
+    span: number,
+    u: number,
+    deg: number,
+    knots: number[] | Float32Array,
+    basisOut: Float64Array,
+    dersOut: Float64Array
+  ): void {
+    ndu[0] = 1.0
+    for (let j = 1; j <= deg; j++) {
+      left[j] = u - knots[span + 1 - j]!
+      right[j] = knots[span + j]! - u
+      let saved = 0.0
+      const jRow = j * stride
+      for (let r = 0; r < j; r++) {
+        const denom = right[r + 1]! + left[j - r]!
+        ndu[jRow + r] = denom
+        const rRow = r * stride
+        const temp = Math.abs(denom) > 1e-12 ? ndu[rRow + (j - 1)]! / denom : 0.0
+        ndu[rRow + j] = saved + right[r + 1]! * temp
+        saved = left[j - r]! * temp
+      }
+      ndu[jRow + j] = saved
+    }
+
+    for (let j = 0; j <= deg; j++) {
+      basisOut[j] = ndu[j * stride + deg]!
+    }
+
+    const degRow = deg * stride
+    for (let r = 0; r <= deg; r++) {
+      let d = 0.0
+      if (r === 0) {
+        const den = ndu[degRow]!
+        if (Math.abs(den) > 1e-12) d = (-deg * ndu[deg - 1]!) / den
+      } else if (r === deg) {
+        const den = ndu[degRow + (deg - 1)]!
+        if (Math.abs(den) > 1e-12) d = (deg * ndu[(deg - 1) * stride + (deg - 1)]!) / den
+      } else {
+        const den1 = ndu[degRow + (r - 1)]!
+        const den2 = ndu[degRow + r]!
+        const t1 = Math.abs(den1) > 1e-12 ? (deg * ndu[(r - 1) * stride + (deg - 1)]!) / den1 : 0.0
+        const t2 = Math.abs(den2) > 1e-12 ? (deg * ndu[r * stride + (deg - 1)]!) / den2 : 0.0
+        d = t1 - t2
+      }
+      dersOut[r] = d
+    }
+  }
 }
 
 /**
@@ -223,91 +320,16 @@ export function referenceNurbsTessellate(
   const vMin = surface.domainV?.[0] ?? kv[q] ?? 0
   const vMax = surface.domainV?.[1] ?? kv[numCpV] ?? 1
 
-  const isRational = surface.weights && surface.weights.length > 0
+  const isRational = Boolean(surface.weights && surface.weights.length > 0)
   const cp = surface.controlPoints
   const isFlatCp = cp instanceof Float32Array
   const weights = surface.weights
 
-  function getCp(x: number, y: number): [number, number, number, number] {
-    const idx = x + y * numCpU
-    let px = 0, py = 0, pz = 0
-    if (isFlatCp) {
-      px = cp[idx * 3 + 0] ?? 0
-      py = cp[idx * 3 + 1] ?? 0
-      pz = cp[idx * 3 + 2] ?? 0
-    } else {
-      const pt = (cp as Array<[number, number, number]>)[idx]
-      if (pt) { px = pt[0]; py = pt[1]; pz = pt[2] }
-    }
-    const w = weights ? (weights[idx] ?? 1.0) : 1.0
-    return [px, py, pz, w]
-  }
-
-  function findSpan(n: number, deg: number, u: number, knots: number[] | Float32Array): number {
-    if (u >= knots[n + 1]!) return n
-    if (u <= knots[deg]!) return deg
-    let low = deg
-    let high = n + 1
-    let mid = Math.floor((low + high) / 2)
-    while (u < knots[mid]! || u >= knots[mid + 1]!) {
-      if (u < knots[mid]!) high = mid
-      else low = mid
-      mid = Math.floor((low + high) / 2)
-    }
-    return mid
-  }
-
-  function basisFunsDers(
-    span: number,
-    u: number,
-    deg: number,
-    knots: number[] | Float32Array
-  ): { basis: number[]; ders: number[] } {
-    const ndu: number[][] = Array.from({ length: deg + 1 }, () => new Array(deg + 1).fill(0))
-    const left = new Array(deg + 1).fill(0)
-    const right = new Array(deg + 1).fill(0)
-
-    ndu[0]![0] = 1.0
-    for (let j = 1; j <= deg; j++) {
-      left[j] = u - knots[span + 1 - j]!
-      right[j] = knots[span + j]! - u
-      let saved = 0.0
-      for (let r = 0; r < j; r++) {
-        const denom = right[r + 1]! + left[j - r]!
-        ndu[j]![r] = denom
-        const temp = Math.abs(denom) > 1e-12 ? ndu[r]![j - 1]! / denom : 0.0
-        ndu[r]![j] = saved + right[r + 1]! * temp
-        saved = left[j - r]! * temp
-      }
-      ndu[j]![j] = saved
-    }
-
-    const basis: number[] = new Array(deg + 1)
-    for (let j = 0; j <= deg; j++) {
-      basis[j] = ndu[j]![deg]!
-    }
-
-    const ders: number[] = new Array(deg + 1).fill(0)
-    for (let r = 0; r <= deg; r++) {
-      let d = 0.0
-      if (r === 0) {
-        const den = ndu[deg]![0]!
-        if (Math.abs(den) > 1e-12) d = -deg * ndu[0]![deg - 1]! / den
-      } else if (r === deg) {
-        const den = ndu[deg]![deg - 1]!
-        if (Math.abs(den) > 1e-12) d = deg * ndu[deg - 1]![deg - 1]! / den
-      } else {
-        const den1 = ndu[deg]![r - 1]!
-        const den2 = ndu[deg]![r]!
-        const t1 = Math.abs(den1) > 1e-12 ? deg * ndu[r - 1]![deg - 1]! / den1 : 0.0
-        const t2 = Math.abs(den2) > 1e-12 ? deg * ndu[r]![deg - 1]! / den2 : 0.0
-        d = t1 - t2
-      }
-      ders[r] = d
-    }
-
-    return { basis, ders }
-  }
+  const evaluateBasis = createBasisEvaluator(Math.max(p, q))
+  const buBasis = new Float64Array(p + 1)
+  const buDers = new Float64Array(p + 1)
+  const bvBasis = new Float64Array(q + 1)
+  const bvDers = new Float64Array(q + 1)
 
   const totalVertices = samplesU * samplesV
   const vertices = new Float32Array(totalVertices * 8)
@@ -316,13 +338,13 @@ export function referenceNurbsTessellate(
     const tv = iv / (samplesV - 1)
     const v = vMin + tv * (vMax - vMin)
     const spanV = findSpan(numCpV - 1, q, v, kv)
-    const bv = basisFunsDers(spanV, v, q, kv)
+    evaluateBasis(spanV, v, q, kv, bvBasis, bvDers)
 
     for (let iu = 0; iu < samplesU; iu++) {
       const tu = iu / (samplesU - 1)
       const u = uMin + tu * (uMax - uMin)
       const spanU = findSpan(numCpU - 1, p, u, ku)
-      const bu = basisFunsDers(spanU, u, p, ku)
+      evaluateBasis(spanU, u, p, ku, buBasis, buDers)
 
       let ptX = 0, ptY = 0, ptZ = 0, ptW = 0
       let duX = 0, duY = 0, duZ = 0, duW = 0
@@ -330,17 +352,26 @@ export function referenceNurbsTessellate(
 
       for (let r = 0; r <= p; r++) {
         const cpx = spanU - p + r
-        const nu = bu.basis[r]!
-        const dnu = bu.ders[r]!
+        const nu = buBasis[r]!
+        const dnu = buDers[r]!
 
         for (let s = 0; s <= q; s++) {
           const cpy = spanV - q + s
-          const mv = bv.basis[s]!
-          const dmv = bv.ders[s]!
+          const mv = bvBasis[s]!
+          const dmv = bvDers[s]!
 
-          const cpVal = getCp(cpx, cpy)
-          let cx = cpVal[0], cy = cpVal[1], cz = cpVal[2]
-          const cw = cpVal[3]
+          const idx = cpx + cpy * numCpU
+          let cx = 0, cy = 0, cz = 0
+          if (isFlatCp) {
+            const base = idx * 3
+            cx = cp[base] ?? 0
+            cy = cp[base + 1] ?? 0
+            cz = cp[base + 2] ?? 0
+          } else {
+            const pt = (cp as Array<[number, number, number]>)[idx]
+            if (pt) { cx = pt[0]; cy = pt[1]; cz = pt[2] }
+          }
+          const cw = weights ? (weights[idx] ?? 1.0) : 1.0
 
           if (isRational) {
             cx *= cw
@@ -380,7 +411,8 @@ export function referenceNurbsTessellate(
       let nz = tanUX * tanVY - tanUY * tanVX
       const len = Math.hypot(nx, ny, nz)
       if (len > 1e-7) {
-        nx /= len; ny /= len; nz /= len
+        const invLen = 1.0 / len
+        nx *= invLen; ny *= invLen; nz *= invLen
       } else {
         nx = 0; ny = 0; nz = 1
       }
@@ -397,6 +429,151 @@ export function referenceNurbsTessellate(
       vertices[off + 7] = tv
     }
   }
+
+  const indices = generateQuadIndices(samplesU, samplesV)
+
+  return {
+    vertices,
+    indices,
+    vertexCount: totalVertices,
+    triangleCount: (samplesU - 1) * (samplesV - 1) * 2,
+  }
+}
+
+/**
+ * Cooperative non-blocking async CPU reference evaluator for NURBS surface tessellation.
+ */
+export async function referenceNurbsTessellateAsync(
+  surface: GpuNurbsSurface,
+  samplesU = 32,
+  samplesV = 32,
+  options: CooperativeAsyncOptions = {}
+): Promise<GpuNurbsTessellationResult> {
+  const p = surface.degreeU
+  const q = surface.degreeV
+  const ku = surface.knotsU
+  const kv = surface.knotsV
+  const numCpU = surface.numCpU
+  const numCpV = surface.numCpV
+
+  const uMin = surface.domainU?.[0] ?? ku[p] ?? 0
+  const uMax = surface.domainU?.[1] ?? ku[numCpU] ?? 1
+  const vMin = surface.domainV?.[0] ?? kv[q] ?? 0
+  const vMax = surface.domainV?.[1] ?? kv[numCpV] ?? 1
+
+  const isRational = Boolean(surface.weights && surface.weights.length > 0)
+  const cp = surface.controlPoints
+  const isFlatCp = cp instanceof Float32Array
+  const weights = surface.weights
+
+  const evaluateBasis = createBasisEvaluator(Math.max(p, q))
+  const buBasis = new Float64Array(p + 1)
+  const buDers = new Float64Array(p + 1)
+  const bvBasis = new Float64Array(q + 1)
+  const bvDers = new Float64Array(q + 1)
+
+  const totalVertices = samplesU * samplesV
+  const vertices = new Float32Array(totalVertices * 8)
+
+  await forEachChunkedAsync(
+    samplesV,
+    iv => {
+      const tv = iv / (samplesV - 1)
+      const v = vMin + tv * (vMax - vMin)
+      const spanV = findSpan(numCpV - 1, q, v, kv)
+      evaluateBasis(spanV, v, q, kv, bvBasis, bvDers)
+
+      for (let iu = 0; iu < samplesU; iu++) {
+        const tu = iu / (samplesU - 1)
+        const u = uMin + tu * (uMax - uMin)
+        const spanU = findSpan(numCpU - 1, p, u, ku)
+        evaluateBasis(spanU, u, p, ku, buBasis, buDers)
+
+        let ptX = 0, ptY = 0, ptZ = 0, ptW = 0
+        let duX = 0, duY = 0, duZ = 0, duW = 0
+        let dvX = 0, dvY = 0, dvZ = 0, dvW = 0
+
+        for (let r = 0; r <= p; r++) {
+          const cpx = spanU - p + r
+          const nu = buBasis[r]!
+          const dnu = buDers[r]!
+
+          for (let s = 0; s <= q; s++) {
+            const cpy = spanV - q + s
+            const mv = bvBasis[s]!
+            const dmv = bvDers[s]!
+
+            const idx = cpx + cpy * numCpU
+            let cx = 0, cy = 0, cz = 0
+            if (isFlatCp) {
+              const base = idx * 3
+              cx = cp[base] ?? 0
+              cy = cp[base + 1] ?? 0
+              cz = cp[base + 2] ?? 0
+            } else {
+              const pt = (cp as Array<[number, number, number]>)[idx]
+              if (pt) { cx = pt[0]; cy = pt[1]; cz = pt[2] }
+            }
+            const cw = weights ? (weights[idx] ?? 1.0) : 1.0
+
+            if (isRational) {
+              cx *= cw
+              cy *= cw
+              cz *= cw
+            }
+
+            const wpt = nu * mv
+            const wdu = dnu * mv
+            const wdv = nu * dmv
+
+            ptX += cx * wpt; ptY += cy * wpt; ptZ += cz * wpt; ptW += cw * wpt
+            duX += cx * wdu; duY += cy * wdu; duZ += cz * wdu; duW += cw * wdu
+            dvX += cx * wdv; dvY += cy * wdv; dvZ += cz * wdv; dvW += cw * wdv
+          }
+        }
+
+        let posX = ptX, posY = ptY, posZ = ptZ
+        let tanUX = duX, tanUY = duY, tanUZ = duZ
+        let tanVX = dvX, tanVY = dvY, tanVZ = dvZ
+
+        if (isRational && Math.abs(ptW) > 1e-12) {
+          const invW = 1.0 / ptW
+          posX = ptX * invW
+          posY = ptY * invW
+          posZ = ptZ * invW
+          tanUX = (duX - posX * duW) * invW
+          tanUY = (duY - posY * duW) * invW
+          tanUZ = (duZ - posZ * duW) * invW
+          tanVX = (dvX - posX * dvW) * invW
+          tanVY = (dvY - posY * dvW) * invW
+          tanVZ = (dvZ - posZ * dvW) * invW
+        }
+
+        let nx = tanUY * tanVZ - tanUZ * tanVY
+        let ny = tanUZ * tanVX - tanUX * tanVZ
+        let nz = tanUX * tanVY - tanUY * tanVX
+        const len = Math.hypot(nx, ny, nz)
+        if (len > 1e-7) {
+          const invLen = 1.0 / len
+          nx *= invLen; ny *= invLen; nz *= invLen
+        } else {
+          nx = 0; ny = 0; nz = 1
+        }
+
+        const vIdx = iu + iv * samplesU
+        const off = vIdx * 8
+        vertices[off + 0] = posX
+        vertices[off + 1] = posY
+        vertices[off + 2] = posZ
+        vertices[off + 3] = nx
+        vertices[off + 4] = ny
+        vertices[off + 5] = nz
+        vertices[off + 6] = tu
+        vertices[off + 7] = tv
+      }
+    },
+    { ...options, checkStride: Math.max(1, Math.floor(256 / Math.max(1, samplesU))) }
+  )
 
   const indices = generateQuadIndices(samplesU, samplesV)
 

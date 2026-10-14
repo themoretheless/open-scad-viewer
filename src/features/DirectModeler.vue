@@ -942,7 +942,7 @@ function applySubtract(){
  const s=subtract.value;if(!s)return
  void runBoolean({operation:'difference',a:[...s.a],b:[...s.b],segments:brepSegments.value,ru:ru.value},true)
 }
-watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),JSON.stringify(subtract.value),brepSegments.value,ru.value],()=>{
+watch(()=>[props.open,document.value,selectedIds.value.join(','),subtract.value?`${subtract.value.active}:${subtract.value.a.join(',')}:${subtract.value.b.join(',')}`:'',brepSegments.value,ru.value],()=>{
  if(booleanPending.value)cancelBoolean()
 },{flush:'sync'})
 onUnmounted(()=>{cancelBoolean();booleanWorker.dispose()})
@@ -1520,8 +1520,8 @@ watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
 function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve) {
   validateSimpleSketch(points,closed)
-  const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
+  const d = history.document, id = crypto.randomUUID(), p = activePlane.value
+  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: { origin: [...p.origin], u: [...p.u], v: [...p.v] }, ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
   commit(d); pickObject(id,'2d')
 }
 function beginSketch(value: typeof tool.value) {
@@ -1858,8 +1858,8 @@ async function exportBodySvg() {
     const {createSvgWorkerClient}=await import('../services/svgWorkerClient')
     if(controller.signal.aborted)return
     worker=createSvgWorkerClient()
-    const vertices=new Float32Array(mesh.positions.length*2)
-    for(let i=0;i<mesh.positions.length;i+=3)vertices.set(mesh.positions.slice(i,i+3),i*2)
+    const pos=mesh.positions,vertices=new Float32Array(pos.length*2)
+    for(let i=0,j=0;i<pos.length;i+=3,j+=6){vertices[j]=pos[i];vertices[j+1]=pos[i+1];vertices[j+2]=pos[i+2]}
     const result=await worker.run({kind:'project',axis:'z',options:{},meshes:[{vertices,indices:new Uint32Array(mesh.indices),faceIds:new Uint32Array(mesh.indices.length/3),transform:new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])}]},{signal:controller.signal})
     if(!controller.signal.aborted&&!restoreDisposed&&props.open)download(result.svg,'body-xy.svg')
   } catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:String(e)}

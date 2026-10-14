@@ -1,6 +1,11 @@
 //! Continuous plane-root coverage of the original positive-weight curve.
 use crate::{Result, check, curve::Curve, curve_jets, distance_bounds::Interval, resource};
 
+mod exact_endpoint;
+mod quadratic;
+mod sturm;
+use exact_endpoint::ExactEndpoints;
+pub const DEFAULT_EXACT_WORK: u64 = 100000;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Classification {
     Excluded,
@@ -8,7 +13,9 @@ pub enum Classification {
     RootAtStart,
     RootAtEnd,
     TangencyAtMidpoint,
+    TangencyInInterval,
     HigherOrderContactAtMidpoint,
+    HigherOrderContactInInterval,
     TangencyAtStart,
     TangencyAtEnd,
     HigherOrderContactAtStart,
@@ -21,6 +28,8 @@ pub enum StopReason {
     ExactCoincidence,
     ExactEndpoint,
     ExactTangency,
+    ExactQuadraticDiscriminant,
+    ExactSturmIsolation,
     ExactHigherOrderContact,
     ParameterTolerance,
     RootClassificationNotProven,
@@ -33,12 +42,15 @@ pub enum Proof {
     CoplanarControls,
     EndpointCoefficients,
     QuadraticSquare,
+    QuadraticDiscriminant,
     BernsteinMidpointPower,
     EndpointWithMonotonicity,
+    RationalDeBoorEndpointWithMonotonicity,
     MonotonicityWithSignChange,
     BernsteinOneVariation,
     BernsteinZeroVariation,
     DirectLinearFormula,
+    OriginalSturmRootIsolation,
 }
 #[derive(Clone, Debug)]
 pub struct Cell {
@@ -61,6 +73,9 @@ impl Cell {
     pub fn root_parameter_bounds(&self) -> Option<[f64; 2]> {
         match self.classification {
             Classification::UniqueRoot => Some(self.isolated_root_bounds.unwrap_or(self.domain)),
+            Classification::TangencyInInterval | Classification::HigherOrderContactInInterval => {
+                self.isolated_root_bounds
+            }
             Classification::RootAtStart
             | Classification::TangencyAtStart
             | Classification::HigherOrderContactAtStart => Some([self.domain[0]; 2]),
@@ -82,6 +97,8 @@ pub struct Report {
     pub cells: Vec<Cell>,
     /// Counts all computed cells, including replaced parents.
     pub work: usize,
+    pub exact_predicate_work: u64,
+    pub exact_predicate_budget_exhausted: bool,
     pub all_roots_isolated: bool,
     pub coverage_resolved: bool,
 }
@@ -151,6 +168,24 @@ pub fn inspect_closed(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<ClosedReport> {
+    inspect_closed_with_exact_budget(
+        c,
+        normal,
+        offset,
+        parameter_tolerance,
+        max_cells,
+        DEFAULT_EXACT_WORK,
+    )
+}
+/// Closed event ownership with the same explicit shared predicate allowance.
+pub fn inspect_closed_with_exact_budget(
+    c: &Curve,
+    normal: [f64; 3],
+    offset: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<ClosedReport> {
     c.validate()?;
     let [lo, hi] = c.domain();
     if c.periodic {
@@ -189,7 +224,14 @@ pub fn inspect_closed(
             "Closed plane events require exactly equal original endpoint controls",
         )?;
     }
-    let report = inspect(c, normal, offset, parameter_tolerance, max_cells)?;
+    let report = inspect_with_exact_budget(
+        c,
+        normal,
+        offset,
+        parameter_tolerance,
+        max_cells,
+        max_exact_work,
+    )?;
     let mut events = report.root_events();
     if let Some(index) = events.iter().position(|e| e.parameter_bounds == [hi; 2]) {
         let mut end = events.remove(index);
@@ -258,7 +300,7 @@ fn exact_four_products_zero(terms: &[[f64; 4]]) -> bool {
     }
     positive == negative
 }
-fn exact_linear_parameter(c: &Curve, span: usize, t: f64, n: [f64; 3], o: f64) -> bool {
+pub(crate) fn exact_linear_parameter(c: &Curve, span: usize, t: f64, n: [f64; 3], o: f64) -> bool {
     if c.degree != 1 {
         return false;
     }
@@ -513,7 +555,14 @@ fn linear_parameter_bounds(
     let t = lo.add(width.mul(q)?)?.intersect(d[0], d[1])?;
     Ok(Some([t.lo, t.hi]))
 }
-fn make(c: &Curve, span: usize, d: [f64; 2], n: [f64; 3], o: f64) -> Result<Pending> {
+fn make(
+    c: &Curve,
+    span: usize,
+    d: [f64; 2],
+    n: [f64; 3],
+    o: f64,
+    exact: &mut ExactEndpoints<'_>,
+) -> Result<Pending> {
     if c.control_points[span - c.degree..=span]
         .iter()
         .all(|p| exact_plane_zero(p, n, o))
@@ -614,9 +663,47 @@ fn make(c: &Curve, span: usize, d: [f64; 2], n: [f64; 3], o: f64) -> Result<Pend
             root_proof: None,
         });
     }
+    if let Some(proof) = quadratic::inspect(c, span, d, n, o, exact) {
+        let excluded = matches!(proof, quadratic::QuadraticProof::Excluded);
+        let bounds = match proof {
+            quadratic::QuadraticProof::DoubleRoot(bounds) => Some(bounds),
+            quadratic::QuadraticProof::Excluded => None,
+        };
+        return Ok(Pending {
+            cell: Cell {
+                domain: d,
+                span,
+                residual_bounds: [f.lo, f.hi],
+                classification: if excluded {
+                    Classification::Excluded
+                } else {
+                    Classification::Unresolved
+                },
+                stop_reason: if excluded {
+                    StopReason::ExactQuadraticDiscriminant
+                } else {
+                    StopReason::ParameterTolerance
+                },
+                root_multiplicity: None,
+                isolated_root_bounds: bounds,
+                proof: if excluded {
+                    Some(Proof::QuadraticDiscriminant)
+                } else {
+                    None
+                },
+            },
+            unique: false,
+            root_proof: if excluded {
+                None
+            } else {
+                Some(Proof::QuadraticDiscriminant)
+            },
+        });
+    }
     let mut unique = false;
     let mut root_proof = None;
     let mut endpoint = None;
+    let mut rational_endpoint = false;
     if !excluded {
         let derivative = if c.degree == 1 {
             // For positive weights, the projected rational line derivative
@@ -648,17 +735,6 @@ fn make(c: &Curve, span: usize, d: [f64; 2], n: [f64; 3], o: f64) -> Result<Pend
             {
                 endpoint = Some(Classification::RootAtEnd);
             }
-            if endpoint.is_none() {
-                if exact_linear_parameter(c, span, d[0], n, o)
-                    || exact_quadratic_knot(c, d[0], n, o)
-                {
-                    endpoint = Some(Classification::RootAtStart);
-                } else if exact_linear_parameter(c, span, d[1], n, o)
-                    || exact_quadratic_knot(c, d[1], n, o)
-                {
-                    endpoint = Some(Classification::RootAtEnd);
-                }
-            }
             let (a, b) = if let Some(pair) = endpoint_residuals {
                 pair
             } else {
@@ -667,6 +743,30 @@ fn make(c: &Curve, span: usize, d: [f64; 2], n: [f64; 3], o: f64) -> Result<Pend
                     project(&curve_jets::endpoint(c, span, d, true)?[0], n, o)?,
                 )
             };
+            if endpoint.is_none() {
+                if exact_linear_parameter(c, span, d[0], n, o)
+                    || exact_quadratic_knot(c, d[0], n, o)
+                    || crate::exact_curve_segments::plane_incidence(c, span, d[0], n, o)
+                        == Some(true)
+                {
+                    endpoint = Some(Classification::RootAtStart);
+                } else if exact_linear_parameter(c, span, d[1], n, o)
+                    || exact_quadratic_knot(c, d[1], n, o)
+                    || crate::exact_curve_segments::plane_incidence(c, span, d[1], n, o)
+                        == Some(true)
+                {
+                    endpoint = Some(Classification::RootAtEnd);
+                }
+            }
+            if endpoint.is_none() {
+                if a.lo <= 0. && a.hi >= 0. && exact.incidence(span, d[0]) == Some(true) {
+                    endpoint = Some(Classification::RootAtStart);
+                    rational_endpoint = true;
+                } else if b.lo <= 0. && b.hi >= 0. && exact.incidence(span, d[1]) == Some(true) {
+                    endpoint = Some(Classification::RootAtEnd);
+                    rational_endpoint = true;
+                }
+            }
             unique = (a.hi < 0. && b.lo > 0.) || (b.hi < 0. && a.lo > 0.);
             if unique {
                 root_proof = Some(Proof::MonotonicityWithSignChange);
@@ -715,7 +815,13 @@ fn make(c: &Curve, span: usize, d: [f64; 2], n: [f64; 3], o: f64) -> Result<Pend
             proof: if excluded {
                 Some(exclusion_proof)
             } else {
-                endpoint.map(|_| Proof::EndpointWithMonotonicity)
+                endpoint.map(|_| {
+                    if rational_endpoint {
+                        Proof::RationalDeBoorEndpointWithMonotonicity
+                    } else {
+                        Proof::EndpointWithMonotonicity
+                    }
+                })
             },
         },
         unique,
@@ -735,6 +841,25 @@ pub fn inspect(
     offset: f64,
     parameter_tolerance: f64,
     max_cells: usize,
+) -> Result<Report> {
+    inspect_with_exact_budget(
+        c,
+        normal,
+        offset,
+        parameter_tolerance,
+        max_cells,
+        DEFAULT_EXACT_WORK,
+    )
+}
+/// Same continuous coverage with a shared exact-rational predicate allowance.
+/// Zero disables this fallback; original interval/dyadic proofs remain active.
+pub fn inspect_with_exact_budget(
+    c: &Curve,
+    normal: [f64; 3],
+    offset: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    max_exact_work: u64,
 ) -> Result<Report> {
     c.validate()?;
     check(
@@ -759,6 +884,11 @@ pub fn inspect(
         (1..=100000).contains(&max_cells),
         "Plane intersection needs 1..100000 cells",
     )?;
+    check(
+        max_exact_work <= cad_predicates::MAX_WORK,
+        "Exact plane predicate budget must be 0..1000000",
+    )?;
+    let mut exact = ExactEndpoints::new(c, normal, offset, max_exact_work);
     let spans: Vec<_> = (c.degree..c.control_points.len())
         .filter(|&i| c.knots[i] < c.knots[i + 1])
         .collect();
@@ -773,6 +903,7 @@ pub fn inspect(
             [c.knots[span], c.knots[span + 1]],
             normal,
             offset,
+            &mut exact,
         )?);
     }
     let mut work = pending.len();
@@ -781,9 +912,36 @@ pub fn inspect(
         let [lo, hi] = p.cell.domain;
         if let Some([a, b]) = p.cell.isolated_root_bounds {
             if (b - a).next_up() <= parameter_tolerance {
-                p.cell.classification = Classification::UniqueRoot;
-                p.cell.root_multiplicity = Some(1);
-                p.cell.proof = Some(Proof::DirectLinearFormula);
+                let double = p.root_proof == Some(Proof::QuadraticDiscriminant);
+                p.cell.classification = if double {
+                    Classification::TangencyInInterval
+                } else {
+                    Classification::UniqueRoot
+                };
+                p.cell.root_multiplicity = Some(if double { 2 } else { 1 });
+                p.cell.proof = Some(if double {
+                    Proof::QuadraticDiscriminant
+                } else {
+                    Proof::DirectLinearFormula
+                });
+                if double {
+                    p.cell.stop_reason = StopReason::ExactTangency;
+                }
+                cells.push(p.cell);
+                continue;
+            }
+            if p.root_proof == Some(Proof::QuadraticDiscriminant) {
+                // The quotient enclosure can be wider than an exact dyadic
+                // root. Ask the original polynomial before refusing precision.
+                if let Some(mut covered) = sturm::cover(
+                    c, p.cell.span, p.cell.residual_bounds,
+                    parameter_tolerance, max_cells - work, &mut exact,
+                ) {
+                    if covered.len() > 1 { work += covered.len(); }
+                    cells.append(&mut covered);
+                    continue;
+                }
+                p.cell.stop_reason = StopReason::PrecisionLimit;
                 cells.push(p.cell);
                 continue;
             }
@@ -795,6 +953,8 @@ pub fn inspect(
                 | Classification::RootAtStart
                 | Classification::RootAtEnd
                 | Classification::TangencyAtMidpoint
+                | Classification::TangencyInInterval
+                | Classification::HigherOrderContactInInterval
                 | Classification::HigherOrderContactAtMidpoint
                 | Classification::TangencyAtStart
                 | Classification::TangencyAtEnd
@@ -803,6 +963,25 @@ pub fn inspect(
         ) {
             cells.push(p.cell);
             continue;
+        }
+        if !p.unique
+            && p.cell.isolated_root_bounds.is_none()
+            && p.cell.domain == [c.knots[p.cell.span], c.knots[p.cell.span + 1]]
+        {
+            if let Some(mut covered) = sturm::cover(
+                c,
+                p.cell.span,
+                p.cell.residual_bounds,
+                parameter_tolerance,
+                max_cells - work,
+                &mut exact,
+            ) {
+                if covered.len() > 1 {
+                    work += covered.len();
+                }
+                cells.append(&mut covered);
+                continue;
+            }
         }
         // Outward width avoids accepting a rounded-down parameter extent.
         if (hi - lo).next_up() <= parameter_tolerance {
@@ -826,8 +1005,8 @@ pub fn inspect(
             cells.push(p.cell);
             continue;
         }
-        pending.push(make(c, p.cell.span, [lo, mid], normal, offset)?);
-        pending.push(make(c, p.cell.span, [mid, hi], normal, offset)?);
+        pending.push(make(c, p.cell.span, [lo, mid], normal, offset, &mut exact)?);
+        pending.push(make(c, p.cell.span, [mid, hi], normal, offset, &mut exact)?);
         work += 2;
     }
     cells.sort_by(|a, b| {
@@ -846,6 +1025,8 @@ pub fn inspect(
                 | Classification::RootAtStart
                 | Classification::RootAtEnd
                 | Classification::TangencyAtMidpoint
+                | Classification::TangencyInInterval
+                | Classification::HigherOrderContactInInterval
                 | Classification::HigherOrderContactAtMidpoint
                 | Classification::TangencyAtStart
                 | Classification::TangencyAtEnd
@@ -856,6 +1037,8 @@ pub fn inspect(
     Ok(Report {
         cells,
         work,
+        exact_predicate_work: exact.work,
+        exact_predicate_budget_exhausted: exact.exhausted,
         all_roots_isolated,
         coverage_resolved,
     })

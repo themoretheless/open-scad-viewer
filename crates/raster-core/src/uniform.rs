@@ -46,18 +46,28 @@ impl ObjectUniform {
     }
 
     /// Writes the full 56-float record into `out`.
+    #[inline]
     pub fn write_f32(&self, out: &mut [f32; OBJECT_UNIFORM_FLOATS]) {
         out[..16].copy_from_slice(&self.model);
         out[16..32].copy_from_slice(&self.nmat);
         out[32..36].copy_from_slice(&self.color);
         out[36..40].copy_from_slice(&self.style);
         out[40..44].copy_from_slice(&self.morph);
-        out[44..47].copy_from_slice(&self.base_color);
-        out[47] = self.metallic;
-        out[48..51].copy_from_slice(&self.emissive);
-        out[51] = self.roughness;
-        out[52] = self.material_id;
-        out[53..56].fill(0.0);
+        let tail = [
+            self.base_color[0],
+            self.base_color[1],
+            self.base_color[2],
+            self.metallic,
+            self.emissive[0],
+            self.emissive[1],
+            self.emissive[2],
+            self.roughness,
+            self.material_id,
+            0.0,
+            0.0,
+            0.0,
+        ];
+        out[44..56].copy_from_slice(&tail);
     }
 }
 
@@ -121,45 +131,51 @@ pub struct SceneUniform {
 /// `light` is the scene light direction (scene uniform floats 20..22),
 /// `center`/`radius` the scene bounds; the extent is radius × 1.25.
 pub fn shadow_light_vp(light: [f32; 3], center: [f32; 3], radius: f32) -> [f32; 16] {
-    let len = (light[0] * light[0] + light[1] * light[1] + light[2] * light[2])
-        .sqrt()
-        .max(f32::EPSILON);
-    let l = [light[0] / len, light[1] / len, light[2] / len];
+    let inv_len = 1.0
+        / (light[0] * light[0] + light[1] * light[1] + light[2] * light[2])
+            .sqrt()
+            .max(f32::EPSILON);
+    let l = [light[0] * inv_len, light[1] * inv_len, light[2] * inv_len];
     let extent = radius.max(1e-3) * 1.25;
+    let two_extent = extent * 2.0;
     let eye = [
-        center[0] + l[0] * extent * 2.0,
-        center[1] + l[1] * extent * 2.0,
-        center[2] + l[2] * extent * 2.0,
+        center[0] + l[0] * two_extent,
+        center[1] + l[1] * two_extent,
+        center[2] + l[2] * two_extent,
     ];
     let view = look_at_row_major(eye, center, [0.0, 0.0, 1.0]);
     let proj = orthographic_row_major(-extent, extent, -extent, extent, 0.0, extent * 4.0);
     let vp = multiply_row_major(&proj, &view);
     // Row-major product → column-major output (the WGSL mat4 layout).
-    let mut out = [0.0f32; 16];
-    for row in 0..4 {
-        for column in 0..4 {
-            out[column * 4 + row] = vp[row * 4 + column];
-        }
-    }
-    out
+    [
+        vp[0], vp[4], vp[8], vp[12],
+        vp[1], vp[5], vp[9], vp[13],
+        vp[2], vp[6], vp[10], vp[14],
+        vp[3], vp[7], vp[11], vp[15],
+    ]
 }
 
 /// Row-major mat4 product (a · b), mirroring `multiplyRowMajor`.
+#[inline]
 fn multiply_row_major(a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
     let mut out = [0.0f32; 16];
     for row in 0..4 {
-        for column in 0..4 {
-            out[row * 4 + column] = a[row * 4] * b[column]
-                + a[row * 4 + 1] * b[4 + column]
-                + a[row * 4 + 2] * b[8 + column]
-                + a[row * 4 + 3] * b[12 + column];
-        }
+        let r = row * 4;
+        let a0 = a[r];
+        let a1 = a[r + 1];
+        let a2 = a[r + 2];
+        let a3 = a[r + 3];
+        out[r]     = a0 * b[0] + a1 * b[4] + a2 * b[8]  + a3 * b[12];
+        out[r + 1] = a0 * b[1] + a1 * b[5] + a2 * b[9]  + a3 * b[13];
+        out[r + 2] = a0 * b[2] + a1 * b[6] + a2 * b[10] + a3 * b[14];
+        out[r + 3] = a0 * b[3] + a1 * b[7] + a2 * b[11] + a3 * b[15];
     }
     out
 }
 
 /// Right-handed WebGPU orthographic projection (depth range [0, 1]),
 /// row-major; mirrors math3d.orthographic.
+#[inline]
 fn orthographic_row_major(
     left: f32,
     right: f32,
@@ -184,6 +200,7 @@ fn orthographic_row_major(
 
 /// Row-major lookAt view matrix; mirrors math3d.lookAt, including the
 /// parallel-up-axis fallback.
+#[inline]
 fn look_at_row_major(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [f32; 16] {
     let mut zx = eye[0] - center[0];
     let mut zy = eye[1] - center[1];
@@ -195,7 +212,8 @@ fn look_at_row_major(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [f32; 16]
         zz = 1.0;
         len = 1.0;
     }
-    let fz = [zx / len, zy / len, zz / len];
+    let inv_z_len = 1.0 / len;
+    let fz = [zx * inv_z_len, zy * inv_z_len, zz * inv_z_len];
 
     let mut xx = up[1] * fz[2] - up[2] * fz[1];
     let mut xy = up[2] * fz[0] - up[0] * fz[2];
@@ -208,18 +226,19 @@ fn look_at_row_major(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [f32; 16]
         xz = ax * fz[1] - ay * fz[0];
         len = (xx * xx + xy * xy + xz * xz).sqrt();
     }
-    let fx = [xx / len, xy / len, xz / len];
+    let inv_x_len = 1.0 / len;
+    let fx = [xx * inv_x_len, xy * inv_x_len, xz * inv_x_len];
     let fy = [
         fz[1] * fx[2] - fz[2] * fx[1],
         fz[2] * fx[0] - fz[0] * fx[2],
         fz[0] * fx[1] - fz[1] * fx[0],
     ];
-    let mut m = [0.0f32; 16];
-    m[0] = fx[0]; m[1] = fx[1]; m[2] = fx[2]; m[3] = -(fx[0] * eye[0] + fx[1] * eye[1] + fx[2] * eye[2]);
-    m[4] = fy[0]; m[5] = fy[1]; m[6] = fy[2]; m[7] = -(fy[0] * eye[0] + fy[1] * eye[1] + fy[2] * eye[2]);
-    m[8] = fz[0]; m[9] = fz[1]; m[10] = fz[2]; m[11] = -(fz[0] * eye[0] + fz[1] * eye[1] + fz[2] * eye[2]);
-    m[15] = 1.0;
-    m
+    [
+        fx[0], fx[1], fx[2], -(fx[0] * eye[0] + fx[1] * eye[1] + fx[2] * eye[2]),
+        fy[0], fy[1], fy[2], -(fy[0] * eye[0] + fy[1] * eye[1] + fy[2] * eye[2]),
+        fz[0], fz[1], fz[2], -(fz[0] * eye[0] + fz[1] * eye[1] + fz[2] * eye[2]),
+        0.0,   0.0,   0.0,   1.0,
+    ]
 }
 
 impl SceneUniform {
@@ -246,6 +265,7 @@ impl SceneUniform {
     }
 
     /// Writes the full 96-float record into `out`.
+    #[inline]
     pub fn write_f32(&self, out: &mut [f32; SCENE_UNIFORM_FLOATS]) {
         out[VP_FLOAT_OFFSET..EYE_FLOAT_OFFSET].copy_from_slice(&self.view_projection);
         out[EYE_FLOAT_OFFSET..LIGHT_FLOAT_OFFSET].copy_from_slice(&self.eye);
@@ -254,19 +274,16 @@ impl SceneUniform {
         out[SECTION_FLOAT_OFFSET..OPTIONS_FLOAT_OFFSET].copy_from_slice(&self.section);
         out[OPTIONS_FLOAT_OFFSET..INVERSE_VP_FLOAT_OFFSET].copy_from_slice(&self.options);
         out[INVERSE_VP_FLOAT_OFFSET..THEME_FLOAT_OFFSET].copy_from_slice(&self.inverse_vp);
-        out[THEME_FLOAT_OFFSET..THEME_FLOAT_OFFSET + 3].copy_from_slice(&self.selection_color);
-        out[HOVER_FLOAT_OFFSET..HOVER_FLOAT_OFFSET + 3].copy_from_slice(&self.hover_color);
-        out[EDGE_FLOAT_OFFSET..EDGE_FLOAT_OFFSET + 3].copy_from_slice(&self.edge_color);
-        out[XRAY_FLOAT_OFFSET..XRAY_FLOAT_OFFSET + 3].copy_from_slice(&self.xray_color);
-        out[GRID_FLOAT_OFFSET..GRID_FLOAT_OFFSET + 3].copy_from_slice(&self.grid_color);
-        out[CAP_FLOAT_OFFSET..CAP_FLOAT_OFFSET + 3].copy_from_slice(&self.cap_color);
+        let theme_block = [
+            self.selection_color[0], self.selection_color[1], self.selection_color[2], 0.0,
+            self.hover_color[0],     self.hover_color[1],     self.hover_color[2],     0.0,
+            self.edge_color[0],      self.edge_color[1],      self.edge_color[2],      0.0,
+            self.xray_color[0],      self.xray_color[1],      self.xray_color[2],      0.0,
+            self.grid_color[0],      self.grid_color[1],      self.grid_color[2],      0.0,
+            self.cap_color[0],       self.cap_color[1],       self.cap_color[2],       0.0,
+        ];
+        out[THEME_FLOAT_OFFSET..LIGHT_VP_FLOAT_OFFSET].copy_from_slice(&theme_block);
         out[LIGHT_VP_FLOAT_OFFSET..SHADOW_FLOAT_OFFSET].copy_from_slice(&self.light_vp);
         out[SHADOW_FLOAT_OFFSET..SCENE_UNIFORM_FLOATS].copy_from_slice(&self.shadow_params);
-        out[THEME_FLOAT_OFFSET + 3] = 0.0;
-        out[HOVER_FLOAT_OFFSET + 3] = 0.0;
-        out[EDGE_FLOAT_OFFSET + 3] = 0.0;
-        out[XRAY_FLOAT_OFFSET + 3] = 0.0;
-        out[GRID_FLOAT_OFFSET + 3] = 0.0;
-        out[CAP_FLOAT_OFFSET + 3] = 0.0;
     }
 }

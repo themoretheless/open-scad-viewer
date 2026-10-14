@@ -53,6 +53,7 @@ fn slab_test(
   node: BvhNode,
   ox: f32, oy: f32, oz: f32,
   dx: f32, dy: f32, dz: f32,
+  inv_dir: vec3<f32>,
   t_min_in: f32,
   t_max_in: f32
 ) -> f32 {
@@ -63,9 +64,8 @@ fn slab_test(
   if (abs(dx) < 1e-12) {
     if (ox < node.min_x || ox > node.max_x) { return -1.0; }
   } else {
-    let inv_x = 1.0 / dx;
-    let t0 = (node.min_x - ox) * inv_x;
-    let t1 = (node.max_x - ox) * inv_x;
+    let t0 = (node.min_x - ox) * inv_dir.x;
+    let t1 = (node.max_x - ox) * inv_dir.x;
     t_near = max(t_near, min(t0, t1));
     t_far = min(t_far, max(t0, t1));
     if (t_near > t_far) { return -1.0; }
@@ -75,9 +75,8 @@ fn slab_test(
   if (abs(dy) < 1e-12) {
     if (oy < node.min_y || oy > node.max_y) { return -1.0; }
   } else {
-    let inv_y = 1.0 / dy;
-    let t0 = (node.min_y - oy) * inv_y;
-    let t1 = (node.max_y - oy) * inv_y;
+    let t0 = (node.min_y - oy) * inv_dir.y;
+    let t1 = (node.max_y - oy) * inv_dir.y;
     t_near = max(t_near, min(t0, t1));
     t_far = min(t_far, max(t0, t1));
     if (t_near > t_far) { return -1.0; }
@@ -87,9 +86,8 @@ fn slab_test(
   if (abs(dz) < 1e-12) {
     if (oz < node.min_z || oz > node.max_z) { return -1.0; }
   } else {
-    let inv_z = 1.0 / dz;
-    let t0 = (node.min_z - oz) * inv_z;
-    let t1 = (node.max_z - oz) * inv_z;
+    let t0 = (node.min_z - oz) * inv_dir.z;
+    let t1 = (node.max_z - oz) * inv_dir.z;
     t_near = max(t_near, min(t0, t1));
     t_far = min(t_far, max(t0, t1));
     if (t_near > t_far) { return -1.0; }
@@ -119,6 +117,13 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     return;
   }
 
+  let inv_dir = vec3<f32>(
+    select(0.0, 1.0 / ray.dx, abs(ray.dx) >= 1e-12),
+    select(0.0, 1.0 / ray.dy, abs(ray.dy) >= 1e-12),
+    select(0.0, 1.0 / ray.dz, abs(ray.dz) >= 1e-12)
+  );
+  let t_min_clamped = max(0.0, ray.t_min);
+
   var best_t = ray.t_max;
   var best_obj = 0xFFFFFFFFu;
 
@@ -139,7 +144,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
       node,
       ray.ox, ray.oy, ray.oz,
       ray.dx, ray.dy, ray.dz,
-      max(0.0, ray.t_min),
+      inv_dir,
+      t_min_clamped,
       best_t
     );
 
@@ -166,14 +172,16 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         left_node,
         ray.ox, ray.oy, ray.oz,
         ray.dx, ray.dy, ray.dz,
-        max(0.0, ray.t_min),
+        inv_dir,
+        t_min_clamped,
         best_t
       );
       let t_right = slab_test(
         right_node,
         ray.ox, ray.oy, ray.oz,
         ray.dx, ray.dy, ray.dz,
-        max(0.0, ray.t_min),
+        inv_dir,
+        t_min_clamped,
         best_t
       );
 

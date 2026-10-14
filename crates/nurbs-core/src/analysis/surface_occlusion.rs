@@ -358,6 +358,30 @@ pub fn inspect(s: &Surface, c: &Curve, tolerance_mm: f64, max_cells: usize) -> R
             }
             continue;
         }
+        // Overlapping proof boxes avoid treating artificial subdivision seams
+        // as geometric boundaries. The enlarged box remains inside the original
+        // knot rectangle, and inclusion is checked again with its own jets.
+        let knots = [&s.knots_u, &s.knots_v];
+        let expanded: Rectangle = std::array::from_fn(|axis| {
+            let margin = (uv[axis][1] - uv[axis][0]) * 0.25;
+            [
+                (uv[axis][0] - margin).max(knots[axis][span[axis]]),
+                (uv[axis][1] + margin).min(knots[axis][span[axis] + 1]),
+            ]
+        });
+        if expanded != uv && result.cells < max_cells {
+            result.cells += 1;
+            let jet = jets::calculate_first_stable(s, span, expanded)?;
+            if let Some(root) = uniform_root(s, span, expanded, target, jet)? {
+                let gap = jets::calculate_first_stable(s, span, root)?[0][2].sub(target[2])?;
+                if gap.lo > tolerance_mm {
+                    result.covers.push(root);
+                    continue;
+                } else if gap.hi <= tolerance_mm {
+                    continue;
+                }
+            }
+        }
         let axis = usize::from(
             (uv[1][1] - uv[1][0]) / (s.knots_v[span[1] + 1] - s.knots_v[span[1]])
                 > (uv[0][1] - uv[0][0]) / (s.knots_u[span[0] + 1] - s.knots_u[span[0]]),
@@ -459,3 +483,7 @@ mod tests {
         assert!(limited.covers.is_empty());
     }
 }
+
+#[path = "surface_occlusion_ball.rs"]
+mod ball;
+pub use ball::ball_silhouette_excludes;

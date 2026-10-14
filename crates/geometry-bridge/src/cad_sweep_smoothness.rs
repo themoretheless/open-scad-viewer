@@ -30,9 +30,11 @@ pub fn diagnose(v: Value, profile: bool) -> Result<Value> {
         )?));
     }
     let r = sweep_smoothness::inspect_profile(&model, &caps, max_work)?;
+    Ok(profile_value(&r))
+}
+pub(crate) fn profile_value(r: &sweep_smoothness::ProfileReport) -> Value {
     let p = &r.profile;
-    Ok(
-        json!({"method":"retained-miter-profile-joins","scope":"wall-profile-seams",
+    json!({"method":"retained-miter-profile-joins","scope":"wall-profile-seams",
         "maxWork":p.max_work,"exactWork":p.exact_work,"extractionComplete":p.extraction_complete,
         "unclassifiedFaces":p.unclassified_faces,"unpairedEdges":p.unpaired_edges,"edgeIds":p.edge_ids,
         "profile":collection(&p.g2,2),"g1Audit":p.g1.as_ref().map(|a|collection(a,1)),
@@ -40,8 +42,7 @@ pub fn diagnose(v: Value, profile: bool) -> Result<Value> {
             else if p.g1_certified {"exact-projective-audit"}else{"unproved"},
         "station":station(&r.station),"totalExactWork":r.total_exact_work,
         "stationContinuity":r.station_continuity,"capContinuity":r.cap_continuity,
-        "fullBoundarySmoothnessCertified":false}),
-    )
+        "fullBoundarySmoothnessCertified":false})
 }
 
 #[cfg(test)]

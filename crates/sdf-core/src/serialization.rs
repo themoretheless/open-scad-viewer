@@ -107,6 +107,51 @@ impl value_codec::Serialize for Field {
                 object.insert("kind".into(), value_codec::Value::String("torus".into()));
                 value_codec::Value::Object(object)
             }
+            Self::Cylinder {
+                center,
+                radius,
+                half_height,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "half_height".into(),
+                    value_codec::Serialize::to_value(half_height),
+                );
+                object.insert("kind".into(), value_codec::Value::String("cylinder".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Gyroid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchwarzP {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Diamond {
+                origin,
+                period,
+                thickness,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
+                object.insert("period".into(), value_codec::Serialize::to_value(period));
+                object.insert(
+                    "thickness".into(),
+                    value_codec::Serialize::to_value(thickness),
+                );
+                let kind = match self {
+                    Self::Gyroid { .. } => "gyroid",
+                    Self::SchwarzP { .. } => "schwarz_p",
+                    _ => "diamond",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Capsule { a, b, radius } => {
                 let mut object = value_codec::Map::new();
                 object.insert("a".into(), value_codec::Serialize::to_value(a));
@@ -315,6 +360,71 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                     center,
                     major_radius,
                     minor_radius,
+                })
+            }
+            "cylinder" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let center: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("center")
+                        .ok_or_else(|| value_codec::error("Missing field center"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                let half_height: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("half_height")
+                        .ok_or_else(|| value_codec::error("Missing field half_height"))?,
+                )?;
+                Ok(Self::Cylinder {
+                    center,
+                    radius,
+                    half_height,
+                })
+            }
+            "gyroid" | "schwarz_p" | "diamond" => {
+                let kind = value["kind"].as_str().unwrap_or("gyroid").to_owned();
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let origin: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("origin")
+                        .ok_or_else(|| value_codec::error("Missing field origin"))?,
+                )?;
+                let period: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("period")
+                        .ok_or_else(|| value_codec::error("Missing field period"))?,
+                )?;
+                let thickness: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("thickness")
+                        .ok_or_else(|| value_codec::error("Missing field thickness"))?,
+                )?;
+                Ok(match kind.as_str() {
+                    "gyroid" => Self::Gyroid {
+                        origin,
+                        period,
+                        thickness,
+                    },
+                    "schwarz_p" => Self::SchwarzP {
+                        origin,
+                        period,
+                        thickness,
+                    },
+                    _ => Self::Diamond {
+                        origin,
+                        period,
+                        thickness,
+                    },
                 })
             }
             "union" => {

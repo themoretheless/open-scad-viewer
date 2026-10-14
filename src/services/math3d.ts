@@ -43,6 +43,18 @@ export function normalizeVec3(v: ArrayLike<number>, fallback: Vec3 = [0, 0, 1]):
   return [v[0] * inv, v[1] * inv, v[2] * inv]
 }
 
+const EDGE_KEY_STRIDE = 67108864 // 2^26 (52-bit safe integer pair limit)
+
+/**
+ * Packs an undirected edge (a, b) into a 53-bit safe integer when max(a, b) < 2^26,
+ * or falls back to a canonical string key when vertex indices exceed 67,108,863.
+ */
+export function packUndirectedEdgeKey(a: number, b: number): number | string {
+  const low = a < b ? a : b
+  const high = a < b ? b : a
+  return high < EDGE_KEY_STRIDE ? low * EDGE_KEY_STRIDE + high : `${low}:${high}`
+}
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }

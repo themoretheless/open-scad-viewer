@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onBeforeUpdate, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onBeforeUpdate, ref, shallowRef, watch } from 'vue'
 import type {
   MeshKey,
   PanelLocale,
@@ -53,11 +53,11 @@ const copy = {
 const text = computed(() => copy[props.locale])
 const query = ref('')
 const searchOpen = ref(false)
-const expandedIds = ref<Set<MeshKey>>(new Set())
+const expandedIds = shallowRef<Set<MeshKey>>(new Set())
 const panelRef = ref<HTMLElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
 const rowRefs = ref<HTMLButtonElement[]>([])
-const activeMeshId = ref<MeshKey | null>(null)
+const activeMeshId = shallowRef<MeshKey | null>(null)
 const hoveredSourceId = ref<number | null>(null)
 const focusedSourceId = ref<number | null>(null)
 

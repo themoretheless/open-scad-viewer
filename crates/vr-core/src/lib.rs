@@ -19,10 +19,63 @@ pub struct PreparedMesh {
     pub color: [f32; 4],
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ScaleMode {
+    /// Normalize the scene bounding box to fit inside `target_extent_m` (default `0.6` m) centered at the origin.
+    NormalizedFit(f64),
+    /// Preserve true 1:1 CAD dimensions by converting millimeters directly to meters (`0.001`) centered at the origin.
+    TrueScaleMmToMeters,
+}
+
+pub struct PreparedMeshWithNormals {
+    pub positions: Vec<f32>,
+    pub normals: Vec<f32>,
+    pub indices: Vec<u32>,
+    pub color: [f32; 4],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VrRayHit {
+    pub mesh_index: usize,
+    pub triangle_index: usize,
+    pub distance_m: f32,
+    pub point: [f32; 3],
+}
+
 pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
+    prepare_scene_with_scale(meshes, ScaleMode::NormalizedFit(0.6))
+}
+
+pub fn prepare_scene_with_scale(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+) -> Result<Vec<PreparedMesh>, Error> {
+    let with_normals = prepare_scene_impl(meshes, scale_mode, false)?;
+    Ok(with_normals
+        .into_iter()
+        .map(|m| PreparedMesh {
+            positions: m.positions,
+            indices: m.indices,
+            color: m.color,
+        })
+        .collect())
+}
+
+pub fn prepare_scene_with_normals(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+) -> Result<Vec<PreparedMeshWithNormals>, Error> {
+    prepare_scene_impl(meshes, scale_mode, true)
+}
+
+fn prepare_scene_impl(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+    compute_normals: bool,
+) -> Result<Vec<PreparedMeshWithNormals>, Error> {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(meshes.len());
     for mesh in meshes {
         if mesh.indices.is_empty() {
             continue;
@@ -38,14 +91,35 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
             return Err(Error::InvalidGeometry);
         }
         let mut positions = Vec::with_capacity(mesh.vertices.len() / 2);
+        let mut normals = if compute_normals {
+            Vec::with_capacity(mesh.vertices.len() / 2)
+        } else {
+            Vec::new()
+        };
         let m = mesh.transform.map(f64::from);
         for p in mesh.vertices.chunks_exact(6) {
             let [x, y, z] = [p[0] as f64, p[1] as f64, p[2] as f64];
-            positions.extend([
+            positions.extend_from_slice(&[
                 (m[0] * x + m[1] * y + m[2] * z + m[3]) as f32,
                 (m[8] * x + m[9] * y + m[10] * z + m[11]) as f32,
                 -(m[4] * x + m[5] * y + m[6] * z + m[7]) as f32,
             ]);
+            if compute_normals {
+                let [nx, ny, nz] = [p[3] as f64, p[4] as f64, p[5] as f64];
+                let rx = m[0] * nx + m[1] * ny + m[2] * nz;
+                let ry = m[8] * nx + m[9] * ny + m[10] * nz;
+                let rz = -(m[4] * nx + m[5] * ny + m[6] * nz);
+                let len = (rx * rx + ry * ry + rz * rz).sqrt();
+                if len > 1e-12 {
+                    normals.extend_from_slice(&[
+                        (rx / len) as f32,
+                        (ry / len) as f32,
+                        (rz / len) as f32,
+                    ]);
+                } else {
+                    normals.extend_from_slice(&[0.0, 1.0, 0.0]);
+                }
+            }
         }
         for &index in &mesh.indices {
             let offset = (index as usize)
@@ -61,8 +135,9 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
                 max[a] = max[a].max(p[a] as f64);
             }
         }
-        result.push(PreparedMesh {
+        result.push(PreparedMeshWithNormals {
             positions,
+            normals,
             indices: mesh.indices,
             color: mesh.color,
         });
@@ -71,13 +146,117 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
         return Err(Error::EmptyScene);
     }
     let extent = (0..3).map(|a| max[a] - min[a]).fold(0.0_f64, f64::max);
-    let scale = if extent > 0.0 { 0.6 / extent } else { 0.001 };
+    let scale = match scale_mode {
+        ScaleMode::NormalizedFit(target) => {
+            if extent > 0.0 && target.is_finite() && target > 0.0 {
+                target / extent
+            } else {
+                0.001
+            }
+        }
+        ScaleMode::TrueScaleMmToMeters => 0.001,
+    };
+    let center = [
+        (min[0] + max[0]) * 0.5,
+        (min[1] + max[1]) * 0.5,
+        (min[2] + max[2]) * 0.5,
+    ];
     for mesh in &mut result {
-        for (i, value) in mesh.positions.iter_mut().enumerate() {
-            *value = ((*value as f64 - (min[i % 3] + max[i % 3]) / 2.0) * scale) as f32;
+        for p in mesh.positions.chunks_exact_mut(3) {
+            p[0] = ((p[0] as f64 - center[0]) * scale) as f32;
+            p[1] = ((p[1] as f64 - center[1]) * scale) as f32;
+            p[2] = ((p[2] as f64 - center[2]) * scale) as f32;
         }
     }
     Ok(result)
+}
+
+/// Möller–Trumbore XR controller raycast against prepared VR scene meshes.
+pub fn raycast_scene(
+    scene: &[PreparedMesh],
+    origin: [f32; 3],
+    direction: [f32; 3],
+) -> Option<VrRayHit> {
+    let dir_len =
+        (direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2])
+            .sqrt();
+    if !dir_len.is_finite() || dir_len <= 1e-12 {
+        return None;
+    }
+    let dir = [
+        direction[0] / dir_len,
+        direction[1] / dir_len,
+        direction[2] / dir_len,
+    ];
+    let mut best: Option<VrRayHit> = None;
+    for (mi, mesh) in scene.iter().enumerate() {
+        for (ti, tri) in mesh.indices.chunks_exact(3).enumerate() {
+            let i0 = (tri[0] as usize) * 3;
+            let i1 = (tri[1] as usize) * 3;
+            let i2 = (tri[2] as usize) * 3;
+            if i0 + 2 >= mesh.positions.len()
+                || i1 + 2 >= mesh.positions.len()
+                || i2 + 2 >= mesh.positions.len()
+            {
+                continue;
+            }
+            let v0 = [
+                mesh.positions[i0],
+                mesh.positions[i0 + 1],
+                mesh.positions[i0 + 2],
+            ];
+            let v1 = [
+                mesh.positions[i1],
+                mesh.positions[i1 + 1],
+                mesh.positions[i1 + 2],
+            ];
+            let v2 = [
+                mesh.positions[i2],
+                mesh.positions[i2 + 1],
+                mesh.positions[i2 + 2],
+            ];
+            let e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+            let e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+            let h = [
+                dir[1] * e2[2] - dir[2] * e2[1],
+                dir[2] * e2[0] - dir[0] * e2[2],
+                dir[0] * e2[1] - dir[1] * e2[0],
+            ];
+            let a = e1[0] * h[0] + e1[1] * h[1] + e1[2] * h[2];
+            if a.abs() < 1e-7 {
+                continue;
+            }
+            let f = 1.0 / a;
+            let s = [origin[0] - v0[0], origin[1] - v0[1], origin[2] - v0[2]];
+            let u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
+            if !(0.0..=1.0).contains(&u) {
+                continue;
+            }
+            let q = [
+                s[1] * e1[2] - s[2] * e1[1],
+                s[2] * e1[0] - s[0] * e1[2],
+                s[0] * e1[1] - s[1] * e1[0],
+            ];
+            let v = f * (dir[0] * q[0] + dir[1] * q[1] + dir[2] * q[2]);
+            if v < 0.0 || u + v > 1.0 {
+                continue;
+            }
+            let t = f * (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]);
+            if t > 1e-6 && best.is_none_or(|b| t < b.distance_m) {
+                best = Some(VrRayHit {
+                    mesh_index: mi,
+                    triangle_index: ti,
+                    distance_m: t,
+                    point: [
+                        origin[0] + dir[0] * t,
+                        origin[1] + dir[1] * t,
+                        origin[2] + dir[2] * t,
+                    ],
+                });
+            }
+        }
+    }
+    best
 }
 
 /// Lock a scene 1.2 m along the viewer's forward direction.
@@ -118,7 +297,7 @@ pub fn prepare_bytes(bytes: &[u8]) -> Result<Vec<u8>, Error> {
     if count > r.bytes.len() / 88 {
         return Err(Error::InvalidGeometry);
     }
-    let mut meshes = Vec::new();
+    let mut meshes = Vec::with_capacity(count);
     for _ in 0..count {
         let nv = r.u32()? as usize;
         let ni = r.u32()? as usize;
@@ -140,15 +319,29 @@ pub fn prepare_bytes(bytes: &[u8]) -> Result<Vec<u8>, Error> {
         return Err(Error::InvalidGeometry);
     }
     let scene = prepare_scene(meshes)?;
-    let mut words = vec![0, scene.len() as u32];
+    let total_words: usize = 2 + scene
+        .iter()
+        .map(|m| 6 + m.positions.len() + m.indices.len())
+        .sum::<usize>();
+    let total_bytes = u32::try_from(total_words.checked_mul(4).ok_or(Error::InvalidGeometry)?)
+        .map_err(|_| Error::InvalidGeometry)?;
+    let mut out = Vec::with_capacity(total_bytes as usize);
+    out.extend_from_slice(&total_bytes.to_le_bytes());
+    out.extend_from_slice(&(scene.len() as u32).to_le_bytes());
     for mesh in scene {
-        words.extend([mesh.positions.len() as u32, mesh.indices.len() as u32]);
-        words.extend(mesh.color.map(f32::to_bits));
-        words.extend(mesh.positions.into_iter().map(f32::to_bits));
-        words.extend(mesh.indices);
+        out.extend_from_slice(&(mesh.positions.len() as u32).to_le_bytes());
+        out.extend_from_slice(&(mesh.indices.len() as u32).to_le_bytes());
+        for c in mesh.color {
+            out.extend_from_slice(&c.to_le_bytes());
+        }
+        for p in mesh.positions {
+            out.extend_from_slice(&p.to_le_bytes());
+        }
+        for i in mesh.indices {
+            out.extend_from_slice(&i.to_le_bytes());
+        }
     }
-    words[0] = u32::try_from(words.len() * 4).map_err(|_| Error::InvalidGeometry)?;
-    Ok(words.into_iter().flat_map(u32::to_le_bytes).collect())
+    Ok(out)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -233,5 +426,21 @@ mod tests {
         assert!((a[12] - 1.8).abs() < 1e-6);
         assert_eq!(a[13], 2.);
         assert_eq!(a[14], 1.);
+    }
+    #[test]
+    fn true_scale_normals_and_raycast() {
+        let with_normals =
+            prepare_scene_with_normals(vec![mesh(0.)], ScaleMode::TrueScaleMmToMeters).unwrap();
+        assert_eq!(with_normals[0].normals.len(), 9);
+        assert!((with_normals[0].normals[1] - 1.0).abs() < 1e-6);
+        // 100 mm span in TrueScaleMmToMeters is 0.1 m (-0.05 to +0.05)
+        assert!((with_normals[0].positions[0] + 0.05).abs() < 1e-6);
+        assert!((with_normals[0].positions[3] - 0.05).abs() < 1e-6);
+
+        let prepared = prepare_scene_with_scale(vec![mesh(0.)], ScaleMode::TrueScaleMmToMeters).unwrap();
+        let hit = raycast_scene(&prepared, [-0.02, -0.02, 1.0], [0.0, 0.0, -1.0]).unwrap();
+        assert_eq!(hit.mesh_index, 0);
+        assert_eq!(hit.triangle_index, 0);
+        assert!((hit.distance_m - 1.0).abs() < 1e-5);
     }
 }

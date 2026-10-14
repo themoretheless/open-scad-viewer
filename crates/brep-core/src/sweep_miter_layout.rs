@@ -25,6 +25,27 @@ pub fn plan(
     initial: usize,
     maximum: usize,
 ) -> Result<Plan> {
+    plan_impl(loops, sites, closed, initial, maximum, false)
+}
+/// Reserve both complete radial end-cap groups from original source spans.
+/// This changes resource planning, never the global1024-face ceiling.
+pub fn plan_annular(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+) -> Result<Plan> {
+    plan_impl(loops, sites, closed, initial, maximum, true)
+}
+fn plan_impl(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+    annular: bool,
+) -> Result<Plan> {
     require(
         (1..=16).contains(&loops.len()) && loops.iter().all(|r| !r.is_empty()),
         "Miter body needs 1..16 nonempty loops",
@@ -55,7 +76,13 @@ pub fn plan(
         spans > 0,
         "Progressive miter body exceeds its site/span budget",
     )?;
-    let cap_faces = if closed { 0 } else { 2 };
+    let cap_faces = if closed {
+        0
+    } else if annular && loops.len() == 2 {
+        spans
+    } else {
+        2
+    };
     let max_steps = maximum
         .min(1024 / edges)
         .min((MAX_FACES - cap_faces) / (edges * spans));
@@ -245,6 +272,23 @@ mod tests {
         let mut bad = loops;
         bad[0][0].weights[0] = 0.;
         assert!(plan(&bad, 2, false, 1, 64).is_err());
+    }
+    #[test]
+    fn radial_caps_reserve_every_physical_face_before_refinement() {
+        // Two six-span rings need twelve terminal faces, not two. Geometry
+        // validity is audited later; planning counts every decomposed span.
+        let edge =
+            nurbs_core::paths::bezier(vec![vec![0., 0., 0.], vec![1., 0., 0.]], None).unwrap();
+        let loops = vec![vec![edge.clone(); 6], vec![edge; 6]];
+        assert_eq!(plan(&loops, 2, false, 1, 128).unwrap().max_steps, 85);
+        let radial = plan_annular(&loops, 2, false, 1, 128).unwrap();
+        assert_eq!((radial.spans, radial.max_steps), (12, 84));
+        assert!(radial.spans * radial.max_steps + 12 <= MAX_FACES);
+        assert!(plan_annular(&loops, 2, false, 85, 128).is_err());
+        assert_eq!(
+            plan_annular(&loops, 3, true, 1, 128).unwrap().max_steps,
+            plan(&loops, 3, true, 1, 128).unwrap().max_steps
+        );
     }
     #[test]
     fn native_partition_and_sharp_vertices_require_whole_uniform_coverage() {

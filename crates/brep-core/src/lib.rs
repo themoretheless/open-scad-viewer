@@ -73,6 +73,7 @@ pub mod self_intersection;
 pub mod shared_boundary;
 pub mod sweep_cap_contacts;
 pub mod sweep_retained_caps;
+pub mod retained_annular_cap;
 pub mod sweep_retained_walls;
 pub mod sweep_retained_charts;
 pub mod sweep_retained_decomposition;

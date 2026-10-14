@@ -3,7 +3,13 @@ import {compileOpenSCAD} from './openscadCompiler'
 import {directBodiesScad} from './directBodiesScad'
 import type {DirectDocument} from './directModeling'
 import {sceneBody} from './meshFlatten'
-const sameNumbers=(a:ArrayLike<number>,b:ArrayLike<number>)=>a.length===b.length&&Array.from(a).every((value,index)=>Object.is(value,b[index]))
+function sameNumbers(a: ArrayLike<number>, b: ArrayLike<number>): boolean {
+ if (a.length !== b.length) return false
+ for (let i = 0; i < a.length; i++) {
+  if (!Object.is(a[i], b[i])) return false
+ }
+ return true
+}
 const sameMesh=(a:{positions:ArrayLike<number>;indices:ArrayLike<number>},b:{positions:ArrayLike<number>;indices:ArrayLike<number>}|undefined)=>
  !!b&&sameNumbers(a.positions,b.positions)&&sameNumbers(a.indices,b.indices)
 /** Replace only authored top-level calls owning changed bodies; keep declarations/comments intact. */

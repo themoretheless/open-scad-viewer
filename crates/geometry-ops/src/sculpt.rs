@@ -437,11 +437,15 @@ impl<'a> Pass<'a> {
         brush: &SculptBrush,
         center: Point,
     ) -> Option<Self> {
-        let weights: Vec<f64> = current
-            .iter()
-            .map(|p| brush.weight_from(center, *p))
-            .collect();
-        let affected: Vec<usize> = (0..current.len()).filter(|&i| weights[i] > 0.).collect();
+        let mut weights = Vec::with_capacity(current.len());
+        let mut affected = Vec::new();
+        for (i, &p) in current.iter().enumerate() {
+            let w = brush.weight_from(center, p);
+            weights.push(w);
+            if w > 0. {
+                affected.push(i);
+            }
+        }
         (!affected.is_empty()).then_some(Self {
             target,
             center,
@@ -466,10 +470,13 @@ impl<'a> Pass<'a> {
         (norm(sum) > 1e-12).then(|| unit(sum))
     }
     fn weighted_centroid(&self, points: &[Point]) -> Point {
-        let total: f64 = self.affected.iter().map(|&i| self.weights[i]).sum();
-        let sum = self.affected.iter().fold([0.; 3], |acc, &i| {
-            add(acc, scale(points[i], self.weights[i]))
-        });
+        let mut total = 0.0;
+        let mut sum = [0.; 3];
+        for &i in &self.affected {
+            let w = self.weights[i];
+            total += w;
+            sum = add(sum, scale(points[i], w));
+        }
         scale(sum, 1. / total)
     }
     fn grab(&self, vector: Point, out: &mut [Point]) {

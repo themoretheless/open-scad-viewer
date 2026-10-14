@@ -18,10 +18,9 @@ impl value_codec::Serialize for Cage {
 
 impl<'de> value_codec::Deserialize<'de> for Cage {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
+        let value_codec::Value::Object(mut object) = value else {
+            return Err(value_codec::error("Expected object"));
+        };
         let vertices: Vec<Point> = value_codec::Deserialize::from_value(
             object
                 .remove("vertices")

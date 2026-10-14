@@ -3891,7 +3891,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         if mode==OriginalTransport::CorrectedRegular&&needs_second&&out.cells==max_cells {
             out.reason=Some("arc-second-remainder-work-unproved");return Ok(out);
         }
-        let residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
+        let _residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
         let position=coarse_position;
         for (j,value) in values.into_iter().enumerate(){
             let mut delta=[I::point(0.);3];let mut ends=[[I::point(0.);3];2];
@@ -3951,6 +3951,7 @@ fn nonaxial_planar_rmf_arc_length_encloses_independent_original_image(){
 fn nonaxial_planar_rmf_parameter_encloses_independent_original_image(){
     check_nonaxial_planar_rmf_original_image(Spacing::Parameter);
 }
+#[cfg(test)]
 fn check_nonaxial_planar_rmf_original_image(spacing:Spacing){
     // C(u)=(u,-u,u²), N=(1,1,0)/sqrt(2). The independent Bishop
     // binormal is (-sqrt(2)u,sqrt(2)u,sqrt(2))/sqrt(2+4u²).
@@ -3996,6 +3997,7 @@ fn check_nonaxial_planar_rmf_original_image(spacing:Spacing){
     let closed=Sweep::new(&profile,&closed,&scale,&twist,Options{normal:[1.,0.,1.],..opts}).unwrap().rmf_planar_patch_error_bound(17,10000,1000000).unwrap();
     assert_eq!(closed.status,Status::Unresolved);assert!(closed.error_upper.is_none());
 }
+#[cfg(test)]
 fn check_original_planar_frame_arc_length(orientation:Orientation){
     let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
     // Exact original polynomial C(u)=(0,u²,u). Its length primitive is
@@ -4709,6 +4711,13 @@ fn closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles(){
     assert!(fine.within_budget);
     assert!(fine.error_upper.unwrap()<proof.error_upper.unwrap()*0.5,"{fine:?}");
     eprintln!("dense spatial upper={} cells={}",fine.error_upper.unwrap(),fine.cells);
+    let controlled=Sweep::new(&profile,&path,&scale,&twist,Options {spacing:Spacing::ArcLength {tolerance:0.0001,max_cells:100000},max_sections:129,max_deviation:0.25,..options}).unwrap()
+        .with_affine_laws(&axis,&center).unwrap().with_spatial_rmf_error_limits(4096,100000,1000000).unwrap();
+    let level=controlled.preview_at(129).unwrap();
+    assert!(level.report.accepted && level.report.continuous_bound);
+    assert_eq!(level.report.continuous_error_upper,fine.error_upper);
+    #[cfg(feature="transport")]
+    {
     let request=value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale,"twist":twist,
         "axis_scale":axis,"center_law":center,"normal":[1.,0.,0.],"orientation":"rmf","spacing":"arc_length",
         "length_tolerance":0.0001,"length_max_cells":100000,"initial_sections":5,"max_sections":129,"max_deviation":0.25,
@@ -4721,11 +4730,6 @@ fn closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles(){
     let mut short_request=request.clone();short_request["maxCells"]=value_codec::json!(fine.cells-1);
     let refused=crate::transport::dispatch(short_request).unwrap();
     assert_eq!(refused["continuousBound"],value_codec::json!(false));assert!(refused["patches"].is_null());
-    let controlled=Sweep::new(&profile,&path,&scale,&twist,Options {spacing:Spacing::ArcLength {tolerance:0.0001,max_cells:100000},max_sections:129,max_deviation:0.25,..options}).unwrap()
-        .with_affine_laws(&axis,&center).unwrap().with_spatial_rmf_error_limits(4096,100000,1000000).unwrap();
-    let level=controlled.preview_at(129).unwrap();
-    assert!(level.report.accepted && level.report.continuous_bound);
-    assert_eq!(level.report.continuous_error_upper,fine.error_upper);
     let mut level_request=request.clone();
     level_request["op"]=value_codec::json!("surface_progressive_sweep_level");
     level_request["profiles"]=value_codec::json!([profile]);
@@ -4740,6 +4744,7 @@ fn closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles(){
     assert!(crate::transport::dispatch(incomplete).is_err());
     let mut wrong=level_request;wrong["rmf_transport_steps"]=value_codec::json!(4095);
     assert!(crate::transport::dispatch(wrong).is_err());
+    }
     let circle=crate::primitives::circle([1.,0.,0.],[0.,1.,1.],0.05).unwrap();
     let tube=Sweep::new(&circle,&path,&scale,&twist,Options {spacing:Spacing::ArcLength {tolerance:0.0001,max_cells:100000},max_sections:129,max_deviation:0.25,..options}).unwrap()
         .with_affine_laws(&axis,&center).unwrap().with_spatial_rmf_error_limits(4096,100000,1000000).unwrap().preview_at(129).unwrap();

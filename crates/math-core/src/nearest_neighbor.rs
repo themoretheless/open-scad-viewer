@@ -1,4 +1,4 @@
-use crate::{Acceleration, V3, dot, sub};
+use crate::{Acceleration, V3, dot, par_map, sub};
 
 /// Brute-force nearest-neighbor search: for every query point, the index into
 /// `targets` of its closest point and the squared Euclidean distance to it
@@ -6,22 +6,20 @@ use crate::{Acceleration, V3, dot, sub};
 /// the CPU reference for [`crate::nearest_neighbor_accelerated`]; O(queries *
 /// targets) work, exact in f64.
 pub fn nearest_neighbor(queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
-    queries
-        .iter()
-        .map(|&q| {
-            let mut best_index = u32::MAX;
-            let mut best_dist = f64::INFINITY;
-            for (i, &t) in targets.iter().enumerate() {
-                let d = sub(q, t);
-                let dist = dot(d, d);
-                if dist < best_dist {
-                    best_dist = dist;
-                    best_index = i as u32;
-                }
+    let min_chunk = (16_384usize).checked_div(targets.len().max(1)).unwrap_or(16_384).max(32);
+    par_map(queries, min_chunk, |&q| {
+        let mut best_index = u32::MAX;
+        let mut best_dist = f64::INFINITY;
+        for (i, &t) in targets.iter().enumerate() {
+            let d = sub(q, t);
+            let dist = dot(d, d);
+            if dist < best_dist {
+                best_dist = dist;
+                best_index = i as u32;
             }
-            (best_index, best_dist)
-        })
-        .collect()
+        }
+        (best_index, best_dist)
+    })
 }
 
 /// WGSL source for the nearest-neighbor compute shader (feature `gpu`); the

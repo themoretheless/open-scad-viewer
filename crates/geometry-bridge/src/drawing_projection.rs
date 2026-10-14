@@ -237,6 +237,7 @@ impl PlanarFace {
     }
 }
 enum RetainedFace {
+    Boundary(Vec<Curve>),
     Planar(PlanarFace),
     Curved {
         surface: nurbs_core::surface::Surface,
@@ -245,12 +246,83 @@ enum RetainedFace {
 }
 impl RetainedFace {
     fn state(&self, curve: &Curve, tolerance: f64, work: &mut usize) -> Result<i8> {
+        if let Self::Boundary(edges) = self {
+            for edge in edges {
+                *work += 1;
+                if *work > 2000000 {
+                    return Err(input("B-rep boundary coverage work budget exceeded"));
+                }
+                for fixed in 0..2 {
+                    let value = edge.control_points[0][fixed];
+                    if !edge
+                        .control_points
+                        .iter()
+                        .chain(&curve.control_points)
+                        .all(|p| p[fixed] == value)
+                    {
+                        continue;
+                    }
+                    let axis = 1 - fixed;
+                    let a = edge.control_points.first().unwrap()[axis];
+                    let b = edge.control_points.last().unwrap()[axis];
+                    // Continuity and endpoint bracketing prove a boundary point
+                    // for every projected coordinate. The depth hull proves
+                    // strict occlusion without guessing its parameter.
+                    if curve
+                        .control_points
+                        .iter()
+                        .all(|p| a.min(b) <= p[axis] && p[axis] <= a.max(b))
+                    {
+                        let z = edge
+                            .control_points
+                            .iter()
+                            .map(|p| p[2])
+                            .fold(f64::INFINITY, f64::min);
+                        let target = curve
+                            .control_points
+                            .iter()
+                            .map(|p| p[2])
+                            .fold(f64::NEG_INFINITY, f64::max);
+                        if nurbs_core::interval_eval::Interval::point(z)
+                            .sub(nurbs_core::interval_eval::Interval::point(target))?
+                            .lo
+                            > tolerance
+                        {
+                            return Ok(1);
+                        }
+                    }
+                }
+            }
+            return Ok(0);
+        }
         let Self::Curved { surface, domain } = self else {
             let Self::Planar(face) = self else {
                 unreachable!()
             };
             return face.state(curve, tolerance, work);
         };
+        // Positive rational weights enclose both complete definitions in
+        // their Euclidean control hulls. Reject distant charts before the
+        // more expensive dependency-sensitive homogeneous interval jets.
+        if (0..2).any(|k| {
+            let lo = curve
+                .control_points
+                .iter()
+                .map(|p| p[k])
+                .fold(f64::INFINITY, f64::min);
+            let hi = curve
+                .control_points
+                .iter()
+                .map(|p| p[k])
+                .fold(f64::NEG_INFINITY, f64::max);
+            surface.control_points.iter().flatten().all(|p| p[k] < lo)
+                || surface.control_points.iter().flatten().all(|p| p[k] > hi)
+        }) {
+            return Ok(0);
+        }
+        if nurbs_core::surface_occlusion::ball_silhouette_excludes(surface, curve, tolerance)? {
+            return Ok(0);
+        }
         // A curve entirely on a supporting coordinate line of the projected
         // surface has no interior projected crossing (silhouette convention,
         // shared with the affine natural-domain boundary case above).
@@ -293,7 +365,7 @@ impl RetainedFace {
             surface,
             curve,
             tolerance,
-            (2000000 - *work).min(64),
+            (2000000 - *work).min(512),
         )?;
         *work += report.cells;
         let mut uncertain = false;
@@ -343,6 +415,37 @@ fn curved_face(model: &brep_core::Model, index: usize, view: &str) -> Result<Ret
 }
 fn retained_faces(model: &brep_core::Model, view: &str) -> Result<Vec<RetainedFace>> {
     let mut faces = Vec::new();
+    let mut boundaries = Vec::new();
+    for edge in &model.edges {
+        for segment in edge.curve.decompose()? {
+            let mut curve = segment.definition().clone();
+            for p in &mut curve.control_points {
+                *p = project(p, view).to_vec();
+            }
+            if !(0..2).any(|k| {
+                curve
+                    .control_points
+                    .iter()
+                    .all(|p| p[k] == curve.control_points[0][k])
+            }) {
+                continue;
+            }
+            let mut pieces = vec![curve];
+            for _ in 0..if pieces[0].degree == 1 { 0 } else { 3 } {
+                let mut split = Vec::new();
+                for c in pieces {
+                    let [a, b] = c.domain();
+                    split.extend(c.split((a + b) * 0.5)?);
+                }
+                pieces = split;
+            }
+            boundaries.extend(pieces);
+            if boundaries.len() > 160000 {
+                return Err(input("B-rep boundary coverage budget exceeded"));
+            }
+        }
+    }
+    faces.push(RetainedFace::Boundary(boundaries));
     for (index, face) in model.faces.iter().enumerate() {
         let s = &face.surface;
         let projected: Vec<Vec<_>> = s
@@ -867,6 +970,34 @@ mod tests {
         );
     }
     #[test]
+    fn sphere_hides_separate_body_without_display_mesh() {
+        let model = brep_core::sphere(2.).unwrap();
+        let front = json!({"brep":model,"mesh":crate::brep::nurbs(&model,1).unwrap().built.mesh});
+        let behind = body([0.3, 0.3, -4.], [0.5, 0.5, -3.]);
+        let alone = drawing(
+            &json!({"bodies":[behind.clone()],"view":"top","hidden":"show","occlusion":"brep"}),
+        )
+        .unwrap();
+        for view in ["front", "right"] {
+            drawing(&json!({"bodies":[front.clone(),behind.clone()],"view":view,"hidden":"dash","occlusion":"brep"})).unwrap_or_else(|e|panic!("{view}: {e:?}"));
+        }
+        let result = drawing(
+            &json!({"bodies":[front,behind],"view":"top","hidden":"dash","occlusion":"brep"}),
+        )
+        .unwrap();
+        for path in alone["paths"].as_array().unwrap() {
+            assert!(
+                result["paths"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|p| p["d"] == path["d"] && p["hidden"] == true),
+                "missing hidden path: {}",
+                path["d"]
+            );
+        }
+    }
+    #[test]
     fn curved_retained_face_uses_uniform_surface_proof() {
         let model = brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
         let surface = nurbs_core::surface::Surface {
@@ -895,6 +1026,50 @@ mod tests {
         assert!(work > 0);
         let front = Curve::from_polyline(vec![vec![0.4, 0.4, 5.], vec![0.6, 0.6, 5.]]).unwrap();
         assert_eq!(face.state(&front, 1e-5, &mut work).unwrap(), 0);
+    }
+    #[test]
+    fn curved_chart_uv_hole_keeps_the_body_behind_it_visible() {
+        let outer =
+            brep_core::sketch::polygon_wire(vec![[0., 0.], [1., 0.], [1., 1.], [0., 1.]]).unwrap();
+        let hole = brep_core::sketch::polygon_wire(vec![
+            [0.35, 0.35],
+            [0.65, 0.35],
+            [0.65, 0.65],
+            [0.35, 0.65],
+        ])
+        .unwrap();
+        let loops = brep_core::planar_trim::orient_even_odd(&[outer, hole], 1e-7).unwrap();
+        let model = brep_core::prism::extrude(&loops, 0., 1.).unwrap();
+        let index = model
+            .faces
+            .iter()
+            .position(|face| !face.holes.is_empty())
+            .unwrap();
+        let surface = nurbs_core::surface::Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+                vec![vec![0.5, 0., 3.], vec![0.5, 1., 3.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let face = RetainedFace::Curved {
+            surface,
+            domain: brep_core::face_domain::FaceDomain::new(&model, index, 1e-9).unwrap(),
+        };
+        let through_hole =
+            Curve::from_polyline(vec![vec![0.45, 0.5, -1.], vec![0.55, 0.5, -1.]]).unwrap();
+        let behind_material =
+            Curve::from_polyline(vec![vec![0.1, 0.1, -1.], vec![0.2, 0.1, -1.]]).unwrap();
+        let mut work = 0;
+        assert_eq!(face.state(&through_hole, 1e-5, &mut work).unwrap(), 0);
+        assert_eq!(face.state(&behind_material, 1e-5, &mut work).unwrap(), 1);
     }
     #[test]
     fn retained_box_edges_and_hidden_lines_have_native_proof() {

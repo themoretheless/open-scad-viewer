@@ -77,6 +77,16 @@ pub enum PathRole {
     Outline,
     Inset,
     Hatch,
+    SolidSkin,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum InfillPattern {
+    #[default]
+    Rectilinear,
+    Grid,
+    Triangles,
+    Concentric,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -192,7 +202,7 @@ fn inset_rings(source: &Rings, distance: f64, budget: &mut Budget) -> Result<Rin
     if source.is_empty() {
         return Ok(Vec::new());
     }
-    let mut bands = Vec::new();
+    let mut bands = Vec::with_capacity(source.len());
     let tolerance = (distance * 0.01).min(0.01);
     let options = StrokeOptions {
         width: 2.0 * distance,
@@ -262,7 +272,7 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
         max_y: f64,
         winding: i32,
     }
-    let mut sorted_edges = Vec::new();
+    let mut sorted_edges = Vec::with_capacity(edges);
     for ring in source {
         for i in 0..ring.len() {
             let a = ring[i];
@@ -280,8 +290,9 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
         }
     }
     sorted_edges.sort_by(|x, y| x.min_y.total_cmp(&y.min_y));
-    let mut active: Vec<usize> = Vec::new();
-    let mut paths = Vec::new();
+    let mut active: Vec<usize> = Vec::with_capacity(sorted_edges.len().min(64));
+    let mut paths = Vec::with_capacity(line_count);
+    let mut hits = Vec::with_capacity(sorted_edges.len().min(64));
     let mut previous_y = None;
     let mut next_edge = 0;
     for row in 0..line_count {
@@ -303,7 +314,7 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
             next_edge += 1;
         }
         active.retain(|&index| y < sorted_edges[index].max_y);
-        let mut hits = Vec::new();
+        hits.clear();
         for &index in &active {
             let edge = &sorted_edges[index];
             let (a, b) = (edge.a, edge.b);
@@ -358,12 +369,162 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
     Ok(paths)
 }
 
+fn hatch_angled(
+    source: &Rings,
+    spacing: f64,
+    angle_rad: f64,
+    role: PathRole,
+    budget: &mut Budget,
+) -> Result<Vec<Toolpath>> {
+    if angle_rad.abs() <= 1e-12 {
+        let mut out = hatch(source, spacing, budget)?;
+        for p in &mut out {
+            p.role = role;
+        }
+        return Ok(out);
+    }
+    let (s, c) = angle_rad.sin_cos();
+    let rotated: Rings = source
+        .iter()
+        .map(|ring| {
+            ring.iter()
+                .map(|&[x, y]| [x * c + y * s, -x * s + y * c])
+                .collect()
+        })
+        .collect();
+    let mut out = hatch(&rotated, spacing, budget)?;
+    for path in &mut out {
+        path.role = role;
+        for pt in &mut path.points {
+            let [rx, ry] = *pt;
+            *pt = [rx * c - ry * s, rx * s + ry * c];
+        }
+    }
+    Ok(out)
+}
+
+fn generate_infill(
+    remaining: &Rings,
+    spacing: f64,
+    pattern: InfillPattern,
+    role: PathRole,
+    budget: &mut Budget,
+) -> Result<Vec<Toolpath>> {
+    match pattern {
+        InfillPattern::Rectilinear => hatch_angled(remaining, spacing, 0.0, role, budget),
+        InfillPattern::Grid => {
+            let mut paths = hatch_angled(remaining, spacing, 0.0, role, budget)?;
+            paths.extend(hatch_angled(
+                remaining,
+                spacing,
+                std::f64::consts::FRAC_PI_2,
+                role,
+                budget,
+            )?);
+            Ok(paths)
+        }
+        InfillPattern::Triangles => {
+            let mut paths = hatch_angled(remaining, spacing, 0.0, role, budget)?;
+            paths.extend(hatch_angled(
+                remaining,
+                spacing,
+                std::f64::consts::FRAC_PI_3,
+                role,
+                budget,
+            )?);
+            paths.extend(hatch_angled(
+                remaining,
+                spacing,
+                -std::f64::consts::FRAC_PI_3,
+                role,
+                budget,
+            )?);
+            Ok(paths)
+        }
+        InfillPattern::Concentric => {
+            let mut paths = Vec::new();
+            let mut step = 1usize;
+            while step <= 64 {
+                let offset = inset_rings(remaining, step as f64 * spacing, budget)?;
+                if offset.is_empty() {
+                    break;
+                }
+                for ring in &offset {
+                    budget.points(ring.len())?;
+                    paths.push(path_from_ring(role, ring, true));
+                }
+                step += 1;
+            }
+            Ok(paths)
+        }
+    }
+}
+
 /// Offset contours and hatch one already-computed layer section. Contours use
 /// nonzero winding (outer boundaries and holes have opposite orientations).
 /// Coordinates remain in the host's model space; Z is a preview sample plane.
 pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result<ToolpathLayer> {
     require_settings(settings)?;
     plan_layer_with_budget(section, settings, &mut Budget::default())
+}
+
+/// Plan one layer with an explicit [`InfillPattern`] (`Grid`, `Triangles`, `Concentric`, or `Rectilinear`)
+/// and optional solid top/bottom skin hatching at `line_width_mm` pitch.
+pub fn plan_layer_with_pattern(
+    section: &LayerSection,
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    solid_skin: bool,
+) -> Result<ToolpathLayer> {
+    require_settings(settings)?;
+    let mut budget = Budget::default();
+    require_section(section, &mut budget)?;
+    budget.arrangement(point_count(&section.contours))?;
+    let source = rings::nonzero(&section.contours)?;
+    budget.points(point_count(&source))?;
+    let mut paths = Vec::new();
+    for wall in 0..settings.wall_count {
+        let inset = (wall as f64 + 0.5) * settings.line_width_mm;
+        let offset = inset_rings(&source, inset, &mut budget)?;
+        let role = if wall == 0 {
+            PathRole::Outline
+        } else {
+            PathRole::Inset
+        };
+        for ring in &offset {
+            budget.points(ring.len())?;
+            paths.push(path_from_ring(role, ring, true));
+        }
+        if offset.is_empty() {
+            break;
+        }
+    }
+    let remaining = inset_rings(
+        &source,
+        settings.wall_count as f64 * settings.line_width_mm,
+        &mut budget,
+    )?;
+    if solid_skin {
+        paths.extend(hatch_angled(
+            &remaining,
+            settings.line_width_mm,
+            std::f64::consts::FRAC_PI_4,
+            PathRole::SolidSkin,
+            &mut budget,
+        )?);
+    } else {
+        paths.extend(generate_infill(
+            &remaining,
+            settings.infill_spacing_mm,
+            pattern,
+            PathRole::Hatch,
+            &mut budget,
+        )?);
+    }
+    Ok(ToolpathLayer {
+        z_mm: section.z_mm,
+        paths,
+    })
 }
 
 fn plan_layer_with_budget(
@@ -457,6 +618,69 @@ where
             ));
         }
         let layer = plan_layer_with_budget(&section, settings, &mut budget)?;
+        if !layer.paths.is_empty() {
+            layers.push(layer);
+        }
+    }
+    Ok(layers)
+}
+
+/// Parallel counterpart to [`schedule_layers`] for thread-safe section providers (`F: Fn(f64) -> Result<LayerSection> + Sync`).
+/// Evaluates sections and layer toolpaths across hardware threads while enforcing the exact same
+/// cumulative `Budget` (`MAX_PLAN_POINTS`, `MAX_PLAN_WORK`) and layer ordering as [`schedule_layers`].
+pub fn schedule_layers_parallel<F>(
+    section_at: F,
+    z_min: f64,
+    z_max: f64,
+    settings: &ToolpathSettings,
+) -> Result<Vec<ToolpathLayer>>
+where
+    F: Fn(f64) -> Result<LayerSection> + Sync,
+{
+    require_settings(settings)?;
+    if !valid_coordinate(z_min) || !valid_coordinate(z_max) || z_max <= z_min {
+        return Err(invalid(
+            "TOOLPATH_INVALID_RANGE",
+            "Layer range must be finite, increasing and within +/-1000000 mm",
+        ));
+    }
+    let mut heights = Vec::new();
+    for index in 0..=MAX_LAYERS {
+        let z = settings.layer_height_mm.mul_add(index as f64, z_min);
+        if !z.is_finite() || heights.last().is_some_and(|&previous| z <= previous) {
+            return Err(invalid(
+                "TOOLPATH_INVALID_RANGE",
+                "Layer height does not advance Z",
+            ));
+        }
+        if z >= z_max {
+            break;
+        }
+        if index == MAX_LAYERS {
+            return Err(invalid(
+                "TOOLPATH_LAYER_LIMIT",
+                "Toolpath plan exceeded 2048 sampled layers",
+            ));
+        }
+        heights.push(z);
+    }
+    let per_layer = math_core::par_try_map(&heights, 2, |&z| {
+        let section = section_at(z)?;
+        if section.z_mm != z {
+            return Err(invalid(
+                "TOOLPATH_INVALID_HEIGHT",
+                "Section Z does not match the requested sample plane",
+            ));
+        }
+        let mut local_budget = Budget::default();
+        let layer = plan_layer_with_budget(&section, settings, &mut local_budget)?;
+        Ok((layer, local_budget))
+    })?;
+    let mut total_budget = Budget::default();
+    let mut layers = Vec::new();
+    for (layer, local_budget) in per_layer {
+        total_budget.points(local_budget.points)?;
+        total_budget.work(local_budget.work)?;
         if !layer.paths.is_empty() {
             layers.push(layer);
         }
@@ -785,5 +1009,35 @@ mod tests {
             hatch(&flat, 1.0, &mut Budget::default()).unwrap(),
             hatch_naive(&flat, 1.0, &mut Budget::default()).unwrap()
         );
+    }
+
+    #[test]
+    fn infill_patterns_and_solid_skin_generate_valid_toolpaths() {
+        let section = LayerSection {
+            z_mm: 0.2,
+            contours: vec![vec![[0., 0.], [20., 0.], [20., 20.], [0., 20.]]],
+        };
+        let settings = ToolpathSettings::default();
+        let rect = plan_layer_with_pattern(&section, &settings, InfillPattern::Rectilinear, false)
+            .unwrap();
+        let grid = plan_layer_with_pattern(&section, &settings, InfillPattern::Grid, false).unwrap();
+        let tri =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::Triangles, false).unwrap();
+        let conc =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::Concentric, false).unwrap();
+        let skin =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::Rectilinear, true).unwrap();
+
+        assert!(grid.paths.len() > rect.paths.len());
+        assert!(tri.paths.len() > grid.paths.len());
+        assert!(conc
+            .paths
+            .iter()
+            .filter(|p| p.role == PathRole::Hatch)
+            .all(|p| p.closed));
+        assert!(skin
+            .paths
+            .iter()
+            .any(|p| p.role == PathRole::SolidSkin && !p.closed));
     }
 }

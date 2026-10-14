@@ -13,6 +13,7 @@ mod moments;
 mod nearest_four;
 mod nearest_neighbor;
 mod nearest_two;
+pub mod parallel;
 mod registration;
 mod rounding;
 pub use rounding::{next_down, next_up};
@@ -21,6 +22,7 @@ mod transform_error;
 mod types;
 
 pub use acceleration::Acceleration;
+pub use parallel::{available_threads, par_map, par_map_index, par_try_map};
 pub use bounds::{
     POINT_BOUNDS_WGSL, PointBounds, TRANSFORMED_POINT_BOUNDS_WGSL, point_bounds,
     point_bounds_accelerated, transformed_point_bounds, transformed_point_bounds_accelerated,

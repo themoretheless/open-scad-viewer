@@ -5,7 +5,9 @@ export interface CurveMeasurement {point:number[];curvaturePerMm:number;radiusMm
 export const solidVertexCount=(body:DirectBody)=>body.brep?body.brep.vertices.length:body.mesh.positions.length/3
 function vertex(body:DirectBody,index:number) {
  if(!Number.isInteger(index)||index<0||index>=solidVertexCount(body))throw Error('Choose an existing vertex.')
- return body.brep?body.brep.vertices[index].point:Array.from(body.mesh.positions.slice(index*3,index*3+3))
+ if(body.brep)return body.brep.vertices[index].point
+ const p=body.mesh.positions,o=index*3
+ return [p[o],p[o+1],p[o+2]]
 }
 export const measureSolidVertices=(a:DirectBody,ia:number,b:DirectBody,ib:number):PointMeasurement=>callGeometryRust('cad_measure_points',{a:vertex(a,ia),b:vertex(b,ib)})
 export function measureSolidEdgeCurvature(body:DirectBody,edge:number,t:number):CurveMeasurement {

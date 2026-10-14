@@ -78,9 +78,16 @@ fn inspect_with_depth(
     check(independent, "Linear projection rows must be independent")?;
     let projected_surface = exact_projected_surface(s, projection);
     let working = projected_surface.as_ref().unwrap_or(s);
-    let station_split = exact_station_split(working);
+    let station_split = exact_station_split(working).map(|(r,p)|(r,p,1))
+        .or_else(|| {
+            // Pure axis permutation gives the same exact subtraction rule for
+            // a polynomial U station curve with weights independent of U.
+            let transposed=crate::surface_edit::transpose(working).ok()?;
+            let (r,p)=exact_station_split(&transposed)?;
+            Some((crate::surface_edit::transpose(&r).ok()?,crate::surface_edit::transpose(&p).ok()?,0))
+        });
     let mut working_span = jets::FirstStableSpanCache::new(working);
-    let mut split_spans = station_split.as_ref().map(|(relative, position)|
+    let mut split_spans = station_split.as_ref().map(|(relative, position,_)|
         (jets::FirstStableSpanCache::new(relative), jets::FirstStableSpanCache::new(position)));
     let mut out = Report {
         certified: false,
@@ -135,11 +142,10 @@ fn inspect_with_depth(
             let derivatives = if let Some((relative, position)) = &mut split_spans {
                 let r = relative.calculate(span, domain)?;
                 let p = position.calculate(span, domain)?;
-                let mut dv = r[2];
-                for k in 0..3 {
-                    dv[k] = dv[k].add(p[2][k])?;
-                }
-                [r[1], dv]
+                let mut derivatives=[r[1],r[2]];
+                let axis=station_split.as_ref().unwrap().2;
+                for k in 0..3 {derivatives[axis][k]=derivatives[axis][k].add(p[axis+1][k])?;}
+                derivatives
             } else {
                 let j = working_span.calculate(span, domain)?;
                 [j[1], j[2]]

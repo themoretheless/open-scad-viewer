@@ -59,6 +59,7 @@ pub fn boolean(
     let mut cuts: Vec<Vec<f64>> = av.iter().chain(&bv).map(|c| c.domain().to_vec()).collect();
     let mut aliases: Vec<usize> = (0..cuts.len()).collect();
     let mut shared = Vec::new();
+    let mut linear = vec![false; cuts.len()];
     let mut work = 0;
     for (i, ca) in av.iter().enumerate() {
         for (j, cb) in bv.iter().enumerate() {
@@ -98,6 +99,49 @@ pub fn boolean(
             work += 1;
             if work > 8192 {
                 return Err(refused("Bézier Boolean pair budget exceeded"));
+            }
+            use nurbs_core::intersection::planar_scalar::{Relation, intersect};
+            if let Some(relation) = intersect(ca, cb, tolerance)? {
+                let overlap = match relation {
+                    Relation::Points(points) => {
+                        for point in points {
+                            cuts[i].push(point.first);
+                            cuts[av.len() + j].push(point.second);
+                        }
+                        continue;
+                    }
+                    Relation::Coincident {
+                        reversed,
+                        linear: straight,
+                    } => (ca.domain(), cb.domain(), reversed, straight),
+                    Relation::Overlap {
+                        points,
+                        linear,
+                        first,
+                        second,
+                        reversed,
+                    } => {
+                        for point in points {
+                            cuts[i].push(point[0]);
+                            cuts[av.len() + j].push(point[1]);
+                        }
+                        (first, second, reversed, linear)
+                    }
+                };
+                let (ar, br, reversed, straight) = overlap;
+                cuts[i].extend(ar);
+                cuts[av.len() + j].extend(br);
+                let old = aliases[av.len() + j];
+                let new = aliases[i];
+                let straight = straight || linear[old] || linear[new];
+                for alias in &mut aliases {
+                    if *alias == old {
+                        *alias = new;
+                    }
+                }
+                linear[new] = straight;
+                shared.push((i, j, !reversed, ar, br));
+                continue;
             }
             let report = intersect_curve_curve_report(&lift(ca), &lift(cb), None)?;
             if !report.report.unresolved.is_empty() {
@@ -167,6 +211,8 @@ pub fn boolean(
             }
         }
     }
+    let sources: Vec<_> = av.iter().chain(&bv).cloned().collect();
+    super::coincidence_ops::synchronize(&sources, &aliases, &mut cuts, tolerance, &mut work)?;
     let mut selected: Vec<(Curve, usize)> = Vec::new();
     for (index, source) in av.iter().chain(&bv).enumerate() {
         let from_a = index < av.len();
@@ -215,7 +261,46 @@ pub fn boolean(
                 piece = piece.reverse()?;
             }
             let alias = aliases[index];
+            let mut coincident_piece = false;
+            for (c, id) in &selected {
+                if *id == alias {
+                    let scale = c
+                        .control_points
+                        .iter()
+                        .chain(&piece.control_points)
+                        .flatten()
+                        .map(|v| v.abs())
+                        .fold(1., f64::max);
+                    let limit = (4096. * f64::EPSILON * scale).min(tolerance * 0.001);
+                    if nurbs_core::intersection::planar_coincidence::agreement(c, &piece)?
+                        .is_some_and(|e| e <= limit)
+                    {
+                        coincident_piece = true;
+                        break;
+                    }
+                }
+            }
+            if coincident_piece {
+                continue;
+            }
             if selected.iter().any(|(c, id)| {
+                // Endpoint agreement is sufficient only for source carriers
+                // independently proved straight by the exact scalar reduction.
+                if *id == alias && linear[alias] {
+                    let endpoints = |c: &Curve| {
+                        [
+                            c.control_points.first().unwrap().clone(),
+                            c.control_points.last().unwrap().clone(),
+                        ]
+                    };
+                    if endpoints(c)
+                        .iter()
+                        .zip(endpoints(&piece))
+                        .all(|(p, q)| (p[0] - q[0]).hypot(p[1] - q[1]) <= 8. * tolerance)
+                    {
+                        return true;
+                    }
+                }
                 c.degree == piece.degree
                     && c.control_points.len() == piece.control_points.len()
                     && c.weights.iter().zip(&piece.weights).all(|(x, y)| {
@@ -296,30 +381,42 @@ pub(super) fn assemble(
     }
     let mut next = vec![0usize; selected.len()];
     let mut predecessor = vec![0usize; selected.len()];
+    let mut order_work = 0;
     for (i, link) in links.iter().enumerate() {
         let curve = &selected[i].0;
-        let d = curve
-            .evaluate(curve.domain()[1])?
-            .d1
-            .ok_or_else(|| refused("Boundary tangent is unresolved"))?;
-        let back = (-d[1]).atan2(-d[0]);
+        let reverse = curve.reverse()?;
+        let d = super::departure_ops::direction(&reverse)
+            .ok_or_else(|| refused("Boundary direction is unresolved"))?;
+        let back = d[1].atan2(d[0]);
         let mut candidates = Vec::new();
         for &j in &outgoing[link[1]] {
             let c = &selected[j].0;
-            let d = c
-                .evaluate(c.domain()[0])?
-                .d1
-                .ok_or_else(|| refused("Boundary tangent is unresolved"))?;
-            if d[0].hypot(d[1]) <= tolerance {
-                return Err(refused("Boundary cusp is unresolved"));
-            }
+            let d = super::departure_ops::direction(c)
+                .ok_or_else(|| refused("Boundary cusp has no nonzero jet"))?;
             candidates.push((
                 (back - d[1].atan2(d[0])).rem_euclid(std::f64::consts::TAU),
                 j,
             ));
         }
-        if contacts && candidates.len() > 1 {
-            candidates.retain(|c| c.0 > 1e-10);
+        if candidates.len() > 1 {
+            let tied = candidates.iter().any(|a| a.0 < 1e-10)
+                || candidates.iter().enumerate().any(|(i, a)| {
+                    candidates
+                        .iter()
+                        .skip(i + 1)
+                        .any(|b| (a.0 - b.0).abs() < 1e-10)
+                });
+            if tied {
+                let branches: Vec<_> = outgoing[link[1]]
+                    .iter()
+                    .map(|j| (*j, &selected[*j].0))
+                    .collect();
+                let chosen = super::departure_ops::continuation(curve, &branches, &mut order_work)?
+                    .ok_or_else(|| refused("Boundary tangent departure ordering is unresolved"))?;
+                next[i] = chosen;
+                predecessor[chosen] += 1;
+                continue;
+            }
         }
         if candidates.is_empty() {
             return Err(refused(
@@ -338,6 +435,7 @@ pub(super) fn assemble(
     }
     let mut used = vec![false; selected.len()];
     let mut loops = Vec::new();
+    let mut emitted = 0;
     for first in 0..selected.len() {
         if used[first] {
             continue;
@@ -354,6 +452,37 @@ pub(super) fn assemble(
             used[current] = true;
             wire.push(selected[current].0.clone());
             current = next[current];
+        }
+        // A valid curved lens may have only two boundary carriers. Preserve
+        // both and split one retained curve to satisfy the cap builder's
+        // three-span wire convention; no chord or fitted carrier is introduced.
+        if wire.len() == 2 {
+            let index = usize::from(wire[1].degree > wire[0].degree);
+            let original = &wire[index];
+            let [a, b] = original.domain();
+            let mut parts = original.split(a * 0.5 + b * 0.5)?;
+            let endpoints = [
+                original.control_points[0].clone(),
+                original.control_points.last().unwrap().clone(),
+            ];
+            let middle = parts[0].control_points.last().unwrap().clone();
+            let last = parts[1].control_points.len() - 1;
+            for (part, index, p) in [
+                (0, 0, endpoints[0].clone()),
+                (1, 0, middle),
+                (1, last, endpoints[1].clone()),
+            ] {
+                let q = &parts[part].control_points[index];
+                if (q[0] - p[0]).hypot(q[1] - p[1]) > tolerance {
+                    return Err(refused("Lens trim endpoint conformance exceeds tolerance"));
+                }
+                parts[part].control_points[index] = p;
+            }
+            wire.splice(index..index + 1, parts);
+        }
+        emitted += wire.len();
+        if emitted > 2048 {
+            return Err(refused("Bézier output fragment budget exceeded"));
         }
         loops.push(wire);
     }

@@ -6,19 +6,40 @@ const WG: u32 = 256;
 @compute @workgroup_size(WG)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
     let stride = groups.x * WG;
-    for (var i = gid.x; i < params.count; i += stride) {
-        let x = input[i];
-        switch params.op {
-            case 0u: { output[i] = -x; }
-            case 1u: { output[i] = abs(x); }
-            case 2u: { output[i] = x * x; }
-            case 3u: { output[i] = sqrt(x); }
-            case 4u: { output[i] = 1.0 / x; }
-            case 5u: { output[i] = exp(x); }
-            case 6u: { output[i] = log(x); }
-            case 7u: { output[i] = sin(x); }
-            case 8u: { output[i] = cos(x); }
-            default: { output[i] = 0.0; }
+    let count = params.count;
+    switch params.op {
+        case 0u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = -input[i]; }
+        }
+        case 1u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = abs(input[i]); }
+        }
+        case 2u: {
+            for (var i = gid.x; i < count; i += stride) {
+                let x = input[i];
+                output[i] = x * x;
+            }
+        }
+        case 3u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = sqrt(input[i]); }
+        }
+        case 4u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = 1.0 / input[i]; }
+        }
+        case 5u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = exp(input[i]); }
+        }
+        case 6u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = log(input[i]); }
+        }
+        case 7u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = sin(input[i]); }
+        }
+        case 8u: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = cos(input[i]); }
+        }
+        default: {
+            for (var i = gid.x; i < count; i += stride) { output[i] = 0.0; }
         }
     }
 }

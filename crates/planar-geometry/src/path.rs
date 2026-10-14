@@ -381,18 +381,21 @@ impl BezierPath {
         let n = self.anchor_count();
         check(node < n, "Anchor index out of range")?;
         if self.closed {
-            let mut edges = self.segments.clone();
-            if edges.len() < n {
-                edges.push(PathSegment::Line { to: self.start });
-            }
+            let get_edge = |idx: usize| -> PathSegment {
+                if idx < self.segments.len() {
+                    self.segments[idx]
+                } else {
+                    PathSegment::Line { to: self.start }
+                }
+            };
             let new_start = if node == 0 {
                 self.start
             } else {
-                edges[node - 1].end()
+                get_edge(node - 1).end()
             };
             let mut new_segments = Vec::with_capacity(n);
             for k in 0..n {
-                new_segments.push(edges[(node + k) % n]);
+                new_segments.push(get_edge((node + k) % n));
             }
             return Ok(vec![Self {
                 start: new_start,
@@ -475,19 +478,52 @@ impl BezierPath {
 
     /// Insert mid-parameter anchors on every segment (densify).
     pub fn add_anchors(&self) -> Result<Self> {
-        let mut path = self.clone();
-        // Insert from the end so indices stay valid.
-        for i in (0..self.segments.len()).rev() {
-            path = path.insert_anchor(i, 0.5)?;
+        check(
+            self.segments.len().saturating_mul(2) <= MAX_SEGMENTS,
+            "Path exceeds segment budget",
+        )?;
+        let mut segments = Vec::with_capacity(self.segments.len() * 2);
+        let mut from = self.start;
+        for &seg in &self.segments {
+            match seg {
+                PathSegment::Line { to } => {
+                    let cut = lerp(from, to, 0.5);
+                    segments.push(PathSegment::Line { to: cut });
+                    segments.push(PathSegment::Line { to });
+                    from = to;
+                }
+                PathSegment::Cubic { c1, c2, to } => {
+                    let q0 = lerp(from, c1, 0.5);
+                    let q1 = lerp(c1, c2, 0.5);
+                    let q2 = lerp(c2, to, 0.5);
+                    let r0 = lerp(q0, q1, 0.5);
+                    let r1 = lerp(q1, q2, 0.5);
+                    let cut = lerp(r0, r1, 0.5);
+                    segments.push(PathSegment::Cubic {
+                        c1: q0,
+                        c2: r0,
+                        to: cut,
+                    });
+                    segments.push(PathSegment::Cubic { c1: r1, c2: q2, to });
+                    from = to;
+                }
+            }
         }
-        Ok(path)
+        Ok(Self {
+            start: self.start,
+            segments,
+            closed: self.closed,
+        })
     }
 
     /// Uniform subdivision: `levels` rounds of midpoint insertion.
     pub fn subdivide(&self, levels: usize) -> Result<Self> {
         check(levels <= 6, "Subdivide levels capped at 6")?;
-        let mut path = self.clone();
-        for _ in 0..levels {
+        if levels == 0 {
+            return Ok(self.clone());
+        }
+        let mut path = self.add_anchors()?;
+        for _ in 1..levels {
             path = path.add_anchors()?;
         }
         Ok(path)
@@ -558,19 +594,18 @@ impl BezierPath {
         crate::stroke::outline_stroke(self, opts)
     }
 
-    pub fn set_anchor_position(&self, node: usize, new_pos: [f64; 2]) -> Result<Self> {
+    fn set_anchor_position_in_place(&mut self, node: usize, new_pos: [f64; 2]) -> Result<()> {
         check(
             new_pos.iter().all(|x| x.is_finite()),
             "Non-finite anchor position",
         )?;
         let n = self.anchor_count();
         check(node < n, "Anchor index out of range")?;
-        let mut path = self.clone();
         if node == 0 {
-            let old = path.start;
-            path.start = new_pos;
-            if path.closed {
-                for seg in &mut path.segments {
+            let old = self.start;
+            self.start = new_pos;
+            if self.closed {
+                for seg in &mut self.segments {
                     let end = seg.end();
                     if dist(end, old) <= 1e-3 {
                         match seg {
@@ -581,11 +616,17 @@ impl BezierPath {
                 }
             }
         } else {
-            match &mut path.segments[node - 1] {
+            match &mut self.segments[node - 1] {
                 PathSegment::Line { to } => *to = new_pos,
                 PathSegment::Cubic { to, .. } => *to = new_pos,
             }
         }
+        Ok(())
+    }
+
+    pub fn set_anchor_position(&self, node: usize, new_pos: [f64; 2]) -> Result<Self> {
+        let mut path = self.clone();
+        path.set_anchor_position_in_place(node, new_pos)?;
         Ok(path)
     }
 
@@ -600,7 +641,7 @@ impl BezierPath {
         let targets = average_anchor_targets(&positions, axis);
         let mut path = self.clone();
         for (&node, &pos) in nodes.iter().zip(targets.iter()) {
-            path = path.set_anchor_position(node, pos)?;
+            path.set_anchor_position_in_place(node, pos)?;
         }
         Ok(path)
     }
@@ -696,14 +737,15 @@ impl BezierPath {
     /// Drop the closing flag (and a redundant return-to-start segment).
     pub fn open_path(&self) -> Result<Self> {
         check(self.closed, "Path is already open")?;
-        let mut segments = self.segments.clone();
-        if let Some(last) = segments.last()
+        let len = if let Some(last) = self.segments.last()
             && dist(last.end(), self.start) <= 1e-3
-            && segments.len() >= 2
+            && self.segments.len() >= 2
         {
-            segments.pop();
-        }
-        Self::open(self.start, segments)
+            self.segments.len() - 1
+        } else {
+            self.segments.len()
+        };
+        Self::open(self.start, self.segments[..len].to_vec())
     }
 
     /// Delete edges whose both endpoints are in `nodes`. Returns open pieces.
@@ -1106,8 +1148,12 @@ fn flatten_cubic(
     tolerance: f64,
     out: &mut Vec<[f64; 2]>,
 ) -> Result<()> {
-    let mut stack = vec![([p0, c1, c2, p3], 0usize)];
-    while let Some(([a, b, c, d], depth)) = stack.pop() {
+    let mut stack = [([[0.0; 2]; 4], 0usize); 33];
+    stack[0] = ([p0, c1, c2, p3], 0usize);
+    let mut stack_len = 1usize;
+    while stack_len > 0 {
+        stack_len -= 1;
+        let ([a, b, c, d], depth) = stack[stack_len];
         let direction = sub2(d, a);
         let length = direction[0].hypot(direction[1]);
         let distance_to_chord = |p: [f64; 2]| {
@@ -1141,8 +1187,9 @@ fn flatten_cubic(
         let abc = lerp(ab, bc, 0.5);
         let bcd = lerp(bc, cd, 0.5);
         let middle = lerp(abc, bcd, 0.5);
-        stack.push(([middle, bcd, cd, d], depth + 1));
-        stack.push(([a, ab, abc, middle], depth + 1));
+        stack[stack_len] = ([middle, bcd, cd, d], depth + 1);
+        stack[stack_len + 1] = ([a, ab, abc, middle], depth + 1);
+        stack_len += 2;
     }
     Ok(())
 }

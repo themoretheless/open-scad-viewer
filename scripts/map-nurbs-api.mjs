@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = p => readFileSync(resolve(root, p), 'utf8')
 const domains = JSON.parse(read('docs/design/nurbs-api-domains.json'))
-const modules = [...read('crates/nurbs-core/src/lib.rs').matchAll(/^pub mod (\w+);/gm)].map(x => x[1]).filter(x => x !== 'domains')
+const source = read('crates/nurbs-core/src/lib.rs')
+const modules = [...source.matchAll(/^pub mod (\w+);/gm)].map(x => x[1]).filter(x => x !== 'domains')
+for (const match of source.matchAll(/^pub use ([^;]+);/gm)) {
+  const path = match[1]
+  if (path.startsWith('transport::') || path.startsWith('math_core::') || path === 'distance_bounds::DistanceStopReason') continue
+  const items = path.includes('{') ? path.split('{')[1].split('}')[0].split(',').map(x => x.trim()).filter(Boolean) : [path]
+  for (const item of items) modules.push(item.split(/\s+as\s+/).at(-1).split('::').at(-1))
+}
 const owner = new Map()
 for (const [domain, names] of Object.entries(domains)) {
   for (const name of names) {

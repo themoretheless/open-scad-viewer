@@ -1,8 +1,16 @@
 import {describe,it,expect} from 'vitest'
 import {createDrawingSheets,drawingPdf,vectorDrawingPdf,parseDrawingDimensions} from '../src/services/drawingSheets'
-import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,createBrepSphere,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 const body=(id:string)=>{const brep=createBrepBox([0,0,0],[20,10,5]);return {id,name:'Деталь <'+id+'>',brep,mesh:tessellateNurbsBrep(brep,1)}}
 describe('native drawing sheets',()=>{
+ it('projects a real sphere and a hidden body through the B-rep WASM path',()=>{
+  const sphere=createBrepSphere(2),box=createBrepBox([0.3,0.3,-4],[0.5,0.5,-3])
+  const sheets=createDrawingSheets([{id:'sphere',name:'Sphere',brep:sphere,mesh:tessellateNurbsBrep(sphere,1)},{id:'box',name:'Box',brep:box,mesh:tessellateNurbsBrep(box,1)}],{template:'A4',scale:5,title:'Sphere',author:'',perBody:false,hidden:'dash',occlusion:'brep'})
+  expect(sheets).toHaveLength(1)
+  expect(sheets[0].svg).toContain('stroke-dasharray')
+  expect(sheets[0].svg).not.toContain('NaN')
+ },60000)
+
  it('exports Unicode labels as embedded searchable text without page images',()=>{
   const sheets=createDrawingSheets([body('a'),body('b')],{template:'A4',scale:1,title:'Сборка',author:'Проверка',perBody:true})
   const pdf=vectorDrawingPdf(sheets),text=new TextDecoder().decode(pdf)

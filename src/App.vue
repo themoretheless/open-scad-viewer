@@ -457,7 +457,8 @@ const solidSeedDocument = ref<DirectDocument | null>(null)
 const solidPaletteRequest = ref(0)
 const meshPaletteRequest = ref(0)
 function openCommandPalette() {
-  if (directModelerOpen.value) solidPaletteRequest.value++
+  if (editorOpen.value) paletteOpen.value = true
+  else if (directModelerOpen.value) solidPaletteRequest.value++
   else if (meshModelerOpen.value) meshPaletteRequest.value++
   else paletteOpen.value = true
 }
@@ -3215,7 +3216,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
               <template v-if="evidence.boundaryErrorBudget !== null">
                 / {{ evidence.boundaryErrorBudget.toPrecision(6) }} mm
               </template>
-              · {{ evidence.boundaryErrorWithinBudget === true ? (lang === 'ru' ? 'в допуске' : 'within budget') : evidence.boundaryErrorWithinBudget === false ? (lang === 'ru' ? 'выше допуска' : 'over budget') : (lang === 'ru' ? 'допуск не подтверждён' : 'budget unproved') }}
+              · {{ evidence.boundaryErrorWithinBudget === true ? (lang === 'ru' ? 'в допуске' : 'within budget') : evidence.boundaryErrorWithinBudget === false ? (lang === 'ru' ? 'выше допуска' : 'over budget') : evidence.continuousBound && evidence.boundaryErrorBudget === null ? (lang === 'ru' ? 'допуск не задан' : 'no tolerance specified') : (lang === 'ru' ? 'допуск не подтверждён' : 'budget unproved') }}
             </template>
           </div>
         </div>

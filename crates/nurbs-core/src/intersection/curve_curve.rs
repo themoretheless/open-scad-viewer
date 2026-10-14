@@ -280,14 +280,15 @@ fn krawczyk_cc(
         let ft = [dot3(r, e1), dot3(r, e2)];
         let j00 = dot3(va, e1);
         let j01 = -dot3(vb, e1);
-        let j10 = dot3(va, e2);
+        let j10 = 0.;
         let j11 = -dot3(vb, e2);
         let det = j00 * j11 - j01 * j10;
         if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
             return Ok(None);
         }
-        let dt = (j11 * ft[0] - j01 * ft[1]) / det;
-        let du = (-j10 * ft[0] + j00 * ft[1]) / det;
+        let inv_det = 1. / det;
+        let dt = (j11 * ft[0] - j01 * ft[1]) * inv_det;
+        let du = (-j10 * ft[0] + j00 * ft[1]) * inv_det;
         t -= dt;
         u -= du;
         if !(ta[0] <= t && t <= ta[1] && tb[0] <= u && u <= tb[1]) {

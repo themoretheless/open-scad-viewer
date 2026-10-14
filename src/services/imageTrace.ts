@@ -5,10 +5,13 @@ import {pathFromPolygon,simplifyPath} from './geometry/path2d'
 import type {SvgJob} from './svgWorkerProtocol'
 
 export interface ImageTraceOptions {widthMm:number;pixelWidth:number;pixelHeight:number;threshold:number;resolution:number;tolerance:number;mode:'dark'|'alpha'}
+function clonePlane(plane: SketchPlane): SketchPlane {
+ return { origin: [plane.origin[0], plane.origin[1], plane.origin[2]], u: [plane.u[0], plane.u[1], plane.u[2]], v: [plane.v[0], plane.v[1], plane.v[2]] }
+}
 /** SVG is only transport into the native bounded raster/mask/contour implementation. */
 export function imageTraceJob(dataUrl:string,o:ImageTraceOptions):SvgJob {
- if(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(dataUrl)||dataUrl.length>3_800_000)throw Error('Use a PNG, JPEG or WebP image smaller than 2.8 MiB.')
- if(!Number.isFinite(o.widthMm)||o.widthMm<=0||o.widthMm>10000||![o.pixelWidth,o.pixelHeight].every(v=>Number.isInteger(v)&&v>0&&v<=16384))throw Error('Invalid image dimensions.')
+ if(dataUrl.length>3_800_000||!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(dataUrl))throw Error('Use a PNG, JPEG or WebP image smaller than 2.8 MiB.')
+ if(!Number.isFinite(o.widthMm)||o.widthMm<=0||o.widthMm>10000||!Number.isInteger(o.pixelWidth)||o.pixelWidth<=0||o.pixelWidth>16384||!Number.isInteger(o.pixelHeight)||o.pixelHeight<=0||o.pixelHeight>16384)throw Error('Invalid image dimensions.')
  if(!Number.isFinite(o.threshold)||o.threshold<.01||o.threshold>.99||!Number.isInteger(o.resolution)||o.resolution<128||o.resolution>2048||!Number.isFinite(o.tolerance)||o.tolerance<.0001||o.tolerance>10||!['dark','alpha'].includes(o.mode))throw Error('Invalid trace settings.')
  const h=o.widthMm*o.pixelHeight/o.pixelWidth
  if(h>10000)throw Error('Image height exceeds 10000 mm.')
@@ -20,7 +23,7 @@ export function imageTraceJob(dataUrl:string,o:ImageTraceOptions):SvgJob {
 export function imageTraceSketches(contours:[number,number][][],tolerance:number,plane:SketchPlane,name:string):DirectSketch[] {
  if(!contours.length)throw Error('No contours at this threshold.')
  if(contours.length>200)throw Error('Image has more than 200 contours. Reduce resolution or adjust the threshold.')
- return contours.map((ring,i)=>withEditableSketchPath({id:crypto.randomUUID(),name:`${name.slice(0,60)} · ${i+1}`,points:[],closed:true,plane:structuredClone(plane)},simplifyPath(pathFromPolygon(ring,true),tolerance)))
+ return contours.map((ring,i)=>withEditableSketchPath({id:crypto.randomUUID(),name:`${name.slice(0,60)} · ${i+1}`,points:[],closed:true,plane:clonePlane(plane)},simplifyPath(pathFromPolygon(ring,true),tolerance)))
 }
 
 export function imageTraceColorJob(dataUrl:string,o:ImageTraceOptions,colors:number,ignoreWhite:boolean,minArea:number):SvgJob {

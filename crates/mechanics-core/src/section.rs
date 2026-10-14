@@ -287,8 +287,9 @@ pub fn thin_walled_open(strips: &[Strip]) -> Result<ThinWalledOpenReport> {
     }
     let tol = 1e-9 * span;
     // Cluster coincident endpoints onto shared node ids (grid rounding).
-    let mut nodes: Vec<[f64; 2]> = Vec::new();
-    let mut ids: std::collections::HashMap<(i64, i64), usize> = Default::default();
+    let mut nodes: Vec<[f64; 2]> = Vec::with_capacity(strips.len() + 1);
+    let mut ids: std::collections::HashMap<(i64, i64), usize> =
+        std::collections::HashMap::with_capacity(strips.len() + 1);
     fn node_of(
         nodes: &mut Vec<[f64; 2]>,
         ids: &mut std::collections::HashMap<(i64, i64), usize>,
@@ -301,7 +302,8 @@ pub fn thin_walled_open(strips: &[Strip]) -> Result<ThinWalledOpenReport> {
             nodes.len() - 1
         })
     }
-    let mut strips_n: Vec<(usize, usize, f64, [f64; 2], [f64; 2])> = Vec::new();
+    let mut strips_n: Vec<(usize, usize, f64, [f64; 2], [f64; 2])> =
+        Vec::with_capacity(strips.len());
     for strip in strips {
         let (a, b) = (
             node_of(&mut nodes, &mut ids, tol, strip.a),
@@ -314,7 +316,7 @@ pub fn thin_walled_open(strips: &[Strip]) -> Result<ThinWalledOpenReport> {
     }
     // Split strips at nodes lying in their interior (T junctions); sub-edges
     // keep the junction's node id so the graph stays connected exactly.
-    let mut edges: Vec<(usize, usize, f64)> = Vec::new();
+    let mut edges: Vec<(usize, usize, f64)> = Vec::with_capacity(strips.len() * 2);
     for &(a, b, t, pa, pb) in &strips_n {
         let d = [pb[0] - pa[0], pb[1] - pa[1]];
         let l2 = d[0] * d[0] + d[1] * d[1];

@@ -117,14 +117,20 @@ pub(crate) fn translated_active_seam_closed(c: &Curve) -> bool {
         })
 }
 pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+    inspect_with_cuts(c, &[])
+}
+/// Exact refinement including requested active-domain cuts; no rounded
+/// construction is admitted as an identity proof.
+pub(crate) fn inspect_with_cuts(c: &Curve, cuts: &[f64]) -> Option<Vec<Curve>> {
     c.validate().ok()?;
     let p = c.degree;
     let n = c.control_points.len();
     let [a, b] = c.domain();
-    if p == 0 {
+    if p == 0 || cuts.len()>256 || cuts.iter().any(|t| !t.is_finite() || *t<=a || *t>=b) {
         return None;
     }
     if c.periodic {
+        if !cuts.is_empty() { return None; }
         let pieces = exact_blossom_segments(c)?;
         // Periodic input validation permits rounded exterior knot translations.
         // Certify the actual active-domain seam, not the periodic flag alone.
@@ -134,7 +140,16 @@ pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
         return Some(pieces);
     }
     if c.knots[..=p].iter().any(|k| *k != a) || c.knots[n..].iter().any(|k| *k != b) {
+        if !cuts.is_empty() { return None; }
         return exact_blossom_segments(c);
+    }
+    // Already authored Bezier spans can be copied exactly for arbitrary
+    // binary64 Euclidean controls and weights, without multiplying them.
+    let mut authored = c.knots.iter().copied().filter(|t| a<=*t && *t<=b).collect::<Vec<_>>();
+    authored.dedup();
+    if cuts.iter().all(|t| authored.contains(t)) {
+        let direct = authored.windows(2).map(|r| copy_at_full_knots(c,r[0],r[1])).collect::<Option<Vec<_>>>();
+        if direct.is_some() { return direct; }
     }
     let mut knots = c.knots.clone();
     let mut controls = c
@@ -156,6 +171,8 @@ pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
         .copied()
         .filter(|k| *k > a && *k < b)
         .collect::<Vec<_>>();
+    breaks.extend_from_slice(cuts);
+    breaks.sort_by(f64::total_cmp);
     breaks.dedup();
     for u in breaks {
         while knots.iter().filter(|k| **k == u).count() < p {
@@ -561,4 +578,99 @@ mod tests {
             }
         }
     }
+}
+
+/// Sufficient exact coordinate incidence using original homogeneous de Boor.
+/// Returns None if any intermediate operation is not exactly representable,
+/// never a rounded evaluation interpreted as a mathematical zero.
+fn homogeneous_coordinate(c: &Curve, span: usize, t: f64, axis: usize) -> Option<[f64;2]> {
+    c.validate().ok()?;
+    let p=c.degree;
+    if !t.is_finite() || axis>=c.control_points[0].len()
+        || span<p || span>=c.control_points.len() || c.knots[span]>=c.knots[span+1]
+        || t<c.knots[span] || t>c.knots[span+1] {return None;}
+    let mut d=Vec::with_capacity(p+1);
+    for i in span-p..=span {
+        d.push([exact_mul(c.control_points[i][axis],c.weights[i])?,c.weights[i]]);
+    }
+    for r in 1..=p {
+        for j in (r..=p).rev() {
+            let i=span-p+j;
+            let numerator=exact_add(t,-c.knots[i])?;
+            let denominator=exact_add(c.knots[i+p-r+1],-c.knots[i])?;
+            let alpha=exact_div(numerator,denominator)?;
+            let beta=exact_add(1.,-alpha)?;
+            for k in 0..2 {
+                d[j][k]=exact_add(exact_mul(beta,d[j-1][k])?,exact_mul(alpha,d[j][k])?)?;
+            }
+        }
+    }
+    if d[p][1]<=0. {return None;}
+    Some(d[p])
+}
+
+pub(crate) fn coordinate_incidence(c: &Curve, span: usize, t: f64, axis: usize, value: f64) -> Option<bool> {
+    if !value.is_finite() { return None; }
+    let [h,w]=homogeneous_coordinate(c,span,t,axis)?;
+    Some(crate::exact_products::sum_sign(&[(h,1.),(-value,w)])==std::cmp::Ordering::Equal)
+}
+/// Exact axis-independent original homogeneous plane residual.
+pub(crate) fn plane_incidence(c: &Curve, span: usize, t: f64, normal: [f64;3], offset: f64) -> Option<bool> {
+    if !offset.is_finite() || !normal.iter().all(|x|x.is_finite()) {return None;}
+    let x=homogeneous_coordinate(c,span,t,0)?;
+    let y=homogeneous_coordinate(c,span,t,1)?;
+    let z=homogeneous_coordinate(c,span,t,2)?;
+    Some(crate::exact_products::sum_sign(&[(normal[0],x[0]),(normal[1],y[0]),(normal[2],z[0]),(-offset,x[1])])==std::cmp::Ordering::Equal)
+}
+
+#[cfg(test)]
+mod incidence_tests {
+    use super::*;
+    #[test]
+    fn homogeneous_incidence_is_exact_and_refuses_rounded_zero() {
+        let c=Curve{degree:2,knots:vec![2.,2.,2.,8.,8.,8.],control_points:vec![vec![0.9375,0.25],vec![0.9375,0.5],vec![1.9375,0.75]],weights:vec![1.;3],periodic:false};
+        assert_eq!(coordinate_incidence(&c,2,3.5,0,1.),Some(true));
+        assert_eq!(coordinate_incidence(&c,2,3.5,0,1f64.next_up()),Some(false));
+        assert_ne!(coordinate_incidence(&c,2,3.5f64.next_up(),0,1.),Some(true));
+        assert_eq!(coordinate_incidence(&c,2,3.5,2,1.),None);
+        assert_eq!(coordinate_incidence(&c,1,3.5,0,1.),None);
+        let rational=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.5,0.25],vec![1.,0.5],vec![1.5,0.75]],weights:vec![1.,2.,1.],periodic:false};
+        assert_eq!(coordinate_incidence(&rational,2,0.5,0,1.),Some(true));
+    }
+}
+
+/// Restrict at existing full-multiplicity boundaries by copying the original
+/// B-spline definition. No homogeneous multiplication or division is needed.
+pub(crate) fn copy_at_full_knots(c: &Curve, a: f64, b: f64) -> Option<Curve> {
+    c.validate().ok()?;
+    let p = c.degree;
+    let n = c.control_points.len();
+    let [start, end] = c.domain();
+    if c.periodic || !a.is_finite() || !b.is_finite() || a < start || a >= b || b > end {
+        return None;
+    }
+    let left_full = if a == start {
+        c.knots[..=p].iter().all(|k| *k == a)
+    } else {
+        c.knots.iter().filter(|&&k| k == a).count() >= p
+    };
+    let right_full = if b == end {
+        c.knots[n..].iter().all(|k| *k == b)
+    } else {
+        c.knots.iter().filter(|&&k| k == b).count() >= p
+    };
+    if !left_full || !right_full { return None; }
+    let first = (p..n).find(|&i| c.knots[i] == a && c.knots[i] < c.knots[i+1])?;
+    let last = (p..n).find(|&i| c.knots[i+1] == b && c.knots[i] < c.knots[i+1])?;
+    let out = Curve {
+        degree: p,
+        knots: std::iter::repeat_n(a, p+1)
+            .chain(c.knots.iter().copied().filter(|k| a < *k && *k < b))
+            .chain(std::iter::repeat_n(b, p+1)).collect(),
+        control_points: c.control_points[first-p..=last].to_vec(),
+        weights: c.weights[first-p..=last].to_vec(),
+        periodic: false,
+    };
+    out.validate().ok()?;
+    Some(out)
 }

@@ -533,14 +533,14 @@ pub fn orient3d_points(
             return Err(Reason::ResourceLimit);
         }
         stage = Stage::Interval;
-        let points = [
+        let flattened = [
             interval_point(a, ctx)?,
             interval_point(b, ctx)?,
             interval_point(c, ctx)?,
             interval_point(d, ctx)?,
         ];
-        let flattened: Vec<_> = points.into_iter().flatten().collect();
-        if let Some(sign) = crate::expression(crate::Predicate::Orient3, &flattened, ctx)?.sign() {
+        let flattened_slice: &[crate::Interval; 12] = unsafe { &*(flattened.as_ptr() as *const [crate::Interval; 12]) };
+        if let Some(sign) = crate::expression(crate::Predicate::Orient3, flattened_slice, ctx)?.sign() {
             ctx.charge(0)?;
             return Ok(sign);
         }
@@ -1162,7 +1162,7 @@ pub fn intersect_triangles3d(
             dot(&pa, &exact[5], ctx)?.sign(),
         ];
         let coplanar = signs.iter().all(|s| *s == Sign::Zero);
-        let mut points: Vec<ConstructedPoint3> = Vec::new();
+        let mut points: Vec<ConstructedPoint3> = Vec::with_capacity(6);
         for (source, target) in [(a, b), (b, a)] {
             for i in 0..3 {
                 let result = intersect_segment_triangle3d(
@@ -1175,17 +1175,17 @@ pub fn intersect_triangles3d(
                 )
                 .map_err(|_| Reason::MissingProof)?
                 .outcome;
-                let candidates = match result {
-                    SegmentTriangleIntersection3::Empty => Vec::new(),
-                    SegmentTriangleIntersection3::Point(p) => vec![p.point],
+                let candidates: [Option<ConstructedPoint3>; 2] = match result {
+                    SegmentTriangleIntersection3::Empty => [None, None],
+                    SegmentTriangleIntersection3::Point(p) => [Some(p.point), None],
                     SegmentTriangleIntersection3::Segment(p) => {
                         let [lo, hi] = *p;
-                        vec![lo.point, hi.point]
+                        [Some(lo.point), Some(hi.point)]
                     }
                     SegmentTriangleIntersection3::Indeterminate(r) => return Err(r),
                     _ => return Err(Reason::MissingProof),
                 };
-                for candidate in candidates {
+                for candidate in candidates.into_iter().flatten() {
                     let mut position = points.len();
                     let mut duplicate = false;
                     for (j, existing) in points.iter().enumerate() {
@@ -1290,21 +1290,26 @@ fn convex_contour3(
     };
     // The first nonsingular coordinate pair preserves lexicographic XYZ order
     // on this plane, including constant leading coordinates.
-    let mut lower: Vec<usize> = Vec::new();
-    let mut upper: Vec<usize> = Vec::new();
-    for (chain, indices) in [
-        (&mut lower, (0..points.len()).collect::<Vec<_>>()),
-        (&mut upper, (0..points.len()).rev().collect()),
-    ] {
-        for i in indices {
-            ctx.charge(1)?;
-            while chain.len() >= 2
-                && turn(chain[chain.len() - 2], chain[chain.len() - 1], i, ctx)? != Sign::Positive
-            {
-                chain.pop();
-            }
-            chain.push(i);
+    let n = points.len();
+    let mut lower: Vec<usize> = Vec::with_capacity(n * 2);
+    for i in 0..n {
+        ctx.charge(1)?;
+        while lower.len() >= 2
+            && turn(lower[lower.len() - 2], lower[lower.len() - 1], i, ctx)? != Sign::Positive
+        {
+            lower.pop();
         }
+        lower.push(i);
+    }
+    let mut upper: Vec<usize> = Vec::with_capacity(n);
+    for i in (0..n).rev() {
+        ctx.charge(1)?;
+        while upper.len() >= 2
+            && turn(upper[upper.len() - 2], upper[upper.len() - 1], i, ctx)? != Sign::Positive
+        {
+            upper.pop();
+        }
+        upper.push(i);
     }
     lower.pop();
     upper.pop();

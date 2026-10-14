@@ -50,31 +50,86 @@ interface CachedComputeContext {
 }
 
 let activeComputeContext: CachedComputeContext | null = null
+let pendingContextPromise: Promise<CachedComputeContext> | null = null
+let pendingFeaturesKey: string | null = null
+let adapterCache = new WeakMap<GPU, Promise<GPUAdapter | null>>()
 
-export function resetGpuComputeContext(): void {
-  activeComputeContext = null
+const wgslIdCache = new Map<string, number>()
+let nextWgslId = 1
+
+function getWgslId(wgsl: string): number {
+  let id = wgslIdCache.get(wgsl)
+  if (id === undefined) {
+    id = nextWgslId++
+    wgslIdCache.set(wgsl, id)
+  }
+  return id
 }
 
-/** Runs the job; returns one Float32Array per output buffer, in dispatch order. */
-export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]> {
-  const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' })
-  if (!adapter) throw new Error('WebGPU adapter unavailable')
-  const selectedVariant = job.wgslVariants?.length
-    ? selectSupportedWgslVariant(adapter, job.wgslVariants)
-    : { label: 'baseline', wgsl: job.wgsl }
-  const wgsl = selectedVariant.wgsl
-  const requiredLanguageFeatures = requiredWgslLanguageFeatures(wgsl)
-  const unsupportedLanguage = unsupportedWgslLanguageFeatures(requiredLanguageFeatures)
-  if (unsupportedLanguage.length) throw new Error(`WebGPU WGSL lacks required feature(s): ${unsupportedLanguage.join(', ')}`)
-  const requiredFeatures = requiredWebGpuFeaturesForWgsl(wgsl)
-  const unsupported = unsupportedWebGpuFeatures(adapter, requiredFeatures)
-  if (unsupported.length) throw new Error(`WebGPU adapter lacks required feature(s): ${unsupported.join(', ')}`)
+function acquireGpuAdapter(gpu: GPU | undefined): Promise<GPUAdapter | null> {
+  if (!gpu) return Promise.resolve(null)
+  let promise = adapterCache.get(gpu)
+  if (!promise) {
+    promise = gpu.requestAdapter({ powerPreference: 'high-performance' }).then(
+      adapter => {
+        if (!adapter) adapterCache.delete(gpu)
+        return adapter
+      },
+      err => {
+        adapterCache.delete(gpu)
+        throw err
+      },
+    )
+    adapterCache.set(gpu, promise)
+  }
+  return promise
+}
 
-  const featuresKey = [...requiredFeatures].sort().join(',')
-  let context = activeComputeContext
-  if (!context || context.adapter !== adapter || context.featuresKey !== featuresKey) {
+export function resetGpuComputeContext(): void {
+  const prev = activeComputeContext
+  activeComputeContext = null
+  pendingContextPromise = null
+  pendingFeaturesKey = null
+  adapterCache = new WeakMap<GPU, Promise<GPUAdapter | null>>()
+  try {
+    prev?.device.destroy?.()
+  } catch {
+    // Ignore errors when destroying lost or mock devices
+  }
+}
+
+async function acquireComputeContext(
+  adapter: GPUAdapter,
+  requiredFeatures: ReturnType<typeof requiredWebGpuFeaturesForWgsl>,
+  featuresKey: string,
+): Promise<CachedComputeContext> {
+  if (
+    activeComputeContext &&
+    activeComputeContext.adapter === adapter &&
+    activeComputeContext.featuresKey === featuresKey
+  ) {
+    return activeComputeContext
+  }
+  if (pendingContextPromise && pendingFeaturesKey === featuresKey) {
+    return pendingContextPromise
+  }
+
+  pendingFeaturesKey = featuresKey
+  const promise = (async (): Promise<CachedComputeContext> => {
+    const unsupported = unsupportedWebGpuFeatures(adapter, requiredFeatures)
+    if (unsupported.length) {
+      throw new Error(`WebGPU adapter lacks required feature(s): ${unsupported.join(', ')}`)
+    }
+    if (
+      activeComputeContext &&
+      activeComputeContext.adapter === adapter &&
+      activeComputeContext.featuresKey === featuresKey
+    ) {
+      return activeComputeContext
+    }
+    const prevDevice = activeComputeContext?.device
     const device = await adapter.requestDevice({ requiredFeatures: requiredFeatures as GPUFeatureName[] })
-    context = {
+    const context: CachedComputeContext = {
       adapter,
       device,
       featuresKey,
@@ -86,12 +141,51 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
       }
     })
     activeComputeContext = context
+    if (prevDevice && prevDevice !== device) {
+      try {
+        prevDevice.destroy?.()
+      } catch {
+        // Ignore cleanup errors on superseded device
+      }
+    }
+    return context
+  })()
+
+  pendingContextPromise = promise
+  try {
+    return await promise
+  } finally {
+    if (pendingContextPromise === promise) {
+      pendingContextPromise = null
+      pendingFeaturesKey = null
+    }
   }
+}
+
+/** Runs the job; returns one Float32Array per output buffer, in dispatch order. */
+export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]> {
+  const adapter = await acquireGpuAdapter(navigator.gpu)
+  if (!adapter) throw new Error('WebGPU adapter unavailable')
+  const selectedVariant = job.wgslVariants?.length
+    ? selectSupportedWgslVariant(adapter, job.wgslVariants)
+    : { label: 'baseline', wgsl: job.wgsl }
+  const wgsl = selectedVariant.wgsl
+  const requiredLanguageFeatures = requiredWgslLanguageFeatures(wgsl)
+  const unsupportedLanguage = unsupportedWgslLanguageFeatures(requiredLanguageFeatures)
+  if (unsupportedLanguage.length) {
+    throw new Error(`WebGPU WGSL lacks required feature(s): ${unsupportedLanguage.join(', ')}`)
+  }
+  const requiredFeatures = requiredWebGpuFeaturesForWgsl(wgsl)
+  const featuresKey = [...requiredFeatures].sort().join(',')
+
+  const context = await acquireComputeContext(adapter, requiredFeatures, featuresKey)
   const device = context.device
   const scratch: GPUBuffer[] = []
   try {
-    const layoutKey = job.dispatches[0]!.buffers.map(b => `${b.binding}:${b.uniform ? 'u' : b.output ? 's' : 'ro'}`).join(',')
-    const pipelineKey = `${job.entryPoint}:${layoutKey}:${wgsl}`
+    const layoutKey = job.dispatches[0]!.buffers
+      .map(b => `${b.binding}:${b.uniform ? 'u' : b.output ? 's' : 'ro'}`)
+      .join(',')
+    const pipelineKey = `${job.entryPoint}:${layoutKey}:${getWgslId(wgsl)}`
     let cached = context.pipelines.get(pipelineKey)
     if (!cached) {
       const module = device.createShaderModule({ code: wgsl })
@@ -101,7 +195,11 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
           visibility: GPUShaderStage.COMPUTE,
           buffer: buffer.uniform
             ? { type: 'uniform' as GPUBufferBindingType }
-            : { type: buffer.output ? 'storage' as GPUBufferBindingType : 'read-only-storage' as GPUBufferBindingType },
+            : {
+                type: buffer.output
+                  ? ('storage' as GPUBufferBindingType)
+                  : ('read-only-storage' as GPUBufferBindingType),
+              },
         })),
       })
       const pipeline = device.createComputePipeline({
@@ -118,37 +216,41 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
     const encoder = device.createCommandEncoder()
     const pass = encoder.beginComputePass()
     pass.setPipeline(pipeline)
-    const reads: { from: GPUBuffer; read: GPUBuffer | null; bytes: number }[] = []
+    const reads: { from: GPUBuffer; read: GPUBuffer | null; bytes: number; alignedBytes: number }[] = []
     for (const dispatch of job.dispatches) {
       const entries: GPUBindGroupEntry[] = []
       for (const buffer of dispatch.buffers) {
         if (buffer.output) {
           const bytes = buffer.outputBytes ?? dispatch.outputBytes
+          const alignedBytes = (bytes + 3) & ~3
           const output = device.createBuffer({
-            size: Math.max(16, bytes),
+            size: Math.max(16, alignedBytes),
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
           })
           scratch.push(output)
           entries.push({ binding: buffer.binding, resource: { buffer: output } })
           if (bytes === 0) {
             // Legal to have empty outputs (e.g. zero features); skip the copy.
-            reads.push({ from: output, read: null, bytes })
+            reads.push({ from: output, read: null, bytes: 0, alignedBytes: 0 })
             continue
           }
           const read = device.createBuffer({
-            size: bytes,
+            size: alignedBytes,
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
           })
           scratch.push(read)
-          reads.push({ from: output, read, bytes })
+          reads.push({ from: output, read, bytes, alignedBytes })
           continue
         }
         const bytes = buffer.data
         let storage = sharedUploads.get(bytes)
         if (!storage) {
+          const alignedInBytes = (bytes.byteLength + 3) & ~3
           storage = device.createBuffer({
-            size: Math.max(16, bytes.byteLength),
-            usage: (buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE) | GPUBufferUsage.COPY_DST,
+            size: Math.max(16, alignedInBytes),
+            usage:
+              (buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE) |
+              GPUBufferUsage.COPY_DST,
           })
           device.queue.writeBuffer(storage, 0, bytes)
           sharedUploads.set(bytes, storage)
@@ -160,14 +262,14 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
       pass.dispatchWorkgroups(...(dispatch.variantWorkgroups?.[selectedVariant.label] ?? dispatch.workgroups))
     }
     pass.end()
-    for (const { from, read, bytes } of reads) {
-      if (read) encoder.copyBufferToBuffer(from, 0, read, 0, bytes)
+    for (const { from, read, alignedBytes } of reads) {
+      if (read) encoder.copyBufferToBuffer(from, 0, read, 0, alignedBytes)
     }
     device.queue.submit([encoder.finish()])
     await Promise.all(reads.map(({ read }) => read?.mapAsync(GPUMapMode.READ)))
-    return reads.map(({ read, bytes }) => {
+    return reads.map(({ read, alignedBytes }) => {
       if (!read) return new Float32Array(0)
-      const values = new Float32Array(read.getMappedRange().slice(0, bytes))
+      const values = new Float32Array(read.getMappedRange().slice(0, alignedBytes))
       read.unmap()
       return values
     })

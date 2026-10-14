@@ -1244,6 +1244,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         }
         "brep_sweep_retained_charts_audit" => cad_sweep_smoothness::diagnose_charts(v),
         "brep_miter_owned_construct" => cad_miter_owned::construct(v),
+        "brep_miter_annular_owned_construct" => cad_miter_owned::construct_annular(v),
         "brep_miter_owned_reconstruct" => cad_miter_owned::reconstruct(v),
         "brep_miter_owned_place" => cad_miter_owned::place(v),
         "brep_miter_affine_boundary" => cad_miter_layout::affine_boundary(v),

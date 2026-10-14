@@ -19,10 +19,11 @@ pub fn render(positions: &[f32]) -> Result<SoupRender> {
             "Decoded STL contains a non-finite coordinate",
         ));
     }
+    let tri_count = positions.len() / 9;
     let mut out = SoupRender {
-        vertices: Vec::new(),
-        indices: Vec::new(),
-        face_ids: Vec::new(),
+        vertices: Vec::with_capacity(tri_count * 18),
+        indices: Vec::with_capacity(tri_count * 3),
+        face_ids: Vec::with_capacity(tri_count),
         discarded: 0,
     };
     for t in positions.as_chunks::<9>().0 {
@@ -44,10 +45,12 @@ pub fn render(positions: &[f32]) -> Result<SoupRender> {
         }
         let id = out.face_ids.len() as u32;
         out.face_ids.push(id);
+        let nf = n.map(|x| (x / length) as f32);
+        let base = (out.vertices.len() / 6) as u32;
+        out.indices.extend_from_slice(&[base, base + 1, base + 2]);
         for p in t.as_chunks::<3>().0 {
-            out.indices.push((out.vertices.len() / 6) as u32);
-            out.vertices.extend(*p);
-            out.vertices.extend(n.map(|x| (x / length) as f32));
+            out.vertices
+                .extend_from_slice(&[p[0], p[1], p[2], nf[0], nf[1], nf[2]]);
         }
     }
     if out.indices.is_empty() {

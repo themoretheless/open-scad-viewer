@@ -327,10 +327,37 @@ fn joined_jacobian(s: &Surface, domain: [[f64; 2]; 2], end: bool) -> Result<[[I;
     Ok(result)
 }
 
+mod glued_monotone;
+
+/// The original strip proof remains the fast path. A second sufficient proof
+/// uses one fixed projection with positive symmetric Jacobian on both complete
+/// half-rectangles. Exact boundary matching makes their glued map continuous.
+pub fn certify_shared_natural_boundary(a:&Surface,b:&Surface,ends:[bool;2],max_cells:usize)->Result<Report>{
+    a.validate()?;b.validate()?;
+    if !eligible(a)||!eligible(b)||a.degree_v!=b.degree_v||a.knots_v!=b.knots_v||max_cells<6 {
+        return certify_shared_natural_boundary_strips(a,b,ends,max_cells);
+    }
+    let ia=if ends[0]{a.degree_u}else{0};let ib=if ends[1]{b.degree_u}else{0};
+    let aligned;
+    let b=if a.control_points[ia]==b.control_points[ib]&&a.weights[ia]==b.weights[ib]{b}
+    else if a.control_points[ia].iter().eq(b.control_points[ib].iter().rev())&&a.weights[ia].iter().eq(b.weights[ib].iter().rev()) {
+        // Bezier V knots have only their original clamped endpoints. Reversing
+        // poles and weights alone is an exact parameter permutation; no rounded
+        // knot arithmetic or reconstructed world coordinates enter the proof.
+        let mut copy=b.clone();for row in &mut copy.control_points{row.reverse();}for row in &mut copy.weights{row.reverse();}aligned=copy;&aligned
+    }else{return certify_shared_natural_boundary_strips(a,b,ends,max_cells);};
+    let mut report=certify_shared_natural_boundary_strips(a,b,ends,max_cells)?;
+    if report.proven||max_cells.saturating_sub(report.spans)<2{return Ok(report);}
+    let (proven,cells)=glued_monotone::certify(a,b,ends,max_cells-report.spans)?;
+    report.spans+=cells;
+    if proven {report.proven=true;report.projection=None;report.contraction_upper=None;report.reason="whole-shared-boundary-glued-monotone-projection";}
+    Ok(report)
+}
+
 /// Certify that the two complete natural faces can meet only on their common
 /// U boundary. `ends` chooses Umax (true) or Umin (false) in each face. Trim/world
 /// edge ownership, individual face validity and shell admission remain separate.
-pub fn certify_shared_natural_boundary(
+fn certify_shared_natural_boundary_strips(
     a: &Surface,
     b: &Surface,
     ends: [bool; 2],

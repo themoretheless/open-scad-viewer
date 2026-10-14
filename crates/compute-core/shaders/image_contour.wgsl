@@ -57,105 +57,143 @@ fn to_mm(gx: f32, gy: f32) -> vec2<f32> {
   return vec2<f32>(gx * sx, (f32(params.grid_h - 1u) - gy) * sy);
 }
 
-fn emit_seg(p0: vec2<f32>, p1: vec2<f32>) {
-  let d = p1 - p0;
-  if (dot(d, d) <= 1e-12) {
-    return;
-  }
-  let slot = atomicAdd(&segment_counter[0], 1u);
-  if (slot < params.max_segments) {
-    let off = slot * 4u;
-    out_segments[off + 0u] = p0.x;
-    out_segments[off + 1u] = p0.y;
-    out_segments[off + 2u] = p1.x;
-    out_segments[off + 3u] = p1.y;
-  }
-}
-
 const WG: u32 = 256;
+var<workgroup> wg_counter: atomic<u32>;
+var<workgroup> wg_base: u32;
 
 @compute @workgroup_size(WG)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  if (params.grid_w < 2u || params.grid_h < 2u) {
-    return;
+fn main(
+  @builtin(global_invocation_id) id: vec3<u32>,
+  @builtin(local_invocation_id) lid: vec3<u32>
+) {
+  if (lid.x == 0u) {
+    atomicStore(&wg_counter, 0u);
   }
-  let cells_w = params.grid_w - 1u;
-  let cells_h = params.grid_h - 1u;
-  let total_cells = cells_w * cells_h;
-  let cell_idx = id.x;
-  if (cell_idx >= total_cells) {
-    return;
-  }
+  workgroupBarrier();
 
-  let cx = cell_idx % cells_w;
-  let cy = cell_idx / cells_w;
+  var local_segs: array<vec4<f32>, 2>;
+  var local_count = 0u;
 
-  // Cell corners:
-  // v0: (cx, cy)     [top-left]
-  // v1: (cx+1, cy)   [top-right]
-  // v2: (cx+1, cy+1) [bottom-right]
-  // v3: (cx, cy+1)   [bottom-left]
-  let v0 = sample_scalar(cx, cy);
-  let v1 = sample_scalar(cx + 1u, cy);
-  let v2 = sample_scalar(cx + 1u, cy + 1u);
-  let v3 = sample_scalar(cx, cy + 1u);
+  if (params.grid_w >= 2u && params.grid_h >= 2u) {
+    let cells_w = params.grid_w - 1u;
+    let cells_h = params.grid_h - 1u;
+    let total_cells = cells_w * cells_h;
+    let cell_idx = id.x;
 
-  let iso = params.threshold;
-  var mask = 0u;
-  if (v0 >= iso) { mask |= 1u; }
-  if (v1 >= iso) { mask |= 2u; }
-  if (v2 >= iso) { mask |= 4u; }
-  if (v3 >= iso) { mask |= 8u; }
+    if (cell_idx < total_cells) {
+      let cx = cell_idx % cells_w;
+      let cy = cell_idx / cells_w;
 
-  if (mask == 0u || mask == 15u) {
-    return;
-  }
+      let v0 = sample_scalar(cx, cy);
+      let v1 = sample_scalar(cx + 1u, cy);
+      let v2 = sample_scalar(cx + 1u, cy + 1u);
+      let v3 = sample_scalar(cx, cy + 1u);
 
-  let fx = f32(cx);
-  let fy = f32(cy);
+      let iso = params.threshold;
+      var mask = 0u;
+      if (v0 >= iso) { mask |= 1u; }
+      if (v1 >= iso) { mask |= 2u; }
+      if (v2 >= iso) { mask |= 4u; }
+      if (v3 >= iso) { mask |= 8u; }
 
-  // Edge 0 (top): v0 -> v1
-  let e_top = to_mm(fx + interp_frac(v0, v1, iso), fy);
-  // Edge 1 (right): v1 -> v2
-  let e_right = to_mm(fx + 1.0, fy + interp_frac(v1, v2, iso));
-  // Edge 2 (bottom): v3 -> v2
-  let e_bottom = to_mm(fx + interp_frac(v3, v2, iso), fy + 1.0);
-  // Edge 3 (left): v0 -> v3
-  let e_left = to_mm(fx, fy + interp_frac(v0, v3, iso));
+      if (mask != 0u && mask != 15u) {
+        let fx = f32(cx);
+        let fy = f32(cy);
 
-  switch (mask) {
-    case 1u:  { emit_seg(e_left, e_top); }
-    case 2u:  { emit_seg(e_top, e_right); }
-    case 3u:  { emit_seg(e_left, e_right); }
-    case 4u:  { emit_seg(e_right, e_bottom); }
-    case 5u:  {
-      let center = 0.25 * (v0 + v1 + v2 + v3);
-      if (center >= iso) {
-        emit_seg(e_left, e_bottom);
-        emit_seg(e_right, e_top);
-      } else {
-        emit_seg(e_left, e_top);
-        emit_seg(e_right, e_bottom);
+        let e_top = to_mm(fx + interp_frac(v0, v1, iso), fy);
+        let e_right = to_mm(fx + 1.0, fy + interp_frac(v1, v2, iso));
+        let e_bottom = to_mm(fx + interp_frac(v3, v2, iso), fy + 1.0);
+        let e_left = to_mm(fx, fy + interp_frac(v0, v3, iso));
+
+        var p0_a = vec2<f32>(0.0);
+        var p1_a = vec2<f32>(0.0);
+        var p0_b = vec2<f32>(0.0);
+        var p1_b = vec2<f32>(0.0);
+        var cand_count = 1u;
+
+        switch (mask) {
+          case 1u:  { p0_a = e_left; p1_a = e_top; }
+          case 2u:  { p0_a = e_top; p1_a = e_right; }
+          case 3u:  { p0_a = e_left; p1_a = e_right; }
+          case 4u:  { p0_a = e_right; p1_a = e_bottom; }
+          case 5u:  {
+            cand_count = 2u;
+            let center = 0.25 * (v0 + v1 + v2 + v3);
+            if (center >= iso) {
+              p0_a = e_left; p1_a = e_bottom;
+              p0_b = e_right; p1_b = e_top;
+            } else {
+              p0_a = e_left; p1_a = e_top;
+              p0_b = e_right; p1_b = e_bottom;
+            }
+          }
+          case 6u:  { p0_a = e_top; p1_a = e_bottom; }
+          case 7u:  { p0_a = e_left; p1_a = e_bottom; }
+          case 8u:  { p0_a = e_bottom; p1_a = e_left; }
+          case 9u:  { p0_a = e_bottom; p1_a = e_top; }
+          case 10u: {
+            cand_count = 2u;
+            let center = 0.25 * (v0 + v1 + v2 + v3);
+            if (center >= iso) {
+              p0_a = e_top; p1_a = e_left;
+              p0_b = e_bottom; p1_b = e_right;
+            } else {
+              p0_a = e_top; p1_a = e_right;
+              p0_b = e_bottom; p1_b = e_left;
+            }
+          }
+          case 11u: { p0_a = e_bottom; p1_a = e_right; }
+          case 12u: { p0_a = e_right; p1_a = e_left; }
+          case 13u: { p0_a = e_right; p1_a = e_top; }
+          case 14u: { p0_a = e_top; p1_a = e_left; }
+          default: { cand_count = 0u; }
+        }
+
+        if (cand_count >= 1u) {
+          let da = p1_a - p0_a;
+          if (dot(da, da) > 1e-12) {
+            local_segs[local_count] = vec4<f32>(p0_a.x, p0_a.y, p1_a.x, p1_a.y);
+            local_count += 1u;
+          }
+        }
+        if (cand_count == 2u) {
+          let db = p1_b - p0_b;
+          if (dot(db, db) > 1e-12) {
+            local_segs[local_count] = vec4<f32>(p0_b.x, p0_b.y, p1_b.x, p1_b.y);
+            local_count += 1u;
+          }
+        }
       }
     }
-    case 6u:  { emit_seg(e_top, e_bottom); }
-    case 7u:  { emit_seg(e_left, e_bottom); }
-    case 8u:  { emit_seg(e_bottom, e_left); }
-    case 9u:  { emit_seg(e_bottom, e_top); }
-    case 10u: {
-      let center = 0.25 * (v0 + v1 + v2 + v3);
-      if (center >= iso) {
-        emit_seg(e_top, e_left);
-        emit_seg(e_bottom, e_right);
-      } else {
-        emit_seg(e_top, e_right);
-        emit_seg(e_bottom, e_left);
-      }
+  }
+
+  var local_slot = 0u;
+  if (local_count > 0u) {
+    local_slot = atomicAdd(&wg_counter, local_count);
+  }
+  workgroupBarrier();
+
+  if (lid.x == 0u) {
+    let wg_total = atomicLoad(&wg_counter);
+    if (wg_total == 1u) {
+      wg_base = atomicAdd(&segment_counter[0], 1u);
+    } else if (wg_total > 1u) {
+      wg_base = atomicAdd(&segment_counter[0], wg_total);
+    } else {
+      wg_base = 0u;
     }
-    case 11u: { emit_seg(e_bottom, e_right); }
-    case 12u: { emit_seg(e_right, e_left); }
-    case 13u: { emit_seg(e_right, e_top); }
-    case 14u: { emit_seg(e_top, e_left); }
-    default: {}
+  }
+  workgroupBarrier();
+
+  for (var s = 0u; s < local_count; s++) {
+    let slot = wg_base + local_slot + s;
+    if (slot < params.max_segments) {
+      let off = slot * 4u;
+      let seg = local_segs[s];
+      out_segments[off + 0u] = seg.x;
+      out_segments[off + 1u] = seg.y;
+      out_segments[off + 2u] = seg.z;
+      out_segments[off + 3u] = seg.w;
+    }
   }
 }

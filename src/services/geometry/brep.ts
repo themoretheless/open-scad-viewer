@@ -1,4 +1,4 @@
-import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest} from '../nurbsMiterOwnedBoundary'
+import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,constructUnbudgetedDirectMiterBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest,type UnbudgetedAnnularMiterBoundaryReport} from '../nurbsMiterOwnedBoundary'
 import {inspectMiterProfileSmoothness,type MiterProfileSmoothness} from '../miterProfileSmoothness'
 import {type SweepBoundaryCertificate} from '../sweepBoundaryCertificate'
 import {planMiterBody,ownedMiterSharpStations,previewMiterWalls} from '../miterBodyLayout'
@@ -361,7 +361,17 @@ export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBre
 export const inspectPolygonBrep=(model:PolygonBrep):BrepReport=>callGeometryRust('brep_polygon_inspect',{model})
 export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>normalizePolygonMesh(callGeometryRust('brep_polygon_tessellate',{model}))
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
-export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>callGeometryRust('brep_nurbs_transform',{model,matrix})
+// These are native-derived optimization selections, never positive proof
+// premises. Native affine transforms retain face indices; receiving workers
+// still audit the actual transformed geometry and every face/pair.
+const nativeSweepPlanarCapSelections=new WeakMap<NurbsBrep,number[]>()
+export const readNativeSweepPlanarCapFaces=(model:NurbsBrep):number[]|undefined=>nativeSweepPlanarCapSelections.get(model)?.slice()
+export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>{
+ const transformed=callGeometryRust<NurbsBrep>('brep_nurbs_transform',{model,matrix})
+ const caps=readNativeSweepPlanarCapFaces(model)
+ if(caps!==undefined)nativeSweepPlanarCapSelections.set(transformed,caps)
+ return transformed
+}
 /** `/7` document composition assigns fresh occurrence-local TopoIds in Rust. */
 export const composeStepV7Occurrences=(models:NurbsBrep[]):NurbsBrep=>
   callGeometryRust('brep_nurbs_compose_step_v7',{models})
@@ -586,7 +596,37 @@ const completeOwnedMiterBody=(
 }
 export const createProgressiveMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions):ProgressiveMiterBrepBody=>
  completeOwnedMiterBody(constructProgressiveMiterOwnedBoundary(loops,points,scale,twist,options),loops,points,scale,twist,options)
-export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterProfileSmoothness;method:'polyline-miter-sections';sections:number;closedPath:boolean;globalEmbeddingCertified:false;roundingCertified:false;continuousBound:false;profileRegularityCertified:boolean;profileRegularity:SweepProfileRegularityAudit;wallRegularityCertified:boolean;retainedWallCharts:SweepRetainedChartEvidence;volume:SweepVolumeAudit;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;retainedCorrespondence?:SweepRetainedCorrespondence}}
+export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterProfileSmoothness;method:'polyline-miter-sections';sections:number;closedPath:boolean;globalEmbeddingCertified:false;roundingCertified:false;continuousBound:boolean;profileRegularityCertified:boolean;profileRegularity:SweepProfileRegularityAudit;wallRegularityCertified:boolean;retainedWallCharts:SweepRetainedChartEvidence;volume:SweepVolumeAudit;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;retainedCorrespondence?:SweepRetainedCorrespondence}}
+export interface NativeDirectMiterGeometry extends MiterBrepBody {
+ report:MiterBrepBody['report'] & {
+  budget:null;boundaryErrorWithinBudget:null
+  boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null
+  boundaryCertificate:UnbudgetedAnnularMiterBoundaryReport['boundaryCertificate']
+  capRepresentation:UnbudgetedAnnularMiterBoundaryReport['capRepresentation']
+  capFaceGroups:[number[],number[]];planarCapFaces:number[]
+  retainedAnnularFilling:UnbudgetedAnnularMiterBoundaryReport['retainedAnnularFilling']
+  retainedSmoothness:UnbudgetedAnnularMiterBoundaryReport['retainedSmoothness']
+ }
+}
+/** Prepared transport for the matching native unbudgeted API. Geometry,
+ * correction, cap selection and the complete numerical bound are Rust-owned.
+ * The live Rush route must switch only with a matching qualified WASM. */
+export const createNativeDirectMiterGeometry=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):NativeDirectMiterGeometry=>{
+ const owned=constructUnbudgetedDirectMiterBoundary({direct:true,loops,points,normal,closed,miterLimit,capCorrection},{smoothnessMaxWork:2000000})
+ if(owned.retainedSmoothness===null)throw new Error('Native direct miter retained smoothness report missing')
+ const model=owned.model,retainedWallCharts=owned.retainedWallCharts
+ const volume=inspectSweepVolume(model,owned.planarCapFaces,DEFAULT_SWEEP_VOLUME_BUDGETS)
+ const profileRegularity=inspectSweepProfileRegularity(loops.flat(),10000)
+ nativeSweepPlanarCapSelections.set(model,owned.planarCapFaces.slice())
+ return {model,report:{method:'polyline-miter-sections',sections:owned.sections.length,closedPath:closed,
+  profileSmoothness:owned.retainedSmoothness.walls,globalEmbeddingCertified:false,roundingCertified:false,
+  continuousBound:owned.boundaryCertificate.continuousBound,profileRegularityCertified:profileRegularity.spanwiseRegular,
+  profileRegularity,wallRegularityCertified:retainedWallCharts.allChartsCertified,retainedWallCharts,volume,
+  ...(owned.sectionCorrection?{sectionCorrection:owned.sectionCorrection}:{}),budget:null,boundaryErrorWithinBudget:null,
+  boundaryErrorUpper:owned.boundaryCertificate.errorUpper,filledCapErrorUpper:owned.boundaryCertificate.filledCapErrorUpper,
+  boundaryCertificate:owned.boundaryCertificate,capRepresentation:owned.capRepresentation,capFaceGroups:owned.capFaceGroups,
+  planarCapFaces:owned.planarCapFaces,retainedAnnularFilling:owned.retainedAnnularFilling,retainedSmoothness:owned.retainedSmoothness}}
+}
 export const createMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):MiterBrepBody=>{
  if(loops.length<1||loops.length>16||loops.some(loop=>loop.length===0))throw new Error('Miter body needs 1..16 nonempty loops')
  let sections=miterNurbsProfileSections(loops.flat(),points,normal,miterLimit,closed)

@@ -139,15 +139,25 @@ fn emit_triangles(@builtin(global_invocation_id) id: vec3<u32>) {
         pos[i] = corner_position(x, y, z, i);
     }
 
-    // Precalculate vertices on each of the 12 edges
+    // Precalculate vertices only on edges referenced by emitted triangles
+    let table_offset = cube_idx * 16u;
+    var edge_mask = 0u;
+    for (var t = 0u; t < tri_cnt; t++) {
+        let e0 = u32(tri_table[table_offset + t * 3u + 0u]);
+        let e1 = u32(tri_table[table_offset + t * 3u + 1u]);
+        let e2 = u32(tri_table[table_offset + t * 3u + 2u]);
+        edge_mask |= (1u << e0) | (1u << e1) | (1u << e2);
+    }
+
     var edge_verts: array<vec3<f32>, 12>;
     for (var e = 0u; e < 12u; e++) {
-        let c = EDGE_CORNERS[e];
-        edge_verts[e] = interpolate_edge(pos[c.x], vals[c.x], pos[c.y], vals[c.y]);
+        if ((edge_mask & (1u << e)) != 0u) {
+            let c = EDGE_CORNERS[e];
+            edge_verts[e] = interpolate_edge(pos[c.x], vals[c.x], pos[c.y], vals[c.y]);
+        }
     }
 
     // Write triangles
-    let table_offset = cube_idx * 16u;
     for (var t = 0u; t < tri_cnt; t++) {
         let e0 = u32(tri_table[table_offset + t * 3u + 0u]);
         let e1 = u32(tri_table[table_offset + t * 3u + 1u]);

@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import {frameArchive} from '../services/assemblyFrameExport'
-import {ref,onUnmounted,watch} from 'vue'
+import {ref,shallowRef,toRaw,onUnmounted,watch} from 'vue'
 import {serializeDirectDocument,type DirectDocument} from '../services/directModeling'
 import {type AssemblyAnimation,validateAssemblyAnimation} from '../services/assemblyAnimation'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 const props=defineProps<{document:DirectDocument;camera:{yaw:number;pitch:number};sourceId?:string;canvas?:HTMLCanvasElement|null;locale?:string}>()
 const emit=defineEmits<{preview:[value:{document:DirectDocument|null;camera:{yaw:number;pitch:number}}]}>()
-const open=ref(false),time=ref(0),x=ref(0),y=ref(0),z=ref(0),angle=ref(0),rotationX=ref(0),rotationY=ref(0),scale=ref(1),frames=ref<AssemblyAnimation>({version:1,frames:[]}),playing=ref(false),error=ref(''),position=ref(0),videoUrl=ref(''),framesUrl=ref(''),framePreview=ref(''),exporting=ref(false),frameProgress=ref(0),exportFps=ref(12)
+const AXES=['x','y','z'] as const
+function clonePlain<T>(value:T):T{
+ const raw=toRaw(value)
+ if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
+ if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
+  const out:Record<string,unknown>={}
+  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
+  return out as T
+ }
+ return raw
+}
+const open=ref(false),time=ref(0),x=ref(0),y=ref(0),z=ref(0),angle=ref(0),rotationX=ref(0),rotationY=ref(0),scale=ref(1),frames=shallowRef<AssemblyAnimation>({version:1,frames:[]}),playing=ref(false),error=ref(''),position=ref(0),videoUrl=ref(''),framesUrl=ref(''),framePreview=ref(''),exporting=ref(false),frameProgress=ref(0),exportFps=ref(12)
 const worker=createSolidPreviewWorker(),label=(ru:string,en:string)=>props.locale==='en'?en:ru
 let recorder:MediaRecorder|undefined,stream:MediaStream|undefined,destroyed=false,captureTimer:ReturnType<typeof setInterval>|undefined
 let generation=0,timer:ReturnType<typeof setTimeout>|undefined,originalCamera:{yaw:number;pitch:number}|undefined
@@ -18,7 +29,7 @@ function add(){try{
  validateAssemblyAnimation(props.document,next);frames.value=next;time.value=Math.min(120,time.value+1);error.value=''
 }catch(e){error.value=String(e)}}
 function stop(){generation++;clearTimeout(timer);worker.cancel();playing.value=false;if(originalCamera){emit('preview',{document:null,camera:originalCamera});originalCamera=undefined}}
-async function show(t:number,token:number){const result=await worker.run({kind:'animationSample',document:JSON.parse(serializeDirectDocument(props.document)),animation:JSON.parse(JSON.stringify(frames.value)),time:t});if(token!==generation)return;emit('preview',result);position.value=t}
+async function show(t:number,token:number){const result=await worker.run({kind:'animationSample',document:JSON.parse(serializeDirectDocument(props.document)),animation:clonePlain(frames.value),time:t});if(token!==generation)return;emit('preview',result);position.value=t}
 async function play(skipStop=false){if(!skipStop)stop();error.value='';if(frames.value.frames.length<2){error.value=label('Добавьте минимум два кадра.','Add at least two frames.');return}originalCamera??={...props.camera};playing.value=true;const token=++generation,start=performance.now(),first=frames.value.frames[0].time,end=frames.value.frames.at(-1)!.time
  const tick=async()=>{if(token!==generation)return;const t=Math.min(end,first+(performance.now()-start)/1000);try{await show(t,token);if(token!==generation)return;if(t===end){playing.value=false;return}timer=setTimeout(tick,125)}catch(e){if(token!==generation)return;stop();error.value=String(e)}};await tick()
 }
@@ -26,7 +37,7 @@ async function load(event:Event){const file=(event.target as HTMLInputElement).f
 async function exportFrames(){
  stop();const token=generation;exporting.value=true;error.value='';frameProgress.value=0
  try{
-  const prepared=await worker.run({kind:'animationFrames',document:JSON.parse(serializeDirectDocument(props.document)),animation:JSON.parse(JSON.stringify(frames.value)),fps:exportFps.value})
+  const prepared=await worker.run({kind:'animationFrames',document:JSON.parse(serializeDirectDocument(props.document)),animation:clonePlain(frames.value),fps:exportFps.value})
   const canvas=document.createElement('canvas');canvas.width=prepared.width;canvas.height=prepared.height
   const context=canvas.getContext('2d');if(!context)throw Error('Frame canvas unavailable.')
   const files:{name:string;bytes:Uint8Array}[]=[],manifest:{file:string;time:number}[]=[];let total=0
@@ -79,7 +90,7 @@ onUnmounted(()=>{destroyed=true;stop();clearInterval(captureTimer);if(recorder?.
   <fieldset v-if="open"><legend>{{label('Ключевые кадры тела и камеры','Body and camera keyframes')}}</legend>
    <small>{{label('Смещения относительно исходной модели. Повороты тела вокруг X, Y и Z. Кадр сохраняет текущий ракурс камеры.','Offsets from the source model. Body rotations around X, Y and Z. Each frame stores the current camera view.')}}</small>
    <label>{{label('Время кадра, с','Frame time, s')}}<input v-model.number="time" type="number" min="0" max="120" step=".1"></label>
-   <label v-for="axis in ['x','y','z']" :key="axis">{{axis.toUpperCase()}}<input v-if="axis==='x'" v-model.number="x" type="number" aria-label="Animation X"><input v-else-if="axis==='y'" v-model.number="y" type="number" aria-label="Animation Y"><input v-else v-model.number="z" type="number" aria-label="Animation Z"></label>
+   <label v-for="axis in AXES" :key="axis">{{axis.toUpperCase()}}<input v-if="axis==='x'" v-model.number="x" type="number" aria-label="Animation X"><input v-else-if="axis==='y'" v-model.number="y" type="number" aria-label="Animation Y"><input v-else v-model.number="z" type="number" aria-label="Animation Z"></label>
    <label>{{label('Поворот X, °','Rotation X, °')}}<input v-model.number="rotationX" type="number" aria-label="Animation rotation X"></label>
    <label>{{label('Поворот Y, °','Rotation Y, °')}}<input v-model.number="rotationY" type="number" aria-label="Animation rotation Y"></label>
    <label>{{label('Поворот Z, °','Rotation Z, °')}}<input v-model.number="angle" type="number"></label>

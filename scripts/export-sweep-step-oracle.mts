@@ -945,6 +945,21 @@ const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures(
   expectedVolume:Math.PI*(.5**2-.2**2)*40*2},
  ...legacyOwnedFixtures(),
 ]
+if(process.argv.includes('--full-207')){
+ if(fixtures.length!==157)throw Error('Full matrix must start from the original 157 cases')
+ const stations=[...stationFrameSources,
+  'straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r',
+  ...['circle-solid','circle-hollow','periodic-solid','periodic-hollow'].map(n=>`closed-frenet-arc-${n}-station-g2.r`),
+  ...['plain-solid','plain-hollow','affine-solid','affine-hollow'].map(n=>`periodic-fixed-normal-arc-${n}-station-g2.r`)]
+ fixtures.push(...stations.map(progressiveStationFixture),...miterLawMatrixModes.map(mode=>miterLawMatrixFixture(mode,true)),
+  closedSpatialRmfTubeFixture(false,false,false,false,false,false,false,true),closedSpatialRmfTubeFixture(true,false,false,false,false,false,false,true),
+  closedSpatialRmfTubeFixture(true,true,false,false,false,false,false,true),closedSpatialRmfTubeFixture(false,false,true,false,false,false,false,true),
+  closedSpatialRmfTubeFixture(true,true,true,false,false,false,false,true),closedSpatialRmfTubeFixture(true,true,false,true,false,false,false,true),
+  closedSpatialRmfTubeFixture(true,true,true,true,false,false,false,true),closedSpatialRmfTubeFixture(true,true,true,false,true,false,false,true),
+  closedSpatialRmfTubeFixture(true,true,true,true,true,false,false,true),closedSpatialRmfTubeFixture(true,false,false,false,false,true,false,true),
+  closedSpatialRmfTubeFixture(true,false,false,false,false,false,true,true))
+ if(fixtures.length!==207||new Set(fixtures.map(f=>f.file)).size!==207)throw Error('Incomplete or duplicate full STEP matrix')
+}
 const cases=fixtures.map(({model,...fixture})=>{
  const auditBudgets={
   ...DEFAULT_SWEEP_VOLUME_BUDGETS,maxTrimPairs:10000,maxTrimCells:100000,

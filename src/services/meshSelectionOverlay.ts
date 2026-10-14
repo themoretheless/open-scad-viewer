@@ -1,4 +1,4 @@
-import { transformPoint, type Mat4, type Vec3 } from './math3d'
+import { packUndirectedEdgeKey, transformPoint, type Mat4, type Vec3 } from './math3d'
 import type { MeshProvenanceRun } from '../core/mesh'
 
 export interface FaceOverlayGeometry {
@@ -57,9 +57,9 @@ function worldVertex(vertices: Float32Array, transform: Mat4, vertexIndex: numbe
   const offset = vertexIndex * 6
   if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || offset + 2 >= vertices.length) return null
   const point: Vec3 = [vertices[offset], vertices[offset + 1], vertices[offset + 2]]
-  if (!point.every(Number.isFinite)) return null
+  if (!Number.isFinite(point[0]) || !Number.isFinite(point[1]) || !Number.isFinite(point[2])) return null
   const world = transformPoint(transform, point)
-  return world.every(Number.isFinite) ? world : null
+  return Number.isFinite(world[0]) && Number.isFinite(world[1]) && Number.isFinite(world[2]) ? world : null
 }
 
 function writeWorldVertex(
@@ -88,9 +88,7 @@ function writeWorldVertex(
 }
 
 function recordEdge(edges: Map<number | string, EdgeUse>, from: number, to: number): void {
-  const low = from < to ? from : to
-  const high = from < to ? to : from
-  const key = high < 67108864 ? low * 67108864 + high : `${low}:${high}`
+  const key = packUndirectedEdgeKey(from, to)
   const existing = edges.get(key)
   if (existing) existing.count++
   else edges.set(key, { from, to, count: 1 })
@@ -240,7 +238,7 @@ export function pointOverlayPosition(
   barycentric: Vec3,
 ): Vec3 | null {
   const vertexIndices = triangleVertexIndices(indices, triangleIndex)
-  if (!vertexIndices || barycentric.length !== 3 || !barycentric.every(Number.isFinite)) return null
+  if (!vertexIndices || barycentric.length !== 3 || !Number.isFinite(barycentric[0]) || !Number.isFinite(barycentric[1]) || !Number.isFinite(barycentric[2])) return null
   let corner = 0
   if (barycentric[1] > barycentric[corner]) corner = 1
   if (barycentric[2] > barycentric[corner]) corner = 2

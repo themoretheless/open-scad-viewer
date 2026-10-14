@@ -228,7 +228,15 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
     return dataError('E_SURFACE_DAT_INVALID', 'surface() DAT rows must contain the same number of heights.')
   }
   enforceDimensions(rows.length, columns)
-  return heightMap(rows.length, columns, Float64Array.from(rows.flat()), 'dat')
+  const samples = new Float64Array(rows.length * columns)
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r]
+    const base = r * columns
+    for (let c = 0; c < columns; c++) {
+      samples[base + c] = row[c]
+    }
+  }
+  return heightMap(rows.length, columns, samples, 'dat')
 }
 
 function u32(bytes: Uint8Array, offset: number): number {

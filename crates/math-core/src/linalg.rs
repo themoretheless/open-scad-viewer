@@ -4,7 +4,7 @@ use crate::types::{ID, M3, V2, V3};
 /// overhead and missed branch hints do not dominate tiny f64 kernels.
 #[inline(always)]
 pub fn dot(a: V3, b: V3) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    a[2].mul_add(b[2], a[0].mul_add(b[0], a[1] * b[1]))
 }
 #[inline(always)]
 pub fn add(a: V3, b: V3) -> V3 {
@@ -28,7 +28,12 @@ pub fn unit(a: V3) -> V3 {
 }
 #[inline(always)]
 pub fn finite(p: V3) -> bool {
-    p.iter().all(|v| v.is_finite() && v.abs() <= 1e6)
+    p[0].is_finite()
+        && p[0].abs() <= 1e6
+        && p[1].is_finite()
+        && p[1].abs() <= 1e6
+        && p[2].is_finite()
+        && p[2].abs() <= 1e6
 }
 #[inline(always)]
 pub fn add2(a: V2, b: V2) -> V2 {
@@ -44,7 +49,7 @@ pub fn scale2(a: V2, s: f64) -> V2 {
 }
 #[inline(always)]
 pub fn dot2(a: V2, b: V2) -> f64 {
-    a[0] * b[0] + a[1] * b[1]
+    a[0].mul_add(b[0], a[1] * b[1])
 }
 #[inline(always)]
 pub fn cross2(a: V2, b: V2) -> f64 {
@@ -80,11 +85,22 @@ pub fn tr(a: M3) -> M3 {
 }
 #[inline(always)]
 pub fn mm(a: M3, b: M3) -> M3 {
-    let bt = tr(b);
     [
-        [dot(a[0], bt[0]), dot(a[0], bt[1]), dot(a[0], bt[2])],
-        [dot(a[1], bt[0]), dot(a[1], bt[1]), dot(a[1], bt[2])],
-        [dot(a[2], bt[0]), dot(a[2], bt[1]), dot(a[2], bt[2])],
+        [
+            a[0][2].mul_add(b[2][0], a[0][0].mul_add(b[0][0], a[0][1] * b[1][0])),
+            a[0][2].mul_add(b[2][1], a[0][0].mul_add(b[0][1], a[0][1] * b[1][1])),
+            a[0][2].mul_add(b[2][2], a[0][0].mul_add(b[0][2], a[0][1] * b[1][2])),
+        ],
+        [
+            a[1][2].mul_add(b[2][0], a[1][0].mul_add(b[0][0], a[1][1] * b[1][0])),
+            a[1][2].mul_add(b[2][1], a[1][0].mul_add(b[0][1], a[1][1] * b[1][1])),
+            a[1][2].mul_add(b[2][2], a[1][0].mul_add(b[0][2], a[1][1] * b[1][2])),
+        ],
+        [
+            a[2][2].mul_add(b[2][0], a[2][0].mul_add(b[0][0], a[2][1] * b[1][0])),
+            a[2][2].mul_add(b[2][1], a[2][0].mul_add(b[0][1], a[2][1] * b[1][1])),
+            a[2][2].mul_add(b[2][2], a[2][0].mul_add(b[0][2], a[2][1] * b[1][2])),
+        ],
     ]
 }
 #[inline(always)]
@@ -98,8 +114,7 @@ pub fn rotation(v: V3) -> M3 {
         return ID;
     }
     let [x, y, z] = scale(v, 1. / angle);
-    let c = angle.cos();
-    let s = angle.sin();
+    let (s, c) = angle.sin_cos();
     let t = 1. - c;
     [
         [t * x * x + c, t * x * y - s * z, t * x * z + s * y],
@@ -133,7 +148,7 @@ pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) 
             break;
         }
         let theta = 0.5 * (2. * a[p][q]).atan2(a[q][q] - a[p][p]);
-        let (c, s) = (theta.cos(), theta.sin());
+        let (s, c) = theta.sin_cos();
         let (app, aqq, apq) = (a[p][p], a[q][q], a[p][q]);
         // Symmetric updates read and write both rows and columns.
         #[allow(clippy::needless_range_loop, reason = "Jacobi rotation updates symmetric matrix entries")]
@@ -146,8 +161,9 @@ pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) 
                 a[q][k] = a[k][q];
             }
         }
-        a[p][p] = c * c * app - 2. * s * c * apq + s * s * aqq;
-        a[q][q] = s * s * app + 2. * s * c * apq + c * c * aqq;
+        let two_sc_apq = 2. * s * c * apq;
+        a[p][p] = c * c * app - two_sc_apq + s * s * aqq;
+        a[q][q] = s * s * app + two_sc_apq + c * c * aqq;
         a[p][q] = 0.;
         a[q][p] = 0.;
         for row in &mut v {
@@ -174,7 +190,16 @@ pub fn smallest<const N: usize>(rows: impl IntoIterator<Item = [f64; N]>) -> [f6
     std::array::from_fn(|i| v[i][k])
 }
 pub fn svd(a: M3) -> (M3, V3, M3) {
-    let ata = mm(tr(a), a);
+    let c0 = [a[0][0], a[1][0], a[2][0]];
+    let c1 = [a[0][1], a[1][1], a[2][1]];
+    let c2 = [a[0][2], a[1][2], a[2][2]];
+    let d00 = dot(c0, c0);
+    let d01 = dot(c0, c1);
+    let d02 = dot(c0, c2);
+    let d11 = dot(c1, c1);
+    let d12 = dot(c1, c2);
+    let d22 = dot(c2, c2);
+    let ata = [[d00, d01, d02], [d01, d11, d12], [d02, d12, d22]];
     let (d, v) = eigen(ata);
     let mut order = [0, 1, 2];
     order.sort_by(|&i, &j| d[j].total_cmp(&d[i]));
@@ -184,7 +209,19 @@ pub fn svd(a: M3) -> (M3, V3, M3) {
     let x = mv(a, cols[1]);
     let u1 = unit(sub(x, scale(u0, dot(x, u0))));
     let u2 = cross(u0, u1);
-    (tr([u0, u1, u2]), s, tr(cols))
+    (
+        [
+            [u0[0], u1[0], u2[0]],
+            [u0[1], u1[1], u2[1]],
+            [u0[2], u1[2], u2[2]],
+        ],
+        s,
+        [
+            [cols[0][0], cols[1][0], cols[2][0]],
+            [cols[0][1], cols[1][1], cols[2][1]],
+            [cols[0][2], cols[1][2], cols[2][2]],
+        ],
+    )
 }
 /// Pivoted elimination for the bounded 3/6/8-dimensional camera systems.
 /// Fixed stack storage avoids allocating every row of each tiny system.
@@ -197,11 +234,11 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
         }
         a.swap(k, p);
         b.swap(k, p);
-        let pivot = a[k][k];
+        let inv_pivot = 1.0 / a[k][k];
         for value in a[k].iter_mut().skip(k) {
-            *value /= pivot;
+            *value *= inv_pivot;
         }
-        b[k] /= pivot;
+        b[k] *= inv_pivot;
         let pivot_row = a[k];
         for i in 0..n {
             if i == k {
@@ -209,9 +246,9 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
             }
             let f = a[i][k];
             for (value, pivot_value) in a[i].iter_mut().zip(pivot_row).skip(k) {
-                *value -= f * pivot_value;
+                *value = (-f).mul_add(pivot_value, *value);
             }
-            b[i] -= f * b[k];
+            b[i] = (-f).mul_add(b[k], b[i]);
         }
     }
     Some(b)

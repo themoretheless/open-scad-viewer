@@ -23,6 +23,7 @@ mod retained_regularity;
 mod retained_smoothness;
 mod original_smoothness;
 mod endpoint_jets;
+pub mod endpoint_points;
 mod rmf_transport;
 mod source_jets;
 mod rmf_first_images;

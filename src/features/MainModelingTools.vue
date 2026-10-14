@@ -2,7 +2,7 @@
 import {resolveSketchSupport} from '../services/mainSketchAssociation'
 import {storageKeys,storageGet,storageSet} from '../services/safeStorage'
 import {parseDirectDocument} from '../services/directModeling'
-import {computed,ref,watch,onUnmounted} from 'vue'
+import {computed,ref,shallowRef,toRaw,watch,onUnmounted} from 'vue'
 import {sceneSnapPoints} from '../services/mainSnapping'
 import {patchMainSource} from '../services/mainSourceEditing'
 import {computeMainSolid,computeCadOperation,cancelMainSolid} from '../services/mainSolidWorker'
@@ -23,9 +23,19 @@ import {previewMeshes,primitiveSource,sceneFace,sceneBody,type MainOperation,typ
 const props=defineProps<{meshes:MeshData[];selected:number|null;hit:PickHit|null;source:string;ready:boolean;locale:string;canUndo:boolean;canRedo:boolean;selectedIndices:number[];project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;cameraRevision:number}>()
 const emit=defineEmits<{append:[source:string];apply:[source:string];solid:[document:DirectDocument];preview:[meshes:MeshData[]|null];undo:[];redo:[];selectMany:[indices:number[]]}>()
 const ru=computed(()=>props.locale==='ru'),l=(a:string,b:string)=>ru.value?a:b
-const sketchAnchor=ref<{entity:string;face:number}|null>(null)
+function clonePlain<T>(value:T):T{
+ const raw=toRaw(value)
+ if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
+ if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
+  const out:Record<string,unknown>={}
+  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
+  return out as T
+ }
+ return raw
+}
+const sketchAnchor=shallowRef<{entity:string;face:number}|null>(null)
 const snapPoints=computed(()=>sceneSnapPoints(props.meshes))
-const sketchOpen=ref(false),sketchPlane=ref<SketchPlane>(xyPlane())
+const sketchOpen=ref(false),sketchPlane=shallowRef<SketchPlane>(xyPlane())
 const working=ref(false)
 let solidGeneration=0
 onUnmounted(cancelMainSolid)
@@ -89,7 +99,7 @@ async function result(){
  {
   const generation=++solidGeneration
   working.value=true
-  try{return await computeMainSolid(props.meshes,props.selected,props.hit,op.value,JSON.parse(JSON.stringify(parameters)))}finally{if(generation===solidGeneration)working.value=false}
+  try{return await computeMainSolid(props.meshes,props.selected,props.hit,op.value,clonePlain(parameters))}finally{if(generation===solidGeneration)working.value=false}
  }
 }
 function preview(){run(async()=>{const d=await result();emit('preview',previewMeshes(d));previewing.value=true})}

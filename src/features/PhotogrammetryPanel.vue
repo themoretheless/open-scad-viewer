@@ -30,7 +30,7 @@ const imageReports = computed(() => new Map(diagnostics.value?.images.map(image 
 const timings = shallowRef<PhotoTimings | null>(null)
 const runInputs = shallowRef<PhotoReportInput[]>([])
 let runSettings = {dense: true, resolution: 128, maxImageSide: 960, densePreset: 'baseline' as PhotoDensePreset}
-const densePreset = ref<PhotoDensePreset>('baseline')
+const densePreset = shallowRef<PhotoDensePreset>('baseline')
 const dense = ref(true), resolution = ref(128), widthMm = ref<number | null>(null)
 watch(densePreset, preset => { if (preset === 'dual-scale-volume') resolution.value = 128 })
 const validWidth = computed(() => typeof widthMm.value === 'number' && Number.isFinite(widthMm.value) && widthMm.value > 0)
@@ -39,7 +39,7 @@ const solidCompatible = computed(() => {
   const candidate = surface.value?.documentSurface ?? surface.value
   return !!candidate && photoCanAppend(candidate)
 })
-const previewMode = ref<PhotoPreviewMode>('points')
+const previewMode = shallowRef<PhotoPreviewMode>('points')
 const panel = ref<HTMLDetailsElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
 const viewportError = ref(''), files = ref<HTMLInputElement | null>(null)

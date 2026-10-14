@@ -133,6 +133,38 @@ function csrSpMV(csr: CsrStiffnessMatrix, x: Float64Array, out: Float64Array) {
   }
 }
 
+let pcgScratchCapacity = 0
+let pcgScratchBuffer = new Float64Array(0)
+const trussUniformBuffer = new ArrayBuffer(16)
+const trussUniformView = new DataView(trussUniformBuffer)
+
+function acquirePcgScratch(numDofs: number): {
+  f: Float64Array
+  u: Float64Array
+  r: Float64Array
+  z: Float64Array
+  p: Float64Array
+  Ap: Float64Array
+  Ku: Float64Array
+} {
+  const needed = numDofs * 7
+  if (pcgScratchCapacity < needed) {
+    pcgScratchCapacity = Math.max(needed, 256 * 7)
+    pcgScratchBuffer = new Float64Array(pcgScratchCapacity)
+  } else {
+    pcgScratchBuffer.fill(0, 0, needed)
+  }
+  return {
+    f: pcgScratchBuffer.subarray(0, numDofs),
+    u: pcgScratchBuffer.subarray(numDofs, numDofs * 2),
+    r: pcgScratchBuffer.subarray(numDofs * 2, numDofs * 3),
+    z: pcgScratchBuffer.subarray(numDofs * 3, numDofs * 4),
+    p: pcgScratchBuffer.subarray(numDofs * 4, numDofs * 5),
+    Ap: pcgScratchBuffer.subarray(numDofs * 5, numDofs * 6),
+    Ku: pcgScratchBuffer.subarray(numDofs * 6, numDofs * 7),
+  }
+}
+
 /**
  * Solves a 3D linear truss system via Jacobi-Preconditioned Conjugate Gradient (PCG).
  */
@@ -154,15 +186,16 @@ export function referenceSolveTrussPcg(
   const tol = opts.tolerance ?? 1e-10
   const maxIter = opts.maxIterations ?? Math.max(200, numDofs * 4)
 
-  const f = new Float64Array(numDofs)
+  const { f, u, r, z, p, Ap, Ku } = acquirePcgScratch(numDofs)
   let fNormSq = 0
   for (let n = 0; n < numNodes; n++) {
     const fn = model.forcesN[n]!
     for (let d = 0; d < 3; d++) {
       const dof = n * 3 + d
-      f[dof] = fn[d]!
+      const val = fn[d]!
+      f[dof] = val
       if (csr.freeMask[dof]) {
-        fNormSq += fn[d]! * fn[d]!
+        fNormSq += val * val
       }
     }
   }
@@ -173,25 +206,22 @@ export function referenceSolveTrussPcg(
     }
   }
 
-  const u = new Float64Array(numDofs)
-  const r = new Float64Array(numDofs)
-  const z = new Float64Array(numDofs)
-  const p = new Float64Array(numDofs)
-  const Ap = new Float64Array(numDofs)
-
   // Initial r = f_free (since u = 0)
   let rzOld = 0
   for (let dof = 0; dof < numDofs; dof++) {
     if (csr.freeMask[dof]) {
-      r[dof] = f[dof]!
-      z[dof] = r[dof]! / csr.diag[dof]!
-      p[dof] = z[dof]!
-      rzOld += r[dof]! * z[dof]!
+      const rVal = f[dof]!
+      const zVal = rVal / csr.diag[dof]!
+      r[dof] = rVal
+      z[dof] = zVal
+      p[dof] = zVal
+      rzOld += rVal * zVal
     }
   }
 
   const fNorm = Math.sqrt(fNormSq)
   if (fNorm > 0) {
+    const stopSq = (tol * Math.max(1, fNorm)) ** 2
     for (let iter = 0; iter < maxIter; iter++) {
       // Ap = K_free * p
       csrSpMV(csr, p, Ap)
@@ -213,20 +243,23 @@ export function referenceSolveTrussPcg(
       for (let dof = 0; dof < numDofs; dof++) {
         if (csr.freeMask[dof]) {
           u[dof] += alpha * p[dof]!
-          r[dof] -= alpha * Ap[dof]!
-          rNormSq += r[dof]! * r[dof]!
+          const rNext = r[dof]! - alpha * Ap[dof]!
+          r[dof] = rNext
+          rNormSq += rNext * rNext
         }
       }
 
-      if (Math.sqrt(rNormSq) <= tol * Math.max(1, fNorm)) {
+      if (rNormSq <= stopSq) {
         break
       }
 
       let rzNew = 0
       for (let dof = 0; dof < numDofs; dof++) {
         if (csr.freeMask[dof]) {
-          z[dof] = r[dof]! / csr.diag[dof]!
-          rzNew += r[dof]! * z[dof]!
+          const rVal = r[dof]!
+          const zVal = rVal / csr.diag[dof]!
+          z[dof] = zVal
+          rzNew += rVal * zVal
         }
       }
 
@@ -241,7 +274,6 @@ export function referenceSolveTrussPcg(
   }
 
   // Compute full Ku to extract support reactions and free-DOF relative residual
-  const Ku = new Float64Array(numDofs)
   csrSpMV(csr, u, Ku)
 
   const displacementsMm: TrussVector[] = new Array(numNodes)
@@ -286,14 +318,15 @@ export function referenceSolveTrussPcg(
     const dy = pb[1] - pa[1]
     const dz = pb[2] - pa[2]
     const len = Math.hypot(dx, dy, dz)
-    const dir = [dx / len, dy / len, dz / len]
+    const invLen = 1 / len
     const ua = displacementsMm[na]!
     const ub = displacementsMm[nb]!
     const elong =
-      dir[0]! * (ub[0] - ua[0]) +
-      dir[1]! * (ub[1] - ua[1]) +
-      dir[2]! * (ub[2] - ua[2])
-    const force = ((mem.youngMpa * mem.areaMm2) / len) * elong
+      (dx * (ub[0] - ua[0]) +
+        dy * (ub[1] - ua[1]) +
+        dz * (ub[2] - ua[2])) *
+      invLen
+    const force = mem.youngMpa * mem.areaMm2 * invLen * elong
     axialForcesN[m] = force
     axialStressesMpa[m] = force / mem.areaMm2
   }
@@ -341,11 +374,12 @@ export async function runGpuTrussSolver(
       const dy = pb[1] - pa[1]
       const dz = pb[2] - pa[2]
       const len = Math.hypot(dx, dy, dz)
+      const invLen = 1 / len
       const off = m * 6
-      memberProps[off + 0] = dx / len
-      memberProps[off + 1] = dy / len
-      memberProps[off + 2] = dz / len
-      memberProps[off + 3] = (mem.youngMpa * mem.areaMm2) / len
+      memberProps[off + 0] = dx * invLen
+      memberProps[off + 1] = dy * invLen
+      memberProps[off + 2] = dz * invLen
+      memberProps[off + 3] = mem.youngMpa * mem.areaMm2 * invLen
       memberProps[off + 4] = mem.areaMm2
       memberProps[off + 5] = len
     }
@@ -358,12 +392,10 @@ export async function runGpuTrussSolver(
       uFlat[n * 3 + 2] = u[2]
     }
 
-    const uniformBuf = new ArrayBuffer(16)
-    const v = new DataView(uniformBuf)
-    v.setUint32(0, 2, true) // mode 2: axial member force & stress
-    v.setUint32(4, numMembers, true)
-    v.setFloat32(8, 1, true)
-    v.setFloat32(12, 0, true)
+    trussUniformView.setUint32(0, 2, true) // mode 2: axial member force & stress
+    trussUniformView.setUint32(4, numMembers, true)
+    trussUniformView.setFloat32(8, 1, true)
+    trussUniformView.setFloat32(12, 0, true)
 
     const outBytes = numMembers * 2 * 4
     const results = await runGpuCompute({
@@ -372,12 +404,12 @@ export async function runGpuTrussSolver(
       dispatches: [
         {
           buffers: [
-            { binding: 0, data: uniformBuf, uniform: true },
+            { binding: 0, data: trussUniformBuffer, uniform: true },
             { binding: 1, data: new Uint32Array([0]) },
             { binding: 2, data: colPairs },
             { binding: 3, data: memberProps },
             { binding: 4, data: uFlat },
-            { binding: 5, data: new Float32Array(numMembers * 2), output: true, outputBytes: outBytes },
+            { binding: 5, data: new Float32Array(0), output: true, outputBytes: outBytes },
           ],
           outputBytes: outBytes,
           workgroups: [Math.ceil(numMembers / 256), 1, 1],
@@ -387,7 +419,26 @@ export async function runGpuTrussSolver(
 
     const rawOut = results[0]
     if (rawOut && rawOut.length >= numMembers * 2) {
-      return cpuResp
+      const axialForcesN = new Array<number>(numMembers)
+      const axialStressesMpa = new Array<number>(numMembers)
+      let allFinite = true
+      for (let m = 0; m < numMembers; m++) {
+        const f = rawOut[m * 2 + 0]!
+        const s = rawOut[m * 2 + 1]!
+        if (!Number.isFinite(f) || !Number.isFinite(s)) {
+          allFinite = false
+          break
+        }
+        axialForcesN[m] = f
+        axialStressesMpa[m] = s
+      }
+      if (allFinite) {
+        return {
+          ...cpuResp,
+          axialForcesN,
+          axialStressesMpa,
+        }
+      }
     }
   } catch {
     // Fallback to CPU result

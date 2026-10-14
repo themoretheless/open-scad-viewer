@@ -30,11 +30,34 @@ fn same_certificate(a: &Value, b: &Value) -> bool {
         _ => a == b,
     }
 }
-fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
+struct OriginalRequest {
+    direct: bool,
+    cap_endpoints: Option<[bool; 2]>,
+    loops: Vec<Vec<Curve>>,
+    points: Vec<[f64; 3]>,
+    scale: Curve,
+    twist: Curve,
+    axes: Curve,
+    center: Curve,
+    use_affine: bool,
+    axis: Option<Curve>,
+    normal: Option<Curve>,
+    guide: Option<Curve>,
+    circle: Option<Budget>,
+    caps: Option<CapCorrection>,
+    options: progressive_miter::Options,
+    limits: Limits,
+}
+// Parse once for both native representations; the large source decoder is not
+// duplicated for each generic result type in the WASM bridge.
+fn parse_original(v: Value, allow_unbudgeted_direct: bool) -> Result<OriginalRequest> {
     let direct = optional_field::<bool>(&v, "direct")?.unwrap_or(false);
     let cap_endpoints: Option<[bool; 2]> = optional_field(&v, "capEndpoints")?;
     if !direct && cap_endpoints.is_some() {
-        return Err(nurbs_core::Error::new("NURBS_INVALID_INPUT", "Endpoint selection is a direct-miter source option"));
+        return Err(nurbs_core::Error::new(
+            "NURBS_INVALID_INPUT",
+            "Endpoint selection is a direct-miter source option",
+        ));
     }
     for key in [
         "model",
@@ -47,6 +70,11 @@ fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
         "levels",
         "sharpStationIndices",
         "edges",
+        "capFaceGroups",
+        "capFaces",
+        "filledCapErrorUpper",
+        "retainedAnnularFilling",
+        "retainedSmoothness",
     ] {
         if v.as_object().is_some_and(|fields| fields.contains_key(key)) {
             return Err(nurbs_core::Error::new(
@@ -112,37 +140,43 @@ fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
         "capRegions":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,
             "maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}}));
     let cap_regions: Value = field(&limits, "capRegions")?;
-    let request = Request {
-        loops: &loops,
-        points: &points,
-        scale: &scale,
-        twist: &twist,
-        options: progressive_miter::Options {
-            normal: field(&v, "normal")?,
-            closed: field(&v, "closed")?,
-            miter_limit: field(&v, "miterLimit")?,
-            initial_steps: if direct {
-                1
-            } else {
-                field(&v, "initialSteps")?
-            },
-            max_steps: if direct { 1 } else { field(&v, "maxSteps")? },
-            max_deviation: field(&v, "maxDeviation")?,
+    let authored_budget: Option<f64> = optional_field(&v, "maxDeviation")?;
+    let unbudgeted = allow_unbudgeted_direct && direct && authored_budget.is_none();
+    if unbudgeted && circle.is_some() {
+        return Err(nurbs_core::Error::new(
+            "NURBS_INVALID_INPUT",
+            "Circle correction requires an authored maxDeviation",
+        ));
+    }
+    let options = progressive_miter::Options {
+        normal: field(&v, "normal")?,
+        closed: field(&v, "closed")?,
+        miter_limit: field(&v, "miterLimit")?,
+        initial_steps: if direct {
+            1
+        } else {
+            field(&v, "initialSteps")?
         },
-        affine: use_affine.then_some((&axes, &center)),
-        frames: axis.as_ref().zip(normal.as_ref()),
-        guide: guide.as_ref(),
-        circle: circle.as_ref().map(budget).transpose()?,
-        caps: cap
-            .as_ref()
-            .map(|c| {
-                Ok::<_, nurbs_core::Error>(CapCorrection {
-                    budget: budget(c)?,
-                    authored_frame: optional_field(c, "authoredFrame")?.unwrap_or(false),
-                })
-            })
-            .transpose()?,
+        max_steps: if direct { 1 } else { field(&v, "maxSteps")? },
+        // Direct neutral-law construction does not refine or automatically
+        // correct geometry. This finite ceiling only reuses its acceptance
+        // machinery; it is not an author tolerance or a transported premise.
+        max_deviation: if unbudgeted {
+            f64::MAX
+        } else {
+            field(&v, "maxDeviation")?
+        },
     };
+    let circle = circle.as_ref().map(budget).transpose()?;
+    let caps = cap
+        .as_ref()
+        .map(|c| {
+            Ok::<_, nurbs_core::Error>(CapCorrection {
+                budget: budget(c)?,
+                authored_frame: optional_field(c, "authoredFrame")?.unwrap_or(false),
+            })
+        })
+        .transpose()?;
     let limits = Limits {
         max_products: field(&limits, "maxProducts")?,
         max_faces: field(&limits, "maxFaces")?,
@@ -169,36 +203,99 @@ fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
             max_trim_domain_cells: field(&cap_regions, "maxTrimDomainCells")?,
         },
     };
-    if direct {
-        sweep_miter_owned::construct_direct(
-            &sweep_miter_owned::DirectRequest {
-                loops: &loops,
-                points: &points,
-                normal: request.options.normal,
-                closed: request.options.closed,
-                miter_limit: request.options.miter_limit,
-                max_deviation: request.options.max_deviation,
-                circle: request.circle,
-                caps: request.caps,
-                cap_endpoints,
-            },
-            &limits,
-        )
-    } else {
-        sweep_miter_owned::construct(&request, &limits)
-    }
+    Ok(OriginalRequest {
+        direct,
+        cap_endpoints,
+        loops,
+        points,
+        scale,
+        twist,
+        axes,
+        center,
+        use_affine,
+        axis,
+        normal,
+        guide,
+        circle,
+        caps,
+        options,
+        limits,
+    })
+}
+fn construct_body_with<T>(
+    v: Value,
+    allow_unbudgeted_direct: bool,
+    finish: impl FnOnce(&Request<'_>, &Limits, bool, Option<[bool; 2]>) -> Result<T>,
+) -> Result<T> {
+    let original = parse_original(v, allow_unbudgeted_direct)?;
+    let request = Request {
+        loops: &original.loops,
+        points: &original.points,
+        scale: &original.scale,
+        twist: &original.twist,
+        options: original.options,
+        affine: original
+            .use_affine
+            .then_some((&original.axes, &original.center)),
+        frames: original.axis.as_ref().zip(original.normal.as_ref()),
+        guide: original.guide.as_ref(),
+        circle: original.circle,
+        caps: original.caps.as_ref().map(|c| CapCorrection {
+            budget: c.budget,
+            authored_frame: c.authored_frame,
+        }),
+    };
+    finish(
+        &request,
+        &original.limits,
+        original.direct,
+        original.cap_endpoints,
+    )
+}
+fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
+    construct_body_with(v, false, |request, limits, direct, cap_endpoints| {
+        if direct {
+            sweep_miter_owned::construct_direct(
+                &sweep_miter_owned::DirectRequest {
+                    loops: request.loops,
+                    points: request.points,
+                    normal: request.options.normal,
+                    closed: request.options.closed,
+                    miter_limit: request.options.miter_limit,
+                    max_deviation: request.options.max_deviation,
+                    circle: request.circle,
+                    caps: request.caps.as_ref().map(|c| CapCorrection {
+                        budget: c.budget,
+                        authored_frame: c.authored_frame,
+                    }),
+                    cap_endpoints,
+                },
+                limits,
+            )
+        } else {
+            sweep_miter_owned::construct(request, limits)
+        }
+    })
 }
 pub fn construct(v: Value) -> Result<Value> {
     let direct = optional_field::<bool>(&v, "direct")?.unwrap_or(false);
     let cap_endpoints: Option<[bool; 2]> = optional_field(&v, "capEndpoints")?;
     let body = construct_body(v)?;
-    let bound = body.boundary();
+    body_value(&body, body.model(), body.boundary(), direct, cap_endpoints)
+}
+fn body_value(
+    body: &sweep_miter_owned::BoundaryBody,
+    model: &brep_core::Model,
+    bound: &nurbs_core::sweeps::filled_cap_error::BoundaryCertificate,
+    direct: bool,
+    cap_endpoints: Option<[bool; 2]>,
+) -> Result<Value> {
     let correction = body.correction().map(|r| {
         json!({"wallDisplacementUpper":r.wall_displacement_upper,
         "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason})
     });
     Ok(
-        json!({"method":"original-request-owned-miter-boundary","retentionMode":if direct {"direct"} else {"progressive"},"capEndpoints":cap_endpoints,"model":body.model(),"sections":body.sections(),
+        json!({"method":"original-request-owned-miter-boundary","retentionMode":if direct {"direct"} else {"progressive"},"capEndpoints":cap_endpoints,"model":model,"sections":body.sections(),
         "sourceSections":body.source_sections(),"sectionCorrection":correction,
         "retainedWallCharts":super::cad_sweep_smoothness::charts_value(body.wall_charts()),
         "edges":body.edges(),"maxSteps":body.max_steps(),
@@ -210,6 +307,112 @@ pub fn construct(v: Value) -> Result<Value> {
         "levels":body.levels(),
         "solidGeometryCertified":false,"globalEmbeddingCertified":false}),
     )
+}
+
+/// Annular mode accepts the same original inputs, and recomputes both source
+/// fillings and all retained rectangular domains in this receiving realm.
+pub fn construct_annular(v: Value) -> Result<Value> {
+    let direct = optional_field::<bool>(&v, "direct")?.unwrap_or(false);
+    let cap_endpoints = optional_field(&v, "capEndpoints")?;
+    let smoothness_work: Option<u64> = optional_field(&v, "smoothnessMaxWork")?;
+    let unbudgeted = direct && optional_field::<f64>(&v, "maxDeviation")?.is_none();
+    let automatic = optional_field::<bool>(&v, "automaticCaps")?.unwrap_or(unbudgeted);
+    if automatic && !direct {
+        return Err(nurbs_core::Error::new(
+            "NURBS_INVALID_INPUT",
+            "Automatic cap selection is a direct-miter source option",
+        ));
+    }
+    let body = construct_body_with(v, true, |request, limits, direct, cap_endpoints| {
+        if direct {
+            let construct = if automatic {
+                sweep_miter_owned::annular::construct_direct_auto
+            } else {
+                sweep_miter_owned::annular::construct_direct
+            };
+            construct(
+                &sweep_miter_owned::DirectRequest {
+                    loops: request.loops,
+                    points: request.points,
+                    normal: request.options.normal,
+                    closed: request.options.closed,
+                    miter_limit: request.options.miter_limit,
+                    max_deviation: request.options.max_deviation,
+                    circle: request.circle,
+                    caps: request.caps.as_ref().map(|c| CapCorrection {
+                        budget: c.budget,
+                        authored_frame: c.authored_frame,
+                    }),
+                    cap_endpoints,
+                },
+                limits,
+            )
+        } else {
+            sweep_miter_owned::annular::construct(request, limits)
+        }
+    })?;
+    let mut value = body_value(
+        body.source(),
+        body.model(),
+        body.boundary(),
+        direct,
+        cap_endpoints,
+    )?;
+    if unbudgeted {
+        let previous = body.boundary();
+        let numerical = nurbs_core::sweeps::filled_cap_error::compose_unbudgeted_boundary(
+            previous.wall_error_upper,
+            previous.filled_cap_error_upper,
+            body.source().closed(),
+        );
+        value["budget"] = Value::Null;
+        value["levels"] = json!([]);
+        value["boundaryCertificate"]["budget"] = Value::Null;
+        value["boundaryCertificate"]["withinBudget"] = Value::Null;
+        value["boundaryCertificate"]["continuousBound"] = json!(numerical.continuous_bound);
+        value["boundaryCertificate"]["errorUpper"] = json!(numerical.error_upper);
+        value["boundaryCertificate"]["reason"] = json!(numerical.reason);
+    }
+    let caps = body.cap_faces();
+    value["capFaceGroups"] = json!(body.cap_face_groups());
+    value["capFaces"] = json!(&caps);
+    value["planarCapFaces"] = json!(if body.filled_caps().is_some() {
+        vec![]
+    } else {
+        caps
+    });
+    value["capRepresentation"] = json!(if body.filled_caps().is_some() {
+        "radial-annular"
+    } else {
+        "legacy"
+    });
+    value["retainedAnnularFilling"]=body.filled_caps().map_or(Value::Null,|proof|json!({
+        "method":"authored-affine-endpoint-annular-filling","sourceFillingCovered":proof.source_filling_covered,
+        "filledCapErrorUpper":proof.filled_cap_error_upper,"withinBudget":proof.within_budget,
+        "exactWork":body.annular_exact_work(),"fillingExactWork":proof.exact_work,
+        "capConstructionExactWork":body.cap_construction_work(),"products":proof.products,"endpointCells":proof.endpoint_cells,
+            "projectiveReparameterizedPatches":proof.projective_reparameterized_patches,
+        "sourceUvFacesInjective":proof.source_uv_faces.as_ref().is_some_and(|r|r.all_faces_injective),
+        "sourceUvPairsClassified":proof.source_uv_pairs.as_ref().is_some_and(|r|r.all_pairs_classified),
+        "reason":proof.reason,"solidGeometryCertified":false
+    }));
+    if unbudgeted && !value["retainedAnnularFilling"].is_null() {
+        value["retainedAnnularFilling"]["withinBudget"] = Value::Null;
+    }
+    value["retainedSmoothness"] = if let Some(max_work) = smoothness_work {
+        let audit = body.inspect_smoothness(max_work)?;
+        json!({"walls":super::cad_sweep_smoothness::profile_value(&audit.walls),
+            "maxWork":max_work,"totalExactWork":audit.exact_work,
+            "capInternalSeams":audit.cap_seams.iter().map(|r|json!({
+                "method":"retained-annular-cap-internal-jets","edgeIds":r.edge_ids,
+                "extractionComplete":r.extraction_complete,"unclassifiedFaces":r.unclassified_faces,
+                "unpairedEdges":r.unpaired_edges,"g1Certified":r.g1_certified,"g2Certified":r.g2_certified,
+                "exactWork":r.exact_work,"maxWork":r.max_work,
+            })).collect::<Vec<_>>(),"capWallContinuity":"C0","fullBoundarySmoothnessCertified":false})
+    } else {
+        Value::Null
+    };
+    Ok(value)
 }
 
 /// Replay original inputs in this realm rather than accepting a transferred
@@ -555,6 +758,160 @@ pub fn place(v: Value) -> Result<Value> {
 mod tests {
     use super::*;
     #[test]
+    fn unbudgeted_direct_annular_transport_never_invents_a_tolerance() {
+        let outer = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap();
+        let request = json!({"op":"brep_miter_annular_owned_construct","direct":true,"loops":[[outer],[hole]],
+            "points":[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]],
+            "normal":[1.,0.,0.],"closed":false,"miterLimit":2.});
+        let before = request.clone();
+        let raw = crate::dispatch(request.clone()).unwrap();
+        assert_eq!(request, before);
+        assert_eq!(raw["capRepresentation"], "radial-annular");
+        assert_eq!(
+            raw["capFaceGroups"],
+            json!([[24, 25, 26, 27], [28, 29, 30, 31]])
+        );
+        assert!(raw["budget"].is_null());
+        assert!(raw["boundaryCertificate"]["budget"].is_null());
+        assert!(raw["boundaryCertificate"]["withinBudget"].is_null());
+        assert!(raw["retainedAnnularFilling"]["withinBudget"].is_null());
+        assert_eq!(raw["levels"], json!([]));
+        assert_eq!(raw["sectionCorrection"], Value::Null);
+        assert_eq!(raw["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(
+            raw["boundaryCertificate"]["reason"],
+            "no-authored-tolerance"
+        );
+        assert_eq!(raw["solidGeometryCertified"], false);
+        let mut budgeted = request.clone();
+        budgeted["maxDeviation"] = json!(0.01);
+        let bounded = crate::dispatch(budgeted).unwrap();
+        assert_eq!(raw["model"], bounded["model"]);
+        assert_eq!(raw["sourceSections"], bounded["sourceSections"]);
+        assert_eq!(raw["sections"], bounded["sections"]);
+        assert_eq!(
+            raw["boundaryCertificate"]["errorUpper"],
+            bounded["boundaryCertificate"]["errorUpper"]
+        );
+        // Exact valid terminal caps preserve the original representation.
+        let mut straight = request.clone();
+        straight["points"] = json!([[0., 0., 0.], [0., 0., 10.]]);
+        let preserved = crate::dispatch(straight.clone()).unwrap();
+        assert_eq!(preserved["capRepresentation"], "legacy");
+        straight["op"] = json!("brep_miter_owned_construct");
+        straight["maxDeviation"] = json!(0.01);
+        let legacy = crate::dispatch(straight).unwrap();
+        assert_eq!(preserved["model"], legacy["model"]);
+        assert!(preserved["boundaryCertificate"]["withinBudget"].is_null());
+        assert_eq!(preserved["boundaryCertificate"]["continuousBound"], true);
+        // Legacy and progressive APIs still require an authored tolerance;
+        // circle repair cannot silently acquire one from the internal ceiling.
+        let mut invalid = request.clone();
+        invalid["op"] = json!("brep_miter_owned_construct");
+        assert!(crate::dispatch(invalid).is_err());
+        let mut invalid = request.clone();
+        invalid["direct"] = json!(false);
+        assert!(crate::dispatch(invalid).is_err());
+        let mut invalid = request;
+        invalid["circleCorrection"] =
+            json!({"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000});
+        assert!(crate::dispatch(invalid).is_err());
+    }
+    #[test]
+    fn annular_transport_owns_source_filled_bound_and_two_complete_cap_groups() {
+        let outer = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap();
+        let request = json!({"op":"brep_miter_annular_owned_construct","direct":true,"loops":[[outer],[hole]],
+            "points":[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]],
+            "normal":[1.,0.,0.],"closed":false,"miterLimit":2.,"maxDeviation":0.01});
+        let before = request.clone();
+        let result = crate::dispatch(request.clone()).unwrap();
+        assert_eq!(request, before);
+        assert_eq!(result["capRepresentation"], "radial-annular");
+        assert_eq!(
+            result["capFaceGroups"],
+            json!([[24, 25, 26, 27], [28, 29, 30, 31]])
+        );
+        assert_eq!(result["capFaces"].as_array().unwrap().len(), 8);
+        assert_eq!(result["planarCapFaces"], json!([]));
+        assert_eq!(result["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(result["boundaryCertificate"]["withinBudget"], true);
+        assert_eq!(
+            result["retainedAnnularFilling"]["sourceFillingCovered"],
+            true
+        );
+        assert_eq!(result["retainedAnnularFilling"]["products"], 288);
+        let total = result["retainedAnnularFilling"]["exactWork"]
+            .as_u64()
+            .unwrap();
+        assert!(total > 0 && total <= 1_000_000);
+        assert_eq!(
+            total,
+            result["retainedAnnularFilling"]["fillingExactWork"]
+                .as_u64()
+                .unwrap()
+                + result["retainedAnnularFilling"]["capConstructionExactWork"]
+                    .as_u64()
+                    .unwrap()
+        );
+        assert_eq!(result["solidGeometryCertified"], false);
+        assert_eq!(result["globalEmbeddingCertified"], false);
+        let mut corrected = request.clone();
+        corrected["circleCorrection"] =
+            json!({"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000});
+        corrected["smoothnessMaxWork"] = json!(2000000);
+        let repaired = crate::dispatch(corrected.clone()).unwrap();
+        assert_eq!(repaired["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(repaired["boundaryCertificate"]["withinBudget"], true);
+        assert_eq!(
+            repaired["retainedSmoothness"]["walls"]["profile"]["exactG1G2Certified"],
+            true
+        );
+        let caps = repaired["retainedSmoothness"]["capInternalSeams"]
+            .as_array()
+            .unwrap();
+        assert_eq!(caps.len(), 2);
+        assert!(
+            caps.iter()
+                .all(|c| c["g1Certified"] == true && c["g2Certified"] == true)
+        );
+        assert_eq!(repaired["retainedSmoothness"]["capWallContinuity"], "C0");
+        assert!(
+            repaired["retainedSmoothness"]["totalExactWork"]
+                .as_u64()
+                .unwrap()
+                <= 2_000_000
+        );
+        corrected["smoothnessMaxWork"] = json!(0);
+        let denied = crate::dispatch(corrected).unwrap();
+        assert_eq!(
+            denied["retainedSmoothness"]["walls"]["profile"]["exactG1G2Certified"],
+            false
+        );
+        assert_eq!(denied["retainedSmoothness"]["totalExactWork"], 0);
+        assert_eq!(denied["boundaryCertificate"]["continuousBound"], true);
+        for key in [
+            "model",
+            "capFaceGroups",
+            "capFaces",
+            "filledCapErrorUpper",
+            "retainedAnnularFilling",
+        ] {
+            let mut injected = request.clone();
+            injected[key] = result.get(key).cloned().unwrap_or(json!(true));
+            assert!(
+                crate::dispatch(injected).is_err(),
+                "Injected {key} was accepted"
+            );
+        }
+        let mut legacy = request;
+        legacy["op"] = json!("brep_miter_owned_construct");
+        let raw = crate::dispatch(legacy).unwrap();
+        assert_eq!(raw["boundaryCertificate"]["continuousBound"], false);
+        assert_eq!(raw["model"]["faces"].as_array().unwrap().len(), 26);
+    }
+    #[test]
     fn bounded_periodic_shear_rechecks_transported_chart_proposals_and_material() {
         let request: Value = value_codec::from_str(include_str!(
             "fixtures/periodic-automatic-cap-shear-request.json"
@@ -653,57 +1010,74 @@ mod tests {
 
     #[test]
     fn direct_circle_transport_preserves_source_and_certifies_saved_profile_g2() {
-        let outer=nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.5).unwrap();
-        let hole=nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.2).unwrap().reverse().unwrap();
-        let request=json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[outer],[hole]],
+        let outer = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.2)
+            .unwrap()
+            .reverse()
+            .unwrap();
+        let request = json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[outer],[hole]],
             "points":[[0.,0.,0.],[10.,0.,0.],[13.,9.,4e-12],[-2.,11.,1e-12],[1.,5.,-2e-12]],
             "normal":[0.,0.,1.],"closed":true,"miterLimit":4.,"maxDeviation":0.01,
             "circleCorrection":{"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000}});
-        let before=request.clone();
-        let result=crate::dispatch(request.clone()).unwrap();
-        assert_eq!(request,before);
-        assert_eq!(result["retentionMode"],"direct");
-        assert_eq!(result["levels"][0]["holonomyCorrectionRadians"],0.);
-        assert_eq!(result["boundaryCertificate"]["continuousBound"],true);
-        assert_eq!(result["boundaryCertificate"]["withinBudget"],true);
-        let smooth=crate::dispatch(json!({"op":"brep_miter_profile_smoothness_audit",
-            "model":result["model"],"capFaces":[],"maxWork":2000000})).unwrap();
-        assert_eq!(smooth["profile"]["exactG1G2Certified"],true,"{smooth}");
-        assert_eq!(smooth["stationContinuity"],"C0");
-        let mut denied=request;
-        denied["circleCorrection"]["maxWork"]=json!(0);
+        let before = request.clone();
+        let result = crate::dispatch(request.clone()).unwrap();
+        assert_eq!(request, before);
+        assert_eq!(result["retentionMode"], "direct");
+        assert_eq!(result["levels"][0]["holonomyCorrectionRadians"], 0.);
+        assert_eq!(result["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(result["boundaryCertificate"]["withinBudget"], true);
+        let smooth = crate::dispatch(json!({"op":"brep_miter_profile_smoothness_audit",
+            "model":result["model"],"capFaces":[],"maxWork":2000000}))
+        .unwrap();
+        assert_eq!(smooth["profile"]["exactG1G2Certified"], true, "{smooth}");
+        assert_eq!(smooth["stationContinuity"], "C0");
+        let mut denied = request;
+        denied["circleCorrection"]["maxWork"] = json!(0);
         assert!(crate::dispatch(denied).is_err());
     }
     #[test]
     fn direct_spatial_raw_final_cap_has_exact_negative_identity() {
-        use brep_core::sweep_cap_contacts::{self,Budgets};
-        let outer=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap();
-        let hole=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.2).unwrap().reverse().unwrap();
-        let request=json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[outer],[hole]],
+        use brep_core::sweep_cap_contacts::{self, Budgets};
+        let outer = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.2)
+            .unwrap()
+            .reverse()
+            .unwrap();
+        let request = json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[outer],[hole]],
             "points":[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,5.+10.]],
             "normal":[1.,0.,0.],"closed":false,"miterLimit":2.,"maxDeviation":0.01});
-        let before=request.clone();
-        let result=crate::dispatch(request.clone()).unwrap();
-        assert_eq!(request,before);
-        assert_eq!(result["sectionCorrection"],Value::Null);
-        assert_eq!(result["boundaryCertificate"]["continuousBound"],false);
-        let model:brep_core::Model=field(&result,"model").unwrap();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let budgets=Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,
-            max_trim_pairs:100000,max_trim_cells:100000,max_trim_domain_cells:1000000};
-        let initial=sweep_cap_contacts::inspect(&model,caps[0],&caps,budgets).unwrap();
-        assert!(initial.cap_certified,"{initial:?}");
-        let final_=sweep_cap_contacts::inspect(&model,caps[1],&caps,budgets).unwrap();
+        let before = request.clone();
+        let result = crate::dispatch(request.clone()).unwrap();
+        assert_eq!(request, before);
+        assert_eq!(result["sectionCorrection"], Value::Null);
+        assert_eq!(result["boundaryCertificate"]["continuousBound"], false);
+        let model: brep_core::Model = field(&result, "model").unwrap();
+        let caps = [model.faces.len() - 2, model.faces.len() - 1];
+        let budgets = Budgets {
+            max_walls: 1024,
+            max_exact_work: 1000000,
+            max_chart_cells: 1000,
+            max_trim_pairs: 100000,
+            max_trim_cells: 100000,
+            max_trim_domain_cells: 1000000,
+        };
+        let initial = sweep_cap_contacts::inspect(&model, caps[0], &caps, budgets).unwrap();
+        assert!(initial.cap_certified, "{initial:?}");
+        let final_ = sweep_cap_contacts::inspect(&model, caps[1], &caps, budgets).unwrap();
         assert!(!final_.cap_certified);
-        assert_eq!(final_.reason,Some("cap-coedge-identity-different"));
-        let mut corrected=request;
-        corrected["capCorrection"]=json!({"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000});
-        corrected["capEndpoints"]=json!([false,true]);
-        let corrected=crate::dispatch(corrected).unwrap();
-        assert_eq!(corrected["boundaryCertificate"]["continuousBound"],true);
-        assert_eq!(corrected["boundaryCertificate"]["withinBudget"],true);
-        let corrected_model:brep_core::Model=field(&corrected,"model").unwrap();
-        assert_eq!(model.faces[caps[0]].surface,corrected_model.faces[caps[0]].surface);
+        assert_eq!(final_.reason, Some("cap-coedge-identity-different"));
+        let mut corrected = request;
+        corrected["capCorrection"] =
+            json!({"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000});
+        corrected["capEndpoints"] = json!([false, true]);
+        let corrected = crate::dispatch(corrected).unwrap();
+        assert_eq!(corrected["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(corrected["boundaryCertificate"]["withinBudget"], true);
+        let corrected_model: brep_core::Model = field(&corrected, "model").unwrap();
+        assert_eq!(
+            model.faces[caps[0]].surface,
+            corrected_model.faces[caps[0]].surface
+        );
     }
 
     #[test]
@@ -762,19 +1136,19 @@ mod tests {
     }
     #[test]
     fn direct_selected_cap_transport_binds_endpoint_scope_and_rejects_empty_selection() {
-        let curve=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap();
-        let request=json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[curve]],
+        let curve = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let request = json!({"op":"brep_miter_owned_construct","direct":true,"loops":[[curve]],
             "points":[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]],
             "normal":[1.,0.,0.],"closed":false,"miterLimit":2.,"maxDeviation":0.01,
             "capCorrection":{"quantum":2_f64.powi(-40),"tolerance":1e-9,"maxWork":1000000},
             "capEndpoints":[false,true]});
-        let report=crate::dispatch(request.clone()).unwrap();
-        assert_eq!(report["retentionMode"],"direct");
-        assert_eq!(report["capEndpoints"],json!([false,true]));
-        assert_eq!(report["boundaryCertificate"]["continuousBound"],true);
-        assert_eq!(report["sections"][0][0][0],report["sourceSections"][0][0]);
-        let mut invalid=request;
-        invalid["capEndpoints"]=json!([false,false]);
+        let report = crate::dispatch(request.clone()).unwrap();
+        assert_eq!(report["retentionMode"], "direct");
+        assert_eq!(report["capEndpoints"], json!([false, true]));
+        assert_eq!(report["boundaryCertificate"]["continuousBound"], true);
+        assert_eq!(report["sections"][0][0][0], report["sourceSections"][0][0]);
+        let mut invalid = request;
+        invalid["capEndpoints"] = json!([false, false]);
         assert!(crate::dispatch(invalid).is_err());
     }
     #[test]

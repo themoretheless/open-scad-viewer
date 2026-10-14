@@ -7,7 +7,18 @@
     "conditioning",
     "coordinate_frame",
     "interval_eval",
-    "polynomial"
+    "polynomial",
+    "bezier_extraction",
+    "compensated",
+    "convex_distance",
+    "core",
+    "dual",
+    "interval_newton",
+    "normal_cone",
+    "numerics",
+    "obb_tree",
+    "robust_solvers",
+    "sturm"
   ],
   "curves": [
     "primitives",
@@ -62,7 +73,17 @@
     "helical_sweep",
     "sections",
     "section_projection",
-    "section_phase"
+    "section_phase",
+    "circle_sweep_repair",
+    "construct",
+    "miter_section_correction",
+    "section_circle_repair",
+    "sweep_section_projection",
+    "sweeps",
+    "wave_surface",
+    "superellipsoid",
+    "optical_shapes",
+    "wing_loft"
   ],
   "editing": [
     "affine",
@@ -73,7 +94,8 @@
     "direct_edit",
     "morph",
     "fairing",
-    "curve_extension"
+    "curve_extension",
+    "editing"
   ],
   "joining": [
     "curve_join",
@@ -84,13 +106,15 @@
     "surface_g2",
     "circle_transition",
     "ellipse_transition",
-    "circle_rectangle_transition"
+    "circle_rectangle_transition",
+    "join"
   ],
   "offsets": [
     "curve_offset",
     "curve_offset_join",
     "curve_offset_wire",
-    "surface_offset"
+    "surface_offset",
+    "offset"
   ],
   "queries": [
     "curve_differential",
@@ -113,7 +137,10 @@
     "radial_bounds",
     "geodesic",
     "unrolling",
-    "frechet"
+    "frechet",
+    "analysis",
+    "distance",
+    "surface_occlusion"
   ],
   "parameterization": [
     "curve_pullback",
@@ -128,7 +155,9 @@
     "chord_witness",
     "chord_fill_selection",
     "surface_parameter_bounds",
-    "trimmed_surface_distance"
+    "trimmed_surface_distance",
+    "trim",
+    "periodic_trim"
   ],
   "validation": [
     "curve_self_intersection",
@@ -147,11 +176,15 @@
     "sweep_cap_wall",
     "sweep_seam_audit",
     "trim_region_audit",
-    "trim_simplicity"
+    "trim_simplicity",
+    "certificates",
+    "retained_wall_coefficients",
+    "retained_wall_domain_certificate"
   ],
   "meshing": [
     "curve_tessellation",
     "surface_tessellation",
-    "shared_tessellation"
+    "shared_tessellation",
+    "tessellation"
   ]
 }

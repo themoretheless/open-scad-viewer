@@ -976,7 +976,7 @@ export function renderOpenScadText(
     }
     if (shaped.some(glyph => !Number.isSafeInteger(glyph.g) || glyph.g < 0
       || !Number.isSafeInteger(glyph.cl) || glyph.cl < 0
-      || ![glyph.dx, glyph.dy, glyph.ax, glyph.ay].every(Number.isFinite))) {
+      || !(Number.isFinite(glyph.dx) && Number.isFinite(glyph.dy) && Number.isFinite(glyph.ax) && Number.isFinite(glyph.ay)))) {
       return textError('E_TEXT_SHAPING_FAILED', `Font ${descriptor.path} returned invalid shaping positions.`, {
         fontPath: descriptor.path,
         faceIndex: descriptor.faceIndex,

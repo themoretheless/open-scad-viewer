@@ -218,3 +218,13 @@ pub use numerics::normal_cone;
 pub use numerics::bezier_extraction;
 
 pub use crate::analysis::surface_occlusion;
+
+pub use crate::construct::surfaces::wave_surface;
+
+pub use crate::trim::periodic_trim;
+
+pub use crate::construct::surfaces::superellipsoid;
+
+pub use crate::construct::surfaces::optical_shapes;
+
+pub use crate::construct::surfaces::wing_loft;

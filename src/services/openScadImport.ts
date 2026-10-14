@@ -425,7 +425,7 @@ function geometry3D(
     dimension: 3 as const,
     format,
     vertices,
-    triangles: Uint32Array.from(triangles),
+    triangles: new Uint32Array(triangles),
     triangleCount: triangles.length / 3,
   })
 }
@@ -2188,10 +2188,13 @@ function dxfDimensionMetadata(
         'DXF query record count',
         'dxf',
       )
-      const coordinates = Array.from({ length: 7 }, (_, index) => Object.freeze([
-        dxfNumber(entity, 10 + index, 0),
-        dxfNumber(entity, 20 + index, 0),
-      ] as const))
+      const coordinates = new Array<readonly [number, number]>(7)
+      for (let index = 0; index < 7; index++) {
+        coordinates[index] = Object.freeze([
+          dxfNumber(entity, 10 + index, 0),
+          dxfNumber(entity, 20 + index, 0),
+        ] as const)
+      }
       dimensions.push(Object.freeze({
         layer: dxfValue(entity, 8, ''),
         name: dxfValue(entity, 1, ''),
@@ -2597,7 +2600,7 @@ function validateImportOptions(
   const origin = options.origin ?? [0, 0]
   const scale = options.scale ?? 1
   const dpi = options.dpi ?? 72
-  if (!Array.isArray(origin) || origin.length !== 2 || !origin.every(Number.isFinite)) {
+  if (!Array.isArray(origin) || origin.length !== 2 || !Number.isFinite(origin[0]) || !Number.isFinite(origin[1])) {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() origin must contain two finite numbers.', {
       sourcePath, specifier, assetPath,
     })
@@ -2847,9 +2850,9 @@ function resolveDxfQueryTransform(
   if (options.origin !== undefined) {
     const supplied: unknown = options.origin
     if (Array.isArray(supplied) && supplied.length === 2
-      && supplied.every(value => typeof value === 'number')) {
+      && typeof supplied[0] === 'number' && typeof supplied[1] === 'number') {
       origin = [supplied[0], supplied[1]]
-      if (!origin.every(Number.isFinite)) {
+      if (!Number.isFinite(origin[0]) || !Number.isFinite(origin[1])) {
         diagnostics.push(dxfQueryDiagnostic(
           'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',
           'DXF query origin contains a non-finite coordinate; 2021.01 arithmetic is preserved.',

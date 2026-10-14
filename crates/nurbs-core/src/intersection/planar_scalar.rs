@@ -20,12 +20,14 @@ pub enum Relation {
         linear: bool,
     },
     Overlap {
+        points: Vec<[f64; 2]>,
+        linear: bool,
         first: [f64; 2],
         second: [f64; 2],
         reversed: bool,
     },
 }
-fn admit(c: &Curve) -> bool {
+pub(super) fn admit(c: &Curve) -> bool {
     (1..=3).contains(&c.degree)
         && !c.periodic
         && c.control_points.len() == c.degree + 1
@@ -45,19 +47,41 @@ fn map_back(c: &Curve, t: f64, reversed: bool) -> f64 {
         t
     }
 }
-fn monotone(c: &Curve, k: usize) -> bool {
+pub fn monotone(c: &Curve, k: usize) -> bool {
+    if k >= 2 || c.control_points.is_empty() || c.control_points.iter().any(|p| p.len() != 2) {
+        return false;
+    }
     let a = c.control_points[0][k];
     let b = c.control_points.last().unwrap()[k];
-    a != b
-        && c.control_points.windows(2).all(|p| {
-            if b > a {
-                p[1][k] >= p[0][k]
-            } else {
-                p[1][k] <= p[0][k]
-            }
-        })
+    if a == b {
+        return false;
+    }
+    if c.control_points.windows(2).all(|p| {
+        if b > a {
+            p[1][k] >= p[0][k]
+        } else {
+            p[1][k] <= p[0][k]
+        }
+    }) {
+        return true;
+    }
+    // Control-polygon monotonicity is sufficient, but not necessary. An
+    // exact derivative root census admits positive derivatives with mixed
+    // Bernstein coefficients, and stationary roots of even multiplicity.
+    match stationary_definition(c, k).ok().flatten() {
+        Some(cad_predicates::PlanarStationaryOutcome::Roots(roots)) => roots.iter().all(|r| {
+            r.multiplicity % 2 == 0
+                || (r.interval[0] == r.interval[1] && (r.interval[0] == 0. || r.interval[0] == 1.))
+        }),
+        _ => false,
+    }
 }
-fn invert(c: &Curve, k: usize, value: f64) -> Result<Option<f64>> {
+pub fn invert(c: &Curve, k: usize, value: f64) -> Result<Option<f64>> {
+    c.validate()?;
+    check(
+        k < 2 && value.is_finite() && c.control_points.iter().all(|p| p.len() == 2),
+        "Invalid planar coordinate inversion",
+    )?;
     let a = c.control_points[0][k];
     let b = c.control_points.last().unwrap()[k];
     if !monotone(c, k) || value < a.min(b) || value > a.max(b) {
@@ -137,6 +161,8 @@ fn carrier_overlap(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relati
         }))
     } else {
         Ok(Some(Relation::Overlap {
+            points: Vec::new(),
+            linear: true,
             first,
             second,
             reversed,
@@ -262,7 +288,7 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
             }
         }
     }
-    Ok(None)
+    super::planar_coincidence::overlap(a, b, tolerance)
 }
 #[cfg(test)]
 mod tests {
@@ -314,5 +340,117 @@ mod tests {
             intersect(&a, &b, 1e-7).unwrap(),
             Some(Relation::Coincident { reversed: true, .. })
         ));
+    }
+}
+
+/// Root census of the actual source, including derivative multiplicities.
+fn stationary_definition(
+    c: &Curve,
+    axis: usize,
+) -> Result<Option<cad_predicates::PlanarStationaryOutcome>> {
+    c.validate()?;
+    check(axis < 2, "Planar stationary axis must be X or Y")?;
+    if !admit(c) {
+        return Ok(None);
+    }
+    let values = c
+        .control_points
+        .iter()
+        .zip(&c.weights)
+        .flat_map(|(p, w)| [p[0], p[1], *w])
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let source = SourceArena::authored("represented-planar-stationary", 1, values)
+        .map_err(|e| crate::input(e.to_string()))?;
+    let refs = (0..c.control_points.len())
+        .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
+        .collect::<Vec<_>>();
+    let context = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &context, Limits::default(), None);
+    let decision = cad_predicates::planar_bezier_stationary_roots(&mut ctx, &refs, axis, 1e-14)
+        .map_err(|e| crate::input(e.to_string()))?;
+    Ok(Some(decision.outcome))
+}
+/// Complete represented-definition stationary parameters; None means the
+/// predicate did not establish completeness and must not become an empty list.
+pub fn stationary(c: &Curve, axis: usize) -> Result<Option<Vec<f64>>> {
+    let Some(outcome) = stationary_definition(c, axis)? else {
+        return Ok(None);
+    };
+    match outcome {
+        cad_predicates::PlanarStationaryOutcome::Constant => Ok(Some(Vec::new())),
+        cad_predicates::PlanarStationaryOutcome::Indeterminate(_) => Ok(None),
+        cad_predicates::PlanarStationaryOutcome::Roots(roots) => Ok(Some(
+            roots
+                .into_iter()
+                .filter_map(|r| {
+                    let t = (r.interval[0] + r.interval[1]) * 0.5;
+                    (t > 0. && t < 1.).then(|| parameter(c, t))
+                })
+                .collect(),
+        )),
+    }
+}
+#[cfg(test)]
+mod stationary_tests {
+    use super::*;
+    #[test]
+    fn exact_monotonicity_does_not_require_an_ordered_control_polygon() {
+        let mut c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 1.1], vec![0.9, 0.8], vec![1.9, 2.1]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let before = c.clone();
+        for axis in 0..2 {
+            assert!(c.control_points[1][axis] > c.control_points[2][axis]);
+            assert!(stationary(&c, axis).unwrap().unwrap().is_empty());
+            assert!(monotone(&c, axis));
+        }
+        let b = c.trim(0.25, 0.75).unwrap().reverse().unwrap();
+        assert!(matches!(
+            intersect(&c, &b, 1e-7).unwrap(),
+            Some(Relation::Overlap { .. })
+        ));
+        assert_eq!(c.control_points, before.control_points);
+        assert_eq!(c.weights, before.weights);
+        // The proof must use the original rational weights: these weights
+        // make the same control polygon reverse in both coordinates.
+        c.weights = vec![1., 100., 100., 1.];
+        assert!(!monotone(&c, 0));
+        assert!(!monotone(&c, 1));
+    }
+    #[test]
+    fn stationary_even_multiplicity_preserves_monotonicity_but_reversals_do_not() {
+        let mut c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 1.], vec![-1., 2.], vec![3., 3.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        assert!(monotone(&c, 0));
+        assert!(monotone(&c.reverse().unwrap(), 0));
+        c.control_points[3][0] = 0.1;
+        assert!(!monotone(&c, 0));
+    }
+    #[test]
+    fn stationary_parameters_find_a_non_dyadic_cusp_without_mutating_its_definition() {
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![1., -1.], vec![-1., 2.], vec![0., -4.], vec![4., 8.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let before = c.control_points.clone();
+        for axis in 0..2 {
+            let roots = stationary(&c, axis).unwrap().unwrap();
+            assert_eq!(roots.len(), 1);
+            assert!((roots[0] - 1. / 3.).abs() < 1e-13);
+        }
+        assert_eq!(c.control_points, before);
     }
 }

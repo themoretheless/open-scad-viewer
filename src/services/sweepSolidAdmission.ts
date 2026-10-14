@@ -30,8 +30,16 @@ export function inspectProgressiveSweepSolidAdmission(artifact:NativeGeometryArt
  const closed=node.op==='brep_progressive_sweep'
   ?(snapshot?.sweepStationReconstruction?.closedPath??snapshot?.sweepBodyBoundaryEvidence?.closedPath)
   :node.closed
- const caps=closed===false||node.op!=='brep_progressive_sweep'&&closed!==true
+ const defaultCaps=closed===false||node.op!=='brep_progressive_sweep'&&closed!==true
   ?[model.faces.length-2,model.faces.length-1]:[]
+ // Native constructors may replace two logical caps with several actual
+ // faces. Transport only their optional planar optimization selection. Empty
+ // selection still requires the full native actual-model face/pair audit.
+ const selected=snapshot?.sweepPlanarCapFaces
+ if(selected!==undefined&&(!Array.isArray(selected)||selected.length>16||
+  selected.some((face:unknown)=>!Number.isInteger(face)||Number(face)<0||Number(face)>=model.faces.length)||
+  new Set(selected).size!==selected.length))throw new Error('Invalid native sweep planar cap selection.')
+ const caps:number[]=selected??defaultCaps
  const replay=snapshot?.sweepMiterReplay
  const report: SweepVolumeAudit = replay
   ? (()=>{

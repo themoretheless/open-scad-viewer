@@ -29,3 +29,13 @@ it('retains rational arcs in mixed cubic booleans and normalizes a crossing auth
  const crossing=authorBrepProfile({kind:'bezier',path:{start:[0,0],closed:true,segments:[{type:'cubic',c1:[4/3,4/3],c2:[8/3,8/3],to:[4,4]},{type:'line',to:[0,4]},{type:'line',to:[4,0]},{type:'line',to:[0,0]}]}})
  expect(crossing.loops).toHaveLength(2);expect(crossing.areaMm2).toBeCloseTo(8,5)
 })
+
+it('keeps third-order interior contacts and different-degree straight overlaps in WASM',()=>{
+ const a=authorBrepProfile({kind:'bezier',path:{start:[0,-2],closed:true,segments:[{type:'line',to:[3,-2]},{type:'line',to:[3,1]},{type:'cubic',c1:[2,-1],c2:[1,1],to:[0,-1]},{type:'line',to:[0,-2]}]}})
+ const b=authorBrepProfile({kind:'bezier',path:{start:[0,-2],closed:true,segments:[{type:'line',to:[3,-2]},{type:'line',to:[3,0]},{type:'line',to:[0,0]},{type:'line',to:[0,-2]}]}})
+ for(const [op,area] of [['union',6.375],['intersection',5.625],['difference',0.375]] as const){
+  const result=booleanBrepProfiles(a,b,op)
+  expect(result.areaMm2).toBeCloseTo(area,5)
+  expect(result.loops.flat().some(c=>c.degree===3)).toBe(true)
+ }
+})

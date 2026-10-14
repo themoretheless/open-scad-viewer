@@ -89,8 +89,9 @@ pub struct Evaluator<'a> {
 }
 impl<'a> Evaluator<'a> {
     pub fn new(document: &'a Json) -> Result<Self> {
-        let mut parameters = HashMap::new();
-        for (i, parameter) in array(&document["parameters"]).iter().enumerate() {
+        let param_list = array(&document["parameters"]);
+        let mut parameters = HashMap::with_capacity(param_list.len());
+        for (i, parameter) in param_list.iter().enumerate() {
             let id = string(&parameter["id"]);
             if parameters.contains_key(id) {
                 return Err(Error::new(
@@ -123,11 +124,12 @@ impl<'a> Evaluator<'a> {
                 },
             );
         }
-        let mut functions = HashMap::new();
-        for function in array(&document["functions"]) {
+        let fn_list = array(&document["functions"]);
+        let mut functions = HashMap::with_capacity(fn_list.len());
+        for function in fn_list {
             functions.insert(string(&function["id"]), function);
         }
-        if functions.len() != array(&document["functions"]).len() {
+        if functions.len() != fn_list.len() {
             return Err(Error::new(
                 "duplicate_id",
                 "/functions",

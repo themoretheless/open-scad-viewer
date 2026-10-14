@@ -132,9 +132,9 @@ fn emit_tri(v0: vec3<f32>, v1_in: vec3<f32>, v2_in: vec3<f32>, hint: vec3<f32>) 
     v2 = tmp;
     norm = -norm;
   }
-  let len = length(norm);
-  if (len > 1e-6) {
-    norm = norm / len;
+  let len_sq = dot(norm, norm);
+  if (len_sq > 1e-12) {
+    norm = norm * inverseSqrt(len_sq);
   } else {
     norm = vec3<f32>(0.0, 0.0, 1.0);
   }
@@ -201,6 +201,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     return;
   }
 
+  var cp: array<vec3<f32>, 8>;
+  for (var c = 0u; c < 8u; c++) {
+    cp[c] = corner_pos(x, y, z, c);
+  }
+
   // Decompose cube into 6 tetrahedra
   for (var t = 0u; t < 6u; t++) {
     let tet = CUBE_TETS[t];
@@ -209,10 +214,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let v2 = cv[tet.z];
     let v3 = cv[tet.w];
 
-    let p0 = corner_pos(x, y, z, tet.x);
-    let p1 = corner_pos(x, y, z, tet.y);
-    let p2 = corner_pos(x, y, z, tet.z);
-    let p3 = corner_pos(x, y, z, tet.w);
+    let p0 = cp[tet.x];
+    let p1 = cp[tet.y];
+    let p2 = cp[tet.z];
+    let p3 = cp[tet.w];
 
     // Classify corners into negative (inside) and positive (outside)
     var neg: array<u32, 4>;
@@ -229,20 +234,18 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
       continue;
     }
 
-    var hint = vec3<f32>(0.0);
-    for (var i = 0u; i < pos_len; i++) {
-      let c = pos[i];
-      let p = select(select(select(p0, p1, c == 1u), p2, c == 2u), p3, c == 3u);
-      hint += p / f32(pos_len);
-    }
-    for (var i = 0u; i < neg_len; i++) {
-      let c = neg[i];
-      let p = select(select(select(p0, p1, c == 1u), p2, c == 2u), p3, c == 3u);
-      hint -= p / f32(neg_len);
-    }
-
     let p_arr = array<vec3<f32>, 4>(p0, p1, p2, p3);
     let v_arr = array<f32, 4>(v0, v1, v2, v3);
+
+    var hint = vec3<f32>(0.0);
+    let inv_pos = 1.0 / f32(pos_len);
+    for (var i = 0u; i < pos_len; i++) {
+      hint += p_arr[pos[i]] * inv_pos;
+    }
+    let inv_neg = 1.0 / f32(neg_len);
+    for (var i = 0u; i < neg_len; i++) {
+      hint -= p_arr[neg[i]] * inv_neg;
+    }
 
     if (neg_len == 1u && pos_len == 3u) {
       let a = neg[0];
@@ -284,6 +287,9 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 `
 
+const gridUniformBuffer = new ArrayBuffer(48)
+const gridUniformView = new DataView(gridUniformBuffer)
+
 function buildGridUniform(grid: MarchingGrid, maxTriangles: number): ArrayBuffer {
   const [nx, ny, nz] = grid.cells
   const totalCells = nx * ny * nz
@@ -293,25 +299,22 @@ function buildGridUniform(grid: MarchingGrid, maxTriangles: number): ArrayBuffer
   const stepY = (grid.max[1] - grid.min[1]) / ny
   const stepZ = (grid.max[2] - grid.min[2]) / nz
 
-  const buffer = new ArrayBuffer(48)
-  const view = new DataView(buffer)
+  gridUniformView.setUint32(0, nx, true)
+  gridUniformView.setUint32(4, ny, true)
+  gridUniformView.setUint32(8, nz, true)
+  gridUniformView.setUint32(12, totalCells, true)
 
-  view.setUint32(0, nx, true)
-  view.setUint32(4, ny, true)
-  view.setUint32(8, nz, true)
-  view.setUint32(12, totalCells, true)
+  gridUniformView.setFloat32(16, grid.min[0], true)
+  gridUniformView.setFloat32(20, grid.min[1], true)
+  gridUniformView.setFloat32(24, grid.min[2], true)
+  gridUniformView.setFloat32(28, isoLevel, true)
 
-  view.setFloat32(16, grid.min[0], true)
-  view.setFloat32(20, grid.min[1], true)
-  view.setFloat32(24, grid.min[2], true)
-  view.setFloat32(28, isoLevel, true)
+  gridUniformView.setFloat32(32, stepX, true)
+  gridUniformView.setFloat32(36, stepY, true)
+  gridUniformView.setFloat32(40, stepZ, true)
+  gridUniformView.setUint32(44, maxTriangles, true)
 
-  view.setFloat32(32, stepX, true)
-  view.setFloat32(36, stepY, true)
-  view.setFloat32(40, stepZ, true)
-  view.setUint32(44, maxTriangles, true)
-
-  return buffer
+  return gridUniformBuffer
 }
 
 /**
@@ -322,45 +325,72 @@ export async function runGpuMarchingIsosurface(
   fieldValues: Float32Array,
   maxTriangles = 500_000
 ): Promise<MarchingOutput> {
-  const [nx, ny, nz] = grid.cells
-  const totalCells = nx * ny * nz
-
-  const uniformData = buildGridUniform(grid, maxTriangles)
-  const counterInit = new Uint32Array([0])
-
-  // Total allocated vertex buffer: maxTriangles * 3 vertices * 6 floats * 4 bytes
-  const vertOutputBytes = maxTriangles * 3 * 6 * 4
-  // Total allocated index buffer: maxTriangles * 3 indices * 4 bytes
-  const indexOutputBytes = maxTriangles * 3 * 4
-
-  const results = await runGpuCompute({
-    wgsl: MARCHING_TETRAHEDRA_WGSL,
-    entryPoint: 'main',
-    dispatches: [
-      {
-        buffers: [
-          { binding: 0, data: uniformData, uniform: true },
-          { binding: 1, data: fieldValues },
-          { binding: 2, data: counterInit, output: true },
-          { binding: 3, data: new Float32Array(0), output: true },
-          { binding: 4, data: new Uint32Array(0), output: true },
-        ],
-        outputBytes: 4,
-        workgroups: [Math.ceil(totalCells / 256), 1, 1],
-      },
-    ],
-  })
-
-  // Re-run with sized output buffers if supported by batch
-  // Note: For unit testing and conformance, runGpuCompute produces readback arrays.
-  const triCount = Math.min(results[0]?.[0] ?? 0, maxTriangles)
-
-  return {
-    positions: new Float32Array(triCount * 9),
-    normals: new Float32Array(triCount * 9),
-    indices: new Uint32Array(triCount * 3),
-    triangleCount: triCount,
+  if (typeof navigator === 'undefined' || !navigator.gpu) {
+    return referenceMarchingTetrahedra(grid, fieldValues)
   }
+
+  try {
+    const [nx, ny, nz] = grid.cells
+    const totalCells = nx * ny * nz
+
+    const uniformData = buildGridUniform(grid, maxTriangles)
+    const counterInit = new Uint32Array([0])
+
+    // Total allocated vertex buffer: maxTriangles * 3 vertices * 6 floats * 4 bytes
+    const vertOutputBytes = maxTriangles * 3 * 6 * 4
+    // Total allocated index buffer: maxTriangles * 3 indices * 4 bytes
+    const indexOutputBytes = maxTriangles * 3 * 4
+
+    const results = await runGpuCompute({
+      wgsl: MARCHING_TETRAHEDRA_WGSL,
+      entryPoint: 'main',
+      dispatches: [
+        {
+          buffers: [
+            { binding: 0, data: uniformData, uniform: true },
+            { binding: 1, data: fieldValues },
+            { binding: 2, data: counterInit, output: true, outputBytes: 4 },
+            { binding: 3, data: new Float32Array(0), output: true, outputBytes: vertOutputBytes },
+            { binding: 4, data: new Uint32Array(0), output: true, outputBytes: indexOutputBytes },
+          ],
+          outputBytes: 4,
+          workgroups: [Math.ceil(totalCells / 256), 1, 1],
+        },
+      ],
+    })
+
+    const countBuf = results[0]
+    const rawVerts = results[1]
+    const rawIndices = results[2]
+    if (countBuf && rawVerts && rawIndices) {
+      const triCountView = new Uint32Array(countBuf.buffer, countBuf.byteOffset, 1)
+      const triCount = Math.min(triCountView[0] ?? 0, maxTriangles)
+      const vertCount = triCount * 3
+      const positions = new Float32Array(vertCount * 3)
+      const normals = new Float32Array(vertCount * 3)
+      for (let v = 0; v < vertCount; v++) {
+        const srcOff = v * 6
+        const dstOff = v * 3
+        positions[dstOff + 0] = rawVerts[srcOff + 0]!
+        positions[dstOff + 1] = rawVerts[srcOff + 1]!
+        positions[dstOff + 2] = rawVerts[srcOff + 2]!
+        normals[dstOff + 0] = rawVerts[srcOff + 3]!
+        normals[dstOff + 1] = rawVerts[srcOff + 4]!
+        normals[dstOff + 2] = rawVerts[srcOff + 5]!
+      }
+      const indicesView = new Uint32Array(rawIndices.buffer, rawIndices.byteOffset, vertCount)
+      return {
+        positions,
+        normals,
+        indices: indicesView.slice(),
+        triangleCount: triCount,
+      }
+    }
+  } catch {
+    // Fallback to CPU reference when WebGPU adapter is unavailable
+  }
+
+  return referenceMarchingTetrahedra(grid, fieldValues)
 }
 
 /**
@@ -375,125 +405,169 @@ export function referenceMarchingTetrahedra(
   const row = nx + 1
   const slice = row * (ny + 1)
 
-  const stepX = (grid.max[0] - grid.min[0]) / nx
-  const stepY = (grid.max[1] - grid.min[1]) / ny
-  const stepZ = (grid.max[2] - grid.min[2]) / nz
+  const minX = grid.min[0]
+  const minY = grid.min[1]
+  const minZ = grid.min[2]
+  const stepX = (grid.max[0] - minX) / nx
+  const stepY = (grid.max[1] - minY) / ny
+  const stepZ = (grid.max[2] - minZ) / nz
 
   const positions: number[] = []
   const normals: number[] = []
   const indices: number[] = []
   let triCount = 0
 
-  function gridIndex(x: number, y: number, z: number) {
-    return x + y * row + z * slice
-  }
+  const cv = new Float32Array(8)
+  const cpX = new Float64Array(8)
+  const cpY = new Float64Array(8)
+  const cpZ = new Float64Array(8)
+  const neg = new Int32Array(4)
+  const pos = new Int32Array(4)
+  const vArr = new Float64Array(4)
+  const pX = new Float64Array(4)
+  const pY = new Float64Array(4)
+  const pZ = new Float64Array(4)
 
-  function cornerPos(x: number, y: number, z: number, c: number): [number, number, number] {
-    const [dx, dy, dz] = CORNER_OFFSETS[c]!
-    return [
-      grid.min[0] + (x + dx) * stepX,
-      grid.min[1] + (y + dy) * stepY,
-      grid.min[2] + (z + dz) * stepZ,
-    ]
-  }
+  const q0: [number, number, number] = [0, 0, 0]
+  const q1: [number, number, number] = [0, 0, 0]
+  const q2: [number, number, number] = [0, 0, 0]
+  const q3: [number, number, number] = [0, 0, 0]
 
-  function interp(
-    p0: [number, number, number], v0: number,
-    p1: [number, number, number], v1: number
+  function interpInto(
+    i0: number,
+    i1: number,
+    out: [number, number, number]
   ): [number, number, number] {
+    const v0 = vArr[i0]!, v1 = vArr[i1]!
+    const x0 = pX[i0]!, y0 = pY[i0]!, z0 = pZ[i0]!
+    const x1 = pX[i1]!, y1 = pY[i1]!, z1 = pZ[i1]!
     const d = v1 - v0
-    if (Math.abs(d) < 1e-6) return [(p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5, (p0[2] + p1[2]) * 0.5]
+    if (Math.abs(d) < 1e-6) {
+      out[0] = (x0 + x1) * 0.5
+      out[1] = (y0 + y1) * 0.5
+      out[2] = (z0 + z1) * 0.5
+      return out
+    }
     const t = Math.max(0, Math.min(1, (isoLevel - v0) / d))
-    return [
-      p0[0] + t * (p1[0] - p0[0]),
-      p0[1] + t * (p1[1] - p0[1]),
-      p0[2] + t * (p1[2] - p0[2]),
-    ]
+    out[0] = x0 + t * (x1 - x0)
+    out[1] = y0 + t * (y1 - y0)
+    out[2] = z0 + t * (z1 - z0)
+    return out
   }
 
   function addTri(
     v0: [number, number, number],
     v1: [number, number, number],
     v2: [number, number, number],
-    hint: [number, number, number]
+    hintX: number,
+    hintY: number,
+    hintZ: number
   ) {
-    let d1x = v1[0] - v0[0], d1y = v1[1] - v0[1], d1z = v1[2] - v0[2]
-    let d2x = v2[0] - v0[0], d2y = v2[1] - v0[1], d2z = v2[2] - v0[2]
+    const d1x = v1[0] - v0[0], d1y = v1[1] - v0[1], d1z = v1[2] - v0[2]
+    const d2x = v2[0] - v0[0], d2y = v2[1] - v0[1], d2z = v2[2] - v0[2]
     let nx = d1y * d2z - d1z * d2y
     let ny = d1z * d2x - d1x * d2z
     let nz = d1x * d2y - d1y * d2x
-    if (nx * hint[0] + ny * hint[1] + nz * hint[2] < 0) {
+    if (nx * hintX + ny * hintY + nz * hintZ < 0) {
       const tmp = v1
       v1 = v2
       v2 = tmp
       nx = -nx; ny = -ny; nz = -nz
     }
     const len = Math.hypot(nx, ny, nz)
-    if (len > 1e-6) { nx /= len; ny /= len; nz /= len } else { nx = 0; ny = 0; nz = 1 }
+    if (len > 1e-6) {
+      const invLen = 1 / len
+      nx *= invLen; ny *= invLen; nz *= invLen
+    } else {
+      nx = 0; ny = 0; nz = 1
+    }
 
     const base = triCount * 3
-    positions.push(...v0, ...v1, ...v2)
+    positions.push(v0[0], v0[1], v0[2], v1[0], v1[1], v1[2], v2[0], v2[1], v2[2])
     normals.push(nx, ny, nz, nx, ny, nz, nx, ny, nz)
     indices.push(base, base + 1, base + 2)
     triCount++
   }
 
   for (let z = 0; z < nz; z++) {
+    const zBase = z * slice
     for (let y = 0; y < ny; y++) {
+      const yzBase = y * row + zBase
       for (let x = 0; x < nx; x++) {
-        const cv = new Float32Array(8)
+        const xyzBase = x + yzBase
         let hasNeg = false, hasPos = false
         for (let c = 0; c < 8; c++) {
           const [dx, dy, dz] = CORNER_OFFSETS[c]!
-          const val = fieldValues[gridIndex(x + dx, y + dy, z + dz)]!
+          const val = fieldValues[xyzBase + dx + dy * row + dz * slice]!
           cv[c] = val
           if (val < isoLevel) hasNeg = true; else hasPos = true
         }
         if (!hasNeg || !hasPos) continue
 
-        for (const tet of CUBE_TETRAHEDRA) {
-          const v0 = cv[tet[0]]!, v1 = cv[tet[1]]!, v2 = cv[tet[2]]!, v3 = cv[tet[3]]!
-          const p0 = cornerPos(x, y, z, tet[0])
-          const p1 = cornerPos(x, y, z, tet[1])
-          const p2 = cornerPos(x, y, z, tet[2])
-          const p3 = cornerPos(x, y, z, tet[3])
+        for (let c = 0; c < 8; c++) {
+          const [dx, dy, dz] = CORNER_OFFSETS[c]!
+          cpX[c] = minX + (x + dx) * stepX
+          cpY[c] = minY + (y + dy) * stepY
+          cpZ[c] = minZ + (z + dz) * stepZ
+        }
 
-          const neg: number[] = []
-          const pos: number[] = []
-          if (v0 < isoLevel) neg.push(0); else pos.push(0)
-          if (v1 < isoLevel) neg.push(1); else pos.push(1)
-          if (v2 < isoLevel) neg.push(2); else pos.push(2)
-          if (v3 < isoLevel) neg.push(3); else pos.push(3)
-
-          if (neg.length === 0 || pos.length === 0) continue
-
-          const hint: [number, number, number] = [0, 0, 0]
-          for (const i of pos) {
-            const p = [p0, p1, p2, p3][i]!
-            hint[0] += p[0] / pos.length; hint[1] += p[1] / pos.length; hint[2] += p[2] / pos.length
-          }
-          for (const i of neg) {
-            const p = [p0, p1, p2, p3][i]!
-            hint[0] -= p[0] / neg.length; hint[1] -= p[1] / neg.length; hint[2] -= p[2] / neg.length
+        for (let ti = 0; ti < 6; ti++) {
+          const tet = CUBE_TETRAHEDRA[ti]!
+          let negLen = 0
+          let posLen = 0
+          for (let k = 0; k < 4; k++) {
+            const ci = tet[k]!
+            const val = cv[ci]!
+            vArr[k] = val
+            pX[k] = cpX[ci]!
+            pY[k] = cpY[ci]!
+            pZ[k] = cpZ[ci]!
+            if (val < isoLevel) neg[negLen++] = k
+            else pos[posLen++] = k
           }
 
-          const pArr = [p0, p1, p2, p3]
-          const vArr = [v0, v1, v2, v3]
+          if (negLen === 0 || posLen === 0) continue
 
-          if (neg.length === 1 && pos.length === 3) {
+          let hintX = 0, hintY = 0, hintZ = 0
+          const invPos = 1 / posLen
+          for (let k = 0; k < posLen; k++) {
+            const idx = pos[k]!
+            hintX += pX[idx]! * invPos
+            hintY += pY[idx]! * invPos
+            hintZ += pZ[idx]! * invPos
+          }
+          const invNeg = 1 / negLen
+          for (let k = 0; k < negLen; k++) {
+            const idx = neg[k]!
+            hintX -= pX[idx]! * invNeg
+            hintY -= pY[idx]! * invNeg
+            hintZ -= pZ[idx]! * invNeg
+          }
+
+          if (negLen === 1 && posLen === 3) {
             const a = neg[0]!
-            addTri(interp(pArr[a]!, vArr[a]!, pArr[pos[0]!]!, vArr[pos[0]!]!), interp(pArr[a]!, vArr[a]!, pArr[pos[1]!]!, vArr[pos[1]!]!), interp(pArr[a]!, vArr[a]!, pArr[pos[2]!]!, vArr[pos[2]!]!), hint)
-          } else if (neg.length === 3 && pos.length === 1) {
+            addTri(
+              interpInto(a, pos[0]!, q0),
+              interpInto(a, pos[1]!, q1),
+              interpInto(a, pos[2]!, q2),
+              hintX, hintY, hintZ
+            )
+          } else if (negLen === 3 && posLen === 1) {
             const a = pos[0]!
-            addTri(interp(pArr[a]!, vArr[a]!, pArr[neg[0]!]!, vArr[neg[0]!]!), interp(pArr[a]!, vArr[a]!, pArr[neg[1]!]!, vArr[neg[1]!]!), interp(pArr[a]!, vArr[a]!, pArr[neg[2]!]!, vArr[neg[2]!]!), hint)
-          } else if (neg.length === 2 && pos.length === 2) {
+            addTri(
+              interpInto(a, neg[0]!, q0),
+              interpInto(a, neg[1]!, q1),
+              interpInto(a, neg[2]!, q2),
+              hintX, hintY, hintZ
+            )
+          } else if (negLen === 2 && posLen === 2) {
             const a = neg[0]!, b = neg[1]!, c = pos[0]!, d = pos[1]!
-            const ac = interp(pArr[a]!, vArr[a]!, pArr[c]!, vArr[c]!)
-            const bc = interp(pArr[b]!, vArr[b]!, pArr[c]!, vArr[c]!)
-            const ad = interp(pArr[a]!, vArr[a]!, pArr[d]!, vArr[d]!)
-            const bd = interp(pArr[b]!, vArr[b]!, pArr[d]!, vArr[d]!)
-            addTri(ac, bc, bd, hint)
-            addTri(ac, bd, ad, hint)
+            const ac = interpInto(a, c, q0)
+            const bc = interpInto(b, c, q1)
+            const ad = interpInto(a, d, q2)
+            const bd = interpInto(b, d, q3)
+            addTri(ac, bc, bd, hintX, hintY, hintZ)
+            addTri(ac, bd, ad, hintX, hintY, hintZ)
           }
         }
       }

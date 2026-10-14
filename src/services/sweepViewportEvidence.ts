@@ -78,7 +78,10 @@ export function readSweepViewportEvidence(artifact:NativeGeometryArtifact|undefi
   const budget=validBound(evidence.boundaryErrorBudget)?evidence.boundaryErrorBudget:null
   const within=upper!==null&&budget!==null&&typeof evidence.boundaryErrorWithinBudget==='boolean'&&evidence.boundaryErrorWithinBudget===(upper<=budget)?evidence.boundaryErrorWithinBudget:null
   const certificate=evidence.boundaryCertificate
-  const completeBound=evidence.continuousBound===true&&certificate?.method==='retained-sweep-boundary-union'&&certificate.scope==='boundary-set-hausdorff'&&certificate.continuousBound===true&&upper!==null&&budget!==null&&certificate.errorUpper===upper&&certificate.budget===budget&&certificate.withinBudget===within&&within!==null
+  const unbudgeted=upper!==null&&evidence.boundaryErrorBudget===null&&evidence.boundaryErrorWithinBudget===null&&
+   certificate?.budget===null&&certificate.withinBudget===null&&certificate.reason==='no-authored-tolerance'
+  const budgetConsistent=budget!==null&&certificate?.budget===budget&&certificate.withinBudget===within&&within!==null
+  const completeBound=evidence.continuousBound===true&&certificate?.method==='retained-sweep-boundary-union'&&certificate.scope==='boundary-set-hausdorff'&&certificate.continuousBound===true&&upper!==null&&certificate.errorUpper===upper&&(budgetConsistent||unbudgeted)
   return {...readRetainedProfileViewportEvidence(evidence.profileSmoothness),nodeId:artifact.nodeId,solidGeometryCertified:evidence.volume.solidGeometryCertified,
    boundaryErrorUpper:upper,boundaryErrorBudget:budget,boundaryErrorWithinBudget:within,
    continuousBound:completeBound,

@@ -12,6 +12,7 @@ use nurbs_core::{
     progressive_miter::{self, Sweep},
     sweeps::filled_cap_error::{self, BoundaryCertificate, Premises},
 };
+pub mod annular;
 
 pub struct Request<'a> {
     pub loops: &'a [Vec<Curve>],
@@ -287,6 +288,8 @@ pub struct BoundaryBody {
     sharp: Vec<usize>,
     closed: bool,
     budget: f64,
+    caps_deferred: bool,
+    cap_probe_work: u64,
 }
 /// Conditional reconstruction from private constructor evidence. This report
 /// does not admit material validity or transfer ownership of its certificate.
@@ -414,53 +417,140 @@ impl BoundaryBody {
 
 enum ConstructionAttempt {
     Complete(BoundaryBody),
-    Refine { levels:Vec<progressive_miter::Report>, steps:usize, work:u64, reason:&'static str },
+    Refine {
+        levels: Vec<progressive_miter::Report>,
+        steps: usize,
+        work: u64,
+        reason: &'static str,
+    },
 }
 
 pub fn construct(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody> {
-    let mut initial=request.options.initial_steps;
-    let mut previous=Vec::new();
-    let mut spent=0_u64;
+    construct_impl(request, limits, false)
+}
+fn construct_source_for_annular(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody> {
+    construct_impl(request, limits, true)
+}
+fn construct_impl(
+    request: &Request<'_>,
+    limits: &Limits,
+    annular_caps: bool,
+) -> Result<BoundaryBody> {
+    let mut initial = request.options.initial_steps;
+    let mut previous = Vec::new();
+    let mut spent = 0_u64;
     loop {
         // Correction work remains caller-owned across rejected candidates.
         // Charge combined correction work conservatively to each supplied
         // allowance; no failed candidate starts a fresh work budget.
-        let remaining=|budget:Budget|->Result<Budget>{
-            let max_work=match budget.max_work {
-                Some(work) if work.is_finite() && work>=spent as f64=>Some(work-spent as f64),
-                Some(_)=>return Err(invalid("Progressive miter correction work exhausted during refinement")),
-                None=>None,
+        let remaining = |budget: Budget| -> Result<Budget> {
+            let max_work = match budget.max_work {
+                Some(work) if work.is_finite() && work >= spent as f64 => Some(work - spent as f64),
+                Some(_) => {
+                    return Err(invalid(
+                        "Progressive miter correction work exhausted during refinement",
+                    ));
+                }
+                None => None,
             };
-            Ok(Budget {max_work,..budget})
+            Ok(Budget { max_work, ..budget })
         };
-        let attempt=Request {loops:request.loops,points:request.points,scale:request.scale,twist:request.twist,
-            options:progressive_miter::Options {initial_steps:initial,..request.options},
-            affine:request.affine,frames:request.frames,guide:request.guide,
-            circle:request.circle.map(remaining).transpose()?,
-            caps:request.caps.as_ref().map(|cap|->Result<CapCorrection>{Ok(CapCorrection {budget:remaining(cap.budget)?,authored_frame:cap.authored_frame})}).transpose()?,
+        let attempt = Request {
+            loops: request.loops,
+            points: request.points,
+            scale: request.scale,
+            twist: request.twist,
+            options: progressive_miter::Options {
+                initial_steps: initial,
+                ..request.options
+            },
+            affine: request.affine,
+            frames: request.frames,
+            guide: request.guide,
+            circle: request.circle.map(remaining).transpose()?,
+            caps: request
+                .caps
+                .as_ref()
+                .map(|cap| -> Result<CapCorrection> {
+                    Ok(CapCorrection {
+                        budget: remaining(cap.budget)?,
+                        authored_frame: cap.authored_frame,
+                    })
+                })
+                .transpose()?,
         };
-        let attempt_limits=Limits {projection_exact_work:limits.projection_exact_work.saturating_sub(spent),..*limits};
-        match construct_attempt(&attempt,&attempt_limits,false,None)? {
-            ConstructionAttempt::Complete(mut body)=>{
+        let attempt_limits = Limits {
+            projection_exact_work: limits.projection_exact_work.saturating_sub(spent),
+            ..*limits
+        };
+        match construct_attempt(&attempt, &attempt_limits, false, None, annular_caps, false)? {
+            ConstructionAttempt::Complete(mut body) => {
                 previous.append(&mut body.levels);
-                body.levels=previous;
-                if let Some(correction)=&mut body.correction {correction.work=correction.work.checked_add(spent).ok_or_else(||invalid("Progressive miter correction work overflow"))?;}
+                body.levels = previous;
+                if let Some(correction) = &mut body.correction {
+                    correction.work = correction
+                        .work
+                        .checked_add(spent)
+                        .ok_or_else(|| invalid("Progressive miter correction work overflow"))?;
+                }
                 return Ok(body);
-            },
-            ConstructionAttempt::Refine {mut levels,steps,work,reason}=>{
-                let plan=sweep_miter_layout::plan(request.loops,request.points.len(),request.options.closed,
-                    request.options.initial_steps,request.options.max_steps)?;
-                if steps>=plan.max_steps {return Err(invalid(reason));}
-                if let Some(last)=levels.last_mut(){last.accepted=false;last.error_certificate_reason=Some("complete-boundary-refinement");}
+            }
+            ConstructionAttempt::Refine {
+                mut levels,
+                steps,
+                work,
+                reason,
+            } => {
+                let planner = if annular_caps {
+                    sweep_miter_layout::plan_annular
+                } else {
+                    sweep_miter_layout::plan
+                };
+                let plan = planner(
+                    request.loops,
+                    request.points.len(),
+                    request.options.closed,
+                    request.options.initial_steps,
+                    request.options.max_steps,
+                )?;
+                if steps >= plan.max_steps {
+                    return Err(invalid(reason));
+                }
+                if let Some(last) = levels.last_mut() {
+                    last.accepted = false;
+                    last.error_certificate_reason = Some("complete-boundary-refinement");
+                }
                 previous.append(&mut levels);
-                spent=spent.checked_add(work).ok_or_else(||invalid("Progressive miter correction work overflow"))?;
-                initial=(steps*2).min(plan.max_steps);
-            },
+                spent = spent
+                    .checked_add(work)
+                    .ok_or_else(|| invalid("Progressive miter correction work overflow"))?;
+                initial = (steps * 2).min(plan.max_steps);
+            }
         }
     }
 }
 
 pub fn construct_direct(request: &DirectRequest<'_>, limits: &Limits) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, false, false)
+}
+fn construct_direct_source_for_annular(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, true, false)
+}
+fn construct_direct_source_for_auto(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, true, true)
+}
+fn construct_direct_impl(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+    annular_caps: bool,
+    automatic_caps: bool,
+) -> Result<BoundaryBody> {
     let scalar = |value| Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],
@@ -493,16 +583,73 @@ pub fn construct_direct(request: &DirectRequest<'_>, limits: &Limits) -> Result<
         }),
     };
     if request.cap_endpoints.is_some() && request.caps.is_none() {
-        return Err(invalid("Direct endpoint selection requires explicit cap correction"));
+        return Err(invalid(
+            "Direct endpoint selection requires explicit cap correction",
+        ));
     }
-    match construct_attempt(&original, limits, true, request.cap_endpoints)? {
+    match construct_attempt(
+        &original,
+        limits,
+        true,
+        request.cap_endpoints,
+        annular_caps,
+        automatic_caps,
+    )? {
         ConstructionAttempt::Complete(body) => Ok(body),
         ConstructionAttempt::Refine { reason, .. } => Err(invalid(reason)),
     }
 }
 
-fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_endpoints: Option<[bool; 2]>) -> Result<ConstructionAttempt> {
-    let plan = sweep_miter_layout::plan(
+fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool, u64)> {
+    let mut work = 0;
+    for face in &model.faces[model.faces.len() - 2..] {
+        for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+            for use_ in &model.loops[wire].coedges {
+                let Some(proof) = nurbs_core::curve_surface_agreement::verify_exact(
+                    &model.edges[use_.edge].curve,
+                    &use_.pcurve,
+                    &face.surface,
+                    use_.reversed,
+                    max_work - work,
+                )?
+                else {
+                    return Ok((false, max_work));
+                };
+                if proof.work_used > max_work - work {
+                    return Err(invalid(
+                        "Cap identity probe exceeded its exact-work allowance",
+                    ));
+                }
+                work += proof.work_used;
+                if proof.outcome != cad_predicates::BezierIdentity::Equal {
+                    return Ok((false, work));
+                }
+            }
+        }
+    }
+    Ok((true, work))
+}
+fn construct_attempt(
+    request: &Request<'_>,
+    limits: &Limits,
+    direct: bool,
+    cap_endpoints: Option<[bool; 2]>,
+    annular_caps: bool,
+    automatic_caps: bool,
+) -> Result<ConstructionAttempt> {
+    // This private mode defers only the old terminal planar fillings. Wall
+    // correction, source correspondence and regularity remain mandatory. The
+    // owning annular constructor must derive both new filled-cap bounds before
+    // it can expose a complete boundary certificate.
+    let mut defer_annular_caps =
+        annular_caps && !request.options.closed && request.loops.len() == 2;
+    let mut cap_probe_work = 0;
+    let planner = if annular_caps {
+        sweep_miter_layout::plan_annular
+    } else {
+        sweep_miter_layout::plan
+    };
+    let plan = planner(
         request.loops,
         request.points.len(),
         request.options.closed,
@@ -513,7 +660,11 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
     let rings = request.loops.iter().map(Vec::len).collect::<Vec<_>>();
     let mut options = request.options;
     options.max_steps = plan.max_steps;
-    let constructor = if direct { Sweep::new_direct } else { Sweep::new };
+    let constructor = if direct {
+        Sweep::new_direct
+    } else {
+        Sweep::new
+    };
     let mut sweep = constructor(
         &profiles,
         request.points,
@@ -751,6 +902,11 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
         .as_ref()
         .and_then(|c| c.wall_displacement_upper)
         .unwrap_or(0.);
+    if automatic_caps && defer_annular_caps {
+        let (exact, used) = cap_boundaries_exact(&model, limits.cap_regions.max_exact_work)?;
+        cap_probe_work = used;
+        defer_annular_caps = !exact;
+    }
     let correspondence = sweep_retained_walls::inspect_correspondence(
         &model,
         &sections,
@@ -780,30 +936,41 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
         .zip(decomposition)
         .and_then(|(base, extra)| error_upper::add(base, extra));
     if correction.is_some() && !wall.is_some_and(|x| x <= options.max_deviation) {
-        let reason="Corrected progressive miter retained wall error exceeds max_deviation or is unproved";
+        let reason =
+            "Corrected progressive miter retained wall error exceeds max_deviation or is unproved";
         if wall.is_some() {
-            let steps=report.steps;
-            return Ok(ConstructionAttempt::Refine {levels,steps,work:correction.as_ref().map_or(0,|c|c.work),reason});
+            let steps = report.steps;
+            return Ok(ConstructionAttempt::Refine {
+                levels,
+                steps,
+                work: correction.as_ref().map_or(0, |c| c.work),
+                reason,
+            });
         }
         return Err(invalid(reason));
     }
-    let caps = if options.closed {
+    let caps = if options.closed || defer_annular_caps {
         None
     } else {
+        let mut cap_regions = limits.cap_regions;
+        cap_regions.max_exact_work -= cap_probe_work;
         let endpoints = [sections[0].clone(), sections.last().unwrap().clone()];
-        let exact = sweep_retained_caps::inspect(
-            &model,
-            &endpoints,
-            limits.cap_regions,
-            limits.cap_max_edges,
-        )?;
+        let exact =
+            sweep_retained_caps::inspect(&model, &endpoints, cap_regions, limits.cap_max_edges)?;
         let (regions, decomposition) = if exact.exact {
             (true, Some([0., 0.]))
         } else {
+            // An inconclusive exact audit has already spent part of the cap
+            // allowance. Approximate decomposition does not receive a new one.
+            let mut remaining = cap_regions;
+            remaining.max_exact_work = remaining
+                .max_exact_work
+                .checked_sub(exact.exact_work)
+                .ok_or_else(|| invalid("Retained cap audit exceeded its exact-work allowance"))?;
             let r = sweep_retained_decomposition::inspect_caps(
                 &model,
                 &endpoints,
-                limits.cap_regions,
+                remaining,
                 limits.max_products,
                 limits.cap_max_edges,
             )?;
@@ -848,9 +1015,13 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
     let boundary =
         filled_cap_error::compose_boundary(wall, caps, options.closed, Some(options.max_deviation));
     if boundary.within_budget == Some(false) {
-        let steps=report.steps;
-        return Ok(ConstructionAttempt::Refine {levels,steps,work:correction.as_ref().map_or(0,|c|c.work),
-            reason:"Progressive miter complete boundary error exceeds max_deviation"});
+        let steps = report.steps;
+        return Ok(ConstructionAttempt::Refine {
+            levels,
+            steps,
+            work: correction.as_ref().map_or(0, |c| c.work),
+            reason: "Progressive miter complete boundary error exceeds max_deviation",
+        });
     }
     let cap_faces = if options.closed {
         Vec::new()
@@ -859,14 +1030,21 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
     };
     let wall_charts = crate::sweep_retained_charts::inspect(&model, &cap_faces, limits.wall_cells)?;
     if correction.is_some() && !wall_charts.certified {
-        #[cfg(all(test,feature="codec"))]
-        if let Ok(path)=std::env::var("OSV_MITER_UNPROVED_MODEL") {
-            std::fs::write(path,value_codec::to_string(&model).unwrap()).unwrap();
+        #[cfg(all(test, feature = "codec"))]
+        if let Ok(path) = std::env::var("OSV_MITER_UNPROVED_MODEL") {
+            std::fs::write(path, value_codec::to_string(&model).unwrap()).unwrap();
         }
         #[cfg(test)]
-        eprintln!("Unproved corrected wall charts: cells={} unresolved={:?} proofs={:?}",
-            wall_charts.cells, wall_charts.unresolved_faces,
-            wall_charts.charts.iter().filter(|(_, r)| r.cells > 256 || !r.certified).collect::<Vec<_>>());
+        eprintln!(
+            "Unproved corrected wall charts: cells={} unresolved={:?} proofs={:?}",
+            wall_charts.cells,
+            wall_charts.unresolved_faces,
+            wall_charts
+                .charts
+                .iter()
+                .filter(|(_, r)| r.cells > 256 || !r.certified)
+                .collect::<Vec<_>>()
+        );
         return Err(invalid(
             "Corrected progressive miter retained wall regularity unproved",
         ));
@@ -890,6 +1068,8 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_e
         sharp,
         closed: options.closed,
         budget: options.max_deviation,
+        caps_deferred: defer_annular_caps,
+        cap_probe_work,
     }))
 }
 
@@ -898,22 +1078,55 @@ mod tests {
     use super::*;
     #[test]
     fn direct_explicit_circle_repair_preserves_original_bound_and_saved_profile_g2() {
-        let outer = nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.5).unwrap();
-        let hole = nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.2).unwrap().reverse().unwrap();
-        let loops = vec![vec![outer],vec![hole]];
-        let points = [[0.,0.,0.],[10.,0.,0.],[13.,9.,4e-12],[-2.,11.,1e-12],[1.,5.,-2e-12]];
-        let mut request = DirectRequest {loops:&loops,points:&points,normal:[0.,0.,1.],closed:true,
-            miter_limit:4.,max_deviation:0.01,circle:None,caps:None,cap_endpoints:None};
-        let raw = construct_direct(&request,&limits()).unwrap();
-        request.circle=Some(Budget {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)});
-        let corrected = construct_direct(&request,&limits()).unwrap();
-        assert_eq!(raw.source_sections(),corrected.source_sections());
-        assert!(corrected.correction().unwrap().wall_displacement_upper.unwrap()>0.);
+        let outer = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.2)
+            .unwrap()
+            .reverse()
+            .unwrap();
+        let loops = vec![vec![outer], vec![hole]];
+        let points = [
+            [0., 0., 0.],
+            [10., 0., 0.],
+            [13., 9., 4e-12],
+            [-2., 11., 1e-12],
+            [1., 5., -2e-12],
+        ];
+        let mut request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [0., 0., 1.],
+            closed: true,
+            miter_limit: 4.,
+            max_deviation: 0.01,
+            circle: None,
+            caps: None,
+            cap_endpoints: None,
+        };
+        let raw = construct_direct(&request, &limits()).unwrap();
+        request.circle = Some(Budget {
+            quantum: 2_f64.powi(-40),
+            tolerance: 1e-9,
+            max_work: Some(1000000.),
+        });
+        let corrected = construct_direct(&request, &limits()).unwrap();
+        assert_eq!(raw.source_sections(), corrected.source_sections());
+        assert!(
+            corrected
+                .correction()
+                .unwrap()
+                .wall_displacement_upper
+                .unwrap()
+                > 0.
+        );
         assert!(corrected.complete_boundary().is_some());
-        let smooth=crate::sweep_smoothness::inspect_profile(corrected.model(),&[],2_000_000).unwrap();
-        assert!(smooth.profile.g2_certified,"Saved corrected profile G2 unproved");
-        request.circle.as_mut().unwrap().max_work=Some(0.);
-        assert!(construct_direct(&request,&limits()).is_err());
+        let smooth =
+            crate::sweep_smoothness::inspect_profile(corrected.model(), &[], 2_000_000).unwrap();
+        assert!(
+            smooth.profile.g2_certified,
+            "Saved corrected profile G2 unproved"
+        );
+        request.circle.as_mut().unwrap().max_work = Some(0.);
+        assert!(construct_direct(&request, &limits()).is_err());
     }
     #[test]
     fn direct_owner_keeps_legacy_hollow_geometry_and_requires_filled_caps() {
@@ -999,7 +1212,8 @@ mod tests {
             closed: false,
             miter_limit: 2.,
             max_deviation: 0.01,
-            circle:None,caps: None,
+            circle: None,
+            caps: None,
             cap_endpoints: None,
         };
         let direct = nurbs_core::construct::curves::paths::miter_sections(
@@ -1022,92 +1236,399 @@ mod tests {
         );
     }
     #[test]
+    fn annular_mode_owns_original_spatial_hollow_and_all_logical_cap_faces() {
+        let loops = vec![
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
+        ];
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [1., 0., 0.],
+            closed: false,
+            miter_limit: 2.,
+            max_deviation: 0.01,
+            circle: None,
+            caps: None,
+            cap_endpoints: None,
+        };
+        let body = annular::construct_direct(&request, &limits()).unwrap();
+        assert!(body.source().complete_boundary().is_none());
+        assert!(
+            body.complete_boundary().is_some(),
+            "{:?}",
+            body.boundary().reason
+        );
+        assert_eq!(body.model().faces.len(), 32);
+        assert_eq!(
+            body.cap_face_groups(),
+            &[vec![24, 25, 26, 27], vec![28, 29, 30, 31]]
+        );
+        assert_eq!(body.cap_faces().len(), 8);
+        assert!(body.source().correction().is_none());
+        assert_eq!(body.model().vertices, body.source().model().vertices);
+        assert_eq!(body.model().faces[..24], body.source().model().faces[..24]);
+        assert!(body.filled_caps().unwrap().source_filling_covered);
+        let walls = crate::sweep_retained_charts::inspect(body.model(), &body.cap_faces(), 100_000)
+            .unwrap();
+        assert!(walls.certified);
+        assert_eq!(walls.charts.len(), 24);
+        let mut denied = limits();
+        denied.domain_exact_work = 1;
+        let unproved = annular::construct_direct(&request, &denied).unwrap();
+        assert!(unproved.complete_boundary().is_none());
+        assert!(unproved.boundary().wall_error_upper.is_some());
+    }
+    #[test]
+    fn annular_explicit_circle_correction_keeps_source_bound_and_retained_profile_g2() {
+        let loops = vec![
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
+        ];
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [1., 0., 0.],
+            closed: false,
+            miter_limit: 2.,
+            max_deviation: 0.01,
+            circle: Some(Budget {
+                quantum: 2_f64.powi(-40),
+                tolerance: 1e-9,
+                max_work: Some(1000000.),
+            }),
+            caps: None,
+            cap_endpoints: None,
+        };
+        let body = annular::construct_direct(&request, &limits()).unwrap();
+        let caps = body.filled_caps().unwrap();
+        assert!(
+            body.complete_boundary().is_some(),
+            "{:?}: {:?}; {}",
+            body.boundary().reason,
+            body.boundary().error_upper,
+            caps.reason
+        );
+        assert!(
+            caps.filled_cap_error_upper
+                .unwrap()
+                .iter()
+                .all(|&b| b < 1e-9)
+        );
+        assert!(
+            body.source()
+                .correction()
+                .unwrap()
+                .wall_displacement_upper
+                .unwrap()
+                < 1e-9
+        );
+        let smooth = body.inspect_smoothness(2_000_000).unwrap();
+        assert!(
+            smooth.walls.profile.g1_certified && smooth.walls.profile.g2_certified,
+            "Retained corrected wall G1/G2 is unproved"
+        );
+        assert_eq!(smooth.walls.cap_continuity, "C0");
+        assert_eq!(smooth.cap_seams.len(), 2);
+        assert!(
+            smooth
+                .cap_seams
+                .iter()
+                .all(|r| r.g1_certified && r.g2_certified),
+            "Retained internal cap G1/G2 is unproved"
+        );
+        assert!(smooth.exact_work <= 2_000_000);
+        assert_eq!(
+            smooth.cap_seams[0].max_work,
+            2_000_000 - smooth.walls.total_exact_work
+        );
+        assert_eq!(
+            smooth.cap_seams[1].max_work,
+            smooth.cap_seams[0].max_work - smooth.cap_seams[0].exact_work
+        );
+        let short = body.inspect_smoothness(smooth.exact_work - 1).unwrap();
+        assert!(short.exact_work <= smooth.exact_work - 1);
+        assert!(
+            !short.walls.profile.g2_certified || short.cap_seams.iter().any(|r| !r.g2_certified)
+        );
+    }
+    #[test]
+    fn annular_source_caps_cover_all_affine_authored_frame_guide_combinations() {
+        let loops = vec![
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
+        ];
+        let points = [[0., 0., 0.], [0., 0., 10.]];
+        let mut scale = scalar(1.);
+        scale.control_points[1][0] = 1.125;
+        let mut twist = scalar(0.);
+        twist.control_points[1][0] = 0.1;
+        let vector = |a: [f64; 3], b: [f64; 3]| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let axes = vector([2., 1., 1.], [2., 1.25, 1.]);
+        let center = vector([0.125, -0.25, 0.], [0.25, 0.125, 0.]);
+        let axis = vector([0., 0., 2.], [0., 0.5, 2.]);
+        let normal = vector([1., 0., 0.], [1., 0., 0.]);
+        let guide = vector([1., 0., 0.], [1., 0., 10.]);
+        for mask in 0..8 {
+            let request = Request {
+                loops: &loops,
+                points: &points,
+                scale: &scale,
+                twist: &twist,
+                options: progressive_miter::Options {
+                    normal: [1., 0., 0.],
+                    closed: false,
+                    miter_limit: 4.,
+                    initial_steps: 1,
+                    max_steps: 16,
+                    max_deviation: 0.25,
+                },
+                affine: (mask & 1 != 0).then_some((&axes, &center)),
+                frames: (mask & 2 != 0).then_some((&axis, &normal)),
+                guide: (mask & 4 != 0).then_some(&guide),
+                circle: None,
+                caps: None,
+            };
+            let body = annular::construct(&request, &limits()).unwrap();
+            assert!(
+                body.complete_boundary().is_some(),
+                "mask={mask}: {:?}",
+                body.boundary().reason
+            );
+            assert!(body.filled_caps().unwrap().within_budget, "mask={mask}");
+            assert_eq!(
+                body.cap_face_groups()
+                    .iter()
+                    .map(Vec::len)
+                    .collect::<Vec<_>>(),
+                vec![4, 4]
+            );
+            let count = body.source().model().faces.len() - 2;
+            assert_eq!(
+                body.model().faces[..count],
+                body.source().model().faces[..count]
+            );
+        }
+    }
+    #[test]
     fn direct_spatial_explicit_caps_keep_legacy_correction_and_complete_bound() {
         let loops = vec![
-            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
-            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
         ];
-        let points = [[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]];
-        let correction = || CapCorrection {budget:Budget {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)},authored_frame:false};
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let correction = || CapCorrection {
+            budget: Budget {
+                quantum: 2_f64.powi(-40),
+                tolerance: 1e-9,
+                max_work: Some(1000000.),
+            },
+            authored_frame: false,
+        };
         let direct = nurbs_core::construct::curves::paths::miter_sections(
-            &loops.iter().flatten().cloned().collect::<Vec<_>>(),&points,[1.,0.,0.],2.).unwrap();
-        let legacy_correction = miter_section_correction::correct(&direct,&points,false,None,Some(correction()),None).unwrap().unwrap();
-        let sections = sweep_miter_layout::partition(legacy_correction.sections.as_ref().unwrap(), &[1,1]).unwrap();
+            &loops.iter().flatten().cloned().collect::<Vec<_>>(),
+            &points,
+            [1., 0., 0.],
+            2.,
+        )
+        .unwrap();
+        let legacy_correction = miter_section_correction::correct(
+            &direct,
+            &points,
+            false,
+            None,
+            Some(correction()),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+        let sections =
+            sweep_miter_layout::partition(legacy_correction.sections.as_ref().unwrap(), &[1, 1])
+                .unwrap();
         let legacy = crate::rational_section_loft(&sections).unwrap();
-        let request = DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],closed:false,miter_limit:2.,max_deviation:0.01,circle:None,caps:Some(correction()),cap_endpoints:None};
-        let body = construct_direct(&request,&limits()).unwrap();
-        assert_eq!(body.model().0,legacy.0);
-        assert_eq!(body.source_sections(),direct);
-        assert_eq!(body.correction().unwrap().wall_displacement_upper,legacy_correction.wall_displacement_upper);
-        assert!(body.complete_boundary().is_some(),"Explicit corrected cap bound still unproved");
+        let request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [1., 0., 0.],
+            closed: false,
+            miter_limit: 2.,
+            max_deviation: 0.01,
+            circle: None,
+            caps: Some(correction()),
+            cap_endpoints: None,
+        };
+        let body = construct_direct(&request, &limits()).unwrap();
+        assert_eq!(body.model().0, legacy.0);
+        assert_eq!(body.source_sections(), direct);
+        assert_eq!(
+            body.correction().unwrap().wall_displacement_upper,
+            legacy_correction.wall_displacement_upper
+        );
+        assert!(
+            body.complete_boundary().is_some(),
+            "Explicit corrected cap bound still unproved"
+        );
         assert!(body.boundary().filled_cap_error_upper.is_some());
-        let mut denied=request;
-        denied.caps.as_mut().unwrap().budget.max_work=Some(0.);
-        assert!(construct_direct(&denied,&limits()).is_err());
+        let mut denied = request;
+        denied.caps.as_mut().unwrap().budget.max_work = Some(0.);
+        assert!(construct_direct(&denied, &limits()).is_err());
     }
     #[test]
     fn direct_owned_affine_preserves_raw_legacy_models_and_bounds_filled_caps() {
-        let quarters = |r:f64| {
-            [ [[r,0.],[r,r],[0.,r]], [[0.,r],[-r,r],[-r,0.]],
-              [[-r,0.],[-r,-r],[0.,-r]], [[0.,-r],[r,-r],[r,0.]] ]
-                .map(|p|Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-                    control_points:p.map(|[x,y]|vec![x,y,0.]).to_vec(),
-                    weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false}).to_vec()
+        let quarters = |r: f64| {
+            [
+                [[r, 0.], [r, r], [0., r]],
+                [[0., r], [-r, r], [-r, 0.]],
+                [[-r, 0.], [-r, -r], [0., -r]],
+                [[0., -r], [r, -r], [r, 0.]],
+            ]
+            .map(|p| Curve {
+                degree: 2,
+                knots: vec![0., 0., 0., 1., 1., 1.],
+                control_points: p.map(|[x, y]| vec![x, y, 0.]).to_vec(),
+                weights: vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.],
+                periodic: false,
+            })
+            .to_vec()
         };
         let mut hole = quarters(0.25);
         hole.reverse();
-        for c in &mut hole {c.control_points.reverse();c.weights.reverse();}
+        for c in &mut hole {
+            c.control_points.reverse();
+            c.weights.reverse();
+        }
         let examples = [
-            vec![vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
-                vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()]],
-            vec![quarters(0.5),hole],
+            vec![
+                vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+                vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
+            ],
+            vec![quarters(0.5), hole],
         ];
-        let matrix=[[1.,0.,0.,0.],[0.,1.,0.,0.],[1.,1.,1.,0.],[0.,0.,0.,1.]];
+        let matrix = [
+            [1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [1., 1., 1., 0.],
+            [0., 0., 0., 1.],
+        ];
         for loops in examples {
-            let points=[[0.,0.,0.],[0.,0.,10.]];
-            let source=construct_direct(&DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],
-                closed:false,miter_limit:2.,max_deviation:0.01,circle:None,caps:None,cap_endpoints:None},&limits()).unwrap();
+            let points = [[0., 0., 0.], [0., 0., 10.]];
+            let source = construct_direct(
+                &DirectRequest {
+                    loops: &loops,
+                    points: &points,
+                    normal: [1., 0., 0.],
+                    closed: false,
+                    miter_limit: 2.,
+                    max_deviation: 0.01,
+                    circle: None,
+                    caps: None,
+                    cap_endpoints: None,
+                },
+                &limits(),
+            )
+            .unwrap();
             assert!(source.complete_boundary().is_some());
-            let expected=crate::transform::affine(source.model(),matrix).unwrap();
-            let placed=source.place(matrix,2_f64.powi(-40),100000,Some(0.01)).unwrap();
-            let boundary=placed.boundary.unwrap();
+            let expected = crate::transform::affine(source.model(), matrix).unwrap();
+            let placed = source
+                .place(matrix, 2_f64.powi(-40), 100000, Some(0.01))
+                .unwrap();
+            let boundary = placed.boundary.unwrap();
             assert!(boundary.continuous_bound);
-            assert_eq!(boundary.within_budget,Some(true));
+            assert_eq!(boundary.within_budget, Some(true));
             assert!(boundary.filled_cap_error_upper.is_some());
-            assert_eq!(placed.placement.unwrap().model.unwrap().0,expected.0,
-                "Affine certificate changed the raw legacy geometry");
-            assert!(source.place(matrix,2_f64.powi(-40),0,Some(0.01)).unwrap().boundary.is_none());
-            let denied=source.place(matrix,2_f64.powi(-40),100000,Some(0.)).unwrap();
+            assert_eq!(
+                placed.placement.unwrap().model.unwrap().0,
+                expected.0,
+                "Affine certificate changed the raw legacy geometry"
+            );
+            assert!(
+                source
+                    .place(matrix, 2_f64.powi(-40), 0, Some(0.01))
+                    .unwrap()
+                    .boundary
+                    .is_none()
+            );
+            let denied = source
+                .place(matrix, 2_f64.powi(-40), 100000, Some(0.))
+                .unwrap();
             assert!(denied.placement.unwrap().model.is_none());
         }
     }
     #[test]
     fn selected_end_cap_owns_the_original_external_correction_without_touching_start() {
-        use nurbs_core::sweep_section_projection::{Correction,Target};
-        let loops=vec![vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
-            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()]];
-        let points=[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]];
-        let direct=nurbs_core::construct::curves::paths::miter_sections(
-            &loops.iter().flatten().cloned().collect::<Vec<_>>(),&points,[1.,0.,0.],2.).unwrap();
-        let legacy=nurbs_core::sweep_section_projection::project(&direct,
-            &[Correction {section:direct.len()-1,quantum:2_f64.powi(-40),tolerance:1e-9,
-                target:Target::Plane {axis:1,coefficients:[0.,-0.5],offset:17.5}}],Some(1000000.)).unwrap();
-        let sections=sweep_miter_layout::partition(legacy.sections.as_ref().unwrap(),&[1,1]).unwrap();
-        let expected=crate::rational_section_loft(&sections).unwrap();
-        let mut request=DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],closed:false,
-            miter_limit:2.,max_deviation:0.01,circle:None,caps:Some(CapCorrection {budget:Budget {
-                quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)},authored_frame:false}),
-            cap_endpoints:Some([false,true])};
-        let body=construct_direct(&request,&limits()).unwrap();
-        assert_eq!(body.model().0,expected.0);
-        assert_eq!(body.sections()[0],sweep_miter_layout::partition(&direct,&[1,1]).unwrap()[0]);
-        assert_eq!(body.correction().unwrap().work,legacy.work);
-        assert!(body.complete_boundary().is_some(),"Selected end cap complete bound unproved");
-        request.caps.as_mut().unwrap().budget.max_work=Some((legacy.work-1) as f64);
-        assert!(construct_direct(&request,&limits()).is_err());
-        request.caps.as_mut().unwrap().budget.max_work=Some(1000000.);
-        request.cap_endpoints=Some([false,false]);
-        assert!(construct_direct(&request,&limits()).is_err());
+        use nurbs_core::sweep_section_projection::{Correction, Target};
+        let loops = vec![
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap()],
+        ];
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let direct = nurbs_core::construct::curves::paths::miter_sections(
+            &loops.iter().flatten().cloned().collect::<Vec<_>>(),
+            &points,
+            [1., 0., 0.],
+            2.,
+        )
+        .unwrap();
+        let legacy = nurbs_core::sweep_section_projection::project(
+            &direct,
+            &[Correction {
+                section: direct.len() - 1,
+                quantum: 2_f64.powi(-40),
+                tolerance: 1e-9,
+                target: Target::Plane {
+                    axis: 1,
+                    coefficients: [0., -0.5],
+                    offset: 17.5,
+                },
+            }],
+            Some(1000000.),
+        )
+        .unwrap();
+        let sections =
+            sweep_miter_layout::partition(legacy.sections.as_ref().unwrap(), &[1, 1]).unwrap();
+        let expected = crate::rational_section_loft(&sections).unwrap();
+        let mut request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [1., 0., 0.],
+            closed: false,
+            miter_limit: 2.,
+            max_deviation: 0.01,
+            circle: None,
+            caps: Some(CapCorrection {
+                budget: Budget {
+                    quantum: 2_f64.powi(-40),
+                    tolerance: 1e-9,
+                    max_work: Some(1000000.),
+                },
+                authored_frame: false,
+            }),
+            cap_endpoints: Some([false, true]),
+        };
+        let body = construct_direct(&request, &limits()).unwrap();
+        assert_eq!(body.model().0, expected.0);
+        assert_eq!(
+            body.sections()[0],
+            sweep_miter_layout::partition(&direct, &[1, 1]).unwrap()[0]
+        );
+        assert_eq!(body.correction().unwrap().work, legacy.work);
+        assert!(
+            body.complete_boundary().is_some(),
+            "Selected end cap complete bound unproved"
+        );
+        request.caps.as_mut().unwrap().budget.max_work = Some((legacy.work - 1) as f64);
+        assert!(construct_direct(&request, &limits()).is_err());
+        request.caps.as_mut().unwrap().budget.max_work = Some(1000000.);
+        request.cap_endpoints = Some([false, false]);
+        assert!(construct_direct(&request, &limits()).is_err());
     }
     #[test]
     fn rational_lattice_preserves_basis_and_charges_bounded_atomic_displacement() {
@@ -1173,41 +1694,80 @@ mod tests {
     }
     #[test]
     fn complete_boundary_refines_after_cap_correction_and_keeps_shared_work() {
-        let outer=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap();
-        let hole=nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap();
-        let loops=vec![vec![outer],vec![hole]];
-        let before=loops.clone();
-        let mut scale=scalar(1.);scale.control_points[1][0]=1.25;
-        let mut twist=scalar(0.);twist.control_points[1][0]=std::f64::consts::PI/12.;
-        let vector=|a:[f64;3],b:[f64;3]|Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.,1.],periodic:false};
-        let axis=vector([0.,0.,2.],[0.,2.,2.]);
-        let normal=vector([3.,0.,0.],[3.,0.,0.]);
-        let axes=vector([2.,1.,1.],[2.,1.,1.]);
-        let center=vector([0.125,-0.25,0.],[0.125,-0.25,0.]);
-        let mut request=Request {loops:&loops,points:&[[0.,0.,0.],[0.,0.,10.]],scale:&scale,twist:&twist,
-            options:progressive_miter::Options {normal:[1.,0.,0.],closed:false,miter_limit:4.,initial_steps:1,max_steps:16,max_deviation:2.},
-            affine:Some((&axes,&center)),frames:Some((&axis,&normal)),guide:None,circle:None,
-            caps:Some(CapCorrection {budget:Budget {quantum:2_f64.powi(-40),tolerance:2.,max_work:Some(1000000.)},authored_frame:false})};
-        let body=construct(&request,&limits()).unwrap();
+        let outer = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap();
+        let loops = vec![vec![outer], vec![hole]];
+        let before = loops.clone();
+        let mut scale = scalar(1.);
+        scale.control_points[1][0] = 1.25;
+        let mut twist = scalar(0.);
+        twist.control_points[1][0] = std::f64::consts::PI / 12.;
+        let vector = |a: [f64; 3], b: [f64; 3]| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights: vec![1., 1.],
+            periodic: false,
+        };
+        let axis = vector([0., 0., 2.], [0., 2., 2.]);
+        let normal = vector([3., 0., 0.], [3., 0., 0.]);
+        let axes = vector([2., 1., 1.], [2., 1., 1.]);
+        let center = vector([0.125, -0.25, 0.], [0.125, -0.25, 0.]);
+        let mut request = Request {
+            loops: &loops,
+            points: &[[0., 0., 0.], [0., 0., 10.]],
+            scale: &scale,
+            twist: &twist,
+            options: progressive_miter::Options {
+                normal: [1., 0., 0.],
+                closed: false,
+                miter_limit: 4.,
+                initial_steps: 1,
+                max_steps: 16,
+                max_deviation: 2.,
+            },
+            affine: Some((&axes, &center)),
+            frames: Some((&axis, &normal)),
+            guide: None,
+            circle: None,
+            caps: Some(CapCorrection {
+                budget: Budget {
+                    quantum: 2_f64.powi(-40),
+                    tolerance: 2.,
+                    max_work: Some(1000000.),
+                },
+                authored_frame: false,
+            }),
+        };
+        let body = construct(&request, &limits()).unwrap();
         assert!(body.complete_boundary().is_some());
-        assert!(body.levels().len()>1);
+        assert!(body.levels().len() > 1);
         assert!(!body.levels()[0].accepted);
-        let rejected=body.levels().iter().find(|r|r.error_certificate_reason==Some("complete-boundary-refinement")).expect("The cap budget must cause additional refinement");
+        let rejected = body
+            .levels()
+            .iter()
+            .find(|r| r.error_certificate_reason == Some("complete-boundary-refinement"))
+            .expect("The cap budget must cause additional refinement");
         assert!(!rejected.accepted);
-        assert!(body.levels().last().unwrap().steps>rejected.steps);
+        assert!(body.levels().last().unwrap().steps > rejected.steps);
         assert!(body.levels().last().unwrap().accepted);
-        let work=body.correction().unwrap().work;
-        request.caps.as_mut().unwrap().budget.max_work=Some((work-1) as f64);
-        assert!(construct(&request,&limits()).is_err());
-        request.caps.as_mut().unwrap().budget.max_work=Some(1000000.);
-        request.options.max_steps=1;
-        assert!(construct(&request,&limits()).is_err());
-        assert_eq!(loops,before);
-        eprintln!("complete miter refinement levels={} last steps={} total correction work={work} error={:?}",body.levels().len(),body.levels().last().unwrap().steps,body.boundary().error_upper);
-        let guide=nurbs_core::primitives::line([1.,0.,0.],[1.,0.,10.]).unwrap();
-        request.guide=Some(&guide);
-        request.options.max_steps=16;
-        let guided=construct(&request,&limits()).unwrap();
+        let work = body.correction().unwrap().work;
+        request.caps.as_mut().unwrap().budget.max_work = Some((work - 1) as f64);
+        assert!(construct(&request, &limits()).is_err());
+        request.caps.as_mut().unwrap().budget.max_work = Some(1000000.);
+        request.options.max_steps = 1;
+        assert!(construct(&request, &limits()).is_err());
+        assert_eq!(loops, before);
+        eprintln!(
+            "complete miter refinement levels={} last steps={} total correction work={work} error={:?}",
+            body.levels().len(),
+            body.levels().last().unwrap().steps,
+            body.boundary().error_upper
+        );
+        let guide = nurbs_core::primitives::line([1., 0., 0.], [1., 0., 10.]).unwrap();
+        request.guide = Some(&guide);
+        request.options.max_steps = 16;
+        let guided = construct(&request, &limits()).unwrap();
         assert!(guided.complete_boundary().is_some());
     }
 

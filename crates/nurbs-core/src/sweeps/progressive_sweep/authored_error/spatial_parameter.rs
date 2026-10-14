@@ -545,19 +545,22 @@ mod tests {
                 .status,
             Status::Unresolved
         );
-        let request = value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale,"twist":twist,
-            "axis_scale":axes,"center_law":center,"normal":[1.,0.,0.],"orientation":"rmf","spacing":"parameter",
-            "initial_sections":129,"max_sections":129,"max_deviation":0.25,"preview_sections":129,"transport_steps":4096,"maxCells":100000,"maxProducts":1000000});
-        let public = crate::transport::dispatch(request).unwrap();
-        assert_eq!(public["continuousBound"], value_codec::json!(true));
-        assert_eq!(public["errorUpper"].as_f64(), Some(upper));
-        assert_eq!(public["solidCertified"], value_codec::json!(false));
-        assert_eq!(
-            public["scope"],
-            value_codec::json!(
-                "retained-patches-relative-to-original-spatial-rmf-parameter-transport"
-            )
-        );
+        #[cfg(feature = "transport")]
+        {
+            let request = value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale,"twist":twist,
+                "axis_scale":axes,"center_law":center,"normal":[1.,0.,0.],"orientation":"rmf","spacing":"parameter",
+                "initial_sections":129,"max_sections":129,"max_deviation":0.25,"preview_sections":129,"transport_steps":4096,"maxCells":100000,"maxProducts":1000000});
+            let public = crate::transport::dispatch(request).unwrap();
+            assert_eq!(public["continuousBound"], value_codec::json!(true));
+            assert_eq!(public["errorUpper"].as_f64(), Some(upper));
+            assert_eq!(public["solidCertified"], value_codec::json!(false));
+            assert_eq!(
+                public["scope"],
+                value_codec::json!(
+                    "retained-patches-relative-to-original-spatial-rmf-parameter-transport"
+                )
+            );
+        }
         // Independent Bernstein path, RK4 Bishop frame and fine polygonal
         // arc phase. Numerical comparisons validate, but never admit a body.
         let position = |u: f64| -> V {
