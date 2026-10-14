@@ -1,12 +1,10 @@
 import {transformRetainedSketch,offsetRetainedSketch,requirePolylineSketch} from './retainedSketchProfile'
 import {callGeometryRust} from './geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
-export type Vec3 = [number,number,number]
+import { dot3, cross3, unit3, type Vec3 } from './math3d'
+export { dot3, cross3, unit3, type Vec3 }
 export interface SketchPlane { origin:Vec3; u:Vec3; v:Vec3 }
 export interface AnalyticCurve { kind:'circle'|'arc'; center:Point2; radius:number; start:number; sweep:number }
-export const dot3=(a:number[],b:number[])=>a.reduce((s,v,i)=>s+v*b[i],0)
-export const cross3=(a:number[],b:number[]):Vec3=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
-export const unit3=(a:number[]):Vec3=>{const n=Math.hypot(...a);if(n<1e-9)throw Error('Zero direction');return a.map(v=>v/n) as Vec3}
 export const xyPlane=():SketchPlane=>({origin:[0,0,0],u:[1,0,0],v:[0,1,0]})
 export function worldPoint(p: number[], plane: SketchPlane = xyPlane()): Vec3 {
   if (!Array.isArray(p) || (p.length !== 2 && p.length !== 3)) {

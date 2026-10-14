@@ -9,6 +9,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
+import { dot3, cross3, normalizeVec3 } from './math3d'
 
 export interface SlicerOptions {
   /** Slicing plane normal vector (default: [0, 0, 1] for Z-slicing) */
@@ -45,13 +46,6 @@ export interface SlicerResult {
 
 import MESH_SLICER_WGSL from '../../crates/compute-core/shaders/mesh_slicer.wgsl?raw'
 export { MESH_SLICER_WGSL }
-
-
-function normalizeVec3(v: [number, number, number]): [number, number, number] {
-  const len = Math.hypot(v[0], v[1], v[2])
-  if (len < 1e-12) return [0, 0, 1]
-  return [v[0] / len, v[1] / len, v[2] / len]
-}
 
 function buildSlicerUniform(
   totalTriangles: number,
@@ -170,6 +164,24 @@ export async function runGpuMeshSlicer(
   return referenceMeshSlicer(vertices, indices, opts)
 }
 
+function interpEdge(
+  p0: [number, number, number],
+  s0: number,
+  p1: [number, number, number],
+  s1: number
+): [number, number, number] {
+  const denom = s1 - s0
+  if (Math.abs(denom) < 1e-9) {
+    return [(p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5, (p0[2] + p1[2]) * 0.5]
+  }
+  const t = Math.max(0, Math.min(1, -s0 / denom))
+  return [
+    p0[0] + t * (p1[0] - p0[0]),
+    p0[1] + t * (p1[1] - p0[1]),
+    p0[2] + t * (p1[2] - p0[2]),
+  ]
+}
+
 /**
  * Exact CPU reference implementation of multi-plane mesh slicing.
  */
@@ -189,36 +201,6 @@ export function referenceMeshSlicer(
   function getPos(vIdx: number): [number, number, number] {
     const base = vIdx * strideFloats + posOffset
     return [vertices[base + 0]!, vertices[base + 1]!, vertices[base + 2]!]
-  }
-
-  function dot3(a: [number, number, number], b: [number, number, number]): number {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-  }
-
-  function cross3(a: [number, number, number], b: [number, number, number]): [number, number, number] {
-    return [
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0],
-    ]
-  }
-
-  function interp(
-    p0: [number, number, number],
-    s0: number,
-    p1: [number, number, number],
-    s1: number
-  ): [number, number, number] {
-    const denom = s1 - s0
-    if (Math.abs(denom) < 1e-9) {
-      return [(p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5, (p0[2] + p1[2]) * 0.5]
-    }
-    const t = Math.max(0, Math.min(1, -s0 / denom))
-    return [
-      p0[0] + t * (p1[0] - p0[0]),
-      p0[1] + t * (p1[1] - p0[1]),
-      p0[2] + t * (p1[2] - p0[2]),
-    ]
   }
 
   const rawList: number[] = []
@@ -259,36 +241,48 @@ export function referenceMeshSlicer(
     const triN = cross3(e1, e2)
     const ccwDir = cross3(planeN, triN)
 
-    const pts: [number, number, number][] = [p0, p1, p2]
-
     for (let layer = lStart; layer <= lEnd; layer++) {
       const planeD = firstD + layer * layerStep
-      const sArr = [d0 - planeD, d1 - planeD, d2 - planeD]
+      const s0 = d0 - planeD
+      const s1 = d1 - planeD
+      const s2 = d2 - planeD
 
-      const neg: number[] = []
-      const pos: number[] = []
-      for (let k = 0; k < 3; k++) {
-        if (sArr[k]! < 0) neg.push(k)
-        else pos.push(k)
+      const n0 = s0 < 0
+      const n1 = s1 < 0
+      const n2 = s2 < 0
+      const negCount = (n0 ? 1 : 0) + (n1 ? 1 : 0) + (n2 ? 1 : 0)
+      if (negCount === 0 || negCount === 3) continue
+
+      let soloP: [number, number, number], soloS: number
+      let pair0P: [number, number, number], pair0S: number
+      let pair1P: [number, number, number], pair1S: number
+
+      const soloIsNeg = negCount === 1
+      if (n0 === soloIsNeg) {
+        soloP = p0; soloS = s0
+        pair0P = p1; pair0S = s1
+        pair1P = p2; pair1S = s2
+      } else if (n1 === soloIsNeg) {
+        soloP = p1; soloS = s1
+        pair0P = p0; pair0S = s0
+        pair1P = p2; pair1S = s2
+      } else {
+        soloP = p2; soloS = s2
+        pair0P = p0; pair0S = s0
+        pair1P = p1; pair1S = s1
       }
 
-      if (neg.length === 0 || pos.length === 0) continue
+      let q1 = interpEdge(soloP, soloS, pair0P, pair0S)
+      let q2 = interpEdge(soloP, soloS, pair1P, pair1S)
 
-      const solo = neg.length === 1 ? neg[0]! : pos[0]!
-      const pair0 = neg.length === 1 ? pos[0]! : neg[0]!
-      const pair1 = neg.length === 1 ? pos[1]! : neg[1]!
-
-      let q1 = interp(pts[solo]!, sArr[solo]!, pts[pair0]!, sArr[pair0]!)
-      let q2 = interp(pts[solo]!, sArr[solo]!, pts[pair1]!, sArr[pair1]!)
-
-      const segDir: [number, number, number] = [q2[0] - q1[0], q2[1] - q1[1], q2[2] - q1[2]]
-      if (dot3(ccwDir, segDir) < 0) {
+      const dx = q2[0] - q1[0], dy = q2[1] - q1[1], dz = q2[2] - q1[2]
+      if (ccwDir[0] * dx + ccwDir[1] * dy + ccwDir[2] * dz < 0) {
         const tmp = q1
         q1 = q2
         q2 = tmp
       }
 
-      const segLen = Math.hypot(q2[0] - q1[0], q2[1] - q1[1], q2[2] - q1[2])
+      const segLen = Math.hypot(dx, dy, dz)
       if (segLen < 1e-7) continue
 
       rawList.push(q1[0], q1[1], q1[2], layer, q2[0], q2[1], q2[2], t)
