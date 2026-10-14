@@ -65,6 +65,7 @@ pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
 pub mod profile_region;
+#[cfg(feature = "codec")]
 pub mod profile_intersections;
 pub mod shared_boundary;
 pub mod self_intersection;
@@ -1552,130 +1553,85 @@ pub mod offset_end_boundary;
 
 pub mod trimmed_face_recipe;
 
-pub mod source_contact_point;
-
-pub mod source_boundary_fragment;
-
-pub mod source_contour_proposal;
-
-pub mod source_region_restore;
-
-pub mod source_contour_winding;
-
-pub mod source_world_wire;
-
-mod source_line_chart_root;
-
-pub mod source_shared_edge;
-
-pub mod source_shared_edge_restore;
-
-pub mod source_edge_restriction;
-
-pub mod source_boundary_network;
-
-pub mod source_boundary_display;
-
-pub mod source_region_display;
-
-pub mod source_collapsed_boundary;
-
-pub mod source_shell_incidence;
-
-pub mod source_shell_restore;
-
-pub mod source_body_restore;
-
-pub mod source_face_contacts;
-
-pub mod source_allowed_contact;
-
-pub mod source_plane_fiber;
-
-pub mod source_pole_plane_image;
-
-pub mod source_pole_paired_contact;
-
-pub mod source_paired_fiber_contact;
-
-pub mod source_fiber_boundary;
-
-pub mod source_fiber_contact;
-
-pub mod source_affine_use;
-
-pub mod source_mapped_edge;
-
 pub mod trimmed_shell_recipe;
 
 pub mod offset_edge_supports;
 
-pub mod source_root_parameter;
-
-pub mod source_halfplane_side;
-
-pub mod source_interior_fiber;
-
-pub mod source_interior_boundary;
-
-pub mod source_interior_contact;
-
-pub mod source_vertex_links;
-
-pub mod source_vertex_contact;
-
-pub mod source_hull_separation;
-
-pub mod source_shell_geometry;
-
-pub mod source_volume;
-
-pub mod source_body_model;
-
-pub mod source_body_topology;
-
-pub mod source_seam_tangency;
-
 pub mod linear_canal;
 
+#[cfg(feature = "codec")]
 pub mod linear_canal_body;
 
+// Canonical source definitions, restore/replay and their exchange snapshots
+// use structured wire values. Raw Model geometry and interval proofs remain
+// independently available without this feature.
+#[cfg(feature = "codec")]
+macro_rules! source_definition_modules {
+    ($($vis:vis $name:ident;)*) => { $($vis mod $name;)* };
+}
+#[cfg(feature = "codec")]
+source_definition_modules! {
+    pub source_contact_point;
+    pub source_boundary_fragment;
+    pub source_contour_proposal;
+    pub source_region_restore;
+    pub source_contour_winding;
+    pub source_world_wire;
+    source_line_chart_root;
+    pub source_shared_edge;
+    pub source_shared_edge_restore;
+    pub source_edge_restriction;
+    pub source_boundary_network;
+    pub source_boundary_display;
+    pub source_region_display;
+    pub source_collapsed_boundary;
+    pub source_shell_incidence;
+    pub source_shell_restore;
+    pub source_body_restore;
+    pub source_face_contacts;
+    pub source_allowed_contact;
+    pub source_plane_fiber;
+    pub source_pole_plane_image;
+    pub source_pole_paired_contact;
+    pub source_paired_fiber_contact;
+    pub source_fiber_boundary;
+    pub source_fiber_contact;
+    pub source_affine_use;
+    pub source_mapped_edge;
+    pub source_root_parameter;
+    pub source_halfplane_side;
+    pub source_interior_fiber;
+    pub source_interior_boundary;
+    pub source_interior_contact;
+    pub source_vertex_links;
+    pub source_vertex_contact;
+    pub source_hull_separation;
+    pub source_shell_geometry;
+    pub source_volume;
+    pub source_body_model;
+    pub source_body_topology;
+    pub source_seam_tangency;
+    pub source_root_refinement;
+    pub source_exchange_endpoints;
+    pub source_exchange_trims;
+    pub source_exchange_step;
+    pub source_support_shell;
+    pub source_pole_planar_contact;
+    pub source_ruled_projection_contact;
+    pub source_planar_material_hull;
+    pub source_corner_plane_image;
+    pub source_face_gap;
+    pub source_material_segment;
+    pub source_material_chord;
+    pub source_material_wall;
+    pub source_wall_search;
+    pub source_wall_scan;
+    pub source_wall_coverage;
+    pub source_wall_self_coverage;
+    pub(crate) source_planar_flux;
+}
+
 pub mod source_inverse_shear;
-
-pub mod source_root_refinement;
-
-pub mod source_exchange_endpoints;
-
-pub mod source_exchange_trims;
-
-pub mod source_exchange_step;
-
-pub mod source_support_shell;
-
-pub mod source_pole_planar_contact;
-
-pub mod source_ruled_projection_contact;
-
-pub mod source_planar_material_hull;
-
-pub mod source_corner_plane_image;
-
-pub mod source_face_gap;
-
-pub mod source_material_segment;
-
-pub mod source_material_chord;
-
-pub mod source_material_wall;
-pub mod source_wall_search;
-
-pub mod source_wall_scan;
-
-pub mod source_wall_coverage;
-
-pub mod source_wall_self_coverage;
-
-pub(crate) mod source_planar_flux;
 
 pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
 

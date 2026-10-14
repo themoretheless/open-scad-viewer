@@ -23,7 +23,11 @@ The default `transport` feature exposes `dispatch(Value)` and `execute(&str)`
 through a separate JSON boundary and enables `codec`. Use
 `default-features = false` for native curves, surfaces, computations and typed
 reports without `value-codec`. Enable `codec` separately when only serialization
-is needed. Native runtime dependencies are `osv-math`, `geometry-ops`,
+is needed. APIs that accept parameter-map Values or return JSON certificate maps
+require `codec`, including mapped/cartesian guided loft reports and checked
+profile-sweep compatibility reports. Their algorithms remain native Rust; the
+typed base constructors, progressive transport and interval kernels are available
+without that feature. Native runtime dependencies are `osv-math`, `geometry-ops`,
 `brep-topology` and `cad-predicates`.
 
 `Curve::bounds()` and `Surface::bounds()` return native `bounds::Bounds` with

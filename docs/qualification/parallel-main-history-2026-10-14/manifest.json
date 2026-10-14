@@ -1,0 +1,344 @@
+{
+  "schema": 1,
+  "incomingCommit": "ec9499e08fc39bb6e9dde01b3d58c72b458bd76d",
+  "geometryCommit": "1cf1d2cdee0c182edd2b9ae220dda70f35c6393c",
+  "scope": "Immutable colliding historical bytes; original path semantics belong to the recorded commit, not the current source tree. No old qualification result is imported.",
+  "records": [
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v71.json",
+      "retainedSha256": "afea83264cf839ca5a5f505e17c63af9b65778a39441c1e8e127083d996c1e45",
+      "incomingSha256": "ddb5c40fa118d33927abdacf144a2a98e1e0dddc94853059e79c975664a063d9",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v71.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v72.json",
+      "retainedSha256": "ae2bc038b686a21c2667957070e568369a1ea5f24b4881c55b67ae301ef8853b",
+      "incomingSha256": "d2973bbda20913d0a019446044154ebddb116836f51446cd1d4fcb0e6db5ced0",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v72.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v73.json",
+      "retainedSha256": "d3caed4740cf7e6620bc01dd07d374ed1fde1fa360c4e835ad8249ab94be8eb9",
+      "incomingSha256": "689a61c60b1856e175ebde35702d4882701854f9a1ecb99fadab127f005211cd",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v73.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "retainedSha256": "286dad62e58e9983cb71424fc1941646bb2a5952e96babaaded0ef537e367603",
+      "incomingSha256": "ddc95fdac64ee12e35d0246506fc67e3f98e57f980c788fba38de58226edcf87",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v74.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v75.json",
+      "retainedSha256": "7ce2f253c31b6992624bad8418acc23e9f9825be624018403a80d86376896e8d",
+      "incomingSha256": "33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v75.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v76.json",
+      "retainedSha256": "eb4bb1b5be30cbda33452b314f17615e0d8f0e7326002cecedde9a82ed56f59d",
+      "incomingSha256": "231c48b1c5cba4a701b9a14ace79ad1714760699b53a29dd2f456a7dd00f427f",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v76.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v77.json",
+      "retainedSha256": "2ad5306adc87ebe9ba3e36f1774868f4a97b1e09edf10cbe304142083cb255ba",
+      "incomingSha256": "8679ae28d91d1e2500a2a917ea61b95420ffd93297e62db9fd5e1c465cdb5a87",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v77.json"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v78.json",
+      "retainedSha256": "fe3edf39d31d905ac18a7c49e79b86bac6fd241d38261b4907f77cdef63daa90",
+      "incomingSha256": "6fe6c20e32133d10215009b351af06a42b0c5048776d661807f4bad43261df11",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v78.json"
+    },
+    {
+      "path": "docs/qualification/g0-v71-g1-v88-refreeze-review.md",
+      "retainedSha256": "ad1206c5aea8e3bf369d0a6aa0447886c4a239cfb097bb3b2bff181b76ec3e73",
+      "incomingSha256": "bf250a45635cef09ebb3a1ba094b09eb5383afe1c76c45f331d03de0feb094aa",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v71-g1-v88-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v71-g1-v88-refreeze-status-v1.json",
+      "retainedSha256": "cb32d21072eed8f0b4cbc5b1f2636f657ce9dcd027f93ab01b5dca2dbba04b80",
+      "incomingSha256": "58bf225e2c41757758169c063d7213eb6a3c79657ad632f45fb0acd93d3b51ff",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v71-g1-v88-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v72-g1-v89-refreeze-review.md",
+      "retainedSha256": "d4996c78d9aec9b4262f98d93c34b45fa0c454a2dc1dbcb412b946626c7c6d03",
+      "incomingSha256": "b0936195677ab91d9d93e7504244d22c4f174087ac99552245ac0d8bd720e9f2",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v72-g1-v89-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v72-g1-v89-refreeze-status-v1.json",
+      "retainedSha256": "cc2105cb097546cbbf8a0fa243d6617867d07761965d14cd7fff218fcd7922f9",
+      "incomingSha256": "b0f42b1c43b8b2e5bbd1650961feeb9662b282d3e218edee56a5aa8e60c6b08b",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v72-g1-v89-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v73-g1-v90-refreeze-review.md",
+      "retainedSha256": "ee4c3d4452fd6c2b9792cd2e94d596f55999337ada48df7fd64cdc14e520180a",
+      "incomingSha256": "c6293f2e3fad2f4ee8c55cd584b03df67dbd0e287ce3b2c65df04505e47b8f36",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v73-g1-v90-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v73-g1-v90-refreeze-status-v1.json",
+      "retainedSha256": "fa8c0303c205a935638132db3d2091d8e40a0dd7be8baa96730629a795be91d4",
+      "incomingSha256": "1d83caaa3567eedc3f830a175d804726216e438acaa73515395489a32b31ed59",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v73-g1-v90-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v74-g1-v91-refreeze-review.md",
+      "retainedSha256": "b9c3225095f7ce8a6e2a7f13fff90caa1b33a2ebc768a72435b05e16fa1fbaea",
+      "incomingSha256": "50e1c3ef5251b9b3749d5654136929c9007ae5f16baef2676ea59cf087d66981",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v74-g1-v91-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json",
+      "retainedSha256": "a42ec2d40f42baeed644ae20ec0d4ede34e78f75fccb5d3d1eb5a44385ce8800",
+      "incomingSha256": "1c972ad0cac14a503f2e2c2737253aba0098b0c2d95b732d53547381617320cb",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v75-g1-v92-refreeze-review.md",
+      "retainedSha256": "499407c66219d51e0fd5ca1ca1990e00a55303a5df5059237596323e7b0eeb15",
+      "incomingSha256": "1ffc51a58b5af3a574d5048b30096b73d35d61fb4c1a5ec398354a4599c64adc",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v75-g1-v92-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json",
+      "retainedSha256": "f02a3516b6f4aa4dc86b04a935d6df8571e031cb7a7b8ca1e945bd2ef9d64c89",
+      "incomingSha256": "49ef52d5365a12f861e17e94d4a4c224822c6d544bb905764923dbb35fb88678",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v76-g1-v93-refreeze-review.md",
+      "retainedSha256": "031e20eb6c2402ab51bc989c7c3678ff71feb6cd91f06ab8b2ec0e5229b78b61",
+      "incomingSha256": "be2ec10fc351f8c9ac393fa95a9ec48c921a56eed15c2db759f39641ecaba8f2",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v76-g1-v93-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v76-g1-v93-refreeze-status-v1.json",
+      "retainedSha256": "931fd3411142ca1a87470eff6e7eb5d4c6f47a9b8f75e754be1cc96f71115a71",
+      "incomingSha256": "cfde26b92f1b77c002d2c332e8223e11c867913504cb0bf39a4bf2b2f85a4d40",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v76-g1-v93-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v77-g1-v94-refreeze-review.md",
+      "retainedSha256": "51b326e9c18bbb25be0f8347416f4bffbf668497f4d79113c7b36b4b1223afa4",
+      "incomingSha256": "0ef610fec7be8b769b387c6b8f80812a1f2cd85cfcaab2743d2814628b76965c",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v77-g1-v94-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v77-g1-v94-refreeze-status-v1.json",
+      "retainedSha256": "3863f007a04b6e6ff9f3c798e4a5fac369eecaadb451491ff9f1792a478321b1",
+      "incomingSha256": "26aefbcf2cb5bbd4fbbe1155127af44bbf23fad5050228bfcd46be5489fa0512",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v77-g1-v94-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/g0-v78-g1-v95-refreeze-review.md",
+      "retainedSha256": "cb40cabb7b91450e8b8a141df9ba8e6bff47f8a8d0ccf7dedfad07f4a02b8a74",
+      "incomingSha256": "f146d32a538ee5da56eeff342b3d1964ae006839837858f679a4120e5949a308",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v78-g1-v95-refreeze-review.md"
+    },
+    {
+      "path": "docs/qualification/g0-v78-g1-v95-refreeze-status-v1.json",
+      "retainedSha256": "fb9389b8bd19ff63b9fa55412ca24c9932203bd7ef5a56529ca9e6d7b00705f0",
+      "incomingSha256": "83f6d552153490a210a4fdfbe3b3b6111090f77f569490525eea3b88ae099139",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v78-g1-v95-refreeze-status-v1.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v54.json",
+      "retainedSha256": "d7ac6cc4705d42b77b1249588aa75c9b65716530e0c14a62ce93882b10fa1605",
+      "incomingSha256": "75c5eaa9402a76df508a221fe501d800bc9099ba0954ad1816468972b2753068",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v54.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v55.json",
+      "retainedSha256": "158c3b2dd00947907d6cc605232b86d7e31dc95a6d19ae1d39064f29ad9af807",
+      "incomingSha256": "e4723994b18b96328ca3929e4ac0444ff68c577b20fc700d68ff847fbccd0cac",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v55.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v56.json",
+      "retainedSha256": "c18bed375ca50228066c96f1c6e333a0d679ba56352000e12b292232e1fee557",
+      "incomingSha256": "7345d6bf28a1238217959158436bc098389f6a192021736d7ee1d0ae597ac1ee",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v56.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v57.json",
+      "retainedSha256": "6a2ab2be52f6d05b43c1e8bebf50090b5d7a85ea8c7d1a1ba9400dc4facf256a",
+      "incomingSha256": "c12e6ef04646c38ef5ebc5e4aada90f31e1aaa7dd537921ba5a5bc0c24a183d1",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v57.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v58.json",
+      "retainedSha256": "643613e46a50f9edfa47e848e0462ff02371c72a3ea75f4a2b77b49f5d8bbeb7",
+      "incomingSha256": "b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v58.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v59.json",
+      "retainedSha256": "3ca9041180bbc575bea157d9140b142cb3787bcad67d8e4ee1ffa9f79c65c028",
+      "incomingSha256": "9c904851cb4c78be338741f5f9181f43cbf834cbc985295665607142f61fd08e",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v59.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v60.json",
+      "retainedSha256": "e2c48f1dc0a4e6580f6f0c276c9b31e0029ebe19c81ad4e057a08112267082eb",
+      "incomingSha256": "c4448dba75d1972fde064312270872c1b3b74aac6b1388b1a04602d9426f8fb2",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v60.json"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v61.json",
+      "retainedSha256": "7864e96d52112f49f5fc23a7eb2472ea816937c628b6168bf89e82b2cf386a1a",
+      "incomingSha256": "321d1f140a474817a4e1cdb736065ba7d9b14d59c8e5e627f33aa4b3f5517174",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v61.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v88.json",
+      "retainedSha256": "a2c27a0954f1ab47b57073831f9f086480abfc7c3d8ec7d8bcc7dc65f357c7d3",
+      "incomingSha256": "a2dee0099486333ee79beaba23247fea469f46e2582b301e7a182e55730545f0",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v88.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v89.json",
+      "retainedSha256": "03588703a9dc40067b10d23f2e04c91412678dab1ced35b75e661746bc68b7b9",
+      "incomingSha256": "514119823a4093a2fe4a763959636a0d30bf966be0e601c7e3c40e963d81c33c",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v89.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v90.json",
+      "retainedSha256": "a23a7be63bbc01e24d8dc5cd250a4eeb8e2a0effba80a19baedf46dd6bb19ac0",
+      "incomingSha256": "bac57190084d38d5a54e35d328a4ab2c61852ec06331423501a55fc5386a9aff",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v90.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v91.json",
+      "retainedSha256": "9c7368b7807f6e19a6a4df16c78c08d048a28bc268e5925c72c2300dff67abad",
+      "incomingSha256": "91b850d9ec259ce1487f0a49bf2fa8c2dea09b5e33b27da26c483d21b0b4ad35",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v91.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v92.json",
+      "retainedSha256": "40625c5b0c058df5aea3a6591338625c70e1dc29171153ecb88daf8a0e699c2a",
+      "incomingSha256": "61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v92.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v93.json",
+      "retainedSha256": "62685332fc6e10c573e33ae0207885051f85c6947cde662e4eeeea71da2d6c16",
+      "incomingSha256": "4ac769063e85e53254dddb4e97cb82f112ec05b1c74404ef25ab71633e0ba695",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v93.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v94.json",
+      "retainedSha256": "e7fbf30be674019e32237432706249e1d23c373477707172d639e69ecac99cff",
+      "incomingSha256": "d55a2599844d72a957c700a8b83e36f09ad25cfc0628a2d8e587d578dcb250a4",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v94.json"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v95.json",
+      "retainedSha256": "dc3ec339b8fd9273afb81296b3d78e2c5c285ef2d0a8ddb3c3bc32d56a5ace39",
+      "incomingSha256": "b1c07be83d5fdebe4126264cc0ad295d643967cfb8dcf2e093baf89d138b3407",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v95.json"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v70-v87.mjs",
+      "retainedSha256": "ced956c1f7d2718d024193b62a75f511b54c05dfc50f8745f1ac8fca9571464b",
+      "incomingSha256": "1338db74ecb741549553722c5f7499de9b385edaf5a6bf04113cbc5bd0e2f8f6",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v70-v87.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v71-v88.mjs",
+      "retainedSha256": "e73c292c3d9589b754c96cdb0034111a7a93f974cee905e7c14c9293b0bc1b48",
+      "incomingSha256": "e765b32b2ef45321864cd0daf5c516a6c7828d217a1f5ba26f78fe9c7584f9f3",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v71-v88.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v72-v89.mjs",
+      "retainedSha256": "73f582b77457967fa72fe01449a0b950a0d6c2c6bce41f600ccf1dcfc7a15d1a",
+      "incomingSha256": "6732343c3a2de5595308fc55f2321bf91edf6655fde0251330fe85f2d8c334b2",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v72-v89.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v73-v90.mjs",
+      "retainedSha256": "13cf3fdfafe0f17bd35b99efd13fe30d108db7e1f58b4871fd3ade126da52f2e",
+      "incomingSha256": "76ebc178cc1fce7836b29b3a2b8eeea0341ff7e879b7c9c1c5b96afe4531df13",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v73-v90.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v74-v91.mjs",
+      "retainedSha256": "402809e6bee3f5a21ee1a5c372c1b724b5b806a4eed526f9bf6411abc08a83c1",
+      "incomingSha256": "e70a16fa5e1c95fecc915ac21f61a730a54fca7587866f789f410de9f78796b5",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v74-v91.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v75-v92.mjs",
+      "retainedSha256": "4101a60cde0875dfdba1c5d4d60449247543bd99a940d25585e68aa1c1e003c2",
+      "incomingSha256": "93ed8092fa58ad496afc5a55fa95ccb88f509d414ce548177f5d596a6e9dddca",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v75-v92.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v76-v93.mjs",
+      "retainedSha256": "813c473b06623e19a1095cf8d4637029488b5afa362df1663e172bfb1bbfee12",
+      "incomingSha256": "ed434d2a7416095758457a9a69af49d2c967f3fa5dec543c32ce27941ff3c633",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v76-v93.mjs"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v77-v94.mjs",
+      "retainedSha256": "c9a75aef90352f015c18412b8297a6fc70b2b33e1b587f7e15b60ef3eeb31334",
+      "incomingSha256": "4aea0c07ddd8e605608a5d7c65547b061b57332440aaefef4b2514eb968000e0",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v77-v94.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v54.mjs",
+      "retainedSha256": "0bdd549045021ef01c1041f8391332f8f6e4c2dfb56ca22a8272698bbd1af06d",
+      "incomingSha256": "ed96dfaddb7857ced2c0ff10d74df57e9a391f4b4a74c9c03d35e2b027802691",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v54.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v55.mjs",
+      "retainedSha256": "0950234376025dd085cd159f4dc1195ace1bf99cbd206a302aee7e2fa70cdeac",
+      "incomingSha256": "a878e90de34afa9831052c9af92ae6956bcf4abdf7cf0a4b54ccf70d8cb1dbbb",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v55.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v56.mjs",
+      "retainedSha256": "4ac04bdf62b31c1029059dc4bb164d9c05e1e9b2b5ad35b7939846f0ab5d84bc",
+      "incomingSha256": "0cdf2a9e5861d70931e15ef9e23fd0bd3e925bafaf7d26ee3d13c5a98e54de2a",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v56.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v57.mjs",
+      "retainedSha256": "b05aa51520cb5fa3257f86d962e4f16ceac05eca550473c0ce1abffe71a4bf57",
+      "incomingSha256": "b5053ca38c07eb47ddb6080a11fc5ceb769fdca1357cf2962f8ecbae140adc30",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v57.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v58.mjs",
+      "retainedSha256": "8e727f6427c78c36249cc73b2cc2e6abfe8b5c6c4948c98fcb80250dac9ee2db",
+      "incomingSha256": "d2db3fd1a4baa12aeeb2c0f41bf3afb6bd35456baf0cade0b481cc50c49e2a5a",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v58.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v59.mjs",
+      "retainedSha256": "c23c050660ee0c3d49c7017356c7908c9b440d1be47eab2506d1d5beb95831a4",
+      "incomingSha256": "8241a0f4b81d766bea18d8954c8806379f00711182221b45f2fb3dfd07a3e92f",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v59.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v60.mjs",
+      "retainedSha256": "6f5e9bad9f7ef63e94a24feaf0178feb6d57f24394cd034070dd06ef76f9500d",
+      "incomingSha256": "5aca16366d5e3197ad9850415f17bb42e47263cfc0b5e681b7ea8f8d42ffe61b",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v60.mjs"
+    },
+    {
+      "path": "scripts/release-own-rust-v61.mjs",
+      "retainedSha256": "32afc942401fdf4612832639a0fafc39ad7faf686f6d50b40c342d3e375699c0",
+      "incomingSha256": "6c33ef3489cf1b72e06c4f770de83090768fe669b6a17449d0fbafaf2ac3bd2f",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v61.mjs"
+    }
+  ]
+}

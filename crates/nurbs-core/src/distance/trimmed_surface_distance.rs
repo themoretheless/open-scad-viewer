@@ -1,7 +1,7 @@
 //! Distance over UV-trimmed surface images. Only proven outside cells are
 //! removed, and only proven inside points may supply an upper distance bound.
 use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};
-use crate::distance_bounds::{Interval, box_distance};
+use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::surface_distance::{Patch, Witness, at, patch_lower, patches};
 use crate::{
     Result, check, resource,
@@ -85,9 +85,6 @@ impl Part {
 struct Cell {
     parts: [Part; 2],
 }
-fn midpoint([lo, hi]: [f64; 2]) -> f64 {
-    lo * 0.5 + hi * 0.5
-}
 struct Sample {
     raw: [f64; 2],
     parameters: [f64; 2],
@@ -107,7 +104,7 @@ fn sample_pair(
         let values = |lo: f64, hi: f64| {
             [
                 lo * 0.875 + hi * 0.125,
-                midpoint([lo, hi]),
+                midpoint(lo, hi),
                 lo * 0.125 + hi * 0.875,
             ]
         };
@@ -254,9 +251,9 @@ impl Search for TrimmedSearch<'_> {
         let mid = if selected.location == Location::Unresolved {
             self.domains.regions[side]
                 .split_hint(selected.patch.domain, axis)
-                .unwrap_or_else(|| midpoint([lo, hi]))
+                .unwrap_or_else(|| midpoint(lo, hi))
         } else {
-            midpoint([lo, hi])
+            midpoint(lo, hi)
         };
         let mut children = [None, None];
         for (i, range) in [[lo, mid], [mid, hi]].into_iter().enumerate() {

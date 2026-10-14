@@ -1,7 +1,7 @@
 //! Exact quadratic separator signs on original rational Bezier UV curves.
 //! The proposed functional is cross(T-J,P-J)-beta*dot(T-J,P-J)^2.
 use crate::{
-    Algebra, AuthoredScalar, Expansion, InputError, LeafRef, PredicateContext, Reason, Sign,
+    Algebra, AuthoredScalar, InputError, LeafRef, PredicateContext, Reason, Sign,
     exact_inputs,
 };
 pub struct Decision {

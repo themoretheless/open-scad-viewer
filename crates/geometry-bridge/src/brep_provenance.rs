@@ -11,9 +11,7 @@ use super::{Result, Value};
 use std::collections::HashSet;
 use value_codec::Number;
 
-fn invalid(message: &str) -> super::Error {
-    super::Error::new("BREP_SEMANTIC_CONTRACT", message)
-}
+use crate::semantic_contract_error as invalid;
 
 fn exact(value: &Value, keys: &[&str]) -> Result<()> {
     let object = value

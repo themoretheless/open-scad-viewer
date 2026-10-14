@@ -22,6 +22,7 @@ pub mod boundary_certificates {
         cap_endpoint_certificate as endpoint, cap_projection_certificate as projection};
 }
 mod law;
+#[cfg(feature = "codec")]
 mod serialization;
 use crate::{Result, check, core::vec3_ext::norm, curve::Curve, foundation::guards::{Budget, require_finite_point}};
 use law::{law, scalar_bounds, validate_law};

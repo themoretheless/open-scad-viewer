@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useEditorFormatting } from './composables/useEditorFormatting'
+import { useEditorResize } from './composables/useEditorResize'
 import VrControls from './components/VrControls.vue'
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
@@ -10,7 +12,7 @@ import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBo
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
@@ -18,6 +20,9 @@ const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGa
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
+import { APP_STRINGS as L, type Language } from './i18n/appStrings'
+import { useAppearance } from './composables/useAppearance'
+import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
@@ -67,13 +72,7 @@ import {
 import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
-import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
-import {
-  findLiteralMatches,
-  replaceAllLiteral,
-  replaceExpectedMatch,
-  wrappedMatchIndex,
-} from './services/textSearch'
+import { nextRovingIndex } from './services/rovingFocus'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
@@ -84,8 +83,6 @@ import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } fro
 import {
   setStorageFailureHandler,
   storageGet,
-  storageGetEnum,
-  storageGetJSON,
   storageSet,
   storageSetJSON,
 } from './services/safeStorage'
@@ -106,15 +103,7 @@ import {
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
 import { encodeWorkspaceShare } from './services/workspaceShare'
 import { WebGPURenderer } from './services/webgpuRenderer'
-import { customizeTokens, normalizeHex } from './services/themeCustomization'
-import {
-  assertThemeCatalog,
-  resolveTheme,
-  themeCanvasColor,
-  THEME_CATALOG,
-  THEME_SELECTIONS,
-  type ThemeSelection,
-} from './services/themePreferences'
+import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
 import type {
   DisplayMode,
   DistanceMeasurement,
@@ -126,8 +115,8 @@ import type {
   StandardView,
 } from './services/rendererContracts'
 import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
-
-type Language = 'ru' | 'en'
+import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, STORAGE_NOTICE_THROTTLE_MS, buildSources, downloadBlob, replaceSharedRecoveryHash, hexToRgb, lineAndColumn, readCommandMru, sanitizeFileName } from './appHelpers'
+import type { DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
@@ -139,152 +128,17 @@ const props = defineProps<{
   workspacePersistence: BrowserWorkspacePersistence
 }>()
 
-const L: Record<Language, Record<string, string>> = {
-  ru: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Настройки', customBase: 'Основной цвет', customAccent: 'Акцентный цвет', customReset: 'Сбросить цвета',
-    render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
-    basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
-    open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
-    exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
-    convertFile: 'Конвертировать…', convertFileHelp: 'Конвертировать файл STL / OBJ / PLY / OFF / AMF / 3MF в выбранный формат', converted: 'Файл конвертирован', exportFormat: 'Формат экспорта',
-    noParameters: 'Добавьте верхнеуровневые переменные; диапазон слайдера: // [min:step:max]',
-    openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
-    meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
-    hint: 'Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
-    noGpu: 'WebGPU недоступен: редактор, сборка и экспорт работают, интерактивная 3D-сцена отключена.',
-    backendWebGpu: 'WebGPU · интерактивный', backendHeadless: 'CPU · без 3D', transparencySorted: 'прозрачность по объектам',
-    initializingViewport: 'Запускаем WebGPU…', retryRenderer: 'Повторить запуск 3D',
-    find: 'Найти', replace: 'Заменить', replaceAll: 'Заменить все', matchCase: 'Учитывать регистр',
-    previousMatch: 'Предыдущее совпадение', nextMatch: 'Следующее совпадение', closeSearch: 'Закрыть поиск',
-    noMatches: 'Нет совпадений', tooManyMatches: 'Слишком много совпадений — уточните запрос',
-    theme: 'Тема', systemTheme: 'Как в системе', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
-    language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
-    fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
-    grid: 'Сетка', gridStep: 'Шаг сетки', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
-    left: 'Слева', right: 'Справа', top: 'Сверху', bottom: 'Снизу',
-    compiling: 'Собираем геометрию…', stale: 'Показан предыдущий результат', ready: 'Готово',
-    failed: 'Ошибка сборки',
-    preview: 'Быстрый preview', full: 'Точная сборка', exported: 'Геометрия экспортирована',
-    copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
-    opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
-    workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
-    workerRestarted: 'Сборка не отвечала 30 секунд — повторяем попытку',
-    cancelBuild: 'Отменить сборку', buildCancelled: 'Сборка отменена',
-    buildTimeout: 'Сборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.',
-    storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
-    format: 'Форматировать', saveBrowser: 'Сохранить в браузере', saveBrowserHelp: 'Сохранить текущий код в IndexedDB, заменив сохранённый черновик', savedBrowser: 'Сохранено в IndexedDB', failedBrowser: 'Не удалось сохранить в IndexedDB', unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
-    storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
-    gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
-    gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
-    commands: 'Команды', commandHelp: 'Поиск действий', shortcuts: 'Горячие клавиши', display: 'Отображение',
-    shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
-    shadingPhong: 'Затенение: Phong', shadingPbr: 'Затенение: PBR', shadingMatcap: 'Затенение: Matcap',
-    shadingToon: 'Затенение: Toon', shadingUnlit: 'Затенение: Unlit',
-    renderThemeDefault: 'Тема рендера: стандартная', renderThemeDarkContrast: 'Тема рендера: тёмный контраст', renderThemeLight: 'Тема рендера: светлая',
-    selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
-    unisolate: 'Показать всё', deselect: 'Снять выбор',
-    scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
-    selectionMode: 'Режим выбора', sidebar: 'Боковая панель', closeSidebar: 'Закрыть боковую панель', measure: 'Измерить расстояние',
-    cancelMeasure: 'Отменить измерение', flipSection: 'Перевернуть сечение', hideSelected: 'Скрыть выбранное', cycleSelectionMode: 'Следующий режим выбора',
-    section: 'Плоскость сканирования', scanPlane: 'Срез', hidden: 'Скрыт',
-    sourceStale: 'Сначала дождитесь сборки текущего исходника',
-    needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
-    needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
-    buildInProgress: 'Дождитесь завершения текущей сборки',
-    depthCandidate: 'цель в глубине',
-    export: 'Экспорт', exportTitle: 'Экспорт модели', download: 'Скачать', cancel: 'Отмена', more: 'Ещё', close: 'Закрыть',
-    svg: 'SVG ↔ 3D', photo: '3D по фотографиям', perf: 'Замеры сборки', modelTools: 'Инструменты моделирования',
-    generators: 'Генераторы', codeToSolid: 'Перенести сцену в Solid', codeToMesh: 'Перенести сцену в Mesh', fileMenu: 'Файл', forPrinting: 'печать', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Черновик сохранён в браузере', exportScope: 'Экспортируется вся сцена одним телом', renderShortcut: 'Рендер',
+const {
+  lang, themeSelection, customAccent, customBase, effectiveTokens, isDark,
+  setCustomColor, effectiveCanvasColor, resetCustomColors,
+  toggleLang, toggleTheme, applyPreferences, attachSystemTheme, detachSystemTheme,
+} = useAppearance({
+  onApplied(canvasColor) {
+    renderer?.setBackgroundColor(canvasColor)
+    // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
+    renderer?.setTheme(renderThemeId.value)
   },
-  en: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Settings', customBase: 'Base color', customAccent: 'Accent color', customReset: 'Reset colors',
-    render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
-    basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
-    open: 'Open', save: 'Save', share: 'Share',
-    exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
-    convertFile: 'Convert…', convertFileHelp: 'Convert an STL / OBJ / PLY / OFF / AMF / 3MF file to the selected export format', converted: 'File converted', exportFormat: 'Export format',
-    noParameters: 'Add top-level variables; slider metadata: // [min:step:max]',
-    openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
-    meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
-    hint: 'Click: select · repeat click: cycle deeper · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
-    noGpu: 'WebGPU is unavailable: editing, builds, and export still work; the interactive 3D viewport is disabled.',
-    backendWebGpu: 'WebGPU · interactive', backendHeadless: 'CPU · no 3D', transparencySorted: 'object-sorted transparency',
-    initializingViewport: 'Starting WebGPU…', retryRenderer: 'Retry 3D viewport',
-    find: 'Find', replace: 'Replace', replaceAll: 'Replace all', matchCase: 'Match case',
-    previousMatch: 'Previous match', nextMatch: 'Next match', closeSearch: 'Close search',
-    noMatches: 'No matches', tooManyMatches: 'Too many matches — refine the query',
-    theme: 'Theme', systemTheme: 'System', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
-    language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
-    fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
-    grid: 'Grid', gridStep: 'Grid step', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
-    left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom',
-    compiling: 'Building geometry…', stale: 'Showing the previous result', ready: 'Ready',
-    failed: 'Build failed',
-    preview: 'Fast preview', full: 'Full build', exported: 'Geometry exported',
-    copied: 'Link copied', copyFailed: 'Link added to the address bar',
-    opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
-    workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
-    workerRestarted: 'Build was unresponsive for 30 seconds — retrying',
-    cancelBuild: 'Cancel build', buildCancelled: 'Build cancelled',
-    buildTimeout: 'Build was unresponsive for another 30 seconds. Edit the model or build again.',
-    storageFailed: 'Could not save data: browser storage is unavailable or full',
-    format: 'Format', saveBrowser: 'Save in browser', saveBrowserHelp: 'Save current code to IndexedDB, replacing the saved draft', savedBrowser: 'Saved to IndexedDB', failedBrowser: 'Could not save to IndexedDB', unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
-    storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
-    gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
-    gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
-    commands: 'Commands', commandHelp: 'Search actions', shortcuts: 'Keyboard shortcuts', display: 'Display',
-    shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
-    shadingPhong: 'Shading: Phong', shadingPbr: 'Shading: PBR', shadingMatcap: 'Shading: Matcap',
-    shadingToon: 'Shading: Toon', shadingUnlit: 'Shading: Unlit',
-    renderThemeDefault: 'Render theme: Default', renderThemeDarkContrast: 'Render theme: Dark Contrast', renderThemeLight: 'Render theme: Light',
-    selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
-    unisolate: 'Show all', deselect: 'Deselect',
-    scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
-    selectionMode: 'Selection mode', sidebar: 'Sidebar', closeSidebar: 'Close sidebar', measure: 'Measure distance',
-    cancelMeasure: 'Cancel measurement', flipSection: 'Flip section', hideSelected: 'Hide selected', cycleSelectionMode: 'Next selection mode',
-    section: 'Scanning plane', scanPlane: 'Section', hidden: 'Hidden',
-    sourceStale: 'Wait for the current source to finish building first',
-    needsModel: 'Build a model first', needsSelection: 'Select an object first',
-    needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
-    buildInProgress: 'Wait for the current build to finish',
-    depthCandidate: 'depth target',
-    export: 'Export', exportTitle: 'Export model', download: 'Download', cancel: 'Cancel', more: 'More', close: 'Close',
-    svg: 'SVG ↔ 3D', photo: '3D from photos', perf: 'Build measurements', modelTools: 'Modeling tools',
-    generators: 'Generators', codeToSolid: 'Bring scene into Solid', codeToMesh: 'Bring scene into Mesh', fileMenu: 'File', forPrinting: 'printing', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Draft saved in browser', exportScope: 'The whole scene is exported as one body', renderShortcut: 'Render',
-  },
-}
-
-const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
-const legacyThemeRaw = storageGet('scad-theme')
-const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
-const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
-const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
-const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-const systemPrefersDark = ref(themeMediaQuery.matches)
-const customAccent = ref<string | null>(normalizeHex(storageGet('scad-accent-v1')))
-const customBase = ref<string | null>(normalizeHex(storageGet('scad-base-v1')))
-const effectiveTokens = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).tokens)
-function setCustomColor(kind: 'accent' | 'base', event: Event) {
-  const value = normalizeHex((event.target as HTMLInputElement).value)
-  if (kind === 'accent') customAccent.value = value
-  else customBase.value = value
-  applyPreferences()
-}
-function effectiveCanvasColor() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  return themeCanvasColor({ ...theme, tokens })
-}
-function resetCustomColors() {
-  customAccent.value = null
-  customBase.value = null
-  applyPreferences()
-}
-const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
+})
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
 const code = ref(props.initialWorkspace.source)
 const autoRender = ref(storageGet('scad-auto') !== 'false')
@@ -296,7 +150,6 @@ const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
 const blocks = computed(() => editorBlocks(code.value))
 const foldedLines = ref(new Set<number>())
-const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const editorRows = computed(() => {
   const lines = code.value.split('\n')
@@ -362,11 +215,6 @@ async function editFoldedLine(line: number) {
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => editorRows.value.length)
-// Virtualized gutter: only the visible window of rows (± overscan) is rendered.
-// Row heights must match the CSS: .gutter-row is 1.58em at 12.5px, .guide-row is 1.58em at .82rem.
-const GUTTER_OVERSCAN_ROWS = 12
-const GUTTER_CONTENT_PADDING_PX = 14
-const gutterRowPx = 1.58 * 12.5
 const guideRowPx = ref(1.58 * 0.82 * 16)
 const gutterScrollTop = ref(0)
 const gutterViewportHeight = ref(600)
@@ -742,11 +590,9 @@ const sectionOffset = computed(() => sceneState.value.section.offset)
 const sectionFlip = computed(() => sceneState.value.section.flip)
 const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
-type DockTab = 'scene' | 'inspect' | 'parameters' | 'svg' | 'photo' | 'perf'
 const dockTab = ref<DockTab>('scene')
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
-const MAIN_COMMAND_PREFIX = 'main:'
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const base = paletteCommands.value.filter(isPaletteCommandEnabled)
   // The source tools only make sense while the editor drawer is showing.
@@ -755,45 +601,16 @@ const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
 const dockOpen = ref(true)
-const findOpen = ref(false)
-const replaceOpen = ref(false)
-const findQuery = ref('')
-const findReplacement = ref('')
-const findCaseSensitive = ref(false)
-const activeFindIndex = ref(-1)
-const findResult = computed(() => findLiteralMatches(code.value, findQuery.value, {
-  caseSensitive: findCaseSensitive.value,
-}))
-const findStatus = computed(() => {
-  if (findResult.value.truncated) return t('tooManyMatches')
-  const count = findResult.value.matches.length
-  return count ? `${Math.max(0, activeFindIndex.value) + 1}/${count}` : t('noMatches')
-})
-watch([findQuery, findCaseSensitive, code], () => {
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+const {
+  findOpen, replaceOpen, findQuery, findReplacement, findCaseSensitive, activeFindIndex, findResult, findStatus,
+  openEditorFind, closeEditorFind, navigateFind, handleFindKeydown,
+  replaceCurrentFindMatch, replaceAllFindMatches,
+} = useEditorFind({
+  code, editor: editorRef, input: findInputRef,
+  translate: key => t(key), notify: message => showNotice(message), onEdited: () => handleEditorInput(),
 })
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
-
-const dockTabs: readonly DockTab[] = ['scene', 'inspect', 'parameters', 'svg', 'photo', 'perf']
-const DOCK_ICONS: Record<DockTab, string> = {
-  scene: 'M4 6h16M4 12h16M4 18h16',
-  inspect: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
-  parameters: 'M4 8h10M18 8h2M4 16h4M12 16h8M16 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
-  svg: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
-  photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
-  perf: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
-}
-// Panels moved into the dock are <details> components; open them when their tab shows.
-function revealDockDetails(el: Element | ComponentPublicInstance | null) {
-  if (!(el instanceof HTMLElement)) return
-  for (const details of el.querySelectorAll<HTMLDetailsElement>(':scope > details')) {
-    if (!details.open) details.open = true
-  }
-}
-const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
-  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
-}
 const exportDialogOpen = ref(false)
 const exportDialogRef = ref<HTMLElement | null>(null)
 function openExportDialog() {
@@ -811,14 +628,6 @@ const persistenceLabel = computed(() => workspaceConflict.value
   ? t('storageConflict')
   : workspacePersistenceStatus.value === 'saving' ? t('savingDraft')
     : workspacePersistenceStatus.value === 'error' ? t('unsavedDraft') : t('savedDraftStatus'))
-function closeMenus() {
-  for (const menu of document.querySelectorAll<HTMLDetailsElement>('.app details.menu[open]')) menu.open = false
-}
-function closeMenusOutside(event: Event) {
-  const target = event.target as Element | null
-  if (target?.closest('details.menu')) return
-  closeMenus()
-}
 function handleDockTabKeydown(event: KeyboardEvent) {
   const key = DOCK_KEY_MAP[event.key]
   if (!key) return
@@ -1064,9 +873,6 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
-/** Rate limit for the storage-write-failure notice. */
-const STORAGE_NOTICE_THROTTLE_MS = 10_000
-
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
 let lastStorageNotice = 0
@@ -1085,14 +891,12 @@ let componentActive = true
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
-let resizing = false
 const topbarRef = ref<HTMLElement | null>(null)
 const topbarHeight = ref(52)
 let topbarResizeObserver: ResizeObserver | null = null
 let layoutResizeObserver: ResizeObserver | null = null
 let editorResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
-const buildSources = new Map<number, string>()
 
 const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
@@ -1105,8 +909,7 @@ onMounted(async () => {
     topbarResizeObserver.observe(topbarRef.value)
   }
   setStorageFailureHandler(reportStorageFailure)
-  themeMediaQuery.addEventListener('change', handleSystemThemeChange)
-  applyPreferences()
+  attachSystemTheme()
   updateBeforeUnloadGuard()
   window.addEventListener('pagehide', flushWorkspacePersistence)
   window.addEventListener('pointerup', endParameterGesture)
@@ -1240,7 +1043,7 @@ onUnmounted(() => {
   buildCoordinator?.dispose()
   buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
-  themeMediaQuery.removeEventListener('change', handleSystemThemeChange)
+  detachSystemTheme()
   window.removeEventListener('pagehide', flushWorkspacePersistence)
   window.removeEventListener('pointerup', endParameterGesture)
   window.removeEventListener('pointercancel', endParameterGesture)
@@ -1839,43 +1642,6 @@ function handleWorkerError(caught?: unknown) {
   error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
 }
 
-function toggleLang() {
-  lang.value = lang.value === 'ru' ? 'en' : 'ru'
-  storageSet('scad-lang', lang.value)
-  document.documentElement.lang = lang.value
-}
-
-function toggleTheme() {
-  themeSelection.value = isDark.value ? 'light' : 'dark'
-  applyPreferences()
-}
-
-function handleSystemThemeChange(event: MediaQueryListEvent) {
-  systemPrefersDark.value = event.matches
-  if (themeSelection.value === 'system') applyPreferences()
-}
-
-function applyPreferences() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  document.documentElement.dataset.theme = theme.scheme
-  document.documentElement.dataset.themePreset = themeSelection.value
-  document.documentElement.lang = lang.value
-  document.documentElement.style.colorScheme = theme.scheme
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  for (const [token, value] of Object.entries(tokens)) {
-    document.documentElement.style.setProperty(token, value)
-  }
-  renderer?.setBackgroundColor(effectiveCanvasColor())
-  if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
-  else storageSet('scad-accent-v1', '')
-  if (customBase.value) storageSet('scad-base-v1', customBase.value)
-  else storageSet('scad-base-v1', '')
-  // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
-  renderer?.setTheme(renderThemeId.value)
-  storageSet('scad-theme-v1', themeSelection.value)
-  storageSet('scad-theme', theme.scheme)
-}
-
 async function loadEditorDocument(example: string, nextFileName: string) {
   applyingWorkspaceReplacement = true
   buildGeneration++
@@ -1978,15 +1744,6 @@ function saveSource() {
   link.click()
   URL.revokeObjectURL(url)
   showNotice(t('saved'))
-}
-
-function downloadBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  link.click()
-  URL.revokeObjectURL(url)
 }
 
 const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
@@ -2126,12 +1883,6 @@ async function shareSource() {
   }
 }
 
-function replaceSharedRecoveryHash(source: string) {
-  const url = new URL(window.location.href)
-  url.hash = `code=${encodeWorkspaceShare(source)}`
-  history.replaceState(null, '', url)
-}
-
 function fitView() { renderer?.fitView() }
 function resetView() {
   viewportController.resetView()
@@ -2179,11 +1930,6 @@ function setDisplayMode(mode: DisplayMode) {
   renderer?.setDisplayMode(mode)
 }
 function changeDisplayMode() { renderer?.setDisplayMode(displayMode.value) }
-
-function hexToRgb(hex: string): [number, number, number] {
-  const value = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#ffffff'
-  return [1, 3, 5].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16) / 255) as [number, number, number]
-}
 function setShadingModel(model: ShadingModel) {
   shadingModel.value = model
   renderer?.setDefaultShadingModel(model)
@@ -2378,91 +2124,6 @@ function handleEditorInput() {
   syncSourceHighlightFromEditor()
 }
 
-function openEditorFind(withReplace = false) {
-  const editor = editorRef.value
-  if (!findOpen.value && editor && editor.selectionStart !== editor.selectionEnd) {
-    findQuery.value = editor.value.slice(editor.selectionStart, editor.selectionEnd)
-  }
-  findOpen.value = true
-  replaceOpen.value = withReplace
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  // The command palette restores its opener after closing. A second render
-  // turn makes the explicit Find target win that documented focus handoff.
-  void nextTick(() => nextTick(() => {
-    findInputRef.value?.focus()
-    findInputRef.value?.select()
-    revealFindMatch()
-  }))
-}
-
-function closeEditorFind() {
-  findOpen.value = false
-  replaceOpen.value = false
-  void nextTick(() => editorRef.value?.focus())
-}
-
-function revealFindMatch() {
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!match || !editorRef.value) return
-  editorRef.value.setSelectionRange(match.start, match.end)
-}
-
-function navigateFind(direction: 1 | -1) {
-  activeFindIndex.value = wrappedMatchIndex(
-    activeFindIndex.value,
-    findResult.value.matches.length,
-    direction,
-  )
-  revealFindMatch()
-}
-
-function handleFindKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    closeEditorFind()
-  } else if (event.key === 'Enter') {
-    event.preventDefault()
-    navigateFind(event.shiftKey ? -1 : 1)
-  }
-}
-
-function replaceCurrentFindMatch() {
-  const editor = editorRef.value
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!editor || !match) return
-  if (replaceExpectedMatch(code.value, match, findReplacement.value) === null) {
-    activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-    revealFindMatch()
-    return
-  }
-  editor.setRangeText(findReplacement.value, match.start, match.end, 'select')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length
-    ? Math.min(activeFindIndex.value, findResult.value.matches.length - 1)
-    : -1
-  revealFindMatch()
-}
-
-function replaceAllFindMatches() {
-  const editor = editorRef.value
-  if (!editor) return
-  const result = replaceAllLiteral(code.value, findQuery.value, findReplacement.value, {
-    caseSensitive: findCaseSensitive.value,
-  })
-  if (result.status === 'too-many' || result.status === 'too-large') {
-    showNotice(t('tooManyMatches'))
-    return
-  }
-  if (result.status !== 'replaced') return
-  editor.setRangeText(result.source, 0, editor.value.length, 'preserve')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  revealFindMatch()
-}
-
 function revealCurrentDiagnostic() {
   if (editorRef.value && editorDiagnostic.value) revealDiagnostic(editorRef.value, editorDiagnostic.value)
 }
@@ -2557,12 +2218,6 @@ function closeScanPanel() {
   void nextTick(() => scanToggleRef.value?.focus())
 }
 
-function lineAndColumn(source: string, offset: number) {
-  const before = source.slice(0, clamp(offset, 0, source.length))
-  const line = before.split('\n').length
-  return { line, column: before.length - before.lastIndexOf('\n') }
-}
-
 function executeCommand(id: string) {
   if (id.startsWith(MAIN_COMMAND_PREFIX)) { paletteOpen.value = false; mainToolsRef.value?.execute(id.slice(MAIN_COMMAND_PREFIX.length)); return }
   const target = paletteCommands.value.find(candidate => candidate.id === id)
@@ -2643,33 +2298,7 @@ function openFunctionReference(query = '') {
   functionReferenceOpen.value = true
 }
 
-function formatEditor() {
-  const formatted = formatCode(code.value)
-  if(formatted === code.value) return
-  const editor = editorRef.value
-  const caret = editor?.selectionStart ?? 0
-  if(editor) editor.setRangeText(formatted,0,editor.value.length,'preserve')
-  code.value = formatted
-  foldedLines.value = new Set()
-  void nextTick(()=>{
-    if(editor) { editor.focus(); editor.setSelectionRange(Math.min(caret,formatted.length),Math.min(caret,formatted.length)) }
-    syncHighlightScroll()
-  })
-  handleEditorInput()
-}
-
-function handleEditorKey(event: KeyboardEvent) {
-  if(event.altKey && event.shiftKey && event.code === 'KeyF') { event.preventDefault(); formatEditor(); return }
-  if(event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
-    event.preventDefault()
-    const editor=editorRef.value; if(!editor) return
-    const edit=indentSelection(code.value,editor.selectionStart,editor.selectionEnd,event.shiftKey)
-    editor.setRangeText(edit.text,edit.start,edit.end,'preserve')
-    code.value=editor.value; editor.setSelectionRange(edit.selectionStart,edit.selectionEnd)
-    handleEditorInput(); return
-  }
-  dispatchKeyboardCommand(event, 'editor')
-}
+const { formatEditor, handleEditorKey } = useEditorFormatting({ code, editorRef, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand })
 
 function handleViewportKey(event: KeyboardEvent) {
   dispatchKeyboardCommand(event, 'viewport')
@@ -2696,47 +2325,13 @@ function isCommandEnabled(id: CommandId): boolean {
   return target ? isPaletteCommandEnabled(target) : true
 }
 
-function startResize(event: PointerEvent) {
-  if (window.matchMedia('(max-width: 800px)').matches) return
-  resizing = true
-  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-  resizeEditor(event.clientX)
-}
-function moveResize(event: PointerEvent) { if (resizing) resizeEditor(event.clientX) }
-function stopResize() {
-  if (!resizing) return
-  resizing = false
-  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
-}
-function resizeEditor(clientX: number) {
-  const rect = mainRef.value?.getBoundingClientRect()
-  if (!rect) return
-  editorMaxWidth.value = editorWidthBounds(rect.width).max
-  editorWidth.value = clampEditorWidth(clientX - rect.left, rect.width)
-}
-function resizeEditorWithKeyboard(event: KeyboardEvent) {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-  event.preventDefault()
-  const width = mainRef.value?.getBoundingClientRect().width ?? 0
-  const bounds = editorWidthBounds(width)
-  editorMaxWidth.value = bounds.max
-  if (event.key === 'Home') editorWidth.value = bounds.min
-  else if (event.key === 'End') editorWidth.value = bounds.max
-  else editorWidth.value = clampEditorWidth(editorWidth.value + (event.key === 'ArrowRight' ? 20 : -20), width)
-  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
-}
+const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEditorResize({ mainRef, editorWidth, editorMaxWidth })
 
 function showNotice(message: string) {
   notice.value = message
   if (noticeTimeout) clearTimeout(noticeTimeout)
   noticeTimeout = setTimeout(() => { notice.value = '' }, 2200)
 }
-
-function readCommandMru(): string[] {
-  const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
-  return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
-}
-function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.r.*$/i, '.r').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 

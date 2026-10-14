@@ -8,9 +8,7 @@ pub struct Selection {
     pub items: Vec<Value>,
     pub outcome_indices: Vec<usize>,
 }
-fn invalid(message: &str) -> super::Error {
-    super::Error::new("BREP_SEMANTIC_CONTRACT", message)
-}
+use crate::semantic_contract_error as invalid;
 fn exact(value: &Value, keys: &[&str]) -> Result<()> {
     let map = value
         .as_object()

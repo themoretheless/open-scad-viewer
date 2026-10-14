@@ -30,6 +30,8 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Check typed geometry without wire codecs
+        run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
@@ -79,6 +81,8 @@ jobs:
             src/generated/geometry-kernels/kernel_bg.wasm
             src/generated/geometry-kernels/identity.ts
           if-no-files-found: error
+      - name: Qualify current WASM graph caps and pole queries
+        run: node --import tsx scripts/qualify-global-geometry.mts docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz global-geometry-wasm.json
       - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json

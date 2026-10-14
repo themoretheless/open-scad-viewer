@@ -91,13 +91,7 @@ pub struct Solution {
     pub degrees_of_freedom: usize,
     pub convergence_certified: bool,
 }
-
-fn length(v: [f64; 2]) -> f64 {
-    v[0].hypot(v[1])
-}
-fn subtract(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] - b[0], a[1] - b[1]]
-}
+use math_core::{norm2 as length, sub2 as subtract};
 impl Sketch {
     fn validate(&self) -> Result<()> {
         if self.points.is_empty()

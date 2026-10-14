@@ -1,4 +1,5 @@
 import { sha256Buffer } from './officialOpenScadRuntimePatch'
+import { record, nonNegativeSafeInteger, positiveSafeInteger } from '../core/plainData'
 
 export const OFFICIAL_OPENSCAD_PROTOCOL_VERSION = 1 as const
 export const OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES = 1_048_576
@@ -133,27 +134,11 @@ const UTF8 = new TextEncoder()
 const FORMAT_SET = new Set<string>(OFFICIAL_OPENSCAD_EXPORT_FORMATS)
 const EXPERIMENT_SET = new Set<string>(OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES)
 
-function record(value: unknown): Record<string, unknown> | null {
-  if (value === null || Array.isArray(value) || typeof value !== 'object') return null
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-    ? value as Record<string, unknown>
-    : null
-}
-
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
   const actual = Object.keys(value)
   return actual.length === keys.length
     && actual.every(key => keys.includes(key))
     && keys.every(key => Object.hasOwn(value, key))
-}
-
-function positiveSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) > 0
-}
-
-function nonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0
 }
 
 export function isWellFormedOfficialOpenScadText(value: string): boolean {

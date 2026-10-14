@@ -40,6 +40,7 @@ pub struct Report {
     pub reason: &'static str,
 }
 impl Report {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         let cells: Vec<_> = self
@@ -61,6 +62,7 @@ impl Report {
 }
 /// Transport delivery keeps the actual candidate beside its qualification.
 /// A proposal is never promoted to a fillet solid, including on a successful fit.
+#[cfg(feature = "codec")]
 pub fn deliver(
     candidate: Option<&Surface>,
     surfaces: [&Surface; 2],

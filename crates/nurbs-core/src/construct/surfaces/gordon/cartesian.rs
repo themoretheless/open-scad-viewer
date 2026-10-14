@@ -346,6 +346,7 @@ fn assemble_mode(
     Ok(super::transpose(stitch_u(&strips, tolerance)?))
 }
 
+#[cfg(feature = "codec")]
 pub(super) fn checked(
     u: &[Curve],
     v: &[Curve],
@@ -368,6 +369,7 @@ pub(super) fn checked(
     )?;
     Ok((surface, certificates))
 }
+#[cfg(feature = "codec")]
 fn curve_audits(
     surface: &Surface,
     u: &[Curve],
@@ -417,6 +419,7 @@ fn curve_audits(
     Ok(certificates)
 }
 
+#[cfg(feature = "codec")]
 pub(super) fn checked_with_tangents(
     u: &[Curve],
     v: &[Curve],

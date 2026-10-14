@@ -221,7 +221,9 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       expect(candidate.success.volume).toBeCloseTo(expected.volume, 8)
       expect(candidate.success.surfaceArea).toBeCloseTo(expected.surfaceArea, 8)
     }
-  }, 15_000)
+    // Lowering costs a linear ~7.4 ms per operation (validation and hashing of each of the
+    // 1,001 semantic operations), about 10 s in total on a 4-core container, too close to 15 s.
+  }, 30_000)
 
   it('matches the frozen source-length failure before opening a backend session', async () => {
     const source = ' '.repeat(250_001)

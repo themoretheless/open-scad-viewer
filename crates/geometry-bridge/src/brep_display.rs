@@ -2,13 +2,7 @@
 use super::{Mesh, Result, Value, field, input, take_field};
 use std::collections::BTreeMap;
 use value_codec::json;
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
+use math_core::cross;
 fn prepare(mesh: &Mesh) -> Result<(Vec<f32>, Vec<usize>, f64)> {
     mesh.validate()?;
     if mesh.indices.len() / 3 > 20_000 {

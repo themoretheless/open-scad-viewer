@@ -105,7 +105,7 @@ fn intersection_cases() -> Vec<Value> {
     };
     vec![
         json!({"op":"brep_intersect_sphere_sphere","first":sphere,"second":translated(2.)}),
-        json!({"op":"brep_intersect_plane_sphere","first":brep_intersect::plane_sphere::plane_patch([-4.,-4.,1.],[8.,0.,0.],[0.,8.,0.]),"second":sphere}),
+        json!({"op":"brep_intersect_plane_sphere","first":crate::intersections::tests::plane_patch([-4.,-4.,1.],[8.,0.,0.],[0.,8.,0.]),"second":sphere}),
         json!({"op":"brep_intersect_sphere_cylinder","first":translated(3.),"second":analytic::cylinder(1.,6.).unwrap()}),
         json!({"op":"brep_intersect_sphere_cone","first":translated(3.),"second":analytic::frustum(0.5,2.,6.).unwrap()}),
         json!({"op":"brep_intersect_sphere_torus","first":analytic::sphere_exact(2.5).unwrap(),"second":analytic::torus(3.,1.).unwrap()}),

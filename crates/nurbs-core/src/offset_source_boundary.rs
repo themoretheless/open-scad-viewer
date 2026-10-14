@@ -8,6 +8,7 @@ pub struct Coedge {
     pub world: Curve,
     pub reversed: bool,
 }
+#[cfg(feature = "codec")]
 impl<'de> value_codec::Deserialize<'de> for Coedge {
     fn from_value(v: value_codec::Value) -> value_codec::Result<Self> {
         Ok(Self {
@@ -42,6 +43,7 @@ pub struct Report {
     pub audits: Vec<Audit>,
 }
 impl Report {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         json!({"method":"offset-source-boundary-admission","scope":"original-trims-and-spatial-coedges",

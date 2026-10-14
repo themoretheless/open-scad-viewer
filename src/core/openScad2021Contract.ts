@@ -1,3 +1,4 @@
+import { builtinFunction, builtinModule, meshSmoke, valueSmoke } from './openScad2021Contract/valueSmoke'
 /**
  * Machine-readable OpenSCAD language target for the repository-owned engine
  * and its optional differential oracle. The inventory is frozen to the
@@ -36,44 +37,6 @@ export interface OpenScadSmokeFixtureContract {
   readonly provisioning: 'inline-text' | 'conformance-fixture-required' | 'runtime-cache-required'
   readonly text?: string
   readonly requirements: readonly string[]
-}
-
-function valueSmoke(call: string, source?: string, fixtureIds: readonly string[] = []): OpenScadSmokeCase {
-  return Object.freeze({
-    call,
-    source: source ?? `echo(${call}); cube(1);`,
-    fixtureIds: Object.freeze([...fixtureIds]),
-    expected: 'defined-value-and-3d-mesh' as const,
-  })
-}
-
-function meshSmoke(call: string, source?: string, fixtureIds: readonly string[] = []): OpenScadSmokeCase {
-  return Object.freeze({
-    call,
-    source: source ?? `${call};`,
-    fixtureIds: Object.freeze([...fixtureIds]),
-    expected: '3d-mesh' as const,
-  })
-}
-
-function builtinFunction(
-  name: string,
-  category: OpenScadBuiltinFunctionContract['category'],
-  call: string,
-  source?: string,
-  fixtureIds: readonly string[] = [],
-): OpenScadBuiltinFunctionContract {
-  return Object.freeze({ name, category, smoke: valueSmoke(call, source, fixtureIds) })
-}
-
-function builtinModule(
-  name: string,
-  category: OpenScadBuiltinModuleContract['category'],
-  call: string,
-  source?: string,
-  fixtureIds: readonly string[] = [],
-): OpenScadBuiltinModuleContract {
-  return Object.freeze({ name, category, smoke: meshSmoke(call, source, fixtureIds) })
 }
 
 /** The 38 non-legacy functions registered by src/func.cc in 2021.01. */

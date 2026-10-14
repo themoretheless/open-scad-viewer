@@ -129,7 +129,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path="intersections/pole_chart_tests.rs"]

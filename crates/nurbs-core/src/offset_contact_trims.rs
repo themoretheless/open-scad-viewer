@@ -35,6 +35,7 @@ pub struct Report {
     pub reason: &'static str,
 }
 impl Report {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         json!({"method":"interval-offset-contact-trim-curves","scope":"full-source-contact-branch",
@@ -244,6 +245,7 @@ pub struct TangentReport {
     pub reason: &'static str,
 }
 impl TangentReport {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         let tangents=self.tangent_planes.iter().map(|r| {

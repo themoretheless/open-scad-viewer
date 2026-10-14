@@ -17,9 +17,9 @@ mod primitives;
 mod tests;
 pub use boolean::*;
 pub use edge_features::*;
-pub use planar_boolean::*;
+pub(crate) use planar_boolean::*;
 pub use planar_edit::*;
-pub use planar_model::*;
+pub(crate) use planar_model::*;
 pub use primitives::*;
 
 const UNSUPPORTED: &str = "BREP_UNSUPPORTED_OPERATION";

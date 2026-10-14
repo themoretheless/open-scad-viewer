@@ -27,6 +27,7 @@ pub struct Report {
     pub reason: &'static str,
 }
 impl Report {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         let cells: Vec<_> = self.cells.iter().map(|c| json!({

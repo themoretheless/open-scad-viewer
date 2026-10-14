@@ -104,8 +104,10 @@ pub use crate::construct::surfaces::extrusion_patches;
 pub use crate::construct::curves::hermite;
 pub use crate::construct::surfaces::hermite_patch;
 pub use crate::construct::surfaces::loft::natural_loft;
+#[cfg(feature = "codec")]
 pub use crate::construct::surfaces::loft::guided_loft;
 pub use crate::construct::surfaces::loft::continuity as loft_continuity;
+#[cfg(feature = "codec")]
 pub use crate::construct::surfaces::loft::alignment as loft_alignment;
 pub use crate::construct::curves::natural_spline;
 pub use crate::construct::surfaces::patches;
@@ -229,6 +231,7 @@ pub mod curve_surface_affine;
 
 pub mod planar_area;
 
+#[cfg(feature = "codec")]
 pub mod loft_reparameterization;
 
 mod sweep_support;
