@@ -1,0 +1,7 @@
+# G0 v83 / G1 v100 verified golden fixture successor
+
+Retain the six independently reconciled Linux golden hashes, the complete 43-case bit-exact Rust test, unchanged numerical work budgets and unchanged measured OwnRust64 WASM. OwnRust68 binds the complete golden fixture and exact same-host comparison evidence. Runtime geometry source and artifact bytes are unchanged from the already tested source 3c19575792ef5002fe9fb85357bd0b36075caab5.
+
+The intermediate OwnRust67 / G0 v82 / G1 v99 freeze was never executed. Local validation exposed a stale predecessor-version expectation in the fingerprint test and four existing 30-second timeouts under shared compilation load. Correct the predecessor expectation and request copy-on-write fixture copies with the platform's ordinary-copy fallback. Copies still own independent writable contents; mutation/refusal tests and all time limits remain unchanged. Preserve the unexecuted freeze, its executor, and its exact raw source snapshot, whose bundle digest was independently recomputed before any amendment.
+
+Preserve the completed G1 v98 archive as historical evidence. All 4,740 units and 132 fresh fragments must execute for v100 with unchanged exact V37 identities. Neither v98 results nor the unexecuted v99 plan supplies credit. Approval and production-cutover boundaries remain unchanged. Full Linux/macOS/Windows native CI is a separate delivery gate.
