@@ -1757,7 +1757,7 @@ pub(crate) fn dispatch(v: Value) -> Result<Value> {
         .as_str()
         .ok_or_else(|| invalid("SVG source must be a string"))?;
     let action = v["action"].as_str().unwrap_or("parse");
-    if !matches!(action, "parse" | "preview") {
+    if !matches!(action, "parse" | "preview" | "profile") {
         return Err(invalid("Unknown SVG action"));
     }
     let dpi = number(&v, "dpi", 72., 0.001, 1_000_000.)?;
@@ -1869,6 +1869,65 @@ pub(crate) fn dispatch(v: Value) -> Result<Value> {
     }
     if normalized.len() > MAX_SOURCE {
         return Err(limit("Normalized SVG exceeds 4 MiB"));
+    }
+    if action == "profile" {
+        let mut sections = Vec::with_capacity(regions.len());
+        for region in regions {
+            let mut rings = region.contours;
+            rings.retain(|r| r.len() >= 3);
+            if rings.is_empty() {
+                sections.push(Vec::new());
+                continue;
+            }
+            if matches!(region.rule, FillRule::EvenOdd) {
+                let copy = rings.clone();
+                for (i, r) in rings.iter_mut().enumerate() {
+                    let p = r[0];
+                    let mut depth = 0;
+                    for (j, other) in copy.iter().enumerate() {
+                        if i == j {
+                            continue;
+                        }
+                        let mut yes = false;
+                        for k in 0..other.len() {
+                            let a = other[k];
+                            let b = other[(k + 1) % other.len()];
+                            if (a[1] > p[1]) != (b[1] > p[1])
+                                && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]
+                            {
+                                yes = !yes;
+                            }
+                        }
+                        if yes {
+                            depth += 1;
+                        }
+                    }
+                    if (rings::area(r) > 0.) != (depth % 2 == 0) {
+                        r.reverse();
+                    }
+                }
+                sections.push(rings::planar(&rings, &vec![], "union")?);
+            } else {
+                sections.push(rings::nonzero(&rings)?);
+            }
+        }
+        let merged = match sections.split_first() {
+            None => Vec::new(),
+            Some((first, rest)) => {
+                let mut acc = first.clone();
+                for next in rest {
+                    acc = rings::planar(&acc, next, "union")?;
+                }
+                acc
+            }
+        };
+        let contours = mesh_section::bounded_svg_contours(merged)?;
+        return Ok(json!({
+            "contours": contours,
+            "widthMm": width,
+            "heightMm": height,
+            "warnings": warnings,
+        }));
     }
     Ok(
         json!({"regions":regions.into_iter().map(|r|json!({"contours":r.contours,"fillRule":match r.rule{FillRule::NonZero=>"nonzero",FillRule::EvenOdd=>"evenodd"}})).collect::<Vec<_>>(),"widthMm":width,"heightMm":height,"normalizedSvg":normalized,"warnings":warnings}),

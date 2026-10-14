@@ -55,3 +55,48 @@ pub fn blend(v: Value) -> Result<Value> {
         v["kind"].as_str() == Some("fillet"),
     )?)
 }
+pub fn extended_shell(v: Value) -> Result<Value> {
+    let mesh: Mesh = field(&v, "mesh")?;
+    let openings: Vec<usize> = field(&v, "openings")?;
+    let thickness: f64 = field(&v, "thickness")?;
+    if let Ok(planar) = super::cad_mesh_planes::planar(value_codec::json!({
+        "body": {"mesh": &mesh},
+        "action": "shell",
+        "faces": &openings,
+        "amount": thickness,
+    })) {
+        return Ok(planar["mesh"].clone());
+    }
+    if let Ok(specialized) =
+        polygon_core::solid_extensions::specialized_shell_fallback(&mesh, &openings, thickness)
+    {
+        return encode(specialized);
+    }
+    let sampled = shell(v)?;
+    Ok(value_codec::json!({
+        "positions": sampled["positions"].clone(),
+        "indices": sampled["indices"].clone(),
+    }))
+}
+pub fn extended_bevel(v: Value) -> Result<Value> {
+    let mesh: Mesh = field(&v, "mesh")?;
+    let edge: usize = field(&v, "edge")?;
+    let size: f64 = field(&v, "size")?;
+    let kind: String = field(&v, "kind")?;
+    if let Ok(planar) = super::cad_mesh_planes::edge(value_codec::json!({
+        "body": {"mesh": &mesh},
+        "edges": [edge],
+        "size": size,
+        "kind": &kind,
+        "segments": 16usize,
+    })) {
+        return Ok(planar["mesh"].clone());
+    }
+    if let Ok(specialized) =
+        polygon_core::solid_extensions::prism_bevel(&mesh, edge, size, kind == "fillet")
+    {
+        return encode(specialized);
+    }
+    let blended = polygon_core::local_blend::blend(&mesh, &mesh, edge, size, size, kind == "fillet")?;
+    encode(blended.mesh)
+}

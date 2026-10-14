@@ -649,7 +649,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_validate"
         | "brep_profile_offset"
         | "brep_profile_boolean"
-        | "brep_profile_signed_area" => brep_profile::dispatch(v),
+        | "brep_profile_signed_area"
+        | "brep_profile_display" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "svg_color_trace" => {
             let tree = svg::parse_tree(&field::<String>(&v, "svg")?, 96., None)?;
@@ -883,6 +884,49 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     "sourceTriangles": contour.source_triangles,
                 })).collect::<Vec<_>>(),
             }))
+        }
+        "mesh_svg_contours" => {
+            let raw_meshes = v["meshes"].as_array().ok_or_else(|| {
+                input("SVG projection requires a valid triangle mesh and affine transform.")
+            })?;
+            struct OwnedProjectionMesh {
+                vertices: Vec<f32>,
+                indices: Vec<u32>,
+                transform: [f64; 16],
+                face_ids: Vec<u32>,
+            }
+            let mut owned = Vec::with_capacity(raw_meshes.len());
+            for item in raw_meshes {
+                let vertices = field::<Vec<u32>>(item, "vertexBits")?
+                    .into_iter()
+                    .map(f32::from_bits)
+                    .collect();
+                let indices = field::<Vec<u32>>(item, "indices")?;
+                let transform = field::<[f64; 16]>(item, "transform")?;
+                let face_ids = field::<Vec<u32>>(item, "faceIds")?;
+                owned.push(OwnedProjectionMesh {
+                    vertices,
+                    indices,
+                    transform,
+                    face_ids,
+                });
+            }
+            let views: Vec<mesh_section::SvgProjectionMesh<'_>> = owned
+                .iter()
+                .map(|m| mesh_section::SvgProjectionMesh {
+                    vertices: &m.vertices,
+                    indices: &m.indices,
+                    transform: m.transform,
+                    face_ids: &m.face_ids,
+                })
+                .collect();
+            let axis = optional_field::<String>(&v, "axis")?;
+            let face_triangle = optional_field::<usize>(&v, "faceTriangle")?;
+            encode(mesh_section::svg_contours(
+                &views,
+                axis.as_deref(),
+                face_triangle,
+            )?)
         }
         "mesh_toolpaths" => gcode::toolpaths(&v),
         "mesh_gcode" => gcode::export(&v),
@@ -2199,6 +2243,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_sampled_corner" | "cad_profile_revolve" => cad_profile_tools::dispatch(v),
         "cad_sampled_shell" => cad_local_mesh_tools::shell(v),
         "cad_local_mesh_blend" => cad_local_mesh_tools::blend(v),
+        "cad_extended_shell" => cad_local_mesh_tools::extended_shell(v),
+        "cad_extended_bevel" => cad_local_mesh_tools::extended_bevel(v),
         "mesh_display_inspect" | "mesh_hit_point" | "mesh_hit_normal" | "mesh_measure" => {
             mesh_display::dispatch(v)
         }

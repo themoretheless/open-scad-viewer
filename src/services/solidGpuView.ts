@@ -1,4 +1,5 @@
 import {TransparentBsp, type TransparentFragment} from './transparentBsp'
+import {smoothTriangleListInKernel} from './geometry/meshAnalysis'
 /**
  * Smooth GPU display for the Solid workspace.
  *
@@ -418,65 +419,8 @@ export class SolidGpuLayer {
  * faces shade smoothly while box edges stay sharp.
  */
 export function smoothTriangleList(positions: ArrayLike<number>, indices: ArrayLike<number>, creaseDegrees = 40): { positions: Float32Array; normals: Float32Array } {
-  const triangleCount = Math.floor(indices.length / 3)
-  const faceNormals = new Float64Array(triangleCount * 3)
-  const byPosition = new Map<string, number[]>()
-  const bucketsByVertex = new Array<number[] | undefined>(Math.floor(positions.length / 3))
-  for (let t = 0; t < triangleCount; t++) {
-    const t3 = t * 3
-    const ia = indices[t3] * 3, ib = indices[t3 + 1] * 3, ic = indices[t3 + 2] * 3
-    const ax = positions[ia], ay = positions[ia + 1], az = positions[ia + 2]
-    const ux = positions[ib] - ax, uy = positions[ib + 1] - ay, uz = positions[ib + 2] - az
-    const wx = positions[ic] - ax, wy = positions[ic + 1] - ay, wz = positions[ic + 2] - az
-    const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx
-    const len = Math.hypot(nx, ny, nz) || 1
-    faceNormals[t3] = nx / len
-    faceNormals[t3 + 1] = ny / len
-    faceNormals[t3 + 2] = nz / len
-    for (let k = 0; k < 3; k++) {
-      const vi = indices[t3 + k]
-      let list = bucketsByVertex[vi]
-      if (!list) {
-        const v3 = vi * 3
-        const id = `${positions[v3].toFixed(5)},${positions[v3 + 1].toFixed(5)},${positions[v3 + 2].toFixed(5)}`
-        list = byPosition.get(id)
-        if (!list) {
-          list = []
-          byPosition.set(id, list)
-        }
-        bucketsByVertex[vi] = list
-      }
-      list.push(t)
-    }
-  }
-  const cosCrease = Math.cos(creaseDegrees * Math.PI / 180)
-  const outPositions = new Float32Array(triangleCount * 9), outNormals = new Float32Array(triangleCount * 9)
-  for (let t = 0; t < triangleCount; t++) {
-    const t3 = t * 3
-    const fnx = faceNormals[t3], fny = faceNormals[t3 + 1], fnz = faceNormals[t3 + 2]
-    for (let k = 0; k < 3; k++) {
-      const i = indices[t3 + k]
-      let sumX = 0, sumY = 0, sumZ = 0
-      const bucket = bucketsByVertex[i]
-      if (bucket) {
-        for (let b = 0; b < bucket.length; b++) {
-          const other3 = bucket[b] * 3
-          const onx = faceNormals[other3], ony = faceNormals[other3 + 1], onz = faceNormals[other3 + 2]
-          if (fnx * onx + fny * ony + fnz * onz >= cosCrease) {
-            sumX += onx; sumY += ony; sumZ += onz
-          }
-        }
-      }
-      const len = Math.hypot(sumX, sumY, sumZ)
-      const o = (t3 + k) * 3
-      const i3 = i * 3
-      outPositions[o] = positions[i3]; outPositions[o + 1] = positions[i3 + 1]; outPositions[o + 2] = positions[i3 + 2]
-      if (len > 1e-9) {
-        outNormals[o] = sumX / len; outNormals[o + 1] = sumY / len; outNormals[o + 2] = sumZ / len
-      } else {
-        outNormals[o] = fnx; outNormals[o + 1] = fny; outNormals[o + 2] = fnz
-      }
-    }
-  }
-  return { positions: outPositions, normals: outNormals }
+  const posArray = positions instanceof Float64Array || positions instanceof Float32Array ? positions : Float64Array.from(positions)
+  const idxArray = indices instanceof Uint32Array ? indices : Uint32Array.from(indices)
+  return smoothTriangleListInKernel(posArray, idxArray, Math.cos(creaseDegrees * Math.PI / 180))
 }
+

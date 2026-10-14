@@ -1,14 +1,10 @@
 import type {DirectSketch,Point2} from './directModeling'
 import {authorBrepProfile,booleanBrepProfiles,offsetBrepProfile,transformBrepProfile,validateBrepProfile,type BrepProfile,type BrepProfileBooleanOperation} from './geometry/brepProfile'
-import {evaluateNurbsCurve} from './nurbsCurve'
 import {callGeometryRust} from './geometry/kernel'
 
 /** Display samples only. All modelling uses retainedProfile.loops. */
 export function retainedProfileDisplay(profile:BrepProfile):Point2[][] {
- return profile.loops.map(loop=>loop.flatMap(curve=>{
-  const count=curve.degree===1?1:24,a=curve.knots[curve.degree],b=curve.knots[curve.controlPoints.length]
-  return Array.from({length:count},(_,i)=>evaluateNurbsCurve(curve,a+(b-a)*i/count).point as Point2)
- }))
+ return callGeometryRust<Point2[][]>('brep_profile_display',{loops:profile.loops})
 }
 export function sketchProfile(sketch:DirectSketch):BrepProfile {
  if(sketch.retainedProfile)return validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)

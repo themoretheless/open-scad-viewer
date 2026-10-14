@@ -244,6 +244,32 @@ impl Curve {
         self.validate()?;
         self.evaluate_validated(u)
     }
+    pub fn evaluate_points(&self, parameters: &[f64]) -> Result<Vec<Vec<f64>>> {
+        check(
+            parameters.len() <= 4096,
+            "Batch curve evaluation exceeds 4096 parameters",
+        )?;
+        self.validate()?;
+        parameters
+            .iter()
+            .map(|&u| Ok(self.evaluate_validated(u)?.point))
+            .collect()
+    }
+    pub fn sample_uniform(&self, segments: usize, include_end: bool) -> Result<Vec<Vec<f64>>> {
+        check(
+            (1..=4096).contains(&segments),
+            "Curve uniform sampling segments must be in [1, 4096]",
+        )?;
+        self.validate()?;
+        let [start, end] = self.domain();
+        let count = if include_end { segments + 1 } else { segments };
+        (0..count)
+            .map(|i| {
+                let u = start + (end - start) * (i as f64) / (segments as f64);
+                Ok(self.evaluate_validated(u)?.point)
+            })
+            .collect()
+    }
     /// Evaluation without re-validation; callers must have validated `self`.
     pub(crate) fn evaluate_validated(&self, u: f64) -> Result<Evaluation> {
         let b = basis(
