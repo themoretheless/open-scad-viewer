@@ -6,7 +6,6 @@ use crate::diagnostics::{
 };
 use crate::{Error, MassModel, Result};
 use nalgebra::{Cholesky, DMatrix, DVector, Dyn};
-use std::collections::BTreeSet;
 
 pub const MAX_NODES: usize = 125;
 pub const MAX_MEMBERS: usize = 400;

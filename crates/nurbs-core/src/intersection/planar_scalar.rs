@@ -228,7 +228,7 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
         match decision.outcome {
             PlanarScalarOutcome::NotReducible | PlanarScalarOutcome::Indeterminate(_) => continue,
             PlanarScalarOutcome::Coincident {
-                reduction: PlanarReduction::CommonCoordinate(_),
+                reduction: PlanarReduction::CommonCoordinate(_) | PlanarReduction::CommonProjection,
             } => {
                 return Ok(Some(Relation::Coincident {
                     reversed,
@@ -243,7 +243,8 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
                 for root in roots {
                     let s = (root.interval[0] + root.interval[1]) * 0.5;
                     let (first, second) = match reduction {
-                        PlanarReduction::CommonCoordinate(_) => {
+                        PlanarReduction::CommonCoordinate(_)
+                        | PlanarReduction::CommonProjection => {
                             (parameter(a, s), map_back(b, parameter(&other, s), reversed))
                         }
                         PlanarReduction::LineCarrier { first } => {
@@ -394,6 +395,27 @@ pub fn stationary(c: &Curve, axis: usize) -> Result<Option<Vec<f64>>> {
 #[cfg(test)]
 mod stationary_tests {
     use super::*;
+    #[test]
+    fn rotated_curved_tangency_keeps_its_multiplicity_and_reversed_parameter() {
+        let curve = |ys: [f64; 4]| Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: (0..4)
+                .map(|i| vec![17. + 10. * i as f64 - ys[i], -9. + 10. * i as f64 + ys[i]])
+                .collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let a = curve([0., 0., 1., 3.]);
+        let b = curve([1., -1., 1., 7.]).reverse().unwrap();
+        let Some(Relation::Points(points)) = intersect(&a, &b, 1e-7).unwrap() else {
+            panic!("Missing rotated contact")
+        };
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].multiplicity, 2);
+        assert!((points[0].first - 1. / 3.).abs() < 1e-11);
+        assert!((points[0].second - 2. / 3.).abs() < 1e-11);
+    }
     #[test]
     fn exact_monotonicity_does_not_require_an_ordered_control_polygon() {
         let mut c = Curve {

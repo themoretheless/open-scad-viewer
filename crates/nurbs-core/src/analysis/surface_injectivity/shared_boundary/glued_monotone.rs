@@ -4,7 +4,12 @@
 //! symmetric-Jacobian certificates establish the actual whole-domain result.
 use super::{Result, Surface};
 
-fn virtual_face(source: &Surface, end: bool, left: bool) -> Result<Option<Surface>> {
+fn virtual_face(
+    source: &Surface,
+    end: bool,
+    left: bool,
+    balanced: bool,
+) -> Result<Option<Surface>> {
     let u = [
         source.knots_u[source.degree_u],
         source.knots_u[source.degree_u + 1],
@@ -17,8 +22,18 @@ fn virtual_face(source: &Surface, end: bool, left: bool) -> Result<Option<Surfac
     let Some((du, dv)) = sample.first_derivatives() else {
         return Ok(None);
     };
-    let length = (du[0].hypot(du[1]).hypot(du[2]) * (u[1] - u[0]))
-        .max(dv[0].hypot(dv[1]).hypot(dv[2]) * (v[1] - v[0]));
+    let transverse = du[0].hypot(du[1]).hypot(du[2]) * (u[1] - u[0]);
+    let along = dv[0].hypot(dv[1]).hypot(dv[2]);
+    let length = if balanced {
+        // Equalize proposed parameter derivative magnitudes, not physical
+        // rectangle extents. A thin cap next to a long wall otherwise makes
+        // the symmetric cross terms dominate despite a valid shared chart.
+        // This is only a choice of positive clamped knot endpoints: its
+        // rounded value is not a premise of any derivative/positivity proof.
+        transverse / along
+    } else {
+        transverse.max(along * (v[1] - v[0]))
+    };
     if !length.is_finite() || length <= 0. {
         return Ok(None);
     }
@@ -84,15 +99,16 @@ fn proposal(a: &Surface, b: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
     }
     Ok(Some(p))
 }
-pub(super) fn certify(
+fn certify_policy(
     a: &Surface,
     b: &Surface,
     ends: [bool; 2],
     max_cells: usize,
+    balanced: bool,
 ) -> Result<(bool, usize)> {
     let (Some(a), Some(b)) = (
-        virtual_face(a, ends[0], true)?,
-        virtual_face(b, ends[1], false)?,
+        virtual_face(a, ends[0], true, balanced)?,
+        virtual_face(b, ends[1], false, balanced)?,
     ) else {
         return Ok((false, 0));
     };
@@ -109,4 +125,83 @@ pub(super) fn certify(
     }
     let second = crate::surface_linear_monotonicity::inspect(&b, p, max_cells - first.cells)?;
     Ok((second.certified, first.cells + second.cells))
+}
+
+pub(super) fn certify(
+    a: &Surface,
+    b: &Surface,
+    ends: [bool; 2],
+    max_cells: usize,
+) -> Result<(bool, usize)> {
+    // Preserve the existing successful fast path and account for its failed
+    // attempt before trying a second parametrization. Neither attempt gets a
+    // fresh cell allowance. Both keep the same original poles and V curve.
+    let first = certify_policy(a, b, ends, max_cells, false)?;
+    if first.0 || first.1 == max_cells {
+        return Ok(first);
+    }
+    let second = certify_policy(a, b, ends, max_cells - first.1, true)?;
+    Ok((second.0, first.1 + second.1))
+}
+
+#[cfg(all(test, feature = "codec"))]
+mod tests {
+    use super::*;
+
+    fn natural(mut surface: Surface, pcurve: crate::curve::Curve) -> (Surface, bool) {
+        let axis = (0..2)
+            .find(|&k| {
+                pcurve
+                    .control_points
+                    .iter()
+                    .all(|p| p[k] == pcurve.control_points[0][k])
+            })
+            .unwrap();
+        if axis == 1 {
+            surface = crate::surface_edit::transpose(&surface).unwrap();
+        }
+        let position = pcurve.control_points[0][axis];
+        let end = position == surface.knots_u[surface.control_points.len()];
+        assert!(end || position == surface.knots_u[surface.degree_u]);
+        (surface, end)
+    }
+
+    #[test]
+    fn thin_oblique_caps_and_long_walls_share_a_complete_monotone_chart() {
+        let data: value_codec::Value =
+            value_codec::from_str(include_str!("fixtures/oblique-annular-wall-cap.json")).unwrap();
+        for pair in data["pairs"].as_array().unwrap() {
+            let (a, ea) = natural(
+                value_codec::from_value(pair["surfaces"][0].clone()).unwrap(),
+                value_codec::from_value(pair["pcurves"][0].clone()).unwrap(),
+            );
+            let (b, eb) = natural(
+                value_codec::from_value(pair["surfaces"][1].clone()).unwrap(),
+                value_codec::from_value(pair["pcurves"][1].clone()).unwrap(),
+            );
+            let proof =
+                super::super::certify_shared_natural_boundary(&a, &b, [ea, eb], 1000).unwrap();
+            assert!(
+                proof.proven,
+                "pair {}: {}, cells={}",
+                pair["faces"], proof.reason, proof.spans
+            );
+            assert!(proof.spans <= 1000);
+            let empty = super::super::certify_shared_natural_boundary(&a, &b, [ea, eb], 0).unwrap();
+            assert!(!empty.proven && empty.spans == 0);
+            let overlap =
+                super::super::certify_shared_natural_boundary(&a, &a, [ea, ea], 100).unwrap();
+            assert!(!overlap.proven && overlap.spans <= 100);
+            let mut changed = b.clone();
+            let row = if eb { changed.degree_u } else { 0 };
+            changed.control_points[row][0][0] = changed.control_points[row][0][0].next_up();
+            let changed =
+                super::super::certify_shared_natural_boundary(&a, &changed, [ea, eb], 1000)
+                    .unwrap();
+            assert!(
+                !changed.proven,
+                "A changed common curve cannot inherit the glued certificate"
+            );
+        }
+    }
 }

@@ -35,31 +35,51 @@ impl Source<'_, '_> {
     }
     fn domains(&self, sizes: &[usize], tolerance: f64, limits: Limits) -> Result<EndpointDomains> {
         match self {
-            Self::Miter(s) => s.certify_ideal_cap_domains(sizes, tolerance, limits.trim_pairs,
-                limits.trim_cells, limits.exact_work),
+            Self::Miter(s) => s.certify_ideal_cap_domains(
+                sizes,
+                tolerance,
+                limits.trim_pairs,
+                limits.trim_cells,
+                limits.exact_work,
+            ),
             Self::Smooth(s) => {
-                let report = s.certify_ideal_endpoint_domains(sizes, tolerance, limits.trim_pairs,
-                    limits.trim_cells, limits.exact_work)?;
+                let report = s.certify_ideal_endpoint_domains(
+                    sizes,
+                    tolerance,
+                    limits.trim_pairs,
+                    limits.trim_cells,
+                    limits.exact_work,
+                )?;
                 // Annular filling uses original region ownership and endpoint
                 // point maps, not a source-to-retained plane projection. No
                 // endpoint normal is inferred from a frame axis here.
                 Ok(EndpointDomains {
                     ideal_cap_domains_certified: report.ideal_endpoint_domains_certified,
-                    source: report.source, endpoint_normals: None,
-                    cells: report.cells, reason: report.reason,
+                    source: report.source,
+                    endpoint_normals: None,
+                    cells: report.cells,
+                    reason: report.reason,
                 })
             }
         }
     }
-    fn endpoint_points(&self, points: &[[f64; 3]], cells: usize, law_cells: usize)
-        -> Result<nurbs_core::progressive_miter::endpoint_point_certificate::Report> {
+    fn endpoint_points(
+        &self,
+        points: &[[f64; 3]],
+        cells: usize,
+        law_cells: usize,
+    ) -> Result<nurbs_core::progressive_miter::endpoint_point_certificate::Report> {
         match self {
             Self::Miter(s) => s.certify_endpoint_points(points, cells, law_cells),
             Self::Smooth(s) => {
                 let report = s.certify_endpoint_points(points, cells)?;
-                Ok(nurbs_core::progressive_miter::endpoint_point_certificate::Report {
-                    points: report.points, cells: report.cells, reason: report.reason,
-                })
+                Ok(
+                    nurbs_core::progressive_miter::endpoint_point_certificate::Report {
+                        points: report.points,
+                        cells: report.cells,
+                        reason: report.reason,
+                    },
+                )
             }
         }
     }
@@ -223,23 +243,50 @@ pub fn inspect(
     law_cells: usize,
     limits: Limits,
 ) -> Result<Report> {
-    inspect_source(Source::Miter(sweep), model, cap_faces, loop_sizes,
-        tolerance, tolerance_uv, law_cells, limits)
+    inspect_source(
+        Source::Miter(sweep),
+        model,
+        cap_faces,
+        loop_sizes,
+        tolerance,
+        tolerance_uv,
+        law_cells,
+        limits,
+    )
 }
 
 /// Compare retained annular caps to the original smooth sweep's complete
 /// endpoint fillings. This does not admit the enclosing Solid or wall error.
 pub fn inspect_smooth(
-    sweep: &MultiSweep<'_>, model: &Model, cap_faces: &[Vec<usize>; 2],
-    loop_sizes: &[usize], tolerance: f64, tolerance_uv: f64, limits: Limits,
+    sweep: &MultiSweep<'_>,
+    model: &Model,
+    cap_faces: &[Vec<usize>; 2],
+    loop_sizes: &[usize],
+    tolerance: f64,
+    tolerance_uv: f64,
+    limits: Limits,
 ) -> Result<Report> {
-    inspect_source(Source::Smooth(sweep), model, cap_faces, loop_sizes,
-        tolerance, tolerance_uv, 0, limits)
+    inspect_source(
+        Source::Smooth(sweep),
+        model,
+        cap_faces,
+        loop_sizes,
+        tolerance,
+        tolerance_uv,
+        0,
+        limits,
+    )
 }
 
 fn inspect_source(
-    sweep: Source<'_, '_>, model: &Model, cap_faces: &[Vec<usize>; 2],
-    loop_sizes: &[usize], tolerance: f64, tolerance_uv: f64, law_cells: usize, limits: Limits,
+    sweep: Source<'_, '_>,
+    model: &Model,
+    cap_faces: &[Vec<usize>; 2],
+    loop_sizes: &[usize],
+    tolerance: f64,
+    tolerance_uv: f64,
+    law_cells: usize,
+    limits: Limits,
 ) -> Result<Report> {
     model.validate()?;
     if loop_sizes.len() != 2

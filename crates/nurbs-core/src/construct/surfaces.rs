@@ -23,3 +23,5 @@ pub mod wave_surface;
 pub mod superellipsoid;
 
 pub mod optical_shapes;
+
+pub mod profile_spring;

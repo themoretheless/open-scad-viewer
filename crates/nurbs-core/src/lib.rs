@@ -228,3 +228,9 @@ pub use crate::construct::surfaces::superellipsoid;
 pub use crate::construct::surfaces::optical_shapes;
 
 pub use crate::construct::surfaces::wing_loft;
+
+pub use crate::construct::surfaces::profile_spring;
+
+pub use crate::construct::curves::radial_cam;
+
+pub use crate::join::surface_blend;

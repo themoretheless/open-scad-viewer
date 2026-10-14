@@ -5,6 +5,22 @@ import {authorBrepProfile,booleanBrepProfiles,normalizeBrepProfile,validateBrepP
 import {pathFromCircle} from '../src/services/geometry/path2d'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})
 const cubic=(points:number[][]):NurbsCurve=>({degree:3,knots:[0,0,0,0,1,1,1,1],controlPoints:points,weights:[1,1,1,1],periodic:false})
+it('preserves a curved double contact through an affine change of coordinates',()=>{
+ const region=(y:number[])=>{
+  const c=cubic(y.map((value,i)=>[10*i,value]))
+  const wire=[line([0,-2],[30,-2]),line([30,-2],[30,y[3]]),reverseNurbsCurve(c),line([0,y[0]],[0,-2])]
+  for(const c of wire)for(const p of c.controlPoints){const[x,y]=p;p[0]=17+x-y;p[1]=-9+x+y}
+  return wire
+ }
+ const a=validateBrepProfile([region([0,0,1,3])]),b=validateBrepProfile([region([1,-1,1,7])]),before=JSON.stringify([a,b])
+ expect(a.areaMm2).toBeCloseTo(180,6);expect(b.areaMm2).toBeCloseTo(240,6)
+ for(const [operation,area] of [['union',240],['intersection',180],['difference',0]] as const){
+  const result=booleanBrepProfiles(a,b,operation)
+  expect(result.areaMm2).toBeCloseTo(area,5)
+  if(area>0)expect(result.loops.flat().some(c=>c.degree===3)).toBe(true)
+ }
+ expect(JSON.stringify([a,b])).toBe(before)
+})
 it('admits monotone cubic carriers whose control polygons reverse',()=>{
  const c=cubic([[0,0],[1,1.1],[.9,.8],[1.9,2.1]])
  const region=(curve:NurbsCurve)=>{const a=curve.controlPoints[0],b=curve.controlPoints.at(-1)!;return [line([a[0],-1],[b[0],-1]),line([b[0],-1],b),reverseNurbsCurve(curve),line(a,[a[0],-1])]}

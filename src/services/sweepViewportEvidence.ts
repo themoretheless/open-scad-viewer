@@ -36,8 +36,29 @@ export function readSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArt
   const wallsProved=walls?.certified===true&&walls.faceCoverageCertified===true&&walls.coefficientFamilyCertified===true&&
    Number.isSafeInteger(walls.inspectedFaces)&&walls.inspectedFaces>0&&walls.inspectedFaces<=1024&&
    Number.isSafeInteger(walls.exactWork)&&walls.exactWork>=0&&walls.exactWork<=1000000
+  const filling=report.retainedAnnularFilling,groups=report.capFaceGroups,caps=report.capFaces
+  const work=(v:unknown):v is number=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=1000000
+  // Validate only the native receipt's declared coverage and ledger. All
+  // filling/UV/geometry decisions remain Rust-owned and Solid audits afresh.
+  const annularCapsProved=report.capRepresentation==='radial-annular'&&report.closedPath===false&&
+   report.retainedCaps===null&&report.capProjection===null&&Array.isArray(report.planarCapFaces)&&report.planarCapFaces.length===0&&
+   Array.isArray(groups)&&groups.length===2&&groups.every((g:unknown)=>Array.isArray(g)&&g.length>0)&&
+   Array.isArray(caps)&&caps.length<=1024&&caps.length===groups.flat().length&&new Set(caps).size===caps.length&&
+   caps.every((f:unknown,i:number)=>Number.isSafeInteger(f)&&Number(f)>=0&&Number(f)<1024&&f===groups.flat()[i])&&
+   walls?.inspectedFaces+caps.length<=1024&&
+   filling?.method==='authored-smooth-endpoint-annular-filling'&&filling.sourceFillingCovered===true&&
+   filling.sourceUvFacesInjective===true&&filling.sourceUvPairsClassified===true&&filling.solidGeometryCertified===false&&
+   work(filling.exactWork)&&work(filling.constructionExactWork)&&work(filling.fillingExactWork)&&
+   filling.exactWork===filling.constructionExactWork+filling.fillingExactWork&&
+   Number.isSafeInteger(filling.products)&&filling.products>=0&&filling.products<=100000&&
+   Number.isSafeInteger(filling.endpointCells)&&filling.endpointCells>=0&&filling.endpointCells<=100000&&
+   Array.isArray(report.filledCapErrorUpper)&&report.filledCapErrorUpper.length===2&&report.filledCapErrorUpper.every(finite)&&
+   Array.isArray(filling.filledCapErrorUpper)&&filling.filledCapErrorUpper.length===2&&
+   filling.filledCapErrorUpper.every((v:unknown,i:number)=>v===report.filledCapErrorUpper[i])&&
+   budget!==null&&filling.withinBudget===report.filledCapErrorUpper.every((v:number)=>v<=budget)&&
+   upper!==null&&report.filledCapErrorUpper.every((v:number)=>v<=upper)
   const capsProved=report.closedPath===true?report.retainedCaps===null&&report.filledCapErrorUpper===null:
-   report.closedPath===false&&report.retainedCaps?.exact===true&&report.capProjection?.idealCapDomainsCertified===true&&
+   annularCapsProved||report.capRepresentation===undefined&&report.closedPath===false&&report.retainedCaps?.exact===true&&report.capProjection?.idealCapDomainsCertified===true&&
    Array.isArray(report.filledCapErrorUpper)&&report.filledCapErrorUpper.length===2&&report.filledCapErrorUpper.every(finite)&&
    Array.isArray(report.capProjection.normalDots)&&report.capProjection.normalDots.length===2&&
    report.capProjection.normalDots.every((dot:unknown)=>Array.isArray(dot)&&dot.length===2&&

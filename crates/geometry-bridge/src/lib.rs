@@ -1297,8 +1297,18 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         >(
             &v, "sections",
         )?)?),
-        "brep_nurbs_progressive_profile_body" | "brep_nurbs_progressive_profile_body_reconstruct_stations" => {
+        "brep_nurbs_progressive_profile_body" | "brep_nurbs_progressive_profile_body_reconstruct_stations"
+        | "brep_nurbs_progressive_profile_annular_body" | "brep_nurbs_progressive_profile_annular_body_reconstruct_stations" => {
             use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+            let annular_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_annular_body"));
+            if annular_mode {
+                for key in ["model","sections","boundaryCertificate","filledCapErrorUpper","retainedAnnularFilling",
+                    "capFaceGroups","capFaces","planarCapFaces","continuousBound","boundaryErrorUpper",
+                    "boundaryContinuousBound","boundaryErrorWithinBudget","globalEmbeddingCertified","retainedCaps",
+                    "retainedWalls","capProjection","retainedSmoothness","stationReconstruction","approximation"] {
+                    if v.get(key).is_some() {return Err(input("Annular progressive body requires original source, not supplied geometry/proofs"));}
+                }
+            }
             let orientation = match field::<String>(&v, "orientation")?.as_str() {
                 "rmf" => Orientation::RotationMinimizing,
                 "fixed" | "authored" => Orientation::Fixed,
@@ -1421,24 +1431,32 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     ));
                 }
             };
-            let result = brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
-                &loops,
-                &path,
-                &scale,
-                &twist,
-                affine,
-                frame_axis.as_ref().zip(frame_normal.as_ref()),
-                guide
-                    .as_ref()
-                    .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))),
-                options,
-                correction,
-                profile_correction,
-                rmf_policy,
-            )?;
+            let guidance=guide.as_ref().map(|g|(g,contact.map(|p|(contact_profile.unwrap_or(0),p))));
+            let owned=if annular_mode {
+                Some(brep_core::analytic::progressive_profile_body_with_annular_caps(
+                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
+                    guidance,options,correction,profile_correction,rmf_policy,
+                    brep_core::retained_annular_cap::reference_filling::Limits {
+                        exact_work:optional_field(&v,"annular_cap_max_work")?.unwrap_or(1000000),
+                        products:optional_field(&v,"annular_cap_max_products")?.unwrap_or(100000),
+                        trim_pairs:optional_field(&v,"annular_cap_max_pairs")?.unwrap_or(10000),
+                        trim_cells:optional_field(&v,"annular_cap_max_cells")?.unwrap_or(100000),
+                        trim_domain_cells:1000000,spans:1024,linear_cells:100000,
+                        contacts:brep_core::face_contacts::Limits {pairs:10000,cells:100000,domain_cells:1000000,
+                            cells_per_pair:1000,domain_cells_per_pair:10000},
+                    },
+                )?)
+            }else{None};
+            let legacy=if annular_mode {None}else{
+                Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
+                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
+                    guidance,options,correction,profile_correction,rmf_policy,
+                )?)
+            };
+            let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).unwrap();
             // Replay the complete original constructor, never caller-authored sections,
             // retained geometry or a scalar certificate. The base receipt stays separate.
-            let station_reconstruction=if v["op"].as_str()==Some("brep_nurbs_progressive_profile_body_reconstruct_stations") {
+            let station_reconstruction=if v["op"].as_str().is_some_and(|op|op.ends_with("_reconstruct_stations")) {
                 if let Some(expected)=optional_field::<brep_core::Model>(&v,"expected_source_model")? {
                     if expected!=result.model {
                         return Err(input("Station reconstruction source model differs from native original constructor"));
@@ -1449,7 +1467,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 )?;
                 let closed=result.approximation.levels.last().unwrap().closed_path;
                 let actual_smoothness=if let Some(model)=report.reconstruction.as_ref().and_then(|r|r.model.as_ref()) {
-                    let caps=if closed {Vec::new()}else{vec![model.faces.len()-2,model.faces.len()-1]};
+                    let caps=owned.as_ref().map(|body|body.cap_faces()).unwrap_or_else(||
+                        if closed {Vec::new()}else{vec![model.faces.len()-2,model.faces.len()-1]});
                     Some(cad_sweep_smoothness::diagnose(json!({"model":model,"capFaces":caps,
                         "maxWork":field::<u64>(&v,"smoothness_max_work")?}),true)?)
                 }else{None};
@@ -1498,6 +1517,31 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                         level["decompositionMaxProducts"] = json!(products);
                     }
                 }
+            }
+            if let Some(body)=&owned {
+                output["capFaces"]=json!(body.cap_faces());
+                output["planarCapFaces"]=json!([]);
+                output["capFaceGroups"]=body.caps().map_or_else(||json!([[],[]]),|caps|json!(caps.face_groups()));
+                output["capRepresentation"]=json!(if body.caps().is_some(){"radial-annular"}else{"closed"});
+                output["retainedAnnularFilling"]=body.caps().map_or(Value::Null,|caps| {
+                    let proof=caps.filling();
+                    json!({"method":"authored-smooth-endpoint-annular-filling",
+                        "sourceFillingCovered":proof.source_filling_covered,"filledCapErrorUpper":proof.filled_cap_error_upper,
+                        "withinBudget":proof.within_budget,"exactWork":caps.exact_work(),"constructionExactWork":caps.construction_work(),
+                        "fillingExactWork":proof.exact_work,"products":proof.products,"endpointCells":proof.endpoint_cells,
+                        "sourceUvFacesInjective":proof.source_uv_faces.as_ref().is_some_and(|r|r.all_faces_injective),
+                        "sourceUvPairsClassified":proof.source_uv_pairs.as_ref().is_some_and(|r|r.all_pairs_classified),
+                        "reason":proof.reason,"solidGeometryCertified":false})
+                });
+                output["retainedSmoothness"]=if let Some(max_work)=optional_field::<u64>(&v,"smoothness_max_work")? {
+                    let actual=body.inspect_smoothness(max_work)?;
+                    json!({"walls":cad_sweep_smoothness::profile_value(&actual.walls),"maxWork":max_work,"totalExactWork":actual.exact_work,
+                        "capInternalSeams":actual.cap_seams.iter().map(|r|json!({"method":"retained-annular-cap-internal-jets","edgeIds":r.edge_ids,
+                            "g1Certified":r.g1_certified,"g2Certified":r.g2_certified,"exactWork":r.exact_work,
+                            "maxWork":r.max_work,"unclassifiedFaces":r.unclassified_faces,"unpairedEdges":r.unpaired_edges,
+                            "extractionComplete":r.extraction_complete})).collect::<Vec<_>>(),
+                        "capWallContinuity":"C0","fullBoundarySmoothnessCertified":false})
+                }else{Value::Null};
             }
             if let Some(report)=station_reconstruction {output["stationReconstruction"]=report;}
             Ok(output)
@@ -2478,6 +2522,8 @@ pub fn execute(input_text: &str) -> String {
 }
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod progressive_annular_tests;
 
 /// Owned binary transport snapshot. Pointers are borrowed until `free()`;
 /// clients must reacquire the WASM memory buffer after allocating this object.

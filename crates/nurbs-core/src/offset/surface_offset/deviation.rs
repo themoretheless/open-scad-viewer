@@ -1,4 +1,4 @@
-//! Certified sampled deviation of an offset surface against the true offset
+//! Sampled numerical deviation of an offset surface against the true offset
 //! (split from `surface_offset`, byte for byte).
 use super::*;
 

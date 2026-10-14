@@ -824,6 +824,45 @@ mod tests {
         }
     }
     #[test]
+    fn affine_curved_tangency_boolean_preserves_both_retained_carriers() {
+        use crate::Curve;
+        let region = |ys: [f64; 4]| {
+            let c = Curve {
+                degree: 3,
+                knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+                control_points: (0..4).map(|i| vec![10. * i as f64, ys[i]]).collect(),
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            let line = |a, b| Curve::from_polyline(vec![a, b]).unwrap();
+            let mut wire = vec![
+                line(vec![0., -2.], vec![30., -2.]),
+                line(vec![30., -2.], vec![30., ys[3]]),
+                c.reverse().unwrap(),
+                line(vec![0., ys[0]], vec![0., -2.]),
+            ];
+            for c in &mut wire {
+                for p in &mut c.control_points {
+                    let [x, y] = [p[0], p[1]];
+                    p[0] = 17. + x - y;
+                    p[1] = -9. + x + y;
+                }
+            }
+            wire
+        };
+        let a = vec![region([0., 0., 1., 3.])];
+        let b = vec![region([1., -1., 1., 7.])];
+        assert!((super::validate_profile(&a, 1e-7).unwrap() - 180.).abs() < 1e-6);
+        assert!((super::validate_profile(&b, 1e-7).unwrap() - 240.).abs() < 1e-6);
+        for (operation, area) in [("union", 240.), ("intersection", 180.), ("difference", 0.)] {
+            let result = super::boolean(&a, &b, operation, 1e-7).unwrap();
+            assert!((super::validate_profile(&result, 1e-7).unwrap() - area).abs() < 1e-5);
+            if area > 0. {
+                assert!(result.iter().flatten().any(|c| c.degree == 3));
+            }
+        }
+    }
+    #[test]
     fn interior_semicubical_cusp_splits_original_curve_without_chords() {
         let c = crate::Curve {
             degree: 3,

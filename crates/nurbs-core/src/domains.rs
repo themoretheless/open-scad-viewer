@@ -33,6 +33,7 @@ pub mod curves {
     pub use crate::hermite;
     pub use crate::engineering_profiles;
     pub use crate::helix;
+    pub use crate::radial_cam;
     pub use crate::involute;
     pub use crate::logarithmic_spiral;
     pub use crate::lissajous;
@@ -57,6 +58,7 @@ pub mod surfaces {
     pub use crate::superellipsoid;
     pub use crate::optical_shapes;
     pub use crate::wing_loft;
+    pub use crate::profile_spring;
     pub use crate::function_surface;
     pub use crate::boundary_fill;
     pub use crate::coons;
@@ -115,6 +117,7 @@ pub mod joining {
     pub use crate::surface_join;
     pub use crate::surface_g1;
     pub use crate::surface_g2;
+    pub use crate::surface_blend;
     pub use crate::circle_transition;
     pub use crate::ellipse_transition;
     pub use crate::circle_rectangle_transition;

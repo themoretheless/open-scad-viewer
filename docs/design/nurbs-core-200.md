@@ -4,7 +4,49 @@
 
 Нативная готовность требует типизированного Rust API, независимых геометрических проверок, отказов на некорректных данных и описанных ограничений. WASM, TypeScript, Rush и редактор не являются условиями нативной готовности. Приближённая операция обязана явно различать выборочную оценку, непрерывную границу ошибки и учёт округления.
 
-Текущее состояние каталога: 165 реализованных возможностей (79 integrated + 86 native), 35 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+Текущее состояние каталога: 173 реализованные возможности (79 integrated + 94 native), 27 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+
+## Актуальный итог — радиальный кулачок native, 2026-10-14
+
+**173/200**: 79 integrated + 94 native, осталось **27 planned**. Добавлен `radial_cam::profile`: translating knife-edge/roller follower, dwell/harmonic/cycloidal/345/4567 motion laws, adaptive cubic contour и sampled pressure/undercut diagnostics. Программа покрывает полный 360-degree cycle; source-angle cells и curve chunks сохраняют full coverage/shared endpoints, последняя control point канонически равна первой. Budget/parameter-precision stops возвращают полный contour с явным недостатком качества.
+
+Прошли пять independent integration groups offline/locked, no-default-features: base-circle invariant для обоих followers, четыре motion laws, lift stations, independent roller-contact geometry, closure/coverage, sampled undercut, budget/invalid inputs и very short angular precision. Error/pressure/undercut остаются sampled estimates, а не continuous manufacturing certificate; output — контур, без extruded/manifold B-rep body. [Контракт](nurbs-radial-cam.md). Далее — история предыдущих рубежей.
+
+## Актуальный итог — пружина с профилем native, 2026-10-14
+
+**172/200**: 79 integrated + 93 native, осталось **28 planned**. Добавлен `profile_spring::approximate`: произвольный rational XY profile переносится в analytic helix normal frame. Profile basis/weights сохраняются; Hermite transport разбивается на Surface patches с одинаковыми boundary controls. Refinement управляется непрерывной real-arithmetic remainder estimate, при span budget возвращается вся спираль до t=1.
+
+Прошли три independent integration groups offline/locked, no-default-features: обе навивки, signed/zero height, 2D/3D XY rational profile, analytic target, normal-plane/metric invariants, patch boundaries, non-power-of-two budget и invalid requests. Source hash конструктора совпал с предшествующим снимком; последняя версия tests прошла повторно после добавления 3D XY case. Libm/rounding, self-collision, regularity и caps/solid topology не квалифицированы. [Контракт](nurbs-profile-spring.md). Далее — история прошлых рубежей.
+
+## Актуальный итог — поверхность по облаку native, 2026-10-14
+
+**171/200**: 79 integrated + 92 native, осталось **29 planned**. Исправлена PCA parameterization cloud surface fitting: масштабированные координаты/covariance, независимая вторая ось с выбором по реальному projected spread, orthogonal power iteration и явный отказ numerically rank-one clouds. Удалена необоснованная diameter/sqrt(N) граница. Site residual теперь вычисляется outward interval tensor de Casteljau; весь Surface против конечного облака имеет coarse control/data-box Hausdorff bound.
+
+Прошли **15 профильных tests** offline/locked без default features: четыре independent cloud integration groups, шесть dependent offset/fillet groups, пять fitting unit tests. Проверены rotated/correlated plane, все три axis-aligned orientations (регрессия вертикального chart), duplicated sites, degeneracy/invalid inputs. Три source/test hashes совпали. Границы относятся к возвращённой mathematical surface и конечным authored sites; неизвестная continuous source и её topology не реконструированы с сертификатом. [Контракт](nurbs-cloud-surface.md). Далее — история прошлых рубежей.
+
+## Актуальный итог — constant/variable fillet native, 2026-10-14
+
+**170/200**: 79 integrated + 91 native, осталось **30 planned**. Проверены rolling-ball и variable-radius surface fillet constructors. Public RadiusLaw evaluation больше не panic на malformed spline; добавлен typed `evaluate_checked`, проверяющий query и nonpositive/nonfinite результат. Уточнены sampled reachability и reference-spine semantics; positive cubic node radii не выданы за continuous positivity proof.
+
+Прошли **14 fillet tests** offline/locked без default features: три независимых integration groups и 11 unit tests. Новые случаи — translated perpendicular supports с authored UV domains, independent cylinder equation, linear/spline station radii, boundary positions/normals, malformed public laws, positive-node negative overshoot и явный отказ для parallel separated supports. Source/test hashes совпали до/после. Нативный контракт — approximate surface constructors; continuous G1/G2, law positivity, B-rep trimming/solid и full error certificate не квалифицированы. [Контракт](nurbs-fillet-surfaces.md). Далее — история прежних рубежей.
+
+## Актуальный итог — surface offset native, 2026-10-14
+
+**168/200**: 79 integrated + 89 native, осталось **32 planned**. Проверен и исправлен `surface_offset::offset`: sample-based plane/sphere/cylinder recognition больше не выдаёт exact=true; точный флаг сохранён для zero-distance identity. Добавлена typed assurance ExactIdentity/SampledDeviation. Cloud-fit certificate больше не подменяет offset error: fitted Surface получает исходные UV domains и повторное измерение относительно S+dn перед принятием.
+
+Прошли **29 профильных tests** offline/locked, no-default-features: три новые integration groups, 15 surface_offset unit tests и 11 dependent fillet tests. Независимая регрессия воспроизводит ложную exactness на z=1e-10*u*v; другая проверяет Euclidean residual в authored U=[2,7],V=[-3,1]. Четыре source/test hashes совпали до/после. Offset deviation и fold-free radius остаются sampled estimates, а не continuous/rounding certificate; tolerance excess и degeneracy требуют проверки caller. [Контракт](nurbs-surface-offset.md). Далее — история прежних рубежей.
+
+## Актуальный итог — геодезическая native, 2026-10-14
+
+**167/200**: 79 integrated + 88 native, осталось **33 planned**. Проверен существующий RK4 geodesic tracing исходной поверхности. Исправлены overflow/underflow при нормализации UV direction, length_achieved при boundary exit и разрешение очень малой доли boundary step через прямое rectangular clipping вместо фиксированных bisections. Слишком малая длина для представимого начального шага отклоняется.
+
+Прошли **9 geodesic tests** offline/locked, no-default-features: четыре независимых integration groups и пять существующих unit tests. Проверены affine-plane endpoints/distance, direction scales 1e±300, boundary lengths при запросе 1e100, cylinder helix, sphere great circle/pole, geodesic offset и invalid/budget cases. Source/test hashes не изменились. Контракт — численное initial-value tracing с явными остановками; локальная sampled curvature не сертифицирует global drift/shortest path. [Ограничения](nurbs-geodesic.md). Далее — история прежних рубежей.
+
+## Актуальный итог — крыло native, 2026-10-14
+
+**166/200**: 79 integrated + 87 native; осталось **34 planned**. Проверен существующий `wing_loft`, добавлены root/domain API paths, исправлен лимит исходных сечений согласно выбранной законцовке (None 11 / Collapse 10 / Dome 9), reference parameterization переведена на hypot и масштабированное накопление с явным отказом при слиянии station parameters.
+
+Прошли **13 wing tests** offline/locked без default features: три независимых integration groups и 10 существующих unit tests, включая NACA, placement, tip, sampled folding и fairing boundaries. Новые regressions проверяют исходные rational profiles после affine placement при разных twist/taper, неравномерные spans, сохранение curve, допустимый координатный предел 1e9 и отказ за ним, все tip limits и invalid inputs. Source/test hashes не изменились во время финального прогона. Sampled folding не является сертификатом injectivity; B-rep/root closure, формальный G1/G2 tip и binary64 error не квалифицированы. [Контракт](nurbs-wing-loft.md). Далее сохранена история прошлых рубежей.
 
 ## Актуальный итог — купол и линза native, 2026-10-14
 
@@ -92,7 +134,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0026 | торическая спираль | integrated |
 | NURBS-0027 | торический узел | integrated |
 | NURBS-0028 | пространственная интерполяция | integrated |
-| NURBS-0029 | геодезическая | planned |
+| NURBS-0029 | геодезическая | native |
 | NURBS-0030 | пересечение поверхностей | planned |
 | NURBS-0031 | плоский патч | integrated |
 | NURBS-0032 | билинейный патч | integrated |
@@ -123,7 +165,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0057 | Gordon | integrated |
 | NURBS-0058 | трёхграничный патч | integrated |
 | NURBS-0059 | многограничное заполнение | integrated |
-| NURBS-0060 | поверхность по облаку | planned |
+| NURBS-0060 | поверхность по облаку | native |
 | NURBS-0061 | труба постоянного радиуса | integrated |
 | NURBS-0062 | переменного радиуса | integrated |
 | NURBS-0063 | profile sweep | integrated |
@@ -133,16 +175,16 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0067 | closed sweep | planned |
 | NURBS-0068 | огибающая сфер | planned |
 | NURBS-0069 | лента вдоль пути | integrated |
-| NURBS-0070 | пружина с профилем | planned |
+| NURBS-0070 | пружина с профилем | native |
 | NURBS-0071 | переход круг–круг | integrated |
 | NURBS-0072 | круг–прямоугольник | integrated |
 | NURBS-0073 | эллипс–эллипс | integrated |
 | NURBS-0074 | смещённые профили | native |
-| NURBS-0075 | constant fillet | planned |
-| NURBS-0076 | variable fillet | planned |
+| NURBS-0075 | constant fillet | native |
+| NURBS-0076 | variable fillet | native |
 | NURBS-0077 | G1 blend | planned |
 | NURBS-0078 | G2 blend | planned |
-| NURBS-0079 | offset | planned |
+| NURBS-0079 | offset | native |
 | NURBS-0080 | оболочка заданной толщины | planned |
 | NURBS-0081 | прямозубая | planned |
 | NURBS-0082 | косозубая | planned |
@@ -154,9 +196,9 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0088 | червячное колесо | planned |
 | NURBS-0089 | наружная резьба | planned |
 | NURBS-0090 | внутренняя резьба | planned |
-| NURBS-0091 | кулачок | planned |
+| NURBS-0091 | кулачок | native |
 | NURBS-0092 | лопатка | planned |
-| NURBS-0093 | крыло | planned |
+| NURBS-0093 | крыло | native |
 | NURBS-0094 | корпус по сечениям | planned |
 | NURBS-0095 | купол | native |
 | NURBS-0096 | линза | native |

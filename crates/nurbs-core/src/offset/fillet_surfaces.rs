@@ -181,13 +181,25 @@ impl RadiusLaw {
         Ok(())
     }
 
-    /// Evaluate the law at `t` (clamped to the control range for splines).
+    /// Evaluate at finite t; invalid authored laws return NaN, never panic.
+    /// Use evaluate_checked for a typed error, including nonpositive overshoot.
     pub fn evaluate(&self, t: f64) -> f64 {
+        if !t.is_finite() || self.validate().is_err() { return f64::NAN; }
         match self {
             RadiusLaw::Constant(r) => *r,
             RadiusLaw::Linear { start, end } => start + (end - start) * t.clamp(0., 1.),
             RadiusLaw::Spline(points) => natural_cubic(points, t),
         }
+    }
+
+    /// Validate authored data and the evaluated radius at this query. Positive
+    /// spline control radii alone do not prove positivity between controls.
+    pub fn evaluate_checked(&self, t: f64) -> Result<f64> {
+        self.validate()?;
+        require_finite_f64(t, "radius_law_query")?;
+        let r=self.evaluate(t);
+        check(r.is_finite() && r>0., "Radius law evaluated to a nonpositive or nonfinite radius")?;
+        Ok(r)
     }
 
     /// `[min, max, mean]` over a budgeted uniform sample.
@@ -291,7 +303,8 @@ impl FilletOptions {
 /// One spine station of a built fillet.
 #[derive(Clone, Copy, Debug)]
 pub struct SpineSample {
-    /// Normalized arc-length parameter in `[0, 1]`.
+    /// Normalized reference-spine arc-length parameter in `[0, 1]`; variable
+    /// law polishing need not preserve arc length of the final center curve.
     pub t: f64,
     /// Ball center on the spine.
     pub center: [f64; 3],
@@ -317,7 +330,7 @@ pub enum FailureReason {
     MarchingDiverged,
     /// The requested radius is below the numerical minimum for this pair.
     RadiusBelowMinimum { radius: f64, minimum: f64 },
-    /// The requested radius exceeds the certified fold-free offset reach of a
+    /// The requested radius exceeds the sampled fold-free offset reach of a
     /// support: the ball cannot stay tangent there.
     RadiusExceedsReachability { radius: f64, limiting: f64 },
     /// The section would self-intersect or collapse (contact angle out of
@@ -550,7 +563,7 @@ fn minimum_radius(a: &Surface, b: &Surface, tol: f64) -> f64 {
     (1e-9 * scale.max(1.)).max(100. * tol)
 }
 
-/// Reachability warning via the certified offset validity: returns a warning
+/// Reachability warning via the sampled offset validity: returns a warning
 /// string when `r_max` on a side exceeds the fold-free bound.
 fn reachability_warning(
     name: &str,
@@ -570,7 +583,7 @@ fn reachability_warning(
         .map(|e| e.point)
         .unwrap_or([f64::NAN; 3]);
     Some(format!(
-        "{name}: requested radius |{signed:.6}| exceeds the certified fold-free reach {:.6} near {:?} (limiting radius)",
+        "{name}: requested radius |{signed:.6}| exceeds the sampled fold-free reach {:.6} near {:?} (limiting radius)",
         report.max_offset, point
     ))
 }
@@ -1102,8 +1115,9 @@ pub fn rolling_ball_fillet(
 }
 
 /// Variable-radius fillet: the radius follows `law` along the normalized
-/// spine arc parameter. Radii must stay positive (validated); when the
-/// sampled maximum exceeds a support's certified fold-free reach a warning
+/// spine arc parameter. Authored radii must be positive; spline overshoot is not continuously
+/// certified. When the
+/// sampled maximum exceeds a support's sampled fold-free reach a warning
 /// names the limiting radius and location.
 pub fn variable_radius_fillet(
     a: &Surface,

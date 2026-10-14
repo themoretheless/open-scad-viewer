@@ -83,19 +83,26 @@ pub(crate) fn normalized(curve: Curve) -> Curve {
 
 fn tangent_angle(curve: &Curve, at_start: bool) -> Result<f64> {
     let n = curve.control_points.len();
-    let (p, q) = if at_start {
-        (&curve.control_points[0], &curve.control_points[1])
+    let p = if at_start {
+        &curve.control_points[0]
     } else {
-        (&curve.control_points[n - 1], &curve.control_points[n - 2])
+        &curve.control_points[n - 1]
     };
-    let d = [q[0] - p[0], q[1] - p[1]];
-    let len = d[0].hypot(d[1]);
-    if !len.is_finite() || len <= 1e-12 {
-        return Err(unsupported(
-            "UV regions: degenerate pcurve tangent in the UV arrangement",
-        ));
+    for step in 1..n {
+        let q = if at_start {
+            &curve.control_points[step]
+        } else {
+            &curve.control_points[n - 1 - step]
+        };
+        let d = [q[0] - p[0], q[1] - p[1]];
+        let len = d[0].hypot(d[1]);
+        if len.is_finite() && len > 1e-12 {
+            return Ok(d[1].atan2(d[0]));
+        }
     }
-    Ok(d[1].atan2(d[0]))
+    Err(unsupported(
+        "UV regions: degenerate pcurve tangent in the UV arrangement",
+    ))
 }
 
 fn signed_area(polygon: &[[f64; 2]]) -> f64 {

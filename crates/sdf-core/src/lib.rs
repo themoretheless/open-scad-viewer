@@ -7,7 +7,6 @@ use geometry_ops::Triangles;
 mod serialization;
 pub use math_core::{Acceleration, Error, Result, V3, finite};
 use planar_geometry::rings::{self, Rings};
-use std::collections::BTreeMap;
 const INVALID_INPUT: &str = "SDF_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)

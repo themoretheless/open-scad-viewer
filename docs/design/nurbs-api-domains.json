@@ -43,7 +43,8 @@
     "rack",
     "thread",
     "formula",
-    "curve_reconstruction"
+    "curve_reconstruction",
+    "radial_cam"
   ],
   "surfaces": [
     "function_surface",
@@ -83,7 +84,8 @@
     "wave_surface",
     "superellipsoid",
     "optical_shapes",
-    "wing_loft"
+    "wing_loft",
+    "profile_spring"
   ],
   "editing": [
     "affine",

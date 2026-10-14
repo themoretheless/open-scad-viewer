@@ -1160,9 +1160,18 @@
     {
       "id": "NURBS-0029",
       "name": "геодезическая",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/geodesic.rs",
+        "crates/nurbs-core/tests/geodesic.rs",
+        "docs/design/nurbs-geodesic.md"
+      ],
+      "remainingQualification": [
+        "initial-value RK4 tracing with local sampled curvature residual; global drift, shortest path and rounding-inclusive endpoint error are not certified",
+        "C0 jets use documented one-sided/finite-difference approximations; poles, boundary exits, numeric limits and accepted-step budget remain explicit",
+        "periodic chart unwrapping, B-rep and viewer/export integration are outside native tracing completion"
+      ],
+      "nativeApi": "nurbs_core::geodesic::trace_geodesic_report"
     },
     {
       "id": "NURBS-0030",
@@ -2296,9 +2305,19 @@
     {
       "id": "NURBS-0060",
       "name": "поверхность по облаку",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/fitting.rs",
+        "crates/nurbs-core/src/foundation/fitting/cloud_surface.rs",
+        "crates/nurbs-core/tests/cloud_surface.rs",
+        "docs/design/nurbs-cloud-surface.md"
+      ],
+      "remainingQualification": [
+        "conditioned PCA chart and numerical least-squares rank limit applicability; multi-sheet topology and unique reconstruction are not inferred",
+        "outward site residual and coarse two-sided Hausdorff bound concern the returned mathematical surface versus the finite authored cloud, not an unknown continuous source",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::fitting::fit_surface_cloud_certified_report"
     },
     {
       "id": "NURBS-0061",
@@ -2587,9 +2606,18 @@
     {
       "id": "NURBS-0070",
       "name": "пружина с профилем",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/profile_spring.rs",
+        "crates/nurbs-core/tests/profile_spring.rs",
+        "docs/design/nurbs-profile-spring.md"
+      ],
+      "remainingQualification": [
+        "continuous real-arithmetic Hermite transport estimate excludes libm/control/evaluation rounding; EstimateReached is not a rounding-inclusive certificate",
+        "self-collision, continuous regularity, caps, manifold/solid and closed-path topology remain outside the profile-spring surface constructor contract",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::profile_spring::approximate"
     },
     {
       "id": "NURBS-0071",
@@ -2734,16 +2762,35 @@
     {
       "id": "NURBS-0075",
       "name": "constant fillet",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/tests/fillet_surfaces.rs",
+        "docs/design/nurbs-fillet-surfaces.md"
+      ],
+      "remainingQualification": [
+        "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
+        "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::offset::fillet_surfaces::rolling_ball_fillet"
     },
     {
       "id": "NURBS-0076",
       "name": "variable fillet",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/tests/fillet_surfaces.rs",
+        "docs/design/nurbs-fillet-surfaces.md"
+      ],
+      "remainingQualification": [
+        "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
+        "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
+        "WASM, Rush, editor and export integration remain outside native completion",
+        "natural-cubic radius positivity is checked per query and sampled by builder, not certified continuously; law uses normalized reference-spine parameter"
+      ],
+      "nativeApi": "nurbs_core::offset::fillet_surfaces::variable_radius_fillet"
     },
     {
       "id": "NURBS-0077",
@@ -2762,9 +2809,20 @@
     {
       "id": "NURBS-0079",
       "name": "offset",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/surface_offset.rs",
+        "crates/nurbs-core/src/offset/surface_offset/validity.rs",
+        "crates/nurbs-core/src/offset/surface_offset/deviation.rs",
+        "crates/nurbs-core/tests/surface_offset_assurance.rs",
+        "docs/design/nurbs-surface-offset.md"
+      ],
+      "remainingQualification": [
+        "nonzero offsets expose SampledDeviation assurance; only zero-distance identity has exact=true, primitive recognition is heuristic",
+        "deviation and fold-free radius are sampled numerical estimates; inter-sample/rounding-inclusive error, tolerance attainment and global injectivity are not certified",
+        "degenerate regions, B-rep self-trimming, constant-thickness shell/solid and viewer/export integration remain outside native surface-offset completion"
+      ],
+      "nativeApi": "nurbs_core::surface_offset::offset"
     },
     {
       "id": "NURBS-0080",
@@ -2905,9 +2963,18 @@
     {
       "id": "NURBS-0091",
       "name": "кулачок",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/radial_cam.rs",
+        "crates/nurbs-core/tests/radial_cam.rs",
+        "docs/design/nurbs-radial-cam.md"
+      ],
+      "remainingQualification": [
+        "adaptive Hermite error, pressure angle and undercut diagnostics are sampled; continuous error/undercut-free/global topology are not certified",
+        "output is an exactly data-closed planar contour chain, not an extruded/manifold B-rep cam or manufacturing admission",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::radial_cam::profile"
     },
     {
       "id": "NURBS-0092",
@@ -2919,17 +2986,18 @@
     {
       "id": "NURBS-0093",
       "name": "крыло",
-      "status": "planned",
+      "status": "native",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/wing_loft.rs",
         "crates/nurbs-core/tests/wing_loft.rs",
         "docs/design/nurbs-wing-loft.md"
       ],
-      "partialNativeApi": "nurbs_core::wing_loft::loft_wing",
       "remainingQualification": [
-        "existing Rust placement/loft/tip implementation audited; overflow-safe reference parameterization and actual tip section limits fixed; native regression run pending",
-        "folding check is sampled; original-surface injectivity, B-rep solid and binary64 rounding are not certified"
-      ]
+        "folding check is sampled; original-surface injectivity and global self-intersection absence are not certified",
+        "tip Dome is a shape treatment without formal G1/G2 proof; root closure/B-rep solid and rounding-inclusive geometry error are outside the wing surface constructor contract",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::wing_loft::loft_wing"
     },
     {
       "id": "NURBS-0094",

@@ -9,6 +9,7 @@ type Poly = Vec<Expansion>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlanarReduction {
     CommonCoordinate(usize),
+    CommonProjection,
     LineCarrier { first: bool },
 }
 #[derive(Clone, Debug)]
@@ -185,7 +186,6 @@ fn sturm(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Vec<Poly>, Reason> 
     let p_len = p.len();
     let mut d = derivative(&p, ctx)?;
     normalize(&mut d, ctx)?;
-    let max_chain = p.len() + 1;
     let mut chain = vec![p];
     if zero(&d) {
         return Ok(chain);
@@ -329,22 +329,83 @@ fn monotone(
     if sign == Sign::Zero {
         return Ok(false);
     }
+    let mut ordered = true;
     for p in points.windows(2) {
         let next = p[1][axis].sub(&p[0][axis], ctx)?.sign();
         if next != Sign::Zero && next != sign {
-            return Ok(false);
+            ordered = false;
+            break;
         }
     }
-    Ok(true)
+    if ordered {
+        return Ok(true);
+    }
+    let h = homogeneous(points, ctx)?;
+    monotone_quotient(&h[axis], &h[2], ctx)
 }
-fn straight(points: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
-    if !monotone(points, 0, ctx)? && !monotone(points, 1, ctx)? {
+fn monotone_quotient(
+    numerator: &Poly,
+    denominator: &Poly,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<bool, Reason> {
+    let equation = sub(
+        &mul(&derivative(numerator, ctx)?, denominator, ctx)?,
+        &mul(numerator, &derivative(denominator, ctx)?, ctx)?,
+        ctx,
+    )?;
+    if zero(&equation) {
         return Ok(false);
     }
+    Ok(isolate(&equation, 1e-12, ctx)?.iter().all(|r| {
+        r.multiplicity % 2 == 0
+            || (r.interval[0] == r.interval[1] && (r.interval[0] == 0. || r.interval[0] == 1.))
+    }))
+}
+/// A shared injective linear functional establishes t=s at every contact.
+/// Its direction is constructed in exact arithmetic from original difference
+/// coefficients, never from rounded rotated controls or a sampled axis.
+fn projected_equation(
+    a: &[Poly; 3],
+    b: &[Poly; 3],
+    ctx: &mut PredicateContext<'_>,
+) -> Result<Option<Poly>, Reason> {
+    let dx = sub(&mul(&a[0], &b[2], ctx)?, &mul(&b[0], &a[2], ctx)?, ctx)?;
+    let dy = sub(&mul(&a[1], &b[2], ctx)?, &mul(&b[1], &a[2], ctx)?, ctx)?;
+    let n = dx.len().max(dy.len());
+    let z = Expansion::scalar(0.);
+    let Some(k) = (0..n).find(|&i| {
+        dx.get(i).unwrap_or(&z).sign() != Sign::Zero || dy.get(i).unwrap_or(&z).sign() != Sign::Zero
+    }) else {
+        return Ok(None);
+    };
+    let x = dx.get(k).unwrap_or(&z);
+    let y = dy.get(k).unwrap_or(&z);
+    for i in 0..n {
+        if dx
+            .get(i)
+            .unwrap_or(&z)
+            .mul(y, ctx)?
+            .sub(&dy.get(i).unwrap_or(&z).mul(x, ctx)?, ctx)?
+            .sign()
+            != Sign::Zero
+        {
+            return Ok(None);
+        }
+    }
+    let projected = sub(&scaled(&a[0], y, ctx)?, &scaled(&a[1], x, ctx)?, ctx)?;
+    if !monotone_quotient(&projected, &a[2], ctx)? {
+        return Ok(None);
+    }
+    Ok(Some(if !zero(&dx) { dx } else { dy }))
+}
+fn straight(points: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
     let origin = &points[0];
     let last = points.last().unwrap();
     let dx = last[0].sub(&origin[0], ctx)?;
     let dy = last[1].sub(&origin[1], ctx)?;
+    if dx.sign() == Sign::Zero && dy.sign() == Sign::Zero {
+        return Ok(false);
+    }
     for p in points {
         let x = p[0].sub(&origin[0], ctx)?;
         let y = p[1].sub(&origin[1], ctx)?;
@@ -352,7 +413,7 @@ fn straight(points: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result
             return Ok(false);
         }
     }
-    Ok(true)
+    Ok(monotone(points, 0, ctx)? || monotone(points, 1, ctx)?)
 }
 /// Source rows are Euclidean XY plus positive weight, degree 1..3. Domains
 /// are normalized only by the caller's parameter mapping; no trimmed/fitted
@@ -390,15 +451,15 @@ pub fn planar_bezier_scalar_roots(
         let ha = homogeneous(aa, ctx)?;
         let hb = homogeneous(bb, ctx)?;
         for axis in 0..2 {
-            if !monotone(aa, axis, ctx)? || !monotone(bb, axis, ctx)? {
-                continue;
-            }
             let common = sub(
                 &mul(&ha[axis], &hb[2], ctx)?,
                 &mul(&hb[axis], &ha[2], ctx)?,
                 ctx,
             )?;
             if !zero(&common) {
+                continue;
+            }
+            if !monotone(aa, axis, ctx)? || !monotone(bb, axis, ctx)? {
                 continue;
             }
             let free = 1 - axis;
@@ -413,6 +474,12 @@ pub fn planar_bezier_scalar_roots(
             }
             return Ok(PlanarScalarOutcome::Roots {
                 reduction,
+                roots: isolate(&equation, parameter_tolerance, ctx)?,
+            });
+        }
+        if let Some(equation) = projected_equation(&ha, &hb, ctx)? {
+            return Ok(PlanarScalarOutcome::Roots {
+                reduction: PlanarReduction::CommonProjection,
                 roots: isolate(&equation, parameter_tolerance, ctx)?,
             });
         }
@@ -451,6 +518,87 @@ pub fn planar_bezier_scalar_roots(
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    fn arbitrary_pair(a: &[[f64; 3]], b: &[[f64; 3]], limits: Limits) -> PlanarScalarOutcome {
+        let source = SourceArena::authored(
+            "planar-projected-root-test",
+            1,
+            a.iter()
+                .chain(b)
+                .flatten()
+                .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let refs = |start: usize, n: usize| {
+            (start..start + n)
+                .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
+                .collect::<Vec<_>>()
+        };
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&source, &tolerance, limits, None);
+        planar_bezier_scalar_roots(&mut ctx, &refs(0, a.len()), &refs(a.len(), b.len()), 1e-12)
+            .unwrap()
+            .outcome
+    }
+    #[test]
+    fn projected_coordinate_retains_multiple_contacts_and_nearby_bifurcations() {
+        let ya = [0., 0., 1., 3.];
+        let yb = [1., -1., 1., 7.];
+        let frame = |i: usize, y: f64| [17. + 10. * i as f64 - y, -9. + 10. * i as f64 + y, 1.];
+        let a = std::array::from_fn::<_, 4, _>(|i| frame(i, ya[i]));
+        for (delta, count, multiplicity) in [
+            (0., 1, 2),
+            (2_f64.powi(-30), 0, 1),
+            (-2_f64.powi(-30), 2, 1),
+        ] {
+            let b = std::array::from_fn::<_, 4, _>(|i| frame(i, yb[i] + delta));
+            let PlanarScalarOutcome::Roots { reduction, roots } =
+                arbitrary_pair(&a, &b, Limits::default())
+            else {
+                panic!("Missing projected reduction")
+            };
+            assert_eq!(reduction, PlanarReduction::CommonProjection);
+            assert_eq!(roots.len(), count);
+            assert!(roots.iter().all(|r| r.multiplicity == multiplicity));
+            if delta == 0. {
+                assert!(roots[0].interval[0] <= 1. / 3. && roots[0].interval[1] >= 1. / 3.)
+            }
+            if count == 2 {
+                assert!(roots[0].interval[1] < roots[1].interval[0])
+            }
+        }
+        let b = std::array::from_fn::<_, 4, _>(|i| frame(i, yb[i]));
+        let mut limits = Limits::default();
+        limits.max_work = 0;
+        assert!(matches!(
+            arbitrary_pair(&a, &b, limits),
+            PlanarScalarOutcome::Indeterminate(Reason::ResourceLimit)
+        ));
+    }
+    #[test]
+    fn common_coordinate_uses_actual_monotonicity_and_original_weights() {
+        let x = [0., 1., 0.9, 1.9];
+        let ya = [0., 0., 1., 3.];
+        let yb = [1., -1., 1., 7.];
+        let mut a = std::array::from_fn::<_, 4, _>(|i| [x[i], ya[i], 1.]);
+        let mut b = std::array::from_fn::<_, 4, _>(|i| [x[i], yb[i], 1.]);
+        let PlanarScalarOutcome::Roots { reduction, roots } =
+            arbitrary_pair(&a, &b, Limits::default())
+        else {
+            panic!("Missing actual monotonicity proof")
+        };
+        assert_eq!(reduction, PlanarReduction::CommonCoordinate(0));
+        assert_eq!(roots.len(), 1);
+        assert_eq!(roots[0].multiplicity, 2);
+        a[1][2] = 100.;
+        a[2][2] = 100.;
+        b[1][2] = 100.;
+        b[2][2] = 100.;
+        assert!(matches!(
+            arbitrary_pair(&a, &b, Limits::default()),
+            PlanarScalarOutcome::NotReducible | PlanarScalarOutcome::Indeterminate(_)
+        ));
+    }
     fn pair(y: &[f64; 4], limits: Limits) -> PlanarScalarOutcome {
         let a = (0..4).map(|i| [i as f64, 0., 1.]).collect::<Vec<_>>();
         let b = (0..4).map(|i| [i as f64, y[i], 1.]).collect::<Vec<_>>();

@@ -5,7 +5,7 @@ fn rational_wing_interpolates_placed_airfoils_and_preserves_source() {
     let sections=[section(0.),section(2.),section(5.)];let before=sections.iter().map(|s|s.profile.clone()).collect::<Vec<_>>();
     let surface=wing_loft::loft_wing(&sections).unwrap();
     for s in &sections {for i in 0..=32 {
-        let u=i as f64/32.;let q=s.profile.evaluate(4.*u).unwrap().point;
+        let u=i as f64/32.;let q=s.profile.evaluate(u).unwrap().point;
         let (sin,cos)=s.twist.sin_cos();let expected=[s.span*s.sweep.tan()+s.taper*(q[0]*cos-q[1]*sin),s.span.abs()*s.dihedral.tan()+s.taper*(q[0]*sin+q[1]*cos),s.span];
         let actual=surface.evaluate(u,s.span/5.).unwrap().point;
         for k in 0..3 {assert!((actual[k]-expected[k]).abs()<1e-10,"{actual:?} != {expected:?}");}
@@ -13,11 +13,12 @@ fn rational_wing_interpolates_placed_airfoils_and_preserves_source() {
     assert!(sections.iter().zip(before).all(|(s,b)|s.profile==b));
 }
 #[test]
-fn large_finite_reference_distances_do_not_overflow_squares() {
-    let mut a=section(0.);let mut b=section(1.);a.twist=0.;b.twist=0.;b.span=1e200;b.dihedral=0.;b.sweep=0.;
-    let surface=wing_loft::loft_wing(&[a,b]).unwrap();
+fn reference_parameterization_preserves_maximum_admitted_span_and_refuses_oversize() {
+    let mut a=section(0.);let mut b=section(1.);a.twist=0.;b.twist=0.;b.span=1e9;b.dihedral=0.;b.sweep=0.;
+    let surface=wing_loft::loft_wing(&[a.clone(),b.clone()]).unwrap();
     let p=surface.evaluate(0.2,0.5).unwrap().point;
-    assert!((p[2]/1e200-0.5).abs()<1e-12);
+    assert!((p[2]/1e9-0.5).abs()<1e-12);
+    b.span=1e200;assert!(wing_loft::loft_wing(&[a,b]).is_err());
 }
 #[test]
 fn tip_policy_uses_actual_extra_section_budget_and_invalid_spans_fail() {
