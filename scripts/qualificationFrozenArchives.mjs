@@ -462,4 +462,11 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'docs/qualification/g0-v82-g1-v99-refreeze-status-v1.json': 'cad83adac1a62fd4b18071a42283d927050780c2ecd4459e934f10a93987b4ad',
   'docs/qualification/g0-v82-g1-v99-refreeze-review.md': '3f59c6979a9908e28d4a0a05fbe4e28b11c1adc3300fa1519f4060ffc04fc815',
   'scripts/refresh-qualification-fingerprints-v82-v99.mjs': '1d2be6ef3e72b90ebf18a64802da09cc509ee4ead3597fe1044bbf76b873a486',
+  'docs/qualification/own-rust-cad-v68.json': '29b8fad47666bc5f35fe07611b6ba49b565b28105373b55bb3b0ded8048019b8',
+  'scripts/release-own-rust-v68.mjs': 'dfe9aff637065b85c422144b378a142d0d8801f8faca0ce8086b0a261966b12c',
+  'docs/qualification/g0-toolchain-fingerprints-v83.json': 'b680d34dcc3725f3b7cc73b2aaecca1e10741739de3f489a1842f1f7d3ef2822',
+  'docs/qualification/semantic-manifold-g1-plan-v100.json': '91a43ebaa7969a6d5cfaa13b265f412aa0baf343d68b61da8a0c4156b642ed0f',
+  'docs/qualification/g0-v83-g1-v100-refreeze-status-v1.json': 'cda254185d5e57fe53e597c4d03ba4ed15e1c346456066e6fff550c18c6df9fa',
+  'docs/qualification/g0-v83-g1-v100-refreeze-review.md': 'f956a827dd810d4d0067d5f5f54af3ed05909577f44fedebc504551635d82502',
+  'scripts/refresh-qualification-fingerprints-v83-v100.mjs': '3a04fd52b36ac9de16e4615bee3f1328ef84dc3f049676f396e9f12323b6e310',
 })
