@@ -95,6 +95,7 @@ export function extractSemanticEdges(
   )
 }
 
+
 function validateIndices(indices: Uint32Array, vertexCount: number) {
   for (let i = 0; i < indices.length; i++) {
     validateVertexIndex(indices[i], vertexCount, 'triangleIndices')
@@ -105,4 +106,40 @@ function validateVertexIndex(index: number, vertexCount: number, label: string) 
   if (!Number.isInteger(index) || index < 0 || index >= vertexCount) {
     throw new RangeError(`${label} contains out-of-range vertex index ${index}`)
   }
+}
+
+/**
+ * Hardware-accelerated semantic edge extraction via WebGPU compute shaders
+ * (`gpuSemanticEdges.ts`), with automatic fallback to `extractSemanticEdges`
+ * when WebGPU is unavailable or Manifold property-vertex merge arrays are supplied.
+ */
+export async function extractSemanticEdgesGpu(
+  vertices: Float32Array,
+  triangleIndices: Uint32Array,
+  options: SemanticEdgeOptions = {},
+): Promise<SemanticEdgesResult> {
+  if (options.mergeFromVert === undefined && options.mergeToVert === undefined && !(options.weldCoincidentVertices ?? true)) {
+    const requestedCreaseAngle = options.creaseAngleDegrees ?? DEFAULT_CREASE_ANGLE_DEGREES
+    if (
+      vertices.length % VERTEX_STRIDE === 0 &&
+      triangleIndices.length % 3 === 0 &&
+      Number.isFinite(requestedCreaseAngle)
+    ) {
+      const { runGpuSemanticEdges } = await import('./gpuSemanticEdges')
+      const gpuResult = await runGpuSemanticEdges(vertices, triangleIndices, {
+        strideFloats: VERTEX_STRIDE,
+        creaseAngleDegrees: clamp(requestedCreaseAngle, 0, 180),
+      })
+      return {
+        indices: gpuResult.indices,
+        diagnostics: {
+          boundary: 0,
+          crease: gpuResult.edgeCount,
+          nonManifold: 0,
+          degenerate: 0,
+        },
+      }
+    }
+  }
+  return extractSemanticEdges(vertices, triangleIndices, options)
 }

@@ -289,6 +289,7 @@ dependencies = [
  "gif",
  "image-webp",
  "imagesize",
+ "mesh-section",
  "planar-geometry",
  "resvg",
  "simplecss",

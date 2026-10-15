@@ -155,11 +155,6 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
 }
 function surfaceConstructionError(error:unknown):string {
  const message=error instanceof Error?error.message:String(error)
- if(advancedOp.value==='nurbs-offset'){
-  if(message.includes('explicit profile join'))return label('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».','The curve has a corner. Choose Bevel or a trim mode under Joins.')
-  if(message.includes('XY plane'))return label('Нужна кривая в плоскости XY с постоянной Z. Выберите плоскую кривую.','Select a curve in an XY plane with constant Z.')
-  if(message.includes('budget')||message.includes('limit'))return label('Предел вычисления достигнут. Увеличьте допуск или разделите кривую.','Calculation limit reached. Increase tolerance or split the curve.')
- }
  if(advancedOp.value==='nurbs-point-trim'){
   if(message.includes('ambiguous or unresolved'))return pointTrimPick.value?label('Попадание в проекции неоднозначно. Поверните вид или выберите другую точку.','The projected pick is ambiguous. Rotate the view or choose another point.'):label('Ближайшая точка неоднозначна. Выберите другую точку разреза.','The nearest point is ambiguous. Choose another cut point.')
   if(message.includes('capture distance'))return label('Точка вне допуска. Приблизьте её к кривой или увеличьте допуск.','Outside capture distance. Move closer to the curve or increase the distance.')
@@ -197,6 +192,5 @@ function surfaceConstructionError(error:unknown):string {
  }
  return message
 }
-
   return { rebuildPeriodic, nurbsRefitResult, nurbsReduction, curveMatchResult, surfaceMatchResult, seamPrepareResult, isNurbsMatch, surfacePreparation, preparationError, profilePreparationError, preparedProfileResult, profilePreparation, curveMatchError, curveMatch, curveMatchGuides, surfaceMatch, surfaceMatchLines, surfaceMatchError, resultAdvanced, bodyCalculationFailure, surfaceConstructionError }
 }

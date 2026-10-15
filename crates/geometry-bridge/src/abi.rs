@@ -53,11 +53,11 @@ pub unsafe fn abi_free(ptr: usize, len: usize) {
     }
 }
 thread_local! {static LAST_RESPONSE: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
-/// Capacity of the last packed response allocation. `encode_binary` grows its
-/// Vec amortized, so capacity usually exceeds length; the response is freed
-/// before the next request (see `decodePacked` on the host), so a single slot
-/// suffices. Buffers not matching the slot (request/staging allocations from
-/// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+// Capacity of the last packed response allocation. `encode_binary` grows its
+// Vec amortized, so capacity usually exceeds length; the response is freed
+// before the next request (see `decodePacked` on the host), so a single slot
+// suffices. Buffers not matching the slot (request/staging allocations from
+// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
 thread_local! {static LAST_RESPONSE_CAP: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
 /// Native hosts fetch responses through these (the packed u64 return truncates
 /// the pointer to 32 bits, which only wasm32 linear memory can promise).
@@ -68,7 +68,16 @@ pub fn abi_response_len() -> usize {
     LAST_RESPONSE.with(|last| last.get().1)
 }
 fn packed(v: Value) -> u64 {
-    let mut bytes=value_codec::encode_binary(&v).unwrap_or_else(|_|value_codec::encode_binary(&json!({"ok":false,"error":{"code":"GEOMETRY_RESOURCE_LIMIT","message":"Response exceeds transport limit"}})).unwrap());
+    let mut bytes = value_codec::encode_binary(&v).unwrap_or_else(|_| {
+        value_codec::encode_binary(&json!({
+            "ok": false,
+            "error": {
+                "code": "GEOMETRY_RESOURCE_LIMIT",
+                "message": "Response exceeds transport limit"
+            }
+        }))
+        .unwrap_or_default()
+    });
     let len = bytes.len();
     let cap = bytes.capacity();
     let ptr = bytes.as_mut_ptr() as usize;
@@ -679,4 +688,91 @@ pub unsafe fn abi_transparent_bsp(
     .map(|v| mesh_analysis::store(mesh_analysis::AnalysisBuffers::Transparency(v)))
     .and_then(encode);
     packed(geometry(result))
+}
+
+/// Certified outward-rounded binary64 addition of nonnegative error bounds (`f64::NAN` on refusal).
+pub fn abi_certified_error_add(a: f64, b: f64) -> f64 {
+    nurbs_core::numerics::error_upper::add(a, b).unwrap_or(f64::NAN)
+}
+
+/// Certified outward-rounded binary64 multiplication of nonnegative error bounds (`f64::NAN` on refusal).
+pub fn abi_certified_error_mul(a: f64, b: f64) -> f64 {
+    nurbs_core::numerics::error_upper::multiply(a, b).unwrap_or(f64::NAN)
+}
+
+/// Certified outward-rounded binary64 sqrt(2) scaling of a nonnegative error bound (`f64::NAN` on refusal).
+pub fn abi_certified_error_sqrt_two(value: f64) -> f64 {
+    nurbs_core::numerics::error_upper::sqrt_two(value).unwrap_or(f64::NAN)
+}
+
+/// Expand an indexed mesh into a flat triangle list with crease-smoothed normals.
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+pub unsafe fn abi_smooth_triangle_list(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    cos_crease: f64,
+) -> u64 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 || !cos_crease.is_finite() {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let positions = match unsafe { read_vertices_f64(fmt, vp, vl) } {
+        Ok(v) => v,
+        Err(e) => return packed(geometry(Err(e))),
+    };
+    let indices = unsafe { read_u32(ip, il) };
+    let out = polygon_core::solid::display::smooth_triangle_list(&positions, &indices, cos_crease);
+    let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::SmoothTriangleList {
+        positions: out.positions,
+        normals: out.normals,
+    });
+    packed(geometry(encode(handle)))
+}
+
+/// Fill stride-6 vertex normals using area-weighted triangle normals.
+/// # Safety
+/// vp/vl (f32 stride-6 vertices) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+pub unsafe fn abi_fill_vertex_normals(vp: usize, vl: usize, ip: usize, il: usize) -> u64 {
+    if vl > LIMIT / 4 || il > LIMIT / 4 || !vl.is_multiple_of(6) {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let mut vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
+    polygon_core::solid::display::fill_indexed_normals(&mut vertices, &indices);
+    let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::VertexNormals { vertices });
+    packed(geometry(encode(handle)))
+}
+
+/// Expand an indexed mesh into flat-shaded stride-6 display vertices, sequential
+/// triangle indices, and total surface area.
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+pub unsafe fn abi_expand_flat_triangles(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let positions = match unsafe { read_vertices_f64(fmt, vp, vl) } {
+        Ok(v) => v,
+        Err(e) => return packed(geometry(Err(e))),
+    };
+    let indices = unsafe { read_u32(ip, il) };
+    let out = polygon_core::solid::display::expand_flat_triangles(&positions, &indices);
+    let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::ExpandedDisplayMesh {
+        vertices: out.vertices,
+        indices: out.indices,
+        floats: vec![out.surface_area],
+    });
+    packed(geometry(encode(handle)))
 }

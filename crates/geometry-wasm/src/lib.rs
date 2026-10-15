@@ -327,3 +327,57 @@ pub unsafe extern "C" fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
 pub unsafe extern "C" fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
     unsafe { geometry_bridge::abi::abi_transparent_bsp(width,vp,vl,limit,operations,tolerance) }
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_add(a: f64, b: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_add(a, b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_mul(a: f64, b: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_mul(a, b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_sqrt_two(value: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_sqrt_two(value)
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_smooth_triangle_list(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    cos_crease: f64,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_smooth_triangle_list(vp, vl, ip, il, fmt, cos_crease) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_fill_vertex_normals(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_fill_vertex_normals(vp, vl, ip, il) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_expand_flat_triangles(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_expand_flat_triangles(vp, vl, ip, il, fmt) }
+}

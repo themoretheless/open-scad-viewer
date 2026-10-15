@@ -2,6 +2,21 @@
 //! topology-preserving decimation, and lightening cell construction.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
+use std::collections::{BTreeMap, BTreeSet};
+mod markers;
+mod print_report;
+mod report_util;
+mod strength;
+mod strength_material;
+mod strength_report;
+mod weak_spots;
+#[cfg(test)]
+#[path="cad_lattice/strength_tests/mod.rs"]
+mod strength_tests;
+pub use markers::weak_spot_markers;
+pub use print_report::{print_optimize, print_report};
+pub use strength::strength;
+pub use strength_material::{materials, structure_hint_op};
 
 use polygon_core::lattice_tools::component_count;
 pub fn components(v: Value) -> Result<Value> {

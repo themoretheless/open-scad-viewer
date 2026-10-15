@@ -222,4 +222,18 @@ mod tests {
         let fixed = source.replace("const WG: u32 = 256;", "const WG: u32 = 96;");
         assert_eq!(reflect(&fixed, "main", &layout).unwrap().0, 96);
     }
+
+    #[test]
+    fn all_cad_kernels_parse_and_validate_with_naga() {
+        for (name, wgsl) in crate::shaders::CAD_KERNELS {
+            let module = naga::front::wgsl::parse_str(wgsl)
+                .unwrap_or_else(|e| panic!("CAD kernel {name} failed to parse: {}", e.emit_to_string(wgsl)));
+            naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            )
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("CAD kernel {name} failed validation: {e}"));
+        }
+    }
 }

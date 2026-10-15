@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { lstat, readFile, realpath, stat } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
-import { defaultCacheRoot } from './officialRuntimeCacheRoot'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
   OFFICIAL_OPENSCAD_FONT_FAMILY,
@@ -45,7 +45,7 @@ import {
   type OfficialOpenScadLogs,
   type OfficialOpenScadWireRequest,
 } from './officialOpenScadRuntimeProtocol'
-import { boundedInteger, buildRequest, capabilitiesShape, classifyUnavailable, compactChildError, defaultChildFactory, defaultRunnerPath, installationSignature, permissionModelAvailable, unavailableCapabilities, verifyInstallation } from './officialOpenScadRuntimeService/defaultRunnerPath'
+import { boundedInteger, buildRequest, capabilitiesShape, classifyUnavailable, compactChildError, defaultCacheRoot, defaultChildFactory, defaultRunnerPath, installationSignature, permissionModelAvailable, unavailableCapabilities, verifyInstallation } from './officialOpenScadRuntimeService/defaultCacheRoot'
 
 export const MAX_MANIFEST_BYTES = 16 * 1024
 export const MAX_RUNTIME_BYTES = 64 * 1024 * 1024

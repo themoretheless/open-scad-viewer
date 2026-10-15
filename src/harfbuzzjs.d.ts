@@ -12,3 +12,8 @@ declare module 'harfbuzzjs/hbjs.js' {
   const bindHarfBuzz: (module: unknown) => unknown
   export default bindHarfBuzz
 }
+
+declare module '*.wgsl?raw' {
+  const src: string
+  export default src
+}

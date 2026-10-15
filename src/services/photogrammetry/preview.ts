@@ -1,5 +1,6 @@
 import type {MeshData} from '../../core/mesh'
 import type {PhotoReconstruction, PhotoSurface} from './kernel'
+import {fillVertexNormalsInKernel} from '../geometry/meshAnalysis'
 import {buildMeshBvh} from '../meshBvh'
 import {extractSemanticEdges} from '../meshTopology'
 
@@ -50,23 +51,8 @@ function previewCoordinates(surface: PhotoSurface, camera?: RecoveredCamera): Pr
   return {positions, center, scale, depth: depths[Math.floor(depths.length / 2)] ?? 1}
 }
 
-function fillNormals(vertices: Float32Array, indices: Uint32Array): void {
-  for (let face = 0; face < indices.length; face += 3) {
-    const a = indices[face]! * 6, b = indices[face + 1]! * 6, c = indices[face + 2]! * 6
-    const ux = vertices[b]! - vertices[a]!, uy = vertices[b + 1]! - vertices[a + 1]!, uz = vertices[b + 2]! - vertices[a + 2]!
-    const vx = vertices[c]! - vertices[a]!, vy = vertices[c + 1]! - vertices[a + 1]!, vz = vertices[c + 2]! - vertices[a + 2]!
-    const normal = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]
-    for (const start of [a, b, c]) for (let axis = 0; axis < 3; axis++) vertices[start + 3 + axis] += normal[axis]!
-  }
-  for (let start = 0; start < vertices.length; start += 6) {
-    const nx = vertices[start + 3]!, ny = vertices[start + 4]!, nz = vertices[start + 5]!
-    const length = Math.sqrt(nx * nx + ny * ny + nz * nz)
-    if (length > 0) for (let axis = 0; axis < 3; axis++) vertices[start + 3 + axis] /= length
-  }
-}
-
 function renderMesh(vertices: Float32Array, indices: Uint32Array, color: MeshData['color'], surface: boolean): MeshData {
-  fillNormals(vertices, indices)
+  fillVertexNormalsInKernel(vertices, indices)
   const edges = surface ? extractSemanticEdges(vertices, indices) : {
     indices: new Uint32Array(), diagnostics: {boundary: 0, crease: 0, nonManifold: 0, degenerate: 0},
   }

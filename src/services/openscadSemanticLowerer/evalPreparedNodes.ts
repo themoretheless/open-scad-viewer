@@ -1,4 +1,5 @@
 import { CSS_COLORS, IDENTITY_MATRIX, LegacyBindingCompatibilityError, MAX_SHAPES } from '../openscadSemanticLowerer'
+const MAX_FN = 256
 import type { EvalContext, RGBA, SemanticNodeWithoutId, SemanticReducedShape, SemanticShape } from '../openscadSemanticLowerer'
 import { hasOpenScadViewportModifier } from '../openscadCompiler'
 import type { CallNode, ModuleNode, Statement, Value } from '../openscadCompiler'
@@ -6,10 +7,9 @@ import { MAX_EVAL_OPS, evaluationError, isStableProfile } from '../openScadStabl
 import { OpenSCADParseError } from '../openscadErrors'
 import type { SemanticDimension, SemanticDynamicSlot, SemanticMatrix4, SemanticValueType } from '../../core/semanticProgram'
 import { arg, evalExpression, evalNodes, viewportSemanticSlots } from './evalExpression'
-import { canonicalNumber, finiteNumber, identityValue, poll, semanticValueType, vectorValue } from './semanticValueType'
+import { canonicalNumber, finiteNumber, identityValue, poll, vectorValue } from './semanticValueType'
 import { clamp01 } from '../math3d'
 import { evalNode } from './evalNode'
-import { resolveLegacyOpenScadSegments, roundLegacyOpenScadSegments } from '../openScadLegacySegments'
 
 export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): SemanticShape[] {
   const output: SemanticShape[] = []
@@ -253,7 +253,7 @@ export function requestedSegments(node: CallNode, ctx: EvalContext): number | nu
   const raw = local === undefined || local === 0 ? global : local
   return raw === undefined || raw === 0
     ? null
-    : roundLegacyOpenScadSegments(finiteNumber(raw, ctx, node.p, '$fn'))
+    : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
 }
 
 export function semanticSegments(
@@ -279,9 +279,10 @@ export function semanticSegmentsFromRequested(
     ctx.builder.addTessellationIntent(occurrence, requested, ctx.env)
     return null
   }
-  const selection=resolveLegacyOpenScadSegments(requested,fallback,minimum,ctx.quality)
-  const maximum=selection.maximum,segments=selection.beforeCap
-  if (selection.clamped) {
+  const maximum = ctx.quality === 'preview' ? 48 : MAX_FN
+  const previewFallback = ctx.quality === 'preview' ? Math.min(fallback, 24) : fallback
+  let segments = requested ?? previewFallback
+  if (segments > maximum) {
     const operation = ctx.builder.registered.byStatement.get(node) ?? null
     ctx.builder.warn(
       operation,
@@ -293,9 +294,14 @@ export function semanticSegmentsFromRequested(
       `$fn=${segments} was clamped to ${maximum} for ${ctx.quality} rendering`,
       { start: node.p, end: node.end },
     )
+    segments = maximum
   }
-  if(selection.reduced)ctx.reduced.value=true
-  return selection.segments
+  segments = Math.max(minimum, segments)
+  if (ctx.quality === 'preview') {
+    const fullSegments = Math.max(minimum, Math.min(requested ?? fallback, MAX_FN))
+    if (segments !== fullSegments) ctx.reduced.value = true
+  }
+  return segments
 }
 
 export function primitiveColor(ctx: EvalContext): RGBA { return ctx.builder.nextColor() }
@@ -369,43 +375,4 @@ export function unionReduceInternal(
     },
   })
   return { node, dimension, color: shapes[0].color, identityOccurrence: null }
-}
-
-export function makeCylinder(node: CallNode, ctx: EvalContext): SemanticShape[] {
-  const height = finiteNumber(arg(node, 'h', 0, 1, ctx), ctx, node.p, 'cylinder height')
-  if (height <= 0) evaluationError(ctx, node.p, 'Cylinder height must be positive')
-  let low = arg(node, 'r1', 1, undefined, ctx)
-  let high = arg(node, 'r2', 2, undefined, ctx)
-  const radius = arg(node, 'r', 1, undefined, ctx)
-  const diameter = arg(node, 'd', -1, undefined, ctx)
-  const diameterLow = arg(node, 'd1', -1, undefined, ctx)
-  const diameterHigh = arg(node, 'd2', -1, undefined, ctx)
-  if (diameterLow !== undefined) low = finiteNumber(diameterLow, ctx, node.p, 'd1') / 2
-  if (diameterHigh !== undefined) high = finiteNumber(diameterHigh, ctx, node.p, 'd2') / 2
-  if (low === undefined && high === undefined) {
-    const base = diameter !== undefined
-      ? finiteNumber(diameter, ctx, node.p, 'diameter') / 2
-      : radius !== undefined ? finiteNumber(radius, ctx, node.p, 'radius') : 1
-    low = base
-    high = base
-  }
-  if (low === undefined) low = high
-  if (high === undefined) high = low
-  const radiusBottom = finiteNumber(low, ctx, node.p, 'r1')
-  const radiusTop = finiteNumber(high, ctx, node.p, 'r2')
-  if (radiusBottom < 0 || radiusTop < 0 || (radiusBottom === 0 && radiusTop === 0)) {
-    evaluationError(ctx, node.p, 'Cylinder radii must be non-negative and not both zero')
-  }
-  const center = arg(node, 'center', 3, false, ctx) === true
-  const occurrence = invoke(node, ctx)
-  const segments = semanticSegments(node, ctx, occurrence, 32, 3)
-  return [ctx.builder.produce(occurrence, segments === null ? {
-    kind: 'cylinder-analytic',
-    valueType: semanticValueType(ctx.builder.languageContract, 'solid', 'd3'),
-    height, radiusBottom, radiusTop, center,
-  } : {
-    kind: 'cylinder-polygonal',
-    valueType: semanticValueType(ctx.builder.languageContract, 'solid-set', 'd3'),
-    height, radiusBottom, radiusTop, center, radialSegments: segments,
-  }, primitiveColor(ctx))]
 }

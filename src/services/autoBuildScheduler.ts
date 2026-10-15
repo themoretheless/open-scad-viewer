@@ -2,6 +2,8 @@ import type { GeometryQuality } from '../core/build'
 
 interface SchedulerOptions {
   build(quality: GeometryQuality): void
+  /** Optional instant feedback (e.g. GPU CSG preview) run on every edit and gesture start. */
+  edit?: () => void
   now?: () => number
   setTimer?: (callback: () => void, delay: number) => unknown
   clearTimer?: (timer: unknown) => void
@@ -40,6 +42,7 @@ export class AutoBuildScheduler {
   }
 
   edited(immediate = false) {
+    this.options.edit?.()
     this.dirty = true
     this.deferredFull = false
     if (immediate) { this.arm(0); return }
@@ -49,7 +52,7 @@ export class AutoBuildScheduler {
     } else this.arm(this.delays.textMs)
   }
 
-  beginGesture() { this.dragging = true }
+  beginGesture() { this.options.edit?.(); this.dragging = true }
 
   setBuilding(building: boolean) {
     this.building = building

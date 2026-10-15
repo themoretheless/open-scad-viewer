@@ -46,6 +46,8 @@ export function nurbsBasisDerivatives(degree: number, knots: number[], controlCo
   return callNurbsRust('basis', { degree, knots, controlCount, u, periodic })
 }
 export function evaluateNurbsCurve(curve: NurbsCurve, u: number): NurbsCurveEvaluation { return callNurbsRust('curve_evaluate', { curve, u }) }
+export function evaluateNurbsCurvePoints(curve: NurbsCurve, parameters: readonly number[]): number[][] { return callNurbsRust('curve_evaluate_points', { curve, parameters }) }
+export function sampleNurbsCurve(curve: NurbsCurve, segments: number, includeEnd = true): number[][] { return callNurbsRust('curve_sample', { curve, segments, includeEnd }) }
 export function insertNurbsKnot(curve: NurbsCurve, u: number, count = 1): NurbsCurve { return callNurbsRust('curve_insert', { curve, u, count }) }
 export interface NurbsPointTrimResult {
   curve:NurbsCurve

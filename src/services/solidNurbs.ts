@@ -2,7 +2,7 @@ import {matchSolidCurve} from './solidCurveMatching'
 import {matchSolidSurface} from './solidSurfaceMatching'
 import type { DirectDocument, DirectSketch, Point2 } from './directModeling'
 import type { NurbsCurve } from './nurbsCurve'
-import { evaluateNurbsCurve, validateNurbsCurve } from './nurbsCurve'
+import { sampleNurbsCurve, validateNurbsCurve } from './nurbsCurve'
 import type { NurbsSurface } from './nurbsSurface'
 import { validateNurbsSurface } from './nurbsSurface'
 import { tessellateNurbsSurface } from './geometry/tessellation'
@@ -59,11 +59,7 @@ export function validateSolidNurbs(document: DirectDocument): void {
 
 export function sampleSolidNurbsCurve(curve: NurbsCurve, segments = 48): number[][] {
   if (!Number.isInteger(segments) || segments < 2 || segments > 256) throw new Error('Invalid curve sampling.')
-  const start = curve.knots[curve.degree]
-  const end = curve.knots[curve.controlPoints.length]
-  return Array.from({ length: segments + 1 }, (_, index) =>
-    evaluateNurbsCurve(curve, start + (end - start) * index / segments).point,
-  )
+  return sampleNurbsCurve(curve, segments)
 }
 
 export function tessellateSolidNurbsSurface(item: SolidNurbsSurface): PolygonMesh {

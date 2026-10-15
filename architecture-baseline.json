@@ -14,12 +14,13 @@
     "crates/brep-core/src/intersections/sphere_cone.rs": 880,
     "crates/brep-core/src/intersections/sphere_cylinder.rs": 1083,
     "crates/brep-core/src/intersections/torus_torus.rs": 926,
-    "crates/brep-core/src/lib.rs": 1682,
+    "crates/brep-core/src/lib.rs": 1642,
     "crates/brep-core/src/nurbs_step_shared.rs": 1202,
     "crates/brep-core/src/step_interchange_v3.rs": 5274,
     "crates/brep-core/src/step_interchange.rs": 2208,
     "crates/brep-topology/src/lib.rs": 1039,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1128,
+    "crates/modelgraph-runtime/src/eval/evaluator.rs": 1018,
     "crates/sdf-core/src/lib.rs": 1541,
     "crates/value-codec/src/lib.rs": 967,
     "scripts/g1-github-actions.mjs": 730,
@@ -55,7 +56,7 @@
     "src/services/openscadSemanticLowerer.ts": 691,
     "src/services/openscadSemanticLowerer/evalNode.ts": 551,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
-    "src/services/webgpuRenderer.ts": 2900
+    "src/services/webgpuRenderer.ts": 2880
   },
   "layers": []
 }

@@ -40,6 +40,8 @@ pub mod surface_contact_search;
 /// Adaptive octree isosurface extraction from SDFs: dual contouring with QEF,
 /// marching cubes, Taubin smoothing and small-component cleanup (items 941, 967).
 pub mod isosurface;
+pub mod planar_scalar;
+pub mod planar_coincidence;
 
 pub(crate) const MAX_BOXES: usize = 8192;
 const MAX_DEGREE: usize = 25;

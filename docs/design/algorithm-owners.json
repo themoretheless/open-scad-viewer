@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-14",
+  "date": "2026-10-15",
   "decisions": [
     {
       "id": "sketch-relations",
@@ -231,6 +231,20 @@
         "src/services/sourceBodyDisplay.ts"
       ],
       "reason": "Native profile_plane and witness_bounds own common-plane geometry and numerical report consistency. Native sketch_shapes owns rectangle and capsule definitions, surface_injectivity owns polar proposals, brep-core wall_search owns bounded samples and wall proposals. geometry-bridge adapts source display budgets and these native calls. TS keeps document transactions, structural response checks, worker cancellation and the explicit caller-supplied evaluator hook; samples never certify coverage."
+    },
+    {
+      "id": "incoming-gpu-preview-and-reference",
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "action": "migrate",
+      "files": [
+        "src/services/gpuCsgPrimitives.ts",
+        "src/services/gpuMarchingCubes.ts",
+        "src/services/gpuNurbsReference.ts",
+        "src/services/gpuSemanticEdges.ts",
+        "src/services/gpuSubdivision.ts",
+        "src/services/gpuTrussSolver.ts"
+      ],
+      "reason": "Imported main preview meshes, GPU readback processing, CPU tessellation reference and PCG fallback remain TypeScript/WGSL code. This is an explicit remaining migration, not Rust ownership credit. They do not compute loft/sweep/frame/cap error, regularity, contact, shell or Solid certificates; those are recomputed by nurbs-core/brep-core. Native replacement of these unrelated GPU fallbacks is outside the common boundary certificate and has not been qualified."
     }
   ],
   "families": [

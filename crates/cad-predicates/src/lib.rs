@@ -411,3 +411,6 @@ mod quadratic_curve_separator;
 pub use quadratic_curve_separator::*;
 mod bilinear_graph_side;
 pub use bilinear_graph_side::rational_bilinear_graph_side;
+
+mod planar_bezier_roots;
+pub use planar_bezier_roots::*;

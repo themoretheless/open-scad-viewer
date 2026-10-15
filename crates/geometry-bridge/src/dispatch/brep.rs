@@ -15,6 +15,7 @@ const OPS: &[&str] = &[
     "brep_profile_boolean",
     "brep_profile_intersections",
     "brep_profile_signed_area",
+    "brep_profile_display",
     "brep_polygon_from_mesh",
     "brep_polygon_inspect",
     "brep_polygon_tessellate",
@@ -41,7 +42,8 @@ fn handle(v: Value) -> Result<Value> {
         | "brep_profile_offset"
         | "brep_profile_boolean"
         | "brep_profile_intersections"
-        | "brep_profile_signed_area" => brep_profile::dispatch(v),
+        | "brep_profile_signed_area"
+        | "brep_profile_display" => brep_profile::dispatch(v),
         "brep_polygon_from_mesh" => {
             let ids: Option<Vec<usize>> =
                 v.get("faceIds").map(|_| field(&v, "faceIds")).transpose()?;

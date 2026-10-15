@@ -36,6 +36,7 @@ pub mod scene_flatten;
 #[path = "serialization.rs"]
 mod serialization;
 pub mod solid;
+pub mod solid_extensions;
 
 pub const MAX_TRIANGLES: usize = 20_000;
 pub use ::mesh_topology::{MAX_MESH_TRIANGLES, MAX_VERTICES};

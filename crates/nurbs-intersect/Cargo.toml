@@ -7,10 +7,10 @@ publish.workspace = true
 
 [features]
 default = ["codec"]
-codec = ["dep:value-codec", "nurbs-core/codec", "cad-predicates/codec"]
+codec = []
 
 [dependencies]
-math-core = { workspace = true }
-nurbs-core = { workspace = true }
-cad-predicates = { workspace = true }
-value-codec = { workspace = true, optional = true }
+math-core = { package = "osv-math", path = "../math-core" }
+nurbs-core = { path = "../nurbs-core" }
+cad-predicates = { path = "../cad-predicates" }
+value-codec = { path = "../value-codec" }

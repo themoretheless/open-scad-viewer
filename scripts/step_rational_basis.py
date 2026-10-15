@@ -18,3 +18,11 @@ def same_positive_projective_weights(a, b):
 
 # Compatibility name for the independently qualified quintic STEP runner.
 positive_proportional_weights = same_positive_projective_weights
+
+if __name__ == '__main__':
+    assert positive_proportional_weights([1]*6, [2]*6)
+    assert positive_proportional_weights([1, 2, 4], [2, 4, 8])
+    assert not positive_proportional_weights([1, 2, 4.000000000000001], [2, 4, 8])
+    assert not positive_proportional_weights([-1, -2], [1, 2])
+    assert not positive_proportional_weights([1], [1, 1])
+    print('Exact rational weight-scaling tests passed')

@@ -1,6 +1,7 @@
 //! Local bridge operations, one router per operation family; `dispatch_local` tries them
 //! in turn and leaves unowned operations to `fallback`.
 pub(crate) mod mesh;
+pub(crate) mod mesh_svg;
 pub(crate) mod intersections;
 pub(crate) mod sweep;
 pub(crate) mod interchange;

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
   "scope": "Authored production src TS/Vue/MJS; generated packages are bound by artifact fingerprints. File ownership and callable census, not a proof of algorithm completeness or migration parity.",
-  "sourceFiles": 607,
-  "callables": 8705,
+  "sourceFiles": 637,
+  "callables": 8904,
   "unreviewedNumericalFiles": [],
   "staleDecisions": [],
   "rows": [
     {
       "file": "src/App.vue",
-      "sha256": "25cadfad8125bde421b3b4dfe45cd597875fa3d96ee93e76beb53220b4695d6c",
+      "sha256": "a4c432585ca311b72de6a6fa76d9d284af238f3952128878549d5c460390ccff",
       "generated": false,
       "owner": "application-host",
       "decision": "host-state",
@@ -622,6 +622,10 @@
           "line": 879
         },
         {
+          "name": "<callback>",
+          "line": 879
+        },
+        {
           "name": "t",
           "line": 901
         },
@@ -1215,7 +1219,7 @@
     },
     {
       "file": "src/appHelpers.ts",
-      "sha256": "c431271ca79fddff9e3a317fb31f24da6ae69d6b3a0bced6fa102471be5b6b32",
+      "sha256": "1ec72a7d35334e0ecf9b878289c099df8bc5dd1aa2335d8dbfa8c982fe512c7b",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -3740,7 +3744,7 @@
     },
     {
       "file": "src/features/CadWorkbenchPanel.vue",
-      "sha256": "4d06a7efd5462d1295b1dbcd0b4c7c3751e2310714cb272037484fe4cc5028c3",
+      "sha256": "5fdc33fc36952880e1231cc847bda2192af97266ec43cc320d2b7d23af2e5f3f",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -3762,16 +3766,16 @@
           "line": 26
         },
         {
+          "name": "<callback>",
+          "line": 27
+        },
+        {
           "name": "label",
-          "line": 29
+          "line": 30
         },
         {
           "name": "loadJoint",
-          "line": 34
-        },
-        {
-          "name": "<callback>",
-          "line": 34
+          "line": 35
         },
         {
           "name": "<callback>",
@@ -3783,82 +3787,82 @@
         },
         {
           "name": "<callback>",
-          "line": 36
+          "line": 37
         },
         {
           "name": "<callback>",
-          "line": 39
+          "line": 37
         },
         {
-          "name": "fitPrint",
+          "name": "<callback>",
           "line": 40
         },
         {
-          "name": "stepExport",
-          "line": 44
+          "name": "fitPrint",
+          "line": 41
         },
         {
-          "name": "stepImport",
+          "name": "stepExport",
           "line": 45
         },
         {
-          "name": "retainedStepImport",
+          "name": "stepImport",
           "line": 46
         },
         {
-          "name": "retainedStepExport",
+          "name": "retainedStepImport",
           "line": 47
         },
         {
+          "name": "retainedStepExport",
+          "line": 48
+        },
+        {
           "name": "chosenBodies",
-          "line": 48
-        },
-        {
-          "name": "<callback>",
-          "line": 48
-        },
-        {
-          "name": "drawing",
           "line": 49
         },
         {
-          "name": "inspection",
+          "name": "<callback>",
+          "line": 49
+        },
+        {
+          "name": "drawing",
           "line": 50
         },
         {
+          "name": "inspection",
+          "line": 51
+        },
+        {
           "name": "<callback>",
-          "line": 50
+          "line": 51
         },
         {
           "name": "fieldPreview",
-          "line": 53
+          "line": 54
         },
         {
           "name": "refresh",
-          "line": 54
+          "line": 55
         },
         {
           "name": "<callback>",
-          "line": 54
+          "line": 55
         },
         {
           "name": "<callback>",
-          "line": 54
+          "line": 55
         },
         {
           "name": "<callback>",
-          "line": 56
-        },
-        {
-          "name": "<callback>",
-          "line": 56
-        },
-        {
-          "name": "cancel",
           "line": 57
         },
         {
           "name": "<callback>",
+          "line": 57
+        },
+        {
+          "name": "cancel",
           "line": 58
         },
         {
@@ -3867,10 +3871,6 @@
         },
         {
           "name": "<callback>",
-          "line": 59
-        },
-        {
-          "name": "<callback>",
           "line": 60
         },
         {
@@ -3879,39 +3879,47 @@
         },
         {
           "name": "<callback>",
-          "line": 60
+          "line": 61
+        },
+        {
+          "name": "<callback>",
+          "line": 61
+        },
+        {
+          "name": "<callback>",
+          "line": 61
         },
         {
           "name": "picked",
-          "line": 61
-        },
-        {
-          "name": "<callback>",
-          "line": 61
-        },
-        {
-          "name": "calculate",
           "line": 62
         },
         {
           "name": "<callback>",
-          "line": 68
+          "line": 62
+        },
+        {
+          "name": "calculate",
+          "line": 63
+        },
+        {
+          "name": "<callback>",
+          "line": 69
         },
         {
           "name": "volume",
-          "line": 71
-        },
-        {
-          "name": "<callback>",
-          "line": 71
-        },
-        {
-          "name": "<callback>",
-          "line": 71
+          "line": 72
         },
         {
           "name": "<callback>",
           "line": 72
+        },
+        {
+          "name": "<callback>",
+          "line": 72
+        },
+        {
+          "name": "<callback>",
+          "line": 73
         }
       ],
       "loops": 0,
@@ -5054,7 +5062,7 @@
     },
     {
       "file": "src/features/directModeler/useNurbsMatching.ts",
-      "sha256": "84f7bdc05f9087411023552bbc5dcec129b2e93c5148e6bfff0ed4b6e7141a95",
+      "sha256": "0f502e1d483de49889f3e0d1e779360f73ec145582d550788acc5a4188122233",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -9045,6 +9053,102 @@
       "lineCoordinates": "combined-script"
     },
     {
+      "file": "src/features/LatticeReportPanel.vue",
+      "sha256": "296db995c3fa5d0883db3cbb7b7ca0d6bbdb565f25e77f5451e8183b728974ab",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "label",
+          "line": 11
+        },
+        {
+          "name": "<callback>",
+          "line": 15
+        },
+        {
+          "name": "<callback>",
+          "line": 19
+        },
+        {
+          "name": "<callback>",
+          "line": 20
+        },
+        {
+          "name": "clearMarkers",
+          "line": 21
+        },
+        {
+          "name": "invalidate",
+          "line": 23
+        },
+        {
+          "name": "<callback>",
+          "line": 24
+        },
+        {
+          "name": "<callback>",
+          "line": 25
+        },
+        {
+          "name": "<callback>",
+          "line": 25
+        },
+        {
+          "name": "<callback>",
+          "line": 25
+        },
+        {
+          "name": "guard",
+          "line": 26
+        },
+        {
+          "name": "settings",
+          "line": 27
+        },
+        {
+          "name": "runPrint",
+          "line": 28
+        },
+        {
+          "name": "<callback>",
+          "line": 28
+        },
+        {
+          "name": "optimize",
+          "line": 29
+        },
+        {
+          "name": "<callback>",
+          "line": 29
+        },
+        {
+          "name": "copyHints",
+          "line": 30
+        },
+        {
+          "name": "runStrength",
+          "line": 31
+        },
+        {
+          "name": "<callback>",
+          "line": 31
+        },
+        {
+          "name": "updateMarkers",
+          "line": 36
+        },
+        {
+          "name": "<callback>",
+          "line": 38
+        }
+      ],
+      "loops": 0,
+      "mathCalls": [],
+      "lineCoordinates": "combined-script"
+    },
+    {
       "file": "src/features/MainModelingOverlay.vue",
       "sha256": "9f4f181052b35deb9162d796c25c48bcdd835ecbdc6de33e0fad45bfdf12bc6d",
       "generated": false,
@@ -11165,7 +11269,7 @@
     },
     {
       "file": "src/harfbuzzjs.d.ts",
-      "sha256": "c0f69760dbb7071d2ec0467b6cd14023b8d2c33b2fec048cadf6ed114aeaeda9",
+      "sha256": "620343020162090bbc89a4b1b84e96898b13b011ee175b972844479882ec93f7",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -13871,91 +13975,95 @@
       "lineCoordinates": "file"
     },
     {
-      "file": "src/mcp/officialOpenScadRuntimeService/defaultRunnerPath.ts",
-      "sha256": "1fa4a77add702b3d48313b31fa10dc3cff183e8074e08b8f355e8791a7e56f2b",
+      "file": "src/mcp/officialOpenScadRuntimeService/defaultCacheRoot.ts",
+      "sha256": "cf00a9d766606d0380550b5fda1e887d1f565228f2e3cd109979fc0e1532a777",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
-          "name": "defaultRunnerPath",
+          "name": "defaultCacheRoot",
           "line": 13
         },
         {
-          "name": "nodePermissionFlag",
+          "name": "defaultRunnerPath",
           "line": 17
         },
         {
-          "name": "permissionModelAvailable",
-          "line": 25
+          "name": "nodePermissionFlag",
+          "line": 21
         },
         {
-          "name": "defaultChildFactory",
+          "name": "permissionModelAvailable",
           "line": 29
         },
         {
+          "name": "defaultChildFactory",
+          "line": 33
+        },
+        {
           "name": "boundedInteger",
-          "line": 51
+          "line": 55
         },
         {
           "name": "unavailableCapabilities",
-          "line": 58
+          "line": 62
         },
         {
           "name": "capabilitiesShape",
-          "line": 65
+          "line": 69
         },
         {
           "name": "readBoundedFile",
-          "line": 122
+          "line": 126
         },
         {
           "name": "verifyInstallation",
-          "line": 135
+          "line": 139
         },
         {
           "name": "installationSignature",
-          "line": 192
+          "line": 196
         },
         {
           "name": "<callback>",
-          "line": 194
+          "line": 198
         },
         {
           "name": "<callback>",
-          "line": 195
+          "line": 199
         },
         {
           "name": "classifyUnavailable",
-          "line": 201
+          "line": 205
         },
         {
           "name": "validateSource",
-          "line": 208
+          "line": 212
         },
         {
           "name": "validateDefines",
-          "line": 217
+          "line": 221
         },
         {
           "name": "encodeFiles",
-          "line": 235
+          "line": 239
         },
         {
           "name": "<callback>",
-          "line": 241
+          "line": 245
         },
         {
           "name": "<callback>",
-          "line": 244
+          "line": 248
         },
         {
           "name": "buildRequest",
-          "line": 272
+          "line": 276
         },
         {
           "name": "compactChildError",
-          "line": 327
+          "line": 331
         }
       ],
       "loops": 2,
@@ -13964,7 +14072,7 @@
     },
     {
       "file": "src/mcp/officialOpenScadRuntimeService.ts",
-      "sha256": "dbab81617848e2e059072276dfe7544e4d3fd982910f24ebef17478f69a6c309",
+      "sha256": "5587353b5ec9b3759c13c61e189999fbcf48863d3bb9c1d859c33c941d5d7732",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -14924,70 +15032,70 @@
     },
     {
       "file": "src/services/autoBuildScheduler.ts",
-      "sha256": "305e893b8ce80d0a9d3f6a29a1f56d6230ef2fda580677f196f20ccc97507ce6",
+      "sha256": "40d8ba7b9ccc4504c9d8021dd2109439e19b937444cf38907ee4f539d0b24bd9",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
           "name": "<callback>",
-          "line": 25
-        },
-        {
-          "name": "<callback>",
-          "line": 26
-        },
-        {
-          "name": "<callback>",
           "line": 27
         },
         {
-          "name": "observe",
-          "line": 35
-        },
-        {
-          "name": "edited",
-          "line": 42
-        },
-        {
-          "name": "beginGesture",
-          "line": 52
-        },
-        {
-          "name": "setBuilding",
-          "line": 54
-        },
-        {
-          "name": "endGesture",
-          "line": 61
-        },
-        {
-          "name": "flush",
-          "line": 67
-        },
-        {
-          "name": "promote",
-          "line": 73
-        },
-        {
-          "name": "cancelPending",
-          "line": 79
-        },
-        {
-          "name": "cancel",
-          "line": 87
-        },
-        {
-          "name": "run",
-          "line": 89
-        },
-        {
-          "name": "arm",
-          "line": 95
+          "name": "<callback>",
+          "line": 28
         },
         {
           "name": "<callback>",
+          "line": 29
+        },
+        {
+          "name": "observe",
+          "line": 37
+        },
+        {
+          "name": "edited",
+          "line": 44
+        },
+        {
+          "name": "beginGesture",
+          "line": 55
+        },
+        {
+          "name": "setBuilding",
+          "line": 57
+        },
+        {
+          "name": "endGesture",
+          "line": 64
+        },
+        {
+          "name": "flush",
+          "line": 70
+        },
+        {
+          "name": "promote",
+          "line": 76
+        },
+        {
+          "name": "cancelPending",
+          "line": 82
+        },
+        {
+          "name": "cancel",
+          "line": 90
+        },
+        {
+          "name": "run",
+          "line": 92
+        },
+        {
+          "name": "arm",
           "line": 98
+        },
+        {
+          "name": "<callback>",
+          "line": 101
         }
       ],
       "loops": 0,
@@ -17422,6 +17530,52 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/cooperativeAsync.ts",
+      "sha256": "0cb598a1c062838a0de1ab59c49c23f1f962e30b841c5b0286cd1e4248fea5dc",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "yieldToEventLoop",
+          "line": 24
+        },
+        {
+          "name": "<callback>",
+          "line": 26
+        },
+        {
+          "name": "<callback>",
+          "line": 28
+        },
+        {
+          "name": "<callback>",
+          "line": 35
+        },
+        {
+          "name": "createAbortError",
+          "line": 38
+        },
+        {
+          "name": "forEachChunkedAsync",
+          "line": 48
+        },
+        {
+          "name": "mapChunkedAsync",
+          "line": 77
+        },
+        {
+          "name": "<callback>",
+          "line": 85
+        }
+      ],
+      "loops": 1,
+      "mathCalls": [
+        "max"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/cpuOrbitPaint.ts",
       "sha256": "d35d49296c3f2738e35943a95bbe4322bd58049099c10a52cf44a4e771c47587",
       "generated": false,
@@ -17926,7 +18080,7 @@
     },
     {
       "file": "src/services/directModelingTools.ts",
-      "sha256": "55033ce5eaca0667700f6bcbcc0224c5291336fead3223a297532fc6cfd31805",
+      "sha256": "7b7ffe91be61e505840f4d6b4d071913b86e4f7963297a6701f5e15481d1588a",
       "generated": false,
       "owner": "planar-geometry + geometry-ops",
       "decision": "direct-tools",
@@ -17989,19 +18143,7 @@
         },
         {
           "name": "directFaceShade",
-          "line": 68
-        },
-        {
-          "name": "<callback>",
-          "line": 73
-        },
-        {
-          "name": "<callback>",
-          "line": 73
-        },
-        {
-          "name": "<callback>",
-          "line": 75
+          "line": 69
         }
       ],
       "loops": 2,
@@ -18056,79 +18198,73 @@
     },
     {
       "file": "src/services/directSketchGeometry.ts",
-      "sha256": "a0233e0595e8acf2d9d5146f59c85ca60fc0ceb02abfb62d4db6cf2cf1f5c1b0",
+      "sha256": "259be0d6c599b8be095d0e4e493a542ecf52d6889edd2884e5f17602a63ecede",
       "generated": false,
       "owner": "planar-geometry + geometry-ops",
       "decision": "direct-tools",
       "functions": [
         {
-          "name": "dot3",
-          "line": 7
-        },
-        {
-          "name": "<callback>",
-          "line": 7
-        },
-        {
-          "name": "cross3",
+          "name": "xyPlane",
           "line": 8
         },
         {
-          "name": "unit3",
+          "name": "worldPoint",
           "line": 9
-        },
-        {
-          "name": "<callback>",
-          "line": 9
-        },
-        {
-          "name": "xyPlane",
-          "line": 10
         },
         {
           "name": "worldPoints",
-          "line": 11
+          "line": 36
         },
         {
-          "name": "worldPoint",
-          "line": 14
+          "name": "arcDirection",
+          "line": 71
         },
         {
           "name": "sampleCurve",
-          "line": 15
+          "line": 82
         },
         {
           "name": "bakeSketch",
-          "line": 18
+          "line": 116
         },
         {
           "name": "transformSketch",
-          "line": 19
+          "line": 123
+        },
+        {
+          "name": "apply",
+          "line": 169
         },
         {
           "name": "validateSimpleSketch",
-          "line": 24
+          "line": 199
         },
         {
           "name": "offsetSketch",
-          "line": 27
+          "line": 203
         },
         {
           "name": "trimSketch",
-          "line": 33
+          "line": 210
         },
         {
           "name": "extendSketch",
-          "line": 37
+          "line": 216
         },
         {
           "name": "slotSketch",
-          "line": 43
+          "line": 223
         }
       ],
-      "loops": 0,
+      "loops": 7,
       "mathCalls": [
-        "hypot"
+        "abs",
+        "atan2",
+        "ceil",
+        "cos",
+        "hypot",
+        "max",
+        "sin"
       ],
       "lineCoordinates": "file"
     },
@@ -18269,26 +18405,26 @@
     },
     {
       "file": "src/services/edgeSelection.ts",
-      "sha256": "cd7cd5037d310dbec8e60a40ae0b0e8972750b96a99370b1e67e0dc68b5612d2",
+      "sha256": "c557eb11d98a7a8df1853eb1da401c670330e64b17643bd26be6303c7f7b403d",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
+          "name": "addAdjacent",
+          "line": 1
+        },
+        {
+          "name": "extendEndpoint",
+          "line": 7
+        },
+        {
           "name": "connectedEdgeChain",
-          "line": 2
+          "line": 25
         },
         {
           "name": "<callback>",
-          "line": 3
-        },
-        {
-          "name": "<callback>",
-          "line": 5
-        },
-        {
-          "name": "<callback>",
-          "line": 8
+          "line": 43
         }
       ],
       "loops": 4,
@@ -18501,7 +18637,7 @@
     },
     {
       "file": "src/services/gcodePreviewGeometry.ts",
-      "sha256": "5832b939f2553da1e9f97fa1b2a5529a7e21d2e30258292a5a19b49d65ad3ee5",
+      "sha256": "cc8153c829a5e5360595bfc6cfe84b7c70b2c4e1376e0ce5fd34200523c4491b",
       "generated": false,
       "owner": "gcode-core + gcode-optimize + printer-core",
       "decision": "gcode",
@@ -18512,23 +18648,23 @@
         },
         {
           "name": "gcodeLayerRange",
-          "line": 26
+          "line": 44
         },
         {
           "name": "lowerBound",
-          "line": 29
+          "line": 47
         },
         {
           "name": "drawGcodeLayer",
-          "line": 42
+          "line": 60
         },
         {
           "name": "x",
-          "line": 52
+          "line": 70
         },
         {
           "name": "y",
-          "line": 53
+          "line": 71
         }
       ],
       "loops": 5,
@@ -19321,94 +19457,94 @@
     },
     {
       "file": "src/services/geometry/kernel.ts",
-      "sha256": "d69e96235df214a627cdf332df5cbfe4bcaf3d926e866c01ff2b45d636f53bbf",
+      "sha256": "ae85c43317936cf45f3672e861f6321306b8d9adcf6046bbe556cb13fe9c26b9",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
           "name": "warmGeometryKernel",
-          "line": 86
+          "line": 92
         },
         {
           "name": "<callback>",
-          "line": 88
+          "line": 94
         },
         {
           "name": "<callback>",
-          "line": 101
+          "line": 107
         },
         {
           "name": "installGeometryKernelFromTrustedHost",
-          "line": 109
+          "line": 115
         },
         {
           "name": "<callback>",
-          "line": 118
+          "line": 124
         },
         {
           "name": "<callback>",
-          "line": 127
+          "line": 133
         },
         {
           "name": "isGeometryKernelReady",
-          "line": 131
+          "line": 137
         },
         {
           "name": "initialize",
-          "line": 132
+          "line": 138
         },
         {
           "name": "takeResponse",
-          "line": 143
+          "line": 149
         },
         {
           "name": "<callback>",
-          "line": 144
+          "line": 150
         },
         {
           "name": "request",
-          "line": 146
+          "line": 152
         },
         {
           "name": "<callback>",
-          "line": 148
+          "line": 154
         },
         {
           "name": "decodeNurbsResult",
-          "line": 153
+          "line": 159
         },
         {
           "name": "callGeometryRust",
-          "line": 158
+          "line": 164
         },
         {
           "name": "createRustSurfaceEvaluator",
-          "line": 165
+          "line": 171
         },
         {
           "name": "evaluate",
-          "line": 167
+          "line": 173
         },
         {
           "name": "free",
-          "line": 167
+          "line": 173
         },
         {
           "name": "withCadMesh",
-          "line": 180
+          "line": 186
         },
         {
           "name": "kernelVertexFormat",
-          "line": 205
-        },
-        {
-          "name": "importCadMesh",
           "line": 211
         },
         {
+          "name": "importCadMesh",
+          "line": 217
+        },
+        {
           "name": "kernelRuntime",
-          "line": 225
+          "line": 231
         }
       ],
       "loops": 0,
@@ -19573,14 +19709,14 @@
     },
     {
       "file": "src/services/geometry/matrixInverse.ts",
-      "sha256": "e59ece46843b3e8f379c347337e13a1963f69adca971080a9ac69873bf7e2386",
+      "sha256": "9d3fb8b8613ca15c2472894ce53a96c820fd0632cc18c327579a0d04b97dbe14",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
           "name": "invertMatrixF64",
-          "line": 10
+          "line": 13
         }
       ],
       "loops": 10,
@@ -19591,7 +19727,7 @@
     },
     {
       "file": "src/services/geometry/meshAnalysis.ts",
-      "sha256": "f978c842696a56cab0dac369958a6130444e9b662bb15facb64ec813aec79408",
+      "sha256": "dc66aeb7eab7a0e64a5322cb600524b8374b12a9fe77306dc717abbc7276fd84",
       "generated": false,
       "owner": "mesh-topology + mesh-query",
       "decision": "threshold-compatibility",
@@ -19655,6 +19791,18 @@
         {
           "name": "extractSemanticEdgesInKernel",
           "line": 274
+        },
+        {
+          "name": "smoothTriangleListInKernel",
+          "line": 330
+        },
+        {
+          "name": "fillVertexNormalsInKernel",
+          "line": 356
+        },
+        {
+          "name": "expandFlatTrianglesInKernel",
+          "line": 376
         }
       ],
       "loops": 3,
@@ -20809,7 +20957,7 @@
     },
     {
       "file": "src/services/geometry/sdf.ts",
-      "sha256": "c550fda1489a29990cc463916c16f3a06ce40cb9ac2c415a292188f37c70cd0b",
+      "sha256": "0b94e9f8801f2eb5ac5279bca4703f0cad43b3642917b3e04e80aa1f86957efa",
       "generated": false,
       "owner": "sdf-core",
       "decision": "sdf",
@@ -20873,6 +21021,10 @@
         {
           "name": "tessellateSdfGpuAware",
           "line": 77
+        },
+        {
+          "name": "tessellateSdfMarchingCubesGpu",
+          "line": 92
         }
       ],
       "loops": 1,
@@ -20985,7 +21137,7 @@
     },
     {
       "file": "src/services/geometry/subdivision.ts",
-      "sha256": "f879c5651c733dd9c622ba169623bb5ea4cd4f7e6517970c75edf4a87fef4fa3",
+      "sha256": "a5a8c79f320b924c1dd421f9629cbb39c246220b5be86a122a8366e84dbcff4a",
       "generated": false,
       "owner": "subdivision-core",
       "decision": "subdivision",
@@ -21061,7 +21213,7 @@
     },
     {
       "file": "src/services/geometry/transparentBspKernel.ts",
-      "sha256": "6770d99996636804598ed4110cd7918419a7294a8895fe465c271391a06e4f2c",
+      "sha256": "1c692901ae2351009ea1a44aaa66699f49d2a64985feb37fcd733afdb9319f44",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -21071,67 +21223,55 @@
           "line": 8
         },
         {
-          "name": "<callback>",
-          "line": 10
-        },
-        {
-          "name": "<callback>",
-          "line": 10
-        },
-        {
           "name": "field",
-          "line": 25
+          "line": 34
         }
       ],
-      "loops": 2,
+      "loops": 4,
       "mathCalls": [],
       "lineCoordinates": "file"
     },
     {
       "file": "src/services/geometry/viewport.ts",
-      "sha256": "7ac82497a670025ff10f1ef72add3c5b01142361799edf4ce7eb6e7f4d533f7f",
+      "sha256": "fc81637300a47dbfa36c0e4a4e739877964167b855ce5ec32de4ca8eead06c78",
       "generated": false,
       "owner": "application-viewport",
       "decision": "viewport-host",
       "functions": [
         {
           "name": "finite",
-          "line": 10
-        },
-        {
-          "name": "homogeneous",
           "line": 12
         },
         {
+          "name": "homogeneous",
+          "line": 19
+        },
+        {
           "name": "point",
-          "line": 18
+          "line": 25
         },
         {
           "name": "unproject",
-          "line": 26
-        },
-        {
-          "name": "<callback>",
           "line": 33
         },
         {
           "name": "clientRayInKernel",
-          "line": 37
+          "line": 46
         },
         {
           "name": "unprojectRayInKernel",
-          "line": 47
+          "line": 56
         },
         {
           "name": "projectPointInKernel",
-          "line": 52
+          "line": 61
         },
         {
           "name": "selectedCornerInKernel",
-          "line": 65
+          "line": 74
         }
       ],
-      "loops": 2,
+      "loops": 3,
       "mathCalls": [
         "hypot"
       ],
@@ -21456,7 +21596,7 @@
     },
     {
       "file": "src/services/geometryTransformTransition.ts",
-      "sha256": "11a278663f86bc6fda1db0c565a56238857e73dc86de884b518f60e296133b7e",
+      "sha256": "bfffedf413326983d8ceb507626472277d4da50e0ed19f9dd791247b2a637fb1",
       "generated": false,
       "owner": "application-viewport",
       "decision": "viewport-host",
@@ -21483,26 +21623,10 @@
         },
         {
           "name": "<callback>",
-          "line": 29
-        },
-        {
-          "name": "<callback>",
-          "line": 30
-        },
-        {
-          "name": "<callback>",
-          "line": 31
-        },
-        {
-          "name": "<callback>",
-          "line": 37
-        },
-        {
-          "name": "<callback>",
-          "line": 38
+          "line": 42
         }
       ],
-      "loops": 4,
+      "loops": 2,
       "mathCalls": [
         "abs",
         "acos",
@@ -21511,6 +21635,85 @@
         "min",
         "sin",
         "sqrt"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/geometryWorkerPool.ts",
+      "sha256": "17ac5198e3aa6f1118df63388195e817007dfd529b9aedd6c373e0a95dd51402",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "detectHardwareConcurrency",
+          "line": 31
+        },
+        {
+          "name": "createKernelWasmMemory",
+          "line": 82
+        },
+        {
+          "name": "collectTransferableBuffers",
+          "line": 111
+        },
+        {
+          "name": "visit",
+          "line": 114
+        },
+        {
+          "name": "submit",
+          "line": 193
+        },
+        {
+          "name": "<callback>",
+          "line": 201
+        },
+        {
+          "name": "<callback>",
+          "line": 214
+        },
+        {
+          "name": "evaluateBatch",
+          "line": 245
+        },
+        {
+          "name": "<callback>",
+          "line": 246
+        },
+        {
+          "name": "findAvailableWorker",
+          "line": 249
+        },
+        {
+          "name": "pump",
+          "line": 266
+        },
+        {
+          "name": "<callback>",
+          "line": 282
+        },
+        {
+          "name": "<callback>",
+          "line": 284
+        },
+        {
+          "name": "<callback>",
+          "line": 291
+        },
+        {
+          "name": "getStats",
+          "line": 300
+        },
+        {
+          "name": "dispose",
+          "line": 310
+        }
+      ],
+      "loops": 6,
+      "mathCalls": [
+        "max",
+        "min"
       ],
       "lineCoordinates": "file"
     },
@@ -21754,6 +21957,947 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/gpuBvhRaycast.ts",
+      "sha256": "f6887311e2e59d78f61ae0be500126f26655beba6bf923bcece6dc427a1a4e04",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "buildFlatBvh",
+          "line": 66
+        },
+        {
+          "name": "<callback>",
+          "line": 77
+        },
+        {
+          "name": "<callback>",
+          "line": 78
+        },
+        {
+          "name": "<callback>",
+          "line": 80
+        },
+        {
+          "name": "buildRange",
+          "line": 94
+        },
+        {
+          "name": "<callback>",
+          "line": 141
+        },
+        {
+          "name": "referenceBatchedBvhRaycast",
+          "line": 187
+        },
+        {
+          "name": "<callback>",
+          "line": 192
+        },
+        {
+          "name": "readNode",
+          "line": 197
+        },
+        {
+          "name": "slabTest",
+          "line": 211
+        },
+        {
+          "name": "referenceBatchedBvhRaycastAsync",
+          "line": 332
+        },
+        {
+          "name": "<callback>",
+          "line": 338
+        },
+        {
+          "name": "<callback>",
+          "line": 342
+        },
+        {
+          "name": "runGpuBatchedBvhRaycast",
+          "line": 351
+        },
+        {
+          "name": "<callback>",
+          "line": 357
+        },
+        {
+          "name": "buildMarqueeRayBatch",
+          "line": 435
+        }
+      ],
+      "loops": 8,
+      "mathCalls": [
+        "abs",
+        "ceil",
+        "max",
+        "min"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgGeometryCache.ts",
+      "sha256": "af16f4657a908e2ff74586dc30f2c70c2e7915fae74a1be0d2b8fc7b656f6ade",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "uploadMesh",
+          "line": 19
+        },
+        {
+          "name": "getPrimitiveMesh",
+          "line": 39
+        },
+        {
+          "name": "destroy",
+          "line": 66
+        }
+      ],
+      "loops": 1,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgParse.ts",
+      "sha256": "8fb940b495d14dd83b498eb1287ad1e854effea79d63be3276ee0d8bf6b7a097",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "flattenCsgNode",
+          "line": 11
+        },
+        {
+          "name": "<callback>",
+          "line": 44
+        },
+        {
+          "name": "evalScalar",
+          "line": 77
+        },
+        {
+          "name": "evalVec3",
+          "line": 87
+        },
+        {
+          "name": "evalBool",
+          "line": 98
+        },
+        {
+          "name": "getCallArg",
+          "line": 104
+        },
+        {
+          "name": "astStatementToGpuCsgNode",
+          "line": 119
+        },
+        {
+          "name": "<callback>",
+          "line": 182
+        },
+        {
+          "name": "<callback>",
+          "line": 194
+        },
+        {
+          "name": "<callback>",
+          "line": 206
+        },
+        {
+          "name": "<callback>",
+          "line": 217
+        },
+        {
+          "name": "compileGpuCsgTree",
+          "line": 231
+        },
+        {
+          "name": "parseOpenScadCsgTree",
+          "line": 250
+        }
+      ],
+      "loops": 7,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgPreview.ts",
+      "sha256": "af45ff064c3cd5c274e85ce9e8692f044ca3df058bc898d1d4c454ebfeedab9c",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [],
+      "loops": 0,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgPrimitives.ts",
+      "sha256": "e1ddf35621edab0827f2584d69a8b1e28d64f98ef2d3a38bcff5409df816b486",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "identityMat4",
+          "line": 4
+        },
+        {
+          "name": "multiplyMat4",
+          "line": 10
+        },
+        {
+          "name": "translationMat4",
+          "line": 45
+        },
+        {
+          "name": "scaleMat4",
+          "line": 53
+        },
+        {
+          "name": "rotationXMat4",
+          "line": 61
+        },
+        {
+          "name": "rotationYMat4",
+          "line": 72
+        },
+        {
+          "name": "rotationZMat4",
+          "line": 83
+        },
+        {
+          "name": "rotationEulerMat4",
+          "line": 94
+        },
+        {
+          "name": "normalMatrixFromModel",
+          "line": 119
+        },
+        {
+          "name": "generateUnitCube",
+          "line": 170
+        },
+        {
+          "name": "generateUnitCylinder",
+          "line": 233
+        },
+        {
+          "name": "generateUnitSphere",
+          "line": 320
+        },
+        {
+          "name": "resetCsgIdCounter",
+          "line": 367
+        },
+        {
+          "name": "createCsgPrimitive",
+          "line": 371
+        }
+      ],
+      "loops": 11,
+      "mathCalls": [
+        "abs",
+        "cos",
+        "sin"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgRenderer.ts",
+      "sha256": "78f44b5491e1021eac6dc44c6ae18d53cc4a9b21fc07ed5af5829dbaf88a9d07",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "getPipelines",
+          "line": 40
+        },
+        {
+          "name": "ensureSceneUniforms",
+          "line": 203
+        },
+        {
+          "name": "createObjectBindGroup",
+          "line": 246
+        },
+        {
+          "name": "renderCsg",
+          "line": 284
+        },
+        {
+          "name": "destroy",
+          "line": 420
+        }
+      ],
+      "loops": 3,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgShaders.ts",
+      "sha256": "fa94ee5b0a3ba01f0868559069b6377038e33e44e1e20aaa37cf9af86c693cf9",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [],
+      "loops": 0,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuCsgTypes.ts",
+      "sha256": "f106271c47d97fb33353652d38d521b95874b2c568d750925769ce15af2b75b5",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [],
+      "loops": 0,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuGcodePreview.ts",
+      "sha256": "9bdb0c2c7bc2936b683e662fbb9538de383dc3684df798ec68d6cba830de2f20",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "unpackGcodeSegments",
+          "line": 41
+        },
+        {
+          "name": "referenceFilterGcodeSegments",
+          "line": 58
+        },
+        {
+          "name": "referenceFilterGcodeSegmentsAsync",
+          "line": 115
+        },
+        {
+          "name": "<callback>",
+          "line": 136
+        },
+        {
+          "name": "runGpuFilterGcodeSegments",
+          "line": 180
+        }
+      ],
+      "loops": 2,
+      "mathCalls": [
+        "ceil",
+        "floor",
+        "max",
+        "min",
+        "round"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuImageTrace.ts",
+      "sha256": "8d3badc87fffe1cff2666012ea5dac1bbba7f76c38ddbf8d6131e7cc082ef1b7",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "quantKey",
+          "line": 43
+        },
+        {
+          "name": "stitchSegmentsToContours",
+          "line": 52
+        },
+        {
+          "name": "packRgbaPixels",
+          "line": 132
+        },
+        {
+          "name": "referenceImageContourTrace",
+          "line": 153
+        },
+        {
+          "name": "sampleScalar",
+          "line": 169
+        },
+        {
+          "name": "interpFrac",
+          "line": 182
+        },
+        {
+          "name": "toMm",
+          "line": 188
+        },
+        {
+          "name": "emitSeg",
+          "line": 195
+        },
+        {
+          "name": "referenceImageContourTraceAsync",
+          "line": 296
+        },
+        {
+          "name": "sampleScalar",
+          "line": 312
+        },
+        {
+          "name": "interpFrac",
+          "line": 325
+        },
+        {
+          "name": "toMm",
+          "line": 331
+        },
+        {
+          "name": "emitSeg",
+          "line": 338
+        },
+        {
+          "name": "<callback>",
+          "line": 348
+        },
+        {
+          "name": "runGpuImageContourTrace",
+          "line": 410
+        }
+      ],
+      "loops": 9,
+      "mathCalls": [
+        "abs",
+        "ceil",
+        "floor",
+        "max",
+        "min",
+        "round"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuMarchingCubes.ts",
+      "sha256": "1d262db72c7cf32fe3d3951f9a1e22b96f06117fb987815567e2e31e2406a8b7",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "buildGridUniform",
+          "line": 55
+        },
+        {
+          "name": "runGpuMarchingIsosurface",
+          "line": 85
+        },
+        {
+          "name": "referenceMarchingTetrahedra",
+          "line": 161
+        },
+        {
+          "name": "interpInto",
+          "line": 198
+        },
+        {
+          "name": "addTri",
+          "line": 220
+        }
+      ],
+      "loops": 10,
+      "mathCalls": [
+        "abs",
+        "ceil",
+        "hypot",
+        "max",
+        "min"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuNurbsReference.ts",
+      "sha256": "41e7dcff88c9823130c1ce6270440698fe5629c106e55ef867ddaa6654627cf9",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "generateQuadIndices",
+          "line": 34
+        },
+        {
+          "name": "findSpan",
+          "line": 76
+        },
+        {
+          "name": "createBasisEvaluator",
+          "line": 90
+        },
+        {
+          "name": "evaluateBasisFunsDers",
+          "line": 96
+        },
+        {
+          "name": "referenceNurbsTessellate",
+          "line": 150
+        },
+        {
+          "name": "referenceNurbsTessellateAsync",
+          "line": 290
+        },
+        {
+          "name": "<callback>",
+          "line": 324
+        }
+      ],
+      "loops": 14,
+      "mathCalls": [
+        "abs",
+        "floor",
+        "hypot",
+        "max"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuNurbsTessellate.ts",
+      "sha256": "18143b62ae2b0e0b3625c89b38d40829c76723ef0c6545fb2760f61bb26f630a",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "buildNurbsUniform",
+          "line": 22
+        },
+        {
+          "name": "packControlPoints",
+          "line": 61
+        },
+        {
+          "name": "runGpuNurbsTessellate",
+          "line": 96
+        },
+        {
+          "name": "createBilinearNurbsPatch",
+          "line": 167
+        },
+        {
+          "name": "createCylinderQuarterNurbsPatch",
+          "line": 187
+        }
+      ],
+      "loops": 1,
+      "mathCalls": [
+        "ceil"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuPicker.ts",
+      "sha256": "ba6f9f0bceea1b7242bafafc5836a9ba56afd6616e51aca1b81db982407f1cbc",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "createPickMatrix",
+          "line": 20
+        },
+        {
+          "name": "ensureResources",
+          "line": 126
+        },
+        {
+          "name": "ensureObjectBindGroup",
+          "line": 210
+        },
+        {
+          "name": "pick",
+          "line": 235
+        },
+        {
+          "name": "destroy",
+          "line": 316
+        }
+      ],
+      "loops": 2,
+      "mathCalls": [
+        "max"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuSemanticEdges.ts",
+      "sha256": "1c8de35477953703338ffed0787a995046690a476bbd533727f3f82766fdf9ee",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "buildMeshEdgeAdjacency",
+          "line": 35
+        },
+        {
+          "name": "buildParamsUniform",
+          "line": 76
+        },
+        {
+          "name": "runGpuSemanticEdges",
+          "line": 100
+        },
+        {
+          "name": "computeTriNormalInto",
+          "line": 170
+        },
+        {
+          "name": "referenceSemanticEdges",
+          "line": 211
+        },
+        {
+          "name": "referenceSemanticEdgesAsync",
+          "line": 262
+        },
+        {
+          "name": "<callback>",
+          "line": 281
+        }
+      ],
+      "loops": 4,
+      "mathCalls": [
+        "ceil",
+        "cos",
+        "floor",
+        "min",
+        "sqrt"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuSlicer.ts",
+      "sha256": "f7e20b1ad651f99e94ecdde86331537208d3786b293431a7a3b6fa66e3d5d39b",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "buildSlicerUniform",
+          "line": 54
+        },
+        {
+          "name": "unpackSegments",
+          "line": 84
+        },
+        {
+          "name": "runGpuMeshSlicer",
+          "line": 101
+        },
+        {
+          "name": "interpEdge",
+          "line": 172
+        },
+        {
+          "name": "sliceSingleTriangle",
+          "line": 190
+        },
+        {
+          "name": "referenceMeshSlicer",
+          "line": 302
+        },
+        {
+          "name": "referenceMeshSlicerAsync",
+          "line": 344
+        },
+        {
+          "name": "<callback>",
+          "line": 362
+        },
+        {
+          "name": "computeSliceArea",
+          "line": 391
+        },
+        {
+          "name": "groupSegmentsByLayer",
+          "line": 418
+        }
+      ],
+      "loops": 5,
+      "mathCalls": [
+        "abs",
+        "ceil",
+        "floor",
+        "max",
+        "min",
+        "round"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuSubdivision.ts",
+      "sha256": "82a6fe8ac4237322bfb41e33632bf9b4dcce522b42b0d30ca0875059fe4135aa",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "buildSubdivUniform",
+          "line": 36
+        },
+        {
+          "name": "runGpuSubdivisionRefine",
+          "line": 65
+        },
+        {
+          "name": "<callback>",
+          "line": 74
+        },
+        {
+          "name": "<callback>",
+          "line": 75
+        },
+        {
+          "name": "<callback>",
+          "line": 76
+        },
+        {
+          "name": "<callback>",
+          "line": 170
+        },
+        {
+          "name": "referenceBrushSubdivision",
+          "line": 271
+        },
+        {
+          "name": "<callback>",
+          "line": 284
+        },
+        {
+          "name": "<callback>",
+          "line": 297
+        },
+        {
+          "name": "runGpuBrushSubdivision",
+          "line": 304
+        },
+        {
+          "name": "<callback>",
+          "line": 361
+        }
+      ],
+      "loops": 18,
+      "mathCalls": [
+        "ceil",
+        "max",
+        "min",
+        "sqrt"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuSubdivisionReference.ts",
+      "sha256": "e33c175ef5548a15069af73eba33f2b14fa8035f988e9161634a9f6651bb9d2e",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "referenceRefineSubdivision",
+          "line": 17
+        },
+        {
+          "name": "<callback>",
+          "line": 30
+        },
+        {
+          "name": "<callback>",
+          "line": 31
+        },
+        {
+          "name": "<callback>",
+          "line": 32
+        },
+        {
+          "name": "<callback>",
+          "line": 80
+        }
+      ],
+      "loops": 16,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuTrussSolver.ts",
+      "sha256": "a7b66f0a686e046b5ff102a969685d6a6a37d9ad94efd5ae73290d586750c5f4",
+      "generated": false,
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "decision": "incoming-gpu-preview-and-reference",
+      "functions": [
+        {
+          "name": "assembleTrussCsr",
+          "line": 36
+        },
+        {
+          "name": "<callback>",
+          "line": 39
+        },
+        {
+          "name": "addEntry",
+          "line": 41
+        },
+        {
+          "name": "<callback>",
+          "line": 104
+        },
+        {
+          "name": "csrSpMV",
+          "line": 124
+        },
+        {
+          "name": "acquirePcgScratch",
+          "line": 141
+        },
+        {
+          "name": "referenceSolveTrussPcg",
+          "line": 171
+        },
+        {
+          "name": "runGpuTrussSolver",
+          "line": 349
+        }
+      ],
+      "loops": 24,
+      "mathCalls": [
+        "abs",
+        "ceil",
+        "hypot",
+        "max",
+        "sqrt"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuWboit.ts",
+      "sha256": "43055ac339d0e8ceef92493f62492b20f1364703e38c29a8652493bb697ddd3f",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "toWboitShader",
+          "line": 61
+        },
+        {
+          "name": "ensureTextures",
+          "line": 117
+        },
+        {
+          "name": "getCompositeBindGroupLayout",
+          "line": 155
+        },
+        {
+          "name": "getCompositeBindGroup",
+          "line": 167
+        },
+        {
+          "name": "getCompositePipeline",
+          "line": 182
+        },
+        {
+          "name": "getWboitPipeline",
+          "line": 216
+        },
+        {
+          "name": "beginWboitPass",
+          "line": 276
+        },
+        {
+          "name": "composite",
+          "line": 309
+        },
+        {
+          "name": "destroyTextures",
+          "line": 334
+        },
+        {
+          "name": "destroy",
+          "line": 343
+        }
+      ],
+      "loops": 0,
+      "mathCalls": [
+        "max",
+        "round"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/gpuZeroCopyPipeline.ts",
+      "sha256": "3e7fcb0ec800b40e5f9e6e010c9b30e4c20fe16d2c6584d73c3ad8e199f7950b",
+      "generated": false,
+      "owner": "application-host",
+      "decision": "host",
+      "functions": [
+        {
+          "name": "alignByteSize",
+          "line": 50
+        },
+        {
+          "name": "packIndirectIndexedArgs",
+          "line": 58
+        },
+        {
+          "name": "createZeroCopyMeshBuffers",
+          "line": 74
+        },
+        {
+          "name": "destroyZeroCopyMeshBuffers",
+          "line": 124
+        },
+        {
+          "name": "dispatchComputeToZeroCopyMesh",
+          "line": 134
+        },
+        {
+          "name": "supportsOffscreenWebGpu",
+          "line": 159
+        },
+        {
+          "name": "bucketSize",
+          "line": 180
+        },
+        {
+          "name": "bucketKey",
+          "line": 185
+        },
+        {
+          "name": "acquire",
+          "line": 189
+        },
+        {
+          "name": "release",
+          "line": 207
+        },
+        {
+          "name": "getStats",
+          "line": 219
+        },
+        {
+          "name": "destroy",
+          "line": 229
+        }
+      ],
+      "loops": 3,
+      "mathCalls": [
+        "ceil",
+        "clz32",
+        "max"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/inspectCurrentCurveChain.ts",
       "sha256": "a4e866ad596a153a52b5bd3949fa0c7425ea765574926f9c2bd4efb89c80db90",
       "generated": false,
@@ -21961,6 +23105,48 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/latticePrintReport.ts",
+      "sha256": "b150f34f76c984fd685fae374a01442c66f0fb215f04b6918b436b60bda50e37",
+      "generated": false,
+      "owner": "polygon-core + mesh-query + mesh-topology + mesh-io",
+      "decision": "mesh",
+      "functions": [
+        {
+          "name": "analyzeLatticePrintability",
+          "line": 30
+        },
+        {
+          "name": "optimizeLatticeForPrint",
+          "line": 35
+        },
+        {
+          "name": "formatLatticePrintReport",
+          "line": 40
+        },
+        {
+          "name": "t",
+          "line": 41
+        },
+        {
+          "name": "<callback>",
+          "line": 46
+        },
+        {
+          "name": "<callback>",
+          "line": 47
+        },
+        {
+          "name": "latticeSlicerHintsJson",
+          "line": 52
+        }
+      ],
+      "loops": 1,
+      "mathCalls": [
+        "round"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/latticePrintSettings.ts",
       "sha256": "671a90c47ec2818fc9a42997c4742679582cd3d2f45653e67a48aeb5d8b61c37",
       "generated": false,
@@ -21978,6 +23164,64 @@
       ],
       "loops": 0,
       "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/latticeStrength.ts",
+      "sha256": "0dee0c494cd6d4485c9738513df62271f34e390c7ad8bdd02211f4253c411324",
+      "generated": false,
+      "owner": "polygon-core + mesh-query + mesh-topology + mesh-io",
+      "decision": "mesh",
+      "functions": [
+        {
+          "name": "latticeMaterials",
+          "line": 48
+        },
+        {
+          "name": "latticeStructureHint",
+          "line": 49
+        },
+        {
+          "name": "analyzeLatticeStrength",
+          "line": 54
+        },
+        {
+          "name": "weakSpotMarkerMeshes",
+          "line": 60
+        },
+        {
+          "name": "<callback>",
+          "line": 61
+        },
+        {
+          "name": "<callback>",
+          "line": 62
+        },
+        {
+          "name": "formatLatticeStrengthReport",
+          "line": 69
+        },
+        {
+          "name": "t",
+          "line": 70
+        },
+        {
+          "name": "<callback>",
+          "line": 84
+        },
+        {
+          "name": "<callback>",
+          "line": 88
+        },
+        {
+          "name": "<callback>",
+          "line": 88
+        }
+      ],
+      "loops": 1,
+      "mathCalls": [
+        "round"
+      ],
       "lineCoordinates": "file"
     },
     {
@@ -22221,155 +23465,22 @@
     },
     {
       "file": "src/services/mainSolidExtensions.ts",
-      "sha256": "b4bce2f0f1e6dd435f033cc7f22d3f47bfc9fe7d771dfbb9e1e579f05853581a",
+      "sha256": "4b615ca02abf66cd7e6ad85dcb620b26e00accafaddd1d4d670c011621681d64",
       "generated": false,
       "owner": "polygon-core",
       "decision": "specialized-solids",
       "functions": [
         {
-          "name": "prism",
-          "line": 8
-        },
-        {
-          "name": "<callback>",
-          "line": 9
-        },
-        {
-          "name": "<callback>",
-          "line": 10
-        },
-        {
-          "name": "<callback>",
-          "line": 11
-        },
-        {
-          "name": "<callback>",
-          "line": 11
-        },
-        {
-          "name": "<callback>",
-          "line": 13
-        },
-        {
-          "name": "<callback>",
-          "line": 14
-        },
-        {
-          "name": "local",
-          "line": 16
-        },
-        {
-          "name": "<callback>",
-          "line": 16
-        },
-        {
-          "name": "<callback>",
-          "line": 17
-        },
-        {
-          "name": "<callback>",
-          "line": 19
-        },
-        {
-          "name": "<callback>",
-          "line": 20
-        },
-        {
-          "name": "<callback>",
-          "line": 20
-        },
-        {
-          "name": "extrude",
-          "line": 23
-        },
-        {
-          "name": "<callback>",
-          "line": 23
-        },
-        {
-          "name": "specializedShell",
-          "line": 24
-        },
-        {
-          "name": "<callback>",
-          "line": 30
-        },
-        {
-          "name": "specializedBevel",
-          "line": 38
-        },
-        {
-          "name": "<callback>",
-          "line": 41
-        },
-        {
-          "name": "<callback>",
-          "line": 41
-        },
-        {
-          "name": "sphereShell",
-          "line": 52
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 53
-        },
-        {
-          "name": "<callback>",
-          "line": 54
-        },
-        {
-          "name": "<callback>",
-          "line": 56
-        },
-        {
-          "name": "<callback>",
-          "line": 58
-        },
-        {
-          "name": "<callback>",
-          "line": 58
-        },
-        {
-          "name": "<callback>",
-          "line": 62
-        },
-        {
           "name": "extendedShell",
-          "line": 70
+          "line": 5
         },
         {
           "name": "extendedBevel",
-          "line": 76
+          "line": 27
         }
       ],
-      "loops": 3,
-      "mathCalls": [
-        "abs",
-        "hypot",
-        "max",
-        "min"
-      ],
+      "loops": 0,
+      "mathCalls": [],
       "lineCoordinates": "file"
     },
     {
@@ -23036,6 +24147,77 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/mainSolidWorkerPool.ts",
+      "sha256": "3097f5e3ea3efe229b4f80df45e366f108ca50b2df898fb46810309e50d085e0",
+      "generated": false,
+      "owner": "geometry-ops + polygon-core",
+      "decision": "solid",
+      "functions": [
+        {
+          "name": "getOrCreateSlot",
+          "line": 54
+        },
+        {
+          "name": "run",
+          "line": 68
+        },
+        {
+          "name": "<callback>",
+          "line": 83
+        },
+        {
+          "name": "onAbort",
+          "line": 94
+        },
+        {
+          "name": "<callback>",
+          "line": 103
+        },
+        {
+          "name": "runBatch",
+          "line": 126
+        },
+        {
+          "name": "<callback>",
+          "line": 130
+        },
+        {
+          "name": "findAvailableSlot",
+          "line": 133
+        },
+        {
+          "name": "pump",
+          "line": 155
+        },
+        {
+          "name": "<callback>",
+          "line": 179
+        },
+        {
+          "name": "<callback>",
+          "line": 186
+        },
+        {
+          "name": "cancelAll",
+          "line": 198
+        },
+        {
+          "name": "dispose",
+          "line": 212
+        },
+        {
+          "name": "getStats",
+          "line": 222
+        }
+      ],
+      "loops": 6,
+      "mathCalls": [
+        "max",
+        "min"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/mainSolidWorkerRuntime.ts",
       "sha256": "3d070779ec82d53b9593d2a382212585fb730c18e7a0a01bb35cc20982a9130b",
       "generated": false,
@@ -23675,89 +24857,113 @@
     },
     {
       "file": "src/services/math3d.ts",
-      "sha256": "a76db0cfc30b0db876ec6c5f0b3fd509087197896b481e0f4de5f66aa6809148",
+      "sha256": "10763d00deb6a05b56e2c4c78022dbda5cb2fee255e7a493b5620b268e5c0104",
       "generated": false,
       "owner": "mesh-query + osv-math",
       "decision": "ray-reference",
       "functions": [
         {
-          "name": "clamp",
-          "line": 18
+          "name": "dot3",
+          "line": 20
         },
         {
-          "name": "clamp01",
-          "line": 22
+          "name": "cross3",
+          "line": 24
         },
         {
-          "name": "identity",
-          "line": 26
-        },
-        {
-          "name": "multiply",
+          "name": "unit3",
           "line": 32
         },
         {
-          "name": "translate",
-          "line": 38
+          "name": "normalizeVec3",
+          "line": 39
         },
         {
-          "name": "rotateX",
-          "line": 44
+          "name": "packUndirectedEdgeKey",
+          "line": 52
         },
         {
-          "name": "rotateY",
-          "line": 50
+          "name": "clamp",
+          "line": 58
         },
         {
-          "name": "rotateZ",
-          "line": 56
-        },
-        {
-          "name": "scale",
+          "name": "clamp01",
           "line": 62
         },
         {
+          "name": "identity",
+          "line": 66
+        },
+        {
+          "name": "resetScratchIdentity",
+          "line": 72
+        },
+        {
+          "name": "multiply",
+          "line": 83
+        },
+        {
+          "name": "translate",
+          "line": 102
+        },
+        {
+          "name": "rotateX",
+          "line": 108
+        },
+        {
+          "name": "rotateY",
+          "line": 114
+        },
+        {
+          "name": "rotateZ",
+          "line": 120
+        },
+        {
+          "name": "scale",
+          "line": 126
+        },
+        {
           "name": "perspective",
-          "line": 68
+          "line": 132
         },
         {
           "name": "orthographic",
-          "line": 81
+          "line": 145
         },
         {
           "name": "lookAt",
-          "line": 103
+          "line": 167
         },
         {
           "name": "transpose",
-          "line": 136
+          "line": 199
         },
         {
           "name": "invert",
-          "line": 147
+          "line": 217
         },
         {
           "name": "transformPoint",
-          "line": 163
+          "line": 231
         },
         {
           "name": "transformVector",
-          "line": 175
+          "line": 243
         },
         {
           "name": "rayAabbDistance",
-          "line": 191
+          "line": 259
         },
         {
           "name": "rayTriangleDistance",
-          "line": 214
+          "line": 282
         },
         {
           "name": "rayIndexedMeshDistance",
-          "line": 240
+          "line": 308
         }
       ],
-      "loops": 4,
+      "loops": 9,
       "mathCalls": [
         "abs",
         "cos",
@@ -24386,58 +25592,51 @@
     },
     {
       "file": "src/services/meshSelectionOverlay.ts",
-      "sha256": "a27589b78a0301c2cc29149a349e748402e041349622acfe2a933f71f54a6f03",
+      "sha256": "f5486a9e4f10f0a11e6a7da0bacbaea5f749989a39e926c742183a4f62bf7d4c",
       "generated": false,
       "owner": "polygon-core + mesh-query + mesh-topology + mesh-io",
       "decision": "mesh",
       "functions": [
         {
           "name": "triangleVertexIndices",
-          "line": 48
+          "line": 50
         },
         {
           "name": "worldVertex",
-          "line": 54
+          "line": 56
+        },
+        {
+          "name": "writeWorldVertex",
+          "line": 65
+        },
+        {
+          "name": "recordEdge",
+          "line": 90
         },
         {
           "name": "buildFaceTriangleIndex",
-          "line": 69
+          "line": 105
         },
         {
           "name": "provenanceRunBounds",
-          "line": 98
+          "line": 134
         },
         {
           "name": "buildFaceOverlayGeometry",
-          "line": 111
-        },
-        {
-          "name": "<callback>",
-          "line": 152
-        },
-        {
-          "name": "<callback>",
-          "line": 153
+          "line": 147
         },
         {
           "name": "pointOverlayPosition",
-          "line": 187
+          "line": 235
         },
         {
           "name": "buildSourceOverlayGeometry",
-          "line": 208
-        },
-        {
-          "name": "<callback>",
-          "line": 248
-        },
-        {
-          "name": "<callback>",
-          "line": 249
+          "line": 256
         }
       ],
-      "loops": 16,
+      "loops": 17,
       "mathCalls": [
+        "abs",
         "floor",
         "max",
         "min"
@@ -24470,7 +25669,7 @@
     },
     {
       "file": "src/services/meshTopology.ts",
-      "sha256": "992273d9a2c34dc005e0b44d2f0e34f9616a968a7964da55e08b21d91699073f",
+      "sha256": "acc39d83e88d825d5ea7817bfd0048e501017248d8dc382bffc96f7ecdc5b1cb",
       "generated": false,
       "owner": "mesh-topology + mesh-query",
       "decision": "threshold-compatibility",
@@ -24481,11 +25680,15 @@
         },
         {
           "name": "validateIndices",
-          "line": 98
+          "line": 99
         },
         {
           "name": "validateVertexIndex",
-          "line": 104
+          "line": 105
+        },
+        {
+          "name": "extractSemanticEdgesGpu",
+          "line": 116
         }
       ],
       "loops": 2,
@@ -24590,7 +25793,7 @@
     },
     {
       "file": "src/services/modelingSnaps.ts",
-      "sha256": "98e701cff4a5e7dd09c993bd77af1bfbd35733d5b99ab3d59812890341086c58",
+      "sha256": "0f3db8367254034d6790988765646c82f854c80bf7baaba462e261a0d26685e2",
       "generated": false,
       "owner": "planar-geometry",
       "decision": "sketch-relations",
@@ -24668,27 +25871,27 @@
           "line": 110
         },
         {
-          "name": "evaluate",
-          "line": 115
+          "name": "<callback>",
+          "line": 124
         },
         {
           "name": "<callback>",
-          "line": 117
+          "line": 126
         },
         {
           "name": "<callback>",
-          "line": 145
+          "line": 153
         },
         {
           "name": "<callback>",
-          "line": 145
+          "line": 153
         },
         {
           "name": "<callback>",
-          "line": 146
+          "line": 154
         }
       ],
-      "loops": 22,
+      "loops": 24,
       "mathCalls": [
         "abs",
         "atan2",
@@ -25281,7 +26484,7 @@
     },
     {
       "file": "src/services/nurbsCurve.ts",
-      "sha256": "b70683a40d6d8e30b45fef6141a2b461ca08a8f04558ba382b114dced12390fb",
+      "sha256": "8a7484f80d08e18472bdd69bf7b1c8cee882835408bfac47529e5b3e616b5951",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs",
@@ -25299,56 +26502,64 @@
           "line": 48
         },
         {
-          "name": "insertNurbsKnot",
+          "name": "evaluateNurbsCurvePoints",
           "line": 49
         },
         {
+          "name": "sampleNurbsCurve",
+          "line": 50
+        },
+        {
+          "name": "insertNurbsKnot",
+          "line": 51
+        },
+        {
           "name": "trimNurbsCurveAtScreenPoint",
-          "line": 61
+          "line": 63
         },
         {
           "name": "trimNurbsCurveAtPoint",
-          "line": 64
+          "line": 66
         },
         {
           "name": "trimNurbsCurve",
-          "line": 67
-        },
-        {
-          "name": "splitNurbsCurve",
-          "line": 68
-        },
-        {
-          "name": "reverseNurbsCurve",
           "line": 69
         },
         {
-          "name": "decomposeNurbsCurve",
+          "name": "splitNurbsCurve",
           "line": 70
         },
         {
+          "name": "reverseNurbsCurve",
+          "line": 71
+        },
+        {
+          "name": "decomposeNurbsCurve",
+          "line": 72
+        },
+        {
           "name": "inspectNurbsDecomposition",
-          "line": 77
+          "line": 79
         },
         {
           "name": "inspectNurbsDecompositionBatch",
-          "line": 83
+          "line": 85
         },
         {
           "name": "elevateNurbsCurve",
-          "line": 86
+          "line": 88
         },
         {
           "name": "nurbsCurveBounds",
-          "line": 87
+          "line": 89
         },
         {
           "name": "measureNurbsCurveDistance",
-          "line": 102
+          "line": 104
         },
         {
           "name": "transformNurbsCurve",
-          "line": 106
+          "line": 108
         }
       ],
       "loops": 0,
@@ -25896,7 +27107,7 @@
     },
     {
       "file": "src/services/nurbsSurface.ts",
-      "sha256": "854d11848733b4ab2af4d2fd4c3a20f89260a74429b102c0affb7146048d0d2e",
+      "sha256": "92a5ee3670f46a6be89724287ab5b6a850975b6154631e495e5516d5ba3c2910",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs",
@@ -25964,9 +27175,13 @@
         {
           "name": "transformNurbsSurfacePatches",
           "line": 82
+        },
+        {
+          "name": "tessellateNurbsSurfaceOnGpu",
+          "line": 91
         }
       ],
-      "loops": 0,
+      "loops": 2,
       "mathCalls": [],
       "lineCoordinates": "file"
     },
@@ -29038,7 +30253,7 @@
     },
     {
       "file": "src/services/openscadSemanticLowerer/evalNode.ts",
-      "sha256": "26a19be8702aaca47a81db203f1164ea5a825122471561a3262ae0f981cdabcb",
+      "sha256": "13d914b376290a25f16b80b4c43d1b24d4df587a903a2877569d8b2048365e80",
       "generated": false,
       "owner": "openscad-core",
       "decision": "language",
@@ -29142,7 +30357,7 @@
     },
     {
       "file": "src/services/openscadSemanticLowerer/evalPreparedNodes.ts",
-      "sha256": "3e0dc5e21874c05cb41831677cd06f8f7718ae116353b694dc52a3bd349779bf",
+      "sha256": "d80fea06be35549a3fff3bf7dd48a245ec2cc9e3ba13b439f87954759ba63fb5",
       "generated": false,
       "owner": "openscad-core",
       "decision": "language-builtins",
@@ -29229,49 +30444,48 @@
         },
         {
           "name": "primitiveColor",
-          "line": 301
+          "line": 307
         },
         {
           "name": "transformShapes",
-          "line": 303
-        },
-        {
-          "name": "<callback>",
           "line": 309
         },
         {
+          "name": "<callback>",
+          "line": 315
+        },
+        {
           "name": "combineShapes",
-          "line": 317
+          "line": 323
         },
         {
           "name": "<callback>",
-          "line": 326
+          "line": 332
         },
         {
           "name": "<callback>",
-          "line": 338
+          "line": 344
         },
         {
           "name": "unionReduceInternal",
-          "line": 346
+          "line": 352
         },
         {
           "name": "<callback>",
-          "line": 353
+          "line": 359
         },
         {
           "name": "<callback>",
-          "line": 364
-        },
-        {
-          "name": "makeCylinder",
-          "line": 374
+          "line": 370
         }
       ],
       "loops": 7,
       "mathCalls": [
         "cos",
         "hypot",
+        "max",
+        "min",
+        "round",
         "sin"
       ],
       "lineCoordinates": "file"
@@ -29421,27 +30635,19 @@
       "lineCoordinates": "file"
     },
     {
-      "file": "src/services/openscadSemanticLowerer/makePolyhedron.ts",
-      "sha256": "601f04f72a8cedc4e681be28c9b33e962ac4f2c91c39ae7e78b092f4e16330c8",
+      "file": "src/services/openscadSemanticLowerer/makeCylinder.ts",
+      "sha256": "dfb7311497f429b6a574b5725cc338850c3ecccd7babf187cd94946d8f10cdf8",
       "generated": false,
       "owner": "openscad-core",
       "decision": "language",
       "functions": [
         {
+          "name": "makeCylinder",
+          "line": 9
+        },
+        {
           "name": "makePolyhedron",
-          "line": 10
-        },
-        {
-          "name": "<callback>",
-          "line": 14
-        },
-        {
-          "name": "<callback>",
-          "line": 22
-        },
-        {
-          "name": "makePolygon",
-          "line": 49
+          "line": 48
         },
         {
           "name": "<callback>",
@@ -29449,49 +30655,62 @@
         },
         {
           "name": "<callback>",
-          "line": 68
+          "line": 60
+        },
+        {
+          "name": "makePolygon",
+          "line": 87
         },
         {
           "name": "<callback>",
-          "line": 68
+          "line": 90
         },
         {
           "name": "<callback>",
-          "line": 80
+          "line": 106
+        },
+        {
+          "name": "<callback>",
+          "line": 106
+        },
+        {
+          "name": "<callback>",
+          "line": 118
         },
         {
           "name": "compatibilityRequestedSegments",
-          "line": 92
+          "line": 130
         },
         {
           "name": "compatibilityPlanarChildren",
-          "line": 105
+          "line": 143
         },
         {
           "name": "<callback>",
-          "line": 111
+          "line": 149
         },
         {
           "name": "evalDxfLinearExtrude",
-          "line": 123
+          "line": 161
         },
         {
           "name": "evalDxfRotateExtrude",
-          "line": 182
+          "line": 220
         },
         {
           "name": "evalPassedCallChildren",
-          "line": 216
+          "line": 254
         },
         {
           "name": "<callback>",
-          "line": 235
+          "line": 273
         }
       ],
       "loops": 3,
       "mathCalls": [
         "max",
         "min",
+        "round",
         "trunc"
       ],
       "lineCoordinates": "file"
@@ -31087,7 +32306,7 @@
     },
     {
       "file": "src/services/orbitCameraProjection.ts",
-      "sha256": "bc0fbeb19beabe9a2d2f698f376d619d21ae8910c612ae77506348459027cd0d",
+      "sha256": "bf6b14d71e633d337d6322cd11ac4b21c2a0bc8c3222c20b4e4f697e2af874ee",
       "generated": false,
       "owner": "application-viewport",
       "decision": "viewport-host",
@@ -31097,51 +32316,19 @@
           "line": 27
         },
         {
-          "name": "dot3",
-          "line": 28
-        },
-        {
-          "name": "cross3",
-          "line": 29
-        },
-        {
-          "name": "orbitViewMatrix",
-          "line": 36
-        },
-        {
-          "name": "<callback>",
-          "line": 43
-        },
-        {
-          "name": "<callback>",
-          "line": 50
+          "name": "writeOrbitViewMatrix",
+          "line": 33
         },
         {
           "name": "computeOrbitCameraFrame",
-          "line": 60
+          "line": 69
         },
         {
           "name": "invalid",
-          "line": 61
-        },
-        {
-          "name": "<callback>",
-          "line": 81
-        },
-        {
-          "name": "<callback>",
-          "line": 82
-        },
-        {
-          "name": "<callback>",
-          "line": 83
-        },
-        {
-          "name": "<callback>",
-          "line": 89
+          "line": 70
         }
       ],
-      "loops": 4,
+      "loops": 3,
       "mathCalls": [
         "abs",
         "atan",
@@ -31568,18 +32755,14 @@
     },
     {
       "file": "src/services/photogrammetry/preview.ts",
-      "sha256": "a541fac7aa9d9c0221dba8a263fbd8285efe44b65833ec74320a540233f3bac3",
+      "sha256": "862d4d0ba272d31700524ab87523c3a63810ff8e5dfc3b19a53882bf5fe597ec",
       "generated": false,
       "owner": "polygon-core",
       "decision": "mesh-display",
       "functions": [
         {
           "name": "previewCoordinates",
-          "line": 21
-        },
-        {
-          "name": "<callback>",
-          "line": 44
+          "line": 22
         },
         {
           "name": "<callback>",
@@ -31587,69 +32770,68 @@
         },
         {
           "name": "<callback>",
-          "line": 49
+          "line": 46
         },
         {
-          "name": "fillNormals",
-          "line": 53
+          "name": "<callback>",
+          "line": 50
         },
         {
           "name": "renderMesh",
-          "line": 68
+          "line": 54
         },
         {
           "name": "<callback>",
-          "line": 76
+          "line": 62
         },
         {
           "name": "markerMesh",
-          "line": 81
+          "line": 67
         },
         {
           "name": "<callback>",
-          "line": 86
+          "line": 72
         },
         {
           "name": "meshes",
-          "line": 107
+          "line": 93
         },
         {
           "name": "frame",
-          "line": 115
+          "line": 101
         },
         {
           "name": "surfaceMesh",
-          "line": 128
+          "line": 114
         },
         {
           "name": "cloudMeshes",
-          "line": 149
+          "line": 135
         },
         {
           "name": "<callback>",
-          "line": 166
+          "line": 152
         },
         {
           "name": "photoMesh",
-          "line": 174
+          "line": 160
         },
         {
           "name": "photoCloudMeshes",
-          "line": 177
+          "line": 163
         },
         {
           "name": "photoCameraFrame",
-          "line": 180
+          "line": 166
         }
       ],
-      "loops": 11,
+      "loops": 6,
       "mathCalls": [
         "atan",
         "ceil",
         "floor",
         "max",
-        "min",
-        "sqrt"
+        "min"
       ],
       "lineCoordinates": "file"
     },
@@ -31897,74 +33079,62 @@
     },
     {
       "file": "src/services/retainedSketchProfile.ts",
-      "sha256": "a83d30a819957bfc59973e561572c2a161f4aa06718c06af8e6d2577acce9df9",
+      "sha256": "2ee348475fe5056a5e09cec2dadd3d4a3dc0bd603414e5f25a6fd5b67d233141",
       "generated": false,
       "owner": "planar-geometry + sketch-core",
       "decision": "planar",
       "functions": [
         {
           "name": "retainedProfileDisplay",
-          "line": 7
-        },
-        {
-          "name": "<callback>",
-          "line": 8
-        },
-        {
-          "name": "<callback>",
-          "line": 8
-        },
-        {
-          "name": "<callback>",
-          "line": 10
+          "line": 6
         },
         {
           "name": "sketchProfile",
-          "line": 13
+          "line": 9
         },
         {
           "name": "withRetainedProfile",
-          "line": 23
+          "line": 19
         },
         {
           "name": "combineSketchProfiles",
+          "line": 25
+        },
+        {
+          "name": "<callback>",
           "line": 29
         },
         {
           "name": "<callback>",
-          "line": 33
+          "line": 29
         },
         {
           "name": "<callback>",
-          "line": 33
+          "line": 29
         },
         {
           "name": "<callback>",
-          "line": 33
-        },
-        {
-          "name": "<callback>",
-          "line": 34
+          "line": 30
         },
         {
           "name": "unionSketchProfiles",
-          "line": 37
+          "line": 33
         },
         {
           "name": "transformRetainedSketch",
-          "line": 38
+          "line": 34
         },
         {
           "name": "<callback>",
-          "line": 39
+          "line": 35
         },
         {
           "name": "requirePolylineSketch",
-          "line": 44
+          "line": 40
         },
         {
           "name": "offsetRetainedSketch",
-          "line": 46
+          "line": 42
         }
       ],
       "loops": 1,
@@ -32044,56 +33214,39 @@
     },
     {
       "file": "src/services/rushFrontendScene.ts",
-      "sha256": "e6d68a8171d38fba5ab196d479f5213f1fd3c8fb6bc6ec86e99265fd2cf1cac5",
+      "sha256": "b8901f0dfb928032d2c3f353942994a6402bb68e95448390b6dd3e0f511602ca",
       "generated": false,
       "owner": "polygon-core",
       "decision": "mesh-display",
       "functions": [
         {
           "name": "buildTextNurbsScene",
-          "line": 12
+          "line": 13
         },
         {
           "name": "<callback>",
-          "line": 27
+          "line": 28
         },
         {
           "name": "ownNurbsDisplayMesh",
-          "line": 40
-        },
-        {
-          "name": "<callback>",
-          "line": 48
-        },
-        {
-          "name": "<callback>",
-          "line": 49
-        },
-        {
-          "name": "<callback>",
-          "line": 49
-        },
-        {
-          "name": "<callback>",
-          "line": 52
+          "line": 41
         },
         {
           "name": "progressiveScenePreviewMapper",
-          "line": 62
+          "line": 57
         },
         {
           "name": "<callback>",
-          "line": 64
+          "line": 59
         },
         {
           "name": "<callback>",
-          "line": 65
+          "line": 60
         }
       ],
-      "loops": 4,
+      "loops": 2,
       "mathCalls": [
-        "abs",
-        "hypot"
+        "abs"
       ],
       "lineCoordinates": "file"
     },
@@ -32420,7 +33573,7 @@
     },
     {
       "file": "src/services/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
-      "sha256": "c33e2cdf6bd694cb8c3eb0b9c15adfc9bf302fbc5b5692d0236f2f875f3241ec",
+      "sha256": "1d9270633dc2c4d6c8136ea0f99962e7f3c87d4d548fb904b8ab9e865932e1c3",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs-certificates",
@@ -32543,7 +33696,7 @@
         },
         {
           "name": "<callback>",
-          "line": 463
+          "line": 462
         }
       ],
       "loops": 3,
@@ -32780,29 +33933,53 @@
     },
     {
       "file": "src/services/sceneAabbIndex.ts",
-      "sha256": "6b48ee9efc4508781705aaf0d0b08c2daaf6158097e3d05255f35098aac7ef8a",
+      "sha256": "b59dcb26cfd097f840a388869c76bd37c5d353aaa9af3c163f26e14a5dccfb97",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
-          "name": "buildSceneAabbIndex",
-          "line": 21
+          "name": "center",
+          "line": 43
+        },
+        {
+          "name": "buildNode",
+          "line": 47
         },
         {
           "name": "<callback>",
-          "line": 24
+          "line": 74
+        },
+        {
+          "name": "<callback>",
+          "line": 84
+        },
+        {
+          "name": "parameter",
+          "line": 99
+        },
+        {
+          "name": "entryDistance",
+          "line": 104
+        },
+        {
+          "name": "buildSceneAabbIndex",
+          "line": 135
         },
         {
           "name": "disposeSceneAabbIndex",
-          "line": 36
+          "line": 174
         },
         {
           "name": "querySceneAabbIndex",
-          "line": 46
+          "line": 184
+        },
+        {
+          "name": "<callback>",
+          "line": 216
         }
       ],
-      "loops": 0,
+      "loops": 6,
       "mathCalls": [
         "max",
         "min",
@@ -36195,133 +37372,124 @@
     },
     {
       "file": "src/services/solidGpuView.ts",
-      "sha256": "801abe89b35c54992df6472dbae9bc836e53c671c5d888069b8cefe117c28ebc",
+      "sha256": "bbfdc31e03da008311895862ec322ec289e31c30aeeccdbdba752ff1c3bb35e3",
       "generated": false,
       "owner": "polygon-core",
       "decision": "mesh-display",
       "functions": [
         {
           "name": "solidRotationColumns",
-          "line": 119
+          "line": 120
         },
         {
           "name": "isSolidGpuSupported",
-          "line": 129
+          "line": 130
         },
         {
           "name": "fail",
-          "line": 163
+          "line": 164
         },
         {
           "name": "init",
-          "line": 170
+          "line": 171
         },
         {
           "name": "makePipeline",
-          "line": 184
-        },
-        {
-          "name": "<callback>",
-          "line": 212
-        },
-        {
-          "name": "<callback>",
-          "line": 212
+          "line": 185
         },
         {
           "name": "<callback>",
           "line": 213
         },
         {
+          "name": "<callback>",
+          "line": 213
+        },
+        {
+          "name": "<callback>",
+          "line": 214
+        },
+        {
           "name": "setBodies",
-          "line": 225
+          "line": 226
         },
         {
           "name": "uploadBodies",
-          "line": 228
+          "line": 229
         },
         {
           "name": "<callback>",
-          "line": 235
+          "line": 236
         },
         {
           "name": "<callback>",
-          "line": 235
+          "line": 236
         },
         {
           "name": "setDragOffset",
-          "line": 281
+          "line": 282
         },
         {
           "name": "rebuildTransparency",
-          "line": 302
+          "line": 303
         },
         {
           "name": "<callback>",
-          "line": 306
+          "line": 307
         },
         {
           "name": "<callback>",
-          "line": 308
+          "line": 309
         },
         {
           "name": "<callback>",
-          "line": 308
+          "line": 309
         },
         {
           "name": "setView",
-          "line": 316
+          "line": 317
         },
         {
           "name": "resize",
-          "line": 321
+          "line": 322
         },
         {
           "name": "requestFrame",
-          "line": 332
+          "line": 333
         },
         {
           "name": "<callback>",
-          "line": 334
+          "line": 335
         },
         {
           "name": "render",
-          "line": 337
+          "line": 338
         },
         {
           "name": "<callback>",
-          "line": 363
+          "line": 364
         },
         {
           "name": "<callback>",
-          "line": 376
+          "line": 377
         },
         {
           "name": "<callback>",
-          "line": 376
+          "line": 377
         },
         {
           "name": "destroy",
-          "line": 379
+          "line": 380
         },
         {
           "name": "smoothTriangleList",
-          "line": 403
-        },
-        {
-          "name": "key",
-          "line": 407
-        },
-        {
-          "name": "<callback>",
-          "line": 409
+          "line": 404
         }
       ],
-      "loops": 13,
+      "loops": 8,
       "mathCalls": [
         "cos",
         "floor",
-        "hypot",
         "max",
         "round",
         "sin"
@@ -36700,7 +37868,7 @@
     },
     {
       "file": "src/services/solidNurbs.ts",
-      "sha256": "952bf8e0a2a2cb5423174d1d49be2176f5532f7e7769863fdbcca95bc96c7f49",
+      "sha256": "fd010b0672e0326785b01103fe26233776ef507d0fa687b64be81b535bb2896c",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs-certificates",
@@ -36718,68 +37886,64 @@
           "line": 60
         },
         {
-          "name": "<callback>",
-          "line": 64
-        },
-        {
           "name": "tessellateSolidNurbsSurface",
-          "line": 69
+          "line": 65
         },
         {
           "name": "nurbsCurveToSketch",
+          "line": 70
+        },
+        {
+          "name": "<callback>",
+          "line": 71
+        },
+        {
+          "name": "<callback>",
           "line": 74
         },
         {
-          "name": "<callback>",
-          "line": 75
-        },
-        {
-          "name": "<callback>",
-          "line": 78
-        },
-        {
           "name": "createSolidNurbsCurve",
-          "line": 84
+          "line": 80
         },
         {
           "name": "createSolidNurbsSurface",
-          "line": 97
+          "line": 93
         },
         {
           "name": "<callback>",
-          "line": 106
+          "line": 102
         },
         {
           "name": "<callback>",
-          "line": 107
+          "line": 103
         },
         {
           "name": "<callback>",
-          "line": 109
+          "line": 105
         },
         {
           "name": "updateSolidNurbsControlPoint",
-          "line": 116
+          "line": 112
         },
         {
           "name": "<callback>",
-          "line": 125
+          "line": 121
         },
         {
           "name": "<callback>",
-          "line": 130
+          "line": 126
         },
         {
           "name": "<callback>",
-          "line": 131
+          "line": 127
         },
         {
           "name": "matchSolidNurbsCurvesG1",
-          "line": 148
+          "line": 144
         },
         {
           "name": "matchSolidNurbsSurfacesG1",
-          "line": 155
+          "line": 151
         }
       ],
       "loops": 2,
@@ -38649,34 +39813,34 @@
     },
     {
       "file": "src/services/svgDocument.ts",
-      "sha256": "d732fbb42426e48099de5a2cae9b470174d30591beb86c28ce46f799ddff5df4",
+      "sha256": "f7149962c5c1e1add4035c92c550164d5ef584c632cc0dbd451df7044341098d",
       "generated": false,
       "owner": "planar-geometry + sketch-core",
       "decision": "planar",
       "functions": [
         {
           "name": "fontBase64",
-          "line": 27
+          "line": 28
         },
         {
           "name": "prepareSvgDocument",
-          "line": 35
-        },
-        {
-          "name": "<callback>",
-          "line": 53
+          "line": 36
         },
         {
           "name": "<callback>",
           "line": 54
         },
         {
+          "name": "<callback>",
+          "line": 55
+        },
+        {
           "name": "readSvgDocument",
-          "line": 62
+          "line": 63
         },
         {
           "name": "readSvgDocumentAsync",
-          "line": 71
+          "line": 72
         }
       ],
       "loops": 1,
@@ -38819,13 +39983,17 @@
     },
     {
       "file": "src/services/svgGeometry.ts",
-      "sha256": "0a0935e517807c43faca46b57763e9a8966d23ad6aa064005d88d95ce6e6d939",
+      "sha256": "6980c45b008d04290a80d6e5762ed716b2c43f2da2de33bc0957e45f20d94e0f",
       "generated": false,
       "owner": "mesh-section",
       "decision": "svg-projection",
       "functions": [
         {
           "name": "bounded",
+          "line": 9
+        },
+        {
+          "name": "<callback>",
           "line": 10
         },
         {
@@ -38834,113 +40002,55 @@
         },
         {
           "name": "<callback>",
-          "line": 12
+          "line": 11
         },
         {
           "name": "<callback>",
-          "line": 12
-        },
-        {
-          "name": "<callback>",
-          "line": 15
+          "line": 14
         },
         {
           "name": "svgPreview",
-          "line": 24
+          "line": 23
         },
         {
           "name": "svgContours",
-          "line": 29
+          "line": 28
         },
         {
           "name": "svgProfile",
-          "line": 34
-        },
-        {
-          "name": "<callback>",
-          "line": 38
-        },
-        {
-          "name": "<callback>",
-          "line": 39
-        },
-        {
-          "name": "<callback>",
-          "line": 39
+          "line": 33
         },
         {
           "name": "contoursSvg",
-          "line": 54
+          "line": 37
         },
         {
           "name": "<callback>",
-          "line": 62
+          "line": 45
         },
         {
           "name": "<callback>",
-          "line": 62
+          "line": 45
         },
         {
           "name": "contoursExtrusion",
-          "line": 67
+          "line": 50
         },
         {
           "name": "<callback>",
-          "line": 71
+          "line": 54
         },
         {
           "name": "meshSvgContours",
-          "line": 83
-        },
-        {
-          "name": "includesTriangle",
-          "line": 101
-        },
-        {
-          "name": "point",
-          "line": 108
+          "line": 66
         },
         {
           "name": "<callback>",
-          "line": 123
-        },
-        {
-          "name": "<callback>",
-          "line": 123
-        },
-        {
-          "name": "<callback>",
-          "line": 128
-        },
-        {
-          "name": "<callback>",
-          "line": 129
-        },
-        {
-          "name": "<callback>",
-          "line": 135
-        },
-        {
-          "name": "<callback>",
-          "line": 136
-        },
-        {
-          "name": "<callback>",
-          "line": 137
-        },
-        {
-          "name": "<callback>",
-          "line": 140
-        },
-        {
-          "name": "<callback>",
-          "line": 140
+          "line": 85
         }
       ],
-      "loops": 9,
+      "loops": 5,
       "mathCalls": [
-        "abs",
-        "hypot",
         "max",
         "min"
       ],
@@ -39285,14 +40395,14 @@
     },
     {
       "file": "src/services/sweep/certificates/nurbsErrorComposition.ts",
-      "sha256": "f44dd8219413efdc8341241a3bf1d54903d900630e73d0d96f07b1279d342f94",
+      "sha256": "d4d7618cb7e62831e85525a6457762897a16f71d870237b253082c936eefd55b",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs",
       "functions": [
         {
-          "name": "compose",
-          "line": 2
+          "name": "certified",
+          "line": 5
         },
         {
           "name": "addCertifiedErrorUpper",
@@ -40137,7 +41247,7 @@
     },
     {
       "file": "src/services/transparentBsp.ts",
-      "sha256": "48def606f1871443d4ffca43d08c4a1a904c4bf02468b1ccf0933973acf0f83e",
+      "sha256": "1834f0b81b9f752fda0afc0a14a75d3be3d6ae5bfa0a2f4cf63d7f46ef2e7473",
       "generated": false,
       "owner": "application-viewport",
       "decision": "viewport-host",
@@ -40159,27 +41269,19 @@
           "line": 18
         },
         {
-          "name": "<callback>",
-          "line": 20
-        },
-        {
           "name": "writeOrdered",
-          "line": 26
+          "line": 31
         },
         {
           "name": "<callback>",
-          "line": 30
+          "line": 35
         },
         {
           "name": "visit",
-          "line": 32
-        },
-        {
-          "name": "<callback>",
-          "line": 33
+          "line": 41
         }
       ],
-      "loops": 2,
+      "loops": 4,
       "mathCalls": [
         "hypot"
       ],
@@ -40253,7 +41355,7 @@
     },
     {
       "file": "src/services/trussAnalysis.ts",
-      "sha256": "e25ebb6073877e327f9443ceb952d640eee3f5c197900ca2606bdc27ac10f286",
+      "sha256": "30de2fd012c066710c634721907965a46a8c8f28360009caf206a1c9c9eb0e76",
       "generated": false,
       "owner": "mechanics-core + mechanical-core",
       "decision": "mechanics",
@@ -40476,62 +41578,71 @@
     },
     {
       "file": "src/services/valueBinaryCodec.ts",
-      "sha256": "cb5fe1e6ff743cb651c5b5f2fa21de43668187d593154eb2777929576242553b",
+      "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
       "functions": [
         {
           "name": "isFlatNumberView",
-          "line": 6
+          "line": 9
         },
         {
-          "name": "encodeBinary",
-          "line": 10
+          "name": "isUnsignedIntView",
+          "line": 12
         },
         {
-          "name": "reserve",
+          "name": "isSignedIntView",
           "line": 15
         },
         {
+          "name": "encodeBinary",
+          "line": 25
+        },
+        {
+          "name": "reserve",
+          "line": 36
+        },
+        {
           "name": "byte",
-          "line": 16
+          "line": 49
         },
         {
           "name": "count",
-          "line": 17
+          "line": 53
+        },
+        {
+          "name": "putNumber",
+          "line": 58
         },
         {
           "name": "put",
-          "line": 18
-        },
-        {
-          "name": "<callback>",
-          "line": 24
+          "line": 76
         },
         {
           "name": "decodeBinary",
-          "line": 29
+          "line": 169
         },
         {
           "name": "need",
-          "line": 32
+          "line": 176
         },
         {
           "name": "count",
-          "line": 33
+          "line": 179
         },
         {
           "name": "triples",
-          "line": 35
+          "line": 186
         },
         {
           "name": "get",
-          "line": 51
+          "line": 229
         }
       ],
-      "loops": 6,
+      "loops": 8,
       "mathCalls": [
+        "floor",
         "max",
         "min"
       ],
@@ -41204,6 +42315,73 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/webgpuRenderer/gpuPasses.ts",
+      "sha256": "eacba759fa5edb0e074d848424f5bfba56f56b8a97bf9b5ebe638ffa64b8148b",
+      "generated": false,
+      "owner": "application-gpu + raster-core",
+      "decision": "gpu",
+      "functions": [
+        {
+          "name": "previewSource",
+          "line": 69
+        },
+        {
+          "name": "bufferArena",
+          "line": 87
+        },
+        {
+          "name": "pick",
+          "line": 92
+        },
+        {
+          "name": "slice",
+          "line": 97
+        },
+        {
+          "name": "releaseDepth",
+          "line": 120
+        },
+        {
+          "name": "encodeCsg",
+          "line": 126
+        },
+        {
+          "name": "encodeWboit",
+          "line": 152
+        },
+        {
+          "name": "clearCsg",
+          "line": 179
+        },
+        {
+          "name": "destroy",
+          "line": 184
+        }
+      ],
+      "loops": 2,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
+      "file": "src/services/webgpuRenderer/overlaySlot.ts",
+      "sha256": "762636bda39b42365684367cabaed2a47999832edf2221383c2b8f85fa2f5016",
+      "generated": false,
+      "owner": "application-gpu + raster-core",
+      "decision": "gpu",
+      "functions": [
+        {
+          "name": "writeOverlaySlot",
+          "line": 19
+        }
+      ],
+      "loops": 0,
+      "mathCalls": [
+        "max",
+        "min"
+      ],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/webgpuRenderer/sampledLanesMatch.ts",
       "sha256": "309462e5336ac5d35b3830fa20e8a9674231167aa1d62e25161c5b7781fc34f1",
       "generated": false,
@@ -41240,738 +42418,798 @@
       "lineCoordinates": "file"
     },
     {
+      "file": "src/services/webgpuRenderer/transparentDraws.ts",
+      "sha256": "a1cd6750d02789c9816f55c0177ac273882210e3d5adc1f6c5daf46301279dd1",
+      "generated": false,
+      "owner": "application-gpu + raster-core",
+      "decision": "gpu",
+      "functions": [
+        {
+          "name": "groupByShadingModel",
+          "line": 16
+        },
+        {
+          "name": "drawTransparentEntities",
+          "line": 31
+        }
+      ],
+      "loops": 2,
+      "mathCalls": [],
+      "lineCoordinates": "file"
+    },
+    {
       "file": "src/services/webgpuRenderer.ts",
-      "sha256": "3c5dddb11c437989e60fd81da3410e726ff23a0f6b6bb6a082bfb57f8b51d4c0",
+      "sha256": "091e3de6ec5b3d084ce089e2042379cdea171bc395cb30054e564dd82cc92972",
       "generated": false,
       "owner": "application-viewport + mesh-query",
       "decision": "mixed-renderer",
       "functions": [
         {
           "name": "<callback>",
-          "line": 230
+          "line": 228
         },
         {
           "name": "<callback>",
-          "line": 231
+          "line": 229
         },
         {
           "name": "<callback>",
-          "line": 236
+          "line": 234
         },
         {
           "name": "init",
-          "line": 391
+          "line": 390
         },
         {
           "name": "<callback>",
-          "line": 451
+          "line": 450
         },
         {
           "name": "<callback>",
-          "line": 467
+          "line": 466
         },
         {
           "name": "isCurrentInit",
-          "line": 491
+          "line": 490
         },
         {
           "name": "buildPipelines",
-          "line": 495
+          "line": 494
         },
         {
           "name": "getRenderPipeline",
-          "line": 511
+          "line": 510
         },
         {
           "name": "extraBindGroupForShader",
-          "line": 516
+          "line": 515
         },
         {
           "name": "meshTransparentPipeline",
-          "line": 521
+          "line": 520
         },
         {
           "name": "deepMeshPipeline",
-          "line": 529
+          "line": 528
         },
         {
           "name": "deepEdgePipeline",
-          "line": 536
+          "line": 535
         },
         {
           "name": "buildSceneUB",
-          "line": 542
+          "line": 541
         },
         {
           "name": "gridFadeDistance",
-          "line": 552
+          "line": 551
         },
         {
           "name": "gridExtent",
-          "line": 557
+          "line": 556
         },
         {
           "name": "buildGrid",
-          "line": 561
+          "line": 560
         },
         {
-          "name": "setMeshes",
+          "name": "setCsgPreviewTree",
+          "line": 576
+        },
+        {
+          "name": "getCsgPreviewTree",
           "line": 577
         },
         {
-          "name": "<callback>",
-          "line": 585
+          "name": "previewCsgSource",
+          "line": 579
         },
         {
           "name": "<callback>",
+          "line": 580
+        },
+        {
+          "name": "getTransparencyMode",
+          "line": 582
+        },
+        {
+          "name": "setTransparencyMode",
+          "line": 583
+        },
+        {
+          "name": "getBufferArena",
           "line": 587
         },
         {
-          "name": "<callback>",
-          "line": 587
+          "name": "sliceSceneMeshesGpu",
+          "line": 590
+        },
+        {
+          "name": "gpuPickAt",
+          "line": 593
+        },
+        {
+          "name": "setMeshes",
+          "line": 605
         },
         {
           "name": "<callback>",
-          "line": 625
+          "line": 614
         },
         {
           "name": "<callback>",
-          "line": 626
+          "line": 616
         },
         {
           "name": "<callback>",
-          "line": 722
+          "line": 616
         },
         {
           "name": "<callback>",
-          "line": 730
+          "line": 654
+        },
+        {
+          "name": "<callback>",
+          "line": 655
+        },
+        {
+          "name": "<callback>",
+          "line": 751
+        },
+        {
+          "name": "<callback>",
+          "line": 759
         },
         {
           "name": "measureMeshBounds",
-          "line": 786
+          "line": 815
         },
         {
           "name": "combineBounds",
-          "line": 847
+          "line": 876
         },
         {
           "name": "setPerspectiveFieldOfView",
-          "line": 862
+          "line": 891
         },
         {
           "name": "fitView",
-          "line": 869
+          "line": 898
         },
         {
           "name": "fitBounds",
-          "line": 873
+          "line": 902
         },
         {
           "name": "<callback>",
-          "line": 874
+          "line": 903
         },
         {
           "name": "applyFitBounds",
-          "line": 877
+          "line": 906
         },
         {
           "name": "getCameraState",
-          "line": 894
+          "line": 923
         },
         {
           "name": "getCameraHistorySnapshot",
-          "line": 904
+          "line": 933
         },
         {
           "name": "restoreCameraHistory",
-          "line": 909
+          "line": 938
         },
         {
           "name": "restoreCameraState",
-          "line": 920
+          "line": 949
         },
         {
           "name": "previousView",
-          "line": 940
-        },
-        {
-          "name": "setDisplayMode",
-          "line": 957
-        },
-        {
-          "name": "setBackgroundColor",
           "line": 969
         },
         {
-          "name": "<callback>",
-          "line": 970
+          "name": "setDisplayMode",
+          "line": 986
         },
         {
-          "name": "setTheme",
-          "line": 984
-        },
-        {
-          "name": "setDefaultShadingModel",
+          "name": "setBackgroundColor",
           "line": 998
         },
         {
-          "name": "setDefaultMaterial",
+          "name": "<callback>",
+          "line": 999
+        },
+        {
+          "name": "setTheme",
           "line": 1013
         },
         {
+          "name": "setDefaultShadingModel",
+          "line": 1027
+        },
+        {
+          "name": "setDefaultMaterial",
+          "line": 1042
+        },
+        {
           "name": "setMatcapTexture",
-          "line": 1054
+          "line": 1083
         },
         {
           "name": "invalidateShadowMap",
-          "line": 1062
+          "line": 1091
         },
         {
           "name": "resetShadowMapCache",
-          "line": 1067
+          "line": 1096
         },
         {
           "name": "setEnvMap",
-          "line": 1078
+          "line": 1107
         },
         {
           "name": "clearSelection",
-          "line": 1082
+          "line": 1111
         },
         {
           "name": "fitSelection",
-          "line": 1097
+          "line": 1126
         },
         {
           "name": "toggleIsolateSelection",
-          "line": 1104
-        },
-        {
-          "name": "resetView",
-          "line": 1121
-        },
-        {
-          "name": "<callback>",
-          "line": 1122
-        },
-        {
-          "name": "setProjection",
           "line": 1133
         },
         {
+          "name": "resetView",
+          "line": 1150
+        },
+        {
           "name": "<callback>",
-          "line": 1135
+          "line": 1151
+        },
+        {
+          "name": "setProjection",
+          "line": 1162
+        },
+        {
+          "name": "<callback>",
+          "line": 1164
         },
         {
           "name": "setGridVisible",
-          "line": 1138
+          "line": 1167
         },
         {
           "name": "setShadowsEnabled",
-          "line": 1153
+          "line": 1182
         },
         {
           "name": "setGridStep",
-          "line": 1165
+          "line": 1194
         },
         {
           "name": "setSelectionMode",
-          "line": 1171
+          "line": 1200
         },
         {
           "name": "setSourceHighlight",
-          "line": 1184
+          "line": 1213
         },
         {
           "name": "restoreNativeFaceSelection",
-          "line": 1192
+          "line": 1221
         },
         {
           "name": "selectMesh",
-          "line": 1202
+          "line": 1231
         },
         {
           "name": "setMeshVisibility",
-          "line": 1207
+          "line": 1236
         },
         {
           "name": "<callback>",
-          "line": 1212
+          "line": 1241
         },
         {
           "name": "<callback>",
-          "line": 1212
+          "line": 1241
         },
         {
           "name": "setMeshVisibilityBatch",
-          "line": 1220
+          "line": 1249
         },
         {
           "name": "finishMeshVisibilityChange",
-          "line": 1237
+          "line": 1266
         },
         {
           "name": "setPreselection",
-          "line": 1280
+          "line": 1309
         },
         {
           "name": "setSection",
-          "line": 1292
-        },
-        {
-          "name": "setMeasureMode",
-          "line": 1303
-        },
-        {
-          "name": "clearMeasurement",
-          "line": 1310
-        },
-        {
-          "name": "restoreMeasurement",
-          "line": 1319
-        },
-        {
-          "name": "<callback>",
           "line": 1321
         },
         {
-          "name": "<callback>",
-          "line": 1324
+          "name": "setMeasureMode",
+          "line": 1332
         },
         {
-          "name": "rebuildEdgeBufferCache",
-          "line": 1333
+          "name": "clearMeasurement",
+          "line": 1339
         },
         {
-          "name": "<callback>",
-          "line": 1338
-        },
-        {
-          "name": "ensureEdgeBuffer",
-          "line": 1343
+          "name": "restoreMeasurement",
+          "line": 1348
         },
         {
           "name": "<callback>",
           "line": 1350
         },
         {
-          "name": "scheduleEdgeBufferWarmup",
+          "name": "<callback>",
+          "line": 1353
+        },
+        {
+          "name": "rebuildEdgeBufferCache",
+          "line": 1362
+        },
+        {
+          "name": "<callback>",
+          "line": 1367
+        },
+        {
+          "name": "ensureEdgeBuffer",
           "line": 1372
         },
         {
+          "name": "<callback>",
+          "line": 1379
+        },
+        {
+          "name": "scheduleEdgeBufferWarmup",
+          "line": 1401
+        },
+        {
           "name": "requestEdgeWarmSlice",
-          "line": 1383
+          "line": 1412
         },
         {
           "name": "<callback>",
-          "line": 1388
+          "line": 1417
         },
         {
           "name": "<callback>",
-          "line": 1391
+          "line": 1420
         },
         {
           "name": "runEdgeWarmSlice",
-          "line": 1395
+          "line": 1424
         },
         {
           "name": "cancelEdgeBufferWarmup",
-          "line": 1409
+          "line": 1438
         },
         {
           "name": "updateMeshStyles",
-          "line": 1427
+          "line": 1456
         },
         {
           "name": "setSelection",
-          "line": 1454
+          "line": 1483
         },
         {
           "name": "usesObjectSelectionStyle",
-          "line": 1472
-        },
-        {
-          "name": "usesObjectHoverStyle",
-          "line": 1476
-        },
-        {
-          "name": "emitSelectionChange",
-          "line": 1480
-        },
-        {
-          "name": "isMeshVisible",
-          "line": 1484
-        },
-        {
-          "name": "setView",
-          "line": 1489
-        },
-        {
-          "name": "setCameraPreset",
-          "line": 1494
-        },
-        {
-          "name": "<callback>",
-          "line": 1495
-        },
-        {
-          "name": "commitCameraChange",
           "line": 1501
         },
         {
-          "name": "recordCameraSnapshot",
-          "line": 1514
+          "name": "usesObjectHoverStyle",
+          "line": 1505
         },
         {
-          "name": "flushActiveGestureCameraSnapshot",
+          "name": "emitSelectionChange",
+          "line": 1509
+        },
+        {
+          "name": "isMeshVisible",
+          "line": 1513
+        },
+        {
+          "name": "setView",
           "line": 1518
         },
         {
-          "name": "emitCameraHistoryChange",
-          "line": 1527
+          "name": "setCameraPreset",
+          "line": 1523
         },
         {
-          "name": "clearDepthCycleState",
-          "line": 1531
+          "name": "<callback>",
+          "line": 1524
         },
         {
-          "name": "resetDepthCycle",
-          "line": 1540
+          "name": "commitCameraChange",
+          "line": 1530
         },
         {
-          "name": "resize",
+          "name": "recordCameraSnapshot",
+          "line": 1543
+        },
+        {
+          "name": "flushActiveGestureCameraSnapshot",
           "line": 1547
         },
         {
+          "name": "emitCameraHistoryChange",
+          "line": 1556
+        },
+        {
+          "name": "clearDepthCycleState",
+          "line": 1560
+        },
+        {
+          "name": "resetDepthCycle",
+          "line": 1569
+        },
+        {
+          "name": "resize",
+          "line": 1576
+        },
+        {
           "name": "updateSize",
-          "line": 1554
+          "line": 1583
         },
         {
           "name": "getAspect",
-          "line": 1592
+          "line": 1623
         },
         {
           "name": "cameraState",
-          "line": 1599
+          "line": 1630
         },
         {
           "name": "clearDrawCaches",
-          "line": 1616
+          "line": 1647
         },
         {
           "name": "render",
-          "line": 1628
+          "line": 1659
         },
         {
           "name": "<callback>",
-          "line": 1635
+          "line": 1666
         },
         {
           "name": "<callback>",
-          "line": 1759
+          "line": 1798
         },
         {
           "name": "<callback>",
-          "line": 1791
+          "line": 1831
         },
         {
           "name": "<callback>",
-          "line": 1791
+          "line": 1831
         },
         {
           "name": "<callback>",
-          "line": 1793
+          "line": 1833
         },
         {
           "name": "<callback>",
-          "line": 1797
+          "line": 1837
+        },
+        {
+          "name": "setStyle",
+          "line": 1838
+        },
+        {
+          "name": "<callback>",
+          "line": 1844
+        },
+        {
+          "name": "<callback>",
+          "line": 1936
         },
         {
           "name": "requestRender",
-          "line": 1916
+          "line": 1947
         },
         {
           "name": "advanceGeometryAnimation",
-          "line": 1922
+          "line": 1953
         },
         {
           "name": "<callback>",
-          "line": 1939
+          "line": 1970
         },
         {
           "name": "<callback>",
-          "line": 1949
-        },
-        {
-          "name": "groupByShadingModel",
-          "line": 1991
+          "line": 1980
         },
         {
           "name": "setObjectStyleImmediate",
-          "line": 2001
+          "line": 2018
         },
         {
           "name": "<callback>",
-          "line": 2010
+          "line": 2027
         },
         {
           "name": "<callback>",
-          "line": 2041
+          "line": 2058
         },
         {
           "name": "<callback>",
-          "line": 2051
+          "line": 2068
         },
         {
           "name": "clearFrameError",
-          "line": 2056
+          "line": 2073
         },
         {
           "name": "notifyCameraChange",
-          "line": 2063
+          "line": 2080
         },
         {
           "name": "projectWorldPoint",
-          "line": 2072
+          "line": 2089
         },
         {
           "name": "worldRay",
-          "line": 2077
+          "line": 2094
         },
         {
           "name": "rayForClientPoint",
-          "line": 2079
+          "line": 2096
         },
         {
           "name": "sourceForTriangle",
-          "line": 2087
-        },
-        {
-          "name": "pickHitFromBvh",
-          "line": 2100
-        },
-        {
-          "name": "<callback>",
           "line": 2104
         },
         {
-          "name": "isSectionClipped",
-          "line": 2124
-        },
-        {
-          "name": "selectionCandidateKey",
-          "line": 2132
+          "name": "pickHitFromBvh",
+          "line": 2117
         },
         {
           "name": "<callback>",
+          "line": 2121
+        },
+        {
+          "name": "isSectionClipped",
           "line": 2141
         },
         {
-          "name": "findHitCandidates",
-          "line": 2144
+          "name": "selectionCandidateKey",
+          "line": 2149
         },
         {
           "name": "<callback>",
-          "line": 2151
+          "line": 2158
+        },
+        {
+          "name": "findHitCandidates",
+          "line": 2161
+        },
+        {
+          "name": "<callback>",
+          "line": 2168
         },
         {
           "name": "cursorBefore",
-          "line": 2169
+          "line": 2186
         },
         {
           "name": "insertFrontier",
-          "line": 2174
+          "line": 2191
         },
         {
           "name": "takeNearest",
-          "line": 2184
+          "line": 2201
         },
         {
           "name": "addNextBoundsCandidate",
-          "line": 2206
+          "line": 2223
         },
         {
           "name": "findHit",
-          "line": 2268
+          "line": 2285
         },
         {
           "name": "pickAt",
-          "line": 2272
+          "line": 2289
         },
         {
           "name": "updateHoverAt",
-          "line": 2301
+          "line": 2318
         },
         {
           "name": "<callback>",
-          "line": 2303
+          "line": 2320
         },
         {
           "name": "cancelPendingHover",
-          "line": 2325
+          "line": 2342
         },
         {
           "name": "scheduleHover",
-          "line": 2331
+          "line": 2348
         },
         {
           "name": "<callback>",
-          "line": 2336
+          "line": 2353
         },
         {
           "name": "<callback>",
-          "line": 2344
+          "line": 2361
         },
         {
           "name": "addMeasurementPoint",
-          "line": 2355
-        },
-        {
-          "name": "emitMeasurementChange",
-          "line": 2362
-        },
-        {
-          "name": "<callback>",
-          "line": 2363
-        },
-        {
-          "name": "rebuildMeasurementBuffer",
           "line": 2372
         },
         {
-          "name": "line",
-          "line": 2381
+          "name": "emitMeasurementChange",
+          "line": 2379
         },
         {
           "name": "<callback>",
-          "line": 2382
+          "line": 2380
+        },
+        {
+          "name": "rebuildMeasurementBuffer",
+          "line": 2389
+        },
+        {
+          "name": "line",
+          "line": 2398
+        },
+        {
+          "name": "<callback>",
+          "line": 2399
         },
         {
           "name": "releaseOverlaySlot",
-          "line": 2395
+          "line": 2412
         },
         {
           "name": "clearSelectionOverlayBuffers",
-          "line": 2402
-        },
-        {
-          "name": "clearSourceHighlightOverlayBuffers",
-          "line": 2408
-        },
-        {
-          "name": "writeOverlaySlot",
           "line": 2419
         },
         {
+          "name": "clearSourceHighlightOverlayBuffers",
+          "line": 2425
+        },
+        {
           "name": "appendColoredPositions",
-          "line": 2451
+          "line": 2430
         },
         {
           "name": "pointForOverlay",
-          "line": 2457
+          "line": 2436
         },
         {
           "name": "sameOverlayTarget",
-          "line": 2469
+          "line": 2448
         },
         {
           "name": "appendFaceOverlay",
-          "line": 2484
+          "line": 2463
         },
         {
           "name": "appendPointOverlay",
-          "line": 2512
+          "line": 2491
         },
         {
           "name": "rebuildSelectionOverlays",
-          "line": 2525
+          "line": 2504
         },
         {
           "name": "add",
-          "line": 2534
+          "line": 2513
         },
         {
           "name": "rebuildSourceHighlightOverlay",
-          "line": 2559
+          "line": 2538
         },
         {
           "name": "<callback>",
-          "line": 2588
+          "line": 2567
         },
         {
           "name": "<callback>",
-          "line": 2621
+          "line": 2600
         },
         {
           "name": "<callback>",
-          "line": 2666
+          "line": 2645
         },
         {
           "name": "<callback>",
-          "line": 2712
+          "line": 2691
         },
         {
           "name": "<callback>",
-          "line": 2730
+          "line": 2709
         },
         {
           "name": "<callback>",
-          "line": 2731
+          "line": 2710
         },
         {
           "name": "clampDistance",
-          "line": 2733
+          "line": 2712
         },
         {
           "name": "bindInput",
-          "line": 2737
+          "line": 2716
         },
         {
           "name": "observeResize",
-          "line": 2754
+          "line": 2733
         },
         {
           "name": "<callback>",
-          "line": 2756
+          "line": 2735
         },
         {
           "name": "destroyMeshes",
-          "line": 2760
+          "line": 2739
         },
         {
           "name": "destroy",
-          "line": 2762
+          "line": 2741
         },
         {
           "name": "destroy",
-          "line": 2774
+          "line": 2753
         },
         {
           "name": "teardown",
-          "line": 2780
+          "line": 2759
         },
         {
           "name": "rebuildSceneAabbIndex",
-          "line": 2872
+          "line": 2852
         },
         {
           "name": "<callback>",
-          "line": 2873
+          "line": 2853
         },
         {
           "name": "currentSceneAabbIndex",
-          "line": 2883
+          "line": 2863
         },
         {
           "name": "updateStatus",
-          "line": 2888
+          "line": 2868
         },
         {
           "name": "reportError",
-          "line": 2893
+          "line": 2873
         }
       ],
-      "loops": 38,
+      "loops": 37,
       "mathCalls": [
         "abs",
         "atan",

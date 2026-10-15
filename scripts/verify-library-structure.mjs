@@ -32,7 +32,7 @@ for(const p of packages.values()){
   }
  }
 }
-const nativeKernels=['cad-predicates','osv-math','mesh-topology','mesh-query','mesh-section','mesh-io','planar-geometry','geometry-ops','polygon-core','sketch-core','subdivision-core','sdf-core','mechanical-core','nurbs-core','nurbs-intersect','brep-topology','brep-core','brep-intersect']
+const nativeKernels=['cad-predicates','osv-math','mesh-topology','mesh-query','mesh-section','mesh-io','planar-geometry','geometry-ops','polygon-core','sketch-core','subdivision-core','sdf-core','mechanical-core','nurbs-core','brep-topology','brep-core']
 const adapters=new Set(['geometry-bridge','geometry-wasm','languages-bridge','languages-wasm','photogrammetry-ffi','photogrammetry-wasm'])
 const native=[]
 for(const name of nativeKernels){

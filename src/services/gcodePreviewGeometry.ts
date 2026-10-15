@@ -5,21 +5,39 @@ import { GCODE_MOVE_ROW_WIDTH, gcodePreviewMoveRows } from './gcodePreviewTransp
 export interface GcodeMeshBounds { min: [number, number, number]; max: [number, number, number] }
 /** Exact bounds in scene coordinates, without materializing a second mesh. */
 export function gcodeMeshBounds(mesh: GcodeSceneMesh): GcodeMeshBounds {
-  const bounds: GcodeMeshBounds = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] }
-  const transform = mesh.transform, vertices = mesh.vertices
-  if (transform.length !== 16 || !transform.every(Number.isFinite) || vertices.length % 6 || !mesh.indices.length) throw new Error('Invalid scene mesh.')
-  for (const index of mesh.indices) {
-    if (index * 6 + 2 >= vertices.length) throw new Error('Mesh contains an invalid vertex index.')
-    for (let axis = 0; axis < 3; axis++) {
-      const offset = axis * 4
-      const value = transform[offset] * vertices[index * 6] + transform[offset + 1] * vertices[index * 6 + 1]
-        + transform[offset + 2] * vertices[index * 6 + 2] + transform[offset + 3]
-      if (!Number.isFinite(value)) throw new Error('Mesh contains non-finite positions.')
-      bounds.min[axis] = Math.min(bounds.min[axis], value)
-      bounds.max[axis] = Math.max(bounds.max[axis], value)
-    }
+  const transform = mesh.transform, vertices = mesh.vertices, indices = mesh.indices
+  if (transform.length !== 16 || vertices.length % 6 || !indices.length) throw new Error('Invalid scene mesh.')
+  for (let i = 0; i < 16; i++) {
+    if (!Number.isFinite(transform[i])) throw new Error('Invalid scene mesh.')
   }
-  return bounds
+  const vertexCount = vertices.length / 6
+  const visited = new Uint8Array(vertexCount)
+  const m0 = transform[0], m1 = transform[1], m2 = transform[2], m3 = transform[3]
+  const m4 = transform[4], m5 = transform[5], m6 = transform[6], m7 = transform[7]
+  const m8 = transform[8], m9 = transform[9], m10 = transform[10], m11 = transform[11]
+  let minX = Infinity, minY = Infinity, minZ = Infinity
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+  for (let i = 0; i < indices.length; i++) {
+    const index = indices[i]
+    if (index >= vertexCount) throw new Error('Mesh contains an invalid vertex index.')
+    if (visited[index]) continue
+    visited[index] = 1
+    const vo = index * 6
+    const vx = vertices[vo], vy = vertices[vo + 1], vz = vertices[vo + 2]
+    const wx = m0 * vx + m1 * vy + m2 * vz + m3
+    const wy = m4 * vx + m5 * vy + m6 * vz + m7
+    const wz = m8 * vx + m9 * vy + m10 * vz + m11
+    if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) {
+      throw new Error('Mesh contains non-finite positions.')
+    }
+    if (wx < minX) minX = wx
+    if (wy < minY) minY = wy
+    if (wz < minZ) minZ = wz
+    if (wx > maxX) maxX = wx
+    if (wy > maxY) maxY = wy
+    if (wz > maxZ) maxZ = wz
+  }
+  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] }
 }
 
 /** Binary search avoids rescanning all moves each time the layer slider changes. */

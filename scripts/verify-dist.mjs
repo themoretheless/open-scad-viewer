@@ -107,7 +107,8 @@ const limits = new Map([
 // Native continuous profile bounds and exact cubic seam add ~16 KB packed.
 // Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
 // Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
-const geometryChunkBudget = 4_092_000
+// Native lattice printability/strength screens and weak-spot markers: measured 4,113,186 bytes.
+const geometryChunkBudget = 4_120_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 103_000],
@@ -122,7 +123,11 @@ const jsChunkBudgets = [
   // add ~6 kB; measured: 113,721 bytes.
   // Key-light contact shadows (depth-only pass, shadow-map bindings, UI
   // toggle) add ~13 kB; measured: 126,965 bytes.
-  [/^assets\/renderer-[^/]+\.js$/, 132_000],
+  // Hardware-offloading port: zero-alloc camera/overlay/BSP hot paths and
+  // the WBOIT/CSG/picker pass wiring (pass bodies and the CSG parser stay
+  // in renderer-gpu-passes / csg-preview-parse) add ~12 kB over the
+  // 124,140-byte pre-port build; measured: 135,764 bytes.
+  [/^assets\/renderer-[^/]+\.js$/, 138_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
   // Rational-surface and transform-plan language kernels: measured 516,458 bytes.
