@@ -1,5 +1,4 @@
 /** Row-major matrix transport and remaining vector helpers. */
-import { callGeometryRust } from './geometry/kernel'
 import { invertMatrixF64 } from './geometry/matrixInverse'
 
 export type Mat4 = Float32Array
@@ -13,6 +12,47 @@ export interface Ray3 {
 export interface Aabb3 {
   min: Vec3
   max: Vec3
+}
+
+const SCRATCH_INV_F64 = new Float64Array(16)
+const SCRATCH_TRANSFORM = new Float32Array(16)
+
+export function dot3(a: ArrayLike<number>, b: ArrayLike<number>): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+export function cross3(a: ArrayLike<number>, b: ArrayLike<number>): Vec3 {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ]
+}
+
+export function unit3(a: ArrayLike<number>): Vec3 {
+  const n = Math.hypot(a[0], a[1], a[2])
+  if (n < 1e-9) throw new Error('Zero direction')
+  const inv = 1 / n
+  return [a[0] * inv, a[1] * inv, a[2] * inv]
+}
+
+export function normalizeVec3(v: ArrayLike<number>, fallback: Vec3 = [0, 0, 1]): Vec3 {
+  const len = Math.hypot(v[0], v[1], v[2])
+  if (len < 1e-12) return [fallback[0], fallback[1], fallback[2]]
+  const inv = 1 / len
+  return [v[0] * inv, v[1] * inv, v[2] * inv]
+}
+
+const EDGE_KEY_STRIDE = 67108864 // 2^26 (52-bit safe integer pair limit)
+
+/**
+ * Packs an undirected edge (a, b) into a 53-bit safe integer when max(a, b) < 2^26,
+ * or falls back to a canonical string key when vertex indices exceed 67,108,863.
+ */
+export function packUndirectedEdgeKey(a: number, b: number): number | string {
+  const low = a < b ? a : b
+  const high = a < b ? b : a
+  return high < EDGE_KEY_STRIDE ? low * EDGE_KEY_STRIDE + high : `${low}:${high}`
 }
 
 export function clamp(value: number, min: number, max: number): number {
@@ -29,38 +69,62 @@ export function identity(): Mat4 {
   return m
 }
 
+function resetScratchIdentity(): Mat4 {
+  SCRATCH_TRANSFORM.fill(0)
+  SCRATCH_TRANSFORM[0] = SCRATCH_TRANSFORM[5] = SCRATCH_TRANSFORM[10] = SCRATCH_TRANSFORM[15] = 1
+  return SCRATCH_TRANSFORM
+}
+
+/**
+ * Row-major 4x4 matrix multiplication with f64 dot-product accumulation and
+ * f32 GPU storage round-trip, matching math_core::viewport::multiply bit-for-bit
+ * without a synchronous WASM call.
+ */
 export function multiply(a: Mat4, b: Mat4): Mat4 {
-  return new Float32Array(callGeometryRust<number[]>('viewport', {
-    action: 'multiply', matrix: Array.from(a), other: Array.from(b),
-  }))
+  for (let i = 0; i < 16; i++) {
+    if (!Number.isFinite(a[i]) || !Number.isFinite(b[i])) {
+      throw new Error('Matrix result exceeds finite GPU storage')
+    }
+  }
+  const out = new Float32Array(16)
+  for (let r = 0; r < 4; r++) {
+    const r4 = r * 4
+    const a0 = a[r4], a1 = a[r4 + 1], a2 = a[r4 + 2], a3 = a[r4 + 3]
+    for (let c = 0; c < 4; c++) {
+      const v = Math.fround(a0 * b[c] + a1 * b[4 + c] + a2 * b[8 + c] + a3 * b[12 + c])
+      if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
+      out[r4 + c] = v
+    }
+  }
+  return out
 }
 
 export function translate(m: Mat4, v: Vec3): Mat4 {
-  const t = identity()
+  const t = resetScratchIdentity()
   t[3] = v[0]; t[7] = v[1]; t[11] = v[2]
   return multiply(t, m)
 }
 
 export function rotateX(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = identity()
+  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
   r[5] = c; r[6] = -s; r[9] = s; r[10] = c
   return multiply(r, m)
 }
 
 export function rotateY(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = identity()
+  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
   r[0] = c; r[2] = s; r[8] = -s; r[10] = c
   return multiply(r, m)
 }
 
 export function rotateZ(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = identity()
+  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
   r[0] = c; r[1] = -s; r[4] = s; r[5] = c
   return multiply(r, m)
 }
 
 export function scale(m: Mat4, v: Vec3): Mat4 {
-  const s = identity()
+  const s = resetScratchIdentity()
   s[0] = v[0]; s[5] = v[1]; s[10] = v[2]
   return multiply(s, m)
 }
@@ -104,37 +168,43 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
   let zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]
   let len = Math.hypot(zx, zy, zz)
   if (len < 1e-10) { zx = 0; zy = 0; zz = 1; len = 1 }
-  const fz = [zx / len, zy / len, zz / len]
+  const fz0 = zx / len, fz1 = zy / len, fz2 = zz / len
 
-  let xx = up[1] * fz[2] - up[2] * fz[1]
-  let xy = up[2] * fz[0] - up[0] * fz[2]
-  let xz = up[0] * fz[1] - up[1] * fz[0]
+  let xx = up[1] * fz2 - up[2] * fz1
+  let xy = up[2] * fz0 - up[0] * fz2
+  let xz = up[0] * fz1 - up[1] * fz0
   len = Math.hypot(xx, xy, xz)
   // Top and bottom views make a Z-up vector parallel to the view direction.
   // Pick a stable secondary up axis instead of producing NaNs.
   if (len < 1e-10) {
-    const [ax, ay, az] = Math.abs(fz[2]) > 0.9 ? [0, 1, 0] : [0, 0, 1]
-    xx = ay * fz[2] - az * fz[1]
-    xy = az * fz[0] - ax * fz[2]
-    xz = ax * fz[1] - ay * fz[0]
+    const highZ = Math.abs(fz2) > 0.9
+    const ax = 0, ay = highZ ? 1 : 0, az = highZ ? 0 : 1
+    xx = ay * fz2 - az * fz1
+    xy = az * fz0 - ax * fz2
+    xz = ax * fz1 - ay * fz0
     len = Math.hypot(xx, xy, xz)
   }
-  const fx = [xx / len, xy / len, xz / len]
-  const fy = [
-    fz[1] * fx[2] - fz[2] * fx[1],
-    fz[2] * fx[0] - fz[0] * fx[2],
-    fz[0] * fx[1] - fz[1] * fx[0],
-  ]
+  const fx0 = xx / len, fx1 = xy / len, fx2 = xz / len
+  const fy0 = fz1 * fx2 - fz2 * fx1
+  const fy1 = fz2 * fx0 - fz0 * fx2
+  const fy2 = fz0 * fx1 - fz1 * fx0
   const m = new Float32Array(16)
-  m[0] = fx[0]; m[1] = fx[1]; m[2] = fx[2]; m[3] = -(fx[0]*eye[0]+fx[1]*eye[1]+fx[2]*eye[2])
-  m[4] = fy[0]; m[5] = fy[1]; m[6] = fy[2]; m[7] = -(fy[0]*eye[0]+fy[1]*eye[1]+fy[2]*eye[2])
-  m[8] = fz[0]; m[9] = fz[1]; m[10] = fz[2]; m[11] = -(fz[0]*eye[0]+fz[1]*eye[1]+fz[2]*eye[2])
+  m[0] = fx0; m[1] = fx1; m[2] = fx2; m[3] = -(fx0*eye[0]+fx1*eye[1]+fx2*eye[2])
+  m[4] = fy0; m[5] = fy1; m[6] = fy2; m[7] = -(fy0*eye[0]+fy1*eye[1]+fy2*eye[2])
+  m[8] = fz0; m[9] = fz1; m[10] = fz2; m[11] = -(fz0*eye[0]+fz1*eye[1]+fz2*eye[2])
   m[12] = 0; m[13] = 0; m[14] = 0; m[15] = 1
   return m
 }
 
 export function transpose(m: Mat4): Mat4 {
-  return new Float32Array(callGeometryRust<number[]>('viewport', { action: 'transpose', matrix: Array.from(m) }))
+  for (let i = 0; i < 16; i++) {
+    if (!Number.isFinite(m[i])) throw new Error('Matrix result exceeds finite GPU storage')
+  }
+  const out = new Float32Array(16)
+  for (let i = 0; i < 16; i++) {
+    out[i] = Math.fround(m[(i % 4) * 4 + ((i / 4) | 0)])
+  }
+  return out
 }
 
 /**
@@ -145,17 +215,15 @@ export function transpose(m: Mat4): Mat4 {
  * per-mesh hot paths.
  */
 export function invert(a: Mat4, out?: Mat4): Mat4 {
-  const values = invertMatrixF64(a)
+  const values = invertMatrixF64(a, SCRATCH_INV_F64)
   if (!values) throw new Error('Singular or unrepresentable matrix inverse')
   // The native boundary stores results as f32 and refuses non-finite storage.
-  const stored = new Array<number>(16)
   for (let i = 0; i < 16; i++) {
     const v = Math.fround(values[i])
     if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
-    stored[i] = v
   }
   const target = out ?? new Float32Array(16)
-  for (let i = 0; i < 16; i++) target[i] = stored[i]
+  for (let i = 0; i < 16; i++) target[i] = Math.fround(values[i])
   return target
 }
 

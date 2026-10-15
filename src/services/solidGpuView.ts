@@ -402,37 +402,63 @@ export class SolidGpuLayer {
  */
 export function smoothTriangleList(positions: ArrayLike<number>, indices: ArrayLike<number>, creaseDegrees = 40): { positions: Float32Array; normals: Float32Array } {
   const triangleCount = Math.floor(indices.length / 3)
-  const faceNormals: number[][] = []
+  const faceNormals = new Float64Array(triangleCount * 3)
   const byPosition = new Map<string, number[]>()
-  const key = (i: number) => `${positions[i * 3].toFixed(5)},${positions[i * 3 + 1].toFixed(5)},${positions[i * 3 + 2].toFixed(5)}`
+  const bucketsByVertex = new Array<number[] | undefined>(Math.floor(positions.length / 3))
   for (let t = 0; t < triangleCount; t++) {
-    const [a, b, c] = [0, 1, 2].map(k => { const i = indices[t * 3 + k]; return [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]] })
-    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
-    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
-    const len = Math.hypot(n[0], n[1], n[2]) || 1
-    faceNormals.push([n[0] / len, n[1] / len, n[2] / len])
+    const t3 = t * 3
+    const ia = indices[t3] * 3, ib = indices[t3 + 1] * 3, ic = indices[t3 + 2] * 3
+    const ax = positions[ia], ay = positions[ia + 1], az = positions[ia + 2]
+    const ux = positions[ib] - ax, uy = positions[ib + 1] - ay, uz = positions[ib + 2] - az
+    const wx = positions[ic] - ax, wy = positions[ic + 1] - ay, wz = positions[ic + 2] - az
+    const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx
+    const len = Math.hypot(nx, ny, nz) || 1
+    faceNormals[t3] = nx / len
+    faceNormals[t3 + 1] = ny / len
+    faceNormals[t3 + 2] = nz / len
     for (let k = 0; k < 3; k++) {
-      const id = key(indices[t * 3 + k])
-      const list = byPosition.get(id)
-      if (list) list.push(t); else byPosition.set(id, [t])
+      const vi = indices[t3 + k]
+      let list = bucketsByVertex[vi]
+      if (!list) {
+        const v3 = vi * 3
+        const id = `${positions[v3].toFixed(5)},${positions[v3 + 1].toFixed(5)},${positions[v3 + 2].toFixed(5)}`
+        list = byPosition.get(id)
+        if (!list) {
+          list = []
+          byPosition.set(id, list)
+        }
+        bucketsByVertex[vi] = list
+      }
+      list.push(t)
     }
   }
   const cosCrease = Math.cos(creaseDegrees * Math.PI / 180)
   const outPositions = new Float32Array(triangleCount * 9), outNormals = new Float32Array(triangleCount * 9)
   for (let t = 0; t < triangleCount; t++) {
-    const fn = faceNormals[t]
+    const t3 = t * 3
+    const fnx = faceNormals[t3], fny = faceNormals[t3 + 1], fnz = faceNormals[t3 + 2]
     for (let k = 0; k < 3; k++) {
-      const i = indices[t * 3 + k]
-      const sum = [0, 0, 0]
-      for (const other of byPosition.get(key(i)) ?? []) {
-        const on = faceNormals[other]
-        if (fn[0] * on[0] + fn[1] * on[1] + fn[2] * on[2] >= cosCrease) { sum[0] += on[0]; sum[1] += on[1]; sum[2] += on[2] }
+      const i = indices[t3 + k]
+      let sumX = 0, sumY = 0, sumZ = 0
+      const bucket = bucketsByVertex[i]
+      if (bucket) {
+        for (let b = 0; b < bucket.length; b++) {
+          const other3 = bucket[b] * 3
+          const onx = faceNormals[other3], ony = faceNormals[other3 + 1], onz = faceNormals[other3 + 2]
+          if (fnx * onx + fny * ony + fnz * onz >= cosCrease) {
+            sumX += onx; sumY += ony; sumZ += onz
+          }
+        }
       }
-      const len = Math.hypot(sum[0], sum[1], sum[2])
-      const n = len > 1e-9 ? [sum[0] / len, sum[1] / len, sum[2] / len] : fn
-      const o = (t * 3 + k) * 3
-      outPositions[o] = positions[i * 3]; outPositions[o + 1] = positions[i * 3 + 1]; outPositions[o + 2] = positions[i * 3 + 2]
-      outNormals[o] = n[0]; outNormals[o + 1] = n[1]; outNormals[o + 2] = n[2]
+      const len = Math.hypot(sumX, sumY, sumZ)
+      const o = (t3 + k) * 3
+      const i3 = i * 3
+      outPositions[o] = positions[i3]; outPositions[o + 1] = positions[i3 + 1]; outPositions[o + 2] = positions[i3 + 2]
+      if (len > 1e-9) {
+        outNormals[o] = sumX / len; outNormals[o + 1] = sumY / len; outNormals[o + 2] = sumZ / len
+      } else {
+        outNormals[o] = fnx; outNormals[o + 1] = fny; outNormals[o + 2] = fnz
+      }
     }
   }
   return { positions: outPositions, normals: outNormals }

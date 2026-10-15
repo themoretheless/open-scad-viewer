@@ -26,22 +26,45 @@ function decompose(m: Mat4): Parts | null {
 export function geometryTransformTransition(from: Mat4, to: Mat4): ((t: number) => Mat4) | null {
   const a = decompose(from), b = decompose(to)
   if (!a || !b || a.scale.some((s, i) => s * b.scale[i] <= 0)) return null
-  let dot = a.rotation.reduce((sum, v, i) => sum + v * b.rotation[i], 0)
-  if (dot < 0) { b.rotation = b.rotation.map(v => -v); dot = -dot }
+  let dot = a.rotation[0] * b.rotation[0] + a.rotation[1] * b.rotation[1] + a.rotation[2] * b.rotation[2] + a.rotation[3] * b.rotation[3]
+  const bx = dot < 0 ? -b.rotation[0] : b.rotation[0]
+  const by = dot < 0 ? -b.rotation[1] : b.rotation[1]
+  const bz = dot < 0 ? -b.rotation[2] : b.rotation[2]
+  const bw = dot < 0 ? -b.rotation[3] : b.rotation[3]
+  if (dot < 0) dot = -dot
+  const ax = a.rotation[0], ay = a.rotation[1], az = a.rotation[2], aw = a.rotation[3]
+  const angle = Math.acos(Math.min(1, dot))
+  const sin = Math.sin(angle)
+  const as0 = a.scale[0], as1 = a.scale[1], as2 = a.scale[2]
+  const ds0 = b.scale[0] - as0, ds1 = b.scale[1] - as1, ds2 = b.scale[2] - as2
+  const ap0 = a.position[0], ap1 = a.position[1], ap2 = a.position[2]
+  const dp0 = b.position[0] - ap0, dp1 = b.position[1] - ap1, dp2 = b.position[2] - ap2
   return t => {
     if (t <= 0) return new Float32Array(from)
     if (t >= 1) return new Float32Array(to)
-    const angle = Math.acos(Math.min(1, dot)), sin = Math.sin(angle)
     const wa = sin < 1e-5 ? 1 - t : Math.sin((1 - t) * angle) / sin
     const wb = sin < 1e-5 ? t : Math.sin(t * angle) / sin
-    const q = a.rotation.map((v, i) => wa * v + wb * b.rotation[i]); const length = Math.hypot(...q)
-    const [x, y, z, w] = q.map(v => v / length)
-    const r = [1-2*(y*y+z*z), 2*(x*y-z*w), 2*(x*z+y*w), 2*(x*y+z*w), 1-2*(x*x+z*z), 2*(y*z-x*w), 2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x*x+y*y)]
-    const result = identity()
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) result[row*4+col] = r[row*3+col] * (a.scale[col] + (b.scale[col]-a.scale[col])*t)
-      result[row*4+3] = a.position[row] + (b.position[row]-a.position[row])*t
-    }
+    const qx = wa * ax + wb * bx
+    const qy = wa * ay + wb * by
+    const qz = wa * az + wb * bz
+    const qw = wa * aw + wb * bw
+    const invLen = 1 / Math.hypot(qx, qy, qz, qw)
+    const x = qx * invLen, y = qy * invLen, z = qz * invLen, w = qw * invLen
+    const s0 = as0 + ds0 * t, s1 = as1 + ds1 * t, s2 = as2 + ds2 * t
+    const result = new Float32Array(16)
+    result[0] = (1 - 2 * (y * y + z * z)) * s0
+    result[1] = 2 * (x * y - z * w) * s1
+    result[2] = 2 * (x * z + y * w) * s2
+    result[3] = ap0 + dp0 * t
+    result[4] = 2 * (x * y + z * w) * s0
+    result[5] = (1 - 2 * (x * x + z * z)) * s1
+    result[6] = 2 * (y * z - x * w) * s2
+    result[7] = ap1 + dp1 * t
+    result[8] = 2 * (x * z - y * w) * s0
+    result[9] = 2 * (y * z + x * w) * s1
+    result[10] = (1 - 2 * (x * x + y * y)) * s2
+    result[11] = ap2 + dp2 * t
+    result[15] = 1
     return result
   }
 }

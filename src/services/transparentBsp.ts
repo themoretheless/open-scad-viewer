@@ -14,11 +14,16 @@ export class TransparentBsp {
   get fragmentCount(){return this.tree.count}
   /** Direction toward the eye, in object coordinates. Returned vertices are independent copies. */
   ordered(towardEye:readonly [number,number,number]):TransparentFragment[]{
-    const output:TransparentFragment[]=[],{vertices,width,owners}=this.tree
+    const output:TransparentFragment[]=[],{vertices,width,owners}=this.tree,stride=width*3
     this.visit(towardEye,index=>{
-      const offset=index*3*width
-      const triangle=[0,1,2].map(k=>Array.from(vertices.subarray(offset+k*width,offset+(k+1)*width))) as unknown as TransparentTriangle
-      output.push({owner:this.owners[owners[index]],triangle})
+      const offset=index*stride
+      const v0=new Array<number>(width),v1=new Array<number>(width),v2=new Array<number>(width)
+      for(let k=0;k<width;k++){
+        v0[k]=vertices[offset+k]
+        v1[k]=vertices[offset+width+k]
+        v2[k]=vertices[offset+width*2+k]
+      }
+      output.push({owner:this.owners[owners[index]],triangle:[v0,v1,v2]})
     })
     return output
   }
@@ -27,10 +32,15 @@ export class TransparentBsp {
     const {vertices,width,count}=this.tree,stride=width*3
     if(target.length!==count*stride)throw Error('Invalid transparency output size')
     let offset=0
-    this.visit(towardEye,index=>{target.set(vertices.subarray(index*stride,(index+1)*stride),offset);offset+=stride})
+    this.visit(towardEye,index=>{
+      const src=index*stride
+      for(let k=0;k<stride;k++)target[offset+k]=vertices[src+k]
+      offset+=stride
+    })
   }
   private visit(towardEye:readonly [number,number,number],accept:(fragment:number)=>void):void{
-    if(towardEye.some(x=>!Number.isFinite(x))||Math.hypot(...towardEye)===0)throw Error('Invalid transparency view direction')
+    const ex=towardEye[0],ey=towardEye[1],ez=towardEye[2]
+    if(!Number.isFinite(ex)||!Number.isFinite(ey)||!Number.isFinite(ez)||Math.hypot(ex,ey,ez)===0)throw Error('Invalid transparency view direction')
     const {root,planes,links}=this.tree
     // Positive tokens are node+1; negative tokens are -(fragment+1).
     const stack:number[]=root?[root]:[]
@@ -38,7 +48,7 @@ export class TransparentBsp {
       const item=stack.pop()!
       if(item<0){accept(-item-1);continue}
       const offset=(item-1)*4
-      const positive=planes[offset]*towardEye[0]+planes[offset+1]*towardEye[1]+planes[offset+2]*towardEye[2]>=0
+      const positive=planes[offset]*ex+planes[offset+1]*ey+planes[offset+2]*ez>=0
       const near=links[offset+(positive?0:1)],far=links[offset+(positive?1:0)]
       if(near)stack.push(near)
       const start=links[offset+2],count=links[offset+3]
