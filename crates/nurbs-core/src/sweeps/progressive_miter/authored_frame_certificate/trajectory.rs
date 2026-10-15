@@ -385,7 +385,7 @@ pub(super) fn control_trajectory_with_fit(
     let batch=control_trajectories_with_fit(path,scale,affine,&[q],traversal,max_cells,frame,transverse_fit)?;
     Ok(TrajectoryReport {traversal,status:batch.status,cells:batch.cells,jet:batch.jets.map(|mut v|v.remove(0)),single_span:batch.single_span,reason:batch.reason})
 }
-pub(super) fn control_trajectories_with_fit(
+pub(crate) fn control_trajectories_with_fit(
     path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
     traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,
 )->Result<TrajectoriesReport>{

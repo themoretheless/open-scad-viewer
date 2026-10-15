@@ -15,9 +15,11 @@ pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control
 pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
 pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
 pub(crate) use trajectory::{translated_constant_values,translated_constant_jets,control_values_with_fit};
+pub(crate) use trajectory::control_trajectories_with_fit;
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
 mod guided_path_values;
+pub(crate) use guided_path_values::certify_path_guide_from_offset;
 mod paired_path_values;
 mod guide_width;
 pub use guide_width::{GuideWidthReport, certify_guide_width};

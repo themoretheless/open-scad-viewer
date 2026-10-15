@@ -110,3 +110,31 @@ fn certified_nonplanar_capped_body_survives_direct_step_topology_exchange() {
         std::fs::write(path, text).unwrap();
     }
 }
+
+#[test]
+fn ideal_source_embedding_is_native_owned_and_budgeted_separately_from_retained_solid() {
+    let mut request=fixture()["sweep"].clone();
+    request["idealBody"]=json!({"projection":[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],"maxCells":100000,"maxExactWork":1000000});
+    let full=dispatch(request.clone()).unwrap();
+    assert_eq!(full["certified"],true,"{full:?}");assert_eq!(full["idealBodyEmbeddingCertified"],true);
+    assert_eq!(full["idealBody"]["volumeRegularityCertified"],true);
+    assert_eq!(full["idealBody"]["parameterTopologyPreserved"],true);
+    assert_eq!(full["smoothnessCertified"],false);
+    request["idealBody"]["maxCells"]=json!(full["idealBody"]["cells"].as_u64().unwrap()-1);
+    request["idealBodyEmbeddingCertified"]=json!(true);
+    let short=dispatch(request).unwrap();assert_eq!(short["certified"],false);
+    assert_eq!(short["idealBodyEmbeddingCertified"],false);assert!(short["model"].is_null());
+    assert_eq!(short["solidGeometryCertified"],true);
+}
+#[test]
+fn complete_smoothness_protocol_cannot_omit_a_cap_or_promote_sharp_joins() {
+    let owned=dispatch(fixture()["sweep"].clone()).unwrap();
+    for order in [1,2] {
+        let r=dispatch(json!({"op":"brep_complete_boundary_smoothness_audit","model":owned["model"],
+            "order":order,"maxExactWork":2000000,"maxAgreementWork":1000000,"maxRegularityCells":100000,
+            "capFaces":[],"seams":[],"fullBoundaryG2Certified":true})).unwrap();
+        assert_eq!(r["fullBoundaryG1Certified"],false);assert_eq!(r["fullBoundaryG2Certified"],false);
+        assert_eq!(r["idealSourceSmoothnessCertified"],false);
+        assert!(!r["edgeIds"].as_array().unwrap().is_empty());
+    }
+}

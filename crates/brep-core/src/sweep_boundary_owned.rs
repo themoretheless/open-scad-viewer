@@ -32,6 +32,7 @@ pub struct Report {
     pub regularity: Option<regularity::Report>,
     pub volume: Option<volume_validity::Report>,
     pub reason: Option<&'static str>,
+    pub ideal_volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
 }
 pub struct CertifiedBody {
     model: Model,
@@ -122,6 +123,7 @@ pub fn construct(
         regularity: None,
         volume: None,
         reason: Some("source-wall-bound-unproved"),
+        ideal_volume: None,
     };
     if !out.wall.continuous_bound || out.wall.continuous_error_upper.is_none() {
         return Ok(Attempt::Refused(Box::new(out)));
@@ -290,5 +292,91 @@ pub fn construct(
         Attempt::Certified(Box::new(CertifiedBody { model, report: out }))
     } else {
         Attempt::Refused(Box::new(out))
+    })
+}
+
+#[derive(Clone, Copy)]
+pub struct IdealLimits {
+    /// One fixed projection, used for the complete original source volume.
+    pub projection: [[f64; 3]; 3],
+    pub cells: usize,
+    pub exact_work: u64,
+}
+/// Stronger constructor: no output model unless BOTH the retained solid and
+/// the original filled-source embedding are proved. The UV topology comes from
+/// the same native cap/contour/trim and retained-volume proof as `construct`;
+/// a caller cannot attach an unrelated source proof to an existing model.
+pub fn construct_with_ideal(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+) -> Result<Attempt> {
+    // Validate stronger limits even when an earlier geometric stage refuses.
+    if ideal.cells > 100000
+        || ideal.exact_work > 1000000
+        || ideal.projection.iter().flatten().any(|x| !x.is_finite())
+    {
+        return Err(fail("Invalid original ideal-body proof limits"));
+    }
+    let attempt = construct(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+    )?;
+    let Attempt::Certified(mut body) = attempt else {
+        return Ok(attempt);
+    };
+    let domain = |s: &nurbs_core::surface::Surface| {
+        [
+            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+        ]
+    };
+    if source_caps[0].trims != source_caps[1].trims
+        || domain(&source_caps[0].surface) != domain(&source_caps[1].surface)
+    {
+        body.report.certified = false;
+        body.report.reason = Some("ideal-body-common-trim-region-unproved");
+        return Ok(Attempt::Refused(Box::new(body.report)));
+    }
+    let mut profile_cells = 0;
+    for profile in sweep.source_profiles() {
+        let regular = nurbs_core::curve_regularity::inspect(profile, ideal.cells - profile_cells)?;
+        profile_cells += regular.cells;
+        if !regular.spanwise_regular {
+            body.report.certified = false;
+            body.report.reason = Some("ideal-body-original-profile-regularity-unproved");
+            return Ok(Attempt::Refused(Box::new(body.report)));
+        }
+    }
+    let proof = sweep.certify_ideal_volume(
+        [&source_caps[0].surface, &source_caps[1].surface],
+        ideal.projection,
+        ideal.cells - profile_cells,
+        ideal.exact_work,
+    )?;
+    let mut proof = proof;
+    proof.cells += profile_cells;
+    let proven = proof.embedding_certified
+        && proof.regularity_certified
+        && proof.parameter_topology_preserved;
+    body.report.reason = if proven { None } else { proof.reason };
+    body.report.ideal_volume = Some(proof);
+    body.report.certified = proven;
+    Ok(if proven {
+        Attempt::Certified(body)
+    } else {
+        Attempt::Refused(Box::new(body.report))
     })
 }

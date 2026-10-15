@@ -114,23 +114,55 @@ pub fn construct(v: Value) -> Result<Value> {
     let source_caps = caps(&v["sourceCaps"])?;
     let retained_caps = caps(&v["retainedCaps"])?;
     let limits = field::<Value>(&v, "limits")?;
-    let attempt = owned::construct(
-        &sweep,
-        &field::<Vec<usize>>(&v, "loopSizes")?,
-        field(&v, "sections")?,
-        [&source_caps[0], &source_caps[1]],
-        [&retained_caps[0], &retained_caps[1]],
-        field(&v, "toleranceUv")?,
-        field(&v, "maxDeviation")?,
-        owned::Limits {
-            source_cells: field(&limits, "sourceCells")?,
-            source_products: field(&limits, "sourceProducts")?,
-            source_exact_work: field(&limits, "sourceExactWork")?,
-            regularity_cells: field(&limits, "regularityCells")?,
-            linear_cells: field(&limits, "linearCells")?,
-            volume: crate::cad_boundary_certificate::volume_limits(&limits["volume"])?,
-        },
-    )?;
+    let ideal = optional::<Value>(&v, "idealBody")?;
+    let ideal_limits = ideal
+        .as_ref()
+        .map(|i| -> Result<owned::IdealLimits> {
+            Ok(owned::IdealLimits {
+                projection: field(i, "projection")?,
+                cells: field(i, "maxCells")?,
+                exact_work: field(i, "maxExactWork")?,
+            })
+        })
+        .transpose()?;
+    let loop_sizes = field::<Vec<usize>>(&v, "loopSizes")?;
+    let sections = field(&v, "sections")?;
+    let tolerance_uv = field(&v, "toleranceUv")?;
+    let error_budget = field(&v, "maxDeviation")?;
+    let limits = owned::Limits {
+        source_cells: field(&limits, "sourceCells")?,
+        source_products: field(&limits, "sourceProducts")?,
+        source_exact_work: field(&limits, "sourceExactWork")?,
+        regularity_cells: field(&limits, "regularityCells")?,
+        linear_cells: field(&limits, "linearCells")?,
+        volume: crate::cad_boundary_certificate::volume_limits(&limits["volume"])?,
+    };
+    let source_caps = [&source_caps[0], &source_caps[1]];
+    let retained_caps = [&retained_caps[0], &retained_caps[1]];
+    let attempt = if let Some(ideal) = ideal_limits {
+        owned::construct_with_ideal(
+            &sweep,
+            &loop_sizes,
+            sections,
+            source_caps,
+            retained_caps,
+            tolerance_uv,
+            error_budget,
+            limits,
+            ideal,
+        )?
+    } else {
+        owned::construct(
+            &sweep,
+            &loop_sizes,
+            sections,
+            source_caps,
+            retained_caps,
+            tolerance_uv,
+            error_budget,
+            limits,
+        )?
+    };
     let (model, r) = match &attempt {
         owned::Attempt::Certified(body) => (Some(body.model()), body.report()),
         owned::Attempt::Refused(r) => (None, r.as_ref()),
@@ -140,7 +172,8 @@ pub fn construct(v: Value) -> Result<Value> {
         "boundaryErrorUpper":r.boundary_error_upper,"filledCapErrorUpper":r.cap_errors,"wall":r.wall,
         "sourceCells":r.source_cells,"sourceProducts":r.source_products,"sourceExactWork":r.source_exact_work,
         "reason":r.reason,"scope":"original-sweep-law-and-authored-filled-caps",
-        "idealBodyEmbeddingCertified":false,"smoothnessCertified":false,"seamContinuity":"C0",
+        "idealBodyEmbeddingCertified":r.ideal_volume.as_ref().is_some_and(|p|p.embedding_certified),
+        "idealBody":r.ideal_volume.as_ref().map(|p|json!({"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"monotonicityLower":p.monotonicity_lower,"projection":p.projection,"reason":p.reason})),"smoothnessCertified":false,"seamContinuity":"C0",
         "regularity":r.regularity.as_ref().map(|p|json!({"proven":p.all_faces_regular_modulo_poles,"cells":p.cells,"unresolvedFaces":p.unresolved_faces})),
         "solidGeometryCertified":r.volume.as_ref().is_some_and(|p|p.proven)}),
     )

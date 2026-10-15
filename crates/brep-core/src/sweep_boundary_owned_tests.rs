@@ -170,6 +170,15 @@ fn original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certifi
     );
     assert!(body.report().boundary_error_upper.unwrap() <= 0.01);
     assert_eq!(body.report().caps.len(), 2);
+    let ideal_limits=IdealLimits {projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
+    let stronger=construct_with_ideal(&sweep,&[4],5,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),ideal_limits).unwrap();
+    let Attempt::Certified(stronger)=stronger else {panic!("Original body embedding was not certified");};
+    let proof=stronger.report().ideal_volume.as_ref().unwrap();
+    assert!(proof.embedding_certified&&proof.regularity_certified&&proof.parameter_topology_preserved);
+    assert_eq!(stronger.model(),body.model());
+    let short=construct_with_ideal(&sweep,&[4],5,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),IdealLimits {cells:proof.cells-1,..ideal_limits}).unwrap();
+    assert!(matches!(short,Attempt::Refused(_)));
+
     #[cfg(feature = "codec")]
     if let Ok(path_out) = std::env::var("OSV_GENERAL_CERTIFICATE_FIXTURE") {
         emit_fixture(
@@ -657,4 +666,28 @@ fn spatial_bishop_transport_and_saddle_caps_work_at_six_nondyadic_stations() {
             .any(|f| f.surface.knots_v.contains(&0.2))
     );
     assert!(body.report().source_cells <= limits().source_cells);
+}
+
+#[test]
+fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
+    let mut source=cap(vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![1.,1.,0.],vec![0.,1.,0.]]);
+    let hole=[[0.25,0.25],[0.25,0.75],[0.75,0.75],[0.75,0.25]];
+    source.trims.push((0..4).map(|i|Curve {degree:1,knots:vec![0.,0.,1.,1.],
+        control_points:vec![hole[i].to_vec(),hole[(i+1)%4].to_vec()],weights:vec![1.;2],periodic:false}).collect());
+    let profiles=source.trims.iter().flatten().map(|c| {
+        let a=&c.control_points[0];let b=&c.control_points[1];
+        nurbs_core::primitives::line([a[0],a[1],0.],[b[0],b[1],0.]).unwrap()
+    }).collect::<Vec<_>>();
+    let path=nurbs_core::primitives::line([0.;3],[0.,0.,64.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{normal:[1.,0.,0.],orientation:Orientation::Fixed,
+        spacing:Spacing::Parameter,initial_sections:5,max_sections:5,max_deviation:0.01}).unwrap();
+    let mut end=source.clone();for p in end.surface.control_points.iter_mut().flatten() {p[2]+=64.;}
+    let ideal=IdealLimits{projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
+    let attempt=construct_with_ideal(&sweep,&[4,4],5,[&source,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap();
+    let body=match attempt {Attempt::Certified(body)=>body,Attempt::Refused(r)=>panic!("Hollow source: {:?}",r.reason)};
+    assert!(body.report().ideal_volume.as_ref().unwrap().parameter_topology_preserved);
+    assert_eq!(body.model().bodies.len(),1);assert_eq!(body.model().faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
+    let mut omitted=source.clone();omitted.trims.pop();
+    assert!(matches!(construct_with_ideal(&sweep,&[4,4],5,[&omitted,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap(),Attempt::Refused(_)));
 }

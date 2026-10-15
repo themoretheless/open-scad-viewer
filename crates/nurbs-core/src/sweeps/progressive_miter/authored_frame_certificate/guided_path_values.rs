@@ -350,6 +350,13 @@ pub fn certify_path_guide(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<Report> {
+    path_guide_jets(path,guide,twist,traversal,max_cells,false)
+}
+/// The caller owns an exact original G-P coefficient identity and its work.
+pub(crate) fn certify_path_guide_from_offset(path:&Curve,offset:&Curve,twist:&Curve,traversal:[f64;2],max_cells:usize)->Result<Report> {
+    path_guide_jets(path,offset,twist,traversal,max_cells,true)
+}
+fn path_guide_jets(path:&Curve,guide:&Curve,twist:&Curve,traversal:[f64;2],max_cells:usize,original_offset:bool)->Result<Report> {
     let p = vector_certificate::certify_third_traversal(path, traversal, max_cells)?;
     let mut out = Report {
         status: Status::Unresolved,
@@ -383,11 +390,11 @@ pub fn certify_path_guide(
     else {
         return Ok(out);
     };
-    let offset = Jet {
+    let offset = if original_offset {rail} else {Jet {
         v: sub(rail.v, position.v)?,
         d: sub(rail.d, position.d)?,
         dd: sub(rail.dd, position.dd)?,
-    };
+    }};
     out.reason = Some("guide-transverse-direction-unproved");
     let Some(b) = normalize(cross_jet(t, offset)?)? else {
         return Ok(out);

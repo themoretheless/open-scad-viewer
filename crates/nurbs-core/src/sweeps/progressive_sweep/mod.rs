@@ -26,6 +26,8 @@ pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesRepor
 pub use original_smoothness::{OriginalFrameSmoothnessReport,ClosedAuthoredFrameSmoothnessReport,ClosedPathFrameSmoothnessReport};
 pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,RetainedDecompositionReport,RetainedDecompositionSmoothnessReport};
 mod endpoint_surface;
+mod ideal_volume;
+pub use ideal_volume::IdealVolumeReport;
 pub use endpoint_surface::EndpointSurfaceReport;
 mod profile_domain;
 pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,EndpointCapProjectionReport};

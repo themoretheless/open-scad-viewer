@@ -4,6 +4,7 @@ use crate::*;
 const OPS: &[&str] = &[
     "brep_sweep_viewport_evidence",
     "brep_sweep_boundary_construct",
+    "brep_complete_boundary_smoothness_audit",
     "brep_progressive_profile_body",
     "brep_sweep_law_payload",
     "brep_sweep_constructor",
@@ -51,6 +52,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_complete_boundary_smoothness_audit" => cad_sweep_smoothness::diagnose_complete(v),
         "brep_sweep_boundary_construct" => cad_sweep_boundary::construct(v),
         "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
         "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),
