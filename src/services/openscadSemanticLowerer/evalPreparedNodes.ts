@@ -1,4 +1,5 @@
-import { CSS_COLORS, IDENTITY_MATRIX, LegacyBindingCompatibilityError, MAX_FN, MAX_SHAPES } from '../openscadSemanticLowerer'
+import { CSS_COLORS, IDENTITY_MATRIX, LegacyBindingCompatibilityError, MAX_SHAPES } from '../openscadSemanticLowerer'
+const MAX_FN = 256
 import type { EvalContext, RGBA, SemanticNodeWithoutId, SemanticReducedShape, SemanticShape } from '../openscadSemanticLowerer'
 import { hasOpenScadViewportModifier } from '../openscadCompiler'
 import type { CallNode, ModuleNode, Statement, Value } from '../openscadCompiler'

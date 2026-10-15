@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useEditorFormatting } from './composables/useEditorFormatting'
+import { useEditorResize } from './composables/useEditorResize'
 import VrControls from './components/VrControls.vue'
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
@@ -889,7 +891,6 @@ let componentActive = true
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
-let resizing = false
 const topbarRef = ref<HTMLElement | null>(null)
 const topbarHeight = ref(52)
 let topbarResizeObserver: ResizeObserver | null = null
@@ -2297,33 +2298,7 @@ function openFunctionReference(query = '') {
   functionReferenceOpen.value = true
 }
 
-function formatEditor() {
-  const formatted = formatCode(code.value)
-  if(formatted === code.value) return
-  const editor = editorRef.value
-  const caret = editor?.selectionStart ?? 0
-  if(editor) editor.setRangeText(formatted,0,editor.value.length,'preserve')
-  code.value = formatted
-  foldedLines.value = new Set()
-  void nextTick(()=>{
-    if(editor) { editor.focus(); editor.setSelectionRange(Math.min(caret,formatted.length),Math.min(caret,formatted.length)) }
-    syncHighlightScroll()
-  })
-  handleEditorInput()
-}
-
-function handleEditorKey(event: KeyboardEvent) {
-  if(event.altKey && event.shiftKey && event.code === 'KeyF') { event.preventDefault(); formatEditor(); return }
-  if(event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
-    event.preventDefault()
-    const editor=editorRef.value; if(!editor) return
-    const edit=indentSelection(code.value,editor.selectionStart,editor.selectionEnd,event.shiftKey)
-    editor.setRangeText(edit.text,edit.start,edit.end,'preserve')
-    code.value=editor.value; editor.setSelectionRange(edit.selectionStart,edit.selectionEnd)
-    handleEditorInput(); return
-  }
-  dispatchKeyboardCommand(event, 'editor')
-}
+const { formatEditor, handleEditorKey } = useEditorFormatting({ code, editorRef, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand })
 
 function handleViewportKey(event: KeyboardEvent) {
   dispatchKeyboardCommand(event, 'viewport')
@@ -2350,35 +2325,7 @@ function isCommandEnabled(id: CommandId): boolean {
   return target ? isPaletteCommandEnabled(target) : true
 }
 
-function startResize(event: PointerEvent) {
-  if (window.matchMedia('(max-width: 800px)').matches) return
-  resizing = true
-  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-  resizeEditor(event.clientX)
-}
-function moveResize(event: PointerEvent) { if (resizing) resizeEditor(event.clientX) }
-function stopResize() {
-  if (!resizing) return
-  resizing = false
-  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
-}
-function resizeEditor(clientX: number) {
-  const rect = mainRef.value?.getBoundingClientRect()
-  if (!rect) return
-  editorMaxWidth.value = editorWidthBounds(rect.width).max
-  editorWidth.value = clampEditorWidth(clientX - rect.left, rect.width)
-}
-function resizeEditorWithKeyboard(event: KeyboardEvent) {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-  event.preventDefault()
-  const width = mainRef.value?.getBoundingClientRect().width ?? 0
-  const bounds = editorWidthBounds(width)
-  editorMaxWidth.value = bounds.max
-  if (event.key === 'Home') editorWidth.value = bounds.min
-  else if (event.key === 'End') editorWidth.value = bounds.max
-  else editorWidth.value = clampEditorWidth(editorWidth.value + (event.key === 'ArrowRight' ? 20 : -20), width)
-  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
-}
+const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEditorResize({ mainRef, editorWidth, editorMaxWidth })
 
 function showNotice(message: string) {
   notice.value = message
