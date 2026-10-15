@@ -13,7 +13,7 @@ import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from './directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
-import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
+import { sampleCurve, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { stringifyMeshJson } from './meshJson'
 import { validateNurbsCurve } from './nurbsCurve'
@@ -266,8 +266,10 @@ interface DirectSnapshot { characters: number; text: string }
 export class DirectHistory {
   private restoreGeneration = 0
   private past: DirectSnapshot[] = []
+  private pastCharacters = 0
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document?:DirectDocument}
+  private futureCharacters = 0
+  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
@@ -289,6 +291,8 @@ export class DirectHistory {
       return {text,characters:text.length}
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
+    this.pastCharacters=this.past.reduce((sum,s)=>sum+s.characters,0)
+    this.futureCharacters=this.future.reduce((sum,s)=>sum+s.characters,0)
     this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
     return id
   }
@@ -297,8 +301,10 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
+    if (this.current.ids) return [...this.current.ids]
     const d=this.current.document??JSON.parse(this.current.text) as DirectDocument
-    return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]].map(object=>object.id)
+    this.current.ids = [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]].map(object=>object.id)
+    return [...this.current.ids]
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
   get snapshotKey() { return this.current.text }
@@ -306,7 +312,7 @@ export class DirectHistory {
   get canRedo() { return this.future.length > 0 }
   get storageStats() {
     return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:this.current.document?1:0,
-      retainedCharacters:this.current.characters+[...this.past,...this.future].reduce((sum,snapshot)=>sum+snapshot.characters,0)}
+      retainedCharacters:this.current.characters+this.pastCharacters+this.futureCharacters}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
     this.commitValidated(parseDirectDocument(stringifyMeshJson(document)),validateChange)
@@ -329,19 +335,19 @@ export class DirectHistory {
     const nextText = serializeDirectDocument(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push({text:this.current.text,characters:this.current.characters})
+    this.pastCharacters += this.current.characters
     // The existing bound counts serialized characters, not actual heap bytes.
     // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
-    let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0)
-    while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
-      retained -= this.past.shift()!.characters
+    while (this.past.length > 80 || (this.past.length > 1 && this.pastCharacters > 16_000_000)) {
+      this.pastCharacters -= this.past.shift()!.characters
     }
-    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []
+    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []; this.futureCharacters = 0
   }
   undo() {
     const d = this.past.at(-1)
     if (d) {
       const document=parseDirectDocument(d.text)
-      this.past.pop();this.future.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      this.past.pop();this.pastCharacters-=d.characters;this.future.push({text:this.current.text,characters:this.current.characters});this.futureCharacters+=this.current.characters;this.current={...d,document}
     }
     return this.document
   }
@@ -349,7 +355,7 @@ export class DirectHistory {
     const d = this.future.at(-1)
     if (d) {
       const document=parseDirectDocument(d.text)
-      this.future.pop();this.past.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      this.future.pop();this.futureCharacters-=d.characters;this.past.push({text:this.current.text,characters:this.current.characters});this.pastCharacters+=this.current.characters;this.current={...d,document}
     }
     return this.document
   }
@@ -360,7 +366,7 @@ export class DirectHistory {
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
     const document=clone(loaded),text=serializeDirectDocument(document)
-    this.current={document,text,characters:text.length};this.past=[];this.future=[]
+    this.current={document,text,characters:text.length};this.past=[];this.pastCharacters=0;this.future=[];this.futureCharacters=0
     return true
   }
   cancelRestore() { this.restoreGeneration++ }
@@ -379,6 +385,8 @@ export class DirectHistory {
     // Retain the already validated immutable snapshot; materialize a private copy
     // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({text:base.text,characters:base.characters})
+    if(direction==='undo'){this.pastCharacters-=snapshot.characters;this.futureCharacters+=base.characters}
+    else{this.futureCharacters-=snapshot.characters;this.pastCharacters+=base.characters}
     this.current={...snapshot}
     return true
   }
@@ -394,17 +402,37 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   }
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
   const count = built.positions.length / 3
-  const pts = new Array<number[]>(count)
-  for (let i = 0, j = 0; i < count; i++, j += 3) {
-    pts[i] = [built.positions[j], built.positions[j + 1], built.positions[j + 2]]
-  }
-  const world = worldPoints(pts, sketch.plane)
+  if (count > 300000) throw new Error('Sketch placement point budget exceeded.')
+  const plane = sketch.plane
   const positions = new Float64Array(built.positions.length)
-  for (let i = 0, j = 0; i < world.length; i++, j += 3) {
-    const wp = world[i]
-    positions[j] = wp[0]
-    positions[j + 1] = wp[1]
-    positions[j + 2] = wp[2]
+  if (!plane) {
+    positions.set(built.positions)
+  } else {
+    const o = plane.origin, u = plane.u, v = plane.v
+    const nx = u[1] * v[2] - u[2] * v[1]
+    const ny = u[2] * v[0] - u[0] * v[2]
+    const nz = u[0] * v[1] - u[1] * v[0]
+    if (
+      !Number.isFinite(o[0]) || !Number.isFinite(o[1]) || !Number.isFinite(o[2]) ||
+      !Number.isFinite(u[0]) || !Number.isFinite(u[1]) || !Number.isFinite(u[2]) ||
+      !Number.isFinite(v[0]) || !Number.isFinite(v[1]) || !Number.isFinite(v[2]) ||
+      !Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nz)
+    ) {
+      throw new Error('Sketch geometry exceeds finite numeric range.')
+    }
+    const src = built.positions
+    for (let j = 0; j < src.length; j += 3) {
+      const x = src[j], y = src[j + 1], z = src[j + 2]
+      const wx = o[0] + x * u[0] + y * v[0] + z * nx
+      const wy = o[1] + x * u[1] + y * v[1] + z * ny
+      const wz = o[2] + x * u[2] + y * v[2] + z * nz
+      if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) {
+        throw new Error('Sketch geometry exceeds finite numeric range.')
+      }
+      positions[j] = wx
+      positions[j + 1] = wy
+      positions[j + 2] = wz
+    }
   }
   return { id, name: sketch.name + ' · 3D', mesh: { positions, indices: built.indices.slice() } }
 }

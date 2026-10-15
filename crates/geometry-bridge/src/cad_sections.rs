@@ -19,7 +19,7 @@ pub fn build(v: Value) -> Result<Value> {
     let sketches: Vec<Value> = field(&v, "sketches")?;
     let ids: Vec<String> = field(&v, "profileIds")?;
     let action: String = field(&v, "action")?;
-    let mut profiles = Vec::new();
+    let mut profiles = Vec::with_capacity(ids.len());
     for id in ids {
         if let Some(s) = sketches
             .iter()
@@ -44,7 +44,8 @@ pub fn build(v: Value) -> Result<Value> {
             if !(3..=512).contains(&count) {
                 return Err(input("Loft requires 3–512 points per section."));
             }
-            let fractions: Vec<f64> = (0..count).map(|i| i as f64 / count as f64).collect();
+            let inv_count = 1.0 / count as f64;
+            let fractions: Vec<f64> = (0..count).map(|i| i as f64 * inv_count).collect();
             let mut sections = Vec::with_capacity(profiles.len());
             for s in profiles {
                 let path = placed(s, true)?;

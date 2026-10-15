@@ -131,26 +131,27 @@ fn total_order_key(v: f32) -> u32 {
         b | 0x8000_0000
     }
 }
-fn blur(p: &[f32], w: usize, h: usize) -> Vec<f32> {
-    let mut tmp = vec![0.; p.len()];
-    let mut out = vec![0.; p.len()];
+fn blur_into(p: &[f32], w: usize, h: usize, tmp: &mut [f32], out: &mut [f32]) {
     for y in 0..h {
-        for x in 0..w {
-            tmp[y * w + x] = (p[y * w + x.saturating_sub(1)]
-                + 2. * p[y * w + x]
-                + p[y * w + (x + 1).min(w - 1)])
-                * 0.25;
+        let row = &p[y * w..(y + 1) * w];
+        let dst = &mut tmp[y * w..(y + 1) * w];
+        dst[0] = (row[0] + 2. * row[0] + row[1.min(w - 1)]) * 0.25;
+        for x in 1..w.saturating_sub(1) {
+            dst[x] = (row[x - 1] + 2. * row[x] + row[x + 1]) * 0.25;
+        }
+        if w > 1 {
+            dst[w - 1] = (row[w - 2] + 2. * row[w - 1] + row[w - 1]) * 0.25;
         }
     }
     for y in 0..h {
+        let prev = &tmp[y.saturating_sub(1) * w..(y.saturating_sub(1) + 1) * w];
+        let curr = &tmp[y * w..(y + 1) * w];
+        let next = &tmp[(y + 1).min(h - 1) * w..((y + 1).min(h - 1) + 1) * w];
+        let dst = &mut out[y * w..(y + 1) * w];
         for x in 0..w {
-            out[y * w + x] = (tmp[y.saturating_sub(1) * w + x]
-                + 2. * tmp[y * w + x]
-                + tmp[(y + 1).min(h - 1) * w + x])
-                * 0.25;
+            dst[x] = (prev[x] + 2. * curr[x] + next[x]) * 0.25;
         }
     }
-    out
 }
 pub fn extract(image: &Image, limit: usize) -> Result<Vec<Feature>> {
     extract_with_options(image, limit, &FeatureOptions::default())
@@ -166,45 +167,68 @@ pub fn extract_with_options(
     }
     let mut p = image.gray();
     let (mut w, mut h) = (image.width, image.height);
-    let mut all = Vec::new();
+    let max_pixels = w * h;
+    let mut all = Vec::with_capacity(limit * 3);
     let mut pyramid = Vec::with_capacity(3);
+    let mut suppressed = vec![false; max_pixels];
+    let mut blur_tmp = vec![0.0f32; max_pixels];
+    let mut xx_raw = vec![0.0f32; max_pixels];
+    let mut yy_raw = vec![0.0f32; max_pixels];
+    let mut xy_raw = vec![0.0f32; max_pixels];
+    let mut scores = vec![0.0f32; max_pixels];
+    let mut corners = Vec::new();
     for level in 0..3 {
         if w < 48 || h < 48 {
             break;
         }
-        p = blur(&p, w, h);
-        let mut xx = vec![0.; w * h];
-        let mut yy = vec![0.; w * h];
-        let mut xy = vec![0.; w * h];
+        let n = w * h;
+        let mut p_blurred = vec![0.0f32; n];
+        blur_into(&p, w, h, &mut blur_tmp[..n], &mut p_blurred);
+        p = p_blurred;
+        xx_raw[..n].fill(0.0);
+        yy_raw[..n].fill(0.0);
+        xy_raw[..n].fill(0.0);
         for y in 1..h - 1 {
+            let row_offset = y * w;
             for x in 1..w - 1 {
-                let i = y * w + x;
+                let i = row_offset + x;
                 let gx = p[i + 1] - p[i - 1];
                 let gy = p[i + w] - p[i - w];
-                xx[i] = gx * gx;
-                yy[i] = gy * gy;
-                xy[i] = gx * gy;
+                xx_raw[i] = gx * gx;
+                yy_raw[i] = gy * gy;
+                xy_raw[i] = gx * gy;
             }
         }
-        let xx = blur(&xx, w, h);
-        let yy = blur(&yy, w, h);
-        let xy = blur(&xy, w, h);
-        let scores: Vec<_> = (0..w * h)
-            .map(|i| xx[i] * yy[i] - xy[i] * xy[i] - 0.04 * (xx[i] + yy[i]).powi(2))
-            .collect();
-        let mut corners = Vec::new();
+        // Reuse scores temporarily as blurred xx, then xx_raw as blurred yy, yy_raw as blurred xy.
+        blur_into(&xx_raw[..n], w, h, &mut blur_tmp[..n], &mut scores[..n]);
+        blur_into(&yy_raw[..n], w, h, &mut blur_tmp[..n], &mut xx_raw[..n]);
+        blur_into(&xy_raw[..n], w, h, &mut blur_tmp[..n], &mut yy_raw[..n]);
+        for i in 0..n {
+            let b_xx = scores[i];
+            let b_yy = xx_raw[i];
+            let b_xy = yy_raw[i];
+            let tr = b_xx + b_yy;
+            scores[i] = b_xx * b_yy - b_xy * b_xy - 0.04 * (tr * tr);
+        }
+        corners.clear();
         for y in 14..h - 14 {
+            let row_prev = &scores[(y - 1) * w..y * w];
+            let row_curr = &scores[y * w..(y + 1) * w];
+            let row_next = &scores[(y + 1) * w..(y + 2) * w];
             for x in 14..w - 14 {
-                let i = y * w + x;
-                let s = scores[i];
+                let s = row_curr[x];
                 if s < 1e-7 {
                     continue;
                 }
-                if (-1isize..=1).all(|dy| {
-                    (-1isize..=1).all(|dx| {
-                        scores[((y as isize + dy) as usize) * w + (x as isize + dx) as usize] <= s
-                    })
-                }) {
+                if row_prev[x - 1] <= s
+                    && row_prev[x] <= s
+                    && row_prev[x + 1] <= s
+                    && row_curr[x - 1] <= s
+                    && row_curr[x + 1] <= s
+                    && row_next[x - 1] <= s
+                    && row_next[x] <= s
+                    && row_next[x + 1] <= s
+                {
                     // Score key orders like descending total_cmp; the inverted
                     // position in the low bits keeps ties in scan order.
                     corners.push((total_order_key(s) as u64) << 32 | !(y * w + x) as u32 as u64);
@@ -212,9 +236,9 @@ pub fn extract_with_options(
             }
         }
         corners.sort_unstable_by(|a, b| b.cmp(a));
-        let mut chosen = Vec::new();
-        let mut suppressed = vec![false; w * h];
-        for key in corners {
+        let mut chosen = Vec::with_capacity(limit.min(corners.len()));
+        suppressed[..n].fill(false);
+        for &key in &corners {
             let k = (key >> 32) as u32;
             let score = f32::from_bits(if k & 0x8000_0000 != 0 {
                 k & 0x7fff_ffff
@@ -226,10 +250,12 @@ pub fn extract_with_options(
             if suppressed[y * w + x] {
                 continue;
             }
-            for py in y.saturating_sub(6)..=(y + 6).min(h - 1) {
-                for px in x.saturating_sub(6)..=(x + 6).min(w - 1) {
-                    suppressed[py * w + px] = true;
-                }
+            let py_start = y.saturating_sub(6);
+            let py_end = (y + 6).min(h - 1);
+            let px_start = x.saturating_sub(6);
+            let px_end = (x + 6).min(w - 1);
+            for py in py_start..=py_end {
+                suppressed[py * w + px_start..=py * w + px_end].fill(true);
             }
             chosen.push((score, x, y));
             if chosen.len() >= limit {
@@ -238,7 +264,7 @@ pub fn extract_with_options(
         }
         for (score, x, y) in chosen {
             let (x, y) = if options.subpixel {
-                localize(&scores, w, x, y)
+                localize(&scores[..n], w, x, y)
             } else {
                 (x as f64, y as f64)
             };
@@ -247,10 +273,15 @@ pub fn extract_with_options(
         let nw = w / 2;
         let nh = h / 2;
         let next = if level < 2 && nw >= 48 && nh >= 48 {
-            let smoothed = blur(&p, w, h);
-            (0..nw * nh)
-                .map(|i| smoothed[(i / nw * 2) * w + (i % nw * 2)])
-                .collect()
+            blur_into(&p, w, h, &mut blur_tmp[..n], &mut xy_raw[..n]);
+            let mut down = Vec::with_capacity(nw * nh);
+            for ny in 0..nh {
+                let src_row = &xy_raw[(ny * 2) * w..(ny * 2 + 1) * w];
+                for nx in 0..nw {
+                    down.push(src_row[nx * 2]);
+                }
+            }
+            down
         } else {
             Vec::new()
         };
@@ -263,8 +294,8 @@ pub fn extract_with_options(
     }
     all.sort_by(|a, b| b.0.total_cmp(&a.0));
     let weights = DescriptorWeights::new();
-    let mut result: Vec<Feature> = Vec::new();
-    let mut suppressed = vec![false; image.width * image.height];
+    let mut result: Vec<Feature> = Vec::with_capacity(limit.min(all.len()));
+    suppressed[..max_pixels].fill(false);
     for (_, level, level_x, level_y) in all {
         let scale = (1 << level) as f64;
         let (fx, fy) = (level_x * scale, level_y * scale);

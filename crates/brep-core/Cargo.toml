@@ -17,9 +17,20 @@ brep-topology = { workspace = true }
 planar-geometry = { workspace = true }
 cad-predicates = { workspace = true }
 sha2 = "0.11"
+num-bigint = "0.4.8"
+num-rational = "0.4.2"
+num-traits = "0.2.19"
 
 [dev-dependencies]
 rbench = { workspace = true }
+
+[[example]]
+name = "certify_sweep_geometry_migration"
+required-features = ["codec"]
+
+[[example]]
+name = "verify_profile_certificate"
+required-features = ["codec"]
 
 [[example]]
 name = "bench_validation"

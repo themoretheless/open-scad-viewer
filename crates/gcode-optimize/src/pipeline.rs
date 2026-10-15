@@ -52,14 +52,12 @@ pub fn optimize(
     let mut budget = Budget::new();
     let mut layers = input.layers;
     for (index, layer) in layers.iter_mut().enumerate() {
-        let mut simplified = Vec::with_capacity(layer.paths.len());
-        for path in &layer.paths {
+        for path in &mut layer.paths {
             let before = path.points.len();
             let next = simplify_path(path, settings.simplify_tolerance_mm, &mut budget)?;
             report.simplified_vertices += before.saturating_sub(next.points.len());
-            simplified.push(next);
+            *path = next;
         }
-        layer.paths = simplified;
 
         let mut previous = None;
         for path in &mut layer.paths {
@@ -76,7 +74,8 @@ pub fn optimize(
 
         let contours = input.avoid.get(index).map(Vec::as_slice).unwrap_or(&[]);
         if !contours.is_empty() {
-            let comb = comb_layer(&layer.paths, contours, &mut budget)?;
+            let paths = std::mem::take(&mut layer.paths);
+            let comb = comb_layer(paths, contours, &mut budget)?;
             report.comb_waypoints += comb.waypoints;
             report.uncombed_travels += comb.uncombed;
             layer.paths = comb.paths;

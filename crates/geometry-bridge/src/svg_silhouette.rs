@@ -181,7 +181,7 @@ pub(crate) fn color_contours(
             })
         })
         .collect();
-    let mut output = Vec::new();
+    let mut output = Vec::with_capacity(palette.len());
     let mut total = 0;
     for (index, color) in palette.iter().enumerate() {
         let mask: Vec<bool> = labels.iter().map(|l| *l == Some(index)).collect();

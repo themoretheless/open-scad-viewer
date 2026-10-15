@@ -7,8 +7,12 @@ assert.ok(input&&output,'Supply inventory directory and output receipt')
 const root=process.cwd(),base=resolve(input),sha=b=>createHash('sha256').update(b).digest('hex')
 const read=p=>readFileSync(p),json=p=>JSON.parse(read(p))
 const planBytes=read(resolve(base,'inventory-plan.json')),plan=JSON.parse(planBytes)
-assert.equal(plan.passedPreflight,true);assert.equal(plan.totalCases,468);assert.equal(plan.nativeObservationsRequired,1432)
+assert.equal(plan.passedPreflight,true);assert.equal(plan.totalCases,478);assert.equal(plan.nativeObservationsRequired,1472)
 assert.equal(plan.jobs.length,11)
+const baselineBytes=read(resolve(root,'scripts/sweep-ui-required-baseline.json')),baseline=JSON.parse(baselineBytes);
+assert.equal(plan.baselineSha256,sha(baselineBytes));
+assert.deepEqual(plan.jobs.map(j=>j.name),Object.keys(baseline.groups));
+for(const job of plan.jobs)assert.deepEqual([...job.caseKeys].sort(),[...baseline.groups[job.name],...(baseline.extensions[job.name]??[])].sort(),'Missing or undeclared UI case');
 const mapArg=options.find(a=>a.startsWith('--report-map='))
 const reportMap=mapArg?json(resolve(mapArg.slice('--report-map='.length))):{}
 const harnessArchive=options.find(a=>a.startsWith('--harness-archive='))?.slice('--harness-archive='.length)
@@ -63,7 +67,7 @@ for(const job of plan.jobs){
   const outcome=c.assertions.filter(a=>outcomes.includes(a.case));assert.equal(outcome.length,1,'Missing or conflicting Solid outcome')
   if(job.name==='surface')assert.equal(outcome[0].case,'surface-solid-refusal')
   else if(job.name==='folded-fixed-refusal')assert.equal(outcome[0].case,'bounded-closed-body-solid-refusal')
-  else if(job.name==='miter')assert.equal(outcome[0].case,c.file==='miter-hollow-body.r'?'unproved-spatial-solid-refusal':'solid-publication')
+  else if(job.name==='miter')assert.equal(outcome[0].case,'solid-publication')
   else assert.equal(outcome[0].case,'solid-publication')
   if(outcome[0].case==='solid-publication'){
    assert.ok(c.solid);assert.equal(c.solid.renderer,'webgpu');assert.ok(c.solid.faces>0&&c.solid.shells>0);assert.match(c.solid.geometrySha256,/^[a-f0-9]{64}$/)
@@ -82,7 +86,7 @@ for(const job of plan.jobs){
  }
  count+=matrix.cases.length;groups.push({name:job.name,reportPath,sha256:sha(bytes),cases:matrix.cases.length,replacement:Object.hasOwn(reportMap,job.name)})
 }
-assert.equal(count,468);assert.equal(observations.length,1432)
+assert.equal(count,478);assert.equal(observations.length,1472)
 assert.match(read(resolve(root,'src/App.vue')).toString(),/workerSilenceTimeoutMs: 30_000/)
-writeFileSync(output,JSON.stringify({schema:'sweep-full-ui-reconciliation/1',passed:true,scope:'Finite468-case matrix on exact isolated WASM/dist and source bytes; authenticated executing native CPU tail followed by Worker destruction, not cooperative cancellation latency or universal geometry proof',geometryWasmSha256:kernel,distIndexSha256:index,inventorySha256:sha(planBytes),verifierSha256:sha(read(new URL(import.meta.url))),cases:count,nativeObservations:observations.length,groups,observations},null,2)+'\n')
-console.log('468 UI cases and1432 authenticated native observations verified')
+writeFileSync(output,JSON.stringify({schema:'sweep-full-ui-reconciliation/1',passed:true,scope:'Finite478-case matrix on exact isolated WASM/dist and source bytes; authenticated executing native CPU tail followed by Worker destruction, not cooperative cancellation latency or universal geometry proof',geometryWasmSha256:kernel,distIndexSha256:index,inventorySha256:sha(planBytes),verifierSha256:sha(read(new URL(import.meta.url))),cases:count,nativeObservations:observations.length,groups,observations},null,2)+'\n')
+console.log('478 UI cases and1472 authenticated native observations verified')

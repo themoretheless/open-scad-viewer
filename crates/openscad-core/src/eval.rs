@@ -104,12 +104,14 @@ impl<'a> Ctx<'a> {
         }
     }
     fn push_function(&self, name: &str) -> Rc<Vec<String>> {
-        let mut stack = (*self.function_stack).clone();
+        let mut stack = Vec::with_capacity(self.function_stack.len() + 1);
+        stack.extend_from_slice(&self.function_stack);
         stack.push(name.to_string());
         Rc::new(stack)
     }
     fn push_module(&self, name: &str) -> Rc<Vec<String>> {
-        let mut stack = (*self.module_stack).clone();
+        let mut stack = Vec::with_capacity(self.module_stack.len() + 1);
+        stack.extend_from_slice(&self.module_stack);
         stack.push(name.to_string());
         Rc::new(stack)
     }
@@ -137,12 +139,13 @@ pub struct Evaluator<'a> {
 }
 
 fn has_modifier(node: &CallNode, kind: &str) -> bool {
-    node.viewport_modifiers.iter().any(|m| m.kind == kind)
+    !node.viewport_modifiers.is_empty() && node.viewport_modifiers.iter().any(|m| m.kind == kind)
 }
 
 /// Deterministic splitmix64 stream standing in for the host's unseeded
 /// `Math.random` (TS only exposes it through unseeded `rands`, which is
 /// nondeterministic there as well).
+#[inline(always)]
 fn splitmix64(state: u64) -> (u64, f64) {
     let next = state.wrapping_add(0x9E3779B97F4A7C15);
     let mut z = next;
@@ -165,7 +168,11 @@ impl<'a> Evaluator<'a> {
         collect_modules(statements, &mut modules);
         Self {
             record_geometry: options.record_geometry,
-            geometry: RefCell::new(Vec::new()),
+            geometry: RefCell::new(if options.record_geometry {
+                Vec::with_capacity(statements.len().min(64))
+            } else {
+                Vec::new()
+            }),
             profiles: RefCell::new(Vec::new()),
             units,
             profile,
@@ -173,7 +180,7 @@ impl<'a> Evaluator<'a> {
             animation_time: options.animation_time,
             ops: Cell::new(0),
             value_budget: Cell::new(0),
-            value_meta: RefCell::new(HashMap::new()),
+            value_meta: RefCell::new(HashMap::with_capacity(16)),
             warnings: RefCell::new(Vec::new()),
             functions,
             modules,
@@ -865,7 +872,10 @@ impl<'a> Evaluator<'a> {
         depth: usize,
     ) -> EvalResult<HashMap<String, Value<'a>>> {
         let mut env = ctx.env.borrow().clone();
-        let mut assigned = HashSet::new();
+        if args.is_empty() {
+            return Ok(env);
+        }
+        let mut assigned = HashSet::with_capacity(args.len());
         for argument in args {
             let overlay = self.stable_overlay_context(ctx, env.clone());
             let value = self.eval_expression(&argument.value, &overlay, depth + 1)?;
@@ -1105,7 +1115,7 @@ impl<'a> Evaluator<'a> {
         ctx: &Ctx<'a>,
         depth: usize,
     ) -> EvalResult<Value<'a>> {
-        let mut values = Vec::new();
+        let mut values = Vec::with_capacity(args.len());
         for argument in args {
             let value = format_value(&self.eval_expression(&argument.value, ctx, depth + 1)?);
             values.push(match &argument.name {
@@ -1137,7 +1147,8 @@ impl<'a> Evaluator<'a> {
         parameter_names: &[&str],
         _ctx: &Ctx<'a>,
     ) -> HashMap<String, &'a ExpressionArgument> {
-        let mut resolved: HashMap<String, &'a ExpressionArgument> = HashMap::new();
+        let mut resolved: HashMap<String, &'a ExpressionArgument> =
+            HashMap::with_capacity(parameter_names.len());
         let parameters: HashSet<&str> = parameter_names.iter().copied().collect();
         for argument in args {
             let name = match &argument.name {

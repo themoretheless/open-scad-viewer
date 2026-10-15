@@ -119,3 +119,30 @@ pub(super) fn opposite_halfplanes(a: &[[f64; 2]], b: &[[f64; 2]], point: [f64; 2
     }
     inspect(a, b, point) == Some(true)
 }
+
+/// A complete algebraic census can admit same-side curved cusp joints whose
+/// convex hulls overlap. Every reported event must own the exact shared end.
+pub(super) fn exact_endpoint_only(
+    a: &crate::Curve,
+    b: &crate::Curve,
+    point: [f64; 2],
+    tolerance: f64,
+) -> crate::Result<bool> {
+    use nurbs_core::intersection::planar_scalar::{Relation, intersect};
+    let endpoint = |c: &crate::Curve| {
+        if c.control_points[0].as_slice() == point {
+            Some(c.domain()[0])
+        } else if c.control_points.last().unwrap().as_slice() == point {
+            Some(c.domain()[1])
+        } else {
+            None
+        }
+    };
+    let (Some(t), Some(u)) = (endpoint(a), endpoint(b)) else {
+        return Ok(false);
+    };
+    Ok(
+        matches!(intersect(a,b,tolerance)?,Some(Relation::Points(events))
+        if !events.is_empty() && events.iter().all(|p|p.first==t && p.second==u)),
+    )
+}

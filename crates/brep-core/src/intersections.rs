@@ -1692,8 +1692,6 @@ pub fn surface_plane(
             report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
             continue;
         }
-        let lower: Vec<_> = values.iter().step_by(2).copied().collect();
-        let upper: Vec<_> = values.iter().skip(1).step_by(2).copied().collect();
         let boundary_scale = piece.weights[0][1] / piece.weights[0][0];
         let proportional_boundaries = boundary_scale.is_finite()
             && boundary_scale > 0.
@@ -1702,7 +1700,8 @@ pub fn surface_plane(
                 .control_points
                 .iter()
                 .all(|row| plane.distance(point3(&row[0])) == plane.distance(point3(&row[1])));
-        if lower.iter().zip(&upper).all(|(a, b)| a.value == b.value) || proportional_boundaries {
+        let equal_bounds = values.chunks_exact(2).all(|pair| pair[0].value == pair[1].value);
+        if equal_bounds || proportional_boundaries {
             // A plane parallel to every ruling reduces to a boundary-curve
             // root query. Each root carries its parameter interval through to
             // a whole generator line; no sampled 3D curve fitting is needed.
@@ -1770,18 +1769,21 @@ pub fn surface_plane(
             }
             continue;
         }
-        let side = |v: &[Coefficient]| {
-            if v.iter().all(|c| c.bound.sign() == 1) {
-                1
-            } else if v.iter().all(|c| c.bound.sign() == -1) {
-                -1
+        let side_step = |offset: usize| {
+            let mut it = values.iter().skip(offset).step_by(2);
+            let Some(first) = it.next() else { return 0; };
+            let s = first.bound.sign();
+            if s != 0 && it.all(|c| c.bound.sign() == s) {
+                s
             } else {
                 0
             }
         };
-        let lower_zero = lower.iter().all(|c| c.value == 0.);
-        let upper_zero = upper.iter().all(|c| c.value == 0.);
-        if (lower_zero && side(&upper) != 0) || (upper_zero && side(&lower) != 0) {
+        let lower_side = side_step(0);
+        let upper_side = side_step(1);
+        let lower_zero = values.iter().step_by(2).all(|c| c.value == 0.);
+        let upper_zero = values.iter().skip(1).step_by(2).all(|c| c.value == 0.);
+        if (lower_zero && upper_side != 0) || (upper_zero && lower_side != 0) {
             let v = if lower_zero { domain[2] } else { domain[3] };
             // A continuous shared knot is owned by the preceding V span.
             // Full-multiplicity discontinuities retain both independent sides.
@@ -1803,7 +1805,7 @@ pub fn surface_plane(
             }
             continue;
         }
-        if side(&lower) * side(&upper) == -1 {
+        if lower_side * upper_side == -1 {
             // Full cross-ruling branch: the denominator cannot vanish because
             // the two boundary curves are uniformly on opposite plane sides.
             let trace = SurfaceTrace::Ruled {

@@ -18,17 +18,41 @@ pub enum SurfaceSurfaceComponent {
     Continued(ContinuedBranch),
     Tangency(TangencyBranch),
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CoverageProof {
+    Unproven,
+    ControlHullDisjoint,
+    SameParameterIdentity,
+    RectilinearCharts,
+    MonotoneGraphInRectangle,
+}
+impl CoverageProof {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Unproven => "unproven",
+            Self::ControlHullDisjoint => "original_control_hull_disjoint",
+            Self::SameParameterIdentity => "same_parameter_identity",
+            Self::RectilinearCharts => "rectilinear_charts",
+            Self::MonotoneGraphInRectangle => "original_monotone_graph_in_rectangle",
+        }
+    }
+}
 pub struct SurfaceSurfaceIntersection {
+    /// Geometric-set coverage proof; candidates alone never prove completeness.
+    pub coverage_proof: CoverageProof,
+    /// Separate owned branch/trim graph obligation, currently not certified.
+    pub topology_proven: bool,
     pub components: Vec<SurfaceSurfaceComponent>,
     pub unresolved: Vec<UnresolvedSurfaceIntersection>,
     pub boxes_visited: usize,
     pub bernstein_excluded: usize,
+    /// Legacy name: counts refined candidate seeds, not Krawczyk certificates.
     pub krawczyk_isolated: usize,
     pub tolerance: ToleranceContext,
 }
 impl SurfaceSurfaceIntersection {
     pub fn complete(&self) -> bool {
-        self.unresolved.is_empty()
+        self.coverage_proof != CoverageProof::Unproven && self.unresolved.is_empty()
     }
 
     pub fn summary(&self) -> branches::Summary {
@@ -66,7 +90,9 @@ impl SurfaceSurfaceIntersection {
                 }
             })
             .collect::<Vec<_>>();
-        branches::summarize(&descriptors, self.complete())
+        let mut summary = branches::summarize(&descriptors, self.complete());
+        summary.permits_topology_authorship &= self.topology_proven;
+        summary
     }
 }
 pub(super) fn mark_junctions(components: &mut [SurfaceSurfaceComponent], floor: f64) {

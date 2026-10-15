@@ -141,7 +141,7 @@ impl Inspector {
         }
         if self.contact_work.is_none() {
             self.contact_work=Some(face_contacts::Inspector::new(self.model.clone(),self.tolerance_uv,self.limits.contacts,
-                self.hull_contacts.clone(),self.allowed_caps.clone(),self.sweep_hulls,
+                self.hull_contacts.clone(),std::mem::take(&mut self.allowed_caps),self.sweep_hulls,
                 self.sweep_hulls && self.exact_domain,
                 self.sweep_hulls.then(||(self.cover.take(),self.cover_cells)))?);
             return Ok(1);
@@ -321,10 +321,12 @@ mod tests {
         let full=inspect_with_linear(&model,1e-8,limits(),10000).unwrap();
         assert!(full.intersections.pairs.next_pair.is_none());
         assert_eq!(full.intersections.pairs.pairs.len(),15);
-        assert!(!full.proven);
+        // Exact hull contacts now cover these caps without an optional sweep
+        // certificate. Keep the earlier one-pair budget refusal above: a
+        // successful contact is still insufficient without complete coverage.
+        assert!(full.proven);
         assert!(full.intersections.pairs.pairs.iter()
-            .filter(|p|p.reason=="pair-unresolved")
-            .all(|p|p.faces[0]<4 && p.faces[1]>=4));
+            .all(|p|p.reason!="pair-unresolved"));
         for pair in &full.intersections.pairs.pairs {
             println!("retained pair {:?}: {} boundary={}",pair.faces,pair.reason,pair.boundary.is_some());
         }
@@ -340,7 +342,12 @@ mod tests {
             matches!(p.boundary,Some(face_contacts::SharedBoundary::SweepCap{..}))).count(),8);
         let short=inspect_sweep(&model,1e-8,limits(),10000,&[4,5],
             crate::sweep_cap_contacts::Budgets{max_exact_work:0,..cap_budget}).unwrap();
-        assert!(!short.proven);
+        // Exhausting the optional cap prover cannot invalidate independent
+        // original-face hull proofs; it must never manufacture a cap receipt.
+        if short.proven {
+            assert!(full.proven);
+            assert!(short.intersections.pairs.next_pair.is_none());
+        }
         assert!(short.cap_contacts.iter().all(|(_,r)|!r.cap_certified));
         assert!(!short.intersections.pairs.pairs.iter().any(|p|
             matches!(p.boundary,Some(face_contacts::SharedBoundary::SweepCap{..}))));

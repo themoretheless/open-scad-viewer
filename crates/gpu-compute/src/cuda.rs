@@ -72,10 +72,13 @@ impl CudaDevice {
                 }
             }
         }
-        let ordinal = std::env::var(DEVICE_ENV)
-            .ok()
-            .and_then(|value| value.trim().parse::<usize>().ok())
-            .unwrap_or(0);
+        static ORDINAL: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+        let ordinal = *ORDINAL.get_or_init(|| {
+            std::env::var(DEVICE_ENV)
+                .ok()
+                .and_then(|value| value.trim().parse::<usize>().ok())
+                .unwrap_or(0)
+        });
         let context = std::panic::catch_unwind(|| CudaContext::new(ordinal))
             .ok()?
             .ok()?;

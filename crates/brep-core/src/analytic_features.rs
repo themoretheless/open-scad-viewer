@@ -40,6 +40,43 @@ pub const EXACT_BENT_RMF_SWEEP_CAPABILITY: &str = "exact-parallel-frame-sweep/2"
 /// Qualified finite shell/offset successor. The admitted cells are audited
 /// convex planar-faced bodies and exact finite cylinders under rigid placement.
 pub const EXACT_ANALYTIC_SHELL_CAPABILITY: &str = "analytic-shell/2";
+/// Independent bottom/top radius laws on the four longitudinal corners of an
+/// axis-aligned cuboid, ordered (-X,-Y), (+X,-Y), (+X,+Y), (-X,+Y).
+/// None retains a sharp corner. This does not construct valence-three blends.
+pub fn independent_cuboid_corner_fillets(
+    model: &Model,
+    radii: [Option<[f64; 2]>; 4],
+) -> Result<AuditedFeatureResult> {
+    const CODE: &str = "BREP_INDEPENDENT_CORNER_FILLET_REFUSED";
+    audit_solid(model).map_err(|_| refuse(CODE, "Source must pass the solid audit"))?;
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            CODE,
+            "Independent longitudinal corners currently require an axis-aligned cuboid",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    let selected = radii.map(|r| r.is_some());
+    let bottom = radii.map(|r| r.map_or(0., |r| r[0]));
+    let top = radii.map(|r| r.map_or(0., |r| r[1]));
+    let result = crate::imprint_pipeline::independent_radius_cuboid_vertical_edges(
+        model, min, max, selected, bottom, top,
+    )
+    .map_err(|e| refuse(CODE, &e.message))?;
+    let scale = bottom.into_iter().chain(top).fold(0., f64::max);
+    certify_blend_result(
+        result,
+        "independent-cuboid-longitudinal-fillets/1",
+        vec![
+            "independent_linear_radius_laws",
+            "adjacent_setback_collision_check",
+            "no_valence3_corner",
+        ],
+        scale,
+        CODE,
+    )
+}
+
 /// Exact linear radius law on one vertical edge of an audited AA cuboid.
 pub const EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY: &str = "exact-variable-radius-fillet/1";
 /// Exact equal-radius sphere/cylinder valence-3 corner on an audited AA cuboid.
@@ -4155,4 +4192,16 @@ mod tests {
         let stl = "solid cube\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nendloop\nendfacet\nendsolid cube\n";
         assert_eq!(import_iges(stl).unwrap_err().code, "BREP_IGES_REFUSED");
     }
+    #[test]
+    fn independent_longitudinal_corner_fillets_are_audited() {
+        let source = cuboid([0.; 3], [10., 8., 12.]).unwrap();
+        let result = independent_cuboid_corner_fillets(&source, [
+            Some([0.1, 0.3]), Some([1., 1.5]), Some([2., 1.]), Some([0.5, 0.75]),
+        ]).unwrap();
+        assert!(result.feature.complete);
+        assert!(result.naming_complete);
+        assert_eq!(result.feature.capability, "independent-cuboid-longitudinal-fillets/1");
+        assert_eq!(result.model.faces.len(), 10);
+    }
+
 }

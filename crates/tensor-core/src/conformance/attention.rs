@@ -8,6 +8,9 @@ pub(super) struct Host<T> {
 }
 impl<T: Copy> Host<T> {
     pub(super) fn logical(&self) -> (Shape, Vec<T>) {
+        if self.permutation.is_none() {
+            return (self.shape.clone(), self.values.clone());
+        }
         let mut layout = Layout::contiguous(self.shape.clone()).unwrap();
         if let Some(axes) = &self.permutation {
             layout = layout.permute(axes).unwrap();
@@ -128,19 +131,19 @@ pub(super) fn reference(
             shape.dims().to_vec()
         }
     }
-    fn coords(mut index: usize, dims: &[usize]) -> Vec<usize> {
-        let mut out = vec![0; dims.len()];
+    fn coords(mut index: usize, dims: &[usize], out: &mut [usize]) {
         for (i, &dim) in dims.iter().enumerate().rev() {
             out[i] = index % dim;
             index /= dim;
         }
-        out
     }
     fn address(dims: &[usize], coordinates: &[usize]) -> usize {
         let start = coordinates.len() - dims.len();
-        dims.iter().enumerate().fold(0, |index, (i, &dim)| {
-            index * dim + if dim == 1 { 0 } else { coordinates[start + i] }
-        })
+        let mut index = 0usize;
+        for (i, &dim) in dims.iter().enumerate() {
+            index = index * dim + if dim == 1 { 0 } else { coordinates[start + i] };
+        }
+        index
     }
     let q = canonical(query.0);
     let k = canonical(key.0);
@@ -162,10 +165,12 @@ pub(super) fn reference(
             }
         }
     }
-    let mut out_dims = batches.clone();
+    let mut out_dims = Vec::with_capacity(batch_rank + 3);
+    out_dims.extend_from_slice(&batches);
     out_dims.extend([heads, n, dv]);
     if query.0.rank() == 2 && key.0.rank() == 2 && value.0.rank() == 2 {
-        out_dims = vec![n, dv];
+        out_dims.clear();
+        out_dims.extend([n, dv]);
     }
     let output_shape = shape(&out_dims);
     if output_shape.is_empty() {
@@ -174,11 +179,15 @@ pub(super) fn reference(
     let batch_count: usize = batches.iter().product();
     let scale = f64::from(options.scale.unwrap_or_else(|| (d as f32).sqrt().recip()));
     let mut output = Vec::with_capacity(output_shape.numel());
+    let mut logits = vec![f64::NEG_INFINITY; keys];
+    let mut weights = Vec::with_capacity(keys);
+    let mut coord_buf = vec![0usize; batch_rank + 3];
     for batch in 0..batch_count {
-        let prefix = coords(batch, &batches);
+        coords(batch, &batches, &mut coord_buf[..batch_rank]);
         for head in 0..heads {
+            let kv_head = head / group;
             for row in 0..n {
-                let mut logits = vec![f64::NEG_INFINITY; keys];
+                logits.fill(f64::NEG_INFINITY);
                 for (column, score) in logits.iter_mut().enumerate() {
                     if options
                         .causal
@@ -186,45 +195,54 @@ pub(super) fn reference(
                     {
                         continue;
                     }
-                    let mut score_coords = prefix.clone();
-                    score_coords.extend([head, row, column]);
+                    coord_buf[batch_rank] = head;
+                    coord_buf[batch_rank + 1] = row;
+                    coord_buf[batch_rank + 2] = column;
                     let bias = mask.map_or(0.0, |(shape, data)| {
-                        f64::from(data[address(shape.dims(), &score_coords)])
+                        f64::from(data[address(shape.dims(), &coord_buf)])
                     });
                     if bias == f64::NEG_INFINITY {
                         continue;
                     }
-                    let mut qc = prefix.clone();
-                    qc.extend([head, row, 0]);
-                    let mut kc = prefix.clone();
-                    kc.extend([head / group, column, 0]);
+                    coord_buf[batch_rank] = head;
+                    coord_buf[batch_rank + 1] = row;
+                    coord_buf[batch_rank + 2] = 0;
+                    let q_base = address(&q, &coord_buf);
+                    coord_buf[batch_rank] = kv_head;
+                    coord_buf[batch_rank + 1] = column;
+                    coord_buf[batch_rank + 2] = 0;
+                    let k_base = address(&k, &coord_buf);
                     let mut dot = 0.0;
                     for inner in 0..d {
-                        *qc.last_mut().unwrap() = inner;
-                        *kc.last_mut().unwrap() = inner;
-                        dot += f64::from(query.1[address(&q, &qc)])
-                            * f64::from(key.1[address(&k, &kc)]);
+                        dot += f64::from(query.1[q_base + inner])
+                            * f64::from(key.1[k_base + inner]);
                     }
                     *score = dot * scale + bias;
                 }
                 let max = logits.iter().copied().fold(f64::NEG_INFINITY, f64::max);
                 if max == f64::NEG_INFINITY {
-                    output.extend(vec![0.0; dv]);
+                    output.resize(output.len() + dv, 0.0);
                     continue;
                 }
-                let weights: Vec<f64> = logits.iter().map(|&x| (x - max).exp()).collect();
-                let sum: f64 = weights.iter().sum();
+                weights.clear();
+                let mut sum = 0.0;
+                for &x in &logits {
+                    let w = (x - max).exp();
+                    weights.push(w);
+                    sum += w;
+                }
+                coord_buf[batch_rank] = kv_head;
+                coord_buf[batch_rank + 1] = 0;
+                coord_buf[batch_rank + 2] = 0;
+                let v_head_base = address(&v, &coord_buf);
+                let v_col_stride = if v[v.len() - 2] == 1 { 0 } else { dv };
+                let v_ch_stride = usize::from(dv != 1);
                 for channel in 0..dv {
-                    let mut vc = prefix.clone();
-                    vc.extend([head / group, 0, channel]);
-                    let result = weights
-                        .iter()
-                        .enumerate()
-                        .map(|(col, &weight)| {
-                            vc[prefix.len() + 1] = col;
-                            weight / sum * f64::from(value.1[address(&v, &vc)])
-                        })
-                        .sum();
+                    let mut result = 0.0;
+                    let ch_offset = v_head_base + channel * v_ch_stride;
+                    for (col, &weight) in weights.iter().enumerate() {
+                        result += weight / sum * f64::from(value.1[ch_offset + col * v_col_stride]);
+                    }
                     output.push(result);
                 }
             }

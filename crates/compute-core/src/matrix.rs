@@ -149,8 +149,8 @@ impl ComputeProgram<'_> {
         let groups = dispatches
             .min(
                 self.runtime
-                    .device
-                    .limits()
+                    .context()
+                    .limits
                     .max_compute_workgroups_per_dimension,
             )
             .min(65535);

@@ -111,9 +111,10 @@ const HEARTBEAT_THROTTLE_MS = 1000
 
 function staleReplacement(request: GeometryBuildRequest) {
   if (request.documentRevision !== latestDocumentRevision) {
-    const latest = [...latestByQuality.values()].reduce<GeometryBuildRequest | undefined>((best, candidate) => (
-      !best || candidate.jobId > best.jobId ? candidate : best
-    ), undefined)
+    let latest: GeometryBuildRequest | undefined
+    for (const candidate of latestByQuality.values()) {
+      if (!latest || candidate.jobId > latest.jobId) latest = candidate
+    }
     return latest ? { documentRevision: latest.documentRevision, jobId: latest.jobId } : undefined
   }
   const latest = latestByQuality.get(request.quality)

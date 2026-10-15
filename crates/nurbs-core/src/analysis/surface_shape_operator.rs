@@ -75,6 +75,53 @@ pub(crate) fn from_jets(j: &jets::Jets) -> Result<Option<Shape>> {
     }
     Ok(Some(Shape { normal, tensor }))
 }
+/// Recover the world graph derivatives through a proved nonsingular XY chart.
+/// This avoids subtracting independent wide tangent boxes to prove a nearly
+/// planar curvature. No planarity or orthonormality of the proposal is assumed.
+fn from_graph_jets(j:&jets::Jets,frame:([usize;3],[f64;2]))->Result<Option<Shape>> {
+    let (axes,plane)=frame;
+    let (xu,xv,yu,yv)=(j[1][0][0],j[0][1][0],j[1][0][1],j[0][1][1]);
+    let determinant=xu.mul(yv)?.sub(xv.mul(yu)?)?;
+    if determinant.lo<=0.&&determinant.hi>=0. {return Ok(None);}
+    let neg=|x:I|I::new(-x.hi,-x.lo);
+    let divide=|x:I|if determinant.hi<0. {neg(x)?.div(neg(determinant)?)}else{x.div(determinant)};
+    let inverse=[[divide(yv)?,divide(neg(xv)?)?],[divide(neg(yu)?)?,divide(xu)?]];
+    let gradient=std::array::from_fn::<_,2,_>(|a|j[1][0][2].mul(inverse[0][a]).and_then(|x|x.add(j[0][1][2].mul(inverse[1][a])?)));
+    let gradient=[gradient[0].clone()?,gradient[1].clone()?];
+    let mut second=[[I::point(0.);2];2];
+    for a in 0..2 {for b in 0..2 {
+        let (u,v)=(usize::from(a==0)+usize::from(b==0),usize::from(a==1)+usize::from(b==1));
+        second[a][b]=j[u][v][2].sub(gradient[0].mul(j[u][v][0])?)?.sub(gradient[1].mul(j[u][v][1])?)?;
+    }}
+    let mut graph=[[[I::point(0.);3];4];4];
+    graph[1][0][axes[0]]=I::point(1.);graph[0][1][axes[1]]=I::point(1.);
+    graph[1][0][axes[2]]=I::point(plane[0]).add(gradient[0])?;
+    graph[0][1][axes[2]]=I::point(plane[1]).add(gradient[1])?;
+    for a in 0..2 {for b in a..2 {
+        let mut value=I::point(0.);
+        for r in 0..2 {for s in 0..2 {value=value.add(inverse[r][a].mul(second[r][s])?.mul(inverse[s][b])?)?;}}
+        graph[usize::from(a==0)+usize::from(b==0)][usize::from(a==1)+usize::from(b==1)][axes[2]]=value;
+    }}
+    let Some(mut shape)=from_jets(&graph)? else{return Ok(None);};
+    if determinant.hi<0. {
+        for x in &mut shape.normal {*x=neg(*x)?;}
+        for row in &mut shape.tensor {for x in row {*x=neg(*x)?;}}
+    }
+    Ok(Some(shape))
+}
+fn graph_proposal(s:&Surface,edge:crate::surface_join::Boundary,range:[f64;2],reverse:bool)->Option<([usize;3],[f64;2])> {
+    use crate::surface_join::Boundary;
+    let d=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],[s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
+    let (fixed,max)=match edge {Boundary::UMin=>(0,false),Boundary::UMax=>(0,true),Boundary::VMin=>(1,false),Boundary::VMax=>(1,true)};
+    let mut t=range[0]*0.5+range[1]*0.5;if reverse{t=1.-t;}
+    let mut uv=[0.;2];uv[fixed]=d[fixed][usize::from(max)];uv[1-fixed]=d[1-fixed][0]+t*(d[1-fixed][1]-d[1-fixed][0]);
+    let n=s.evaluate(uv[0],uv[1]).ok()?.unit_normal()?;
+    let c=(0..3).max_by(|&a,&b|n[a].abs().total_cmp(&n[b].abs()))?;
+    if n[c]==0. {return None;}
+    let axes=[(c+1)%3,(c+2)%3,c];let plane=[-n[axes[0]]/n[c],-n[axes[1]]/n[c]];
+    plane.iter().all(|x|x.is_finite()).then_some((axes,plane))
+}
+
 /// Local query only: this is not a whole-seam G2 certificate. Automatic needs
 /// a C2 basis at interior knots; explicit sides resolve one-sided jet queries.
 pub fn at(surface: &Surface, parameter: [f64; 2], sides: [Side; 2]) -> Result<Report> {
@@ -176,9 +223,12 @@ pub fn boundary_bounds(
             });
         }
     }
+    let frame=graph_proposal(surface,edge,range,reverse);
+    let graph=frame.map(|frame|crate::surface_g1::boundary_graph_jets(surface,edge,range,reverse,frame)).transpose()?;
     let mut result: Option<Shape> = None;
-    for j in crate::surface_g1::boundary_jets(surface, edge, range, reverse)? {
-        let Some(shape) = from_jets(&j)? else {
+    for (index,j) in crate::surface_g1::boundary_jets(surface, edge, range, reverse)?.iter().enumerate() {
+        let graph_shape=if let (Some(frame),Some(graph))=(frame,graph.as_ref()) {from_graph_jets(&graph[index],frame)?}else{None};
+        let Some(shape) = (if graph_shape.is_some(){graph_shape}else{from_jets(j)?}) else {
             return Ok(Report {
                 status: Status::RegularityNotProven,
                 normal: None,

@@ -1,9 +1,10 @@
 //! Exact rational surfaces of revolution. Quarter patches avoid periodic seams
 //! and preserve ordinary manifold incidence without collapsed pole edges.
+pub mod g2_annular;
 use super::*;
 mod loft;
 mod rational_loft;
-pub use rational_loft::{AnnularProgressiveBody,AnnularCaps,progressive_profile_body_with_annular_caps,ProgressiveBodyEvidence,EndpointCapCorrection,progressive_profile_body_with_evidence,progressive_profile_body_with_evidence_and_correction,progressive_profile_body_with_rmf_policy,progressive_profile_body_with_rmf_policy_and_corrections};
+pub use rational_loft::{AnnularProgressiveBody,AnnularCaps,progressive_profile_body_with_annular_caps,progressive_profile_body_with_automatic_caps,ProgressiveBodyEvidence,EndpointCapCorrection,progressive_profile_body_with_evidence,progressive_profile_body_with_evidence_and_correction,progressive_profile_body_with_rmf_policy,progressive_profile_body_with_rmf_policy_and_corrections};
 pub use rational_loft::{periodic_section_loft, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, SmoothStationWalls, smooth_station_walls, progressive_profile_body};
 pub(crate) use loft::piecewise_ruled_loft;
 pub use loft::ruled_loft;
@@ -634,6 +635,17 @@ pub fn revolve_wire(wire: &[Curve], tolerance: f64) -> Result<Model> {
 /// Signed partial analytic revolution, capped by retained planar trim curves.
 pub fn revolve_wire_angle(wire: &[Curve], tolerance: f64, angle_degrees: f64) -> Result<Model> {
     if !angle_degrees.is_finite() || !(1e-5..=360.).contains(&angle_degrees.abs()) {
+        return Err(Error::new("BREP_INVALID_ANGLE","Revolve angle magnitude must be in 0.00001..360 degrees"));
+    }
+    planar_trim::validate(&[wire.to_vec()],tolerance)?;
+    revolve_wire_assembly(wire,tolerance,angle_degrees)
+}
+// Only the sealed native meridian constructor can use the polynomial path.
+fn revolve_g2_annular_meridian(source:&g2_annular::Meridian,tolerance:f64)->Result<Model> {
+    revolve_wire_assembly(source.wire(),tolerance,360.)
+}
+fn revolve_wire_assembly(wire:&[Curve],tolerance:f64,angle_degrees:f64)->Result<Model> {
+    if !angle_degrees.is_finite() || !(1e-5..=360.).contains(&angle_degrees.abs()) {
         return Err(Error::new(
             "BREP_INVALID_ANGLE",
             "Revolve angle magnitude must be in 0.00001..360 degrees",
@@ -645,7 +657,6 @@ pub fn revolve_wire_angle(wire: &[Curve], tolerance: f64, angle_degrees: f64) ->
     } else {
         (angle_degrees.abs() / 90.).ceil() as usize
     };
-    planar_trim::validate(&[wire.to_vec()], tolerance)?;
     if wire.len() > 64 || wire.len() < 3 || wire.len() * segments + if full { 0 } else { 2 } > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",

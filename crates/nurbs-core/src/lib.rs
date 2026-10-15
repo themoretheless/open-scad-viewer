@@ -234,3 +234,11 @@ pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
 
 pub use crate::join::surface_blend;
+
+pub use crate::construct::surfaces::bellows;
+
+pub use crate::construct::surfaces::sphere_envelope;
+
+pub use crate::intersection::parallel_sections;
+
+pub use crate::offset::machining as planar_toolpath;

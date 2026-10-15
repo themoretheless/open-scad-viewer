@@ -142,16 +142,11 @@ fn span(knots: &[f64], degree: usize, n: usize, range: Interval) -> Option<usize
 }
 /// Homogeneous blossom of the original curve, with interval affine endpoint
 /// mapping. Never round a newly extracted control point before certification.
-fn restricted(c: &Curve, t: [f64; 2], reversed: bool) -> Result<Option<Vec<Poly>>> {
-    use crate::curve_surface_agreement::mapped;
-    let range = mapped(c, Interval::new(t[0], t[1])?, reversed)?;
+fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<Vec<Poly>>> {
+    let range = Interval::new(ends[0].lo.min(ends[1].lo), ends[0].hi.max(ends[1].hi))?;
     let Some(span) = span(&c.knots, c.degree, c.control_points.len(), range) else {
         return Ok(None);
     };
-    let ends = [
-        mapped(c, Interval::point(t[0]), reversed)?,
-        mapped(c, Interval::point(t[1]), reversed)?,
-    ];
     let dim = c.control_points[0].len();
     let mut source = Vec::new();
     for i in span - c.degree..=span {
@@ -285,6 +280,27 @@ pub(crate) fn upper_cell(
     reversed: bool,
     t: [f64; 2],
 ) -> Result<Option<f64>> {
+    use crate::curve_surface_agreement::mapped;
+    upper_mapped_cell(
+        c, p, s,
+        [
+            mapped(c, Interval::point(t[0]), reversed)?,
+            mapped(c, Interval::point(t[1]), reversed)?,
+        ],
+        [
+            mapped(p, Interval::point(t[0]), false)?,
+            mapped(p, Interval::point(t[1]), false)?,
+        ],
+    )
+}
+/// Endpoint intervals describe an affine relation on the ORIGINAL curves.
+pub(crate) fn upper_mapped_cell(
+    c: &Curve,
+    p: &Curve,
+    s: &Surface,
+    edge_ends: [Interval; 2],
+    pcurve_ends: [Interval; 2],
+) -> Result<Option<f64>> {
     let (du, dv) = (s.degree_u, s.degree_v);
     if p.degree.saturating_mul(du.saturating_add(dv)) > 32
         || c.degree > 16
@@ -293,13 +309,16 @@ pub(crate) fn upper_cell(
     {
         return Ok(None);
     }
-    let Some(curve) = restricted(c, t, reversed)? else {
+    let Some(curve) = restricted_ends(c, edge_ends)? else {
         return Ok(None);
     };
-    let Some(h) = restricted(p, t, false)? else {
+    let Some(h) = restricted_ends(p, pcurve_ends)? else {
         return Ok(None);
     };
-    let range = crate::curve_surface_agreement::mapped(p, Interval::new(t[0], t[1])?, false)?;
+    let range = Interval::new(
+        pcurve_ends[0].lo.min(pcurve_ends[1].lo),
+        pcurve_ends[0].hi.max(pcurve_ends[1].hi),
+    )?;
     let uv = crate::curve_surface_agreement::curve_bounds(p, range)?;
     let domains = [
         [s.knots_u[du], s.knots_u[s.control_points.len()]],

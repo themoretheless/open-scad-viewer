@@ -218,17 +218,16 @@ pub fn boolean(
         let from_a = index < av.len();
         let local = if from_a { index } else { index - av.len() };
         let other = if from_a { &b } else { &a };
-        cuts[index].sort_by(f64::total_cmp);
-        cuts[index].dedup_by(|a, b| (*a - *b).abs() < 1e-12);
+        super::coincidence_ops::coalesce(source, &mut cuts[index], tolerance, &mut work)?;
         for interval in cuts[index].windows(2) {
-            if interval[1] - interval[0] <= 1e-12 {
+            if interval[1] <= interval[0] {
                 continue;
             }
             let mut piece = source.trim(interval[0], interval[1])?;
-            let p = piece.evaluate((interval[0] + interval[1]) * 0.5)?.point;
+            let p = piece.evaluate(interval[0] * 0.5 + interval[1] * 0.5)?.point;
             let neighbor = shared.iter().find_map(|(i, j, same, ar, br)| {
                 let range = if from_a { ar } else { br };
-                let mid = (interval[0] + interval[1]) * 0.5;
+                let mid = interval[0] * 0.5 + interval[1] * 0.5;
                 if ((from_a && *i == local) || (!from_a && *j == local))
                     && range[0] < mid
                     && mid < range[1]
@@ -328,7 +327,7 @@ pub fn boolean(
             }
         }
     }
-    assemble(selected, tolerance, op == "union")
+    assemble(selected, tolerance, op == "union" || op == "difference")
 }
 pub(super) fn assemble(
     mut selected: Vec<(Curve, usize)>,

@@ -73,10 +73,9 @@ impl value_codec::Serialize for PatchSet {
 }
 impl<'de> value_codec::Deserialize<'de> for PatchSet {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
+        let Value::Object(mut object) = value else {
+            return Err(value_codec::error("Expected object"));
+        };
         let patches: Vec<Surface> = value_codec::Deserialize::from_value(
             object
                 .remove("patches")
@@ -119,14 +118,16 @@ impl<'de> value_codec::Deserialize<'de> for PatchSet {
 }
 fn surface(cp: Vec<Vec<Point>>) -> Surface {
     let degree = cp.len() - 1;
-    let mut knots = vec![0.; degree + 1];
-    knots.extend(vec![1.; degree + 1]);
+    let n = degree + 1;
+    let mut knots = Vec::with_capacity(2 * n);
+    knots.resize(n, 0.);
+    knots.resize(2 * n, 1.);
     Surface {
         degree_u: degree,
         degree_v: degree,
         knots_u: knots.clone(),
         knots_v: knots,
-        weights: vec![vec![1.; degree + 1]; degree + 1],
+        weights: vec![vec![1.; n]; n],
         control_points: cp
             .into_iter()
             .map(|r| r.into_iter().map(|p| p.to_vec()).collect())
@@ -215,7 +216,7 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
             }
         }
     }
-    let mut patches = Vec::new();
+    let mut patches = Vec::with_capacity(mesh.indices.len() / 3);
     let mut maximum: f64 = 0.;
     let mut count = 0;
     for t in mesh.indices.as_chunks::<3>().0 {
@@ -307,7 +308,7 @@ pub fn tessellate_surfaces(
     let built_patches = math_core::par_try_map(patches, 2, |s| tessellate_nurbs(s, &opts))?;
     for (i, built) in built_patches.into_iter().enumerate() {
         let offset = mesh.positions.len() / 3;
-        ids.extend(vec![face_ids[i]; built.mesh.indices.len() / 3]);
+        ids.resize(ids.len() + built.mesh.indices.len() / 3, face_ids[i]);
         mesh.indices
             .extend(built.mesh.indices.iter().map(|j| j + offset));
         mesh.positions.extend(built.mesh.positions);

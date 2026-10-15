@@ -10,7 +10,9 @@ import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
 const [root,output,nativeRoot]=process.argv.slice(2)
 assert.ok(nativeRoot,'Rust original-source capture root required')
 assert.ok(root&&output,'Staged root and output are required')
+const automatic=process.argv.includes('--automatic-caps')
 const rawBuilt=process.argv.includes('--raw-built')
+const capsFirst=process.argv.includes('--caps-first')
 const unpackedOptimized=process.argv.find(a=>a.startsWith('--unpacked-optimized='))?.slice('--unpacked-optimized='.length)
 assert.ok(!(rawBuilt&&unpackedOptimized),'Choose one explicit unpublished artifact mode')
 const artifactMode=unpackedOptimized?'unpacked-optimized':rawBuilt?'raw-built-before-optimization':'packed-staged'
@@ -41,9 +43,9 @@ const invoke=(op:string,args:object):any=>{
   return reply.value
  }finally{wasm.abi_free(ptr,encoded.length)}
 }
-const volume=(model:unknown)=>{
+const volume=(model:unknown,capFaces:number[]=[])=>{
  const started=performance.now()
- const start=invoke('brep_sweep_volume_begin',{model,capFaces:[],...DEFAULT_SWEEP_VOLUME_BUDGETS})
+ const start=invoke('brep_sweep_volume_begin',{model,capFaces,...DEFAULT_SWEEP_VOLUME_BUDGETS})
  try{
   for(let i=0;i<10000;i++){
    const step=invoke('brep_sweep_volume_step',{session:start.session,maxUnits:32})
@@ -98,9 +100,13 @@ for(const entry of capture.cases){
  const source=JSON.parse(sourceBytes.toString())
  const {op,...args}=source
  const before=JSON.stringify(args)
- const body=invoke(op,{...args,smoothness_max_work:2000000})
+ assert.ok(['brep_nurbs_progressive_profile_annular_body','brep_nurbs_progressive_profile_auto_body'].includes(op))
+ const operation=automatic?'brep_nurbs_progressive_profile_auto_body':'brep_nurbs_progressive_profile_annular_body'
+ const body=invoke(operation,{...args,smoothness_max_work:2000000})
  assert.equal(JSON.stringify(args),before)
  assert.equal(body.capRepresentation,'radial-annular')
+ if(automatic)assert.ok(body.capSelectionExactWork>0)
+ else assert.equal(body.capSelectionExactWork,0)
  assert.equal(body.boundaryContinuousBound,true)
  assert.equal(body.boundaryErrorWithinBudget,true)
  assert.ok(body.boundaryErrorUpper<=args.max_deviation)
@@ -111,23 +117,38 @@ for(const entry of capture.cases){
  assert.equal(body.retainedAnnularFilling.sourceFillingCovered,true)
  assert.equal(body.retainedAnnularFilling.sourceUvFacesInjective,true)
  assert.equal(body.retainedAnnularFilling.sourceUvPairsClassified,true)
- assert.equal(body.retainedAnnularFilling.exactWork,body.retainedAnnularFilling.constructionExactWork+body.retainedAnnularFilling.fillingExactWork)
+ assert.equal(body.retainedAnnularFilling.exactWork,(body.retainedAnnularFilling.selectionExactWork??0)+body.retainedAnnularFilling.constructionExactWork+body.retainedAnnularFilling.fillingExactWork)
  assert.ok(body.retainedAnnularFilling.exactWork<=1000000)
  assert.equal(body.retainedSmoothness.capWallContinuity,'C0')
  assert.equal(body.retainedSmoothness.fullBoundarySmoothnessCertified,false)
  assert.ok(body.retainedSmoothness.totalExactWork<=2000000)
+ if(capsFirst){
+  const audit=body.retainedSmoothness
+  assert.equal(audit.auditOrder,'caps-first')
+  let work=0
+  for(const cap of audit.capInternalSeams){
+   assert.equal(cap.maxWork,2000000-work)
+   assert.ok(Number.isSafeInteger(cap.exactWork)&&cap.exactWork>=0&&cap.exactWork<=cap.maxWork)
+   if(cap.g2Certified)assert.equal(cap.g1Certified,true)
+   if(cap.g1Certified||cap.g2Certified)assert.ok(cap.exactWork>0)
+   work+=cap.exactWork
+  }
+  assert.equal(audit.walls.maxWork,2000000-work)
+  assert.equal(audit.totalExactWork,work+audit.walls.totalExactWork)
+  if(entry.sourceRequestFile==='quadratic-frenet-source.json')assert.equal(audit.capInternalSeams[0].g2Certified,true,'Applicable initial cap jets must not be starved')
+ }
  const boundaryCertificate={method:'retained-sweep-boundary-union',scope:'boundary-set-hausdorff',
   continuousBound:body.boundaryContinuousBound,errorUpper:body.boundaryErrorUpper,
   filledCapErrorUpper:body.filledCapErrorUpper,budget:args.max_deviation,withinBudget:body.boundaryErrorWithinBudget}
  const key=entry.sourceRequestFile.replace('-source.json','')
  const audited=materialAndStep({...body,boundaryCertificate},key)
- reports.push({key,sourceRequestSha256:entry.sourceRequestSha256,boundaryCertificate,
+ reports.push({key,operation,sourceRequestSha256:entry.sourceRequestSha256,boundaryCertificate,
   retainedAnnularFilling:body.retainedAnnularFilling,retainedSmoothness:body.retainedSmoothness,volume:audited.proof})
  for(const injected of ['model','boundaryCertificate','retainedAnnularFilling','capFaces','retainedSmoothness']){
-  assert.throws(()=>invoke(op,{...args,[injected]:{certified:true}}),/original source/)
+  assert.throws(()=>invoke(operation,{...args,[injected]:{certified:true}}),/original source/)
  }
- assert.throws(()=>invoke(op,{...args,annular_cap_max_work:0}))
- const unproved=invoke(op,{...args,annular_cap_max_products:0})
+ assert.throws(()=>invoke(operation,{...args,annular_cap_max_work:0}))
+ const unproved=invoke(operation,{...args,annular_cap_max_products:0})
  assert.equal(unproved.boundaryContinuousBound,false)
  assert.equal(unproved.boundaryErrorUpper,null)
 }
@@ -137,26 +158,32 @@ const hole=invoke('curve_reverse',{curve:invoke('curve_circle',{center:[0,0,0],n
 const request={loops:[[outer],[hole]],path:invoke('curve_line',{start:[0,0,0],end:[0,0,10]}),
  scale:curve(1),twist:curve(0),normal:[1,0,0],orientation:'fixed',spacing:'parameter',
  initial_sections:3,max_sections:3,max_deviation:.01,smoothness_max_work:2000000}
-const owned=invoke('brep_nurbs_progressive_profile_annular_body',request)
+const ownedOperation=automatic?'brep_nurbs_progressive_profile_auto_body':'brep_nurbs_progressive_profile_annular_body'
+const owned=invoke(ownedOperation,request)
+assert.equal(owned.capRepresentation,automatic?'legacy':'radial-annular')
+assert.equal(owned.capFaces.length,automatic?2:8)
+assert.deepEqual(owned.planarCapFaces,automatic?owned.capFaces:[])
 const repair={station_quantum:.125,station_tolerance:1e-9,station_max_work:1000000}
-const reconstruct=(extra:object={})=>invoke('brep_nurbs_progressive_profile_annular_body_reconstruct_stations',{
+const reconstruct=(extra:object={})=>invoke(ownedOperation+'_reconstruct_stations',{
  ...request,...repair,expected_source_model:owned.model,...extra})
 const repaired=reconstruct(),candidate=repaired.stationReconstruction
 assert.equal(candidate.boundaryCertificate.continuousBound,true)
 assert.equal(candidate.boundaryCertificate.withinBudget,true)
 assert.equal(candidate.profileSmoothness.station.stationG2Certified,true)
 assert.deepEqual(repaired.capFaces,owned.capFaces)
-assert.deepEqual(repaired.planarCapFaces,[])
+assert.deepEqual(repaired.planarCapFaces,owned.planarCapFaces)
 for(const face of owned.capFaces)assert.deepEqual(candidate.reconstruction.model.faces[face],owned.model.faces[face])
 const tainted=structuredClone(owned.model);tainted.vertices[0].point[0]+=1e-12
 assert.throws(()=>reconstruct({expected_source_model:tainted}),/differs/)
-assert.throws(()=>reconstruct({station_max_work:0}),/Annular boundary identity is not exact/)
-const repairedMaterial=volume(candidate.reconstruction.model)
+if(automatic)assert.equal(reconstruct({station_max_work:0}).stationReconstruction.reconstruction,null)
+else assert.throws(()=>reconstruct({station_max_work:0}),/Annular boundary identity remains unproved: ResourceLimit/)
+const repairedMaterial=volume(candidate.reconstruction.model,repaired.planarCapFaces)
 assert.equal(repairedMaterial.solidGeometryCertified,true)
 mkdirSync(directory,{recursive:true})
 writeFileSync(join(directory,'manifest.json'),JSON.stringify({schema:'sweep-external-step/2',units:'mm',
  artifactProvenance:{mode:artifactMode,sha256,sourceCaptureManifestSha256:hash(readFileSync(join(nativeRoot,'manifest.json')))},cases:stepCases},null,2)+'\n')
-writeFileSync(output,JSON.stringify({schema:'smooth-annular-owned-abi/1',passed:true,artifactPath,artifactMode,sha256,
+writeFileSync(output,JSON.stringify({schema:'smooth-annular-owned-abi/1',passed:true,automatic,artifactPath,artifactMode,sha256,
+ capsFirstTransportChecked:capsFirst,
  byteLength:bytes.length,scope:'Finite exact-artifact ABI, source-bound, fresh material, station jets and independent STEP preparation; no Rush/UI delivery claim',
  cases:reports,reconstruction:{boundaryCertificate:candidate.boundaryCertificate,profileSmoothness:candidate.profileSmoothness,
  volume:repairedMaterial,capFacesPreserved:true,mutatedSourceRefused:true,zeroWorkRefused:true},calls},null,2)+'\n')

@@ -158,7 +158,7 @@ fn solve3(matrix: [[f64; 3]; 3], rhs: [f64; 3]) -> Option<[f64; 3]> {
 fn detect_exact(surface: &Surface) -> Result<Option<Exact>> {
     let ([u0, u1], [v0, v1]) = domain(surface);
     let (nu, nv) = (5, 5);
-    let mut jets = Vec::new();
+    let mut jets = Vec::with_capacity((nu + 1) * (nv + 1));
     for i in 0..=nu {
         for j in 0..=nv {
             let u = u0 + (u1 - u0) * i as f64 / nu as f64;
@@ -587,7 +587,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
             if radius + signed <= 0. {
                 // Inward offset through the center: the general path records
                 // the focal crossing as a degenerate region.
-                let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+                let candidate = offset_net(surface, distance, &mut degenerate)?;
                 let deviation =
                     sampled_deviation(surface, &candidate, distance, &mut degenerate)?;
                 candidate.validate()?;
@@ -676,7 +676,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
         // cloud certificate does not certify the continuous offset map.
         let ([u0, u1], [v0, v1]) = domain(surface);
         let (nu, nv) = (24, 24);
-        let mut targets = Vec::new();
+        let mut targets = Vec::with_capacity((nu + 1) * (nv + 1));
         for i in 0..=nu {
             for j in 0..=nv {
                 let u = u0 + (u1 - u0) * i as f64 / nu as f64;
@@ -1032,4 +1032,19 @@ mod tests {
         assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
         assert!(err.contains("distance"), "{err}");
     }
+}
+
+/// Offset the control net along Greville normals while retaining the original
+/// degrees, knot domains and positive weights. Useful for exactly owned side
+/// walls; error remains sampled, not a continuous thickness certificate.
+/// Degeneracy/focal warnings are retained and must be handled by the caller.
+pub fn offset_preserving_basis(surface:&Surface,distance:f64)->Result<OffsetReport> {
+    surface.validate()?;require_finite_f64(distance,"distance")?;
+    if distance==0. {return Ok(OffsetReport{surface:surface.clone(),max_deviation:0.,degenerate_regions:vec![],exceeds_fold_free_bound:false,exact:true})}
+    let validity=offset_validity(surface,distance)?;
+    let mut degenerate=Vec::new();
+    if !validity.requested_ok {degenerate.push(validity_cell(surface,validity.limiting_uv));}
+    let result=offset_net(surface,distance,&mut degenerate)?;
+    let max_deviation=sampled_deviation(surface,&result,distance,&mut degenerate)?;
+    Ok(OffsetReport{surface:result,max_deviation,degenerate_regions:degenerate,exceeds_fold_free_bound:!validity.requested_ok,exact:false})
 }

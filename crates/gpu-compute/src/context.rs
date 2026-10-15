@@ -44,6 +44,10 @@ pub struct GpuContextHandles {
     pub backend: wgpu::Backend,
     /// Features advertised by the adapter, not necessarily enabled on the device.
     pub features: wgpu::Features,
+    /// Features enabled on the device.
+    pub enabled_features: wgpu::Features,
+    /// Device limits cached at creation.
+    pub limits: wgpu::Limits,
     pub subgroup_min_size: u32,
     pub subgroup_max_size: u32,
 }
@@ -100,12 +104,16 @@ impl GpuContext {
             trace: wgpu::Trace::Off,
         }))
         .map_err(|error| GpuContextError::Device(error.to_string()))?;
+        let enabled_features = device.features();
+        let limits = device.limits();
         Ok(Self {
             inner: std::sync::Arc::new(GpuContextHandles {
                 device,
                 queue,
                 backend,
                 features,
+                enabled_features,
+                limits,
                 subgroup_min_size: info.subgroup_min_size,
                 subgroup_max_size: info.subgroup_max_size,
             }),
@@ -121,7 +129,7 @@ impl GpuContext {
     }
 
     pub fn enabled_features(&self) -> wgpu::Features {
-        self.device.features()
+        self.enabled_features
     }
 
     /// Whether subgroups can be used on this device.

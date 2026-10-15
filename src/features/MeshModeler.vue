@@ -137,10 +137,15 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, { immediate: true })
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
+const meshStatsCache = new WeakMap<PolygonMesh, ReturnType<typeof meshObjectStats> & { edges: number }>()
 const stats = computed(() => {
   if (!kernelReady.value || !selected.value) return null
-  const base = meshObjectStats(selected.value.mesh)
-  return { ...base, edges: buildEdgeList(selected.value.mesh).length }
+  const mesh = selected.value.mesh
+  const cached = meshStatsCache.get(mesh)
+  if (cached) return cached
+  const result = { ...meshObjectStats(mesh), edges: getEdgeList(mesh).length }
+  meshStatsCache.set(mesh, result)
+  return result
 })
 
 function syncHistoryFlags() {
@@ -186,7 +191,7 @@ function transformSelected() {
     if ((selectMode.value === 'vertex' && selectedVerts.value.length) ||
         (selectMode.value === 'edge' && selectedEdges.value.length)) {
       const vertexIds = selectMode.value === 'edge'
-        ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(d.objects[index].mesh)[edge] ?? []))]
+        ? [...new Set(selectedEdges.value.flatMap(edge => getEdgeList(d.objects[index].mesh)[edge] ?? []))]
         : selectedVerts.value
       d.objects[index] = {
         ...d.objects[index],
@@ -515,9 +520,18 @@ function togglePick(kind: 'vertex' | 'face' | 'edge', id: number) {
   list.value = [...set]
 }
 
-function projected(objectId: string) {
-  const object = document.value.objects.find(o => o.id === objectId)
-  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
+const edgeListCache = new WeakMap<PolygonMesh, Array<[number, number]>>()
+function getEdgeList(mesh: PolygonMesh): Array<[number, number]> {
+  let edges = edgeListCache.get(mesh)
+  if (!edges) {
+    edges = buildEdgeList(mesh)
+    edgeListCache.set(mesh, edges)
+  }
+  return edges
+}
+
+function projected(object: MeshWorkspaceDocument['objects'][number]) {
+  if (!object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
   const cam = camera.value
   const tris = projectMeshModelerFaces(object.mesh, cam)
   const verts: Array<{ x: number; y: number; id: number }> = []
@@ -527,7 +541,7 @@ function projected(objectId: string) {
       verts.push({ x: p[0], y: -p[1], id: i })
     }
   }
-  const edges = selectMode.value === 'edge' ? buildEdgeList(object.mesh).map(([a, b], id) => {
+  const edges = selectMode.value === 'edge' ? getEdgeList(object.mesh).map(([a, b], id) => {
     const point = (vertex: number) => projectDirectPoint([
       object.mesh.positions[vertex * 3],
       object.mesh.positions[vertex * 3 + 1],
@@ -560,7 +574,7 @@ function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' 
   if (!list.value.includes(id)) { list.value = [...list.value, id] }
   const mesh = object.mesh
   const vertexIds = kind === 'vertex' ? [...selectedVerts.value]
-    : kind === 'edge' ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(mesh)[edge] ?? []))]
+    : kind === 'edge' ? [...new Set(selectedEdges.value.flatMap(edge => getEdgeList(mesh)[edge] ?? []))]
       : [...new Set(selectedFaces.value.flatMap(face => [mesh.indices[face * 3], mesh.indices[face * 3 + 1], mesh.indices[face * 3 + 2]]))]
   const target = event.currentTarget as SVGGraphicsElement
   const svg = target.ownerSVGElement ?? (target as unknown as SVGSVGElement)
@@ -645,7 +659,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
-const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
 const sceneFaces = computed(() => scene.value.flatMap(object =>
   object.tris.map(tri => ({ ...tri, objectId: object.id })),

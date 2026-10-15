@@ -853,21 +853,15 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         Ok(true)
     };
     let center = |m: &Mesh| {
-        std::array::from_fn::<_, 3, _>(|k| {
-            (m.positions
-                .as_chunks::<3>()
-                .0
-                .iter()
-                .map(|p| p[k])
-                .fold(f64::INFINITY, f64::min)
-                + m.positions
-                    .as_chunks::<3>()
-                    .0
-                    .iter()
-                    .map(|p| p[k])
-                    .fold(f64::NEG_INFINITY, f64::max))
-                / 2.
-        })
+        let mut cmin = [f64::INFINITY; 3];
+        let mut cmax = [f64::NEG_INFINITY; 3];
+        for p in m.positions.as_chunks::<3>().0 {
+            for k in 0..3 {
+                cmin[k] = cmin[k].min(p[k]);
+                cmax[k] = cmax[k].max(p[k]);
+            }
+        }
+        std::array::from_fn::<_, 3, _>(|k| cmin[k] / 2. + cmax[k] / 2.)
     };
     let axis = sub(center(&b), center(&a));
     let separated = !a.indices.is_empty()

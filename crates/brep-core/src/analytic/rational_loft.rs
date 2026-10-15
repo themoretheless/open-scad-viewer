@@ -714,6 +714,7 @@ pub struct ProgressiveBodyEvidence {
     station_closed:bool,
     station_budget:f64,
     annular_caps:Option<AnnularCaps>,
+    cap_selection_work:u64,
 }
 
 mod annular_caps;
@@ -1231,7 +1232,7 @@ pub fn progressive_profile_body_with_rmf_policy_and_corrections(
     rmf_policy:Option<(usize,usize,usize)>,
 )->Result<ProgressiveBodyEvidence>{
     progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
-        correction,profile_correction,rmf_policy,None)
+        correction,profile_correction,rmf_policy,None,false)
 }
 
 /// Source-owned progressive body with complete radial annular end caps.
@@ -1245,7 +1246,21 @@ pub fn progressive_profile_body_with_annular_caps(
     rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
 )->Result<AnnularProgressiveBody>{
     let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
-        correction,profile_correction,rmf_policy,Some(caps))?;
+        correction,profile_correction,rmf_policy,Some(caps),false)?;
+    Ok(annular_caps::Boundary::new(body))
+}
+
+/// Native selection preserves exact legacy caps. A failed terminal coedge
+/// probe and annular construction/filling share one exact-work allowance.
+pub fn progressive_profile_body_with_automatic_caps(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
+    rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
+)->Result<AnnularProgressiveBody>{
+    let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
+        correction,profile_correction,rmf_policy,Some(caps),true)?;
     Ok(annular_caps::Boundary::new(body))
 }
 
@@ -1254,7 +1269,7 @@ fn progressive_profile_body_internal(
     affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
     guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
     correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
-    rmf_policy:Option<(usize,usize,usize)>,annular:Option<crate::retained_annular_cap::reference_filling::Limits>,
+    rmf_policy:Option<(usize,usize,usize)>,annular:Option<crate::retained_annular_cap::reference_filling::Limits>,automatic_caps:bool,
 )->Result<ProgressiveBodyEvidence>{
     use nurbs_core::progressive_sweep::{Sweep, approximate_profiles};
     if let Some(limits)=annular {annular_caps::validate_limits(limits)?;}
@@ -1284,10 +1299,10 @@ fn progressive_profile_body_internal(
         return Err(err("Progressive body exceeds64 section spans"));
     }
     let closed=nurbs_core::progressive_sweep::path_is_closed(path)?;
-    if annular.is_some() && !closed && loops.len()!=2 {
+    if annular.is_some() && !automatic_caps && !closed && loops.len()!=2 {
         return Err(err("Annular progressive caps require one outer ring and one hole"));
     }
-    let cap_faces = if closed {0} else if annular.is_some() {spans} else {2};
+    let cap_faces = if closed {0} else if annular.is_some() && !automatic_caps {spans} else {2};
     let options = nurbs_core::progressive_sweep::Options {
         max_sections: options
             .max_sections
@@ -1434,10 +1449,19 @@ fn progressive_profile_body_internal(
     } else {
         rational_section_loft(&sections)?
     };
+    let (use_annular,cap_selection_work)=if automatic_caps && !report.closed_path && loops.len()==2 {
+        let (exact,work)=crate::sweep_miter_owned::cap_boundaries_exact(&model,annular.unwrap().exact_work)?;
+        (!exact,work)
+    }else{(annular.is_some() && !automatic_caps && !report.closed_path,0)};
+    // Preserve accepted legacy layouts. A replacement must fit the same face
+    // ceiling; no surface/station is dropped to manufacture room for caps.
+    if use_annular && model.faces.len()-2+spans>MAX_FACES {
+        return Err(err("Automatic annular caps exceed the shared body face budget"));
+    }
     let (retained_sections,body_decomposition_error_upper,body_decomposition_products)=retained_section_partition(&sections,1000000)?;
-    let retained_caps=if report.closed_path || annular.is_some() {None} else {
+    let retained_caps=if report.closed_path || use_annular {None} else {
         Some(crate::sweep_retained_caps::inspect(&model,&[retained_sections[0].clone(),retained_sections.last().unwrap().clone()],
-            crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,
+            crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:annular.map_or(1000000,|l|l.exact_work)-cap_selection_work,max_chart_cells:1000,
                 max_trim_pairs:100000,max_trim_cells:100000,max_trim_domain_cells:1000000},1024)?)
     };
     let make_source=|| ->Result<nurbs_core::progressive_sweep::MultiSweep<'_>> {
@@ -1450,7 +1474,7 @@ fn progressive_profile_body_internal(
         if let Some((steps,cells,products))=rmf_policy {source=source.with_spatial_rmf_error_limits(steps,cells,products)?;}
         Ok(source)
     };
-    let cap_projection=if report.closed_path || annular.is_some() {None} else {
+    let cap_projection=if report.closed_path || use_annular {None} else {
         let source=make_source()?;
         let sizes=loops.iter().map(Vec::len).collect::<Vec<_>>();
         let caps=[model.faces[model.faces.len()-2].surface.clone(),model.faces.last().unwrap().surface.clone()];
@@ -1469,10 +1493,10 @@ fn progressive_profile_body_internal(
     let original_wall_error=if retained_walls.certified {report.continuous_error_upper.zip(body_decomposition_error_upper)
         .and_then(|(a,b)|nurbs_core::numerics::error_upper::add(a,b))}else{None};
     let wall_error=if let Some(correction)=correction_error_upper {original_wall_error.and_then(|e|nurbs_core::numerics::error_upper::add(e,correction))}else{original_wall_error};
-    let annular_caps=if let Some(limits)=annular.filter(|_| !report.closed_path) {
+    let annular_caps=if let Some(limits)=annular.filter(|_| use_annular) {
         let source=make_source()?;
         let sizes=loops.iter().map(Vec::len).collect::<Vec<_>>();
-        let assembled=annular_caps::assemble(&source,&model,&sizes,options.max_deviation,1e-9,limits)?;
+        let assembled=annular_caps::assemble(&source,&model,&sizes,options.max_deviation,1e-9,limits,cap_selection_work)?;
         filled_cap_error_upper=assembled.evidence.filling().filled_cap_error_upper;
         model=assembled.model;
         Some(assembled.evidence)
@@ -1484,7 +1508,7 @@ fn progressive_profile_body_internal(
     );
     let station_closed=report.closed_path;
     Ok(ProgressiveBodyEvidence {model,approximation,retained_caps,cap_projection,filled_cap_error_upper,cap_correction_error_upper,profile_correction_error_upper,retained_walls,boundary_error_upper,boundary_error_within_budget,body_decomposition_error_upper,body_decomposition_products,
-        station_sections:sections,station_boundary,station_closed,station_budget:options.max_deviation,annular_caps})
+        station_sections:sections,station_boundary,station_closed,station_budget:options.max_deviation,annular_caps,cap_selection_work})
 }
 
 #[cfg(test)]

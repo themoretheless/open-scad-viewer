@@ -304,7 +304,7 @@ fn certify_guide_values_at(
 )->Result<ValuesReport>{
     super::validate_law(twist, false)?;
     let rail = vector_certificate::certify_values_traversal(guide, traversal, max_cells, false)?;
-    let mut out = ValuesReport {
+    let out = ValuesReport {
         status: Status::Unresolved,
         cells: rail.cells,
         longitudinal: None,

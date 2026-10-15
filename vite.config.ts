@@ -50,12 +50,16 @@ export default defineConfig({
             // WASM host plumbing is shared by every kernel. Grouped with the
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
+            { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
+            // The declarative command inventory is shared by the entry and help panels.
+            { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
-            // Keep authored sketch controls in their own module; static imports
-            // preserve their existing loading and rendering behavior.
-            { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.vue$/, includeDependenciesRecursively: false },
+            // Keep the Vue facade and its script/template submodules together.
+            // Splitting only the facade creates a cyclic, uninitialized export.
+            { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.vue(?:\?|$)/, includeDependenciesRecursively: false },
             {
               // Direct-modeling helpers are shared by lazy CAD panels; they must
               // not capture the geometry kernel they reference.
@@ -71,7 +75,7 @@ export default defineConfig({
             // Keep independent GPU preview and compute passes out of renderer control code.
             { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit|gpuPicker|gpuZeroCopyPipeline|gpuSlicer|gpuBvhRaycast|gpuSubdivision|gpuGcodePreview|gpuImageTrace|gpuTrussSolver|gpuSemanticEdges|gpuNurbsTessellate|gpuMarchingCubes)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer-resources', test: /src[\\/]services[\\/](pipelineFactory|textureResources|uniformFill)\.ts$/, includeDependenciesRecursively: false },
-            { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
+            { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/, includeDependenciesRecursively: false },
 
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],

@@ -25,3 +25,13 @@ it('presents native complete annular coverage and refuses malformed cap ownershi
   expect(read({retainedAnnularFilling:{...report.retainedAnnularFilling,...change}})?.continuousBound,JSON.stringify(change)).toBe(false)
  }
 })
+
+
+it('requires the native selector and replacement to share one consistent cap ledger',()=>{
+ const proof={...report.retainedAnnularFilling,selectionExactWork:25,exactWork:325}
+ expect(read({capSelectionExactWork:25,retainedAnnularFilling:proof})?.continuousBound).toBe(true)
+ for(const change of [{selectionExactWork:24},{exactWork:300},{selectionExactWork:1000001}]){
+  expect(read({capSelectionExactWork:25,retainedAnnularFilling:{...proof,...change}})?.continuousBound).toBe(false)
+ }
+ expect(read({capSelectionExactWork:25})?.continuousBound).toBe(false)
+})

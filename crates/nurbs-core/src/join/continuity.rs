@@ -24,8 +24,6 @@ mod station_scale;
 pub use projective_collection::inspect_projective_seam_collection_with_rational_scale_proposals;
 pub use projective_collection::inspect_projective_seam_collection_until_refused;
 pub use station_scale::propose_boundary_normal_scale;
-pub(crate) use station_scale::propose_station_scale_scalar;
-pub(crate) use exact_strip::inspect_station_projective_strip_jets;
 pub(crate) use exact_strip::inspect_proposed_station_projective_strip_jets;
 pub use station_scale::propose_station_normal_scale;
 type H = [f64; 4];
@@ -92,8 +90,12 @@ impl Boundary {
             "Surface matching produced inadmissible weights; reduce the normal scale or change the reference strip",
         )?;
         let (u, v) = self.index(s, i, layer);
+        let inv_w = 1.0 / h[3];
         s.weights[u][v] = h[3];
-        s.control_points[u][v] = h[..3].iter().map(|x| x / h[3]).collect();
+        let p = &mut s.control_points[u][v];
+        p[0] = h[0] * inv_w;
+        p[1] = h[1] * inv_w;
+        p[2] = h[2] * inv_w;
         Ok(())
     }
     fn coefficients(&self, s: &Surface, order: usize) -> Result<Vec<Vec<f64>>> {

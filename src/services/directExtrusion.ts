@@ -8,7 +8,11 @@ import { booleanPolygonMeshes } from './geometry/polygon'
 import { stringifyMeshJson } from './meshJson'
 
 export function sameSketchPlane(a: SketchPlane = xyPlane(), b: SketchPlane = xyPlane()) {
-  return [a.origin,a.u,a.v].every((p,i)=>p.every((v,k)=>Math.abs(v-[b.origin,b.u,b.v][i][k])<1e-7))
+  const ao = a.origin, au = a.u, av = a.v
+  const bo = b.origin, bu = b.u, bv = b.v
+  return Math.abs(ao[0] - bo[0]) < 1e-7 && Math.abs(ao[1] - bo[1]) < 1e-7 && Math.abs(ao[2] - bo[2]) < 1e-7
+    && Math.abs(au[0] - bu[0]) < 1e-7 && Math.abs(au[1] - bu[1]) < 1e-7 && Math.abs(au[2] - bu[2]) < 1e-7
+    && Math.abs(av[0] - bv[0]) < 1e-7 && Math.abs(av[1] - bv[1]) < 1e-7 && Math.abs(av[2] - bv[2]) < 1e-7
 }
 /** Nested contours use even/odd fill; circles remain rational curves. */
 export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: number, offset=0): NurbsBrep {

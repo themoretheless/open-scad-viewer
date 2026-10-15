@@ -3,7 +3,7 @@ import type {NurbsCurve} from '../nurbsCurve'
 
 export type BrepProfileFillRule = 'material-left' | 'even-odd'
 export type BrepProfileBooleanOperation = 'union' | 'intersection' | 'difference' | 'xor'
-/** Retained line/circular-arc/polynomial Bézier region; empty material has loops=[] and areaMm2=0. */
+/** Retained positive-weight rational Bézier region; empty material has loops=[] and areaMm2=0. */
 export interface BrepProfile {
   kind: 'brep-profile'
   loops: NurbsCurve[][]
@@ -38,3 +38,19 @@ export const offsetBrepProfile=(profile:BrepProfile,distance:number):BrepProfile
 
 /** Split resolved self-intersections with even-odd fill, retaining source trims. */
 export const normalizeBrepProfile=(loops:NurbsCurve[][],toleranceMm=1e-7):BrepProfile=>callGeometryRust('brep_profile_normalize',{loops,toleranceMm})
+
+/** Portable proof witnesses. Rust verifies topology of these exact stored bits;
+ * area, construction history and solid validity are separate claims. */
+export interface BrepProfileCertificate {
+  version:number
+  scope:'represented-profile-topology'
+  source:string
+  subdivisionDepth:number
+  monotoneAxes:number[]
+  separatingNormals:number[]
+  orientation:number[]
+  orientationDepth:number|null
+  nestingDepth:number[]
+}
+export const certifyBrepProfile=(profile:BrepProfile):BrepProfileCertificate=>callGeometryRust('brep_profile_certify',{loops:profile.loops,toleranceMm:profile.toleranceMm})
+export const verifyBrepProfileCertificate=(profile:BrepProfile,certificate:BrepProfileCertificate):{status:'verified';scope:'represented-profile-topology';spans:number;pieces:number;nestingDepth:number[]}=>callGeometryRust('brep_profile_verify_certificate',{loops:profile.loops,toleranceMm:profile.toleranceMm,certificate})

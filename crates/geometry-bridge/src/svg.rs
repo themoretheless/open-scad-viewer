@@ -53,7 +53,11 @@ fn number(v: &Value, key: &str, default: f64, min: f64, max: f64) -> Result<f64>
 }
 
 fn check_urls(value: &str) -> Result<()> {
-    let lower = value.to_ascii_lowercase();
+    let lower: std::borrow::Cow<'_, str> = if value.bytes().any(|b| b.is_ascii_uppercase()) {
+        std::borrow::Cow::Owned(value.to_ascii_lowercase())
+    } else {
+        std::borrow::Cow::Borrowed(value)
+    };
     // Inspect every declaration independently. A `none` declaration elsewhere
     // in a stylesheet must not hide an unsupported value on another element.
     // Delimiters inside quoted strings/comments are not CSS declarations.
@@ -77,7 +81,7 @@ fn check_urls(value: &str) -> Result<()> {
         }
         Ok(())
     };
-    let mut declaration = String::new();
+    let mut declaration = String::with_capacity(64);
     let mut chars = lower.chars().peekable();
     let mut quote = None;
     while let Some(c) = chars.next() {
@@ -111,7 +115,7 @@ fn check_urls(value: &str) -> Result<()> {
             "SVG external stylesheets and CSS font loading are unsupported; supply font files explicitly",
         ));
     }
-    let mut tail = lower.as_str();
+    let mut tail: &str = lower.as_ref();
     while let Some(start) = tail.find("url(") {
         tail = &tail[start + 4..];
         let end = tail

@@ -1,9 +1,10 @@
-//! Certified bounded general NURBS curve/curve and curve/surface intersection.
+//! Bounded curve/curve and curve/surface queries with explicit proof scopes.
 //!
-//! Coverage uses outward-rounded Bernstein/interval hull exclusion, half-open
-//! knot ownership, Krawczyk uniqueness on terminal boxes, and derivative-order
-//! contact classification. Unresolved appears only at resource or conditioning
-//! boundaries. Reports carry ToleranceContext evidence and CoedgeTrim maps.
+//! General legacy reports include numerical intersection/contact candidates;
+//! original hull exclusion alone does not certify their existence or topology.
+//! `intersect_curve_curve_certified_report` separately proves checked affine
+//! spatial-line pairs and transverse roots on an exactly shared planar chart.
+//! Unsupported geometry, contacts and incomplete localization remain explicit.
 use crate::{Result, check, curve::Curve, surface::Surface};
 use cad_predicates::ToleranceContext;
 pub(crate) use math_core::{cross as cross3, dot as dot3};
@@ -31,7 +32,7 @@ pub(crate) mod bezier_clip;
 pub mod self_curve;
 /// Surface self-intersection audit (formerly `crate::surface_self_intersection`).
 pub mod self_surface;
-/// Certified surface/surface intersection (formerly `crate::ss_intersection`).
+/// Surface/surface candidates and qualified coverage reductions.
 pub mod ss_intersection;
 /// Contact certificates for surface/surface sections (formerly `crate::surface_contact`).
 pub mod surface_contact;
@@ -973,3 +974,12 @@ pub mod planar_scalar;
 
 #[path = "intersection/planar_coincidence.rs"]
 pub mod planar_coincidence;
+
+/// Original-surface parallel plane sections with explicit unresolved charts.
+pub mod parallel_sections;
+#[path = "intersection/planar_curve_curve.rs"]
+mod planar_curve_curve;
+pub use planar_curve_curve::{CertifiedCurveCrossing, CertifiedCurveIntersection, intersect_curve_curve_certified_report};
+#[path = "intersection/certified_curve_plane.rs"]
+mod certified_curve_plane;
+pub use certified_curve_plane::{CertifiedPlaneCrossing, CertifiedCurvePlaneIntersection, intersect_curve_plane_certified_report};

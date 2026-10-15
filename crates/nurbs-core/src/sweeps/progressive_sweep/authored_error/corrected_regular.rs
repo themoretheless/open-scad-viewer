@@ -22,12 +22,13 @@ pub(super) fn certify(path:&Curve,max_cells:usize)->Result<Report>{
             return Ok(out);
         }
     }
-    // C4 is sufficient for continuous Frenet second jets through original knots.
-    // Exact Cartesian jets, rather than knot multiplicity or sampled normals.
-    let basis=super::super::endpoint_jets::certify_basis_knots(path,4,(max_cells-out.cells) as u64)?;
+    // C2 position jets suffice for a continuous nonzero principal frame.
+    // This value-cover premise is not a claim about frame second jets or
+    // retained G1/G2. Higher derivative remainders have independent guards.
+    let basis=super::super::endpoint_jets::certify_basis_knots(path,2,(max_cells-out.cells) as u64)?;
     out.cells+=basis.exact_work as usize;
     let knots=if basis.certified {super::super::endpoint_jets::Report{certified:true,exact_work:0}}
-        else {super::super::endpoint_jets::certify_knots(path,4,(max_cells-out.cells) as u64)?};
+        else {super::super::endpoint_jets::certify_knots(path,2,(max_cells-out.cells) as u64)?};
     out.cells+=knots.exact_work as usize;
     if !knots.certified{return Ok(out);}
     let start=vector_certificate::certify_traversal(path,[0.,0.],max_cells-out.cells,false)?;
@@ -74,6 +75,44 @@ pub(super) fn certify(path:&Curve,max_cells:usize)->Result<Report>{
 #[cfg(test)]
 mod tests {
  use super::*;
+ #[test]
+ fn cubic_c2_source_owns_value_bound_without_promoting_frame_second_jets(){
+  let path=Curve{degree:3,knots:vec![0.,0.,0.,0.,0.5,1.,1.,1.,1.],
+   control_points:vec![vec![0.,0.,0.],vec![0.16666666666666666,0.,0.],
+    vec![0.5,0.16666666666666666,0.],vec![0.8333333333333334,0.6666666666666666,0.5],vec![1.,1.,1.125]],
+   weights:vec![1.;5],periodic:false};
+  let saved=path.clone();
+  assert!(super::super::super::endpoint_jets::certify_basis_knots(&path,2,10000).unwrap().certified);
+  assert!(!super::super::super::endpoint_jets::certify_knots(&path,4,10000).unwrap().certified);
+  let eligibility=certify(&path,10000).unwrap();
+  assert!(eligibility.certified,"{eligibility:?}");
+  assert!(!certify(&path,0).unwrap().certified);
+  assert!(!certify(&path,eligibility.cells-1).unwrap().certified);
+  let profile=crate::primitives::line([0.,0.1,0.],[0.,0.2,0.]).unwrap();
+  let scale=constant_vector_law([1.,0.,0.]).unwrap();
+  let twist=constant_vector_law([0.;3]).unwrap();
+  for (spacing,count) in [(Spacing::Parameter,17),(Spacing::ArcLength{tolerance:0.001,max_cells:100000},65)]{
+   let options=Options{orientation:Orientation::CorrectedFrenet,normal:[0.,0.,1.],spacing,
+    initial_sections:3,max_sections:129,max_deviation:0.05};
+   let sweep=Sweep::new(&profile,&path,&scale,&twist,options).unwrap();
+   let proof=super::super::corrected_patch_error_with_length(&sweep,count,10000,1000000,None).unwrap();
+   assert_eq!(proof.status,Status::Certified,"{spacing:?}: {proof:?}");
+   assert!(proof.within_budget&&proof.error_upper.unwrap()<=0.05,"{spacing:?}: {proof:?}");
+   assert!(proof.cells>0&&proof.cells<=10000);
+   let short=super::super::corrected_patch_error_with_length(&sweep,count,proof.cells-1,1000000,None).unwrap();
+   assert_eq!(short.status,Status::Unresolved,"{spacing:?}: {short:?}");
+   assert!(short.error_upper.is_none());
+   let strict=Sweep::new(&profile,&path,&scale,&twist,Options{orientation:Orientation::Frenet,..options}).unwrap();
+   assert_eq!(sweep.sections_at(count).unwrap(),strict.sections_at(count).unwrap(),"Source-bound extension must preserve actual retained sections");
+   let final_level=sweep.preview_at(count).unwrap();
+   assert!(final_level.report.continuous_bound&&final_level.report.accepted,"{:?}",final_level.report);
+  }
+  let mut c1=path.clone();c1.knots.insert(5,0.5);c1.control_points.insert(3,vec![0.625,0.4,0.25]);c1.weights.insert(3,1.);
+  c1.validate().unwrap();
+  assert!(!super::super::super::endpoint_jets::certify_knots(&c1,2,10000).unwrap().certified);
+  assert!(!certify(&c1,10000).unwrap().certified);
+  assert_eq!(path,saved);
+ }
  #[test]
  fn nonplanar_original_regular_branch_owns_whole_cover_and_shared_refusal(){
   let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![2.,1.,0.],vec![3.,1.,1.]],None).unwrap();

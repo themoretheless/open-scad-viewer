@@ -26,6 +26,26 @@ pub struct Smoothness {
     pub cap_seams: Vec<crate::sweep_smoothness::AxisReport>,
     pub exact_work: u64,
 }
+/// Audit small endpoint seam sets before a long sequence of wall diagnostics
+/// can exhaust the shared allowance. Every stage retains its charged work;
+/// unknown wall outcomes remain explicit and receive the remaining budget.
+pub(crate) fn inspect_saved_smoothness(
+    model: &Model, caps: &[usize], groups: &[Vec<usize>; 2], max_work: u64,
+) -> Result<Smoothness> {
+    let mut work=0;
+    let mut cap_seams=Vec::new();
+    for group in groups {
+        if group.len()<2 {continue;}
+        let excluded=(0..model.faces.len()).filter(|face|!group.contains(face)).collect::<Vec<_>>();
+        let report=crate::sweep_smoothness::inspect_axis(model,&excluded,
+            crate::sweep_smoothness::Axis::Profile,max_work-work)?;
+        work+=report.exact_work;
+        cap_seams.push(report);
+    }
+    let walls=crate::sweep_smoothness::inspect_profile(model,caps,max_work-work)?;
+    work+=walls.total_exact_work;
+    Ok(Smoothness {walls,cap_seams,exact_work:work})
+}
 impl Boundary {
     pub fn model(&self) -> &Model {
         &self.model
@@ -59,31 +79,7 @@ impl Boundary {
     /// Audit actual retained wall and internal cap jets with one caller-owned
     /// work budget. Source frame regularity never substitutes for these jets.
     pub fn inspect_smoothness(&self, max_work: u64) -> Result<Smoothness> {
-        let walls =
-            crate::sweep_smoothness::inspect_profile(&self.model, &self.cap_faces(), max_work)?;
-        let mut work = walls.total_exact_work;
-        let mut cap_seams = Vec::new();
-        for group in &self.cap_face_groups {
-            if group.len() < 2 {
-                continue;
-            }
-            let excluded = (0..self.model.faces.len())
-                .filter(|i| !group.contains(i))
-                .collect::<Vec<_>>();
-            let report = crate::sweep_smoothness::inspect_axis(
-                &self.model,
-                &excluded,
-                crate::sweep_smoothness::Axis::Profile,
-                max_work - work,
-            )?;
-            work += report.exact_work;
-            cap_seams.push(report);
-        }
-        Ok(Smoothness {
-            walls,
-            cap_seams,
-            exact_work: work,
-        })
+        inspect_saved_smoothness(&self.model,&self.cap_faces(),&self.cap_face_groups,max_work)
     }
 }
 

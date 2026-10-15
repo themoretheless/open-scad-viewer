@@ -93,13 +93,13 @@ pub fn split_candidates(
             && cuts.windows(2).all(|w| w[0] < w[1]),
         "Seam cuts must be ordered distinct interior parameters",
     )?;
-    let parameters: Vec<_> = std::iter::once(a)
-        .chain(cuts.iter().copied())
-        .chain(std::iter::once(b))
-        .collect();
     let mut pieces = Vec::with_capacity(tiles.len());
     let mut contained = true;
-    for (range, tile) in parameters.windows(2).zip(tiles) {
+    for (idx, tile) in tiles.iter().enumerate() {
+        let range = [
+            if idx == 0 { a } else { cuts[idx - 1] },
+            if idx == cuts.len() { b } else { cuts[idx] },
+        ];
         let translation =
             std::array::from_fn(|axis| tile[axis] as f64 * (chart[axis][1] - chart[axis][0]));
         check(
@@ -188,16 +188,13 @@ pub fn inspect_seams(
     )?;
     let mut levels = Vec::new();
     for axis in 0..2 {
-        let lo = source
+        let (lo, hi) = source
             .control_points
             .iter()
             .map(|p| p[axis])
-            .fold(f64::INFINITY, f64::min);
-        let hi = source
-            .control_points
-            .iter()
-            .map(|p| p[axis])
-            .fold(f64::NEG_INFINITY, f64::max);
+            .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), v| {
+                (lo.min(v), hi.max(v))
+            });
         let period = chart[axis][1] - chart[axis][0];
         let q = I::new(lo, hi)?
             .sub(I::point(chart[axis][0]))?
@@ -240,7 +237,7 @@ pub fn inspect_seams(
         .count();
     let mut report = SeamSearch {
         status: SearchStatus::Complete,
-        seams: Vec::new(),
+        seams: Vec::with_capacity(levels.len()),
         work: 0,
         total_seams: levels.len(),
     };

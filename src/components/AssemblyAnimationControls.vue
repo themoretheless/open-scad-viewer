@@ -28,8 +28,9 @@ function add(){try{
  const next:AssemblyAnimation={version:1,frames:[...frames.value.frames.filter(f=>f.time!==time.value),{time:time.value,poses,camera:{...props.camera}}].sort((a,b)=>a.time-b.time)}
  validateAssemblyAnimation(props.document,next);frames.value=next;time.value=Math.min(120,time.value+1);error.value=''
 }catch(e){error.value=String(e)}}
-function stop(){generation++;clearTimeout(timer);worker.cancel();playing.value=false;if(originalCamera){emit('preview',{document:null,camera:originalCamera});originalCamera=undefined}}
-async function show(t:number,token:number){const result=await worker.run({kind:'animationSample',document:JSON.parse(serializeDirectDocument(props.document)),animation:clonePlain(frames.value),time:t});if(token!==generation)return;emit('preview',result);position.value=t}
+let cachedPlayDoc:DirectDocument|undefined
+function stop(){generation++;clearTimeout(timer);worker.cancel();playing.value=false;cachedPlayDoc=undefined;if(originalCamera){emit('preview',{document:null,camera:originalCamera});originalCamera=undefined}}
+async function show(t:number,token:number){const document=cachedPlayDoc??=JSON.parse(serializeDirectDocument(props.document));const result=await worker.run({kind:'animationSample',document,animation:clonePlain(frames.value),time:t});if(token!==generation)return;emit('preview',result);position.value=t}
 async function play(skipStop=false){if(!skipStop)stop();error.value='';if(frames.value.frames.length<2){error.value=label('Добавьте минимум два кадра.','Add at least two frames.');return}originalCamera??={...props.camera};playing.value=true;const token=++generation,start=performance.now(),first=frames.value.frames[0].time,end=frames.value.frames.at(-1)!.time
  const tick=async()=>{if(token!==generation)return;const t=Math.min(end,first+(performance.now()-start)/1000);try{await show(t,token);if(token!==generation)return;if(t===end){playing.value=false;return}timer=setTimeout(tick,125)}catch(e){if(token!==generation)return;stop();error.value=String(e)}};await tick()
 }
@@ -82,7 +83,7 @@ async function exportVideo(){
 }
 watch(playing,value=>{if(!value&&recorder?.state==='recording'){const current=recorder;setTimeout(()=>{if(current.state==='recording')current.stop()},120)}})
 function download(){try{validateAssemblyAnimation(props.document,frames.value);const url=URL.createObjectURL(new Blob([JSON.stringify({document:JSON.parse(serializeDirectDocument(props.document)),animation:frames.value},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='assembly-animation.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){error.value=String(e)}}
-watch(()=>serializeDirectDocument(props.document),()=>stop())
+watch(()=>props.document,()=>{cachedPlayDoc=undefined;stop()})
 onUnmounted(()=>{destroyed=true;stop();clearInterval(captureTimer);if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());if(videoUrl.value)URL.revokeObjectURL(videoUrl.value);if(framesUrl.value)URL.revokeObjectURL(framesUrl.value);if(framePreview.value)URL.revokeObjectURL(framePreview.value);worker.dispose()})
 </script>
 <template>

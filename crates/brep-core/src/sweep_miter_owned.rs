@@ -182,12 +182,31 @@ fn rational_periodic_lattice(
         return Ok(None);
     }
     let mut work = 0;
-    for stride in [1., 3., 5., 7., 15., 21., 35., 105.] {
+    let mut proposal = sections.to_vec();
+    for (stride_idx, stride) in [1., 3., 5., 7., 15., 21., 35., 105.].into_iter().enumerate() {
         let step = quantum * stride;
-        let mut proposal = sections.to_vec();
+        if stride_idx > 0 {
+            for (src_sec, dst_sec) in sections.iter().zip(proposal.iter_mut()) {
+                for (src_c, dst_c) in src_sec.iter().zip(dst_sec.iter_mut()) {
+                    for (src_p, dst_p) in src_c
+                        .control_points
+                        .iter()
+                        .zip(dst_c.control_points.iter_mut())
+                    {
+                        dst_p.copy_from_slice(src_p);
+                    }
+                }
+            }
+        }
         let mut maximum: f64 = 0.;
         let mut exact = true;
         for (source, target) in sections.iter().flatten().zip(proposal.iter_mut().flatten()) {
+            let p0 = &source.control_points[0];
+            let varying = [
+                source.control_points.iter().any(|p| p[0] != p0[0]),
+                source.control_points.iter().any(|p| p[1] != p0[1]),
+                source.control_points.iter().any(|p| p[2] != p0[2]),
+            ];
             for (a, b) in source
                 .control_points
                 .iter()
@@ -199,11 +218,7 @@ fn rational_periodic_lattice(
                         return Err(invalid("Rational periodic lattice work exhausted"));
                     }
                     work += 1;
-                    if source
-                        .control_points
-                        .iter()
-                        .any(|p| p[k] != source.control_points[0][k])
-                    {
+                    if varying[k] {
                         let units = (a[k] / step).round();
                         if !units.is_finite() || units.abs() >= 2_f64.powi(46) {
                             return Ok(None);
@@ -244,13 +259,14 @@ fn nonplanar_caps(model: &Model, max_work: u64) -> (bool, u64) {
         {
             continue;
         }
-        let values = s
-            .control_points
-            .iter()
-            .flatten()
-            .flatten()
-            .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
-            .collect();
+        let mut values = Vec::with_capacity(12);
+        values.extend(
+            s.control_points
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|x| AuthoredScalar::Binary64Bits(x.to_bits())),
+        );
         let Ok(arena) = SourceArena::authored("owned-cap-planarity", 1, values) else {
             continue;
         };
@@ -437,8 +453,9 @@ fn construct_impl(
     annular_caps: bool,
 ) -> Result<BoundaryBody> {
     let mut initial = request.options.initial_steps;
-    let mut previous = Vec::new();
+    let mut previous = Vec::with_capacity(8);
     let mut spent = 0_u64;
+    let mut cached_max_steps: Option<usize> = None;
     loop {
         // Correction work remains caller-owned across rejected candidates.
         // Charge combined correction work conservatively to each supplied
@@ -501,19 +518,26 @@ fn construct_impl(
                 work,
                 reason,
             } => {
-                let planner = if annular_caps {
-                    sweep_miter_layout::plan_annular
-                } else {
-                    sweep_miter_layout::plan
+                let max_steps = match cached_max_steps {
+                    Some(m) => m,
+                    None => {
+                        let planner = if annular_caps {
+                            sweep_miter_layout::plan_annular
+                        } else {
+                            sweep_miter_layout::plan
+                        };
+                        let plan = planner(
+                            request.loops,
+                            request.points.len(),
+                            request.options.closed,
+                            request.options.initial_steps,
+                            request.options.max_steps,
+                        )?;
+                        cached_max_steps = Some(plan.max_steps);
+                        plan.max_steps
+                    }
                 };
-                let plan = planner(
-                    request.loops,
-                    request.points.len(),
-                    request.options.closed,
-                    request.options.initial_steps,
-                    request.options.max_steps,
-                )?;
-                if steps >= plan.max_steps {
+                if steps >= max_steps {
                     return Err(invalid(reason));
                 }
                 if let Some(last) = levels.last_mut() {
@@ -524,7 +548,7 @@ fn construct_impl(
                 spent = spent
                     .checked_add(work)
                     .ok_or_else(|| invalid("Progressive miter correction work overflow"))?;
-                initial = (steps * 2).min(plan.max_steps);
+                initial = (steps * 2).min(max_steps);
             }
         }
     }
@@ -600,7 +624,7 @@ fn construct_direct_impl(
     }
 }
 
-fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool, u64)> {
+pub(crate) fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool, u64)> {
     let mut work = 0;
     for face in &model.faces[model.faces.len() - 2..] {
         for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
@@ -656,7 +680,11 @@ fn construct_attempt(
         request.options.initial_steps,
         request.options.max_steps,
     )?;
-    let profiles = request.loops.iter().flatten().cloned().collect::<Vec<_>>();
+    let total_profiles: usize = request.loops.iter().map(Vec::len).sum();
+    let mut profiles = Vec::with_capacity(total_profiles);
+    for l in request.loops {
+        profiles.extend_from_slice(l);
+    }
     let rings = request.loops.iter().map(Vec::len).collect::<Vec<_>>();
     let mut options = request.options;
     options.max_steps = plan.max_steps;
@@ -681,9 +709,9 @@ fn construct_attempt(
     if let Some(guide) = request.guide {
         sweep = sweep.with_orientation_guide(guide)?;
     }
-    let mut levels = Vec::new();
+    let mut levels = Vec::with_capacity(4);
     let mut accepted = None;
-    let direct_level = if direct {
+    if direct {
         use nurbs_core::construct::curves::paths::{closed_miter_sections, miter_sections};
         let sections = if options.closed {
             closed_miter_sections(
@@ -700,22 +728,19 @@ fn construct_attempt(
                 options.miter_limit,
             )
         }?;
-        Some(sweep.preview_retained_at(1, sections))
-    } else {
-        None
-    };
-    let candidates: Box<dyn Iterator<Item = nurbs_core::Result<progressive_miter::Level>> + '_> =
-        if let Some(level) = direct_level {
-            Box::new(std::iter::once(level))
-        } else {
-            Box::new(sweep.by_ref())
-        };
-    for level in candidates {
-        let level = level?;
+        let level = sweep.preview_retained_at(1, sections)?;
         if level.report.accepted {
             accepted = Some(level.sections);
         }
         levels.push(level.report);
+    } else {
+        for level in sweep.by_ref() {
+            let level = level?;
+            if level.report.accepted {
+                accepted = Some(level.sections);
+            }
+            levels.push(level.report);
+        }
     }
     let report = levels
         .last()
@@ -1340,16 +1365,20 @@ mod tests {
             "Retained internal cap G1/G2 is unproved"
         );
         assert!(smooth.exact_work <= 2_000_000);
-        assert_eq!(
-            smooth.cap_seams[0].max_work,
-            2_000_000 - smooth.walls.total_exact_work
-        );
+        assert_eq!(smooth.cap_seams[0].max_work, 2_000_000);
         assert_eq!(
             smooth.cap_seams[1].max_work,
             smooth.cap_seams[0].max_work - smooth.cap_seams[0].exact_work
         );
-        let short = body.inspect_smoothness(smooth.exact_work - 1).unwrap();
-        assert!(short.exact_work <= smooth.exact_work - 1);
+        let cap_work = smooth.cap_seams.iter().map(|r| r.exact_work).sum::<u64>();
+        assert_eq!(smooth.walls.profile.max_work, 2_000_000 - cap_work);
+        assert_eq!(smooth.walls.station.max_work, smooth.walls.profile.max_work - smooth.walls.profile.exact_work);
+        assert_eq!(smooth.exact_work, cap_work + smooth.walls.total_exact_work);
+        let required_g2_work = cap_work + smooth.walls.profile.exact_work;
+        let enough = body.inspect_smoothness(required_g2_work).unwrap();
+        assert!(enough.walls.profile.g2_certified && enough.cap_seams.iter().all(|r| r.g2_certified));
+        let short = body.inspect_smoothness(required_g2_work - 1).unwrap();
+        assert!(short.exact_work <= required_g2_work - 1);
         assert!(
             !short.walls.profile.g2_certified || short.cap_seams.iter().any(|r| !r.g2_certified)
         );

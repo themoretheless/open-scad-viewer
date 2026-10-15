@@ -39,7 +39,7 @@ function prepareSvgDocument(
   action: 'parse' | 'preview' | 'profile' = 'parse',
   legacyDpi = false,
 ) {
-  if (new TextEncoder().encode(source).length > SVG_MAX_BYTES) throw new Error('SVG exceeds 4 MiB.')
+  if (source.length > SVG_MAX_BYTES || (source.length * 3 > SVG_MAX_BYTES && new TextEncoder().encode(source).length > SVG_MAX_BYTES)) throw new Error('SVG exceeds 4 MiB.')
   const dpi = options.dpi ?? 96
   const tolerance = options.tolerance ?? 0.02
   const rasterSize = options.rasterSize ?? 512

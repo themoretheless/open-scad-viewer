@@ -77,8 +77,10 @@ export interface AnnularMiterOwnedBoundaryReport extends MiterOwnedBoundaryRepor
  retainedSmoothness:{
   walls:import('./miterProfileSmoothness').MiterProfileSmoothness
   maxWork:number;totalExactWork:number
+  auditOrder?:'caps-first'
+  geometricMaxCells?:number;geometricCells?:number
   capInternalSeams:{method:'retained-annular-cap-internal-jets';edgeIds:number[];extractionComplete:boolean;
-   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number}[]
+   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number;geometricG2?:import('./geometricG2').GeometricG2Report}[]
   capWallContinuity:'C0';fullBoundarySmoothnessCertified:false
  }|null
  retainedAnnularFilling:{

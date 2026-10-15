@@ -39,8 +39,15 @@ export function snapDirectPoint(p: Point2, candidates: Point2[], tolerance: numb
 export function directExtrusionTool(sketch: DirectSketch, height: number, baseZ: number): DirectBody {
   if (!Number.isFinite(baseZ) || !Number.isFinite(height) || Math.abs(height) < .01 || Math.abs(baseZ) > 1e6) throw new Error('Extrusion requires a finite height of at least 0.01 mm.')
   const body = extrudeDirectSketch(sketch, Math.abs(height), 'preview-extrusion')
-  const plane=sketch.plane??xyPlane(), normal=cross3(plane.u,plane.v)
-  for (let i=0;i<body.mesh.positions.length;i++) body.mesh.positions[i]+=normal[i%3]*(baseZ+Math.min(0,height))
+  const plane = sketch.plane ?? xyPlane(), normal = cross3(plane.u, plane.v)
+  const dz = baseZ + Math.min(0, height)
+  const ox = normal[0] * dz, oy = normal[1] * dz, oz = normal[2] * dz
+  const pos = body.mesh.positions
+  for (let i = 0; i < pos.length; i += 3) {
+    pos[i] += ox
+    pos[i + 1] += oy
+    pos[i + 2] += oz
+  }
   return body
 }
 export function applyDirectExtrusion(document: DirectDocument, sketchId: string, height: number, baseZ: number, operation: 'new' | 'union' | 'difference', targetId: string, id: string): DirectDocument {

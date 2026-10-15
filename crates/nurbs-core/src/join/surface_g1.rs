@@ -36,6 +36,12 @@ pub(crate) fn boundary_jets(
     t: [f64; 2],
     reverse: bool,
 ) -> Result<Vec<jets::Jets>> {
+    boundary_jets_impl(s,e,t,reverse,None)
+}
+pub(crate) fn boundary_graph_jets(s:&Surface,e:Boundary,t:[f64;2],reverse:bool,frame:([usize;3],[f64;2]))->Result<Vec<jets::Jets>> {
+    boundary_jets_impl(s,e,t,reverse,Some(frame))
+}
+fn boundary_jets_impl(s:&Surface,e:Boundary,t:[f64;2],reverse:bool,frame:Option<([usize;3],[f64;2])>)->Result<Vec<jets::Jets>> {
     let (fixed, max) = edge(e);
     let free = 1 - fixed;
     let d = domains(s);
@@ -89,7 +95,7 @@ pub(crate) fn boundary_jets(
         } else {
             domain[free] = [lo, hi];
         }
-        let j = jets::calculate_partial_stable(s, span, domain, corner)?;
+        let j = if let Some(frame)=frame {jets::calculate_partial_stable_graph(s,span,domain,corner,frame)?}else{jets::calculate_partial_stable(s, span, domain, corner)?};
         out.push(j);
     }
     Ok(out)

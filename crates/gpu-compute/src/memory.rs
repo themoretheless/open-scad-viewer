@@ -51,10 +51,10 @@ impl GpuBuffer {
             return Err(BufferError::InvalidUsage);
         }
         let bytes = bytes.max(4);
-        let limits = device.limits();
+        let limits = &context.limits;
         if bytes > limits.max_buffer_size
             || (usage.contains(wgpu::BufferUsages::STORAGE)
-                && bytes > limits.max_storage_buffer_binding_size)
+                && bytes > limits.max_storage_buffer_binding_size as u64)
         {
             return Err(BufferError::TooLarge);
         }
@@ -159,7 +159,7 @@ impl<'a> GpuBufferView<'a> {
     ) -> Result<wgpu::BindingResource<'a>, BufferError> {
         self.validate(context, wgpu::BufferUsages::STORAGE)?;
         if !self.offset.is_multiple_of(u64::from(
-            context.device.limits().min_storage_buffer_offset_alignment,
+            context.limits.min_storage_buffer_offset_alignment,
         )) {
             return Err(BufferError::UnalignedBinding);
         }

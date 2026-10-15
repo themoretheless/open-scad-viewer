@@ -82,13 +82,15 @@ pub const fn backend_label(backend: wgpu::Backend) -> &'static str {
 /// Probes the preferred portable compute backend without constructing a
 /// domain-specific kernel pipeline.
 pub fn available_backend_report() -> Option<BackendReport> {
-    GpuContext::new().map(|context| context.backend_report())
+    static REPORT: std::sync::OnceLock<Option<BackendReport>> = std::sync::OnceLock::new();
+    *REPORT.get_or_init(|| GpuContext::new().map(|context| context.backend_report()))
 }
 
 /// Reports native WGSL subgroup support for future kernels that can preserve
 /// their tie-breaking semantics with subgroup reductions.
 pub fn available_subgroup_report() -> Option<SubgroupReport> {
-    GpuContext::new().map(|context| context.subgroup_report())
+    static REPORT: std::sync::OnceLock<Option<SubgroupReport>> = std::sync::OnceLock::new();
+    *REPORT.get_or_init(|| GpuContext::new().map(|context| context.subgroup_report()))
 }
 
 /// Per-backend workgroup-size tuning for compute kernels that template their

@@ -538,7 +538,7 @@ fn rands<'a>(
     } else {
         None
     };
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(count as usize);
     for _ in 0..count as usize {
         if minimum == maximum {
             result.push(Value::Number(minimum));
@@ -632,7 +632,7 @@ fn character_string(value: &Value, ctx: &mut BuiltinContext) -> String {
             if *step == 0.0 {
                 return String::new();
             }
-            let mut result = String::new();
+            let mut result = String::with_capacity(count as usize);
             for index in 0..count as usize {
                 result.push_str(&character_string(
                     &Value::Number(start + step * index as f64),
@@ -685,7 +685,7 @@ fn concat<'a>(
     arg: ArgReader<'_, 'a>,
     ctx: &mut BuiltinContext<'_, 'a>,
 ) -> BResult<Value<'a>> {
-    let mut result: Vec<Value<'a>> = Vec::new();
+    let mut result: Vec<Value<'a>> = Vec::with_capacity(argc);
     for index in 0..argc {
         let value = arg(index)?;
         let addition = match &value {
@@ -702,7 +702,7 @@ fn concat<'a>(
             );
         }
         match value {
-            Value::Vector(items) => result.extend(items.iter().cloned()),
+            Value::Vector(items) => result.extend_from_slice(&items),
             other => result.push(other),
         }
     }
@@ -810,7 +810,7 @@ fn search_needles<'a>(
     column: usize,
     include_empty_first_match: bool,
 ) -> BResult<Value<'a>> {
-    let mut output: Vec<Value<'a>> = Vec::new();
+    let mut output: Vec<Value<'a>> = Vec::with_capacity(needles.len());
     for needle in needles {
         let mut matches: Vec<Value<'a>> = Vec::new();
         for (index, row) in table.iter().enumerate() {
@@ -848,7 +848,7 @@ fn search_string_rows<'a>(
     maximum: usize,
     column: usize,
 ) -> BResult<Value<'a>> {
-    let mut output: Vec<Value<'a>> = Vec::new();
+    let mut output: Vec<Value<'a>> = Vec::with_capacity(characters.len());
     for character in characters {
         let mut matches: Vec<Value<'a>> = Vec::new();
         for (index, row) in rows.iter().enumerate() {
@@ -911,7 +911,7 @@ fn search<'a>(
 
     if let (Value::Str(deref!(needle)), Value::Str(deref!(table))) = (&needle, &table) {
         let table_characters: Vec<char> = table.chars().collect();
-        let mut output: Vec<Value<'a>> = Vec::new();
+        let mut output: Vec<Value<'a>> = Vec::with_capacity(needle.len());
         for character in needle.chars() {
             let mut matches: Vec<Value<'a>> = Vec::new();
             for (index, candidate) in table_characters.iter().enumerate() {

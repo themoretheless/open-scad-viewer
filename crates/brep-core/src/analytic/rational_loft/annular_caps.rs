@@ -7,6 +7,7 @@ pub struct CapEvidence {
     groups: [Vec<usize>; 2],
     filling: source_filling::Report,
     construction_work: u64,
+    selection_work:u64,
 }
 impl CapEvidence {
     pub fn face_groups(&self) -> &[Vec<usize>; 2] {
@@ -22,7 +23,7 @@ impl CapEvidence {
         self.construction_work
     }
     pub fn exact_work(&self) -> u64 {
-        self.construction_work + self.filling.exact_work
+        self.selection_work + self.construction_work + self.filling.exact_work
     }
 }
 
@@ -44,8 +45,15 @@ impl Boundary {
         self.body.annular_caps.as_ref()
     }
     pub fn cap_faces(&self) -> Vec<usize> {
-        self.caps().map_or_else(Vec::new, CapEvidence::faces)
+        self.caps().map_or_else(||if self.body.station_closed {Vec::new()}else{
+            vec![self.body.model.faces.len()-2,self.body.model.faces.len()-1]
+        }, CapEvidence::faces)
     }
+    pub fn cap_selection_work(&self)->u64 {self.body.cap_selection_work}
+    pub fn cap_face_groups(&self)->[Vec<usize>;2] {
+        self.caps().map_or_else(||{let faces=self.cap_faces();if faces.is_empty(){[vec![],vec![]]}else{[vec![faces[0]],vec![faces[1]]]}},|caps|caps.face_groups().clone())
+    }
+    pub fn planar_cap_faces(&self)->Vec<usize> {if self.caps().is_some(){vec![]}else{self.cap_faces()}}
     pub fn boundary(&self) -> &BoundaryCertificate {
         &self.body.station_boundary
     }
@@ -66,33 +74,8 @@ impl Boundary {
         &self,
         max_work: u64,
     ) -> Result<crate::sweep_miter_owned::annular::Smoothness> {
-        let walls =
-            crate::sweep_smoothness::inspect_profile(self.model(), &self.cap_faces(), max_work)?;
-        let mut work = walls.total_exact_work;
-        let mut cap_seams = Vec::new();
-        if let Some(caps) = self.caps() {
-            for group in caps.face_groups() {
-                if group.len() < 2 {
-                    continue;
-                }
-                let excluded = (0..self.model().faces.len())
-                    .filter(|f| !group.contains(f))
-                    .collect::<Vec<_>>();
-                let report = crate::sweep_smoothness::inspect_axis(
-                    self.model(),
-                    &excluded,
-                    crate::sweep_smoothness::Axis::Profile,
-                    max_work - work,
-                )?;
-                work += report.exact_work;
-                cap_seams.push(report);
-            }
-        }
-        Ok(crate::sweep_miter_owned::annular::Smoothness {
-            walls,
-            cap_seams,
-            exact_work: work,
-        })
+        crate::sweep_miter_owned::annular::inspect_saved_smoothness(
+            self.model(),&self.cap_faces(),&self.cap_face_groups(),max_work)
     }
 }
 
@@ -158,9 +141,11 @@ pub(super) fn assemble(
     tolerance: f64,
     tolerance_uv: f64,
     limits: Limits,
+    selection_work:u64,
 ) -> Result<Assembled> {
     validate_limits(limits)?;
-    let pair = replace_pair(model, limits.exact_work)?;
+    let available=limits.exact_work.checked_sub(selection_work).ok_or_else(||err("Cap selection work exhausted"))?;
+    let pair = replace_pair(model, available)?;
     let filling = source_filling::inspect_smooth(
         source,
         &pair.model,
@@ -169,7 +154,7 @@ pub(super) fn assemble(
         tolerance,
         tolerance_uv,
         Limits {
-            exact_work: limits.exact_work - pair.work,
+            exact_work: available - pair.work,
             ..limits
         },
     )?;
@@ -179,6 +164,7 @@ pub(super) fn assemble(
             groups: pair.groups,
             filling,
             construction_work: pair.work,
+            selection_work,
         },
     })
 }

@@ -7,15 +7,18 @@ const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfe
 const post = (event: PhotoWorkerEvent, transfer: Transferable[] = []) => scope.postMessage(event, transfer)
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error)
 
+function pushSurfaceBuffers(buffers: Transferable[], surface: PhotoSurface['documentSurface'] | PhotoSurface | undefined): void {
+  if (!surface) return
+  if (ArrayBuffer.isView(surface.positions)) buffers.push(surface.positions.buffer as ArrayBuffer)
+  if (ArrayBuffer.isView(surface.colors)) buffers.push(surface.colors.buffer as ArrayBuffer)
+  if (ArrayBuffer.isView(surface.triangles)) buffers.push(surface.triangles.buffer as ArrayBuffer)
+}
+
 /** Geometry buffers move to the main thread by transfer; a structured clone would copy them again. */
 function transferList(result: PhotoSurface): Transferable[] {
   const buffers: Transferable[] = []
-  for (const surface of [result, result.documentSurface]) {
-    if (!surface) continue
-    for (const array of [surface.positions, surface.colors, surface.triangles]) {
-      if (ArrayBuffer.isView(array)) buffers.push(array.buffer as ArrayBuffer)
-    }
-  }
+  pushSurfaceBuffers(buffers, result)
+  pushSurfaceBuffers(buffers, result.documentSurface)
   return buffers
 }
 

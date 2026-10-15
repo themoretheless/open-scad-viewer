@@ -42,18 +42,35 @@ impl<'a> ScratchPool<'a> {
             return Err(ComputeError::OutOfBounds);
         }
         let bytes = (len as u64 * 4).max(4);
-        let old = self.slots.get(name);
-        if let Some(slot) = old
-            && slot.buffer.size() >= bytes
-        {
-            return Ok(ScratchArray {
-                array: self.runtime.import_buffer(slot.buffer.clone(), len)?,
-                generation: slot.generation,
-            });
+        if let Some(slot) = self.slots.get_mut(name) {
+            if slot.buffer.size() >= bytes {
+                return Ok(ScratchArray {
+                    array: self.runtime.import_buffer(slot.buffer.clone(), len)?,
+                    generation: slot.generation,
+                });
+            }
+            let reserved = self.reserved - slot.buffer.size() + bytes;
+            if reserved > self.budget {
+                return Err(ComputeError::BudgetExceeded {
+                    requested: reserved,
+                    budget: self.budget,
+                });
+            }
+            let buffer = GpuBuffer::new(
+                self.runtime.context(),
+                bytes,
+                wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
+            )?;
+            let generation = slot.generation + 1;
+            let array = self.runtime.import_buffer(buffer.clone(), len)?;
+            slot.buffer = buffer;
+            slot.generation = generation;
+            self.reserved = reserved;
+            return Ok(ScratchArray { array, generation });
         }
-        let previous = old.map_or(0, |slot| slot.buffer.size());
-        let generation = old.map_or(1, |slot| slot.generation + 1);
-        let reserved = self.reserved - previous + bytes;
+        let reserved = self.reserved + bytes;
         if reserved > self.budget {
             return Err(ComputeError::BudgetExceeded {
                 requested: reserved,
@@ -69,8 +86,8 @@ impl<'a> ScratchPool<'a> {
         )?;
         let array = self.runtime.import_buffer(buffer.clone(), len)?;
         self.slots
-            .insert(name.to_owned(), Slot { buffer, generation });
+            .insert(name.to_owned(), Slot { buffer, generation: 1 });
         self.reserved = reserved;
-        Ok(ScratchArray { array, generation })
+        Ok(ScratchArray { array, generation: 1 })
     }
 }

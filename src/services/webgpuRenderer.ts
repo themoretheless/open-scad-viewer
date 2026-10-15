@@ -412,6 +412,8 @@ export class WebGPURenderer {
   private morphScratch = new Float32Array(4)
   private materialTailScratch = new Float32Array(8)
   private sceneUniformScratch = new Float32Array(SCENE_UNIFORM_LAYOUT.floats)
+  private lastSceneUniforms = new Float32Array(SCENE_UNIFORM_LAYOUT.floats)
+  private lastSceneUniformsValid = false
   /** Active render theme; fills the Scene theme tail every frame. */
   private theme: RenderTheme = DEFAULT_THEME
   /** Scene-level default shading model for meshes without their own material. */
@@ -681,6 +683,7 @@ export class WebGPURenderer {
   private buildSceneUB() {
     const dev = this.dev!
     this.sceneUB = dev.createBuffer({ size: SCENE_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.lastSceneUniformsValid = false
     this.sceneBG = dev.createBindGroup({
       layout: this.pipelines.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
@@ -1893,7 +1896,20 @@ export class WebGPURenderer {
       shadowActive,
       bounds: this.bounds,
     })
-    dev.queue.writeBuffer(sceneUB, 0, sd)
+    let sceneChanged = !this.lastSceneUniformsValid
+    if (!sceneChanged) {
+      for (let i = 0; i < sd.length; i++) {
+        if (sd[i] !== this.lastSceneUniforms[i]) {
+          sceneChanged = true
+          break
+        }
+      }
+    }
+    if (sceneChanged) {
+      dev.queue.writeBuffer(sceneUB, 0, sd)
+      this.lastSceneUniforms.set(sd)
+      this.lastSceneUniformsValid = true
+    }
 
     // Classify draws before encoding: the shadow depth pass runs ahead of the
     // main pass and draws the same opaque set.
@@ -3175,6 +3191,7 @@ export class WebGPURenderer {
     this.gpuBufferArena = null
     this.sceneUB?.destroy()
     this.sceneUB = null
+    this.lastSceneUniformsValid = false
     this.morphDummyVB?.destroy()
     this.morphDummyVB = null
     this.textures.teardown()
@@ -3204,11 +3221,14 @@ export class WebGPURenderer {
   get currentStatus(): RendererLifecycleEvent { return this.status }
 
   private rebuildSceneAabbIndex() {
-    const replacement = buildSceneAabbIndex(this.meshes.flatMap((mesh, index) => (
-      mesh.visible
-        ? [{ id: index, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max } }]
-        : []
-    )))
+    const entries: { id: number; bounds: Aabb3 }[] = []
+    for (let index = 0; index < this.meshes.length; index++) {
+      const mesh = this.meshes[index]!
+      if (mesh.visible) {
+        entries.push({ id: index, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max } })
+      }
+    }
+    const replacement = buildSceneAabbIndex(entries)
     disposeSceneAabbIndex(this.sceneAabbIndex)
     this.sceneAabbIndex = replacement
     this.sceneAabbIndexDirty = false

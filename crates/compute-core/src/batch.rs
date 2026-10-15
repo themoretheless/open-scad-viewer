@@ -28,6 +28,7 @@ impl<'a> ComputeBatch<'a> {
 
     /// Commits a fully prepared operation without submitting intermediate work.
     pub(crate) fn append(&mut self, other: Self) {
+        self.steps.reserve(other.steps.len());
         self.steps.extend(other.steps);
     }
 
@@ -47,8 +48,12 @@ impl<'a> ComputeBatch<'a> {
     /// Appends ordered dispatches to a caller-owned compute pass, for example
     /// one whose beginning/end timestamps are supplied by a GPU profiler.
     pub fn record_in_pass(&self, pass: &mut wgpu::ComputePass<'_>) {
+        let mut current_kernel: Option<*const Kernel> = None;
         for (kernel, bindings, groups) in &self.steps {
-            kernel.record_in_pass(pass, bindings, *groups);
+            let ptr = *kernel as *const Kernel;
+            let same_pipeline = current_kernel == Some(ptr);
+            kernel.record_in_pass_with_pipeline_state(pass, bindings, *groups, !same_pipeline);
+            current_kernel = Some(ptr);
         }
     }
 

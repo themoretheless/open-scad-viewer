@@ -111,21 +111,24 @@ pub fn inspect_periodic_winding(
         out.reason = PeriodicWindingReason::ImageBudget;
         return Ok(out);
     }
+    if let Some(req) = out.required_images {
+        out.images.reserve(req);
+    }
     let domain = TrimDomain::new(loops, tolerance_uv)?;
     let mut winding = 0i32;
+    let p0 = I::point(point[0]);
+    let p1 = I::point(point[1]);
     for u in ranges[0][0]..=ranges[0][1] {
+        let u_interval = p0.add(I::point(f64::from(u)).mul(periods[0])?)?;
+        let qu = [u_interval.lo, u_interval.hi];
         for v in ranges[1][0]..=ranges[1][1] {
             if out.cells == max_cells {
                 out.reason = PeriodicWindingReason::WorkLimit;
                 return Ok(out);
             }
             let tile = [u, v];
-            let mut query = [[0.; 2]; 2];
-            for axis in 0..2 {
-                let interval = I::point(point[axis])
-                    .add(I::point(f64::from(tile[axis])).mul(periods[axis])?)?;
-                query[axis] = [interval.lo, interval.hi];
-            }
+            let v_interval = p1.add(I::point(f64::from(v)).mul(periods[1])?)?;
+            let query = [qu, [v_interval.lo, v_interval.hi]];
             let classification = domain.classify(query, max_cells - out.cells)?;
             out.cells += classification.cells;
             let value = classification.winding;

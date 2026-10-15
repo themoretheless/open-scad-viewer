@@ -332,7 +332,8 @@ impl<'a> Sweep<'a> {
         let traversal =
             (self.lengths[edge] + f * (self.lengths[edge + 1] - self.lengths[edge])) / total;
         let t = self.tangents[edge];
-        let angle = law(self.twist, traversal)? + self.correction * traversal;
+        let twist_val = law(self.twist, traversal)?;
+        let angle = twist_val + self.correction * traversal;
         let (n,b,frame_axis)=if let Some((longitudinal,transverse))=self.frame_laws {
             let value=|curve:&Curve|->Result<V>{let [a,b]=curve.domain();let p=curve.evaluate(a+(b-a)*traversal)?.point;Ok([p[0],p[1],p[2]])};
             let axis=unit(value(longitudinal)?)?;
@@ -342,14 +343,14 @@ impl<'a> Sweep<'a> {
                 sub(rail,path)
             } else {value(transverse)?};
             let normal=unit(sub(v,axis.map(|x|x*dot(axis,v))))?;
-            let n=rotate(normal,axis,law(self.twist,traversal)?);(n,cross(axis,n),axis)
+            let n=rotate(normal,axis,twist_val);(n,cross(axis,n),axis)
         } else if let Some(guide)=self.orientation_guide {
             let [a,b]=guide.domain();let rail=guide.evaluate(a+(b-a)*traversal)?.point;
             let next=(edge+1)%self.points.len();
             let path:V=std::array::from_fn(|k|(1.-f)*self.points[edge][k]+f*self.points[next][k]);
             let v=sub([rail[0],rail[1],rail[2]],path);
             let normal=unit(sub(v,t.map(|x|x*dot(t,v))))?;
-            let n=rotate(normal,t,law(self.twist,traversal)?);(n,cross(t,n),t)
+            let n=rotate(normal,t,twist_val);(n,cross(t,n),t)
         } else {let n=rotate(self.normals[edge],t,angle);(n,cross(t,n),t)};
         let scale = law(self.scale, traversal)?;
         let (axes,center)=if let Some((axes,center))=self.affine_laws {
@@ -357,29 +358,43 @@ impl<'a> Sweep<'a> {
             (value(axes)?,value(center)?)
         } else {([1.;3],[0.;3])};
         let next = (edge + 1) % self.points.len();
-        self.profiles
-            .iter()
-            .zip(&self.offsets)
-            .map(|(profile, offsets)| {
-                let mut curve = profile.clone();
-                for (p, offset) in curve.control_points.iter_mut().zip(offsets) {
-                    let q: V =
-                        if self.affine_laws.is_some(){std::array::from_fn(|k|
-                            (scale*axes[0]*offset[0]+center[0])*n[k]+(scale*axes[1]*offset[1]+center[1])*b[k]+center[2]*frame_axis[k])}
-                        else {std::array::from_fn(|k| scale * (offset[0] * n[k] + offset[1] * b[k]))};
-                    let shift = |plane: Option<V>| plane.map_or(0., |h| dot(q, h) / dot(t, h));
-                    let axial = (1. - f) * shift(self.planes[edge]) + f * shift(self.planes[next]);
-                    *p = (0..3)
-                        .map(|k| {
-                            (1. - f) * self.points[edge][k] + f * self.points[next][k] + q[k]
-                                - axial * t[k]
-                        })
-                        .collect();
-                }
-                curve.validate()?;
-                Ok(curve)
-            })
-            .collect()
+        let p_edge = self.points[edge];
+        let p_next = self.points[next];
+        let base_pt: V = std::array::from_fn(|k| (1. - f) * p_edge[k] + f * p_next[k]);
+        let plane_edge = self.planes[edge];
+        let plane_next = self.planes[next];
+        let mut out = Vec::with_capacity(self.profiles.len());
+        for (profile, offsets) in self.profiles.iter().zip(&self.offsets) {
+            let mut control_points = Vec::with_capacity(offsets.len());
+            for offset in offsets {
+                let q: V = if self.affine_laws.is_some() {
+                    std::array::from_fn(|k| {
+                        (scale * axes[0] * offset[0] + center[0]) * n[k]
+                            + (scale * axes[1] * offset[1] + center[1]) * b[k]
+                            + center[2] * frame_axis[k]
+                    })
+                } else {
+                    std::array::from_fn(|k| scale * (offset[0] * n[k] + offset[1] * b[k]))
+                };
+                let shift = |plane: Option<V>| plane.map_or(0., |h| dot(q, h) / dot(t, h));
+                let axial = (1. - f) * shift(plane_edge) + f * shift(plane_next);
+                control_points.push(vec![
+                    base_pt[0] + q[0] - axial * t[0],
+                    base_pt[1] + q[1] - axial * t[1],
+                    base_pt[2] + q[2] - axial * t[2],
+                ]);
+            }
+            let curve = Curve {
+                degree: profile.degree,
+                knots: profile.knots.clone(),
+                control_points,
+                weights: profile.weights.clone(),
+                periodic: profile.periodic,
+            };
+            curve.validate()?;
+            out.push(curve);
+        }
+        Ok(out)
     }
     fn at(&self, index: usize, steps: usize) -> Result<Vec<Curve>> {
         if self.options.closed && index == self.tangents.len() * steps {

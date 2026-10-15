@@ -11,6 +11,7 @@ pub struct LegacyResolution {
     pub reduced: bool,
 }
 /// Match Math.round, including negative zero and values too large to have fractions.
+#[inline]
 pub fn legacy_round(value: f64) -> f64 {
     if value.abs() >= 4503599627370496. || !value.is_finite() {
         return value;
@@ -28,6 +29,7 @@ pub fn legacy_round(value: f64) -> f64 {
     }
 }
 /// Viewer-subset quality caps. Language validation and warning presentation stay with callers.
+#[inline]
 pub fn legacy(
     requested: Option<f64>,
     fallback: f64,

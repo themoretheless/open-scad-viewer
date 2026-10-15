@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {primitiveCreationError} from '../services/primitiveCreationError'
+import RoundSolidOptions from '../components/RoundSolidOptions.vue'
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
 import VrControls from '../components/VrControls.vue'
@@ -1104,6 +1106,8 @@ function surfaceConstructionError(error:unknown):string {
 }
 const surfaceBuildResult=shallowRef<ReturnType<typeof buildSolidSurface>|null>(null)
 const invalidQuantities = ref<Record<string, boolean>>({})
+const invalidQuantitiesKey = computed(() => JSON.stringify(invalidQuantities.value))
+const selectedIdsKey = computed(() => selectedIds.value.join('\0'))
 const bodyEditRevision=ref(0),bodyEditRetryVisible=ref(false)
 watch(advancedOp,()=>{bodyEditRetryVisible.value=false},{flush:'sync'})
 watch(()=>props.open,open=>{if(!open)advancedOp.value=null},{flush:'sync'})
@@ -1115,7 +1119,7 @@ const curveOffsetState=shallowRef<Awaited<ReturnType<typeof import('../services/
 const bodyEditPending=ref(false),bodyEditResult=shallowRef<DirectDocument|null>(null),bodyEditError=ref('')
 function cancelBodyEdit(){curveOffsetState.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
 onUnmounted(()=>{cancelBodyEdit();bodyEditWorker.dispose()})
-watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,selection.value,faceIndex.value,edgeIndex.value,JSON.stringify(edgeIndexes.value),JSON.stringify(openingFaces.value),JSON.stringify(surfaceInputs.value),JSON.stringify(selectedIds.value),JSON.stringify(surfaceReversed.value),loftPreviewId.value,activeGroup.value,JSON.stringify(advanced.value),JSON.stringify(pointTrimPick.value),filletSegments.value,JSON.stringify(invalidQuantities.value)],()=>{
+watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,selection.value,faceIndex.value,edgeIndex.value,edgeIndexes.value.join(','),openingFaces.value.join(','),surfaceInputs.value.join('\0'),selectedIdsKey.value,surfaceReversed.value.join(','),loftPreviewId.value,activeGroup.value,JSON.stringify(advanced.value),JSON.stringify(pointTrimPick.value),filletSegments.value,invalidQuantitiesKey.value],()=>{
  cancelBodyEdit()
  if(!props.open||Object.keys(invalidQuantities.value).length||!(advancedOp.value==='nurbs-offset'||advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isSolidSurfaceBuild(advancedOp.value)||isNurbsMatch(advancedOp.value)||isSolidSceneEdit(advancedOp.value)))return
  const generation=bodyEditGeneration
@@ -1255,15 +1259,38 @@ async function refreshBodyEdges(){
 const featureEdges=computed(()=>authoredEdges.value.map(edge=>({i:edge.index,id:edge.id,points:edge.points.map(point=>project(point,'3d').join(',')).join(' ')})))
 const splitPlanePoints=computed(()=>{
  if(advancedOp.value!=='split'||!selectedBody.value)return ''
- const n=axisVector(advanced.value.axis),u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u),p=bodyPoints(selectedBody.value),size=Math.max(...p.map(p=>Math.hypot(...p)))+10
+ const n=axisVector(advanced.value.axis),u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u),pos=selectedBody.value.mesh.positions
+ let maxR=0
+ for(let i=0;i<pos.length;i+=3){const r=Math.hypot(pos[i],pos[i+1],pos[i+2]);if(r>maxR)maxR=r}
+ const size=maxR+10
  return [[-size,-size],[size,-size],[size,size],[-size,size]].map(q=>project(worldPoint(q,{origin:n.map(x=>x*advanced.value.distance) as Vec3,u,v}),'3d').join(',')).join(' ')
 })
 /** Axis-aligned bounds of the selection: the gizmo is centred on them and sized by them. */
 const gizmoBounds=computed(()=>{
- const p=[...document.value.bodies.filter(b=>selectedIds.value.includes(b.id)).flatMap(bodyPoints),...document.value.sketches.filter(s=>selectedIds.value.includes(s.id)).flatMap(s=>s.points.map(p=>worldPoint(p,s.plane)))]
- if(!p.length)return null
- const min=[0,1,2].map(k=>Math.min(...p.map(q=>q[k]))),max=[0,1,2].map(k=>Math.max(...p.map(q=>q[k])))
- return {center:[0,1,2].map(k=>(min[k]+max[k])/2) as Vec3, extent:Math.max(...[0,1,2].map(k=>max[k]-min[k]))}
+ let min0=Infinity,max0=-Infinity,min1=Infinity,max1=-Infinity,min2=Infinity,max2=-Infinity,hasPoints=false
+ for(const b of document.value.bodies){
+  if(!selectedIds.value.includes(b.id))continue
+  const pos=b.mesh.positions
+  for(let i=0;i<pos.length;i+=3){
+   hasPoints=true
+   const x=pos[i],y=pos[i+1],z=pos[i+2]
+   if(x<min0)min0=x;if(x>max0)max0=x
+   if(y<min1)min1=y;if(y>max1)max1=y
+   if(z<min2)min2=z;if(z>max2)max2=z
+  }
+ }
+ for(const s of document.value.sketches){
+  if(!selectedIds.value.includes(s.id))continue
+  for(const pt of s.points){
+   hasPoints=true
+   const q=worldPoint(pt,s.plane),x=q[0],y=q[1],z=q[2]
+   if(x<min0)min0=x;if(x>max0)max0=x
+   if(y<min1)min1=y;if(y>max1)max1=y
+   if(z<min2)min2=z;if(z>max2)max2=z
+  }
+ }
+ if(!hasPoints)return null
+ return {center:[(min0+max0)/2,(min1+max1)/2,(min2+max2)/2] as Vec3, extent:Math.max(max0-min0,max1-min1,max2-min2)}
 })
 const gizmoCenter=computed(()=>gizmoBounds.value?.center??null)
 /**
@@ -1311,6 +1338,8 @@ function startCv(e:PointerEvent,u:number,v:number) {
  const svg=canvasOf(e);svg.focus();cvDrag={id:selectedNurbs.value.id,u,v,before:history.document,point:[...point],start:position(e),pointer:e.pointerId,svg,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
 }
 function pickEdge(e:PointerEvent|KeyboardEvent,index:number){
+ // Navigation must bubble to the canvas even when it starts on an edge.
+ if('button' in e && e.button!==0)return
  extraSelection.value=[];e.stopPropagation()
  if(e.shiftKey||e.ctrlKey||e.metaKey){const set=new Set(edgeIndexes.value.length?edgeIndexes.value:edgeIndex.value>=0?[edgeIndex.value]:[]);set.has(index)?set.delete(index):set.add(index);edgeIndexes.value=[...set];edgeIndex.value=edgeIndexes.value.at(-1)??-1}
  else {edgeIndex.value=index;edgeIndexes.value=[index]}
@@ -1554,7 +1583,7 @@ function extrude() { run(() => {
   const id=previewBody.value?.id??'';commit(next)
   operation.value=null;mode.value='3d';selection.value=extrusionMode.value==='new'?id:next.bodies.some(b=>b.id===targetBody.value)?targetBody.value:'';fit('3d')
 }) }
-watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup.value,cornerVertex.value,cornerRadius.value,copyCount.value,copySweep.value,copyX.value,copyY.value,sketchEditRevision.value,JSON.stringify(invalidQuantities.value)],()=>{
+watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup.value,cornerVertex.value,cornerRadius.value,copyCount.value,copySweep.value,copyX.value,copyY.value,sketchEditRevision.value,invalidQuantitiesKey.value],()=>{
  cancelSketchEdit()
  const op=operation.value
  if(!props.open||Object.keys(invalidQuantities.value).length||!selectedSketch.value||(op!=='fillet'&&op!=='dogear'&&op!=='array'))return
@@ -1574,12 +1603,12 @@ const copyPreview = computed(() => operation.value==='array'?sketchEditResult.va
 function applyCopies(){applySketchEdit()}
 function duplicate() { run(() => {
  const d=history.document,moved=transformSelection(d,selectedIds.value,[10,10,0],[0,0,1],0,1),ids:string[]=[],copies=new Map(selectedIds.value.map(id=>[id,crypto.randomUUID()]))
- for(const s of moved.sketches)if(selectedIds.value.includes(s.id)){s.id=copies.get(s.id)!;s.name=(s.name+' · copy').slice(0,100);ids.push(s.id);d.sketches.push(s)}
- for(const b of moved.bodies)if(selectedIds.value.includes(b.id)){b.id=copies.get(b.id)!;if(b.instance&&copies.has(b.instance.sourceId))b.instance.sourceId=copies.get(b.instance.sourceId)!;b.name=(b.name+' · copy').slice(0,100);ids.push(b.id);d.bodies.push(b)}
+ for(const s of moved.sketches)if(copies.has(s.id)){s.id=copies.get(s.id)!;s.name=(s.name+' · copy').slice(0,100);ids.push(s.id);d.sketches.push(s)}
+ for(const b of moved.bodies)if(copies.has(b.id)){b.id=copies.get(b.id)!;if(b.instance&&copies.has(b.instance.sourceId))b.instance.sourceId=copies.get(b.instance.sourceId)!;b.name=(b.name+' · copy').slice(0,100);ids.push(b.id);d.bodies.push(b)}
  if(!ids.length)return
  commit(d);pickObject(ids[0],mode.value);extraSelection.value=ids.slice(1)
 }) }
-watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, () => JSON.stringify(invalidQuantities.value)], () => {
+watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, invalidQuantitiesKey], () => {
   invalidateSolidPreview()
   if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) return
   const generation=previewGeneration
@@ -1603,12 +1632,13 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
 }, {flush:'sync'})
 watch(selection, () => { advancedOp.value=null; operation.value = null; previewBody.value = null; cornerVertex.value = 0 })
 function remove() { run(() => {
+  const selectedSet = new Set(selectedIds.value)
   advancedOp.value=null
   const d = history.document
-  d.sketches = d.sketches.filter(s => !selectedIds.value.includes(s.id))
-  d.bodies = d.bodies.filter(b => !selectedIds.value.includes(b.id))
-  d.curves = d.curves!.filter(c => !selectedIds.value.includes(c.id))
-  d.surfaces = d.surfaces!.filter(s => !selectedIds.value.includes(s.id))
+  d.sketches = d.sketches.filter(s => !selectedSet.has(s.id))
+  d.bodies = d.bodies.filter(b => !selectedSet.has(b.id))
+  d.curves = d.curves!.filter(c => !selectedSet.has(c.id))
+  d.surfaces = d.surfaces!.filter(s => !selectedSet.has(s.id))
   commit(d); selection.value = ''; extraSelection.value=[]
 }) }
 function restoreGizmoPreview(){
@@ -1651,7 +1681,7 @@ async function drainGizmoTransforms(){
   }
  }finally{if(epoch===gizmoEpoch){gizmoRunning=false;gizmoPending.value=false}}
 }
-watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value)],()=>{
+watch(()=>[props.open,document.value,selectedIdsKey.value],()=>{
  if(!gizmoPublishing&&(gizmoBase||gizmoPending.value)){cancelGizmoWorker();manipulatorDrag=null;cvDrag=null;vertexDrag=null;curveDrag=null;if(gesture?.workerEdit)gesture=null;previewingTransform.value=false}
 },{flush:'sync'})
 watch(()=>[cvU.value,cvV.value],()=>{if(pointEditActive.value&&(gizmoBase||gizmoPending.value)){cancelGizmoWorker();cvDrag=null}},{flush:'sync'})
@@ -1676,7 +1706,7 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
  }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
 }
-watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
+watch(()=>[props.open,document.value,selectedIdsKey.value,dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
 onUnmounted(()=>{cancelDirectTransform();directTransformWorker.dispose()})
 function transform(){
  if(directTransformPending.value)return
@@ -2905,6 +2935,9 @@ if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
 const primitiveKinds = ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'] as const
 const roundGeometry=ref<'exact'|'faceted'>('exact')
 const primitiveSize = ref(20),primitiveTopRadius=ref(5),primitiveInnerRadius=ref(7)
+const primitiveG2Enabled=ref(false),primitiveG2Size=ref(0.5)
+const primitiveG2Individual=ref(false),primitiveG2Sizes=ref<[number,number,number,number]>([0.5,0.5,0.5,0.5])
+const failedPrimitive=ref<typeof primitiveKinds[number]|null>(null),primitiveG2Invalid=ref(false)
 // 24x24 stroke icons for the pane tool bars; labels stay in the tooltip and aria-label.
 const TOOL_ICONS = {
   select: 'M5 3l14 8-7 1.5L8 20z',
@@ -2944,25 +2977,30 @@ const primitiveWorker=createSolidPreviewWorker(),primitivePending=ref(false)
 let primitiveGeneration=0
 function cancelPrimitive(){primitiveGeneration++;primitiveWorker.cancel();primitivePending.value=false}
 onUnmounted(()=>{cancelPrimitive();primitiveWorker.dispose()})
-watch(()=>[props.open,document.value,operation.value,advancedOp.value,tool.value,primitiveSize.value,primitiveTopRadius.value,primitiveInnerRadius.value,roundGeometry.value,brepSegments.value,activeGroup.value,lockedIds.value.join(',')],()=>{if(primitivePending.value)cancelPrimitive()},{flush:'sync'})
+watch(()=>[props.open,document.value,operation.value,advancedOp.value,tool.value,primitiveSize.value,primitiveTopRadius.value,primitiveInnerRadius.value,primitiveG2Enabled.value,primitiveG2Size.value,primitiveG2Individual.value,...primitiveG2Sizes.value,roundGeometry.value,brepSegments.value,activeGroup.value,lockedIds.value.join(',')],()=>{if(primitivePending.value)cancelPrimitive()},{flush:'sync'})
 async function addPrimitive(kind: typeof primitiveKinds[number]) {
- cancelCommand();error.value=''
+ cancelCommand();error.value='';failedPrimitive.value=null;primitiveG2Invalid.value=false
  const generation=++primitiveGeneration,before=document.value,target=history,id=crypto.randomUUID()
  const current=()=>generation===primitiveGeneration&&props.open&&!restoreDisposed&&before===document.value&&target===history
  let name=primitiveLabel(kind)
  if(['box','wedge','cylinder','frustum','tube'].includes(kind))name+=' · 3D'
  if(['cylinder','sphere','cone'].includes(kind)&&!(kind==='cone'&&roundGeometry.value==='faceted'))name+=` · ${roundGeometry.value==='exact'?label('точный B-rep','exact B-rep'):label('гранёный B-rep','faceted B-rep')}`
  if(['frustum','tube','torus'].includes(kind))name+=` · ${label('точный B-rep','exact B-rep')}`
+ if(kind==='tube'&&primitiveG2Enabled.value)name+=' · G2'
  primitivePending.value=true;workspace.value?.focus()
  try{
   if(!Number.isFinite(primitiveSize.value)||primitiveSize.value<.1||primitiveSize.value>10000)throw Error(label('Размер от 0.1 до 10000 мм','Size must be 0.1–10000 mm'))
-  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
+  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
   if(!current())return
   const {validateLocked,added}=prepareCommit(next)
   const applied=await target.commitAsync(async()=>next,validateLocked)
   if(!current()||!applied)return
   primitivePending.value=false;finishCommit(added);pickObject(id,'3d');fit('3d')
- }catch(e){if(current())error.value=e instanceof Error?e.message:String(e)}
+ }catch(e){if(current()){
+  const message=e instanceof Error?e.message:String(e),code=e&&typeof e==='object'&&'code' in e&&typeof e.code==='string'?e.code:'';failedPrimitive.value=kind
+  primitiveG2Invalid.value=kind==='tube'&&primitiveG2Enabled.value&&(code==='BREP_G2_ANNULAR_LIMITS'||message.includes('BREP_G2_ANNULAR_LIMITS')||message.includes('G2 tube transition size'))
+  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code)
+ }}
  finally{if(generation===primitiveGeneration)primitivePending.value=false}
 }
 const bridgeEndA=ref<'start'|'end'>('end'),bridgeEndB=ref<'start'|'end'>('start'),bridgeTension=ref(1)
@@ -3342,10 +3380,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span class="primitive-divider" aria-hidden="true"></span>
       <button class="primitive-icon" :title="label('NURBS-кривая','NURBS curve')" :aria-label="label('NURBS-кривая','NURBS curve')" @click="addNurbs('curve')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.curve" /></svg></button>
       <button class="primitive-icon" :title="label('NURBS-поверхность','NURBS surface')" :aria-label="label('NURBS-поверхность','NURBS surface')" @click="addNurbs('surface')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.surface" /></svg></button>
-      <details><summary>{{ label('Параметры круглых тел','Round solid options') }}</summary>
-      <label>{{ label('Верхний радиус конуса, мм','Frustum top radius, mm') }} <input v-model.number="primitiveTopRadius" type="number" min="0.00001" /></label>
-      <label>{{ label('Внутренний радиус трубы, мм','Tube inner radius, mm') }} <input v-model.number="primitiveInnerRadius" type="number" min="0.00001" /></label>
-      </details>
+      <RoundSolidOptions :label="label" :primitive-g2-invalid="primitiveG2Invalid" v-model:top-radius="primitiveTopRadius" v-model:inner-radius="primitiveInnerRadius" v-model:g2-enabled="primitiveG2Enabled" v-model:g2-size="primitiveG2Size" v-model:individual="primitiveG2Individual" v-model:transition-sizes="primitiveG2Sizes" />
+      <button v-if="failedPrimitive" :disabled="primitivePending" @click="failedPrimitive && addPrimitive(failedPrimitive)">{{ label('Повторить создание','Retry creation') }}</button>
       <label>{{ label('Сфера / цилиндр / конус','Sphere / cylinder / cone') }} <select v-model="roundGeometry"><option value="exact">{{ label('Точные поверхности','Exact surfaces') }}</option><option value="faceted">{{ label('Гранёный · planar Boolean','Faceted · planar Boolean') }}</option></select></label>
       <label>{{ label('Размер, мм','Size, mm') }} <input v-model.number="primitiveSize" type="number" min="0.1" max="10000" /></label>
       <button type="button" :title="label('Импорт сетки как тело', 'Import mesh as body')" @click="stlInput?.click()">{{ label('Импорт сетки', 'Import mesh') }}</button>
@@ -3510,7 +3546,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <g v-for="(vertex,end) in selectedBody.brep.edges[edgeIndex]?.vertices??[]" :key="end" :transform="`translate(${project(selectedBody.brep.vertices[vertex].point,'3d').join(' ')})`"><circle :r="views['3d']/100" fill="#ffc977"/><text :font-size="views['3d']/35" fill="#ffc977" :x="views['3d']/80">{{ end===0?'A':'B' }}</text></g>
               </g>
               <g v-if="pane==='3d' && pickMode==='edge'" :data-body-overlay="selectedBody?.id">
-                <polyline v-for="edge in featureEdges" :key="edge.id" :data-topology-edge="edge.id" role="button" tabindex="0" :aria-label="label('Ребро ','Edge ')+(edge.i+1)" :aria-pressed="edgeIndexes.includes(edge.i)" @keydown.enter.stop.prevent="pickEdge($event,edge.i)" @keydown.space.stop.prevent="pickEdge($event,edge.i)" :points="edge.points" fill="none" :stroke="edgeIndexes.includes(edge.i)?(advancedPreview.error && ['edge-fillet','chamfer'].includes(advancedOp??'')?'#f87171':'#ffc977'):'#89baff'" :stroke-width="edgeIndexes.includes(edge.i)?5:3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickEdge($event,edge.i)" />
+                <polyline v-for="edge in featureEdges" :key="edge.id" :data-topology-edge="edge.id" role="button" tabindex="0" :aria-label="label('Ребро ','Edge ')+(edge.i+1)" :aria-pressed="edgeIndexes.includes(edge.i)" @keydown.enter.stop.prevent="pickEdge($event,edge.i)" @keydown.space.stop.prevent="pickEdge($event,edge.i)" :points="edge.points" fill="none" :stroke="edgeIndexes.includes(edge.i)?(advancedPreview.error && ['edge-fillet','chamfer'].includes(advancedOp??'')?'#f87171':'#ffc977'):'#89baff'" :stroke-width="edgeIndexes.includes(edge.i)?5:3" vector-effect="non-scaling-stroke" @pointerdown="pickEdge($event,edge.i)" />
               </g>
               <g v-if="pane==='3d' && !advancedOp && pickMode==='body'" :data-body-overlay="selectedIds.join(' ')">
                 <g v-for="axis in gizmoAxes" :key="axis.axis">

@@ -16,21 +16,44 @@ import type { DirectDocument } from './directModeling'
  * owned by the scene/renderer (transferring them would detach live scene geometry),
  * mirroring the gcodePreviewWorkerTransport precedent and the svgWorkerClient note.
  */
+function pushTransferView(transfer: ArrayBuffer[], view: unknown): void {
+  if (view && ArrayBuffer.isView(view)) {
+    const buf = view.buffer
+    if (buf instanceof ArrayBuffer && !transfer.includes(buf)) {
+      transfer.push(buf)
+    }
+  }
+}
+
 export function prepareMainSolidTransfer(response: MainSolidResponse): { response: MainSolidResponse; transfer: ArrayBuffer[] } {
   if(response.ok && (response.kind==='displayMesh'||response.kind==='surfaceMesh')) {
     const mesh=response.kind==='surfaceMesh'?response.result as PolygonMesh:(response.result as DisplayMesh).mesh
-    const buffers=new Set<ArrayBuffer>()
-    for(const view of [mesh.positions,mesh.indices,mesh.uv])if(view&&ArrayBuffer.isView(view)&&view.buffer instanceof ArrayBuffer)buffers.add(view.buffer)
-    return {response,transfer:[...buffers]}
+    const transfer: ArrayBuffer[] = []
+    pushTransferView(transfer, mesh.positions)
+    pushTransferView(transfer, mesh.indices)
+    pushTransferView(transfer, mesh.uv)
+    return {response,transfer}
   }
   if(response.ok && (response.kind==='restoreDocument'||response.kind==='rushGraphImport'||response.kind==='primitive')) {
     // These jobs parse the complete replacement, so parsed mesh buffers belong
     // exclusively to the response. Deduplicate buffers in case views share backing storage.
-    const buffers=new Set<ArrayBuffer>()
-    for(const body of (response.result as DirectDocument).bodies) {
-      for(const view of [body.mesh.positions,body.mesh.indices,body.mesh.uv]) {
-        if(view && ArrayBuffer.isView(view) && view.buffer instanceof ArrayBuffer)buffers.add(view.buffer)
+    const bodies = (response.result as DirectDocument).bodies
+    if (bodies.length <= 8) {
+      const transfer: ArrayBuffer[] = []
+      for (let i = 0; i < bodies.length; i++) {
+        const mesh = bodies[i]!.mesh
+        pushTransferView(transfer, mesh.positions)
+        pushTransferView(transfer, mesh.indices)
+        pushTransferView(transfer, mesh.uv)
       }
+      return { response, transfer }
+    }
+    const buffers=new Set<ArrayBuffer>()
+    for(const body of bodies) {
+      const mesh = body.mesh
+      if(mesh.positions && ArrayBuffer.isView(mesh.positions) && mesh.positions.buffer instanceof ArrayBuffer)buffers.add(mesh.positions.buffer)
+      if(mesh.indices && ArrayBuffer.isView(mesh.indices) && mesh.indices.buffer instanceof ArrayBuffer)buffers.add(mesh.indices.buffer)
+      if(mesh.uv && ArrayBuffer.isView(mesh.uv) && mesh.uv.buffer instanceof ArrayBuffer)buffers.add(mesh.uv.buffer)
     }
     return {response,transfer:[...buffers]}
   }
@@ -38,7 +61,9 @@ export function prepareMainSolidTransfer(response: MainSolidResponse): { respons
   const result = response.result as StructuralSections
   const mesh = result?.sourceMesh
   if (!mesh || !(mesh.positions instanceof Float64Array) || !(mesh.indices instanceof Uint32Array)) return { response, transfer: [] }
-  return { response, transfer: [mesh.positions.buffer as ArrayBuffer, mesh.indices.buffer as ArrayBuffer] }
+  const posBuf = mesh.positions.buffer as ArrayBuffer
+  const idxBuf = mesh.indices.buffer as ArrayBuffer
+  return { response, transfer: posBuf === idxBuf ? [posBuf] : [posBuf, idxBuf] }
 }
 
 /** Typed arrays survive structuredClone intact, so protocol validation sees them

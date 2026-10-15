@@ -34,22 +34,19 @@ impl Interval {
     }
     /// Outward-rounded product.
     pub fn mul(self, b: Self) -> Result<Self> {
-        let p = [
-            self.lo * b.lo,
-            self.lo * b.hi,
-            self.hi * b.lo,
-            self.hi * b.hi,
-        ];
+        let p0 = self.lo * b.lo;
+        let p1 = self.lo * b.hi;
+        let p2 = self.hi * b.lo;
+        let p3 = self.hi * b.hi;
         numeric(
-            p.iter().all(|x| x.is_finite()),
+            p0.is_finite() && p1.is_finite() && p2.is_finite() && p3.is_finite(),
             "Distance product exceeded numeric range",
         )?;
+        // Preserve the original seeded left-fold order and outward rounding.
+        // Explicit four-term reductions avoid iterator calls in size builds.
         Self::new(
-            p.iter().copied().fold(f64::INFINITY, f64::min).next_down(),
-            p.iter()
-                .copied()
-                .fold(f64::NEG_INFINITY, f64::max)
-                .next_up(),
+            f64::INFINITY.min(p0).min(p1).min(p2).min(p3).next_down(),
+            f64::NEG_INFINITY.max(p0).max(p1).max(p2).max(p3).next_up(),
         )
     }
     /// Outward-rounded quotient; `b` must be separated above zero.
@@ -133,6 +130,27 @@ pub enum DistanceStopReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn product_matches_frozen_bounds_and_errors_at_binary64_extremes() {
+        fn frozen(a: Interval, b: Interval) -> Result<Interval> {
+            let p = [a.lo*b.lo,a.lo*b.hi,a.hi*b.lo,a.hi*b.hi];
+            numeric(p.iter().all(|x|x.is_finite()),"Distance product exceeded numeric range")?;
+            Interval::new(p.iter().copied().fold(f64::INFINITY,f64::min).next_down(),
+                p.iter().copied().fold(f64::NEG_INFINITY,f64::max).next_up())
+        }
+        let sub = f64::from_bits(1);
+        let values = [-f64::MAX,-1e308,-1e100,-1.,-f64::MIN_POSITIVE,-sub,-0.,0.,sub,f64::MIN_POSITIVE,1.,1e100,1e308,f64::MAX];
+        let intervals = values.iter().flat_map(|&lo|values.iter().filter_map(move |&hi|
+            (lo<=hi).then_some(Interval {lo,hi}))).collect::<Vec<_>>();
+        for &a in &intervals {for &b in &intervals {
+            match (a.mul(b),frozen(a,b)) {
+                (Ok(x),Ok(y))=>assert_eq!([x.lo.to_bits(),x.hi.to_bits()],[y.lo.to_bits(),y.hi.to_bits()],"{a:?} * {b:?}"),
+                (Err(x),Err(y))=>assert_eq!((x.code,x.message),(y.code,y.message)),
+                (x,y)=>panic!("Product status changed for {a:?} * {b:?}: {x:?} versus {y:?}"),
+            }
+        }}
+    }
 
     #[test]
     fn point_rejects_nan_and_infinity() {

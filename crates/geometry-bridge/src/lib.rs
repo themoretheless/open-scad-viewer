@@ -71,6 +71,7 @@ mod cad_solid_distance;
 mod cad_split;
 mod cad_surface_diagnostics;
 mod cad_sweep_smoothness;
+mod cad_geometric_g2;
 mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
@@ -650,7 +651,9 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_offset"
         | "brep_profile_boolean"
         | "brep_profile_signed_area"
-        | "brep_profile_display" => brep_profile::dispatch(v),
+        | "brep_profile_display"
+        | "brep_profile_certify"
+        | "brep_profile_verify_certificate" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "svg_color_trace" => {
             let tree = svg::parse_tree(&field::<String>(&v, "svg")?, 96., None)?;
@@ -1253,6 +1256,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "brep_miter_section_partition" => cad_miter_layout::partition(v),
         "brep_miter_sharp_stations" => cad_miter_layout::sharp(v),
         "brep_miter_wall_preview" => cad_miter_layout::preview(v),
+        "brep_closed_patch_network" => cad_geometric_g2::create_closed_patch_network(v),
+        "brep_g2_surface_bridge" => cad_geometric_g2::create_surface_bridge(v),
+        "brep_geometric_g2_audit" => cad_geometric_g2::diagnose(v),
+        "brep_g2_annular_cylinder" => cad_geometric_g2::create_annular_cylinder(v),
         "brep_miter_profile_smoothness_audit" => cad_sweep_smoothness::diagnose(v, true),
         "brep_miter_station_smoothness_audit" => cad_sweep_smoothness::diagnose(v, false),
         "brep_sweep_volume_audit" => cad_face_contacts::diagnose_sweep_volume(v),
@@ -1298,14 +1305,16 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             &v, "sections",
         )?)?),
         "brep_nurbs_progressive_profile_body" | "brep_nurbs_progressive_profile_body_reconstruct_stations"
-        | "brep_nurbs_progressive_profile_annular_body" | "brep_nurbs_progressive_profile_annular_body_reconstruct_stations" => {
+        | "brep_nurbs_progressive_profile_annular_body" | "brep_nurbs_progressive_profile_annular_body_reconstruct_stations"
+        | "brep_nurbs_progressive_profile_auto_body" | "brep_nurbs_progressive_profile_auto_body_reconstruct_stations" => {
             use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
-            let annular_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_annular_body"));
+            let automatic_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_auto_body"));
+            let annular_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_annular_body")||automatic_mode);
             if annular_mode {
                 for key in ["model","sections","boundaryCertificate","filledCapErrorUpper","retainedAnnularFilling",
                     "capFaceGroups","capFaces","planarCapFaces","continuousBound","boundaryErrorUpper",
                     "boundaryContinuousBound","boundaryErrorWithinBudget","globalEmbeddingCertified","retainedCaps",
-                    "retainedWalls","capProjection","retainedSmoothness","stationReconstruction","approximation"] {
+                    "retainedWalls","capProjection","retainedSmoothness","stationReconstruction","approximation","capSelectionExactWork","capRepresentation"] {
                     if v.get(key).is_some() {return Err(input("Annular progressive body requires original source, not supplied geometry/proofs"));}
                 }
             }
@@ -1433,7 +1442,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             };
             let guidance=guide.as_ref().map(|g|(g,contact.map(|p|(contact_profile.unwrap_or(0),p))));
             let owned=if annular_mode {
-                Some(brep_core::analytic::progressive_profile_body_with_annular_caps(
+                let construct=if automatic_mode {brep_core::analytic::progressive_profile_body_with_automatic_caps}else{brep_core::analytic::progressive_profile_body_with_annular_caps};
+                Some(construct(
                     &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
                     guidance,options,correction,profile_correction,rmf_policy,
                     brep_core::retained_annular_cap::reference_filling::Limits {
@@ -1520,27 +1530,30 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }
             if let Some(body)=&owned {
                 output["capFaces"]=json!(body.cap_faces());
-                output["planarCapFaces"]=json!([]);
-                output["capFaceGroups"]=body.caps().map_or_else(||json!([[],[]]),|caps|json!(caps.face_groups()));
-                output["capRepresentation"]=json!(if body.caps().is_some(){"radial-annular"}else{"closed"});
+                output["planarCapFaces"]=json!(body.planar_cap_faces());
+                output["capSelectionExactWork"]=json!(body.cap_selection_work());
+                output["capFaceGroups"]=json!(body.cap_face_groups());
+                output["capRepresentation"]=json!(if body.caps().is_some(){"radial-annular"}else if result.approximation.levels.last().unwrap().closed_path {"closed"}else{"legacy"});
                 output["retainedAnnularFilling"]=body.caps().map_or(Value::Null,|caps| {
                     let proof=caps.filling();
                     json!({"method":"authored-smooth-endpoint-annular-filling",
                         "sourceFillingCovered":proof.source_filling_covered,"filledCapErrorUpper":proof.filled_cap_error_upper,
                         "withinBudget":proof.within_budget,"exactWork":caps.exact_work(),"constructionExactWork":caps.construction_work(),
-                        "fillingExactWork":proof.exact_work,"products":proof.products,"endpointCells":proof.endpoint_cells,
+                        "fillingExactWork":proof.exact_work,"selectionExactWork":body.cap_selection_work(),"products":proof.products,"endpointCells":proof.endpoint_cells,
                         "sourceUvFacesInjective":proof.source_uv_faces.as_ref().is_some_and(|r|r.all_faces_injective),
                         "sourceUvPairsClassified":proof.source_uv_pairs.as_ref().is_some_and(|r|r.all_pairs_classified),
                         "reason":proof.reason,"solidGeometryCertified":false})
                 });
                 output["retainedSmoothness"]=if let Some(max_work)=optional_field::<u64>(&v,"smoothness_max_work")? {
                     let actual=body.inspect_smoothness(max_work)?;
-                    json!({"walls":cad_sweep_smoothness::profile_value(&actual.walls),"maxWork":max_work,"totalExactWork":actual.exact_work,
-                        "capInternalSeams":actual.cap_seams.iter().map(|r|json!({"method":"retained-annular-cap-internal-jets","edgeIds":r.edge_ids,
-                            "g1Certified":r.g1_certified,"g2Certified":r.g2_certified,"exactWork":r.exact_work,
-                            "maxWork":r.max_work,"unclassifiedFaces":r.unclassified_faces,"unpairedEdges":r.unpaired_edges,
-                            "extractionComplete":r.extraction_complete})).collect::<Vec<_>>(),
-                        "capWallContinuity":"C0","fullBoundarySmoothnessCertified":false})
+                    let geometric_max_cells=optional_field::<usize>(&v,"geometric_g2_max_cells")?.unwrap_or(0);
+                    if geometric_max_cells>100000 {return Err(input("Geometric G2 shared cell budget must be within 0..100000"));}
+                    let mut remaining=geometric_max_cells;
+                    let caps=actual.cap_seams.iter().map(|r|cad_geometric_g2::cap_value(body.model(),r,&mut remaining)).collect::<Result<Vec<_>>>()?;
+                    json!({"walls":cad_sweep_smoothness::profile_value(&actual.walls),"maxWork":max_work,"totalExactWork":actual.exact_work,"auditOrder":"caps-first",
+                        "geometricMaxCells":geometric_max_cells,"geometricCells":geometric_max_cells-remaining,
+                        "capInternalSeams":caps,
+                        "capWallContinuity":if result.approximation.levels.last().unwrap().closed_path {"absent"}else{"C0"},"fullBoundarySmoothnessCertified":false})
                 }else{Value::Null};
             }
             if let Some(report)=station_reconstruction {output["stationReconstruction"]=report;}

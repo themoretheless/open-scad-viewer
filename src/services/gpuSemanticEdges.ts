@@ -128,7 +128,8 @@ export async function runGpuSemanticEdges(
       maxEdges
     )
 
-    const counterInit = new Uint32Array([0])
+const COUNTER_INIT = new Uint32Array([0])
+const EMPTY_U32 = new Uint32Array(0)
 
     const results = await runGpuCompute({
       wgsl: SEMANTIC_EDGES_WGSL,
@@ -140,8 +141,8 @@ export async function runGpuSemanticEdges(
             { binding: 1, data: vertices },
             { binding: 2, data: indices },
             { binding: 3, data: edgeAdjacency },
-            { binding: 4, data: counterInit, output: true, outputBytes: 4 },
-            { binding: 5, data: new Uint32Array(0), output: true, outputBytes: maxEdges * 2 * 4 },
+            { binding: 4, data: COUNTER_INIT, output: true, outputBytes: 4 },
+            { binding: 5, data: EMPTY_U32, output: true, outputBytes: maxEdges * 2 * 4 },
           ],
           outputBytes: maxEdges * 2 * 4,
           workgroups: [Math.ceil(totalEdges / 256), 1, 1],
@@ -149,14 +150,13 @@ export async function runGpuSemanticEdges(
       ],
     })
 
-    const count = Math.min(results[0]?.[0] ?? 0, maxEdges)
-    const rawIndices = results[1]
+    // Compute readback exposes raw bytes through Float32Array views; these
+    // shader outputs are u32, so preserve their bits rather than convert values.
+    const asU32 = (view: Float32Array) => new Uint32Array(view.buffer, view.byteOffset, view.byteLength / 4)
+    const count = Math.min(results[0] ? asU32(results[0])[0] : 0, maxEdges)
+    const rawIndices = results[1] ? asU32(results[1]) : undefined
     if (rawIndices) {
-      const edgeIndices = new Uint32Array(count * 2)
-      for (let i = 0; i < count * 2; i++) {
-        edgeIndices[i] = rawIndices[i]!
-      }
-      return { indices: edgeIndices, edgeCount: count }
+      return { indices: rawIndices.slice(0, count * 2), edgeCount: count }
     }
   } catch {
     // Fallback if WebGPU compute is not available

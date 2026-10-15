@@ -12,7 +12,7 @@ fn split(controls: &[[I;4]], alpha: I, weights: [f64;2]) -> Result<(Vec<[I;4]>,V
     for remaining in (1..d.len()).rev() {
         for j in 0..remaining {
             let a=d[j];let b=d[j+1];
-            for k in 0..4 { d[j][k]=a[k].mul(beta)?.add(b[k].mul(alpha)?)?
+            for k in 0..4 { d[j][k]=super::mul_blend_factor(a[k],beta)?.add(super::mul_blend_factor(b[k],alpha)?)?
                 .intersect(a[k].lo.min(b[k].lo),a[k].hi.max(b[k].hi))?; }
             d[j][3]=d[j][3].intersect(weights[0],weights[1])?;
         }

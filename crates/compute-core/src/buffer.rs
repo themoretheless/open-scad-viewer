@@ -1,5 +1,17 @@
 use wgpu::{Buffer, Device, Queue};
 
+#[cfg(target_endian = "little")]
+fn cast_f32_bytes(data: &[f32]) -> &[u8] {
+    // SAFETY: f32 has no padding or uninitialized bytes, and u8 has alignment 1.
+    unsafe { std::slice::from_raw_parts(data.as_ptr().cast::<u8>(), std::mem::size_of_val(data)) }
+}
+
+#[cfg(target_endian = "little")]
+fn cast_u32_bytes(data: &[u32]) -> &[u8] {
+    // SAFETY: u32 has no padding or uninitialized bytes, and u8 has alignment 1.
+    unsafe { std::slice::from_raw_parts(data.as_ptr().cast::<u8>(), std::mem::size_of_val(data)) }
+}
+
 /// Uploads `data` as a storage buffer (STORAGE | COPY_DST).
 pub fn storage_f32(device: &Device, queue: &Queue, data: &[f32]) -> Buffer {
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -10,6 +22,9 @@ pub fn storage_f32(device: &Device, queue: &Queue, data: &[f32]) -> Buffer {
             | wgpu::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
+    #[cfg(target_endian = "little")]
+    queue.write_buffer(&buffer, 0, cast_f32_bytes(data));
+    #[cfg(not(target_endian = "little"))]
     queue.write_buffer(&buffer, 0, &gpu_compute::pack_f32(data));
     buffer
 }
@@ -36,6 +51,9 @@ pub fn storage_u32(device: &Device, queue: &Queue, data: &[u32]) -> Buffer {
             | wgpu::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
+    #[cfg(target_endian = "little")]
+    queue.write_buffer(&buffer, 0, cast_u32_bytes(data));
+    #[cfg(not(target_endian = "little"))]
     queue.write_buffer(&buffer, 0, &gpu_compute::pack_u32(data));
     buffer
 }
@@ -49,6 +67,9 @@ pub fn uniform_f32(device: &Device, queue: &Queue, floats: &[f32]) -> Buffer {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
+    #[cfg(target_endian = "little")]
+    queue.write_buffer(&buffer, 0, cast_f32_bytes(floats));
+    #[cfg(not(target_endian = "little"))]
     queue.write_buffer(&buffer, 0, &gpu_compute::pack_f32(floats));
     buffer
 }
@@ -83,12 +104,12 @@ pub fn try_read_f32(
             .checked_mul(4)
             .ok_or(gpu_compute::ReadbackError::InvalidRange)?,
     )?;
-    Ok(bytes
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|chunk| f32::from_le_bytes(*chunk))
-        .collect())
+    let chunks = bytes.as_chunks::<4>().0;
+    let mut out = Vec::with_capacity(chunks.len());
+    for chunk in chunks {
+        out.push(f32::from_le_bytes(*chunk));
+    }
+    Ok(out)
 }
 pub fn try_read_u32(
     device: &Device,
@@ -104,12 +125,12 @@ pub fn try_read_u32(
             .checked_mul(4)
             .ok_or(gpu_compute::ReadbackError::InvalidRange)?,
     )?;
-    Ok(bytes
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|chunk| u32::from_le_bytes(*chunk))
-        .collect())
+    let chunks = bytes.as_chunks::<4>().0;
+    let mut out = Vec::with_capacity(chunks.len());
+    for chunk in chunks {
+        out.push(u32::from_le_bytes(*chunk));
+    }
+    Ok(out)
 }
 
 /// Compatibility convenience: panics on transport failure, never fabricates an

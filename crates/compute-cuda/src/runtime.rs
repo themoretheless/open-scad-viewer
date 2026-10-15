@@ -366,13 +366,11 @@ pub(crate) fn rank(shape: &Shape) -> Result<u32, CudaError> {
         .map_err(|_| CudaError::InvalidInput("CUDA tensor rank exceeds u32::MAX"))
 }
 pub(crate) fn layout_metadata(layout: &Layout) -> Vec<u64> {
-    layout
-        .shape()
-        .dims()
-        .iter()
-        .chain(layout.strides())
-        .map(|&v| v as u64)
-        .collect()
+    let rank = layout.shape().rank();
+    let mut meta = Vec::with_capacity(rank * 2);
+    meta.extend(layout.shape().dims().iter().map(|&v| v as u64));
+    meta.extend(layout.strides().iter().map(|&v| v as u64));
+    meta
 }
 impl TensorBackend for CudaRuntime {
     type Tensor = CudaTensor;

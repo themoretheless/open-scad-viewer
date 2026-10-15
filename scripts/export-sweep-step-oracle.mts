@@ -10,7 +10,7 @@ import {createHash} from 'node:crypto'
 import {bezierNurbsCurve,circleNurbsCurve,miterNurbsProfileSections} from '../src/services/nurbsConstructors'
 import type {ProgressiveGuidedSurfaceSweepOptions} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve,evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveBrepProfileBody,createMiterBrepProfileBody,createProgressiveMiterBrepProfileBody,createRationalBrepSectionLoft,transformNurbsBrep} from '../src/services/geometry/brep'
+import {createProgressiveBrepProfileBody as constructProgressiveBrepProfileBody,createMiterBrepProfileBody,createProgressiveMiterBrepProfileBody,createRationalBrepSectionLoft,transformNurbsBrep} from '../src/services/geometry/brep'
 import type {ProgressiveBrepSweepOptions} from '../src/services/geometry/brep'
 import {projectSweepSections} from '../src/services/nurbsSectionProjection'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/services/sweepRetainedCorrespondence'
@@ -27,9 +27,23 @@ import {miterLawMatrixModes,miterLawMatrixSource,miterLawMatrixSmoothSource,mite
 import {stationFrameSources} from './station-frame-matrix-sources.mjs'
 import type {NurbsBrep} from '../src/services/geometry/brep'
 import type {SweepBoundaryCertificate} from '../src/services/sweepBoundaryCertificate'
+import {sweepStepCapLayout} from './sweep-step-cap-layout.mjs'
+// Explicit qualification mode: every direct smooth source uses the same
+// native automatic selector as Rush. Preserve legacy replay when absent.
+const automaticSmoothCaps=process.argv.includes('--automatic-smooth-caps')
+const automaticBodies=new WeakMap<NurbsBrep,ReturnType<typeof constructProgressiveBrepProfileBody>>()
+const createProgressiveBrepProfileBody:typeof constructProgressiveBrepProfileBody=(...args)=>{
+ const body=constructProgressiveBrepProfileBody(...(automaticSmoothCaps
+  ?[...args.slice(0,4),{...args[4],annularCaps:{...args[4].annularCaps,automatic:true}}] as Parameters<typeof constructProgressiveBrepProfileBody>:args))
+ if(automaticSmoothCaps)automaticBodies.set(body.model,body)
+ return body
+}
 // Preserve actual Rust-owned components instead of reducing them to a scalar flag.
 const captureBodyBoundaryEvidence=(body:ReturnType<typeof createProgressiveBrepProfileBody>)=>({
  profileCorrectionErrorUpper:body.profileCorrectionErrorUpper,profileSmoothness:body.profileSmoothness,
+ capRepresentation:body.capRepresentation,capSelectionExactWork:body.capSelectionExactWork,
+ capFaceGroups:body.capFaceGroups,capFaces:body.capFaces,planarCapFaces:body.planarCapFaces,
+ retainedAnnularFilling:body.retainedAnnularFilling,retainedSmoothness:body.retainedSmoothness,
  capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,
  retainedWalls:body.retainedWalls,capProjection:body.capProjection,
  bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts,
@@ -174,7 +188,7 @@ const miterLawMatrixFixture=(mode:MiterLawMatrixMode,profileG2=false)=>{
  if(profileG2&&(!evidence.profileG1Certified||!evidence.profileG2Certified||evidence.stationContinuity!=='C0'))throw Error('Incomplete retained profile G2/sharp station C0: '+name)
  const construction=built.report.construction![node.id]
  deepStrictEqual([construction.affineLawsApplied,construction.authoredFramesApplied,construction.orientationGuideApplied],[mode.affine,mode.authored,mode.guided])
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  const capFaces=mode.closed?[]:[model.faces.length-2,model.faces.length-1]
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  return {file:name+'.step',model,faces:model.faces.length,shells:mode.closed?2:1,capHoleFaces:mode.closed?0:2,capFaces,
@@ -191,7 +205,7 @@ const reconstructedModeFixture=(sourceName:string,sharp=false)=>{
  const sourceFile=`examples/rush/${sourceName}.r`,source=readFileSync(sourceFile,'utf8')
  const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing reconstructed retained mode: '+sourceName)
- const artifact=JSON.parse(built.nativeGeometry.geometryJson),model=artifact.geometry as NurbsBrep
+ const artifact=readNativeGeometryData(built.nativeGeometry),model=artifact.geometry as NurbsBrep
  const evidence=readSweepViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.boundaryErrorWithinBudget||!evidence.solidGeometryCertified
   ||evidence.profileG2Certified!==true||evidence.stationG2Certified!==!sharp
@@ -345,7 +359,7 @@ const obliqueRmfHollowFixture=(corrected=false,initialSections=2)=>{
  if(corrected&&(!body.boundaryContinuousBound||!body.boundaryErrorWithinBudget))throw Error('Corrected oblique RMF full boundary proof required')
  return {file:corrected?(initialSections===2?'rmf-oblique-linear-scale-hollow-corrected.step':`rmf-oblique-linear-scale-hollow-corrected-${initialSections}-stations.step`):'rmf-oblique-linear-scale-hollow.step',model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:2,
   expectedVolume:Math.PI*(.1**2-.05**2)*5*7/3,
-  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:corrected,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
+  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:corrected||automaticSmoothCaps,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
   wallFaceReversed:body.model.faces.slice(0,-2).map((_,id)=>body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed),
   outwardCapContours:body.model.faces.slice(-2).map((face,j)=>{
    const id=body.model.faces.length-2+j
@@ -399,7 +413,7 @@ const frenetHollowFixture=(orientation:'frenet'|'rmf'='frenet',rectangular=false
  return {file:corrected?`${orientation}-quadratic-hollow-corrected.step`:rectangular?'rmf-planar-quadratic-rectangular.step':orientation==='rmf'?'rmf-planar-quadratic-hollow.step':'frenet-quadratic-hollow.step',model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:rectangular?0:2,
   capFaces:[body.model.faces.length-2,body.model.faces.length-1],
   expectedVolume:Math.PI*(.1**2-.05**2)*(.5*Math.sqrt(5)+.25*Math.asinh(2)),
-  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:rectangular||corrected,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
+  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:rectangular||corrected||automaticSmoothCaps,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
   wallFaceReversed:body.model.faces.slice(0,-2).map((_,id)=>body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed),
   outwardCapContours:body.model.faces.slice(-2).map((face,j)=>{
    const id=body.model.faces.length-2+j
@@ -526,7 +540,7 @@ const closedSpatialRmfTubeFixture=(hollow=false,varying=false,periodic=false,par
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Closed spatial RMF boundary error unproved')
  if(profileG2&&(!evidence.profileG2Certified||!evidence.profileG1Certified||evidence.stationContinuity!=='C0'))throw Error('Actual corrected spatial profile G2 and station C0 required')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  if(multipleHoles){
   deepStrictEqual(model.bodies[0]!.innerShells,[1,2,3])
   deepStrictEqual(model.shells.length,4)
@@ -546,7 +560,7 @@ const correctedFrenetBodyFixture=(sourceFile:string,capHoleFaces=2)=>{
  if(!native)throw Error('Missing corrected Frenet retained body: '+sourceFile)
  const evidence=readSweepBodyBoundaryViewportEvidence(native)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Complete corrected Frenet wall/cap bound required: '+sourceFile)
- const model=JSON.parse(native.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(native).geometry as NurbsBrep
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  if(/affine-(inflection|zero-curvature)/.test(sourceFile)){
   deepStrictEqual(graph.nodes.find(n=>n.op==='brep_progressive_sweep')?.axis_scale?.values,[[1.25,.75,1],[1.25,.75,1]])
@@ -583,7 +597,7 @@ const sharpProfileStationG2Fixture=()=>{
  if(!evidence?.continuousBound||!evidence.boundaryErrorWithinBudget||!evidence.solidGeometryCertified
   ||evidence.profileG1Certified!==false||evidence.profileG2Certified!==false||evidence.stationG2Certified!==true)
   throw Error('Incomplete sharp-profile/nonuniform-station qualification')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  const caps=[model.faces.length-2,model.faces.length-1]
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  return {file:'rush-sharp-profile-nonuniform-station-g2-miter.step',model,faces:model.faces.length,
@@ -603,7 +617,7 @@ const closedContactBodyFixture=(arc=false,rationalPhase=false)=>{
  if(!built.nativeGeometry)throw Error('Missing closed contact retained body')
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Original complete closed contact bound required')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  if(model.shells.length!==2)throw Error('Closed contact outer/inner shells required')
  return {file:sourceFile.split('/').at(-1)!.replace(/\.r$/,'.step'),model,faces:model.faces.length,
   shells:2,capHoleFaces:0,capFaces:[],outwardCapContours:[],requireNativeSolid:true,
@@ -624,7 +638,7 @@ const closedOriginalBodyFixtures=(includeArc=true,includePeriodicAuthored=false)
  if(!native)throw Error('Missing closed corrected body: '+sourceFile)
  const evidence=readSweepBodyBoundaryViewportEvidence(native)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Closed original whole-boundary proof required: '+sourceFile)
- const model=JSON.parse(native.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(native).geometry as NurbsBrep
  return {file:sourceFile.replace(/\.r$/,'.step'),model,faces:model.faces.length,shells:1,capHoleFaces:0,capFaces:[],requireNativeSolid:true,
   sourceSha256:createHash('sha256').update(source).digest('hex'),sourceFile:`examples/rush/${sourceFile}`,
   construction:built.report.construction![native.nodeId],boundaryEvidence:evidence,outwardCapContours:[],
@@ -646,16 +660,17 @@ const directSpatialHolonomyFixture=(corrected=false)=>{
   construction:{boundaryCertificate:body.boundaryCertificate,sourceRequest:request,levels:body.levels,sectionCorrection:body.sectionCorrection,profileSmoothness}}
 }
 const progressiveStationFixture=(file:string)=>{
+ const profileG2=file!=='oblique-rmf-annular-body-station-g2.r'
  const sourceFile=`examples/rush/${file}`,source=readFileSync(sourceFile,'utf8')
  const graph=compileRushFrontend(source).document
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing owned progressive station geometry')
  const data=readNativeGeometryData(built.nativeGeometry),model=data.geometry as NurbsBrep
  const boundaryEvidence=readSweepViewportEvidence(built.nativeGeometry)
- if(!boundaryEvidence?.continuousBound||!boundaryEvidence.boundaryErrorWithinBudget||!boundaryEvidence.profileG2Certified||!boundaryEvidence.stationG2Certified)throw Error('Actual complete progressive station G2/bound required')
+ if(!boundaryEvidence?.continuousBound||!boundaryEvidence.boundaryErrorWithinBudget||(profileG2&&!boundaryEvidence.profileG2Certified)||!boundaryEvidence.stationG2Certified)throw Error('Actual complete progressive station G2/bound required')
  const construction=built.report.construction![built.nativeGeometry.nodeId]
  const closed=data.sweepStationReconstruction.closedPath===true
- const capFaces=closed?[]:[model.faces.length-2,model.faces.length-1]
+ const capFaces=data.sweepPlanarCapFaces??(closed?[]:[model.faces.length-2,model.faces.length-1])
  const reversed=new Map(model.shells.flatMap(shell=>shell.faces.map(use=>[use.face,use.reversed] as const)))
  return {file:file.replace(/\.r$/,'.step'),model,faces:model.faces.length,shells:model.shells.length,
   capHoleFaces:capFaces.filter(id=>model.faces[id]!.holes.length>0).length,capFaces,outwardCapContours:capFaces.map(id=>{
@@ -665,6 +680,8 @@ const progressiveStationFixture=(file:string)=>{
      use.reversed!==reversed.get(id)?reverseNurbsCurve(model.edges[use.edge]!.curve):model.edges[use.edge]!.curve))
   }),requireNativeSolid:true,volumeBudgets:DEFAULT_SWEEP_VOLUME_BUDGETS,
   expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
+  ...(!profileG2?{requireStationG2:true,stationSeamCount:8}:{}),
+  requestedSmoothness:{...(profileG2?{profile:'G2'}:{}),station:'G2'},
   sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),construction,boundaryEvidence}
 }
 const legacyOwnedFixtures=()=>[
@@ -687,7 +704,8 @@ const legacyOwnedFixtures=()=>[
   sourceSha256:createHash('sha256').update(affineRushSource).digest('hex'),construction:affineRushConstruction,
   expectedVolume:Math.PI*(.5**2-.2**2)*10*1.5},
 ]
-const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures()
+const fixtures=process.argv.includes('--annular-station-g2-only')?[progressiveStationFixture('oblique-rmf-annular-body-station-g2.r')]
+ :process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures()
  :process.argv.includes('--station-frame-g2-only')?stationFrameSources.map(progressiveStationFixture)
  :process.argv.includes('--progressive-station-g2-only')?['straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r'].map(progressiveStationFixture)
  :process.argv.includes('--spatial-profile-g2-only')?[
@@ -798,7 +816,7 @@ const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures(
   return {file:'rush-reconstructed-rational-profile.step',model:model as NurbsBrep,
    faces:model.faces.length,shells:1,capHoleFaces:0,capFaces:[model.faces.length-2,model.faces.length-1],
    requireNativeSolid:true,construction,sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),
-   replayRouting:JSON.parse(built.nativeGeometry!.geometryJson).sweepMiterReplay,
+   replayRouting:readNativeGeometryData(built.nativeGeometry!).sweepMiterReplay,
    outwardCapContours,expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference'}
  })(),
  (()=>{
@@ -829,7 +847,7 @@ const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures(
   return {file:'rush-reconstructed-periodic-profile.step',model:model as NurbsBrep,
    faces:model.faces.length,shells:1,capHoleFaces:0,capFaces:caps,requireNativeSolid:true,
    construction,sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),
-   replayRouting:JSON.parse(built.nativeGeometry!.geometryJson).sweepMiterReplay??null,
+   replayRouting:readNativeGeometryData(built.nativeGeometry!).sweepMiterReplay??null,
    volumeReferenceMethod:'polynomial-boundary-divergence-integral',
    wallFaceReversed:model.faces.flatMap((_,id)=>caps.includes(id)?[]:[reversed(id)]),
    outwardCapContours,expectedVolume:0}
@@ -850,7 +868,7 @@ const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures(
   return {file:`rush-closed-periodic-profile-${mode}.step`,model:model as NurbsBrep,
    faces:model.faces.length,shells:2,capHoleFaces:0,capFaces:[],requireNativeSolid:true,
    construction,sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),
-   replayRouting:JSON.parse(built.nativeGeometry!.geometryJson).sweepMiterReplay??null,
+   replayRouting:readNativeGeometryData(built.nativeGeometry!).sweepMiterReplay??null,
    volumeReferenceMethod:mode==='rational-placed'?'rational-boundary-gauss-reference':'polynomial-boundary-divergence-integral',wallFaceReversed,
    outwardCapContours:[],expectedVolume:0}
  }),
@@ -877,7 +895,7 @@ const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures(
   })
   return {file:`rush-periodic-moving-axis-${capMode}.step`,model:model as NurbsBrep,faces:model.faces.length,
    shells:1,capHoleFaces:2,requireNativeSolid:true,construction,sourceFile,
-   replayRouting:JSON.parse(built.nativeGeometry!.geometryJson).sweepMiterReplay??null,
+   replayRouting:readNativeGeometryData(built.nativeGeometry!).sweepMiterReplay??null,
    sourceSha256:createHash('sha256').update(source).digest('hex'),
    volumeReferenceMethod:'polynomial-boundary-divergence-integral',
    wallFaceReversed:model.faces.flatMap((_,id)=>caps.includes(id)?[]:[reversed(id)]),outwardCapContours,
@@ -960,7 +978,17 @@ if(process.argv.includes('--full-207')){
   closedSpatialRmfTubeFixture(true,false,false,false,false,false,true,true))
  if(fixtures.length!==207||new Set(fixtures.map(f=>f.file)).size!==207)throw Error('Incomplete or duplicate full STEP matrix')
 }
-const cases=fixtures.map(({model,...fixture})=>{
+const cases=fixtures.map(({model,...storedFixture})=>{
+ const nativeBody=automaticBodies.get(model)
+ const construction=storedFixture.construction as any
+ const bodyEvidence=construction?.bodyBoundaryEvidence
+  ??('boundaryError' in storedFixture?construction?.[storedFixture.boundaryError?.nodeId]?.bodyBoundaryEvidence:undefined)
+ const capLayout=nativeBody?sweepStepCapLayout(nativeBody):bodyEvidence?.capRepresentation
+  ?sweepStepCapLayout({...bodyEvidence,model}):construction?.stationReconstruction&&construction.capRepresentation
+  ?sweepStepCapLayout({...construction,model}):null
+ const fixture={...storedFixture,...capLayout,
+  ...(capLayout?.capRepresentation==='radial-annular'?{outwardCapContours:[]}:{}),
+ }
  const auditBudgets={
   ...DEFAULT_SWEEP_VOLUME_BUDGETS,maxTrimPairs:10000,maxTrimCells:100000,
   maxTrimDomainCells:1000000,maxPairs:10000,maxCells:100000,maxDomainCells:1000000,
@@ -968,9 +996,10 @@ const cases=fixtures.map(({model,...fixture})=>{
   ...('volumeBudgets' in fixture?fixture.volumeBudgets:{}),
  }
  const caps='capFaces' in fixture?fixture.capFaces:fixture.capHoleFaces?[model.faces.length-2,model.faces.length-1]:[]
- const nativeProfileSmoothness=inspectMiterProfileSmoothness(model,caps)
+ const nativeProfileSmoothness=inspectMiterProfileSmoothness(model,capLayout?.physicalCapFaces??caps)
  if('requireStationG2' in fixture&&fixture.requireStationG2&&
-   (nativeProfileSmoothness.stationContinuity!=='G2'||nativeProfileSmoothness.station.edgeIds.length<24)){
+   (nativeProfileSmoothness.stationContinuity!=='G2'||('stationSeamCount' in fixture
+    ?nativeProfileSmoothness.station.edgeIds.length!==fixture.stationSeamCount:nativeProfileSmoothness.station.edgeIds.length<24))){
   throw Error('Nonuniform native station G2/complete seam set refused: '+fixture.file)
  }
  const genericNativeRetainedWallCharts=inspectSweepRetainedWallCharts(model,caps,100000)
@@ -1015,7 +1044,7 @@ const cases=fixtures.map(({model,...fixture})=>{
 // Complete reports can exceed V8's maximum single string length. Preserve
 // every field while writing one case at a time; publish only the finished file.
 const stagedManifest=resolve(root,`manifest-${process.pid}.json.writing`)
-writeFileSync(stagedManifest,JSON.stringify({schema:'sweep-external-step/2',units:'mm',artifactProvenance}).slice(0,-1)+',"cases":[\n')
+writeFileSync(stagedManifest,JSON.stringify({schema:'sweep-external-step/2',units:'mm',artifactProvenance,automaticSmoothCaps}).slice(0,-1)+',"cases":[\n')
 for(let index=0;index<cases.length;index++)appendFileSync(stagedManifest,(index?',\n':'')+JSON.stringify(cases[index]))
 appendFileSync(stagedManifest,'\n]}\n')
 renameSync(stagedManifest,resolve(root,'manifest.json'))

@@ -70,7 +70,7 @@ impl AssociationVotes {
         }
     }
     pub fn resolve(self) -> (BTreeMap<usize, usize>, usize) {
-        let mut candidates = Vec::new();
+        let mut candidates = Vec::with_capacity(self.0.len());
         let mut rejected = 0;
         for (feature, points) in self.0.into_iter().enumerate() {
             if points.len() != 1 {
@@ -82,7 +82,7 @@ impl AssociationVotes {
             let (point, votes) = points.into_iter().next().unwrap();
             candidates.push((votes, feature, point));
         }
-        candidates.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+        candidates.sort_unstable_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
         let mut used = BTreeSet::new();
         let mut result = BTreeMap::new();
         for (_, feature, point) in candidates {

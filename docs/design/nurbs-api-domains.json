@@ -85,7 +85,9 @@
     "superellipsoid",
     "optical_shapes",
     "wing_loft",
-    "profile_spring"
+    "profile_spring",
+    "bellows",
+    "sphere_envelope"
   ],
   "editing": [
     "affine",
@@ -109,14 +111,16 @@
     "circle_transition",
     "ellipse_transition",
     "circle_rectangle_transition",
-    "join"
+    "join",
+    "surface_blend"
   ],
   "offsets": [
     "curve_offset",
     "curve_offset_join",
     "curve_offset_wire",
     "surface_offset",
-    "offset"
+    "offset",
+    "planar_toolpath"
   ],
   "queries": [
     "curve_differential",
@@ -142,7 +146,8 @@
     "frechet",
     "analysis",
     "distance",
-    "surface_occlusion"
+    "surface_occlusion",
+    "parallel_sections"
   ],
   "parameterization": [
     "curve_pullback",

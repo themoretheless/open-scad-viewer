@@ -1,11 +1,22 @@
+import {readAnnularG2Evidence,type AnnularG2Evidence} from './annularG2Evidence'
 import {readNativeGeometryData} from './nativeGeometrySnapshot'
 import type {NativeGeometryArtifact} from '../core/nativeGeometry'
 import {MAX_SWEEP_SEAM_WORK} from './nurbsSweepAudit'
+function hasUniqueNonNegativeSafeIntegers(arr: unknown[]): boolean {
+  const seen = new Set<number>()
+  for (let i = 0; i < arr.length; i++) {
+    const v = arr[i]
+    if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0 || seen.has(v)) return false
+    seen.add(v)
+  }
+  return true
+}
+
 /** Receipt coverage/work validation only; every jet decision comes from Rust. */
 function readRetainedProfileViewportEvidence(smooth:any):Pick<SweepViewportEvidence,'profileG2Certified'|'profileG1Certified'|'profileSeamCount'|'stationG1Certified'|'stationG2Certified'|'stationSeamCount'|'stationContinuity'|'capContinuity'>{
   const profile=smooth?.profile
   const smoothnessDeclared=smooth?.method==='retained-miter-profile-joins'&&smooth.scope==='wall-profile-seams'&&Array.isArray(smooth.edgeIds)&&Array.isArray(profile?.seams)
-  const completeExtraction=smoothnessDeclared&&smooth.extractionComplete===true&&Array.isArray(smooth.unclassifiedFaces)&&smooth.unclassifiedFaces.length===0&&Array.isArray(smooth.unpairedEdges)&&smooth.unpairedEdges.length===0&&smooth.edgeIds.length>0&&new Set(smooth.edgeIds).size===smooth.edgeIds.length&&smooth.edgeIds.every((edge:number)=>Number.isSafeInteger(edge)&&edge>=0)
+  const completeExtraction=smoothnessDeclared&&smooth.extractionComplete===true&&Array.isArray(smooth.unclassifiedFaces)&&smooth.unclassifiedFaces.length===0&&Array.isArray(smooth.unpairedEdges)&&smooth.unpairedEdges.length===0&&smooth.edgeIds.length>0&&hasUniqueNonNegativeSafeIntegers(smooth.edgeIds)
   const auditCertified=(audit:any,order:1|2,availableWork:number)=>completeExtraction&&audit?.method==='constant-projective-strip-jets'&&audit.exactG1G2Certified===true&&audit.certifiedOrder===order&&Array.isArray(audit.seams)&&smooth.edgeIds.length===audit.seams.length&&Number.isSafeInteger(audit.exactWork)&&audit.exactWork>=0&&audit.exactWork<=availableWork&&audit.seams.every((seam:any)=>seam&&seam.certified===true&&seam.exactIdentity===true&&seam.regularityCertified===true&&(seam.certifiedOrder===order||order===1&&seam.certifiedOrder===2))&&Array.isArray(audit.unresolvedSeams)&&audit.unresolvedSeams.length===0
   const smoothnessBudget=smooth?.maxWork===undefined?1000000:smooth.maxWork
   const validSmoothnessBudget=Number.isSafeInteger(smoothnessBudget)&&smoothnessBudget>=0&&smoothnessBudget<=MAX_SWEEP_SEAM_WORK
@@ -14,7 +25,7 @@ function readRetainedProfileViewportEvidence(smooth:any):Pick<SweepViewportEvide
   const station=smooth?.station
   const stationEdges=station?.edgeIds
   const stationDeclared=station?.method==='retained-miter-station-joins'&&station.scope==='wall-station-seams'&&Array.isArray(stationEdges)
-  const stationComplete=stationDeclared&&station.extractionComplete===true&&Array.isArray(station.unclassifiedFaces)&&station.unclassifiedFaces.length===0&&Array.isArray(station.unpairedEdges)&&station.unpairedEdges.length===0&&stationEdges.length>0&&new Set(stationEdges).size===stationEdges.length&&stationEdges.every((edge:number)=>Number.isSafeInteger(edge)&&edge>=0)
+  const stationComplete=stationDeclared&&station.extractionComplete===true&&Array.isArray(station.unclassifiedFaces)&&station.unclassifiedFaces.length===0&&Array.isArray(station.unpairedEdges)&&station.unpairedEdges.length===0&&stationEdges.length>0&&hasUniqueNonNegativeSafeIntegers(stationEdges)
   const stationBudgetValid=stationDeclared&&validSmoothnessBudget&&Number.isSafeInteger(smooth.exactWork)&&smooth.exactWork>=0&&(!smooth.g1Audit||Number.isSafeInteger(smooth.g1Audit.exactWork)&&smooth.g1Audit.exactWork>=0)&&smooth.exactWork===profile?.exactWork+(smooth.g1Audit?.exactWork??0)&&smooth.exactWork<=smoothnessBudget&&station?.maxWork===smoothnessBudget-smooth.exactWork&&Number.isSafeInteger(station?.exactWork)&&station.exactWork>=0&&Number.isSafeInteger(station.g2?.exactWork)&&station.g2.exactWork>=0&&(!station.g1Audit||Number.isSafeInteger(station.g1Audit.exactWork)&&station.g1Audit.exactWork>=0)&&station.exactWork===station.g2?.exactWork+(station.g1Audit?.exactWork??0)&&station.exactWork<=station.maxWork&&smooth.totalExactWork===smooth.exactWork+station.exactWork
   const stationAuditCertified=(audit:any,order:1|2,available:number)=>stationComplete&&audit?.method==='constant-projective-strip-jets'&&audit.exactG1G2Certified===true&&audit.certifiedOrder===order&&Number.isSafeInteger(audit.exactWork)&&audit.exactWork>=0&&audit.exactWork<=available&&Array.isArray(audit.seams)&&audit.seams.length===stationEdges.length&&audit.seams.every((seam:any)=>seam?.certified===true&&seam.exactIdentity===true&&seam.regularityCertified===true&&seam.certifiedOrder===order)&&Array.isArray(audit.unresolvedSeams)&&audit.unresolvedSeams.length===0
   const stationG2Certified=stationBudgetValid&&stationAuditCertified(station.g2,2,station.maxWork)
@@ -23,9 +34,16 @@ function readRetainedProfileViewportEvidence(smooth:any):Pick<SweepViewportEvide
   return smoothnessDeclared?{profileG2Certified,profileG1Certified,profileSeamCount:profile.seams.length,stationContinuity,...(stationDeclared?{stationG1Certified,stationG2Certified,stationSeamCount:stationEdges.length}:{}),...(smooth.capContinuity==='C0'||smooth.capContinuity==='absent'?{capContinuity:smooth.capContinuity}: {})}:{}
 }
 
+const bodyBoundaryEvidenceCache = new WeakMap<NativeGeometryArtifact, ReturnType<typeof computeSweepBodyBoundaryViewportEvidence>>()
 /** Presentation of native constructor-owned body error; no Solid admission. */
 export function readSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArtifact|undefined){
  if(!artifact||artifact.kind!=='brep')return null
+ if(bodyBoundaryEvidenceCache.has(artifact))return bodyBoundaryEvidenceCache.get(artifact)!
+ const result=computeSweepBodyBoundaryViewportEvidence(artifact)
+ bodyBoundaryEvidenceCache.set(artifact,result)
+ return result
+}
+function computeSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArtifact){
  try {
   const report=readNativeGeometryData(artifact)?.sweepBodyBoundaryEvidence
   if(!report||report.globalEmbeddingCertified!==false||report.boundaryErrorScope!=='constructor-owned-retained-wall-and-cap-union')return null
@@ -40,16 +58,19 @@ export function readSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArt
   const work=(v:unknown):v is number=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=1000000
   // Validate only the native receipt's declared coverage and ledger. All
   // filling/UV/geometry decisions remain Rust-owned and Solid audits afresh.
+  const flatGroups=Array.isArray(groups)&&groups.length===2&&groups.every((g:unknown)=>Array.isArray(g)&&g.length>0)?groups.flat():null
   const annularCapsProved=report.capRepresentation==='radial-annular'&&report.closedPath===false&&
    report.retainedCaps===null&&report.capProjection===null&&Array.isArray(report.planarCapFaces)&&report.planarCapFaces.length===0&&
-   Array.isArray(groups)&&groups.length===2&&groups.every((g:unknown)=>Array.isArray(g)&&g.length>0)&&
-   Array.isArray(caps)&&caps.length<=1024&&caps.length===groups.flat().length&&new Set(caps).size===caps.length&&
-   caps.every((f:unknown,i:number)=>Number.isSafeInteger(f)&&Number(f)>=0&&Number(f)<1024&&f===groups.flat()[i])&&
+   flatGroups!==null&&
+   Array.isArray(caps)&&caps.length<=1024&&caps.length===flatGroups.length&&new Set(caps).size===caps.length&&
+   caps.every((f:unknown,i:number)=>Number.isSafeInteger(f)&&Number(f)>=0&&Number(f)<1024&&f===flatGroups[i])&&
    walls?.inspectedFaces+caps.length<=1024&&
    filling?.method==='authored-smooth-endpoint-annular-filling'&&filling.sourceFillingCovered===true&&
    filling.sourceUvFacesInjective===true&&filling.sourceUvPairsClassified===true&&filling.solidGeometryCertified===false&&
    work(filling.exactWork)&&work(filling.constructionExactWork)&&work(filling.fillingExactWork)&&
-   filling.exactWork===filling.constructionExactWork+filling.fillingExactWork&&
+   work(filling.selectionExactWork??0)&&work(report.capSelectionExactWork??0)&&
+   (filling.selectionExactWork??0)===(report.capSelectionExactWork??0)&&
+   filling.exactWork===(filling.selectionExactWork??0)+filling.constructionExactWork+filling.fillingExactWork&&
    Number.isSafeInteger(filling.products)&&filling.products>=0&&filling.products<=100000&&
    Number.isSafeInteger(filling.endpointCells)&&filling.endpointCells>=0&&filling.endpointCells<=100000&&
    Array.isArray(report.filledCapErrorUpper)&&report.filledCapErrorUpper.length===2&&report.filledCapErrorUpper.every(finite)&&
@@ -58,18 +79,20 @@ export function readSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArt
    budget!==null&&filling.withinBudget===report.filledCapErrorUpper.every((v:number)=>v<=budget)&&
    upper!==null&&report.filledCapErrorUpper.every((v:number)=>v<=upper)
   const capsProved=report.closedPath===true?report.retainedCaps===null&&report.filledCapErrorUpper===null:
-   annularCapsProved||report.capRepresentation===undefined&&report.closedPath===false&&report.retainedCaps?.exact===true&&report.capProjection?.idealCapDomainsCertified===true&&
+   annularCapsProved||(report.capRepresentation===undefined||report.capRepresentation==='legacy')&&
+   (report.capSelectionExactWork===undefined||work(report.capSelectionExactWork)&&work(report.retainedCaps?.exactWork)&&report.capSelectionExactWork+report.retainedCaps.exactWork<=1000000)&&
+   report.closedPath===false&&report.retainedCaps?.exact===true&&report.capProjection?.idealCapDomainsCertified===true&&
    Array.isArray(report.filledCapErrorUpper)&&report.filledCapErrorUpper.length===2&&report.filledCapErrorUpper.every(finite)&&
    Array.isArray(report.capProjection.normalDots)&&report.capProjection.normalDots.length===2&&
    report.capProjection.normalDots.every((dot:unknown)=>Array.isArray(dot)&&dot.length===2&&
     dot.every((v:unknown)=>typeof v==='number'&&Number.isFinite(v))&&dot[0]<=dot[1]&&(dot[0]>0||dot[1]<0))
   const complete=report.boundaryContinuousBound===true&&wallsProved&&capsProved&&upper!==null&&budget!==null&&
    typeof report.boundaryErrorWithinBudget==='boolean'&&report.boundaryErrorWithinBudget===(upper<=budget)
-  return {...readRetainedProfileViewportEvidence(report.profileSmoothness),nodeId:artifact.nodeId,continuousBound:complete,errorUpper:complete?upper:null,budget,
+  return {...readRetainedProfileViewportEvidence(report.retainedSmoothness?.walls??report.profileSmoothness),...readAnnularG2Evidence(report.retainedSmoothness),nodeId:artifact.nodeId,continuousBound:complete,errorUpper:complete?upper:null,budget,
    withinBudget:complete?report.boundaryErrorWithinBudget as boolean:null}
  }catch{return null}
 }
-export interface SweepViewportEvidence {
+export interface SweepViewportEvidence extends AnnularG2Evidence {
  nodeId:string
  solidGeometryCertified:boolean
  continuousBound:boolean
@@ -87,13 +110,18 @@ export interface SweepViewportEvidence {
  boundaryErrorBudget:number|null
  boundaryErrorWithinBudget:boolean|null
 }
+const sweepEvidenceCache = new WeakMap<NativeGeometryArtifact, SweepViewportEvidence | null>()
 /** Presentation only. Geometry admission must independently revalidate B-rep. */
 export function readSweepViewportEvidence(artifact:NativeGeometryArtifact|undefined):SweepViewportEvidence|null {
  if(!artifact||artifact.kind!=='brep')return null
+ if(sweepEvidenceCache.has(artifact))return sweepEvidenceCache.get(artifact)!
  try {
   const evidence=readNativeGeometryData(artifact)?.sweepEvidence
   if(!evidence||typeof evidence!=='object'||!evidence.volume||
-   typeof evidence.volume.solidGeometryCertified!=='boolean')return null
+   typeof evidence.volume.solidGeometryCertified!=='boolean'){
+   sweepEvidenceCache.set(artifact,null)
+   return null
+  }
   const validBound=(x:unknown):x is number=>typeof x==='number'&&Number.isFinite(x)&&x>=0
   const upper=validBound(evidence.boundaryErrorUpper)?evidence.boundaryErrorUpper:null
   const budget=validBound(evidence.boundaryErrorBudget)?evidence.boundaryErrorBudget:null
@@ -103,12 +131,17 @@ export function readSweepViewportEvidence(artifact:NativeGeometryArtifact|undefi
    certificate?.budget===null&&certificate.withinBudget===null&&certificate.reason==='no-authored-tolerance'
   const budgetConsistent=budget!==null&&certificate?.budget===budget&&certificate.withinBudget===within&&within!==null
   const completeBound=evidence.continuousBound===true&&certificate?.method==='retained-sweep-boundary-union'&&certificate.scope==='boundary-set-hausdorff'&&certificate.continuousBound===true&&upper!==null&&certificate.errorUpper===upper&&(budgetConsistent||unbudgeted)
-  return {...readRetainedProfileViewportEvidence(evidence.profileSmoothness),nodeId:artifact.nodeId,solidGeometryCertified:evidence.volume.solidGeometryCertified,
+  const result:SweepViewportEvidence={...readRetainedProfileViewportEvidence(evidence.profileSmoothness),nodeId:artifact.nodeId,solidGeometryCertified:evidence.volume.solidGeometryCertified,
    boundaryErrorUpper:upper,boundaryErrorBudget:budget,boundaryErrorWithinBudget:within,
    continuousBound:completeBound,
    profileRegularityCertified:evidence.profileRegularityCertified===true,
    wallRegularityCertified:evidence.wallRegularityCertified===true}
- }catch{return null}
+  sweepEvidenceCache.set(artifact,result)
+  return result
+ }catch{
+  sweepEvidenceCache.set(artifact,null)
+  return null
+ }
 }
 
 
@@ -131,14 +164,21 @@ function readRetainedDecompositionProof(decomposition:any,order:1|2){
     Number.isSafeInteger(j.rightPatch)&&j.rightPatch>=0&&j.rightPatch<4096&&j.leftPatch!==j.rightPatch&&
     j.certified===true&&j.exactIdentity===true&&j.regularityCertified===true&&
     j.reason==='exact-regular-projective-strip-jets'&&Number.isSafeInteger(j.exactWork)&&j.exactWork>0)&&
-   new Set(decomposition.joins.map((j:any)=>`${j.leftPatch}:${j.rightPatch}`)).size===decompositionJoinCount&&
+   new Set(decomposition.joins.map((j:any)=>(j.leftPatch<<12)|j.rightPatch)).size===decompositionJoinCount&&
    decomposition.joins.reduce((sum:number,j:any)=>sum+j.exactWork,0)===decomposition.exactWork
   return {certified,count:decompositionJoinCount}
 }
 
+const sweepPatchEvidenceCache = new WeakMap<NativeGeometryArtifact, ReturnType<typeof computeSweepPatchViewportEvidence>>()
 /** Scoped original-transport patch error; never a body, mesh or embedding proof. */
 export function readSweepPatchViewportEvidence(artifact:NativeGeometryArtifact|undefined){
  if(!artifact||artifact.kind!=='patches')return null
+ if(sweepPatchEvidenceCache.has(artifact))return sweepPatchEvidenceCache.get(artifact)!
+ const result=computeSweepPatchViewportEvidence(artifact)
+ sweepPatchEvidenceCache.set(artifact,result)
+ return result
+}
+function computeSweepPatchViewportEvidence(artifact:NativeGeometryArtifact){
  try{
   const report=readNativeGeometryData(artifact)?.sweepPatchEvidence
   if(report?.method!=='progressive-fourfold-section-refinement'||report.accepted!==true)return null

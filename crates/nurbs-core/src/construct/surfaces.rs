@@ -25,3 +25,7 @@ pub mod superellipsoid;
 pub mod optical_shapes;
 
 pub mod profile_spring;
+
+pub mod bellows;
+
+pub mod sphere_envelope;

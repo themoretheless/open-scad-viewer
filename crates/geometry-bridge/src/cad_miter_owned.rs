@@ -25,7 +25,8 @@ fn same_certificate(a: &Value, b: &Value) -> bool {
         (Value::Object(a), Value::Object(b)) => {
             a.len() == b.len()
                 && a.iter()
-                    .all(|(k, a)| b.get(k).is_some_and(|b| same_certificate(a, b)))
+                    .zip(b.iter())
+                    .all(|((ka, va), (kb, vb))| ka == kb && same_certificate(va, vb))
         }
         _ => a == b,
     }
@@ -403,7 +404,7 @@ pub fn construct_annular(v: Value) -> Result<Value> {
         let audit = body.inspect_smoothness(max_work)?;
         json!({"walls":super::cad_sweep_smoothness::profile_value(&audit.walls),
             "maxWork":max_work,"totalExactWork":audit.exact_work,
-            "capInternalSeams":audit.cap_seams.iter().map(|r|json!({
+            "auditOrder":"caps-first","capInternalSeams":audit.cap_seams.iter().map(|r|json!({
                 "method":"retained-annular-cap-internal-jets","edgeIds":r.edge_ids,
                 "extractionComplete":r.extraction_complete,"unclassifiedFaces":r.unclassified_faces,
                 "unpairedEdges":r.unpaired_edges,"g1Certified":r.g1_certified,"g2Certified":r.g2_certified,

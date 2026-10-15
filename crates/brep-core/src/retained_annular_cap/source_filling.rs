@@ -335,15 +335,23 @@ fn inspect_source(
         return Err(refused("End-cap faces must have unique valid ownership"));
     }
     let axis = out.domains.source.source_plane_axis.unwrap();
-    let projected = rings.clone().map(|ring| {
-        ring.into_iter()
-            .map(|mut c| {
-                c.control_points = c
+    let free = match axis {
+        0 => [1, 2],
+        1 => [0, 2],
+        _ => [0, 1],
+    };
+    let projected = rings.each_ref().map(|ring| {
+        ring.iter()
+            .map(|c| Curve {
+                degree: c.degree,
+                knots: c.knots.clone(),
+                control_points: c
                     .control_points
-                    .into_iter()
-                    .map(|p| (0..3).filter(|&k| k != axis).map(|k| p[k]).collect())
-                    .collect();
-                c
+                    .iter()
+                    .map(|p| vec![p[free[0]], p[free[1]]])
+                    .collect(),
+                weights: c.weights.clone(),
+                periodic: c.periodic,
             })
             .collect()
     });
@@ -364,17 +372,21 @@ fn inspect_source(
         out.reason = "source-annular-filling-coverage-unproved";
         return Ok(out);
     }
-    let mut points = Vec::new();
-    let mut source_weights = Vec::new();
-    let mut offsets = vec![0];
+    let total_poles: usize = rings[0].iter().map(|a| a.control_points.len() * 2).sum();
+    let mut points = Vec::with_capacity(total_poles);
+    let mut source_weights = Vec::with_capacity(total_poles);
+    let mut offsets = Vec::with_capacity(n + 1);
+    offsets.push(0);
     for (a, b) in rings[0].iter().zip(&rings[1]) {
         if a.degree != b.degree || a.knots != b.knots {
             out.reason = "source-ring-tensor-correspondence-unproved";
             return Ok(out);
         }
         for i in 0..a.control_points.len() {
-            points.push(a.control_points[i].clone().try_into().unwrap());
-            points.push(b.control_points[i].clone().try_into().unwrap());
+            let pa = &a.control_points[i];
+            let pb = &b.control_points[i];
+            points.push([pa[0], pa[1], pa[2]]);
+            points.push([pb[0], pb[1], pb[2]]);
             source_weights.extend([a.weights[i], b.weights[i]]);
         }
         offsets.push(points.len());
@@ -389,6 +401,8 @@ fn inspect_source(
         return Ok(out);
     };
     let mut upper = [0_f64; 2];
+    let mut edges = Vec::with_capacity(4);
+    let mut authored = Vec::new();
     for end in 0..2 {
         for span in 0..n {
             let f = &model.faces[cap_faces[end][span]];
@@ -410,15 +424,12 @@ fn inspect_source(
                 out.reason = "retained-cap-domain-work-exhausted";
                 return Ok(out);
             }
-            let edges = model.loops[f.outer]
-                .coedges
-                .iter()
-                .map(|c| Coedge {
-                    world: &model.edges[c.edge].curve,
-                    uv: &c.pcurve,
-                    reversed: c.reversed,
-                })
-                .collect::<Vec<_>>();
+            edges.clear();
+            edges.extend(model.loops[f.outer].coedges.iter().map(|c| Coedge {
+                world: &model.edges[c.edge].curve,
+                uv: &c.pcurve,
+                reversed: c.reversed,
+            }));
             let domain = retained_wall_domain_certificate::inspect(
                 &f.surface,
                 &edges,
@@ -431,10 +442,8 @@ fn inspect_source(
                 return Ok(out);
             }
             let range = offsets[span]..offsets[span + 1];
-            let authored = ideal[range.clone()]
-                .iter()
-                .map(|p| p[end])
-                .collect::<Vec<_>>();
+            authored.clear();
+            authored.extend(ideal[range.clone()].iter().map(|p| p[end]));
             let Some(bound) = projective::inspect(
                 &source_weights[range],
                 &authored,

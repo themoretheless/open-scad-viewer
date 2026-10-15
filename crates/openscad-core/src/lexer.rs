@@ -155,7 +155,7 @@ fn decode_units(units: &[u16]) -> String {
 }
 
 pub fn tokenize(source: &[u16]) -> Result<Vec<Token>, ParseError> {
-    let mut out = Vec::new();
+    let mut out = Vec::with_capacity(source.len() / 4 + 1);
     let mut i = 0usize;
     let mut pending_directive = false;
     let at = |index: usize| source.get(index).copied();

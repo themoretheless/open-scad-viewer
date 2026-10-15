@@ -1,4 +1,5 @@
 import {checkRetainedAxisAudit as checkAxis} from './retained-axis-audit-contract.mjs'
+import {checkRetainedEdgeCoverage} from './sweep-retained-edge-coverage.mjs'
 import {readSweepManifest} from './sweep-manifest-reader.mjs'
 import {spatialRmfProfileG2BodySources} from './spatial-rmf-profile-g2-sources.mjs'
 import assert from 'node:assert/strict'
@@ -111,13 +112,11 @@ for(const item of cases){
  assert.equal(p.totalExactWork,p.exactWork+station.exactWork)
  assert.ok(p.totalExactWork<=p.maxWork)
  assert.equal(p.stationContinuity,station.stationG2Certified?'G2':station.stationG1Certified?'G1':'C0')
- assert.equal(p.capContinuity,item.capFaces.length?'C0':'absent')
+ assert.equal(p.capContinuity,(item.physicalCapFaces??item.capFaces).length?'C0':'absent')
  assert.equal(p.fullBoundarySmoothnessCertified,false,'Scoped wall audits must not claim the entire boundary')
- const owned=[...p.edgeIds,...station.edgeIds,...station.capEdges]
- assert.equal(new Set(owned).size,owned.length,'Seam ownership overlaps')
- assert.equal(owned.length,item.edges,'Uncovered retained boundary edges')
+ const capCoverage=checkRetainedEdgeCoverage(item)
  checkCapturedStep(item)
- smoothness.push({file:item.file,requiredSmoothness,profileContinuity:p.profile.exactG1G2Certified?'G2':p.profileG1Certified?'G1':'C0',profileG2:p.profile.exactG1G2Certified,stationContinuity:p.stationContinuity,profileEdges:p.edgeIds.length,stationEdges:station.edgeIds.length,capEdges:station.capEdges.length,wholeBoundarySmoothness:false})
+ smoothness.push({file:item.file,requiredSmoothness,profileContinuity:p.profile.exactG1G2Certified?'G2':p.profileG1Certified?'G1':'C0',profileG2:p.profile.exactG1G2Certified,stationContinuity:p.stationContinuity,profileEdges:p.edgeIds.length,stationEdges:station.edgeIds.length,capEdges:station.capEdges.length,...capCoverage,wholeBoundarySmoothness:false})
 }
-writeFileSync(outputPath,JSON.stringify({schema:'sweep-finite-modes/2',manifestSha256,artifactProvenance:manifest.artifactProvenance,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),declaredSmoothnessContractCases:smoothness.filter(s=>s.requiredSmoothness!==null).length,verifierSourceSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),contractSourceSha256:createHash('sha256').update(readFileSync(new URL('./sweep-retained-smoothness-contracts.mjs',import.meta.url))).digest('hex'),retainedAxisVerifierSha256:createHash('sha256').update(readFileSync(new URL('./retained-axis-audit-contract.mjs',import.meta.url))).digest('hex'),completeBoundaryVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-complete-boundary-contracts.mjs',import.meta.url))).digest('hex'),scope:'Captured finite mode examples only; no general theorem, UI completion, or whole-library completion claim',lawCases,smoothness,spatial:spatial.map(c=>({file:c.file,boundary:c.boundaryError,nativeSolid:true,stationContinuity:c.nativeProfileSmoothness.stationContinuity}))},null,2)+'\n')
+writeFileSync(outputPath,JSON.stringify({schema:'sweep-finite-modes/2',manifestSha256,artifactProvenance:manifest.artifactProvenance,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),declaredSmoothnessContractCases:smoothness.filter(s=>s.requiredSmoothness!==null).length,verifierSourceSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),contractSourceSha256:createHash('sha256').update(readFileSync(new URL('./sweep-retained-smoothness-contracts.mjs',import.meta.url))).digest('hex'),retainedAxisVerifierSha256:createHash('sha256').update(readFileSync(new URL('./retained-axis-audit-contract.mjs',import.meta.url))).digest('hex'),completeBoundaryVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-complete-boundary-contracts.mjs',import.meta.url))).digest('hex'),edgeCoverageVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-retained-edge-coverage.mjs',import.meta.url))).digest('hex'),scope:'Captured finite mode examples only; no general theorem, UI completion, or whole-library completion claim',lawCases,smoothness,spatial:spatial.map(c=>({file:c.file,boundary:c.boundaryError,nativeSolid:true,stationContinuity:c.nativeProfileSmoothness.stationContinuity}))},null,2)+'\n')
 console.log(`${lawCases.length} joint-law cases and ${spatial.length} spatial holonomy cases verified; ${smoothness.length} complete scoped seam ownership audits`)

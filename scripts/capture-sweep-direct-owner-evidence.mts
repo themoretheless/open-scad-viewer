@@ -4,11 +4,15 @@ import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {circleNurbsCurve,bezierNurbsCurve} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveBrepProfileBody,createProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
+import {createProgressiveBrepProfileBody as constructProgressiveBrepProfileBody,createProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
 import {exportDirectStepV5} from '../src/services/cadNurbsStep'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 import {checkCompleteBoundaryContract} from './sweep-complete-boundary-contracts.mjs'
 
+import {sweepStepCapLayout} from './sweep-step-cap-layout.mjs'
+const automaticSmoothCaps=process.argv.includes('--automatic-smooth-caps')
+const createProgressiveBrepProfileBody:typeof constructProgressiveBrepProfileBody=(...args)=>constructProgressiveBrepProfileBody(...(automaticSmoothCaps
+ ?[...args.slice(0,4),{...args[4],annularCaps:{...args[4].annularCaps,automatic:true}}] as Parameters<typeof constructProgressiveBrepProfileBody>:args))
 const directory=resolve(process.argv[2]),output=resolve(process.argv[3])
 const law=(a:number,b:number)=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
 const sha=(b:Uint8Array|string)=>createHash('sha256').update(b).digest('hex')
@@ -20,7 +24,8 @@ const capture=(file:string,body:ReturnType<typeof createProgressiveBrepProfileBo
   {bodyBoundaryEvidence:{...Object.fromEntries(Object.entries(body).filter(([key])=>key!=='model'&&key!=='approximation')),
    budget:body.approximation.report.budget,closedPath:body.approximation.report.closedPath}}
  const closed=body.approximation.report.closedPath
- const item={file,capFaces:closed?[]:[body.model.faces.length-2,body.model.faces.length-1],construction}
+ const item={file,capFaces:closed?[]:[body.model.faces.length-2,body.model.faces.length-1],
+  ...(!miter&&automaticSmoothCaps?sweepStepCapLayout(body):{}),construction}
  const result=checkCompleteBoundaryContract(item)
  assert.ok(result,'Missing actual native boundary owner')
  cases.push({...item,result,stepSha256:sha(existing)})

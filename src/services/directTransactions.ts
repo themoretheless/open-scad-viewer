@@ -17,15 +17,24 @@ export type DirectAction =
 export interface DirectDocumentEdit {collection:'sketches'|'bodies'|'curves'|'surfaces'|'groups'|'metadata'|'order';id:string;before:unknown;after:unknown;index?:number}
 export interface DirectActionScript {version:1;actions:DirectAction[]}
 export const MAX_ACTION_SCRIPT_BYTES=16*1024*1024
+const withinScriptByteLimit=(text:string)=>text.length<=MAX_ACTION_SCRIPT_BYTES&&(text.length*3<=MAX_ACTION_SCRIPT_BYTES||new TextEncoder().encode(text).length<=MAX_ACTION_SCRIPT_BYTES)
+const sameEntity=(a:unknown,b:unknown):boolean=>{
+ if(a===b)return true
+ if(Array.isArray(a)&&Array.isArray(b)&&a.every(x=>typeof x==='string')&&b.every(x=>typeof x==='string')){
+  return a.length===b.length&&a.every((v,i)=>v===b[i])
+ }
+ return JSON.stringify(a??null)===JSON.stringify(b??null)
+}
 /** Work on an isolated document. Only the final validated result may be committed. */
 export function executeDirectTransaction(document:DirectDocument,text:string):DirectDocument {
- if(typeof text!=='string'||new TextEncoder().encode(text).length>MAX_ACTION_SCRIPT_BYTES)throw Error('Action script exceeds 16 MiB.')
+ if(typeof text!=='string'||!withinScriptByteLimit(text))throw Error('Action script exceeds 16 MiB.')
  const script:DirectActionScript=JSON.parse(text)
  if(!script||script.version!==1||!Array.isArray(script.actions)||script.actions.length<1||script.actions.length>80)throw Error('Expected 1–80 actions in a version 1 script.')
  let next=parseDirectDocument(serializeDirectDocument(document))
  for(const [index,action] of script.actions.entries()){
   try{
    if(!action||typeof action!=='object')throw Error('Invalid action.')
+   let validated=false
    switch(action.kind){
     case 'sceneEdit':next=applySolidSceneEdit(next,action.options);break
     case 'primitive':next=addSolidPrimitive(next,action.options);break
@@ -43,18 +52,17 @@ export function executeDirectTransaction(document:DirectDocument,text:string):Di
      const value=JSON.parse(serializeDirectDocument(next)) as Record<string,any>
      for(const edit of action.edits){
       if(!edit||!['sketches','bodies','curves','surfaces','groups','metadata','order'].includes(edit.collection)||typeof edit.id!=='string')throw Error('Invalid entity edit.')
-      const same=(a:unknown,b:unknown)=>JSON.stringify(a??null)===JSON.stringify(b??null)
       if(edit.collection==='order'){
        if(!['sketches','bodies','curves','surfaces','groups'].includes(edit.id)||!Array.isArray(edit.after)||edit.after.some(v=>typeof v!=='string'))throw Error('Invalid recorded entity order.')
        const key=edit.id==='groups'?'name':'id',original=(next as any)[edit.id]??[],list=value[edit.id]??[],ids=edit.after as string[]
-       if(!same(original.map((e:any)=>e[key]),edit.before)||ids.length!==list.length||new Set(ids).size!==ids.length||ids.some(id=>!list.some((e:any)=>e[key]===id)))throw Error('Recorded entity order does not match the source.')
+       if(!sameEntity(original.map((e:any)=>e[key]),edit.before)||ids.length!==list.length||new Set(ids).size!==ids.length||ids.some(id=>!list.some((e:any)=>e[key]===id)))throw Error('Recorded entity order does not match the source.')
        value[edit.id]=ids.map(id=>list.find((e:any)=>e[key]===id))
       }else if(edit.collection==='metadata'){
-       if(!['interchange','blenderProjectId'].includes(edit.id)||!same(value[edit.id],edit.before))throw Error('Recorded metadata no longer matches the source.')
+       if(!['interchange','blenderProjectId'].includes(edit.id)||!sameEntity(value[edit.id],edit.before))throw Error('Recorded metadata no longer matches the source.')
        if(edit.after===null)delete value[edit.id];else value[edit.id]=edit.after
       }else{
        const list:any[]=value[edit.collection]??[],key=edit.collection==='groups'?'name':'id',index=list.findIndex(e=>e[key]===edit.id)
-       if(!same(index<0?null:list[index],edit.before))throw Error('Recorded entity no longer matches the source: '+edit.id)
+       if(!sameEntity(index<0?null:list[index],edit.before))throw Error('Recorded entity no longer matches the source: '+edit.id)
        if(edit.after===null){if(index>=0)list.splice(index,1)}
        else {if(typeof edit.after!=='object'||(edit.after as any)[key]!==edit.id)throw Error('Entity identity mismatch.');if(index>=0)list[index]=edit.after;else {if(edit.index!==undefined&&(!Number.isInteger(edit.index)||edit.index<0||edit.index>list.length))throw Error('Invalid entity insertion position.');list.splice(edit.index??list.length,0,edit.after)}}
        value[edit.collection]=list
@@ -62,10 +70,10 @@ export function executeDirectTransaction(document:DirectDocument,text:string):Di
      }
      next=parseDirectDocument(JSON.stringify(value));break
     }
-    case 'checkpoint':next=parseDirectDocument(action.document);break
+    case 'checkpoint':next=parseDirectDocument(serializeDirectDocument(parseDirectDocument(action.document)));validated=true;break
     default:throw Error('Unsupported action kind.')
    }
-   next=parseDirectDocument(serializeDirectDocument(next))
+   if(!validated)next=parseDirectDocument(serializeDirectDocument(next))
   }catch(error){throw Error(`Action ${index+1}: ${error instanceof Error?error.message:String(error)}`)}
  }
  return next
@@ -75,7 +83,7 @@ export function appendDirectCheckpoint(script:DirectActionScript,document:Direct
  const text=serializeDirectDocument(document)
  if(script.actions.at(-1)?.kind==='checkpoint'&&(script.actions.at(-1) as Extract<DirectAction,{kind:'checkpoint'}>).document===text)return script
  const next:DirectActionScript={version:1,actions:[...script.actions,{kind:'checkpoint',document:text}]}
- if(next.actions.length>80||new TextEncoder().encode(JSON.stringify(next)).length>MAX_ACTION_SCRIPT_BYTES)throw Error('Recording limit reached (80 changes / 16 MiB).')
+ if(next.actions.length>80||!withinScriptByteLimit(JSON.stringify(next)))throw Error('Recording limit reached (80 changes / 16 MiB).')
  return next
 }
 
@@ -86,12 +94,13 @@ export function appendDirectDocumentEdit(script:DirectActionScript,before:Direct
  for(const collection of ['sketches','bodies','curves','surfaces','groups'] as const){
   const key=collection==='groups'?'name':'id',a=(before[collection]??[]) as any[],b=(after[collection]??[]) as any[]
   const ids=new Set([...a,...b].map(e=>e[key]))
-  for(const id of ids){const old=a.find(e=>e[key]===id)??null,index=b.findIndex(e=>e[key]===id),value=index<0?null:b[index];if(JSON.stringify(old)!==JSON.stringify(value))edits.push({collection,id,before:structuredClone(old),after:structuredClone(value),index:index<0?undefined:index})}
-  if(JSON.stringify(a.map(e=>e[key]))!==JSON.stringify(b.map(e=>e[key])))edits.push({collection:'order',id:collection,before:a.map(e=>e[key]),after:b.map(e=>e[key])})
+  for(const id of ids){const old=a.find(e=>e[key]===id)??null,index=b.findIndex(e=>e[key]===id),value=index<0?null:b[index];if(!sameEntity(old,value))edits.push({collection,id,before:structuredClone(old),after:structuredClone(value),index:index<0?undefined:index})}
+  const aOrder=a.map(e=>e[key]),bOrder=b.map(e=>e[key])
+  if(!sameEntity(aOrder,bOrder))edits.push({collection:'order',id:collection,before:aOrder,after:bOrder})
  }
- for(const id of ['interchange','blenderProjectId'] as const)if(JSON.stringify(before[id]??null)!==JSON.stringify(after[id]??null))edits.push({collection:'metadata',id,before:structuredClone(before[id]??null),after:structuredClone(after[id]??null)})
+ for(const id of ['interchange','blenderProjectId'] as const)if(!sameEntity(before[id]??null,after[id]??null))edits.push({collection:'metadata',id,before:structuredClone(before[id]??null),after:structuredClone(after[id]??null)})
  if(!edits.length)return script
  const next:DirectActionScript={version:1,actions:[...script.actions,{kind:'documentEdit',edits}]}
- if(next.actions.length>80||new TextEncoder().encode(JSON.stringify(next)).length>MAX_ACTION_SCRIPT_BYTES)throw Error('Recording limit reached (80 commands / 16 MiB).')
+ if(next.actions.length>80||!withinScriptByteLimit(JSON.stringify(next)))throw Error('Recording limit reached (80 commands / 16 MiB).')
  return next
 }

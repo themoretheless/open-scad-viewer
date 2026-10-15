@@ -36,18 +36,41 @@ pub fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer, size: usize) ->
 /// Packs values into little-endian bytes for GPU buffers (LE is the WGSL wire
 /// order; on the little-endian target platforms this equals `to_ne_bytes`).
 pub fn pack_f32(values: &[f32]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(values.len() * 4);
-    for value in values {
-        out.extend_from_slice(&value.to_le_bytes());
+    #[cfg(target_endian = "little")]
+    {
+        // SAFETY: f32 has no padding or uninitialized bytes, and u8 has alignment 1.
+        let bytes = unsafe {
+            std::slice::from_raw_parts(values.as_ptr().cast::<u8>(), std::mem::size_of_val(values))
+        };
+        bytes.to_vec()
     }
-    out
+    #[cfg(not(target_endian = "little"))]
+    {
+        let mut out = Vec::with_capacity(values.len() * 4);
+        for value in values {
+            out.extend_from_slice(&value.to_le_bytes());
+        }
+        out
+    }
 }
 
 /// Same packing for u32 payloads (indices, aux records).
 pub fn pack_u32(values: &[u32]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(values.len() * 4);
-    for value in values {
-        out.extend_from_slice(&value.to_le_bytes());
+    #[cfg(target_endian = "little")]
+    {
+        // SAFETY: u32 has no padding or uninitialized bytes, and u8 has alignment 1.
+        let bytes = unsafe {
+            std::slice::from_raw_parts(values.as_ptr().cast::<u8>(), std::mem::size_of_val(values))
+        };
+        bytes.to_vec()
     }
-    out
+    #[cfg(not(target_endian = "little"))]
+    {
+        let mut out = Vec::with_capacity(values.len() * 4);
+        for value in values {
+            out.extend_from_slice(&value.to_le_bytes());
+        }
+        out
+    }
 }
+

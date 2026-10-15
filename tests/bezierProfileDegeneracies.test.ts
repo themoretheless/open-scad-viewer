@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest'
 import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {analyzeNurbsBrep,extrudeBrepCurves,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {reverseNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
 import {authorBrepProfile,booleanBrepProfiles,normalizeBrepProfile,validateBrepProfile} from '../src/services/geometry/brepProfile'
 import {pathFromCircle} from '../src/services/geometry/path2d'
@@ -92,4 +93,62 @@ it('retains a shared curved boundary when the two source spans use different inj
  expect(difference.areaMm2+intersection.areaMm2).toBeCloseTo(a.areaMm2,5)
  expect(union.loops).toHaveLength(2);expect(union.loops.every(wire=>wire.length>=3)).toBe(true)
  expect(union.loops.flat().some(c=>c.degree===3)).toBe(true)
+})
+it('normalizes a same-side curved cusp with a nonlinear parameter map',()=>{
+ for(const transformed of [false,true]){
+  const a=cubic([[0,0],[2,0],[4,2],[6,6]]),b=cubic([[0,0],[2,0],[6,2],[12,12]])
+  const wire=[b,line([12,12],[6,6]),reverseNurbsCurve(a)]
+  if(transformed)for(const c of wire)for(const p of c.controlPoints){const[x,y]=p;p[0]=17+x-y;p[1]=-9+x+y}
+  const before=JSON.stringify(wire),expected=transformed?25.2:12.6
+  expect(validateBrepProfile([wire]).areaMm2).toBeCloseTo(expected,6)
+  const result=normalizeBrepProfile([wire])
+  expect(result.areaMm2).toBeCloseTo(expected,6);expect(result.loops).toHaveLength(1)
+  expect(result.loops[0].filter(c=>c.degree===3)).toHaveLength(2)
+  const body=extrudeBrepCurves(result.loops,0,1.5)
+  expect(inspectNurbsBrep(body).topologyValid).toBe(true);expect(body.edges.some(e=>e.curve.degree===3)).toBe(true)
+  expect(analyzeNurbsBrep(body).signedVolumeMm3).toBeCloseTo(expected*1.5,5)
+  const beforeBody=JSON.stringify(body)
+  for(const detail of [1,3,4,32]){
+   const mesh=tessellateNurbsBrep(body,detail)
+   expect(mesh.report.closed).toBe(true);expect(mesh.report.degenerateTriangles).toBe(0)
+   expect(mesh.report.nonManifoldEdges).toBe(0);expect(mesh.report.orientationConflicts).toBe(0)
+   expect(new Set(mesh.faceIds).size).toBe(body.faces.length)
+   if(detail===32)expect(Math.abs(mesh.report.signedVolumeMm3-expected*1.5)/(expected*1.5)).toBeLessThan(.003)
+  }
+  expect(JSON.stringify(body)).toBe(beforeBody)
+  expect(JSON.stringify(wire)).toBe(before)
+ }
+})
+it('normalizes a nodal cubic from its original carrier after stationary splitting',()=>{
+ for(const transformed of [false,true]){
+  const c=cubic([[9,-18],[-7,26],[-7,-26],[9,18]]),wire=[c,line([9,18],[9,-18])]
+  if(transformed)for(const c of wire)for(const p of c.controlPoints){const[x,y]=p;p[0]=17+x-y;p[1]=-9+x+y}
+  const before=JSON.stringify(wire),result=normalizeBrepProfile([wire])
+  expect(result.loops).toHaveLength(2);expect(result.areaMm2).toBeCloseTo(transformed?288:144,5)
+  expect(result.loops.flat().some(c=>c.degree===3)).toBe(true);expect(JSON.stringify(wire)).toBe(before)
+ }
+})
+it('keeps cusp geometry when the knot domain uses different units',()=>{
+ for(const end of [1e-15,1,1e8]){
+  const c=cubic([[3,-1],[-1,1],[-1,-1],[3,1]]);c.knots=[0,0,0,0,end,end,end,end]
+  const result=normalizeBrepProfile([[c,line([3,1],[3,-1])]])
+  expect(result.areaMm2).toBeCloseTo(2.4,6);expect(result.loops[0].filter(c=>c.degree===3)).toHaveLength(2)
+ }
+})
+it('retains the cusp component from a curved third-order difference',()=>{
+ const region=(y:number[])=>{const c=cubic(y.map((v,i)=>[10*i,v]));return[line([0,-2],[30,-2]),line([30,-2],[30,y[3]]),reverseNurbsCurve(c),line([0,y[0]],[0,-2])]}
+ const a=validateBrepProfile([region([0,0,1,3])]),b=validateBrepProfile([region([0,0,1,6])])
+ const result=booleanBrepProfiles(b,a,'difference')
+ expect(result.loops).toHaveLength(1);expect(result.areaMm2).toBeCloseTo(22.5,6);expect(result.loops[0].some(c=>c.degree===3)).toBe(true)
+})
+it('keeps both clamped endpoints exactly when reversing a signed knot domain',()=>{
+ const c=line([0,0],[1,1]);c.knots=[-1e8,-1e8,1e-8,1e-8]
+ const reversed=reverseNurbsCurve(c)
+ expect(reversed.knots).toEqual(c.knots);expect(reversed.controlPoints).toEqual([[1,1],[0,0]])
+ expect(reverseNurbsCurve(reversed)).toEqual(c)
+})
+it('refuses unresolved root transport instead of snapping an interior event to an endpoint',()=>{
+ const start=1e8,end=start+2**-26,c=cubic([[0,0],[1,1],[2,-1],[3,0]])
+ c.knots=[start,start,start,start,end,end,end,end]
+ expect(()=>normalizeBrepProfile([[c,line([3,0],[0,0])]])).toThrow(/represent|precision|domain/i)
 })

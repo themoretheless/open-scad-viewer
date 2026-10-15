@@ -10,7 +10,13 @@ pub fn abi_alloc(len: usize) -> usize {
     if len > LIMIT {
         return 0;
     }
-    Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
+    let mut buf = Vec::<u8>::with_capacity(len);
+    // SAFETY: u8 has no drop glue or validity invariants for uninitialized bytes before host write,
+    // and abi_free reconstructs Vec with exact len/cap.
+    unsafe {
+        buf.set_len(len);
+    }
+    Box::into_raw(buf.into_boxed_slice()) as *mut u8 as usize
 }
 
 /// # Safety

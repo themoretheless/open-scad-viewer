@@ -53,6 +53,22 @@ pub(crate) fn boundary_box(s: &Surface, edge: Boundary, t: [f64; 2], reverse: bo
         .map(|b| I::new(b[0], b[1]))
         .collect()
 }
+/// Sufficient identity of the represented, clamped boundary curves under the
+/// same normalized parameter. No rounded knot normalization or sampled equality.
+pub(crate) fn identical_boundary(a:&Surface,ea:Boundary,b:&Surface,eb:Boundary)->bool {
+    fn extract(s:&Surface,e:Boundary)->Option<(usize,&[f64],bool,Vec<&Vec<f64>>,Vec<f64>)> {
+        let (fixed,max)=match e {Boundary::UMin=>(0,false),Boundary::UMax=>(0,true),Boundary::VMin=>(1,false),Boundary::VMax=>(1,true)};
+        let (p,k,n,periodic)=if fixed==0 {(s.degree_u,&s.knots_u,s.control_points.len(),s.periodic_u)}else{(s.degree_v,&s.knots_v,s.control_points[0].len(),s.periodic_v)};
+        let endpoint=k[if max {n}else{p}];
+        let end=if max {&k[n..]}else{&k[..=p]};
+        if periodic||end.len()!=p+1||!end.iter().all(|&v|v==endpoint){return None;}
+        let i=if max {n-1}else{0};
+        Some(if fixed==0 {(s.degree_v,&s.knots_v,s.periodic_v,s.control_points[i].iter().collect(),s.weights[i].clone())}
+          else{(s.degree_u,&s.knots_u,s.periodic_u,s.control_points.iter().map(|row|&row[i]).collect(),s.weights.iter().map(|row|row[i]).collect())})
+    }
+    match(extract(a,ea),extract(b,eb)) {(Some(a),Some(b))=>a==b,_=>false}
+}
+
 struct Cell {
     t: [f64; 2],
     bounds: [f64; 2],

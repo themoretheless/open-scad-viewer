@@ -15,7 +15,8 @@ function clonePlain<T>(value:T):T{
  }
  return raw
 }
-const selected=computed(()=>props.ids.map(id=>props.curves.find(c=>c.id===id)))
+const curveById=computed(()=>{const m=new Map<string,SolidNurbsCurve>();for(const c of props.curves)m.set(c.id,c);return m})
+const selected=computed(()=>props.ids.map(id=>curveById.value.get(id)))
 const enabled=computed(()=>selected.value.length>0&&selected.value.every(c=>c?.curve.degree===1&&!c.curve.periodic))
 const client=createSolidPreviewWorker(),pending=ref(false),error=ref(''),result=shallowRef<CurveOffsetDiagnostics|null>(null)
 let generation=0

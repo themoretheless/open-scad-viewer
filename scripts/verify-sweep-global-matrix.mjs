@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto'
 import {dirname,resolve} from 'node:path'
 import {checkCompleteFacePairCover} from './sweep-face-pair-cover.mjs'
 import {bindStepOracle} from './sweep-step-oracle-binding.mjs'
+import {smoothCapGapCompanions,checkAutomaticSmoothCapContract} from './sweep-automatic-cap-contracts.mjs'
 
 // Independent reconciliation of native global certificates with OCCT results.
 // Finite fixture coverage never promotes an unresolved body or a general theorem.
@@ -23,13 +24,11 @@ assert.ok(Number.isSafeInteger(artifact.geometryWasmByteLength)&&artifact.geomet
 assert.equal(artifact.publicAndPackedVerified,true)
 assert.deepEqual(oracle.artifactProvenance,artifact,'OCCT/native WASM provenance differs')
 const expectedRefusals=new Set(['open-spatial-hollow-miter.step','affine-oblique-hollow-miter.step'])
-// These raw exact-boundary negatives must carry actual Different identities
-// and a separately fully certified corrected companion, never an unresolved retry.
-const pairedCapGaps=new Map([
- ['rmf-oblique-linear-scale-hollow.step','rmf-oblique-linear-scale-hollow-corrected.step'],
- ['frenet-quadratic-hollow.step','frenet-quadratic-hollow-corrected.step'],
- ['rmf-planar-quadratic-hollow.step','rmf-quadratic-hollow-corrected.step'],
-])
+// Legacy raw caps remain exact-boundary negatives with Different identities
+// and a fully certified corrected companion. The explicit Auto matrix instead
+// requires original-source radial filling plus fresh whole-model proofs.
+const pairedCapGaps=smoothCapGapCompanions
+const automaticSmoothCaps=manifest.automaticSmoothCaps===true
 const external=new Map(oracle.cases.map(c=>[c.file,c]))
 assert.equal(external.size,oracle.cases.length,'Duplicate external fixture')
 assert.equal(manifest.cases.length,external.size,'Incomplete external coverage')
@@ -63,7 +62,10 @@ for(const item of manifest.cases){
   assert.deepEqual(item.nativeBoundary,native.boundary,'Replay boundary differs from actual volume audit')
  }
 
- const companionFile=pairedCapGaps.get(item.file)
+ const pairedCompanionFile=pairedCapGaps.get(item.file)
+ const automaticCapCase=automaticSmoothCaps&&pairedCompanionFile!==undefined
+ const companionFile=automaticCapCase?undefined:pairedCompanionFile
+ if(automaticCapCase)checkAutomaticSmoothCapContract(item)
  const refused=expectedRefusals.has(item.file)||companionFile!==undefined
  assert.equal(native.solidGeometryCertified,!refused,`${item.file}: unexpected native admission`)
  if(companionFile){
@@ -126,6 +128,6 @@ for(const item of manifest.cases){
  cases.push({file:item.file,stepSha256:hash,status:companionFile?'correctly-refused-exact-cap-gap':refused?'correctly-unproved':'certified',shells:item.shells,capHoleFaces:item.capHoleFaces,wallRegularityCertified:item.nativeRetainedWallCharts?.allChartsCertified??null,profileRegularityCertified:item.construction?.profileRegularityCertified??null,parents:native.nesting?.parents??null,orientations:native.orientations})
 }
 assert.ok([...expectedRefusals].every(file=>seen.has(file)),'Missing deliberate refusal')
-const report={schema:controlPlaneOnly?'sweep-global-control-plane/1':'sweep-global-matrix/1',manifestSha256,artifactProvenance:artifact,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),oracleSha256:createHash('sha256').update(readFileSync(oraclePath)).digest('hex'),pairCoverVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-face-pair-cover.mjs',import.meta.url))).digest('hex'),controlPlaneOnly,scope:controlPlaneOnly?'Synthetic refused control-plane evidence only; not a complete geometric qualification.':'Declared finite STEP fixtures; native global certificates reconciled with independent OCCT topology/material evidence. Unresolved cases remain refused; no universal or whole-boundary smoothness claim.',passed:true,certified:cases.filter(c=>c.status==='certified').length,refused:cases.filter(c=>c.status!=='certified').length,cases}
+const report={automaticSmoothCaps,completeBoundaryVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-complete-boundary-contracts.mjs',import.meta.url))).digest('hex'),automaticCapContractVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-automatic-cap-contracts.mjs',import.meta.url))).digest('hex'),schema:controlPlaneOnly?'sweep-global-control-plane/1':'sweep-global-matrix/1',manifestSha256,artifactProvenance:artifact,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),oracleSha256:createHash('sha256').update(readFileSync(oraclePath)).digest('hex'),pairCoverVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-face-pair-cover.mjs',import.meta.url))).digest('hex'),controlPlaneOnly,scope:controlPlaneOnly?'Synthetic refused control-plane evidence only; not a complete geometric qualification.':'Declared finite STEP fixtures; native global certificates reconciled with independent OCCT topology/material evidence. Unresolved cases remain refused; no universal or whole-boundary smoothness claim.',passed:true,certified:cases.filter(c=>c.status==='certified').length,refused:cases.filter(c=>c.status!=='certified').length,cases}
 writeFileSync(outputPath,JSON.stringify(report,null,2)+'\n')
 console.log(`${report.certified} certified, ${report.refused} correctly unproved`)

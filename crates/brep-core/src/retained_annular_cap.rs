@@ -35,10 +35,13 @@ pub fn construct(outer: &[Curve], inner: &[Curve], max_work: u64) -> Result<Reta
     for ring in [outer, inner] {
         for (i, c) in ring.iter().enumerate() {
             c.validate()?;
+            let d1 = c.degree + 1;
             if c.periodic
-                || c.control_points.len() != c.degree + 1
+                || c.control_points.len() != d1
                 || c.control_points.iter().any(|p| p.len() != 3)
-                || c.knots != [vec![0.; c.degree + 1], vec![1.; c.degree + 1]].concat()
+                || c.knots.len() != 2 * d1
+                || c.knots[..d1].iter().any(|&k| k != 0.)
+                || c.knots[d1..].iter().any(|&k| k != 1.)
                 || c.weights.iter().any(|&w| w <= 0.)
             {
                 return Err(refused(
@@ -80,7 +83,6 @@ pub fn construct(outer: &[Curve], inner: &[Curve], max_work: u64) -> Result<Reta
             periodic_u: false,
             periodic_v: false,
         };
-        surface.validate()?;
         patches.push(surface);
     }
     let mut exact_work = 0;
@@ -97,26 +99,37 @@ pub fn construct(outer: &[Curve], inner: &[Curve], max_work: u64) -> Result<Reta
             return Err(refused("Annular boundary exceeded shared work"));
         }
         exact_work += proof.work_used;
-        if proof.outcome != cad_predicates::BezierIdentity::Equal {
-            return Err(refused("Annular boundary identity is not exact"));
+        match proof.outcome {
+            cad_predicates::BezierIdentity::Equal => {}
+            cad_predicates::BezierIdentity::Different => {
+                return Err(refused("Annular boundary identity is not exact"));
+            }
+            cad_predicates::BezierIdentity::Indeterminate(reason) => {
+                return Err(refused(&format!("Annular boundary identity remains unproved: {reason:?}")));
+            }
         }
         Ok(())
     };
+    let uv_u0 = uv_line([0., 0.], [1., 0.]);
+    let uv_u1 = uv_line([0., 1.], [1., 1.]);
+    let uv_v0 = uv_line([0., 0.], [0., 1.]);
+    let uv_v1 = uv_line([1., 0.], [1., 1.]);
+    let mut radial = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0.; 3], vec![0.; 3]],
+        weights: vec![1., 1.],
+        periodic: false,
+    };
     for (i, surface) in patches.iter().enumerate() {
-        prove(&outer[i], &uv_line([0., 0.], [1., 0.]), surface)?;
-        prove(&inner[i], &uv_line([0., 1.], [1., 1.]), surface)?;
-        for (end, u) in [(0, 0.), (outer[i].degree, 1.)] {
-            let radial = Curve {
-                degree: 1,
-                knots: vec![0., 0., 1., 1.],
-                control_points: vec![
-                    outer[i].control_points[end].clone(),
-                    inner[i].control_points[end].clone(),
-                ],
-                weights: vec![outer[i].weights[end], inner[i].weights[end]],
-                periodic: false,
-            };
-            prove(&radial, &uv_line([u, 0.], [u, 1.]), surface)?;
+        prove(&outer[i], &uv_u0, surface)?;
+        prove(&inner[i], &uv_u1, surface)?;
+        for (end, uv_v) in [(0, &uv_v0), (outer[i].degree, &uv_v1)] {
+            radial.control_points[0].clone_from(&outer[i].control_points[end]);
+            radial.control_points[1].clone_from(&inner[i].control_points[end]);
+            radial.weights[0] = outer[i].weights[end];
+            radial.weights[1] = inner[i].weights[end];
+            prove(&radial, uv_v, surface)?;
         }
     }
     Ok(RetainedAnnularCap {
@@ -160,7 +173,7 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
     }) {
         return Err(refused("Cap wires must have unique face ownership"));
     }
-    let owners = model
+    let mut owner_iter = model
         .shells
         .iter()
         .enumerate()
@@ -169,14 +182,15 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
                 .iter()
                 .filter(move |u| u.face == face)
                 .map(move |u| (s, u.reversed))
-        })
-        .collect::<Vec<_>>();
-    if owners.len() != 1 {
+        });
+    let Some(owner) = owner_iter.next() else {
+        return Err(refused("Cap must have one shell owner"));
+    };
+    if owner_iter.next().is_some() {
         return Err(refused("Cap must have one shell owner"));
     }
-    let outer_uses = model.loops[old.outer].coedges.clone();
-    let mut inner_uses = model.loops[old.holes[0]].coedges.clone();
-    inner_uses.reverse();
+    let outer_uses = &model.loops[old.outer].coedges;
+    let inner_coedges = &model.loops[old.holes[0]].coedges;
     let oriented = |c: &crate::Coedge| -> Result<Curve> {
         if c.reversed {
             model.edges[c.edge].curve.reverse()
@@ -188,8 +202,9 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
         .iter()
         .map(oriented)
         .collect::<Result<Vec<_>>>()?;
-    let inner = inner_uses
+    let inner = inner_coedges
         .iter()
+        .rev()
         .map(|c| oriented(c)?.reverse())
         .collect::<Result<Vec<_>>>()?;
     let cap = construct(&outer, &inner, max_work)?;
@@ -207,11 +222,11 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
         }
     }
     let mut wire_map = vec![usize::MAX; result.loops.len()];
-    let mut retained = Vec::new();
-    for (i, wire) in result.loops.iter().enumerate() {
+    let mut retained = Vec::with_capacity(result.loops.len().saturating_sub(2) + cap.patches.len());
+    for (i, wire) in std::mem::take(&mut result.loops).into_iter().enumerate() {
         if !source_wires.contains(&i) {
             wire_map[i] = retained.len();
-            retained.push(wire.clone());
+            retained.push(wire);
         }
     }
     result.loops = retained;
@@ -224,11 +239,14 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
     let vertex = |c: &crate::Coedge, start: bool| {
         model.edges[c.edge].vertices[usize::from(start == c.reversed)]
     };
-    let mut radials = Vec::new();
-    for i in 0..outer.len() {
+    let n_outer = outer.len();
+    let mut radials = Vec::with_capacity(n_outer);
+    result.edges.reserve(n_outer);
+    for i in 0..n_outer {
         // inner_uses follows the original clockwise edge; its end is the
         // start of the aligned counterclockwise span.
-        let vertices = [vertex(&outer_uses[i], true), vertex(&inner_uses[i], false)];
+        let inner_use = &inner_coedges[inner_coedges.len() - 1 - i];
+        let vertices = [vertex(&outer_uses[i], true), vertex(inner_use, false)];
         radials.push(result.edges.len());
         result.edges.push(crate::Edge {
             degenerate: false,
@@ -245,11 +263,13 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
             },
         });
     }
-    let mut cap_faces = Vec::new();
+    let mut cap_faces = Vec::with_capacity(cap.patches.len());
+    result.faces.reserve(cap.patches.len());
+    result.shells[owner.0].faces.reserve(cap.patches.len());
     for (i, surface) in cap.patches.into_iter().enumerate() {
         let mut a = outer_uses[i].clone();
         a.pcurve = uv_line([0., 0.], [1., 0.]);
-        let mut b = inner_uses[i].clone();
+        let mut b = inner_coedges[inner_coedges.len() - 1 - i].clone();
         b.pcurve = uv_line([1., 1.], [0., 1.]);
         let wire = result.loops.len();
         result.loops.push(crate::Loop {
@@ -275,9 +295,9 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
             outer: wire,
             holes: Vec::new(),
         });
-        result.shells[owners[0].0].faces.push(crate::FaceUse {
+        result.shells[owner.0].faces.push(crate::FaceUse {
             face: id,
-            reversed: owners[0].1,
+            reversed: owner.1,
         });
     }
     result.rebuild_topology_ids();
@@ -297,8 +317,14 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
                 return Err(refused("Assembled cap exceeds shared work"));
             }
             exact_work += p.work_used;
-            if p.outcome != cad_predicates::BezierIdentity::Equal {
-                return Err(refused("Assembled cap coedge identity is not exact"));
+            match p.outcome {
+                cad_predicates::BezierIdentity::Equal => {}
+                cad_predicates::BezierIdentity::Different => {
+                    return Err(refused("Assembled cap coedge identity is not exact"));
+                }
+                cad_predicates::BezierIdentity::Indeterminate(reason) => {
+                    return Err(refused(&format!("Assembled cap coedge identity remains unproved: {reason:?}")));
+                }
             }
         }
     }
@@ -383,7 +409,8 @@ mod tests {
     fn exhausted_work_and_mismatched_correspondence_refuse_without_moving_curves() {
         let (outer, inner) = original_endpoint();
         let before = (outer.clone(), inner.clone());
-        assert!(construct(&outer, &inner, 0).is_err());
+        let empty=construct(&outer,&inner,0).unwrap_err();
+        assert!(empty.to_string().contains("unproved")&&empty.to_string().contains("ResourceLimit"),"{empty}");
         let full = construct(&outer, &inner, 1_000_000).unwrap();
         assert!(construct(&outer, &inner, full.exact_work - 1).is_err());
         let mut changed = inner.clone();

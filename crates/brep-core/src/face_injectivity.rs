@@ -48,8 +48,9 @@ impl Inspector {
         if max_spans == 0 || max_spans > 100_000 || max_linear_cells > 100_000 {
             return Err(Error::new("BREP_INJECTIVITY_BUDGET", "Face injectivity budget must be in 1..100000"));
         }
+        let face_count = model.faces.len();
         Ok(Self {model, max_spans, max_linear_cells, proposals,
-            report: Report {all_faces_injective:true,spans:0,linear_cells:0,faces:Vec::new()}})
+            report: Report {all_faces_injective:true,spans:0,linear_cells:0,faces:Vec::with_capacity(face_count)}})
     }
     pub(crate) fn completed_faces(&self) -> usize { self.report.faces.len() }
     pub(crate) fn finished(&self) -> bool { self.completed_faces() == self.model.faces.len() }

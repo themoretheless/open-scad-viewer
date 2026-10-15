@@ -139,3 +139,80 @@ fn progressive_annular_wire_reconstruction_keeps_all_caps_and_replays_original_s
         json!(x.next_up());
     assert!(dispatch(reconstruct).is_err());
 }
+
+#[test]
+fn progressive_auto_caps_preserve_legacy_model_and_source_replay() {
+    let mut request=source();request["op"]=json!("brep_nurbs_progressive_profile_auto_body");
+    let mut old=request.clone();old["op"]=json!("brep_nurbs_progressive_profile_body");
+    let old=dispatch(old).unwrap();
+    let body=dispatch(request.clone()).unwrap();
+    assert_eq!(body["model"],old["model"]);
+    assert_eq!(body["capRepresentation"],"legacy");
+    assert_eq!(body["capFaceGroups"],json!([[16],[17]]));
+    assert_eq!(body["planarCapFaces"],json!([16,17]));
+    assert_eq!(body["boundaryContinuousBound"],true);
+    let selected=body["capSelectionExactWork"].as_u64().unwrap();
+    assert!(selected>0 && selected+body["retainedCaps"]["exactWork"].as_u64().unwrap()<=1000000);
+    let mut short=request.clone();short["annular_cap_max_work"]=json!(selected);
+    let refused=dispatch(short).unwrap();
+    assert_eq!(refused["boundaryContinuousBound"],false);
+    assert!(refused["boundaryErrorUpper"].is_null());
+    request["op"]=json!("brep_nurbs_progressive_profile_auto_body_reconstruct_stations");
+    request["expected_source_model"]=body["model"].clone();
+    request["station_quantum"]=json!(0.125);request["station_tolerance"]=json!(1e-9);
+    request["station_max_work"]=json!(1000000);
+    let repaired=dispatch(request.clone()).unwrap();
+    assert_eq!(repaired["stationReconstruction"]["boundaryCertificate"]["continuousBound"],true);
+    assert_eq!(repaired["stationReconstruction"]["profileSmoothness"]["station"]["stationG2Certified"],true);
+    request["expected_source_model"]["vertices"][0]["point"][0]=json!(999);
+    assert!(dispatch(request).is_err());
+}
+
+#[test]
+fn progressive_auto_caps_own_oblique_original_source_and_selection_ledger() {
+    let mut request=source();request["op"]=json!("brep_nurbs_progressive_profile_auto_body");
+    let outer=nurbs_core::primitives::circle([0.;3],[3.,4.,0.],0.1).unwrap();
+    let inner=nurbs_core::primitives::circle([0.;3],[3.,4.,0.],0.05).unwrap().reverse().unwrap();
+    request["loops"]=json!([[outer],[inner]]);
+    request["path"]=json!(nurbs_core::primitives::line([0.;3],[3.,4.,0.]).unwrap());
+    request["normal"]=json!([0.,0.,1.]);request["orientation"]=json!("rmf");
+    request["initial_sections"]=json!(2);request["max_sections"]=json!(129);
+    request["scale"]["controlPoints"][1][0]=json!(2);
+    let before=request.clone();let body=dispatch(request.clone()).unwrap();
+    assert_eq!(request,before);
+    assert_eq!(body["capRepresentation"],"radial-annular");
+    assert_eq!(body["planarCapFaces"],json!([]));
+    assert_eq!(body["boundaryContinuousBound"],true);
+    assert_eq!(body["boundaryErrorWithinBudget"],true);
+    let caps=&body["retainedAnnularFilling"];
+    assert_eq!(caps["selectionExactWork"],body["capSelectionExactWork"]);
+    assert_eq!(caps["exactWork"].as_u64().unwrap(),caps["selectionExactWork"].as_u64().unwrap()
+        +caps["constructionExactWork"].as_u64().unwrap()+caps["fillingExactWork"].as_u64().unwrap());
+    assert!(caps["exactWork"].as_u64().unwrap()<=1000000);
+    request["annular_cap_max_work"]=body["capSelectionExactWork"].clone();
+    assert!(dispatch(request).is_err());
+}
+
+#[test]
+fn progressive_auto_closed_body_reports_absent_caps_not_sharp_caps() {
+    let mut request=source();request["op"]=json!("brep_nurbs_progressive_profile_auto_body");
+    request["path"]=json!(nurbs_core::primitives::circle([0.;3],[0.,0.,1.],2.).unwrap());
+    request["loops"]=json!([[nurbs_core::primitives::circle([2.,0.,0.],[0.,1.,0.],0.5).unwrap()],
+        [nurbs_core::primitives::circle([2.,0.,0.],[0.,1.,0.],0.25).unwrap().reverse().unwrap()]]);
+    request["orientation"]=json!("rmf");
+    request["normal"]=json!([0.,0.,1.]);request["initial_sections"]=json!(9);request["max_sections"]=json!(9);
+    request["max_deviation"]=json!(2);
+    let body=dispatch(request.clone()).unwrap();
+    assert_eq!(body["capRepresentation"],"closed");
+    assert_eq!(body["capFaces"],json!([]));
+    assert_eq!(body["capFaceGroups"],json!([[],[]]));
+    assert_eq!(body["planarCapFaces"],json!([]));
+    assert_eq!(body["capSelectionExactWork"],0);
+    assert_eq!(body["retainedSmoothness"]["capWallContinuity"],"absent");
+    assert!(body["retainedAnnularFilling"].is_null());
+    // Profiles are authored at the path start. Moving this pair to the
+    // circle center collapses the sweep axis and must not publish a body.
+    request["loops"]=json!([[nurbs_core::primitives::circle([0.;3],[0.,1.,0.],0.5).unwrap()],
+        [nurbs_core::primitives::circle([0.;3],[0.,1.,0.],0.25).unwrap().reverse().unwrap()]]);
+    assert!(dispatch(request).is_err());
+}

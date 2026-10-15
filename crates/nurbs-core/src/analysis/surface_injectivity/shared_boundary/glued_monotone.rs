@@ -4,11 +4,14 @@
 //! symmetric-Jacobian certificates establish the actual whole-domain result.
 use super::{Result, Surface};
 
+#[derive(Clone,Copy,Debug)]
+enum Parametrization { Extents, GeometricMean, Balanced }
+
 fn virtual_face(
     source: &Surface,
     end: bool,
     left: bool,
-    balanced: bool,
+    policy: Parametrization,
 ) -> Result<Option<Surface>> {
     let u = [
         source.knots_u[source.degree_u],
@@ -24,15 +27,19 @@ fn virtual_face(
     };
     let transverse = du[0].hypot(du[1]).hypot(du[2]) * (u[1] - u[0]);
     let along = dv[0].hypot(dv[1]).hypot(dv[2]);
-    let length = if balanced {
+    let extents=transverse.max(along*(v[1]-v[0]));
+    let length = match policy {
         // Equalize proposed parameter derivative magnitudes, not physical
         // rectangle extents. A thin cap next to a long wall otherwise makes
         // the symmetric cross terms dominate despite a valid shared chart.
         // This is only a choice of positive clamped knot endpoints: its
         // rounded value is not a premise of any derivative/positivity proof.
-        transverse / along
-    } else {
-        transverse.max(along * (v[1] - v[0]))
+        Parametrization::Balanced=>transverse/along,
+        Parametrization::Extents=>extents,
+        // An intermediate positive parameter metric avoids making either
+        // the long wall or the thin cap dominate the common dual projection.
+        // Only original coefficients and outward Jacobian bounds certify it.
+        Parametrization::GeometricMean=>extents.sqrt()*(transverse/along).sqrt(),
     };
     if !length.is_finite() || length <= 0. {
         return Ok(None);
@@ -104,11 +111,11 @@ fn certify_policy(
     b: &Surface,
     ends: [bool; 2],
     max_cells: usize,
-    balanced: bool,
+    policy: Parametrization,
 ) -> Result<(bool, usize)> {
     let (Some(a), Some(b)) = (
-        virtual_face(a, ends[0], true, balanced)?,
-        virtual_face(b, ends[1], false, balanced)?,
+        virtual_face(a, ends[0], true, policy)?,
+        virtual_face(b, ends[1], false, policy)?,
     ) else {
         return Ok((false, 0));
     };
@@ -127,21 +134,47 @@ fn certify_policy(
     Ok((second.certified, first.cells + second.cells))
 }
 
+// The oriented transverse tangents only propose a metric order. A positive
+// alignment (e.g. an expanding inner wall and radial cap) can make the fully
+// balanced metric costly to enclose; try the intermediate scale there first.
+// Every accepted pair still proves both whole rectangles on original poles.
+fn preferred_metric(a:&Surface,b:&Surface,ends:[bool;2])->Parametrization {
+    let aligned=(||->Option<bool> {
+        let a=virtual_face(a,ends[0],true,Parametrization::Extents).ok()??;
+        let b=virtual_face(b,ends[1],false,Parametrization::Extents).ok()??;
+        let derivative=|s:&Surface| {
+            s.evaluate((s.knots_u[s.degree_u]+s.knots_u[s.degree_u+1])*0.5,
+                (s.knots_v[s.degree_v]+s.knots_v[s.degree_v+1])*0.5).ok()?.first_derivatives().map(|j|j.0)
+        };
+        let da=derivative(&a)?;let db=derivative(&b)?;
+        let dot=(0..3).map(|k|da[k]*db[k]).sum::<f64>();
+        dot.is_finite().then_some(dot>0.)
+    })();
+    if aligned==Some(true) {Parametrization::GeometricMean}else{Parametrization::Balanced}
+}
+
 pub(super) fn certify(
     a: &Surface,
     b: &Surface,
     ends: [bool; 2],
     max_cells: usize,
 ) -> Result<(bool, usize)> {
-    // Preserve the existing successful fast path and account for its failed
-    // attempt before trying a second parametrization. Neither attempt gets a
-    // fresh cell allowance. Both keep the same original poles and V curve.
-    let first = certify_policy(a, b, ends, max_cells, false)?;
-    if first.0 || first.1 == max_cells {
-        return Ok(first);
+    // Preserve the original successful fast path. Failed attempts consume
+    // the same cumulative allowance; no proposal can reset or admit work.
+    let first=certify_policy(a,b,ends,max_cells,Parametrization::Extents)?;
+    if first.0||first.1==max_cells {return Ok(first);}
+    let preferred=preferred_metric(a,b,ends);
+    let policies=match preferred {
+        Parametrization::GeometricMean=>[Parametrization::GeometricMean,Parametrization::Balanced],
+        _=>[Parametrization::Balanced,Parametrization::GeometricMean],
+    };
+    let mut used=first.1;
+    for policy in policies {
+        let next=certify_policy(a,b,ends,max_cells-used,policy)?;
+        used+=next.1;
+        if next.0||used==max_cells {return Ok((next.0,used));}
     }
-    let second = certify_policy(a, b, ends, max_cells - first.1, true)?;
-    Ok((second.0, first.1 + second.1))
+    Ok((false,used))
 }
 
 #[cfg(all(test, feature = "codec"))]
@@ -202,6 +235,40 @@ mod tests {
                 !changed.proven,
                 "A changed common curve cannot inherit the glued certificate"
             );
+        }
+    }
+
+    #[test]
+    fn reconstructed_oblique_station_and_cap_share_the_original_pair_budget() {
+        let data:value_codec::Value=value_codec::from_str(include_str!(
+            "fixtures/oblique-reconstructed-station-wall-cap.json"
+        )).unwrap();
+        for pair in data["pairs"].as_array().unwrap() {
+            let (a,ea)=natural(value_codec::from_value(pair["surfaces"][0].clone()).unwrap(),
+                value_codec::from_value(pair["pcurves"][0].clone()).unwrap());
+            let (mut b,eb)=natural(value_codec::from_value(pair["surfaces"][1].clone()).unwrap(),
+                value_codec::from_value(pair["pcurves"][1].clone()).unwrap());
+            let ia=if ea{a.degree_u}else{0};let ib=if eb{b.degree_u}else{0};
+            if a.control_points[ia]!=b.control_points[ib] {
+                for row in &mut b.control_points {row.reverse();}
+                for row in &mut b.weights {row.reverse();}
+            }
+            assert_eq!(a.control_points[ia],b.control_points[ib]);
+            assert_eq!(a.weights[ia],b.weights[ib]);
+            let original=(a.clone(),b.clone());
+            let proof=super::super::certify_shared_natural_boundary(&a,&b,[ea,eb],1000).unwrap();
+            assert!(proof.proven,"pair {}: {}, cells={}",pair["faces"],proof.reason,proof.spans);
+            assert!(proof.spans>6&&proof.spans<=1000);
+            assert!(super::super::certify_shared_natural_boundary(&a,&b,[ea,eb],proof.spans).unwrap().proven);
+            for budget in [0,5,6,proof.spans-1] {
+                let partial=super::super::certify_shared_natural_boundary(&a,&b,[ea,eb],budget).unwrap();
+                assert!(!partial.proven&&partial.spans<=budget);
+            }
+            let overlap=super::super::certify_shared_natural_boundary(&a,&a,[ea,ea],1000).unwrap();
+            assert!(!overlap.proven&&overlap.spans<=1000);
+            assert_eq!((a.clone(),b.clone()),original);
+            b.control_points[ib][0][0]=b.control_points[ib][0][0].next_up();
+            assert!(!super::super::certify_shared_natural_boundary(&a,&b,[ea,eb],1000).unwrap().proven);
         }
     }
 }

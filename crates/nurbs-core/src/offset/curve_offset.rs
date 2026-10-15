@@ -835,3 +835,6 @@ mod tests {
         assert!(report.max_deviation <= 1e-5);
     }
 }
+#[path = "orthogonal_cleanup.rs"]
+mod orthogonal_cleanup;
+pub use orthogonal_cleanup::{CleanupStop, CleanupLimits, OrthogonalCleanup, cleanup_orthogonal_miter_offset};

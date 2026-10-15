@@ -10,7 +10,12 @@ import * as geometryKernel from '../src/services/geometry/kernel'
 import * as transparencyKernel from '../src/services/geometry/transparentBspKernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
-beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue')})
+beforeAll(async()=>{
+ // Native geometry fixtures need the same initialized runtime as interactions
+ // in the browser; cold compilation belongs to setup, not one selected test.
+ await geometryKernel.warmGeometryKernel()
+ await import('../src/components/CurvePointTrimControls.vue')
+})
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
@@ -307,6 +312,27 @@ it('previews, applies and undoes a qualified exact fillet from an edge pick',asy
  expect(analyzeNurbsBrep(body.brep!).signedVolumeMm3).toBeCloseTo(8000-(1-Math.PI/4)*80,5)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('↷');expect(ui.doc().bodies.at(-1)!.brep).toEqual(body.brep)
+})
+
+it.each([1,2])('lets navigation button %i over an edge reach the canvas without changing selection or geometry',async button=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Edges')
+ const before=ui.doc(),svg=ui.svg(),edge=ui.all(svg).find(n=>n.props['data-topology-edge'])!
+ const stopPropagation=vi.fn(),event={...ui.event(edge),button,stopPropagation}
+ edge.props.onPointerdown(event);await nextTick()
+ expect(stopPropagation).not.toHaveBeenCalled()
+ expect(edge.props['aria-pressed']).toBe(false)
+ // This renderer does not bubble DOM events. Deliver the unconsumed event
+ // to its SVG parent, then exercise the actual camera gesture.
+ const initialPoints=edge.props.points,initialView=svg.props.viewBox
+ svg.props.onPointerdown({...event,currentTarget:svg});await flushClearance()
+ svg.props.onPointermove({...ui.event(svg,30,15),button});await flushClearance()
+ if(button===2)expect(edge.props.points).not.toEqual(initialPoints)
+ else expect(svg.props.viewBox).not.toEqual(initialView)
+ svg.props.onPointerup({...ui.event(svg,30,15),button});await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ edge.props.onPointerdown({...ui.event(edge),stopPropagation});await nextTick()
+ expect(stopPropagation).toHaveBeenCalledOnce()
+ expect(edge.props['aria-pressed']).toBe(true)
 })
 
 it('locates an oversized fillet and recovers after reducing its radius',async()=>{
@@ -2607,6 +2633,56 @@ it('cancels primitive construction on Escape, parameter change and closure, then
  await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('Sphere');await ui.setProps({open:false});requests[3].reject(Error('obsolete primitive failure'));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete primitive failure')
+})
+
+it('cancels stale G2 tube requests and retries with the corrected transition size',async()=>{
+ const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const ui=await mount(),before=ui.doc()
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const toggle=ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes('G2 tube end transitions'))!
+ toggle.props['onUpdate:modelValue'](true);await flushClearance()
+ const extent=ui.all().find(n=>n.tag==='input'&&n.props.step==='0.1'&&n.parent&&ui.text(n.parent).includes('G2 transition size'))!
+ await ui.click('Tube');expect(requests[0].job.options.g2TransitionSize).toBe(.5)
+ extent.props['onUpdate:modelValue'](.25);await flushClearance()
+ requests[0].reject(Error('obsolete G2 failure'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete G2 failure')
+ await ui.click('Tube');requests[1].reject(Error('BREP_G2_ANNULAR_LIMITS'));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Check the inner radius')
+ extent.props['onUpdate:modelValue'](.1);await flushClearance();await ui.click('Retry creation')
+ expect(requests[2].job.options.g2TransitionSize).toBe(.1)
+ requests[2].resolve(addSolidPrimitive(requests[2].job.document,requests[2].job.options));await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ expect(ui.doc().bodies.at(-1)!.brep!.faces).toHaveLength(32)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('Tube');await commandKey(ui,'Escape')
+ requests[3].resolve(addSolidPrimitive(requests[3].job.document,requests[3].job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+})
+
+it('keeps independent end transitions through cancellation, Retry and history',async()=>{
+ const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const ui=await mount(),before=ui.doc()
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const toggle=(text:string)=>ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes(text))!
+ toggle('G2 tube end transitions').props['onUpdate:modelValue'](true);await flushClearance()
+ toggle('Individual tube transitions').props['onUpdate:modelValue'](true);await flushClearance()
+ async function extent(text:string,value:number){ui.all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.parent&&ui.text(n.parent).includes(text))!.props.onInput({target:{valueAsNumber:value}});await flushClearance()}
+ await extent('Outer bottom',.1);await extent('Outer top',.25);await extent('Inner top',.5);await extent('Inner bottom',.75)
+ await ui.click('Tube');expect(requests[0].job.options.g2TransitionSizes).toEqual([.1,.25,.5,.75])
+ await extent('Inner bottom',.6)
+ requests[0].resolve(addSolidPrimitive(requests[0].job.document,requests[0].job.options));await flushClearance();expect(ui.doc()).toEqual(before)
+ await ui.click('Tube');requests[1].reject(Object.assign(Error('Adjacent positive transition extents must fit their common wall or cap'),{code:'BREP_G2_ANNULAR_LIMITS'}));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Check the inner radius')
+ expect(ui.all().filter(n=>n.tag==='input'&&n.props['aria-invalid']===true).length).toBeGreaterThanOrEqual(4)
+ await extent('Inner bottom',.75);await ui.click('Retry creation')
+ expect(requests[2].job.options.g2TransitionSizes).toEqual([.1,.25,.5,.75])
+ requests[2].resolve(addSolidPrimitive(requests[2].job.document,requests[2].job.options));await flushClearance()
+ const accepted=structuredClone(ui.doc());expect(accepted.bodies).toHaveLength(before.bodies.length+1)
+ expect(accepted.bodies.at(-1)!.brep!.faces).toHaveLength(32)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(accepted)
 })
 
 it('discards vertex measurement replies after a changed input and Escape without editing history',async()=>{

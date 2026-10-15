@@ -2,7 +2,7 @@
 #[path = "persistent_naming/serialization.rs"]
 mod serialization;
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fmt;
 
 const INVALID_NAMING: &str = "BREP_INVALID_PERSISTENT_NAMING";
@@ -159,11 +159,18 @@ impl TopoId {
 
 impl fmt::Display for TopoId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:", self.kind.prefix())?;
-        for byte in self.bytes {
-            write!(formatter, "{byte:02x}")?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let prefix = self.kind.prefix().as_bytes();
+        let mut buf = [0u8; 36];
+        let plen = prefix.len();
+        buf[..plen].copy_from_slice(prefix);
+        buf[plen] = b':';
+        for (i, &byte) in self.bytes.iter().enumerate() {
+            buf[plen + 1 + 2 * i] = HEX[(byte >> 4) as usize];
+            buf[plen + 1 + 2 * i + 1] = HEX[(byte & 0x0f) as usize];
         }
-        Ok(())
+        let s = std::str::from_utf8(&buf[..plen + 33]).unwrap();
+        formatter.write_str(s)
     }
 }
 
@@ -234,13 +241,25 @@ pub struct ChangeSet {
 
 impl ChangeSet {
     pub fn validate(&self) -> math_core::Result<()> {
+        use rustc_hash::{FxHashMap, FxHashSet};
         let fail = |message| math_core::Error::new(INVALID_NAMING, message);
         for (id, kind) in &self.nodes {
             if id.kind() != *kind {
                 return Err(fail("Topology node kind conflicts with its ID prefix"));
             }
         }
-        let mut edges = BTreeMap::<TopoId, BTreeSet<TopoId>>::new();
+        let all_unique = |slice: &[TopoId]| -> bool {
+            for i in 0..slice.len() {
+                if slice[i + 1..].contains(&slice[i]) {
+                    return false;
+                }
+            }
+            true
+        };
+        let mut edges = FxHashMap::<TopoId, Vec<TopoId>>::with_capacity_and_hasher(
+            self.changes.len(),
+            Default::default(),
+        );
         for change in &self.changes {
             if change.provenance.operation.is_empty()
                 || change.provenance.occurrence.is_empty()
@@ -250,11 +269,7 @@ impl ChangeSet {
                     "Topology change provenance and role must be non-empty",
                 ));
             }
-            let unique_parents: BTreeSet<_> = change.parents.iter().copied().collect();
-            let unique_children: BTreeSet<_> = change.children.iter().copied().collect();
-            if unique_parents.len() != change.parents.len()
-                || unique_children.len() != change.children.len()
-            {
+            if !all_unique(&change.parents) || !all_unique(&change.children) {
                 return Err(fail("Topology change endpoints must be unique"));
             }
             let cardinality_ok = match change.kind {
@@ -294,16 +309,19 @@ impl ChangeSet {
             for parent in &change.parents {
                 for child in &change.children {
                     if parent != child {
-                        edges.entry(*parent).or_default().insert(*child);
+                        let list = edges.entry(*parent).or_default();
+                        if !list.contains(child) {
+                            list.push(*child);
+                        }
                     }
                 }
             }
         }
         fn visit(
             node: TopoId,
-            edges: &BTreeMap<TopoId, BTreeSet<TopoId>>,
-            visiting: &mut BTreeSet<TopoId>,
-            visited: &mut BTreeSet<TopoId>,
+            edges: &FxHashMap<TopoId, Vec<TopoId>>,
+            visiting: &mut FxHashSet<TopoId>,
+            visited: &mut FxHashSet<TopoId>,
         ) -> bool {
             if visited.contains(&node) {
                 return true;
@@ -311,20 +329,21 @@ impl ChangeSet {
             if !visiting.insert(node) {
                 return false;
             }
-            if edges
-                .get(&node)
-                .into_iter()
-                .flatten()
-                .any(|child| !visit(*child, edges, visiting, visited))
-            {
-                return false;
+            if let Some(children) = edges.get(&node) {
+                for &child in children {
+                    if !visit(child, edges, visiting, visited) {
+                        return false;
+                    }
+                }
             }
             visiting.remove(&node);
             visited.insert(node);
             true
         }
-        let mut visiting = BTreeSet::new();
-        let mut visited = BTreeSet::new();
+        let mut visiting =
+            FxHashSet::with_capacity_and_hasher(self.nodes.len(), Default::default());
+        let mut visited =
+            FxHashSet::with_capacity_and_hasher(self.nodes.len(), Default::default());
         for node in self.nodes.keys() {
             if !visit(*node, &edges, &mut visiting, &mut visited) {
                 return Err(fail("Topology lineage must be acyclic"));

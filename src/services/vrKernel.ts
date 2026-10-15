@@ -1,3 +1,4 @@
+import {decodeBase91} from './wasmBase91'
 import bytes from '../generated/vr-core/bytes'
 
 interface Kernel extends WebAssembly.Exports {
@@ -12,7 +13,7 @@ function kernel(): Kernel {
   // Small independent module, instantiated on first VR use. No async boundary
   // between the user's click and WebXR requestSession.
   return instance ??= new WebAssembly.Instance(new WebAssembly.Module(
-    Uint8Array.from(atob(bytes), char => char.charCodeAt(0)),
+    bytes.startsWith('bKx:')?decodeBase91(bytes):Uint8Array.from(atob(bytes), char => char.charCodeAt(0)),
   )).exports as Kernel
 }
 export interface KernelMesh {

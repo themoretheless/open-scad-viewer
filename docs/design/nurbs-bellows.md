@@ -1,0 +1,13 @@
+# Кубическая гофрированная оболочка
+
+`nurbs_core::bellows::cubic(Request)` строит наружную поверхность, полость и два кольцевых торца. Задаются center, mean_radius, signed amplitude, positive height, radial_thickness и periods=1..256. Требуется mean_radius>abs(amplitude)+radial_thickness. Signed amplitude меняет начальный экстремум; нулевая amplitude даёт прямую цилиндрическую оболочку.
+
+Axial parameter u∈[0,1], Z=Cz+height*u. В каждом half-period radius=mean+sign*amplitude*(1−6t²+4t³), t∈[0,1], знак чередуется. Нулевые endpoint slopes и совпадающие second derivatives дают C2 axial radius law в вещественной арифметике. Это явно заданный cubic wave, не sinusoidal approximation. Angular parameter v∈[0,4] использует четыре rational quadratic circle quadrants; он не аффинен физическому углу внутри квадранта.
+
+Наружная/внутренняя surfaces имеют degrees 3×2, circle weights 1/√2 и cardinal/tangent-intersection controls. Каждый patch содержит максимум десять half-periods / 31 axial controls и 9 angular controls; все periods сохраняются. Полный максимум — 52 outer + 52 inner patches и два rims. Каждый соседний axial boundary использует одинаковые control/weight rows. Angular seam материализован одинаковыми first/last columns. Rims переиспользуют исходные skin rows, при необходимости с reversal; symmetric circle knot vector сохраняет соответствие v↔4−v.
+
+Normals ориентированы наружу на outer, в полость на inner, −Z на bottom и +Z на top. Radial_thickness — разность radial profile coefficients, не постоянная толщина по normal. Поэтому NURBS-0080 (общая оболочка заданной нормальной толщины) остаётся planned. Return Shell является geometric surface collection: B-rep face/edge ownership, incidence, manifold/solid audit и tessellation не создаются.
+
+Конструкция рационально/полиномиально точна в вещественной арифметике для данного cubic law; binary64 circle weights, coordinates и evaluator rounding не сертифицированы. Проверяется representable positive cavity/wall gap в cardinal directions и строгое возрастание axial controls. Если размеры/толщина теряются при world-coordinate precision, функция возвращает typed numeric error вместо схлопнутой оболочки. Остальные Surface limits применяются при validation.
+
+Проверка 2026-10-14: пять independent integration groups прошли offline/locked, no-default-features. Проверены cubic radius/height formula для signed/zero amplitude, inner radial gap, normals, boundary points/weights/knots и orientations, полный maximum period budget, invalid sizes и precision-collapse refusals. Source/test SHA-256 совпали до/после окончательного прогона. NURBS-0097: native в данном контракте; это не constant-normal-wall или B-rep qualification.

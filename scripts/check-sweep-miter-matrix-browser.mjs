@@ -46,7 +46,7 @@ const gpuBackend=process.argv.find(a=>a.startsWith('--gpu-backend='))?.slice('--
 assert.ok(['auto','metal','swiftshader'].includes(gpuBackend),'Unknown requested GPU backend')
 const evidenceOnly=process.argv.includes('--evidence-only')
 assert.ok(!evidenceOnly||surfaceMode&&!headed,'Evidence-only requires a headless surface run')
-const sources=(progressiveStationMatrixMode?['straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r']:bodyBoundaryMode?(profileG2BodyMatrixMode?[...spatialRmfProfileG2BodySources]:[...sweepBodyBoundarySources]):surfaceMode?['closed-g1-arc-length-fixed-progressive-sweep.r','closed-antipodal-spatial-rmf-progressive-sweep.r','closed-spatial-rmf-affine-certified.r','closed-conic-direction-frame-c1-progressive-sweep.r','closed-arc-length-guided-frame-c2-progressive-sweep.r','closed-arc-length-guided-source-bound-progressive-sweep.r','closed-planar-guided-frame-c2-progressive-sweep.r','closed-planar-path-frame-c2-progressive-sweep.r','corrected-frenet-sweep.r','corrected-frenet-antiparallel-progressive-sweep.r','authored-closed-cartesian-c2-progressive-sweep.r','authored-closed-nonclamped-c2-progressive-sweep.r','mixed-knots-curved-frenet-progressive-sweep.r','authored-closed-piecewise-c2-progressive-sweep.r','decomposed-profile-g1-progressive-sweep.r','decomposed-profile-g2-progressive-sweep.r','closed-authored-arc-length-progressive-sweep.r','closed-authored-source-bound-progressive-sweep.r','authored-closed-projective-c2-progressive-sweep.r','authored-closed-multispan-c2-progressive-sweep.r','authored-closed-c2-progressive-sweep.r','nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-planar-rmf-progressive-sweep.r','arc-length-curved-contact-progressive-sweep.r','arc-length-curved-guided-progressive-sweep.r','arc-length-curved-frenet-progressive-sweep.r','arc-length-curved-fixed-normal-progressive-sweep.r','arc-length-curved-fixed-progressive-sweep.r','arc-length-curved-authored-progressive-sweep.r','arc-length-authored-progressive-sweep.r','arc-length-guided-progressive-sweep.r','arc-length-progressive-sweep.r','arc-length-affine-progressive-sweep.r','planar-rmf-progressive-sweep.r','oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','authored-progressive-sweep.r','fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','guided-progressive-sweep.r','contact-progressive-sweep.r','closed-guided-progressive-sweep.r','closed-contact-progressive-sweep.r','closed-fixed-progressive-sweep.r','closed-arc-length-fixed-progressive-sweep.r','periodic-arc-length-fixed-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','closed-fixed-normal-full-turn-progressive-sweep.r','closed-planar-rmf-full-turn-progressive-sweep.r','closed-frenet-progressive-sweep.r']:[
+const sources=(progressiveStationMatrixMode?['oblique-rmf-annular-body-station-g2.r','straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r']:bodyBoundaryMode?(profileG2BodyMatrixMode?[...spatialRmfProfileG2BodySources]:[...sweepBodyBoundarySources]):surfaceMode?['closed-g1-arc-length-fixed-progressive-sweep.r','closed-antipodal-spatial-rmf-progressive-sweep.r','closed-spatial-rmf-affine-certified.r','closed-conic-direction-frame-c1-progressive-sweep.r','closed-arc-length-guided-frame-c2-progressive-sweep.r','closed-arc-length-guided-source-bound-progressive-sweep.r','closed-planar-guided-frame-c2-progressive-sweep.r','closed-planar-path-frame-c2-progressive-sweep.r','corrected-frenet-sweep.r','corrected-frenet-antiparallel-progressive-sweep.r','authored-closed-cartesian-c2-progressive-sweep.r','authored-closed-nonclamped-c2-progressive-sweep.r','mixed-knots-curved-frenet-progressive-sweep.r','authored-closed-piecewise-c2-progressive-sweep.r','decomposed-profile-g1-progressive-sweep.r','decomposed-profile-g2-progressive-sweep.r','closed-authored-arc-length-progressive-sweep.r','closed-authored-source-bound-progressive-sweep.r','authored-closed-projective-c2-progressive-sweep.r','authored-closed-multispan-c2-progressive-sweep.r','authored-closed-c2-progressive-sweep.r','nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-planar-rmf-progressive-sweep.r','arc-length-curved-contact-progressive-sweep.r','arc-length-curved-guided-progressive-sweep.r','arc-length-curved-frenet-progressive-sweep.r','arc-length-curved-fixed-normal-progressive-sweep.r','arc-length-curved-fixed-progressive-sweep.r','arc-length-curved-authored-progressive-sweep.r','arc-length-authored-progressive-sweep.r','arc-length-guided-progressive-sweep.r','arc-length-progressive-sweep.r','arc-length-affine-progressive-sweep.r','planar-rmf-progressive-sweep.r','oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','authored-progressive-sweep.r','fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','guided-progressive-sweep.r','contact-progressive-sweep.r','closed-guided-progressive-sweep.r','closed-contact-progressive-sweep.r','closed-fixed-progressive-sweep.r','closed-arc-length-fixed-progressive-sweep.r','periodic-arc-length-fixed-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','closed-fixed-normal-full-turn-progressive-sweep.r','closed-planar-rmf-full-turn-progressive-sweep.r','closed-frenet-progressive-sweep.r']:[
  'sharp-profile-nonuniform-station-g2-miter.r',
  'direct-miter-circle-owned-boundary.r',
  'miter-moving-affine-full-boundary-refined.r',
@@ -158,7 +158,7 @@ try {
  for(const viewport of viewports)for(const file of sources){
   if(!plannedCaseSet.has(caseKey(viewport,file)))continue
   const source=await readFile(path.join(sourceDirectory,file),'utf8')
-  if(unbudgetedSourceMode)assert.ok(!/\bmax_deviation\s*:/.test(source),'The unchanged hollow example must have no authored tolerance')
+  if(file==='miter-hollow-body.r')assert.ok(!/\bmax_deviation\s*:/.test(source),'The unchanged hollow example must have no authored tolerance')
   const name=viewport.width+'-'+file.replace(/\.r$/,'')
   const directory=path.join(output,name);await mkdir(directory,{recursive:true})
   const context=await browser.newContext({viewport,acceptDownloads:true})
@@ -457,7 +457,7 @@ try {
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\//.test(text)&&/Стыки вдоль пути:\s*G2/.test(text)), 'Rational profile G1 and station G2 must reach viewport presentation')
     entry.assertions.push({case:'rational-profile-G1-and-station-G2',status:'passed'})
    }
-   if(progressiveStationMatrixMode||profileG2LawMatrixMode||file==='direct-miter-circle-owned-boundary.r'||file.startsWith('progressive-miter-reconstructed-conic-')||file==='closed-miter-frame-guide-affine-hollow.r'||file==='closed-miter-frame-guide-affine-hollow-corrected.r'||file==='closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r'||file==='progressive-miter-circle-corrected-hollow.r'||file==='progressive-miter-spatial-circle-corrected-hollow.r'||file==='progressive-miter-affine-circle-corrected-hollow.r'||file==='progressive-miter-oblique-circle-corrected-hollow.r'||file==='miter-rational-curved-guide-frame-affine-hollow.r'){
+   if((progressiveStationMatrixMode&&file!=='oblique-rmf-annular-body-station-g2.r')||profileG2LawMatrixMode||file==='direct-miter-circle-owned-boundary.r'||file.startsWith('progressive-miter-reconstructed-conic-')||file==='closed-miter-frame-guide-affine-hollow.r'||file==='closed-miter-frame-guide-affine-hollow-corrected.r'||file==='closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r'||file==='progressive-miter-circle-corrected-hollow.r'||file==='progressive-miter-spatial-circle-corrected-hollow.r'||file==='progressive-miter-affine-circle-corrected-hollow.r'||file==='progressive-miter-oblique-circle-corrected-hollow.r'||file==='miter-rational-curved-guide-frame-affine-hollow.r'){
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\/\s*✓/.test(text)), 'Every profile seam in this mode must certify G2')
     entry.assertions.push({case:'profile-G2',status:'passed'})
    }
@@ -473,7 +473,7 @@ try {
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\/\s*\?/.test(text)), 'Independent G1 must survive unproved G2')
     entry.assertions.push({case:'independent-G1-with-unproved-G2',status:'passed'})
    }
-   if(unbudgetedSourceMode){
+   if(file==='miter-hollow-body.r'){
     assert.ok(entry.viewportEvidence.some(text=>/Непрерывная ошибка границы:\s*доказана/.test(text)),'Unbudgeted numerical boundary bound must reach the viewport')
     assert.ok(entry.viewportEvidence.some(text=>text.includes('допуск не задан')),'Viewport must preserve the absence of an authored tolerance')
     assert.ok(!entry.viewportEvidence.some(text=>text.includes('в допуске')),'Unbudgeted source must not acquire tolerance admission')
@@ -509,9 +509,16 @@ try {
     await materialMenu.locator('summary').click()
     await materialMenu.getByRole('combobox',{name:'Модель затенения',exact:true}).waitFor({state:'hidden'})
     entry.assertions.push({case:'material-panel-open-close',status:'passed'})
-    await page.locator('.canvas-panel').getByRole('button',{name:'Вписать',exact:true}).click()
-    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
-    entry.assertions.push({case:'viewport-fit-through-UI',status:'passed'})
+   }
+   // Exercise the existing fit control for retained miter/station views too.
+   await page.locator('.canvas-panel').getByRole('button',{name:'Вписать',exact:true}).click()
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+   entry.assertions.push({case:'viewport-fit-through-UI',status:'passed'})
+   const dock=page.locator('#cad-sidebar')
+   if(await dock.isVisible()){
+    const c=await page.locator('.canvas-panel canvas.gpu-canvas').boundingBox(),d=await dock.boundingBox()
+    assert.ok(c&&d&&c.width>0&&c.x+c.width<=d.x+1,'Rendered canvas must fit the area left visible by the open dock')
+    entry.assertions.push({case:'viewport-reserves-open-dock-space',status:'passed'})
    }
    const persistenceError=page.locator('.persistence-error')
    entry.previewWorkspacePersistence={error:await persistenceError.count()?await persistenceError.getAttribute('title'):null}
@@ -658,7 +665,7 @@ try {
    entry.assertions.push({case:'source-change',status:'passed',fault:'held worker dispatch'})
    await page.evaluate(()=>window.sweepHoldExact=false)
    await load(source);await toSolid()
-   if(surfaceMode||file==='miter-hollow-body.r'&&!unbudgetedSourceMode||boundedFixedRefusalMode){
+   if(surfaceMode||boundedFixedRefusalMode){
     await waitSolidFinished()
     const error=page.locator('.message.error');await error.waitFor()
     assert.match(await error.innerText(),surfaceMode?/Solid source requires native B-rep bodies/i:/Solid geometry.*boundary embedding/i)
@@ -695,7 +702,7 @@ try {
    const document=await download('solid')
    assert.equal(document.bodies.length,1)
    assert.ok(document.bodies[0].brep?.faces.length>0)
-   if(unbudgetedSourceMode)assert.equal(document.bodies[0].brep.faces.length,32,'Solid must receive both complete native annular cap groups')
+   if(file==='miter-hollow-body.r')assert.equal(document.bodies[0].brep.faces.length,32,'Solid must receive both complete native annular cap groups')
    entry.solid={faces:document.bodies[0].brep.faces.length,shells:document.bodies[0].brep.shells.length,
     geometrySha256:sha(JSON.stringify(document.bodies[0].brep))}
    entry.assertions.push({case:'solid-publication',status:'passed'})

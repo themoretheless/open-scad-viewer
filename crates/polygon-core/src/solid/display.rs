@@ -1,8 +1,6 @@
 //! Native display-mesh preparation: crease-smoothed triangle lists,
 //! area-weighted indexed vertex normals, and flat-shaded triangle expansion.
 
-use std::collections::HashMap;
-
 pub struct SmoothTriangleList {
     pub positions: Vec<f32>,
     pub normals: Vec<f32>,
@@ -34,9 +32,10 @@ pub fn smooth_triangle_list(
     let triangle_count = indices.len() / 3;
     let vertex_count = positions.len() / 3;
     let mut face_normals = vec![[0.0f64; 3]; triangle_count];
-    let mut by_position: HashMap<[i64; 3], usize> = HashMap::with_capacity(vertex_count);
+    let mut by_position: rustc_hash::FxHashMap<[i64; 3], usize> =
+        rustc_hash::FxHashMap::with_capacity_and_hasher(vertex_count, Default::default());
     let mut buckets: Vec<Vec<usize>> = Vec::with_capacity(vertex_count);
-    let mut bucket_by_vertex: Vec<Option<usize>> = vec![None; vertex_count];
+    let mut bucket_by_vertex: Vec<usize> = vec![usize::MAX; vertex_count];
 
     for (t, face_normal) in face_normals.iter_mut().enumerate() {
         let t3 = t * 3;
@@ -68,23 +67,23 @@ pub fn smooth_triangle_list(
 
         for k in 0..3 {
             let vi = indices[t3 + k] as usize;
-            let bucket_idx = match bucket_by_vertex[vi] {
-                Some(idx) => idx,
-                None => {
-                    let v3 = vi * 3;
-                    let key = [
-                        quantize_coord(positions[v3]),
-                        quantize_coord(positions[v3 + 1]),
-                        quantize_coord(positions[v3 + 2]),
-                    ];
-                    let idx = *by_position.entry(key).or_insert_with(|| {
-                        let new_idx = buckets.len();
-                        buckets.push(Vec::new());
-                        new_idx
-                    });
-                    bucket_by_vertex[vi] = Some(idx);
-                    idx
-                }
+            let cached = bucket_by_vertex[vi];
+            let bucket_idx = if cached != usize::MAX {
+                cached
+            } else {
+                let v3 = vi * 3;
+                let key = [
+                    quantize_coord(positions[v3]),
+                    quantize_coord(positions[v3 + 1]),
+                    quantize_coord(positions[v3 + 2]),
+                ];
+                let idx = *by_position.entry(key).or_insert_with(|| {
+                    let new_idx = buckets.len();
+                    buckets.push(Vec::with_capacity(6));
+                    new_idx
+                });
+                bucket_by_vertex[vi] = idx;
+                idx
             };
             buckets[bucket_idx].push(t);
         }
@@ -102,7 +101,8 @@ pub fn smooth_triangle_list(
             let mut sum_x = 0.0f64;
             let mut sum_y = 0.0f64;
             let mut sum_z = 0.0f64;
-            if let Some(bucket_idx) = bucket_by_vertex[i] {
+            let bucket_idx = bucket_by_vertex[i];
+            if bucket_idx != usize::MAX {
                 for &other_t in &buckets[bucket_idx] {
                     let [onx, ony, onz] = face_normals[other_t];
                     if fnx * onx + fny * ony + fnz * onz >= cos_crease {

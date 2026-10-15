@@ -1,0 +1,3 @@
+# Rejected parameter portfolio experiments
+
+An intermediate geometric-mean metric proves the two original inner pairs but starves the old successful balanced proof for outer pair[11,23]. Corner/midpoint determinant ranking instead chooses the expensive balanced route for inner pair[12,23] and also fails the original1000cell budget. Direct diagnostic costs: outer Extents168fail/Middle495fail/Balanced596pass; inner Extents264fail/Middle416pass/Balanced715fail. No numerical score is a certificate. Preserve all three actual pair fixtures and the original1000cell budget; this experimental portfolio is removed.

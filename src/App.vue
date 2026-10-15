@@ -3159,6 +3159,12 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
               {{ evidence.profileG1Certified ? '✓' : '?' }} / {{ evidence.profileG2Certified ? '✓' : '?' }} ({{ evidence.profileSeamCount }})
               · {{ lang === 'ru' ? 'station-швы' : 'station seams' }}: {{ evidence.stationContinuity }}
             </template>
+            <template v-if="evidence.capGeometricG2Certified !== undefined">
+              · {{ lang === 'ru' ? 'Внутренние швы крышек G2 в допуске' : 'Cap internal seams G2 within tolerance' }}:
+              {{ evidence.capGeometricG2Certified ? '✓' : '?' }} ({{ evidence.capGeometricSeamCount }})
+              <template v-if="evidence.capGeometricG2Certified"> · Δn ≤ {{ evidence.capNormalChordUpper?.toExponential(2) }} · Δκ ≤ {{ evidence.capCurvatureTensorUpper?.toExponential(2) }} mm⁻¹</template>
+              · {{ lang === 'ru' ? 'Торец–стенка' : 'Cap–wall' }}: C0
+            </template>
           </div>
         </div>
         <div v-if="sweepPatchFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">
@@ -3813,6 +3819,8 @@ button, select { color: inherit; }
 /* Viewport: the scene is the interface. Chrome floats over it and stays small. */
 .canvas-panel { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas-bg); }
 .gpu-canvas { width: 100%; height: 100%; display: block; touch-action: none; outline: 0; }
+/* Keep the rendered frustum inside the area left visible by the opaque dock. */
+.canvas-panel.with-dock .gpu-canvas { width: calc(100% - min(var(--dock-w), calc(100% - 16px))); }
 .viewer-toolbar {
   position: absolute; z-index: 3; top: 10px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 1px; max-width: calc(100% - 24px); padding: 3px;
@@ -3973,6 +3981,7 @@ button, select { color: inherit; }
   .selection-modes { top: 56px; left: 8px; }
   .selection-hud { left: 8px; transform: none; max-width: calc(100% - 16px); }
   .cad-dock { width: min(var(--dock-w), calc(100% - 8px)); }
+  .canvas-panel.with-dock .gpu-canvas { width: calc(100% - min(var(--dock-w), calc(100% - 8px))); }
   .canvas-panel :deep(.main-model-tools), .canvas-panel.with-dock :deep(.main-model-tools) { left: 8px; right: 8px; transform: none; max-width: none; width: auto; }
   .stats { font-size: 11px; }
   .status { width: 100%; margin-left: 0; }

@@ -513,7 +513,11 @@ mod tests {
         let wrong=inspect_sweep(&inward,1e-8,limits(),10000,&[4,5],cap).unwrap();
         assert!(wrong.boundary.proven && !wrong.proven);
         assert_eq!(wrong.orientations[0].outward,Some(false));
-        let no_boundary=inspect_sweep(&model,1e-8,limits(),10000,&[4,5],
+        // Limit the mandatory joint boundary cover, not an optional cap
+        // certificate that exact original-face hull contacts can replace.
+        let mut incomplete_boundary=limits();
+        incomplete_boundary.boundary.contacts.pairs=1;
+        let no_boundary=inspect_sweep(&model,1e-8,incomplete_boundary,10000,&[4,5],
             crate::sweep_cap_contacts::Budgets{max_exact_work:0,..cap}).unwrap();
         assert!(!no_boundary.proven && !no_boundary.boundary.proven);
         assert!(no_boundary.nesting.is_none());

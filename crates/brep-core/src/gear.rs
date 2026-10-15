@@ -75,11 +75,17 @@ pub struct GearGeometry {
     pub tip_radius: f64,
     pub root_radius: f64,
     pub outside_radius: f64,
-    /// Continuous real-arithmetic remainder for the Hermite involute flanks.
-    /// Excludes binary64 trig, control placement and evaluation rounding.
+    /// Continuous stored-curve error bound. When flank_rounding_certified is
+    /// true, this includes nominal GearSpec parameter derivation; otherwise
+    /// it refers to stored derived radii and angles. Point evaluation is separate.
     pub flank_deviation: f64,
-    /// Whether the flank error report also covers binary64 rounding.
+    /// Whether the flank bound also covers complete nominal GearSpec radius,
+    /// pressure/placement and roll derivation, including arithmetic rounding.
+    /// Root transitions, topology and helical walls remain separate.
     pub flank_rounding_certified: bool,
+    /// Inclusive curve bound is certified against the stored derived radius
+    /// and placement angles. This does not certify GearSpec parameter derivation.
+    pub flank_stored_parameters_rounding_certified: bool,
     /// Continuous real-arithmetic remainder for the helical walls (zero for spur).
     /// Binary64 rounding is excluded.
     pub sweep_deviation: f64,
@@ -171,36 +177,42 @@ fn involute(
     sign: f64,
     half: &dyn Fn(f64) -> f64,
 ) -> Result<(Curve, f64)> {
-    // Reuse the native involute Hermite constructor and its continuous
-    // real-arithmetic remainder instead of a finite sample acceptance test.
-    let approximation = nurbs_core::involute::approximate_quintic(
-        [0.; 3],
-        base,
-        t0.min(t1),
-        t0.max(t1),
-        FLANK_FIT,
-    )?;
-    let mut curve = approximation.curve;
-    if curve.control_points.len() > 32 {
-        return Err(invalid(
-            "Gear flank needs more than 32 surface controls at the requested tolerance; reduce module or increase teeth",
-        ));
+    let angle=center+sign*half(base);
+    let (curve,certificate)=involute_flank(base,t0,t1,angle,-sign)?;
+    Ok((curve,certificate.error_upper))
+}
+
+/// Build a quintic involute flank and certify the actual stored poles and
+/// knots, including trigonometric placement and reverse-parameter rounding.
+/// Radius and angles are the supplied binary64 values, interpreted as exact
+/// nominal geometry. Their derivation from a complete GearSpec is not covered.
+/// Reflection is +/-1. Angles must be within -8..8; at most 32 controls are
+/// retained, and the inclusive geometric error must be <= 1e-6.
+pub fn involute_flank(
+    base:f64,t0:f64,t1:f64,angle:f64,reflection:f64,
+)->Result<(Curve,nurbs_core::involute::QuinticCertificate)> {
+    if !angle.is_finite() || angle.abs()>8. || !(reflection==1. || reflection== -1.) {
+        return Err(invalid("Flank needs a bounded angle and reflection +/-1"));
     }
-    let angle = center + sign * half(base);
-    let (sin, cos) = angle.sin_cos();
+    // Reserve half of the requested allowance for stored pole/knot placement.
+    let approximation=nurbs_core::involute::approximate_quintic(
+        [0.;3],base,t0.min(t1),t0.max(t1),FLANK_FIT*0.5)?;
+    let mut curve=approximation.curve;
+    if curve.control_points.len()>32 {
+        return Err(invalid("Gear flank needs more than 32 controls at the requested tolerance"));
+    }
+    let (sin,cos)=angle.sin_cos();
     for point in &mut curve.control_points {
-        let (x, y) = (point[0], point[1]);
-        // The canonical involute has polar angle t-atan(t). Reflection
-        // followed by rotation yields center+sign*(half(base)-t+atan(t)).
-        *point = vec![cos * x + sign * sin * y, sin * x - sign * cos * y];
+        let (x,y)=(point[0],reflection*point[1]);
+        *point=vec![cos*x-sin*y,sin*x+cos*y];
     }
-    if t1 < t0 {
-        curve = reverse2(&curve);
+    if t1<t0 {curve=curve.reverse()?;}
+    let certificate=nurbs_core::involute::certify_quintic_placed(
+        &curve,[0.;3],base,t0,t1,angle,reflection)?;
+    if certificate.error_upper>FLANK_FIT {
+        return Err(invalid("Stored flank exceeds the rounding-inclusive error allowance"));
     }
-    curve.validate()?;
-    // Orthogonal placement preserves the ideal Euclidean remainder.
-    // Binary64 trigonometry, placement and evaluation rounding are excluded.
-    Ok((curve, approximation.real_arithmetic_error_estimate))
+    Ok((curve,certificate))
 }
 
 fn reverse2(c: &Curve) -> Curve {
@@ -215,6 +227,9 @@ fn reverse2(c: &Curve) -> Curve {
 /// Closed loops of the outline (each a connected CCW or CW chain of 2D
 /// curves, material on the left), the geometry report, and the fit.
 fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
+    if ![spec.module,spec.pressure_angle_deg,spec.height,spec.helix_angle_deg,spec.bore,spec.rim_width,spec.clearance,spec.backlash].iter().all(|x|x.is_finite()) {
+        return Err(invalid("Gear dimensions, angles and allowances must be finite"));
+    }
     let teeth = spec.teeth as f64;
     if !(3..=256).contains(&spec.teeth) {
         return Err(invalid("Gear teeth must be 3..256"));
@@ -304,6 +319,9 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
     let t0 = ((start / base).powi(2) - 1.).max(0.).sqrt();
     let t1 = ((high / base).powi(2) - 1.).max(0.).sqrt();
     let mut flank_deviation: f64 = 0.;
+    let ideal=nurbs_core::involute::derive_gear_parameter_bounds(spec.module,spec.teeth,spec.pressure_angle_deg,spec.clearance,spec.backlash,spec.internal).ok();
+    let mut full_flank_certified=ideal.is_some();
+    let mut full_flank_deviation=0_f64;
     // One tooth outline, counter-clockwise, starting at the low radius on
     // the leading side.
     let mut tooth: Vec<Curve> = Vec::new();
@@ -318,6 +336,19 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
         let (rising, d1) = involute(base, t0, t1, center, -1., &half)?;
         let (falling, d2) = involute(base, t1, t0, center, 1., &half)?;
         flank_deviation = flank_deviation.max(d1).max(d2);
+        if let Some(ideal)=&ideal {
+            use nurbs_core::distance_bounds::Interval as I;
+            let step=I::new(ideal.tooth_step[0],ideal.tooth_step[1])?;
+            let nominal_center=step.mul(I::point(i as f64+if spec.internal{0.5}else{0.}))?;
+            let half=I::new(ideal.half_base_angle[0],ideal.half_base_angle[1])?;
+            for (curve,from,to,sign) in [(&rising,ideal.roll_start,ideal.roll_end,-1.),(&falling,ideal.roll_end,ideal.roll_start,1.)] {
+                let angle=nominal_center.add(half.mul(I::point(sign))?)?;
+                match nurbs_core::involute::certify_quintic_parameter_box(curve,[0.;3],ideal.base_radius,from,to,[angle.lo,angle.hi],-sign) {
+                    Ok(certificate)=>{full_flank_deviation=full_flank_deviation.max(certificate.error_upper);full_flank_certified &= certificate.error_upper<=FLANK_FIT;}
+                    Err(_)=>full_flank_certified=false,
+                }
+            }
+        }
         tooth.push(rising);
         tooth.push(arc2(high, center - high_half, center + high_half)?);
         tooth.push(falling);
@@ -352,6 +383,7 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
             loops.push(hole);
         }
     }
+    if full_flank_certified {flank_deviation=flank_deviation.max(full_flank_deviation);}
     let geometry = GearGeometry {
         pitch_radius: pitch,
         base_radius: base,
@@ -359,7 +391,8 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
         root_radius: root,
         outside_radius: outside,
         flank_deviation,
-        flank_rounding_certified: false,
+        flank_rounding_certified: full_flank_certified,
+        flank_stored_parameters_rounding_certified: true,
         sweep_deviation: 0.,
         sweep_rounding_certified: false,
         face_count: 0,
@@ -702,7 +735,7 @@ mod tests {
         assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
         assert_eq!(geometry.face_count, 20 * 6 + 2);
         assert!(geometry.flank_deviation <= FLANK_FIT);
-        assert!(!geometry.flank_rounding_certified);
+        assert!(geometry.flank_rounding_certified);
         assert_eq!(geometry.sweep_deviation, 0.);
         // The volume lies between the root and tip cylinders and close to
         // the pitch cylinder (teeth fill about half the band).

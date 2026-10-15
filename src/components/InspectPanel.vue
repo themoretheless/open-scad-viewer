@@ -121,13 +121,25 @@ function updateOffset(rawValue: string | number) {
   emit('update:section-offset', Math.max(safeSectionMin.value, Math.min(safeSectionMax.value, numeric)))
 }
 
+const numberFormatCache = new Map<string, Intl.NumberFormat>()
+function getNumberFormatter(locale: string, digits: number): Intl.NumberFormat {
+  const key = `${locale}:${digits}`
+  let formatter = numberFormatCache.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: digits })
+    numberFormatCache.set(key, formatter)
+  }
+  return formatter
+}
+
 function formatNumber(value: number, digits = 3) {
-  return value.toLocaleString(props.locale, { maximumFractionDigits: digits })
+  return getNumberFormatter(props.locale, digits).format(value)
 }
 
 function formatVector(vector: Vector3 | undefined | null) {
   if (!vector) return '—'
-  return vector.map(value => formatNumber(value)).join('  ·  ')
+  const fmt = getNumberFormatter(props.locale, 3)
+  return `${fmt.format(vector[0])}  ·  ${fmt.format(vector[1])}  ·  ${fmt.format(vector[2])}`
 }
 
 function sourceLocation(source: SourceProvenanceRow) {
@@ -162,7 +174,7 @@ function sourceLocation(source: SourceProvenanceRow) {
             </div>
             <div v-if="selection.triangleCount !== undefined">
               <dt>{{ text.triangles }}</dt>
-              <dd>{{ selection.triangleCount.toLocaleString(locale) }}</dd>
+              <dd>{{ formatNumber(selection.triangleCount, 0) }}</dd>
             </div>
             <div v-if="selection.surfaceArea !== undefined">
               <dt>{{ text.area }}</dt>

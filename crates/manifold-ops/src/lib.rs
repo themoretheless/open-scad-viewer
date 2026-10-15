@@ -30,6 +30,7 @@ pub enum BooleanOp {
 }
 
 impl From<BooleanOp> for boolean::Operation {
+    #[inline]
     fn from(op: BooleanOp) -> Self {
         match op {
             BooleanOp::Union => boolean::Operation::Union,

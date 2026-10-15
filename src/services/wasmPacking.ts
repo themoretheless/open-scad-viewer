@@ -1,3 +1,4 @@
+import {decodeBase91} from './wasmBase91'
 /** Bounded raw DEFLATE decoder for generated WASM. No runtime package or network load. */
 const codeOrder=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]
 const lengthBase=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258]
@@ -16,9 +17,9 @@ function tree(lengths:number[]):Tree{
  return {table,bits:max}
 }
 const fixedLiteral=tree(Array.from({length:288},(_,n)=>n<144?8:n<256?9:n<280?7:8)),fixedDistance=tree(Array(32).fill(5))
-/** Decodes a generated base64 package (4-byte size prefix + raw DEFLATE). */
+/** Decodes legacy base64 or compact ASCII (4-byte size + raw DEFLATE). */
 export function unpackWasmBase64(wasmBase64:string):Uint8Array<ArrayBuffer>{
- return unpackWasm(Uint8Array.from(atob(wasmBase64),character=>character.charCodeAt(0)))
+ return unpackWasm(wasmBase64.startsWith('bKx:')?decodeBase91(wasmBase64):Uint8Array.from(atob(wasmBase64),character=>character.charCodeAt(0)))
 }
 export function unpackWasm(input:Uint8Array):Uint8Array<ArrayBuffer>{
  if(input.length<4)throw new Error('Truncated WASM package')

@@ -69,10 +69,10 @@ export function parseSweepPayload(blob: Uint8Array): GpuSweepPayload {
   // The gray block starts here; share one backing store with zero copies.
   const gray = floats(grayFloats)
   const viewCount = u32()
-  const views: (GpuSweepView | null)[] = []
+  const views: (GpuSweepView | null)[] = new Array(viewCount)
   for (let i = 0; i < viewCount; i++) {
     if (u32() === 0) {
-      views.push(null)
+      views[i] = null
       continue
     }
     const mapWidth = u32()
@@ -80,25 +80,31 @@ export function parseSweepPayload(blob: Uint8Array): GpuSweepPayload {
     const sourceCount = u32()
     const needed = u32()
     const refImage = u32()
-    const [step, refF, refCx, refCy] = [...floats(4)]
+    const hdrFloats = floats(4)
+    const step = hdrFloats[0]!
+    const refF = hdrFloats[1]!
+    const refCx = hdrFloats[2]!
+    const refCy = hdrFloats[3]!
     const hypotheses = floats(hypothesesPerView).slice()
-    const sources: GpuSweepSource[] = []
+    const sources: GpuSweepSource[] = new Array(sourceCount)
     for (let s = 0; s < sourceCount; s++) {
       const floats16 = floats(16).slice()
       const image = u32()
       u32()
       u32()
       u32()
-      sources.push({ image, floats: floats16 })
+      sources[s] = { image, floats: floats16 }
     }
-    views.push({
+    views[i] = {
       mapWidth, mapHeight, needed, refImage,
-      step: step!, refF: refF!, refCx: refCx!, refCy: refCy!,
+      step, refF, refCx, refCy,
       hypotheses, sources,
-    })
+    }
   }
   return { imageWidth, imageHeight, imageOffset, gray, hypothesesPerView, patchRadius, views }
 }
+
+const EMPTY_F32 = new Float32Array(0)
 
 /** Scores every present view with the kernel's shader; views stay in image order.
  * One pass, one submit, concurrent readbacks; the shared gray raster uploads once. */
@@ -106,24 +112,42 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?:
   const payload = parseSweepPayload(blob)
   const patchLen = (payload.patchRadius * 2 + 1) ** 2
   const dispatches = []
-  for (const view of payload.views) {
+  for (let vIdx = 0; vIdx < payload.views.length; vIdx++) {
+    const view = payload.views[vIdx]
     if (!view) continue
     const scoresFloats = view.mapWidth * view.mapHeight * payload.hypothesesPerView
     const params = new ArrayBuffer(64)
-    const pu = new DataView(params)
-    ;[
-      view.mapWidth, view.mapHeight, payload.hypothesesPerView, view.sources.length,
-      patchLen, payload.patchRadius, view.needed,
-      payload.imageWidth[view.refImage]!, payload.imageHeight[view.refImage]!,
-      payload.imageOffset[view.refImage]!, 0, 0,
-    ].forEach((v, i) => pu.setUint32(i * 4, v, true))
-    ;[view.step, view.refF, view.refCx, view.refCy].forEach((v, i) => pu.setFloat32(48 + i * 4, v, true))
-    const srcf = new Float32Array(view.sources.length * 16)
-    const srcm = new Uint32Array(view.sources.length * 4)
-    view.sources.forEach((source, s) => {
+    const pu32 = new Uint32Array(params, 0, 12)
+    const pf32 = new Float32Array(params, 48, 4)
+    const srcCount = view.sources.length
+    pu32[0] = view.mapWidth
+    pu32[1] = view.mapHeight
+    pu32[2] = payload.hypothesesPerView
+    pu32[3] = srcCount
+    pu32[4] = patchLen
+    pu32[5] = payload.patchRadius
+    pu32[6] = view.needed
+    pu32[7] = payload.imageWidth[view.refImage]!
+    pu32[8] = payload.imageHeight[view.refImage]!
+    pu32[9] = payload.imageOffset[view.refImage]!
+    pu32[10] = 0
+    pu32[11] = 0
+    pf32[0] = view.step
+    pf32[1] = view.refF
+    pf32[2] = view.refCx
+    pf32[3] = view.refCy
+    const srcf = new Float32Array(srcCount * 16)
+    const srcm = new Uint32Array(srcCount * 4)
+    for (let s = 0; s < srcCount; s++) {
+      const source = view.sources[s]!
       srcf.set(source.floats, s * 16)
-      srcm.set([payload.imageOffset[source.image]!, payload.imageWidth[source.image]!, payload.imageHeight[source.image]!, 0], s * 4)
-    })
+      const mBase = s * 4
+      const img = source.image
+      srcm[mBase] = payload.imageOffset[img]!
+      srcm[mBase + 1] = payload.imageWidth[img]!
+      srcm[mBase + 2] = payload.imageHeight[img]!
+      srcm[mBase + 3] = 0
+    }
     dispatches.push({
       buffers: [
         { binding: 0, data: params, uniform: true },
@@ -131,7 +155,7 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?:
         { binding: 2, data: srcf },
         { binding: 3, data: srcm },
         { binding: 4, data: payload.gray },
-        { binding: 5, data: new Float32Array(0), output: true },
+        { binding: 5, data: EMPTY_F32, output: true },
       ],
       outputBytes: scoresFloats * 4,
       workgroups: [Math.ceil(view.mapWidth / 16), Math.ceil(view.mapHeight / 16), 1] as [number, number, number],
@@ -141,10 +165,14 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?:
     })
   }
   const parts = await runGpuCompute({ wgsl, wgslVariants, entryPoint: 'sweep', dispatches })
-  const total = parts.reduce((sum, scores) => sum + scores.length, 0)
+  let total = 0
+  for (let i = 0; i < parts.length; i++) {
+    total += parts[i]!.length
+  }
   const flat = new Float32Array(total)
   let offset = 0
-  for (const scores of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const scores = parts[i]!
     flat.set(scores, offset)
     offset += scores.length
   }

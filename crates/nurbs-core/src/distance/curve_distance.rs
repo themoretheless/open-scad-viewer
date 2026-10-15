@@ -574,3 +574,6 @@ pub fn nearest_point(
         cells: report.cells,
     })
 }
+
+mod clearance;
+pub use clearance::{Clearance, ClearanceStatus, prove_clearance};

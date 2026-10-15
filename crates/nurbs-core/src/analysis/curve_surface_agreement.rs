@@ -710,3 +710,6 @@ mod tests {
         assert!(verify(&c, &p, &plane(), false, 0., 100).is_err());
     }
 }
+
+mod correspondence;
+pub use correspondence::{CorrespondenceReport, verify_correspondence, verify_oriented_correspondence};

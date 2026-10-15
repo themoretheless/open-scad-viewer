@@ -127,7 +127,8 @@ pub trait TensorIndexBackend: TensorBackend {
 pub fn gather_shape(input: &Shape, indices: &Shape, axis: usize) -> Result<Shape, TensorError> {
     input.validate_axes(&[axis])?;
     validate_index_count(indices)?;
-    let mut dims = input.dims()[..axis].to_vec();
+    let mut dims = Vec::with_capacity(input.rank() - 1 + indices.rank());
+    dims.extend_from_slice(&input.dims()[..axis]);
     dims.extend_from_slice(indices.dims());
     dims.extend_from_slice(&input.dims()[axis + 1..]);
     Shape::new(dims)

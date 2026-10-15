@@ -23,8 +23,27 @@ const svg=ref<SVGSVGElement>(),rectangle=ref<{a:number[];b:number[]}|null>(null)
 const bodies=computed(()=>props.meshes.map(sceneBody))
 const points=(i:number)=>{const b=bodies.value[i];if(!b)return [];const pos=b.mesh.positions,count=pos.length/3,out=new Array<number[]>(count);for(let j=0;j<count;j++){const o=j*3;out[j]=[pos[o],pos[o+1],pos[o+2]]}return out}
 const selectedPoints=computed(()=>props.selection.flatMap(points))
-const center=computed(()=>[0,1,2].map(k=>{const a=selectedPoints.value.map(p=>p[k]);return a.length?(Math.min(...a)+Math.max(...a))/2:0}) as Vec3)
-const size=computed(()=>Math.max(5,...selectedPoints.value.map(p=>Math.hypot(...p.map((v,k)=>v-center.value[k]))))*.7)
+const center=computed<Vec3>(()=>{
+ const pts=selectedPoints.value
+ if(!pts.length)return [0,0,0]
+ let min0=Infinity,max0=-Infinity,min1=Infinity,max1=-Infinity,min2=Infinity,max2=-Infinity
+ for(let i=0;i<pts.length;i++){
+  const p=pts[i],x=p[0],y=p[1],z=p[2]
+  if(x<min0)min0=x;if(x>max0)max0=x
+  if(y<min1)min1=y;if(y>max1)max1=y
+  if(z<min2)min2=z;if(z>max2)max2=z
+ }
+ return [(min0+max0)/2,(min1+max1)/2,(min2+max2)/2]
+})
+const size=computed(()=>{
+ const pts=selectedPoints.value,c=center.value,cx=c[0],cy=c[1],cz=c[2]
+ let maxDist=5
+ for(let i=0;i<pts.length;i++){
+  const p=pts[i],d=Math.hypot(p[0]-cx,p[1]-cy,p[2]-cz)
+  if(d>maxDist)maxDist=d
+ }
+ return maxDist*.7
+})
 const project=(p:readonly number[])=>{void props.revision;return props.project(p)}
 const path=(points:number[][])=>points.map(project).filter((p):p is [number,number]=>p!==null).map(p=>p.join(',')).join(' ')
 const topology=computed(()=>{try{return props.selected===null?null:sceneFace(props.meshes[props.selected],props.hit)}catch{return null}})

@@ -113,7 +113,9 @@ export interface GpuPickerSceneParams {
 export class GpuPicker {
   private dev: GPUDevice | null = null
   private colorTexture: GPUTexture | null = null
+  private colorView: GPUTextureView | null = null
   private depthTexture: GPUTexture | null = null
+  private depthView: GPUTextureView | null = null
   private readbackBuffer: GPUBuffer | null = null
   private pipeline: GPURenderPipeline | null = null
   private sceneBGL: GPUBindGroupLayout | null = null
@@ -134,6 +136,7 @@ export class GpuPicker {
       format: 'r32uint',
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     })
+    this.colorView = this.colorTexture.createView()
 
     // 1x1 Depth attachment
     this.depthTexture = dev.createTexture({
@@ -141,6 +144,7 @@ export class GpuPicker {
       format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     })
+    this.depthView = this.depthTexture.createView()
 
     // Readback buffer (WebGPU requires bytesPerRow >= 256 for buffer copies)
     this.readbackBuffer = dev.createBuffer({
@@ -262,8 +266,8 @@ export class GpuPicker {
     dev.queue.writeBuffer(this.sceneUB!, 0, sceneData)
 
     const encoder = dev.createCommandEncoder()
-    const colorView = this.colorTexture!.createView()
-    const depthView = this.depthTexture!.createView()
+    const colorView = this.colorView ?? (this.colorView = this.colorTexture!.createView())
+    const depthView = this.depthView ?? (this.depthView = this.depthTexture!.createView())
 
     const pass = encoder.beginRenderPass({
       colorAttachments: [{
@@ -322,7 +326,9 @@ export class GpuPicker {
     this.objUBs = []
     this.objBGs = []
     this.colorTexture = null
+    this.colorView = null
     this.depthTexture = null
+    this.depthView = null
     this.readbackBuffer = null
     this.sceneUB = null
     this.sceneBG = null

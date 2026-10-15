@@ -57,10 +57,11 @@ fn volume_limits() -> volume_validity::Limits {
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let directory = PathBuf::from(std::env::args().nth(1).expect("Output directory required"));
+    let automatic=std::env::args().any(|a|a=="--automatic");
     std::fs::create_dir_all(directory.join("step"))?;
     let binary = std::env::current_exe()?;
     let provenance = json!({"mode":"native-source-owned-progressive-annular-debug",
-        "nativeExecutableSha256":hash(&std::fs::read(binary)?),"wasmQualified":false});
+        "nativeExecutableSha256":hash(&std::fs::read(binary)?),"automaticCaps":automatic,"wasmQualified":false});
     let mut cases = Vec::new();
     let mut summaries = Vec::new();
     for (kind, name) in [
@@ -117,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         // Exact original Rust coefficients for later ABI replay. No retained
         // geometry or scalar certificate is supplied to that constructor.
-        let request=json!({"op":"brep_nurbs_progressive_profile_annular_body",
+        let request=json!({"op":if automatic {"brep_nurbs_progressive_profile_auto_body"}else{"brep_nurbs_progressive_profile_annular_body"},
             "loops":loops,"path":path,"scale":scale,"twist":twist,"normal":options.normal,
             "orientation":if kind==1 {"frenet"}else{"rmf"},"spacing":"parameter",
             "initial_sections":options.initial_sections,"max_sections":options.max_sections,
@@ -125,7 +126,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let request_text=value_codec::to_string(&request)?;
         std::fs::write(directory.join(format!("{name}-source.json")),&request_text)?;
         let started = Instant::now();
-        let body = progressive_profile_body_with_annular_caps(
+        let construct=if automatic {brep_core::analytic::progressive_profile_body_with_automatic_caps}else{progressive_profile_body_with_annular_caps};
+        let body = construct(
             &loops,
             &path,
             &scale,
@@ -191,7 +193,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "boundaryCertificate":{"continuousBound":bound.continuous_bound,"withinBudget":bound.within_budget,
                 "errorUpper":bound.error_upper,"wallErrorUpper":bound.wall_error_upper,"filledCapErrorUpper":bound.filled_cap_error_upper,
                 "budget":options.max_deviation,"closed":body.evidence().approximation.levels.last().unwrap().closed_path,"reason":bound.reason,"scope":"boundary-set-hausdorff"},
-            "capFaceGroups":caps.face_groups(),"capConstructionWork":caps.construction_work(),"capExactWork":caps.exact_work(),
+            "capFaceGroups":caps.face_groups(),"capSelectionWork":body.cap_selection_work(),"capConstructionWork":caps.construction_work(),"capExactWork":caps.exact_work(),
             "sourceFillingCovered":caps.filling().source_filling_covered,
             "retainedWallCoverage":body.evidence().retained_walls.certified,
             "stations":body.evidence().approximation.levels.last().unwrap().sections});

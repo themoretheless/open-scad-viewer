@@ -434,9 +434,16 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 }
                 continue;
             }
-            let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::default();
-            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::default();
+            let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::with_capacity_and_hasher(
+                s.faces.len() * 4,
+                Default::default(),
+            );
+            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::with_capacity_and_hasher(
+                s.faces.len() * 4,
+                Default::default(),
+            );
             let mut pole_uses = FxHashMap::<usize, FxHashSet<usize>>::default();
+            let mut cs = Vec::new();
             for u in &s.faces {
                 let f = self
                     .faces
@@ -455,10 +462,8 @@ impl<C, S, P, V> Model<C, S, P, V> {
                             "Collapsed boundary is repeated on one face",
                         )?;
                     }
-                    let cs: Vec<_> = all
-                        .iter()
-                        .filter(|c| !self.edges[c.edge].degenerate)
-                        .collect();
+                    cs.clear();
+                    cs.extend(all.iter().filter(|c| !self.edges[c.edge].degenerate));
                     require(
                         !cs.is_empty() && (cs.len() == all.len() || cs.len() >= 2),
                         "Pole face needs at least two ordinary boundary edges",
@@ -466,7 +471,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     for (i, c) in cs.iter().enumerate() {
                         incidence
                             .entry(c.edge)
-                            .or_default()
+                            .or_insert_with(|| Vec::with_capacity(2))
                             .push((u.face, c.reversed ^ u.reversed));
                         let next = &cs[(i + 1) % cs.len()];
                         let vertex = self.edges[c.edge].vertices[usize::from(!c.reversed)];
@@ -474,7 +479,10 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     }
                 }
             }
-            let mut adjacency = FxHashMap::<usize, Vec<usize>>::default();
+            let mut adjacency = FxHashMap::<usize, Vec<usize>>::with_capacity_and_hasher(
+                s.faces.len(),
+                Default::default(),
+            );
             for (edge_index, edges) in &incidence {
                 require(
                     edges.len() <= 2,
@@ -494,11 +502,14 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     adjacency.entry(edges[1].0).or_default().push(edges[0].0);
                 }
             }
-            let mut seen = FxHashSet::default();
-            let mut queue = vec![s.faces[0].face];
+            let mut seen = FxHashSet::with_capacity_and_hasher(s.faces.len(), Default::default());
+            let mut queue = Vec::with_capacity(s.faces.len());
+            queue.push(s.faces[0].face);
             while let Some(f) = queue.pop() {
                 if seen.insert(f) {
-                    queue.extend(adjacency.get(&f).into_iter().flatten());
+                    if let Some(neighbors) = adjacency.get(&f) {
+                        queue.extend_from_slice(neighbors);
+                    }
                 }
             }
             require(

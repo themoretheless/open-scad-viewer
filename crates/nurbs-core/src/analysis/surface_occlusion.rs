@@ -116,12 +116,16 @@ fn boundary_cover(
                 if target[coordinate].lo != target[coordinate].hi {
                     continue;
                 }
-                let row: Vec<_> = if fixed == 0 {
-                    s.control_points[index].iter().collect()
+                let matches_coord = if fixed == 0 {
+                    s.control_points[index]
+                        .iter()
+                        .all(|p| p[coordinate] == target[coordinate].lo)
                 } else {
-                    s.control_points.iter().map(|r| &r[index]).collect()
+                    s.control_points
+                        .iter()
+                        .all(|r| r[index][coordinate] == target[coordinate].lo)
                 };
-                if !row.iter().all(|p| p[coordinate] == target[coordinate].lo) {
+                if !matches_coord {
                     continue;
                 }
                 let remaining = 1 - coordinate;

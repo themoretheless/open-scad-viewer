@@ -162,6 +162,14 @@ fn calculate_partial_stable_up_to(
     s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2],
     corner: [Option<usize>; 2], max_order: usize,
 ) -> Result<Jets> {
+    calculate_partial_stable_projected(s,span,domain,corner,max_order,None)
+}
+/// Preserve correlated height coefficients before differentiation. The binary
+/// plane coefficients are proposals only; all projection arithmetic is enclosed.
+pub(crate) fn calculate_partial_stable_graph(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],frame:([usize;3],[f64;2]))->Result<Jets> {
+    calculate_partial_stable_projected(s,span,domain,corner,2,Some(frame))
+}
+fn calculate_partial_stable_projected(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],max_order:usize,frame:Option<([usize;3],[f64;2])>)->Result<Jets> {
     let full = [
         [s.knots_u[span[0]], s.knots_u[span[0] + 1]],
         [s.knots_v[span[1]], s.knots_v[span[1] + 1]],
@@ -186,6 +194,13 @@ fn calculate_partial_stable_up_to(
                 h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
             }
         }
+    }
+    if let Some((axes,plane))=frame {
+        for row in &mut net {for h in row {
+            let p=*h;
+            h[0]=p[axes[0]];h[1]=p[axes[1]];
+            h[2]=p[axes[2]].sub(p[axes[0]].mul(I::point(plane[0]))?)?.sub(p[axes[1]].mul(I::point(plane[1]))?)?;
+        }}
     }
     let mut h = [[[I::point(0.); 4]; 4]; 4];
     for order in 0..=max_order {

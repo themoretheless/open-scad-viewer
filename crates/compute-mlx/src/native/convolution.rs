@@ -88,26 +88,32 @@ fn parameters(plan: &ConvPlan) -> Result<Vec<u32>, MlxError> {
     let contraction = kernel
         .checked_mul(plan.channels_per_group)
         .ok_or(MlxError::TooLarge)?;
-    let mut values = vec![
+    let mut words = Vec::with_capacity((6 + plan.spatial_rank * 4) * 2);
+    let mut push_u64 = |v: usize| {
+        words.push(v as u32);
+        words.push((v as u64 >> 32) as u32);
+    };
+    for v in [
         plan.output.numel(),
         spatial,
         plan.channels_per_group,
         plan.outputs_per_group,
         kernel,
         contraction,
-    ];
+    ] {
+        push_u64(v);
+    }
     for axis in 0..plan.spatial_rank {
-        values.extend([
+        for v in [
             plan.output.dims()[axis + 2],
             plan.options.strides[axis],
             plan.options.dilations[axis],
             plan.options.padding_before[axis],
-        ]);
+        ] {
+            push_u64(v);
+        }
     }
-    Ok(values
-        .into_iter()
-        .flat_map(|v| [v as u32, (v as u64 >> 32) as u32])
-        .collect())
+    Ok(words)
 }
 
 #[cfg(test)]

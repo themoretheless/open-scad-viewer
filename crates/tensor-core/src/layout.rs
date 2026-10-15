@@ -53,9 +53,11 @@ impl Layout {
         if self.shape.is_empty() {
             return true;
         }
+        let dims = self.shape.dims();
         let mut expected = 1;
-        for (&dim, &stride) in self.shape.dims().iter().zip(&self.strides).rev() {
-            if dim > 1 && stride != expected {
+        for i in (0..dims.len()).rev() {
+            let dim = dims[i];
+            if dim > 1 && self.strides[i] != expected {
                 return false;
             }
             expected *= dim; // Checked by Shape::new for nonempty shapes.
@@ -66,18 +68,15 @@ impl Layout {
         if self.shape.is_empty() {
             return Ok(self.offset);
         }
-        self.shape
-            .dims()
-            .iter()
-            .zip(&self.strides)
-            .try_fold(self.offset, |end, (&dim, &stride)| {
-                stride
-                    .checked_mul(dim - 1)
-                    .and_then(|delta| end.checked_add(delta))
-                    .ok_or(TensorError::LayoutOverflow)
-            })?
-            .checked_add(1)
-            .ok_or(TensorError::LayoutOverflow)
+        let dims = self.shape.dims();
+        let mut end = self.offset;
+        for i in 0..dims.len() {
+            let delta = self.strides[i]
+                .checked_mul(dims[i] - 1)
+                .ok_or(TensorError::LayoutOverflow)?;
+            end = end.checked_add(delta).ok_or(TensorError::LayoutOverflow)?;
+        }
+        end.checked_add(1).ok_or(TensorError::LayoutOverflow)
     }
     pub fn validate_storage_len(&self, available: usize) -> Result<(), TensorError> {
         let required = self.required_storage_len()?;
@@ -106,15 +105,16 @@ impl Layout {
     }
     pub fn permute(&self, axes: &[usize]) -> Result<Self, TensorError> {
         let shape = self.shape.permute(axes)?;
-        Self::new(
-            shape,
-            axes.iter()
-                .map(|&axis| self.strides[axis])
-                .collect::<Vec<_>>(),
-            self.offset,
-        )
+        let mut strides = Vec::with_capacity(axes.len());
+        for &axis in axes {
+            strides.push(self.strides[axis]);
+        }
+        Self::new(shape, strides, self.offset)
     }
     pub fn broadcast_to(&self, shape: Shape) -> Result<Self, TensorError> {
+        if self.shape == shape {
+            return Ok(self.clone());
+        }
         if self.shape.broadcast(&shape)? != shape {
             return Err(TensorError::IncompatibleBroadcast {
                 left: self.shape.dims().to_vec(),
@@ -164,11 +164,23 @@ impl Layout {
                 actual: self.shape.numel(),
             });
         }
-        let mut offset = self.offset;
-        for (&dim, &stride) in self.shape.dims().iter().zip(&self.strides).rev() {
-            offset += (flat % dim) * stride;
-            flat /= dim;
+        let dims = self.shape.dims();
+        match dims.len() {
+            0 => Ok(self.offset),
+            1 => Ok(self.offset + flat * self.strides[0]),
+            2 => {
+                let d1 = dims[1];
+                Ok(self.offset + (flat / d1) * self.strides[0] + (flat % d1) * self.strides[1])
+            }
+            _ => {
+                let mut offset = self.offset;
+                for i in (0..dims.len()).rev() {
+                    let dim = dims[i];
+                    offset += (flat % dim) * self.strides[i];
+                    flat /= dim;
+                }
+                Ok(offset)
+            }
         }
-        Ok(offset)
     }
 }

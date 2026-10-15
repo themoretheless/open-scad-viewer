@@ -1,5 +1,6 @@
 //! Native ownership and sufficient exact jets of retained wall seams.
 //! Caps, trim/world-edge identity and global shell validity remain separate.
+pub mod geometric;
 use crate::{Error, MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Result};
 use nurbs_core::{
     continuity::{self, ProjectiveSeam, ProjectiveSeamCollectionReport},
@@ -40,7 +41,7 @@ fn require(value: bool, message: &str) -> Result<()> {
         Err(Error::new("BREP_SWEEP_SMOOTHNESS_INVALID", message))
     }
 }
-fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static str> {
+pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static str> {
     if p.degree != 1
         || p.control_points.len() != 2
         || p.weights.len() != 2
@@ -130,7 +131,7 @@ fn inspect_axis_impl(
         }
     }
     let mut uses = vec![Vec::<(usize, &'static str)>::new(); model.edges.len()];
-    let mut edge_order = Vec::new();
+    let mut edge_order = Vec::with_capacity(model.edges.len());
     let mut unclassified_faces = Vec::new();
     for (index, face) in model.faces.iter().enumerate() {
         if caps[index] {
@@ -147,6 +148,7 @@ fn inspect_axis_impl(
                 if let Some(label) = boundary(&face.surface, &c.pcurve, axis) {
                     found[usize::from(label.ends_with("Max"))] = true;
                     if uses[c.edge].is_empty() {
+                        uses[c.edge].reserve_exact(2);
                         edge_order.push(c.edge);
                     }
                     uses[c.edge].push((index, label));
@@ -157,8 +159,8 @@ fn inspect_axis_impl(
             unclassified_faces.push(index);
         }
     }
-    let mut seams = Vec::new();
-    let mut edge_ids = Vec::new();
+    let mut seams = Vec::with_capacity(edge_order.len());
+    let mut edge_ids = Vec::with_capacity(edge_order.len());
     let mut cap_edges = Vec::new();
     let mut unpaired_edges = Vec::new();
     for edge in edge_order {

@@ -224,10 +224,21 @@ fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
     let clamped = t.clamp(points[0].0, points[n - 1].0);
     // Second derivatives m[i]; natural boundary m[0] = m[n-1] = 0. Thomas
     // forward sweep over the interior rows of the tridiagonal system.
-    let mut m = vec![0.; n];
+    let mut m_stack = [0.; 64];
+    let mut cp_stack = [0.; 64];
+    let mut dp_stack = [0.; 64];
+    let mut m_heap;
+    let mut cp_heap;
+    let mut dp_heap;
     let interior = n.saturating_sub(2);
-    let mut cp = vec![0.; interior];
-    let mut dp = vec![0.; interior];
+    let (m, cp, dp): (&mut [f64], &mut [f64], &mut [f64]) = if n <= 64 {
+        (&mut m_stack[..n], &mut cp_stack[..interior], &mut dp_stack[..interior])
+    } else {
+        m_heap = vec![0.; n];
+        cp_heap = vec![0.; interior];
+        dp_heap = vec![0.; interior];
+        (&mut m_heap, &mut cp_heap, &mut dp_heap)
+    };
     for row in 0..interior {
         let i = row + 1;
         let h0 = points[i].0 - points[i - 1].0;
@@ -467,22 +478,26 @@ impl<'a> Marcher<'a> {
 
     /// Least-norm Newton on the 3×4 underdetermined system.
     fn refine(&self, seed: [f64; 4], r: f64) -> Result<Option<([f64; 4], [f64; 3])>> {
-        let finish = |x: [f64; 4]| -> Result<Option<([f64; 4], [f64; 3])>> {
-            let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
-            let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
-            let center = scale(
-                add(add(pa, scale(na, r * self.sa)), add(pb, scale(nb, r * self.sb))),
-                0.5,
-            );
-            Ok(Some((x, center)))
-        };
+        Ok(self.refine_with_contacts(seed, r)?.map(|(x, center, _, _)| (x, center)))
+    }
+
+    fn refine_with_contacts(
+        &self,
+        seed: [f64; 4],
+        r: f64,
+    ) -> Result<Option<([f64; 4], [f64; 3], [f64; 3], [f64; 3])>> {
         let mut x = seed;
         let mut budget = Budget::with_iterations(NEWTON_ITERS + 1)?.guard("fillet_newton");
         for _ in 0..NEWTON_ITERS {
             budget.tick()?;
-            let Some(f) = self.value(&x, r)? else { return Ok(None) };
+            let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
+            let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
+            let ca = add(pa, scale(na, r * self.sa));
+            let cb = add(pb, scale(nb, r * self.sb));
+            let f = sub(ca, cb);
             if norm(f) <= self.tol {
-                return finish(x);
+                let center = scale(add(ca, cb), 0.5);
+                return Ok(Some((x, center, pa, pb)));
             }
             let Some(j) = self.jacobian(&x, r)? else { return Ok(None) };
             let mut jjt = [[0.; 3]; 3];
@@ -507,9 +522,14 @@ impl<'a> Marcher<'a> {
                 return Ok(None);
             }
         }
-        let Some(f) = self.value(&x, r)? else { return Ok(None) };
+        let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
+        let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
+        let ca = add(pa, scale(na, r * self.sa));
+        let cb = add(pb, scale(nb, r * self.sb));
+        let f = sub(ca, cb);
         if norm(f) <= self.tol {
-            finish(x)
+            let center = scale(add(ca, cb), 0.5);
+            Ok(Some((x, center, pa, pb)))
         } else {
             Ok(None)
         }
@@ -655,7 +675,7 @@ fn march_direction(
     max_steps: usize,
     closed_at: [f64; 3],
 ) -> Result<(Vec<RawPoint>, bool)> {
-    let mut points = Vec::new();
+    let mut points = Vec::with_capacity(max_steps.min(64));
     let mut x = seed;
     let r0 = radius_at(0.);
     let Some(mut tangent) = m.tangent(&x, r0)? else {
@@ -679,9 +699,9 @@ fn march_direction(
             for i in 0..4 {
                 candidate[i] += sign * step * tangent[i];
             }
-            if let Some((refined, _)) = m.refine(candidate, radius_at(s + sign * step))? {
+            if let Some((refined, center, pa, pb)) = m.refine_with_contacts(candidate, radius_at(s + sign * step))? {
                 if m.inside(&refined) {
-                    accepted = Some(refined);
+                    accepted = Some((refined, center, pa, pb));
                     break;
                 }
             }
@@ -690,12 +710,9 @@ fn march_direction(
                 break;
             }
         }
-        let Some(next) = accepted else { break };
+        let Some((next, center, pa, pb)) = accepted else { break };
         let s_next = s + sign * step;
         let r_next = radius_at(s_next);
-        let Some((pa, na)) = point_normal(m.a, next[0], next[1])? else { break };
-        let Some((pb, nb)) = point_normal(m.b, next[2], next[3])? else { break };
-        let center = scale(add(add(pa, scale(na, r_next * m.sa)), add(pb, scale(nb, r_next * m.sb))), 0.5);
         // Curvature-adaptive next step: chord error κ h²/8 ≤ chord tolerance.
         let mut h_next = (h * 1.5).min(h_max);
         if let Some(t_next) = m.tangent(&next, r_next)? {
@@ -750,6 +767,7 @@ fn trace_spine(
     let (forward, closed_f) = march_direction(m, seed, 1., &radius_at, max_steps / 2, seed_center)?;
     backward.reverse();
     let mut points = backward;
+    points.reserve(1 + forward.len());
     points.push(RawPoint { x: seed, center: seed_center, contact_a: pa, contact_b: pb, s: 0. });
     points.extend(forward);
     // Re-base arc lengths to start at zero.
@@ -1681,7 +1699,7 @@ mod tests {
         let report = hold_line_fillet(&a, &b, &line_a, &line_b, &FilletOptions::default()).unwrap();
         assert!(report.failure.is_none(), "{:?}", report.failure);
         let surface = report.surface.as_ref().unwrap();
-        let (du, dv) = domain(surface);
+        let (_du, dv) = domain(surface);
         // Station iso curves hit the hold points and start/end tangent to the
         // supports (section tangent perpendicular to each plane normal).
         for k in 0..report.spine.len() {

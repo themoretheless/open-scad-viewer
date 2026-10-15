@@ -48,10 +48,16 @@ fn aligned_uv(model: &Model, face: usize) -> Result<[Vec<Curve>; 2]> {
 }
 fn lift_uv(ring: &[Curve]) -> Vec<Curve> {
     ring.iter()
-        .map(|c| {
-            let mut c = c.clone();
-            c.control_points.iter_mut().for_each(|p| p.push(0.));
-            c
+        .map(|c| Curve {
+            degree: c.degree,
+            knots: c.knots.clone(),
+            control_points: c
+                .control_points
+                .iter()
+                .map(|p| vec![p[0], p[1], 0.])
+                .collect(),
+            weights: c.weights.clone(),
+            periodic: c.periodic,
         })
         .collect()
 }
@@ -69,10 +75,15 @@ pub(super) fn uv_sheet(
     let cap = construct(&rings[0], &rings[1], max_work)?;
     let n = cap.patches.len();
     let mut model = Model::empty(tolerance)?;
+    model.vertices.reserve(2 * n);
+    model.edges.reserve(3 * n);
+    model.loops.reserve(n);
+    model.faces.reserve(n);
     for ring in &rings {
         for c in ring {
+            let p = &c.control_points[0];
             model.vertices.push(Vertex {
-                point: c.control_points[0].clone().try_into().unwrap(),
+                point: [p[0], p[1], p[2]],
             });
         }
     }

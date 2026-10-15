@@ -129,6 +129,13 @@ fn inspect_with_depth(
             }
         }
     }
+    // Gale & Nikaido, Math. Ann.159 (1965), Theorem4: a differentiable
+    // map with a P-Jacobian throughout a rectangle is globally injective.
+    // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
+    // Unlike symmetric positivity, this alternative is not used across C0
+    // knot lines. Basis C1 is a sufficient differentiability prerequisite.
+    let c1_basis=(0..2).all(|axis|degrees[axis]>=1&&knots[axis].iter().filter(|&&k|knots[axis][degrees[axis]]<k&&k<knots[axis][counts[axis]])
+        .all(|k|knots[axis].iter().filter(|x|*x==k).count()<degrees[axis]));
     while let Some((span, domain, depth)) = pending.pop() {
         if out.cells == max_cells {
             out.reason = Some("cell-budget-exhausted");
@@ -213,9 +220,10 @@ fn inspect_with_depth(
             }
             let off = uv.add(vu)?.mul(I::point(0.5))?;
             let radius = I::point(off.lo.abs().max(off.hi.abs()));
-            Ok(i8::from(
-                uu.lo > 0. && vv.lo > 0. && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.,
-            ))
+            let positive_diagonal=uu.lo>0.&&vv.lo>0.;
+            let symmetric=positive_diagonal&&uu.mul(vv)?.sub(radius.mul(radius)?)?.lo>0.;
+            let p_matrix=c1_basis&&positive_diagonal&&uu.mul(vv)?.sub(uv.mul(vu)?)?.lo>0.;
+            Ok(i8::from(symmetric||p_matrix))
         })();
         match result {
             Ok(1) => (),
@@ -535,10 +543,13 @@ mod tests {
         };
         let saved=s.clone();
         let original=inspect_candidate_basic(&s,10000).unwrap();
-        assert!(!original.certified);
-        assert_eq!(original.reason,Some("subdivision-depth-exhausted"));
+        // The whole-chart P-Jacobian gate now also certifies this basic
+        // projection. Success is independently replayed on the original face;
+        // the older symmetric-Jacobian refusal is not a required outcome.
+        assert!(original.certified, "{original:?}");
+        assert!(inspect(&s, original.projection, 10000).unwrap().certified);
         let proof = inspect_candidate(&s, 10000).unwrap();
-        assert!(proof.certified&&proof.cells>original.cells&&proof.cells<10000,"{proof:?}");
+        assert!(proof.certified && proof.cells < 10000, "{proof:?}");
         for budget in [0,proof.cells-1] {
             assert!(!inspect_candidate(&s,budget).unwrap().certified);
         }
@@ -549,15 +560,17 @@ mod tests {
 
     use super::*;
     #[test]
-    fn transverse_proposal_does_not_mix_long_station_motion_into_profile_row() {
+    fn long_station_motion_keeps_p_jacobian_and_transverse_certificates() {
         let mut s = quarter();
         for row in &mut s.control_points {
             for (v, p) in row.iter_mut().enumerate() {
                 p[2] = 100. * v as f64 + p[0];
             }
         }
+        // Long station shear defeats symmetric positivity, but the exact
+        // projected P-Jacobian remains admissible on this smooth rectangle.
         assert!(
-            !inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
+            inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
                 .unwrap()
                 .certified
         );
@@ -627,5 +640,23 @@ mod tests {
                 .unwrap()
                 .certified
         );
+    }
+}
+
+#[cfg(test)]
+mod p_matrix_regressions {
+    use super::*;
+    fn shear(c0:bool,fold:bool)->Surface {
+        let xs=if c0 {vec![0.,0.5,1.]}else{vec![0.,1.]};
+        let points=xs.iter().map(|&u|[0.,1.].into_iter().map(|v|vec![u+if fold{2.}else{10.}*v,if fold{2.*u+v}else{-0.05*u+v},0.]).collect()).collect();
+        Surface{degree_u:1,degree_v:1,knots_u:if c0{vec![0.,0.,0.5,1.,1.]}else{vec![0.,0.,1.,1.]},knots_v:vec![0.,0.,1.,1.],control_points:points,weights:vec![vec![1.;2];xs.len()],periodic_u:false,periodic_v:false}
+    }
+    #[test]
+    fn p_jacobian_accepts_nonsymmetric_c1_charts_and_refuses_folds_or_unproved_c1() {
+        let identity=[[1,0,0],[0,1,0]];
+        assert!(inspect(&shear(false,false),identity,1).unwrap().certified);
+        assert!(!inspect(&shear(false,true),identity,32).unwrap().certified);
+        assert!(!inspect(&shear(true,false),identity,32).unwrap().certified);
+        assert!(!inspect(&shear(false,false),identity,0).unwrap().certified);
     }
 }

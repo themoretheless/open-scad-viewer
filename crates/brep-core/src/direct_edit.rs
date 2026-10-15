@@ -455,6 +455,12 @@ fn suppress_fillet_chain(
 
     // 4. Vertex substitution: every vertex incident to a removed edge must
     //    sit on exactly one cap (its substitute is that cap's corner point).
+    let mut cap_edge_owners: Vec<(usize, usize)> = Vec::new();
+    for (&cap, edges) in &cap_edges {
+        for &e in edges {
+            cap_edge_owners.push((e, cap));
+        }
+    }
     let mut substitute: BTreeMap<usize, [f64; 3]> = BTreeMap::new();
     for &edge in &removed_edges {
         guard.tick()?;
@@ -463,15 +469,8 @@ fn suppress_fillet_chain(
                 continue;
             }
             let mut caps_of_vertex: BTreeSet<usize> = BTreeSet::new();
-            for (other, faces) in adjacency.iter().enumerate() {
-                if !cap_edges.values().flatten().any(|e| *e == other) {
-                    continue;
-                }
+            for &(other, cap) in &cap_edge_owners {
                 if model.edges[other].vertices.contains(&vertex) {
-                    let cap = *faces
-                        .iter()
-                        .find(|f| !chain_set.contains(f))
-                        .expect("cap edge has an outside face");
                     caps_of_vertex.insert(cap);
                 }
             }

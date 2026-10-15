@@ -95,10 +95,10 @@ impl ComputeRuntime {
     /// host-side zero vector. wgpu initializes new buffers before first use.
     pub fn zeros<T: GpuElement>(&self, len: usize) -> Result<GpuArray<T>, ComputeError> {
         let bytes = (len as u64).saturating_mul(4).max(4);
-        let limits = self.device.limits();
+        let limits = &self.context.limits;
         let limit = limits
             .max_buffer_size
-            .min(limits.max_storage_buffer_binding_size)
+            .min(limits.max_storage_buffer_binding_size as u64)
             .min(u64::from(u32::MAX) * 4);
         if bytes > limit {
             return Err(ComputeError::TooLarge { bytes, limit });
@@ -180,9 +180,27 @@ impl ComputeRuntime {
             return Err(ComputeError::OutOfBounds);
         }
         if !values.is_empty() {
-            let bytes: Vec<u8> = values.iter().flat_map(|v| v.to_bytes()).collect();
-            self.queue
-                .write_buffer(array.buffer(), offset as u64 * 4, &bytes);
+            #[cfg(target_endian = "little")]
+            {
+                // SAFETY: GpuElement is sealed to f32 and u32, both 4-byte POD types.
+                let bytes = unsafe {
+                    std::slice::from_raw_parts(
+                        values.as_ptr().cast::<u8>(),
+                        std::mem::size_of_val(values),
+                    )
+                };
+                self.queue
+                    .write_buffer(array.buffer(), offset as u64 * 4, bytes);
+            }
+            #[cfg(not(target_endian = "little"))]
+            {
+                let mut bytes = Vec::with_capacity(values.len() * 4);
+                for v in values {
+                    bytes.extend_from_slice(&v.to_bytes());
+                }
+                self.queue
+                    .write_buffer(array.buffer(), offset as u64 * 4, &bytes);
+            }
         }
         Ok(())
     }

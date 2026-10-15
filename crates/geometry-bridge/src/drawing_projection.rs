@@ -5,6 +5,7 @@ use nurbs_core::curve::Curve;
 use polygon_core::Mesh;
 use std::fmt::Write;
 use value_codec::{Value, json};
+#[inline(always)]
 fn project(p: &[f64], view: &str) -> [f64; 3] {
     match view {
         "top" => [p[0], -p[1], p[2]],
@@ -16,7 +17,8 @@ fn curve_path(c: &Curve) -> Result<String> {
     let p = &c.control_points;
     let a = &p[0];
     let b = p.last().unwrap();
-    let mut d = format!("M{} {} ", a[0], a[1]);
+    let mut d = String::with_capacity(64);
+    write!(d, "M{} {} ", a[0], a[1]).unwrap();
     if c.degree == 1 {
         write!(d, "L{} {}", b[0], b[1]).unwrap();
     } else if c.degree == 3 && c.weights.iter().all(|w| *w == c.weights[0]) {
@@ -31,16 +33,22 @@ fn curve_path(c: &Curve) -> Result<String> {
         if w == 1. {
             write!(d, "Q{} {} {} {}", p[1][0], p[1][1], b[0], b[1]).unwrap();
         } else if w > 0. && w < 1. {
-            let center: [f64; 2] =
-                [0, 1].map(|k| ((a[k] + b[k]) * 0.5 - w * w * p[1][k]) / (1. - w * w));
-            let u: [f64; 2] = [0, 1].map(|k| w * (p[1][k] - center[k]));
-            let v: [f64; 2] = [0, 1].map(|k| (b[k] - a[k]) / (2. * (1. - w * w).sqrt()));
+            let w2 = w * w;
+            let one_minus_w2 = 1. - w2;
+            let center = [
+                ((a[0] + b[0]) * 0.5 - w2 * p[1][0]) / one_minus_w2,
+                ((a[1] + b[1]) * 0.5 - w2 * p[1][1]) / one_minus_w2,
+            ];
+            let u = [w * (p[1][0] - center[0]), w * (p[1][1] - center[1])];
+            let denom = 2. * one_minus_w2.sqrt();
+            let v = [(b[0] - a[0]) / denom, (b[1] - a[1]) / denom];
             let m = [
                 u[0] * u[0] + v[0] * v[0],
                 u[0] * u[1] + v[0] * v[1],
                 u[1] * u[1] + v[1] * v[1],
             ];
-            let radius = ((m[0] - m[2]).powi(2) + 4. * m[1] * m[1]).sqrt();
+            let dm = m[0] - m[2];
+            let radius = (dm * dm + 4. * m[1] * m[1]).sqrt();
             let rx = ((m[0] + m[2] + radius) * 0.5).sqrt();
             // det avoids subtracting nearly equal eigenvalues for edge-on ellipses.
             let det = u[0] * v[1] - u[1] * v[0];
@@ -64,20 +72,23 @@ fn curve_path(c: &Curve) -> Result<String> {
                 };
                 let end = w.acos();
                 let phase = v[axis].atan2(u[axis]);
-                let mut angles = vec![-end, end];
+                let mut angles = [-end, end, 0., 0., 0., 0., 0.];
+                let mut len = 2usize;
                 for k in -2..=2 {
                     let t = phase + f64::from(k) * std::f64::consts::PI;
                     if -end < t && t < end {
-                        angles.push(t);
+                        angles[len] = t;
+                        len += 1;
                     }
                 }
-                angles.sort_by(f64::total_cmp);
-                for t in angles.into_iter().skip(1) {
+                angles[..len].sort_unstable_by(f64::total_cmp);
+                for &t in &angles[1..len] {
+                    let (sin_t, cos_t) = t.sin_cos();
                     write!(
                         d,
                         "L{} {} ",
-                        center[0] + u[0] * t.cos() + v[0] * t.sin(),
-                        center[1] + u[1] * t.cos() + v[1] * t.sin()
+                        center[0] + u[0] * cos_t + v[0] * sin_t,
+                        center[1] + u[1] * cos_t + v[1] * sin_t
                     )
                     .unwrap();
                 }
@@ -92,7 +103,7 @@ fn curve_path(c: &Curve) -> Result<String> {
 }
 fn triangle_state(c: &Curve, t: &[[f64; 3]; 3], tol: f64) -> i8 {
     let [a, b, z] = *t;
-    let cross = |a: [f64; 3], b: [f64; 3], p: &Vec<f64>| {
+    let cross = |a: [f64; 3], b: [f64; 3], p: &[f64]| {
         (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
     };
     let determinant = (b[0] - a[0]) * (z[1] - a[1]) - (b[1] - a[1]) * (z[0] - a[0]);
@@ -103,29 +114,39 @@ fn triangle_state(c: &Curve, t: &[[f64; 3]; 3], tol: f64) -> i8 {
     let mut definitely_inside = true;
     for (u, v) in [(a, b), (b, z), (z, a)] {
         let margin = tol * (v[0] - u[0]).hypot(v[1] - u[1]);
-        let values: Vec<_> = c
-            .control_points
-            .iter()
-            .map(|p| sign * cross(u, v, p))
-            .collect();
-        if values.iter().all(|v| *v < -margin) {
+        let mut all_outside = true;
+        let mut all_inside = true;
+        for p in &c.control_points {
+            let val = sign * cross(u, v, p);
+            if !(val < -margin) {
+                all_outside = false;
+            }
+            if !(val >= margin) {
+                all_inside = false;
+            }
+        }
+        if all_outside {
             return 0;
         }
-        definitely_inside &= values.iter().all(|v| *v >= margin);
+        definitely_inside &= all_inside;
     }
-    let dz: Vec<_> = c
-        .control_points
-        .iter()
-        .map(|p| {
-            let s = ((p[0] - a[0]) * (z[1] - a[1]) - (p[1] - a[1]) * (z[0] - a[0])) / determinant;
-            let u = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / determinant;
-            p[2] - (a[2] + s * (b[2] - a[2]) + u * (z[2] - a[2]))
-        })
-        .collect();
-    if dz.iter().all(|d| *d >= -tol) {
+    let mut all_front = true;
+    let mut all_behind = true;
+    for p in &c.control_points {
+        let s = ((p[0] - a[0]) * (z[1] - a[1]) - (p[1] - a[1]) * (z[0] - a[0])) / determinant;
+        let u = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / determinant;
+        let d = p[2] - (a[2] + s * (b[2] - a[2]) + u * (z[2] - a[2]));
+        if !(d >= -tol) {
+            all_front = false;
+        }
+        if !(d < -tol) {
+            all_behind = false;
+        }
+    }
+    if all_front {
         return 0;
     }
-    if definitely_inside && dz.iter().all(|d| *d < -tol) {
+    if definitely_inside && all_behind {
         return 1;
     }
     -1

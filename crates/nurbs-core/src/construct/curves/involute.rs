@@ -216,3 +216,10 @@ pub fn approximate_quintic(
         real_arithmetic_error_estimate: estimate,
     })
 }
+
+mod quintic_certificate;
+pub use quintic_certificate::{QuinticCertificate, certify_quintic, certify_quintic_placed};
+
+mod gear_parameters;
+pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds};
+pub use quintic_certificate::certify_quintic_parameter_box;

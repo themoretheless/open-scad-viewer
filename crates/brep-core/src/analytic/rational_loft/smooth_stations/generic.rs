@@ -8,11 +8,12 @@ use cad_predicates::{
 fn zero_difference(
     a: [usize; 3],
     b: [usize; 3],
+    coefficients: [usize; 3],
     source: &SourceArena,
     ctx: &mut PredicateContext<'_>,
 ) -> bool {
     let refs = |indices: [usize; 3]| indices.map(|i| source.leaf(i).unwrap());
-    cad_predicates::direction_dot3d(ctx, refs(a), refs(b), refs([6, 6, 6]), refs([7, 8, 6]))
+    cad_predicates::direction_dot3d(ctx, refs(a), refs(b), refs([6, 6, 6]), refs(coefficients))
         .is_ok_and(|proof| proof.outcome == Outcome::Sign(Sign::Zero))
 }
 fn shared_jets(left: &Surface, right: &Surface, work: &mut u64, max_work: u64) -> bool {
@@ -35,6 +36,7 @@ fn shared_jets(left: &Surface, right: &Surface, work: &mut u64, max_work: u64) -
                 0.,
                 1.,
                 -1.,
+                -2.,
             ]
             .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
             .to_vec();
@@ -51,11 +53,11 @@ fn shared_jets(left: &Surface, right: &Surface, work: &mut u64, max_work: u64) -
                 },
                 None,
             );
-            // Equal first differences, with zero second differences on both
-            // sides. V-constant positive weights give equal homogeneous jets.
-            let valid = zero_difference([1, 3, 6], [2, 4, 6], &source, &mut ctx)
-                && zero_difference([0, 1, 6], [1, 2, 6], &source, &mut ctx)
-                && zero_difference([3, 4, 6], [4, 5, 6], &source, &mut ctx);
+            // Equal first and second differences, including nonzero shared
+            // curvature. Positive V-constant weights give equal homogeneous
+            // jets; equal degree/domain factors cancel on the two sides.
+            let valid = zero_difference([1, 3, 6], [2, 4, 6], [7, 8, 6], &source, &mut ctx)
+                && zero_difference([0, 1, 6], [5, 4, 6], [7, 9, 6], &source, &mut ctx);
             *work += ctx.work_used();
             if !valid {
                 return false;
@@ -155,7 +157,7 @@ pub(super) fn construct(
         sharp.contains(&i)
             || closed && (i == 0 || i == n - 1) && (sharp.contains(&0) || sharp.contains(&(n - 1)))
     };
-    for degree in [5usize, 13, 25] {
+    'degree: for degree in [5usize, 13, 25] {
         out.wall_displacement_upper = None;
         out.reason = "work-limit";
         let mut sides = vec![Vec::new(); loops];
@@ -204,13 +206,30 @@ pub(super) fn construct(
                             };
                             let p = a.control_points[i][k];
                             let r = b.control_points[i][k];
+                            let paired_end = closed || layer + 1 != n - 1;
+                            let (left_near, left_far) = if paired_end && !is_sharp(layer + 1) {
+                                if !charge(&mut out.work, max_work) {
+                                    return Ok(out);
+                                }
+                                // Derive the left jet from the same rounded
+                                // right controls used by the next patch. This
+                                // avoids independent p +/- t rounding across
+                                // binary exponent boundaries. Exact predicates
+                                // below still decide whether both jets agree.
+                                let right_near = r + tb;
+                                let right_far = r + 2. * tb;
+                                let near = 2. * r - right_near;
+                                (near, (2. * near - 2. * right_near) + right_far)
+                            } else {
+                                (r - tb, r - 2. * tb)
+                            };
                             for j in 0..=degree {
                                 let value = match j {
                                     0 => p,
                                     1 => p + ta,
                                     2 => p + 2. * ta,
-                                    j if j == degree - 2 => r - 2. * tb,
-                                    j if j == degree - 1 => r - tb,
+                                    j if j == degree - 2 => left_far,
+                                    j if j == degree - 1 => left_near,
                                     j if j == degree => r,
                                     _ => p + (r - p) * (j as f64 / degree as f64),
                                 };
@@ -295,7 +314,10 @@ pub(super) fn construct(
                         max_work,
                     ) {
                         out.reason = "shared-station-jets-unproved";
-                        return Ok(out);
+                        // A rounded low-degree proposal can lose exact jets at
+                        // an exponent boundary. Higher degrees use smaller
+                        // offsets; recheck them under the remaining allowance.
+                        continue 'degree;
                     }
                 }
             }
@@ -308,7 +330,7 @@ pub(super) fn construct(
                         max_work,
                     ) {
                         out.reason = "shared-station-jets-unproved";
-                        return Ok(out);
+                        continue 'degree;
                     }
                 }
             }
@@ -322,4 +344,38 @@ pub(super) fn construct(
         return Ok(out);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn shared_nonzero_second_jet_is_exact_and_curvature_mutation_is_refused() {
+        // Authored binary64 controls at the observed exponent-boundary case.
+        // The shared second difference is nonzero; G2 does not require zero curvature.
+        let l2=f64::from_bits(0x3ff1f3b645a1c28c);
+        let l1=f64::from_bits(0x3ff84189374bc28e);
+        let station=f64::from_bits(0x3ffe8f5c28f5c28f);
+        let r1=f64::from_bits(0x40026e978d4fe148);
+        let r2=f64::from_bits(0x400595810624e148);
+        let surface=|y:[f64;6]| Surface {
+            degree_u:1,degree_v:5,knots_u:vec![0.,0.,1.,1.],
+            knots_v:[vec![0.;6],vec![1.;6]].concat(),
+            control_points:[0.,1.].into_iter().map(|x|y.iter().map(|&v|vec![x,v,0.]).collect()).collect(),
+            weights:vec![vec![1.;6];2],periodic_u:false,periodic_v:false,
+        };
+        let left=surface([0.3,0.7,1.,l2,l1,station]);
+        let right=surface([station,r1,r2,3.1,3.5,3.9]);
+        let mut work=0;
+        assert!(shared_jets(&left,&right,&mut work,10000));
+        assert!(work>0&&work<=10000);
+        let mut changed=right.clone();
+        changed.control_points[0][2][1]=changed.control_points[0][2][1].next_up();
+        let mut changed_work=0;
+        assert!(!shared_jets(&left,&changed,&mut changed_work,10000),
+            "Equal position/first jet must not conceal a changed second jet");
+        let mut zero_work=0;
+        assert!(!shared_jets(&left,&right,&mut zero_work,0));
+        assert_eq!(zero_work,0);
+    }
 }

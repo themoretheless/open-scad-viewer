@@ -38,13 +38,13 @@ pub(super) fn cycles(edges: &[ChartEdge], unique: bool) -> Option<Vec<Vec<usize>
         next
     };
     let mut seen = vec![false; edges.len()];
-    let mut loops = Vec::new();
+    let mut loops = Vec::with_capacity(edges.len().min(8));
     for start in 0..edges.len() {
         if seen[start] {
             continue;
         }
         let mut current = start;
-        let mut cycle = Vec::new();
+        let mut cycle = Vec::with_capacity(edges.len());
         loop {
             if seen[current] {
                 if current != start {

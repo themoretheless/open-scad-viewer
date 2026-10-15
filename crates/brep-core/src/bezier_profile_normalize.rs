@@ -41,11 +41,17 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
         return Err(refused("Invalid Bézier normalization options"));
     }
     let mut curves = Vec::new();
+    let mut parents = Vec::new();
+    let mut parent_ids = Vec::new();
+    let mut next_parent_id = 0usize;
+    let mut work = 0;
     for wire in wires {
         if wire.is_empty() {
             return Err(refused("Empty authored boundary"));
         }
         for (i, c) in wire.iter().enumerate() {
+            let parent_id = next_parent_id;
+            next_parent_id += 1;
             controls(c)?;
             if c.control_points.last() != wire[(i + 1) % wire.len()].control_points.first() {
                 return Err(refused("Authored boundary is open"));
@@ -54,15 +60,30 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                 continue;
             }
             let mut cuts = c.domain().to_vec();
-            for k in 0..2 {
+            // One injective coordinate suffices. Splitting every coordinate
+            // extremum rounds otherwise exact tangent/implicit identities.
+            // Stationary roots on the chosen coordinate still split zero jets.
+            let injective_axis = (0..2)
+                .filter(|&axis| {
+                    (c.control_points.last().unwrap()[axis] - c.control_points[0][axis]).abs()
+                        > 8. * tolerance
+                        && nurbs_core::intersection::planar_scalar::monotone(c, axis)
+                })
+                .max_by(|&a, &b| {
+                    let delta = |k: usize| {
+                        (c.control_points.last().unwrap()[k] - c.control_points[0][k]).abs()
+                    };
+                    delta(a).total_cmp(&delta(b))
+                });
+            let axes = injective_axis.map_or_else(|| vec![0, 1], |k| vec![k]);
+            for k in axes {
                 cuts.extend(
                     nurbs_core::intersection::planar_scalar::stationary(c, k)?.ok_or_else(
                         || refused("Authored stationary parameter completeness is unresolved"),
                     )?,
                 );
             }
-            cuts.sort_by(f64::total_cmp);
-            cuts.dedup_by(|a, b| (*a - *b).abs() < 1e-12);
+            super::coincidence_ops::coalesce(c, &mut cuts, tolerance, &mut work)?;
             for interval in cuts.windows(2) {
                 let mut piece = c.trim(interval[0], interval[1])?;
                 // A shared cut is evaluated once by the same source definition,
@@ -102,6 +123,8 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                 if !injective(&piece, tolerance) {
                     return Err(refused("Authored cusp/injectivity remains unresolved"));
                 }
+                parents.push(c.clone());
+                parent_ids.push(parent_id);
                 curves.push(piece);
                 if curves.len() > 1022 {
                     return Err(refused("Bézier normalization exceeds 1022 spans"));
@@ -110,7 +133,6 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
         }
     }
     let mut cuts: Vec<_> = curves.iter().map(|c| c.domain().to_vec()).collect();
-    let mut work = 0;
     let mut aliases: Vec<_> = (0..curves.len()).collect();
     let mut linear = vec![false; curves.len()];
     for i in 0..curves.len() {
@@ -136,6 +158,50 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                 return Err(refused("Bézier normalization pair budget exceeded"));
             }
             use nurbs_core::intersection::planar_scalar::Relation;
+            if parent_ids[i] == parent_ids[j]
+                && let Some(events) = nurbs_core::intersection::planar_scalar::self_intersections(
+                    &parents[i],
+                    tolerance,
+                )?
+            {
+                let a = curves[i].domain();
+                let b = curves[j].domain();
+                for point in events {
+                    for (t, u) in [(point.first, point.second), (point.second, point.first)] {
+                        if a[0] <= t && t <= a[1] && b[0] <= u && u <= b[1] {
+                            cuts[i].push(t);
+                            cuts[j].push(u);
+                        }
+                    }
+                }
+                continue;
+            }
+            // Stationary splitting retains the authored parent definition.
+            // Count contacts on that source before rounding a trim control net;
+            // otherwise a multiple root can spuriously bifurcate after a cut.
+            if (parents[i].domain() != curves[i].domain()
+                || parents[j].domain() != curves[j].domain())
+                && let Some(Relation::Points(events)) =
+                    nurbs_core::intersection::planar_scalar::intersect(
+                        &parents[i],
+                        &parents[j],
+                        tolerance,
+                    )?
+            {
+                let a = curves[i].domain();
+                let b = curves[j].domain();
+                for point in events {
+                    if a[0] <= point.first
+                        && point.first <= a[1]
+                        && b[0] <= point.second
+                        && point.second <= b[1]
+                    {
+                        cuts[i].push(point.first);
+                        cuts[j].push(point.second);
+                    }
+                }
+                continue;
+            }
             if let Some(relation) = nurbs_core::intersection::planar_scalar::intersect(
                 &curves[i], &curves[j], tolerance,
             )? {
@@ -202,10 +268,9 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
     super::coincidence_ops::synchronize(&curves, &aliases, &mut cuts, tolerance, &mut work)?;
     let mut fragments: Vec<(Curve, usize, bool)> = Vec::new();
     for (i, source) in curves.iter().enumerate() {
-        cuts[i].sort_by(f64::total_cmp);
-        cuts[i].dedup_by(|a, b| (*a - *b).abs() < 1e-12);
+        super::coincidence_ops::coalesce(source, &mut cuts[i], tolerance, &mut work)?;
         for range in cuts[i].windows(2) {
-            if range[1] - range[0] <= 1e-12 {
+            if range[1] <= range[0] {
                 continue;
             }
             let piece = source.trim(range[0], range[1])?;
@@ -288,11 +353,13 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
     for (i, source) in curves.iter().enumerate() {
         let mut c = source.clone();
         let interval = source.domain();
-        let e = c.evaluate((interval[0] + interval[1]) * 0.5)?;
-        let d =
+        let e = c.evaluate(interval[0] * 0.5 + interval[1] * 0.5)?;
+        let raw =
             e.d1.ok_or_else(|| refused("Normalization tangent is unresolved"))?;
+        let span = interval[1] - interval[0];
+        let d = [raw[0] * span, raw[1] * span];
         let length = d[0].hypot(d[1]);
-        if length <= tolerance {
+        if !length.is_finite() || length <= tolerance {
             return Err(refused("Normalization cusp is unresolved"));
         }
         let n = [-d[1] / length, d[0] / length];
@@ -374,7 +441,7 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                         continue;
                     }
                     let [a, b] = part.domain();
-                    let [left, right] = part.split((a + b) * 0.5)?;
+                    let [left, right] = part.split(a * 0.5 + b * 0.5)?;
                     pending.push((right, depth + 1));
                     pending.push((left, depth + 1));
                 }

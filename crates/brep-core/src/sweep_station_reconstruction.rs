@@ -247,7 +247,10 @@ mod tests {
         let denied =
             reconstruct(&rational_source, &rational, &[], true, 0.125, 10., 10000).unwrap();
         assert!(denied.model.is_none());
-        assert_eq!(denied.candidate.reason, "shared-station-jets-unproved");
+        // Retrying higher-degree proposals must share the original allowance.
+        assert_eq!(denied.candidate.reason, "work-limit");
+        assert_eq!(denied.candidate.work, 10000);
+        assert!(denied.candidate.sides.is_none());
     }
     #[test]
     fn general_multisegment_hollow_profiles_preserve_caps_and_station_g2() {

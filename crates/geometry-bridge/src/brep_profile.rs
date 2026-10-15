@@ -5,7 +5,7 @@ use nurbs_core::curve::Curve;
 use value_codec::json;
 
 pub(crate) fn profile(loops: Vec<Vec<Curve>>, tolerance: f64) -> Result<Value> {
-    let area = if loops.iter().flatten().any(|c| c.degree == 3) {
+    let area = if loops.iter().flatten().any(|c| brep_core::bezier_profile::requires_general(c,tolerance)) {
         brep_core::bezier_profile::validate_profile(&loops, tolerance)?
     } else {
         planar_trim::validate(&loops, tolerance)?;
@@ -25,6 +25,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
         None => 1e-7,
     };
     match v["op"].as_str() {
+        Some("brep_profile_certify") => {
+            let loops: Vec<Vec<Curve>> = field(&v,"loops")?;
+            encode(brep_core::profile_certificate::certify(&loops,tolerance)?)
+        }
+        Some("brep_profile_verify_certificate") => {
+            let loops: Vec<Vec<Curve>> = field(&v,"loops")?;
+            let certificate: brep_core::profile_certificate::ProfileCertificate=field(&v,"certificate")?;
+            let verified=brep_core::profile_certificate::verify(&loops,tolerance,&certificate)?;
+            Ok(json!({"status":"verified","scope":"represented-profile-topology",
+                "spans":verified.spans(),"pieces":verified.pieces(),"nestingDepth":verified.nesting_depth()}))
+        }
         Some("brep_profile_normalize") => profile(brep_core::bezier_profile::normalize(&field::<Vec<Vec<Curve>>>(&v,"loops")?,tolerance)?,tolerance),
         Some("brep_profile_cleanup") => {
             let loops: Vec<Vec<Curve>> = field(&v, "loops")?;
@@ -154,7 +165,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             match fill_rule.as_str() {
                 "material-left" => profile(loops, tolerance),
                 "even-odd" => profile(
-                    if loops.iter().flatten().any(|c| c.degree == 3) {
+                    if loops.iter().flatten().any(|c| brep_core::bezier_profile::requires_general(c,tolerance)) {
                         brep_core::bezier_profile::orient_even_odd(&loops, tolerance)?
                     } else {
                         planar_trim::orient_even_odd(&loops, tolerance)?
@@ -168,7 +179,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let a: Vec<Vec<Curve>> = field(&v, "a")?;
             let b: Vec<Vec<Curve>> = field(&v, "b")?;
             let operation: String = field(&v, "operation")?;
-            let result = if a.iter().chain(&b).flatten().any(|c| c.degree == 3) {
+            let result = if a.iter().chain(&b).flatten().any(|c| brep_core::bezier_profile::requires_general(c,tolerance)) {
                 brep_core::bezier_profile::boolean(&a, &b, &operation, tolerance)?
             } else {
                 planar_trim::boolean(&a, &b, &operation, tolerance)?
@@ -177,7 +188,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         }
         Some("brep_profile_signed_area") => {
             let wire: Vec<Curve> = field(&v, "loop")?;
-            encode(if wire.iter().any(|c| c.degree == 3) {
+            encode(if wire.iter().any(|c| brep_core::bezier_profile::requires_general(c,tolerance)) {
                 brep_core::bezier_profile::signed_area(&wire, tolerance)?
             } else {
                 planar_trim::signed_area(&wire, tolerance)?
@@ -304,5 +315,34 @@ mod tests {
             dispatch(json!({"op":"brep_profile_offset","loops":loops,"distance":-5.})).unwrap();
         assert_eq!(empty["loops"], json!([]));
         assert_eq!(empty["geometryStatus"], json!("numerical_uncertified"));
+    }
+    #[test]
+    fn profile_certificate_native_transport_rechecks_proof_and_scope() {
+        let loops = vec![rectangle([0., 0.], [10., 10.])];
+        let c = dispatch(json!({"op":"brep_profile_certify","loops":loops})).unwrap();
+        let verified =
+            dispatch(json!({"op":"brep_profile_verify_certificate","loops":loops,"certificate":c}))
+                .unwrap();
+        assert_eq!(verified["status"].as_str(), Some("verified"));
+        assert_eq!(
+            verified["scope"].as_str(),
+            Some("represented-profile-topology")
+        );
+        let mut bad = c.clone();
+        bad["nestingDepth"] = json!([1]);
+        assert!(
+            dispatch(
+                json!({"op":"brep_profile_verify_certificate","loops":loops,"certificate":bad})
+            )
+            .is_err()
+        );
+        let mut bad = c.clone();
+        bad["solidValid"] = json!(true);
+        assert!(
+            dispatch(
+                json!({"op":"brep_profile_verify_certificate","loops":loops,"certificate":bad})
+            )
+            .is_err()
+        );
     }
 }

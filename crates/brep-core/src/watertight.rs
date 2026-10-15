@@ -381,3 +381,8 @@ pub fn inspect_boundary_portions(
         within_tolerance,
     })
 }
+
+mod correspondence;
+pub use correspondence::{Correspondence, inspect_boundary_correspondence, infer_boundary_correspondence};
+mod linear_patch_set;
+pub use linear_patch_set::{LinearMatch, LinearPatchSetReport, inspect_linear_patch_set};

@@ -17,7 +17,8 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
   const measured = callGeometryRust('cad_dimensions',{points:sketch.points,dimensions:sketch.dimensions??[],...(edit?{edit}:{})}) as DimensionResult
   const dimensions = sketch.dimensions??[]
   if (edit && dimensions.length > 1 && dimensions.every(d=>d.kind==='length') && sketch.points.length>=3 && sketch.points.length<=16) {
-    const constraints: SolverConstraint[] = dimensions.map((d,i) => ({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:i===edit.index?edit.value:(callGeometryRust('cad_dimensions',{points:sketch.points,dimensions:[d]}) as DimensionResult).measurements[0].value!}))
+    const baseline = callGeometryRust('cad_dimensions',{points:sketch.points,dimensions}) as DimensionResult
+    const constraints: SolverConstraint[] = dimensions.map((d,i) => ({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:i===edit.index?edit.value:baseline.measurements[i].value!}))
     const solved = solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),constraints)
     if (solved.status==='inconsistent'||solved.status==='not_converged') throw Error('Sketch dimensions conflict or did not converge.')
     const points = solved.points.map(p=>p.position)
@@ -34,10 +35,17 @@ export function bridgeNurbsCurves(a:NurbsCurve,b:NurbsCurve,endA:'start'|'end'='
   return callGeometryRust('cad_bridge_curve',{a,b,endA,endB,tension})
 }
 
+const dimensionStatusCache = new WeakMap<DirectSketch, ReturnType<typeof solveRushGraphSketch> | null>()
 /** State of the length constraints preserved together by dimension editing. */
 export function sketchDimensionStatus(sketch:DirectSketch) {
+ if (dimensionStatusCache.has(sketch)) return dimensionStatusCache.get(sketch)!
  const dimensions=sketch.dimensions??[]
- if(sketch.analytic || sketch.points.length<3 || sketch.points.length>16 || !dimensions.length || !dimensions.every(d=>d.kind==='length'))return null
+ if(sketch.analytic || sketch.points.length<3 || sketch.points.length>16 || !dimensions.length || !dimensions.every(d=>d.kind==='length')) {
+  dimensionStatusCache.set(sketch, null)
+  return null
+ }
  const measured=sketchDimensions(sketch)
- return solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),dimensions.map((d,i)=>({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:measured.measurements[i].value!})))
+ const result = solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),dimensions.map((d,i)=>({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:measured.measurements[i].value!})))
+ dimensionStatusCache.set(sketch, result)
+ return result
 }

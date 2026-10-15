@@ -1,6 +1,6 @@
 use gcode_core::PlannedPath;
 
-use crate::travel::{dist, path_end, path_start, travel_mm};
+use crate::travel::{dist, dist_sq, path_end, path_start};
 use crate::{Budget, Result};
 
 pub fn order_layer(
@@ -28,7 +28,7 @@ fn nearest_neighbor(paths: &mut Vec<PlannedPath>, budget: &mut Budget) -> Result
         budget.add(remaining.len())?;
         let mut best = 0usize;
         let mut best_flip = false;
-        let mut best_d = f64::INFINITY;
+        let mut best_d_sq = f64::INFINITY;
         for (i, path) in remaining.iter().enumerate() {
             let Some(start) = path_start(path) else {
                 continue;
@@ -36,16 +36,19 @@ fn nearest_neighbor(paths: &mut Vec<PlannedPath>, budget: &mut Budget) -> Result
             let Some(end) = path_end(path) else {
                 continue;
             };
-            let d_start = dist(current, start);
-            if d_start < best_d {
-                best_d = d_start;
+            let d_start_sq = dist_sq(current, start);
+            if d_start_sq < best_d_sq {
+                best_d_sq = d_start_sq;
                 best = i;
                 best_flip = false;
             }
-            if !path.closed && dist(current, end) < best_d {
-                best_d = dist(current, end);
-                best = i;
-                best_flip = true;
+            if !path.closed {
+                let d_end_sq = dist_sq(current, end);
+                if d_end_sq < best_d_sq {
+                    best_d_sq = d_end_sq;
+                    best = i;
+                    best_flip = true;
+                }
             }
         }
         let mut chosen = remaining.swap_remove(best);
@@ -60,6 +63,14 @@ fn nearest_neighbor(paths: &mut Vec<PlannedPath>, budget: &mut Budget) -> Result
     Ok(flips)
 }
 
+#[inline]
+fn opt_dist(a: Option<[f64; 2]>, b: Option<[f64; 2]>) -> f64 {
+    match (a, b) {
+        (Some(p), Some(q)) => dist(p, q),
+        _ => 0.0,
+    }
+}
+
 fn two_opt(paths: &mut [PlannedPath], max_swaps: usize, budget: &mut Budget) -> Result<usize> {
     let n = paths.len();
     if n < 4 || max_swaps == 0 {
@@ -72,17 +83,25 @@ fn two_opt(paths: &mut [PlannedPath], max_swaps: usize, budget: &mut Budget) -> 
         for i in 0..n.saturating_sub(1) {
             for k in i + 1..n {
                 budget.add(1)?;
-                let before = travel_mm(paths);
-                reverse_segment(paths, i, k);
-                let after = travel_mm(paths);
+                let mut before = 0.0;
+                let mut after = 0.0;
+                if i > 0 {
+                    let prev_end = path_end(&paths[i - 1]);
+                    before += opt_dist(prev_end, path_start(&paths[i]));
+                    after += opt_dist(prev_end, path_end(&paths[k]));
+                }
+                if k + 1 < n {
+                    let next_start = path_start(&paths[k + 1]);
+                    before += opt_dist(path_end(&paths[k]), next_start);
+                    after += opt_dist(path_start(&paths[i]), next_start);
+                }
                 if after + 1e-12 < before {
+                    reverse_segment(paths, i, k);
                     swaps += 1;
                     improved = true;
                     if swaps >= max_swaps {
                         return Ok(swaps);
                     }
-                } else {
-                    reverse_segment(paths, i, k);
                 }
             }
         }

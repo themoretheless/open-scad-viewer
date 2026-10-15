@@ -75,7 +75,7 @@ pub(crate) fn jacobian_from_net(
             continue;
         }
         let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
-        let mut diffs = Vec::new();
+        let mut diffs = Vec::with_capacity((p + 1) * (q + 1));
         for i in 0..=p {
             for j in 0..=q {
                 if (axis == 0 && i == p) || (axis == 1 && j == q) {
@@ -163,7 +163,10 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
             report.spans += 1;
             for k in 0..3 {
                 for axis in 0..2 {
-                    j[k][axis] = hull([j[k][axis], next[k][axis]].into_iter());
+                    j[k][axis] = I {
+                        lo: j[k][axis].lo.min(next[k][axis].lo),
+                        hi: j[k][axis].hi.max(next[k][axis].hi),
+                    };
                 }
             }
         }

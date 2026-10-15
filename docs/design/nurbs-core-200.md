@@ -4,7 +4,87 @@
 
 Нативная готовность требует типизированного Rust API, независимых геометрических проверок, отказов на некорректных данных и описанных ограничений. WASM, TypeScript, Rush и редактор не являются условиями нативной готовности. Приближённая операция обязана явно различать выборочную оценку, непрерывную границу ошибки и учёт округления.
 
-Текущее состояние каталога: 173 реализованные возможности (79 integrated + 94 native), 27 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+Текущее состояние каталога: 189 реализованных возможностей (79 integrated + 110 native), 11 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+
+## Rational patch skins with sampled thickness assurance, 2026-10-15
+
+**189/200**: 79 integrated + 110 native; **11 planned** remain. Three independent tests pass for signed planar thickness/volume, a rational curved skin, original source-cap retention, all six saved-face regularity proofs, exact owned seam topology and continuous saved-boundary agreement. Ideal normal-thickness accuracy is explicitly sampled; general solid shelling and continuous ideal-thickness/embedding certificates remain separate. [Contract](nurbs-patch-shell-thickness.md).
+
+## Exact original orthogonal offset cleanup, 2026-10-15
+
+**188/200**: 79 integrated + 109 native; **12 planned** remain. Three integration tests pass for source-exact orthogonal miter offsets, full exact arrangement identity, crossings and coincident opposite cancellation, multiple fill components, common Z, source immutability and explicit precision/degeneracy/work refusals. NURBS-0188 is native in this declared specialization; general smooth offset topology and Minkowski buffer semantics remain separate. [Contract](nurbs-orthogonal-offset-cleanup.md).
+
+## Certified original curve / plane roots, 2026-10-15
+
+**187/200**: 79 integrated + 108 native; **13 planned** remain. Six new integration tests pass for original nonplanar rational curve roots against a containing rectangular plane, nonunit/reversed UV domains, endpoints, complete overlap with checked UV trace, subnormal gaps, tangency and explicit clipping/nonaffine/work obligations. NURBS-0164 is native within this documented scope; general surface roots and trim ownership are not claimed. [Contract](nurbs-certified-curve-plane.md).
+
+## Certified curve crossings, 2026-10-15
+
+**186/200**: 79 integrated + 107 native; **14 planned** remain. Six new integration tests and the full 1342-test core suite pass. NURBS-0163 now has checked affine 3D-line roots, original planar rational transverse root existence/uniqueness, complete original product coverage, spatial localization and exact same-definition overlap. General nonlinear spatial/tangent contacts remain outside the admitted native scope. [Contract](nurbs-certified-curve-crossings.md).
+
+## Automatic partial straight-boundary patch closure, 2026-10-15
+
+**185/200**: 79 integrated + 106 native; **15 planned** remain. NURBS-0197 now includes automatic exact image partitions with unique opposite uses, partial one-to-many overlaps, and nonlinear rational boundary parameterization. Three new tests and nine existing seam/correspondence tests pass. Full original lift agreement is mandatory; general curved partial matching and solid embedding remain outside this native scope. The three multispan Boolean regressions also pass after adding original monotone graph coverage; general SS ownership remains planned. [Patch contract](nurbs-linear-patch-closure.md), [SS contract](nurbs-ss-monotone-graph.md).
+
+## Original-boundary nonlinear correspondence, 2026-10-15
+
+**184/200 remains unchanged**. NURBS-0197 gained continuous original-domain piecewise affine parameter correspondence, bounded nearest-lift inference, original-domain reversal and shared-budget B-rep checks. The search cannot authorize a match; full-interval proofs must independently admit both face lifts. Automatic partial-overlap fragmentation, unique pairing across a complete patch set and topology ownership remain open. [Contract](nurbs-boundary-correspondence.md).
+
+## Clearance-qualified planar contour machining, 2026-10-15
+
+**184/200**: 79 integrated + 105 native; **16 planned** remain. Six independent integration tests passed: threshold-driven original-curve clearance, close-pair versus work refusal, clockwise/counterclockwise paths, rational circle, nested spacing, full nominal-offset tolerance, limited work and a cutter too large for a concave slot. Complete paths require original-loop winding and global cutter/stock clearance; no sampled display proxy admits the plan. [Contract](nurbs-planar-toolpath.md).
+
+## Authored trimmed multipatch shells, 2026-10-15
+
+**183/200**: 79 integrated + 104 native; **17 planned** remain. Five independent integration tests passed: cube and rational hollow shell, full-interval boundary agreement, trim-region and regularity audits, vertex-link closure, malformed/discontinuous input, exhausted work and an endpoint-preserving pcurve bulge. The constructor authors a Shell only after all gates; no Body or embedding certificate is manufactured. [Contract](nurbs-trimmed-shell.md).
+
+## Parallel plane sections, 2026-10-15
+
+**182/200**: 79 integrated + 103 native; **18 planned** remain. Five independent integration tests passed, including rational sources, nonnormalized domains, negative nonunit normals, empty levels, tangencies/coincidence and shared-budget exhaustion. Complete admitted parameter graphs have continuous original-surface spatial error bounds; unsupported topology remains explicitly unresolved over the full source domain. [Contract](nurbs-parallel-sections.md).
+
+## Section-authored blade, 2026-10-15
+
+**181/200**: 79 integrated + 102 native; **19 planned** remain. Three independent integration tests passed: polynomial profile oracle, actual ruled walls, closed owned incidence and invalid inputs. Native construction supports chord, thickness-control, twist and stacking at 2..129 stations. Global embedding, aerodynamic performance and adapter/export integration remain separate. [Contract](nurbs-blade.md).
+
+## G2 with inferred nonaffine correspondence, 2026-10-15
+
+**180/200**: 79 integrated + 101 native; **20 planned** remain. Seven independent integration tests passed, including a quadratic boundary reparameterization and a rational cylinder under a Mobius reparameterization, with reversed orientation. Search proposes a monotone open-seam relation; original-surface interval bounds independently verify position, normal and curvature over its entire domain. Closed-seam phase search and topology authorship remain outside this native API. [Contract](nurbs-surface-g2-affine.md).
+
+## Актуальный итог — замкнутый sweep native, 2026-10-15
+
+**179/200**: 79 integrated + 100 native, осталось **21 planned**. Проверены progressive_profile_body_with_rmf_policy и surface-only framed_sweep: неплоский закрытый путь, holonomy, rational sections, periodic owned incidence и открытый cross-section. Body-режим отдельно подтверждает continuous original-to-retained boundary upper; surface-only диагностика остаётся sampled.
+
+Прошли **3 independent integration tests**; полый periodic Body и STEP-void fixture включены в прошедший набор из 19 section-body tests. На сетке 129 sections увеличение proof steps 512→4096 уменьшило доказанную границу 0.12551→0.01665; допуск 0.03 и sampled geometry не менялись. Full Body требует boundary receipt <=0.03. G1/G2 seam, embedding/global solid и universal STEP не квалифицированы. [Контракт](nurbs-closed-sweep-native.md). Текущие связанные проверки завершены; далее — предыдущие рубежи.
+
+## Актуальный итог — корпус по сечениям native, 2026-10-15
+
+**178/200**: 79 integrated + 99 native, осталось **22 planned**. Проверен существующий `brep_core::rational_section_loft`: рациональные боковые стенки через authored sections, outer loop и holes, planar trim caps, shared edges и замкнутая B-rep incidence. Реализация не дублировалась; каталог приведён в соответствие с проверенным Rust API.
+
+Прошли **19 integration tests** offline/locked, codec, no-default-features: independent cone wall equations, caps/holes, incidence, 33 sections, reverse travel, natural and supplied walls, malformed input, transport variants и конкретные STEP round trips. SHA-256 основного исходника и теста не изменились за прогон. Global embedding/solid и общий rounding-inclusive design-intent error не квалифицированы. [Контракт](nurbs-body-by-sections.md). Далее — предыдущие рубежи.
+
+## Актуальный итог — огибающая сфер native, 2026-10-14
+
+**177/200**: 79 integrated + 98 native, осталось **23 planned**. Добавлен `sphere_envelope::approximate_with_domain_audit`: характеристические круги движущихся сфер учитывают dr/ds, исходные rational jets непрерывно проверяют spanwise existence и reference angular chart, адаптивная сборка сохраняет rational circle sections и полное path coverage. Недостаточное доказательство не даёт поверхности в audited API. Выборочная точность аппроксимации отделена от доказательства существования кругов.
+
+Прошли **9 integration tests** на актуальной Cargo-built Rust-библиотеке: sphere/envelope equations, rational radius и independent domains, конус/тор, неплоская polynomial centerline, whole-domain feasibility и недостаточный budget, invalid inputs и shared boundaries. Source/test/library hashes сохранены вместе с командой и полным результатом. Continuous approximation error, rounding, immersion/self-overlap, singular extensions и B-rep solid не квалифицированы. [Контракт](nurbs-sphere-envelope.md). Далее — история предыдущих рубежей.
+
+## Сверка состояния — 2026-10-14
+
+**176/200**, осталось **24**. NURBS-0030 (общее пересечение поверхностей) остаётся planned: наличие кандидатов и малый residual не доказывают полноту пересечения или корректность trim-топологии. Частичные исходные редукции: разделённые control hulls, идентичные поверхности и ограниченные координатные прямоугольные патчи с точно представимым UV-отображением. Геометрическое покрытие и право строить топологию учитываются отдельно; адаптер B-rep обязан сохранять это различие. JSON-проверка проверяет структуру отчёта, а не воспроизводит математическое доказательство.
+
+Приоритет остатка: пересечения curve/curve, curve/surface, surface/surface; замкнутый sweep и shell; periodic trim, очистка offset и watertight audit; затем механические формы. Исторические результаты ниже относятся к указанным прогонам; эта сверка не означает повторную квалификацию всех 176 возможностей.
+
+## Актуальный итог — гофрированная оболочка native, 2026-10-14
+
+**176/200**: 79 integrated + 97 native, осталось **24 planned**. Добавлен `bellows::cubic`: cubic axial corrugation, outer/cavity rational surfaces и два annular rims с корректной normal orientation. Полная модель сохраняется до 256 periods; shared boundary controls/weights/knots формируют data-matched surface collection. Толщина задана радиально, не по normal; NURBS-0080 остаётся planned.
+
+Прошли пять independent integration groups offline/locked без default features: analytic cubic-wave radius/height, signed/zero amplitude, radial gap, normals, boundary identity including reversed weights/knots, full resource limit и numerical-collapse/invalid-input refusals. Source/test hashes совпали до/после финального прогона. B-rep incidence/manifold/solid и binary64 rounding не квалифицированы. [Контракт](nurbs-bellows.md). Далее — история прошлых рубежей.
+
+## Актуальный итог — рациональные G1/G2 bridges native, 2026-10-14
+
+**175/200**: 79 integrated + 96 native, осталось **25 planned**. Добавлен `surface_blend`: cubic/quintic homogeneous Hermite bridges между любыми U/V boundaries рациональных Surfaces. Поддержаны разные degrees/knots/weights, unclamped boundaries, reversed affine correspondence и positive transverse gains. Полные homogeneous boundary jets выравниваются в polynomial basis, затем строятся rational Surface patches с положительными weights.
+
+Прошли пять independent integration groups offline/locked, no-default-features: full Cartesian first/second/mixed jets, несепарабельные weights и W'', все boundary axes/orientations, unclamped domains, resource/invalid scales и analytic rational Möbius oracle. Конструкция даёт C1/C2 matching в real arithmetic и G1/G2 на регулярных source charts; binary64 continuity certificate, global regularity, nonlinear matching и B-rep topology не квалифицированы. Общая NURBS shell NURBS-0080 остаётся planned: её текущие реализации ограничены analytic/planar bodies. [Контракт](nurbs-surface-blend.md). Далее — история прошлых рубежей.
 
 ## Актуальный итог — радиальный кулачок native, 2026-10-14
 
@@ -172,8 +252,8 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0064 | twisted sweep | integrated |
 | NURBS-0065 | рациональный translational sweep с переменным масштабом профиля | integrated |
 | NURBS-0066 | двухнаправляющий sweep | integrated |
-| NURBS-0067 | closed sweep | planned |
-| NURBS-0068 | огибающая сфер | planned |
+| NURBS-0067 | closed sweep | native |
+| NURBS-0068 | огибающая сфер | native |
 | NURBS-0069 | лента вдоль пути | integrated |
 | NURBS-0070 | пружина с профилем | native |
 | NURBS-0071 | переход круг–круг | integrated |
@@ -182,8 +262,8 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0074 | смещённые профили | native |
 | NURBS-0075 | constant fillet | native |
 | NURBS-0076 | variable fillet | native |
-| NURBS-0077 | G1 blend | planned |
-| NURBS-0078 | G2 blend | planned |
+| NURBS-0077 | G1 blend | native |
+| NURBS-0078 | G2 blend | native |
 | NURBS-0079 | offset | native |
 | NURBS-0080 | оболочка заданной толщины | planned |
 | NURBS-0081 | прямозубая | planned |
@@ -197,15 +277,15 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0089 | наружная резьба | planned |
 | NURBS-0090 | внутренняя резьба | planned |
 | NURBS-0091 | кулачок | native |
-| NURBS-0092 | лопатка | planned |
+| NURBS-0092 | лопатка | native |
 | NURBS-0093 | крыло | native |
-| NURBS-0094 | корпус по сечениям | planned |
+| NURBS-0094 | корпус по сечениям | native |
 | NURBS-0095 | купол | native |
 | NURBS-0096 | линза | native |
-| NURBS-0097 | гофрированная оболочка | planned |
+| NURBS-0097 | гофрированная оболочка | native |
 | NURBS-0098 | волновая поверхность | native |
 | NURBS-0099 | S(u,v) | native |
-| NURBS-0100 | trimmed multipatch shell | planned |
+| NURBS-0100 | trimmed multipatch shell | native |
 | NURBS-0101 | Полиномиальная пространственная кривая | integrated |
 | NURBS-0102 | Полиномиальная параметрическая поверхность XYZ | integrated |
 | NURBS-0103 | Рациональная полиномиальная пространственная кривая | integrated |
@@ -287,15 +367,15 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0179 | проверка G2 между кривыми | native |
 | NURBS-0180 | проверка G0 между поверхностями | native |
 | NURBS-0181 | проверка G1 между поверхностями | native |
-| NURBS-0182 | проверка G2 между поверхностями | planned |
+| NURBS-0182 | проверка G2 между поверхностями | native |
 | NURBS-0183 | проверка регулярности поверхности | native |
 | NURBS-0184 | оценка отклонения кривой после редактирования | native |
 | NURBS-0185 | оценка отклонения поверхности после редактирования | native |
 | NURBS-0186 | плоский offset кривой с допуском | native |
 | NURBS-0187 | стыки offset-контура | native |
 | NURBS-0188 | очистка самопересечений offset-контура | planned |
-| NURBS-0189 | плоская эквидистантная дорожка обработки | planned |
-| NURBS-0190 | параллельные сечения поверхности плоскостями | planned |
+| NURBS-0189 | плоская эквидистантная дорожка обработки | native |
+| NURBS-0190 | параллельные сечения поверхности плоскостями | native |
 | NURBS-0191 | адаптивная тесселяция кривой | native |
 | NURBS-0192 | адаптивная тесселяция поверхности | native |
 | NURBS-0193 | согласованная тесселяция общих границ патчей | native |

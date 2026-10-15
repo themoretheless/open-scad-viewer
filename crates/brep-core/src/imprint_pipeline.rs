@@ -673,18 +673,51 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
     radius_bottom: f64,
     radius_top: f64,
 ) -> Result<Model> {
-    let radii = [radius_bottom, radius_top];
-    if radii.iter().any(|radius| {
-        !(radius.is_finite()
-            && *radius > 0.
-            && 2. * radius < max[0] - min[0]
-            && 2. * radius < max[1] - min[1])
-    }) {
+    independent_radius_cuboid_vertical_edges(
+        source,
+        min,
+        max,
+        rounded,
+        [radius_bottom; 4],
+        [radius_top; 4],
+    )
+}
+
+/// Independent linear radius laws for the four longitudinal corners. Adjacent
+/// setbacks are checked at both ends; their sum is affine along the whole edge.
+/// This constructs a prism family, not a valence-three spherical corner.
+pub(crate) fn independent_radius_cuboid_vertical_edges(
+    source: &Model,
+    min: [f64; 3],
+    max: [f64; 3],
+    rounded: [bool; 4],
+    radius_bottom: [f64; 4],
+    radius_top: [f64; 4],
+) -> Result<Model> {
+    if !rounded.iter().any(|&x| x)
+        || (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || max[i] <= min[i])
+    {
         return Err(refuse(
-            "Variable-radius cuboid radii exceed the admitted profile",
+            "Independent-radius cuboid needs finite positive extents and selected corners",
         ));
     }
-    let profile_at = |radius: f64, z: f64| -> Result<Vec<Curve>> {
+    for radii in [radius_bottom, radius_top] {
+        if (0..4).any(|i| rounded[i] && (!radii[i].is_finite() || radii[i] <= 0.)) {
+            return Err(refuse("Selected corner radii must be finite and positive"));
+        }
+        for i in 0..4 {
+            let next = (i + 1) % 4;
+            let extent = max[i % 2] - min[i % 2];
+            let a = if rounded[i] { radii[i] } else { 0. };
+            let b = if rounded[next] { radii[next] } else { 0. };
+            if !((extent - a) - b > source.tolerance_mm) {
+                return Err(refuse(
+                    "Adjacent corner radii consume their shared support edge",
+                ));
+            }
+        }
+    }
+    let profile_at = |radii: [f64; 4], z: f64| -> Result<Vec<Curve>> {
         let corners = [
             [min[0], min[1]],
             [max[0], min[1]],
@@ -692,22 +725,22 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
             [min[0], max[1]],
         ];
         let entry = [
-            [min[0], min[1] + radius],
-            [max[0] - radius, min[1]],
-            [max[0], max[1] - radius],
-            [min[0] + radius, max[1]],
+            [min[0], min[1] + radii[0]],
+            [max[0] - radii[1], min[1]],
+            [max[0], max[1] - radii[2]],
+            [min[0] + radii[3], max[1]],
         ];
         let exit = [
-            [min[0] + radius, min[1]],
-            [max[0], min[1] + radius],
-            [max[0] - radius, max[1]],
-            [min[0], max[1] - radius],
+            [min[0] + radii[0], min[1]],
+            [max[0], min[1] + radii[1]],
+            [max[0] - radii[2], max[1]],
+            [min[0], max[1] - radii[3]],
         ];
         let centers = [
-            [min[0] + radius, min[1] + radius],
-            [max[0] - radius, min[1] + radius],
-            [max[0] - radius, max[1] - radius],
-            [min[0] + radius, max[1] - radius],
+            [min[0] + radii[0], min[1] + radii[0]],
+            [max[0] - radii[1], min[1] + radii[1]],
+            [max[0] - radii[2], max[1] - radii[2]],
+            [min[0] + radii[3], max[1] - radii[3]],
         ];
         let starts = [
             std::f64::consts::PI,
@@ -727,7 +760,7 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
                 curves.push(arc_curve(
                     CircleArc {
                         center: centers[i],
-                        radius,
+                        radius: radii[i],
                         start: starts[i],
                         sweep: std::f64::consts::FRAC_PI_2,
                     },
@@ -1663,5 +1696,79 @@ mod tests {
                 .unwrap();
         assert!(!out.bodies[0].inner_shells.is_empty());
         out.validate().unwrap();
+    }
+    #[test]
+    fn independent_corner_radii_close_without_mutating_source() {
+        let source = crate::cuboid([0.; 3], [10., 8., 12.]).unwrap();
+        let original = source.clone();
+        let out = independent_radius_cuboid_vertical_edges(
+            &source,
+            [0.; 3],
+            [10., 8., 12.],
+            [true; 4],
+            [0.1, 1., 2., 0.5],
+            [0.3, 1.5, 1., 0.75],
+        )
+        .unwrap();
+        out.validate().unwrap();
+        assert_eq!(out.bodies.len(), 1);
+        assert!(out.shells[0].closed);
+        assert_eq!(out.faces.len(), 10);
+        assert_eq!(source.vertices.len(), original.vertices.len());
+        assert!(
+            source
+                .vertices
+                .iter()
+                .zip(&original.vertices)
+                .all(|(a, b)| a.point == b.point)
+        );
+        // A circular boundary has an authored quarter-circle middle weight.
+        assert_eq!(out.edges.iter().filter(|e| e.curve.degree == 2).count(), 8);
+        for (z, radii) in [(0., [0.1, 1., 2., 0.5]), (12., [0.3, 1.5, 1., 0.75])] {
+            let centers = [
+                [radii[0], radii[0]],
+                [10. - radii[1], radii[1]],
+                [10. - radii[2], 8. - radii[2]],
+                [radii[3], 8. - radii[3]],
+            ];
+            for (i, center) in centers.iter().enumerate() {
+                let arc = out
+                    .edges
+                    .iter()
+                    .filter(|e| e.curve.degree == 2)
+                    .find(|e| {
+                        let p = e.curve.evaluate(0.5).unwrap().point;
+                        (p[2] - z).abs() < 1e-10
+                            && ((p[0] - center[0]).hypot(p[1] - center[1]) - radii[i]).abs() < 1e-10
+                    })
+                    .expect("each prescribed end radius has its own arc");
+                for t in [0., 0.25, 0.5, 0.75, 1.] {
+                    let p = arc.curve.evaluate(t).unwrap().point;
+                    assert!(((p[0] - center[0]).hypot(p[1] - center[1]) - radii[i]).abs() < 1e-10);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn independent_corner_radii_refuse_overlap_at_either_end() {
+        let source = crate::cuboid([0.; 3], [10., 8., 12.]).unwrap();
+        for (bottom, top) in [
+            ([6., 5., 1., 1.], [1.; 4]),
+            ([1.; 4], [1., 4., 5., 1.]),
+            ([f64::NAN, 1., 1., 1.], [1.; 4]),
+        ] {
+            assert!(
+                independent_radius_cuboid_vertical_edges(
+                    &source,
+                    [0.; 3],
+                    [10., 8., 12.],
+                    [true; 4],
+                    bottom,
+                    top,
+                )
+                .is_err()
+            );
+        }
     }
 }

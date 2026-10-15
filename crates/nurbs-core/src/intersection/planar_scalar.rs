@@ -37,16 +37,100 @@ pub(super) fn admit(c: &Curve) -> bool {
 }
 fn parameter(c: &Curve, t: f64) -> f64 {
     let [a, b] = c.domain();
-    a + t * (b - a)
-}
-fn map_back(c: &Curve, t: f64, reversed: bool) -> f64 {
-    if reversed {
-        let [a, b] = c.domain();
-        a + (b - t)
+    if t == 0. {
+        a
+    } else if t == 1. {
+        b
     } else {
-        t
+        a * (1. - t) + b * t
     }
 }
+/// Transport an isolated unit-domain root without silently snapping a true
+/// interior event to a clamped endpoint on a poorly resolved knot domain.
+fn root_parameter(c: &Curve, interval: [f64; 2], tolerance: Option<f64>) -> Result<f64> {
+    use crate::interval_eval::{Interval, evaluate_interval};
+    let t = interval[0] * 0.5 + interval[1] * 0.5;
+    let [a, b] = c.domain();
+    let p = parameter(c, t).clamp(a, b);
+    let exact_end = interval == [0., 0.] || interval == [1., 1.];
+    // Clamped endpoint coordinates are original Euclidean control leaves.
+    if exact_end {
+        return Ok(p);
+    }
+    let collapsed = !exact_end && (!(0. < t && t < 1.) || !(a < p && p < b));
+    // The root box belongs to the original homogeneous control definition on
+    // a unit domain. Reparameterization changes no geometry or source controls.
+    // Comparing both outward images also detects coarse *interior* transport.
+    let mut unit = c.clone();
+    unit.knots = vec![0.; c.degree + 1];
+    unit.knots.extend(vec![1.; c.degree + 1]);
+    let root = evaluate_interval(&unit, Interval::new(interval[0], interval[1])?)?;
+    let mapped = evaluate_interval(c, Interval::point(p))?;
+    let error = root
+        .iter()
+        .zip(mapped)
+        .try_fold(0f64, |sum, (r, m)| {
+            let bound = (r.lo - m.hi).abs().max((r.hi - m.lo).abs()).next_up();
+            let next = (sum + bound).next_up();
+            next.is_finite().then_some(next)
+        })
+        .unwrap_or(f64::INFINITY);
+    let scale = c
+        .control_points
+        .iter()
+        .flatten()
+        .map(|v| v.abs())
+        .fold(1., f64::max);
+    let limit = if collapsed {
+        tolerance.map_or(512. * f64::EPSILON * scale, |v| {
+            (4096. * f64::EPSILON * scale).min(v * 0.001)
+        })
+    } else {
+        tolerance.map_or(512. * f64::EPSILON * scale, |v| v * 0.125)
+    };
+    if error > limit {
+        return Err(crate::numeric_err(
+            "Bézier root transport exceeds the geometric parameter precision budget",
+        ));
+    }
+    Ok(p)
+}
+fn distinct_events(points: &[Point], a: &Curve, b: &Curve) -> Result<()> {
+    let end = |c: &Curve, t: f64| c.domain().contains(&t);
+    for i in 0..points.len() {
+        if points[..i]
+            .iter()
+            .any(|p| p.first == points[i].first && p.second == points[i].second)
+            && !(end(a, points[i].first) && end(b, points[i].second))
+        {
+            return Err(crate::numeric_err(
+                "Distinct Bézier events collapse at source parameter precision",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn map_back(c: &Curve, t: f64, reversed: bool) -> Result<f64> {
+    if !reversed {
+        return Ok(t);
+    }
+    let [a, b] = c.domain();
+    let mapped = if t == a {
+        b
+    } else if t == b {
+        a
+    } else {
+        a + (b - t)
+    };
+    if a < t && t < b && !(a < mapped && mapped < b) {
+        return Err(crate::numeric_err(
+            "Reversal collapses an interior Bézier contact at source parameter precision",
+        ));
+    }
+    Ok(mapped)
+}
+
 pub fn monotone(c: &Curve, k: usize) -> bool {
     if k >= 2 || c.control_points.is_empty() || c.control_points.iter().any(|p| p.len() != 2) {
         return false;
@@ -107,7 +191,7 @@ pub fn invert(c: &Curve, k: usize, value: f64) -> Result<Option<f64>> {
             hi = mid;
         }
     }
-    Ok(Some(parameter(c, (lo + hi) * 0.5)))
+    Ok(Some(root_parameter(c, [lo, hi], None)?))
 }
 fn residual(a: &Curve, b: &Curve, t: f64, u: f64) -> Result<f64> {
     let p = a.evaluate(t)?.point;
@@ -193,7 +277,8 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
             / c.weights.iter().copied().fold(f64::INFINITY, f64::min)
     };
     let weight_ratio = ratio(a).max(ratio(b));
-    let parameter_tolerance = (tolerance / (scale * 64. * weight_ratio * weight_ratio)).min(1e-12);
+    let parameter_tolerance =
+        (tolerance / (scale * 64. * weight_ratio * weight_ratio)).min(8. * f64::EPSILON);
     if !parameter_tolerance.is_finite() || parameter_tolerance <= 0. {
         return Ok(None);
     }
@@ -241,15 +326,19 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
             PlanarScalarOutcome::Roots { reduction, roots } => {
                 let mut points = Vec::new();
                 for root in roots {
-                    let s = (root.interval[0] + root.interval[1]) * 0.5;
                     let (first, second) = match reduction {
                         PlanarReduction::CommonCoordinate(_)
-                        | PlanarReduction::CommonProjection => {
-                            (parameter(a, s), map_back(b, parameter(&other, s), reversed))
-                        }
+                        | PlanarReduction::CommonProjection => (
+                            root_parameter(a, root.interval, Some(tolerance))?,
+                            map_back(
+                                b,
+                                root_parameter(&other, root.interval, Some(tolerance))?,
+                                reversed,
+                            )?,
+                        ),
                         PlanarReduction::LineCarrier { first } => {
                             let (line, curve) = if first { (a, &other) } else { (&other, a) };
-                            let ct = parameter(curve, s);
+                            let ct = root_parameter(curve, root.interval, Some(tolerance))?;
                             let p = curve.evaluate(ct)?.point;
                             let start = &line.control_points[0];
                             let end = line.control_points.last().unwrap();
@@ -270,9 +359,9 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
                                 return Ok(None);
                             };
                             if first {
-                                (lt, map_back(b, ct, reversed))
+                                (lt, map_back(b, ct, reversed)?)
                             } else {
-                                (ct, map_back(b, lt, reversed))
+                                (ct, map_back(b, lt, reversed)?)
                             }
                         }
                     };
@@ -285,12 +374,122 @@ pub fn intersect(a: &Curve, b: &Curve, tolerance: f64) -> Result<Option<Relation
                         multiplicity: root.multiplicity,
                     });
                 }
+                distinct_events(&points, a, b)?;
                 return Ok(Some(Relation::Points(points)));
             }
         }
     }
-    super::planar_coincidence::overlap(a, b, tolerance)
+    if let Some(overlap) = super::planar_coincidence::overlap(a, b, tolerance)? {
+        return Ok(Some(overlap));
+    }
+    paired(a, b, tolerance, parameter_tolerance)
 }
+fn paired(
+    a: &Curve,
+    b: &Curve,
+    tolerance: f64,
+    parameter_tolerance: f64,
+) -> Result<Option<Relation>> {
+    use cad_predicates::{PlanarPairOutcome, planar_bezier_pair_roots};
+    for swapped in [false, true] {
+        let (first, second) = if swapped { (b, a) } else { (a, b) };
+        let values = first
+            .control_points
+            .iter()
+            .zip(&first.weights)
+            .chain(second.control_points.iter().zip(&second.weights))
+            .flat_map(|(p, w)| [p[0], p[1], *w])
+            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect();
+        let source = SourceArena::authored("represented-planar-implicit-pair", 1, values)
+            .map_err(|e| crate::input(e.to_string()))?;
+        let refs = |start: usize, count: usize| {
+            (start..start + count)
+                .map(|i| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap()))
+                .collect::<Vec<_>>()
+        };
+        let context = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&source, &context, Limits::default(), None);
+        let decision = planar_bezier_pair_roots(
+            &mut ctx,
+            &refs(0, first.control_points.len()),
+            &refs(first.control_points.len(), second.control_points.len()),
+            parameter_tolerance,
+        )
+        .map_err(|e| crate::input(e.to_string()))?;
+        if let PlanarPairOutcome::Roots(roots) = decision.outcome {
+            let mut points = Vec::new();
+            for root in roots {
+                let t = root_parameter(first, root.first, Some(tolerance))?;
+                let u = root_parameter(second, root.second, Some(tolerance))?;
+                let (t, u) = if swapped { (u, t) } else { (t, u) };
+                if residual(a, b, t, u)? > tolerance {
+                    return Ok(None);
+                }
+                points.push(Point {
+                    first: t,
+                    second: u,
+                    multiplicity: root.multiplicity,
+                });
+            }
+            distinct_events(&points, a, b)?;
+            return Ok(Some(Relation::Points(points)));
+        }
+    }
+    Ok(None)
+}
+/// Complete distinct preimage pairs of an authored proper quadratic/cubic.
+/// A one-preimage cusp is split by `stationary`, not reported as a crossing.
+pub fn self_intersections(c: &Curve, tolerance: f64) -> Result<Option<Vec<Point>>> {
+    use cad_predicates::{PlanarPairOutcome, planar_bezier_self_roots};
+    c.validate()?;
+    check(
+        tolerance.is_finite() && tolerance > 0.,
+        "Positive planar self contact tolerance required",
+    )?;
+    if !admit(c) {
+        return Ok(None);
+    }
+    let values = c
+        .control_points
+        .iter()
+        .zip(&c.weights)
+        .flat_map(|(p, w)| [p[0], p[1], *w])
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let source = SourceArena::authored("represented-planar-self-pairs", 1, values)
+        .map_err(|e| crate::input(e.to_string()))?;
+    let refs = (0..c.control_points.len())
+        .map(|i| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap()))
+        .collect::<Vec<_>>();
+    let context = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &context, Limits::default(), None);
+    let decision = planar_bezier_self_roots(&mut ctx, &refs, 8. * f64::EPSILON)
+        .map_err(|e| crate::input(e.to_string()))?;
+    if let PlanarPairOutcome::Roots(roots) = decision.outcome {
+        let mut points = Vec::new();
+        for r in roots {
+            let t = root_parameter(c, r.first, Some(tolerance))?;
+            let u = root_parameter(c, r.second, Some(tolerance))?;
+            if t == u {
+                return Err(crate::numeric_err(
+                    "Distinct Bézier self-preimages collapse in the source knot domain",
+                ));
+            }
+            if residual(c, c, t, u)? > tolerance {
+                return Ok(None);
+            }
+            points.push(Point {
+                first: t,
+                second: u,
+                multiplicity: r.multiplicity,
+            });
+        }
+        return Ok(Some(points));
+    }
+    Ok(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,15 +580,22 @@ pub fn stationary(c: &Curve, axis: usize) -> Result<Option<Vec<f64>>> {
     match outcome {
         cad_predicates::PlanarStationaryOutcome::Constant => Ok(Some(Vec::new())),
         cad_predicates::PlanarStationaryOutcome::Indeterminate(_) => Ok(None),
-        cad_predicates::PlanarStationaryOutcome::Roots(roots) => Ok(Some(
-            roots
-                .into_iter()
-                .filter_map(|r| {
-                    let t = (r.interval[0] + r.interval[1]) * 0.5;
-                    (t > 0. && t < 1.).then(|| parameter(c, t))
-                })
-                .collect(),
-        )),
+        cad_predicates::PlanarStationaryOutcome::Roots(roots) => {
+            let mut parameters = Vec::new();
+            for r in roots {
+                if r.interval == [0., 0.] || r.interval == [1., 1.] {
+                    continue;
+                }
+                let p = root_parameter(c, r.interval, None)?;
+                if parameters.contains(&p) {
+                    return Err(crate::numeric_err(
+                        "Distinct Bézier stationary roots collapse in the source knot domain",
+                    ));
+                }
+                parameters.push(p);
+            }
+            Ok(Some(parameters))
+        }
     }
 }
 #[cfg(test)]
@@ -474,5 +680,137 @@ mod stationary_tests {
             assert!((roots[0] - 1. / 3.).abs() < 1e-13);
         }
         assert_eq!(c.control_points, before);
+    }
+}
+
+#[cfg(test)]
+mod implicit_pair_tests {
+    use super::*;
+    #[test]
+    fn curved_third_order_contact_with_nonlinear_parameter_map_is_complete() {
+        let c = |points: Vec<Vec<f64>>| Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: points,
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let a = c(vec![vec![0., 0.], vec![2., 0.], vec![4., 2.], vec![6., 6.]]);
+        let b = c(vec![
+            vec![0., 0.],
+            vec![2., 0.],
+            vec![6., 2.],
+            vec![12., 12.],
+        ]);
+        let before = (a.clone(), b.clone());
+        for reverse in [false, true] {
+            let b = if reverse {
+                b.reverse().unwrap()
+            } else {
+                b.clone()
+            };
+            let Some(Relation::Points(points)) = intersect(&a, &b, 1e-7).unwrap() else {
+                panic!("missing paired census")
+            };
+            assert_eq!(points.len(), 1);
+            assert_eq!(points[0].first, 0.);
+            assert_eq!(points[0].second, if reverse { 1. } else { 0. });
+            assert_eq!(points[0].multiplicity, 3);
+        }
+        assert_eq!(a.control_points, before.0.control_points);
+        assert_eq!(b.control_points, before.1.control_points);
+    }
+    #[test]
+    fn endpoint_parameter_mapping_preserves_extreme_signed_domains() {
+        let c = Curve {
+            degree: 1,
+            knots: vec![-1e8, -1e8, 1e-8, 1e-8],
+            control_points: vec![vec![0., 0.], vec![1., 1.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        assert_eq!(parameter(&c, 0.), c.domain()[0]);
+        assert_eq!(parameter(&c, 1.), c.domain()[1]);
+        assert_eq!(map_back(&c, c.domain()[0], true).unwrap(), c.domain()[1]);
+        assert_eq!(map_back(&c, c.domain()[1], true).unwrap(), c.domain()[0]);
+    }
+}
+
+#[cfg(test)]
+mod self_pair_tests {
+    use super::*;
+    #[test]
+    fn proper_nodal_source_keeps_both_preimages_while_a_cusp_has_only_one() {
+        for cusp in [false, true] {
+            let points = if cusp {
+                vec![vec![3., -3.], vec![-1., 3.], vec![-1., -3.], vec![3., 3.]]
+            } else {
+                vec![
+                    vec![9., -18.],
+                    vec![-7., 26.],
+                    vec![-7., -26.],
+                    vec![9., 18.],
+                ]
+            };
+            let mut c = Curve {
+                degree: 3,
+                knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+                control_points: points,
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            for transformed in [false, true] {
+                if transformed {
+                    for p in &mut c.control_points {
+                        let (x, y) = (p[0], p[1]);
+                        p[0] = 17. + x - y;
+                        p[1] = -9. + x + y;
+                    }
+                }
+                let roots = self_intersections(&c, 1e-7).unwrap().unwrap();
+                if cusp {
+                    assert!(roots.is_empty())
+                } else {
+                    assert_eq!(roots.len(), 1);
+                    assert_eq!(roots[0].first, 0.25);
+                    assert_eq!(roots[0].second, 0.75);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod root_transport_tests {
+    use super::*;
+    #[test]
+    fn unrepresentable_interior_contact_is_refused_instead_of_becoming_an_endpoint() {
+        let a = 1e8_f64;
+        let b = a.next_up();
+        let c = Curve {
+            degree: 3,
+            knots: vec![a, a, a, a, b, b, b, b],
+            control_points: vec![vec![0., 0.], vec![1., 1.], vec![2., -1.], vec![3., 0.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let line = Curve::from_polyline(vec![vec![0., 0.], vec![3., 0.]]).unwrap();
+        assert!(intersect(&c, &line, 1e-7).is_err());
+        assert!(stationary(&c, 1).is_err());
+        assert!(invert(&c, 0, 1.5).is_err());
+        assert_eq!(root_parameter(&c, [0., 0.], None).unwrap(), a);
+        assert_eq!(root_parameter(&c, [1., 1.], None).unwrap(), b);
+        let unit = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
+        assert_eq!(
+            root_parameter(&unit, [1_f64.next_down(), 1.], None).unwrap(),
+            1.
+        );
+        assert_eq!(
+            root_parameter(&unit, [1_f64.next_down(), 1.], Some(1e-7)).unwrap(),
+            1.
+        );
+        let mut signed = c.clone();
+        signed.knots = vec![-1e8, -1e8, -1e8, -1e8, 1e-8, 1e-8, 1e-8, 1e-8];
+        assert!(map_back(&signed, 1e-8_f64.next_down(), true).is_err());
     }
 }

@@ -17,6 +17,7 @@ interface QueuedSolidTask<K extends MainSolidJob['kind'] = MainSolidJob['kind']>
   job: Extract<MainSolidJob, { kind: K }>
   options: MainSolidPoolRunOptions
   priority: number
+  aborted?: boolean
   resolve: (value: MainSolidResults[K]) => void
   reject: (reason: unknown) => void
   cleanupAbort?: () => void
@@ -34,9 +35,12 @@ interface QueuedSolidTask<K extends MainSolidJob['kind'] = MainSolidJob['kind']>
 export class MainSolidWorkerPool {
   readonly poolSize: number
   private readonly slots: (MainSolidWorkerClient | null)[]
-  private readonly busySlots = new Set<number>()
+  private readonly busySlots: Uint8Array
+  private activeSlotCount = 0
   private readonly perWorkerCompleted: number[]
   private readonly queue: QueuedSolidTask<any>[] = []
+  private queueHead = 0
+  private activeQueuedCount = 0
   private nextTaskId = 1
   private completedTasks = 0
   private closed = false
@@ -48,6 +52,7 @@ export class MainSolidWorkerPool {
     const caps = detectHardwareConcurrency(8)
     this.poolSize = Math.max(1, poolSize ?? Math.min(4, caps.recommendedWorkers))
     this.slots = new Array(this.poolSize).fill(null)
+    this.busySlots = new Uint8Array(this.poolSize)
     this.perWorkerCompleted = new Array(this.poolSize).fill(0)
   }
 
@@ -92,9 +97,9 @@ export class MainSolidWorkerPool {
 
       if (options.signal) {
         const onAbort = () => {
-          const idx = this.queue.indexOf(task)
-          if (idx !== -1) {
-            this.queue.splice(idx, 1)
+          if (!task.aborted) {
+            task.aborted = true
+            this.activeQueuedCount--
             task.cleanupAbort?.()
             reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
           }
@@ -103,18 +108,25 @@ export class MainSolidWorkerPool {
         task.cleanupAbort = () => options.signal?.removeEventListener('abort', onAbort)
       }
 
-      // Insert in priority order (higher priority first, FIFO for ties)
-      let inserted = false
-      for (let i = 0; i < this.queue.length; i++) {
-        if (task.priority > this.queue[i]!.priority) {
-          this.queue.splice(i, 0, task)
-          inserted = true
-          break
+      // Insert in priority order (higher priority first, FIFO for ties) using binary search
+      const q = this.queue
+      const len = q.length
+      if (len === this.queueHead || task.priority <= q[len - 1]!.priority) {
+        q.push(task)
+      } else {
+        let lo = this.queueHead
+        let hi = len
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1
+          if (task.priority > q[mid]!.priority) {
+            hi = mid
+          } else {
+            lo = mid + 1
+          }
         }
+        q.splice(lo, 0, task)
       }
-      if (!inserted) {
-        this.queue.push(task)
-      }
+      this.activeQueuedCount++
 
       this.pump()
     })
@@ -131,13 +143,14 @@ export class MainSolidWorkerPool {
   }
 
   private findAvailableSlot(): number | null {
+    if (this.activeSlotCount >= this.poolSize) return null
     // Prefer an already-warm idle slot with the fewest completed tasks, then a cold slot
     let bestWarm: number | null = null
     let bestWarmCount = Infinity
     let firstCold: number | null = null
 
     for (let i = 0; i < this.poolSize; i++) {
-      if (this.busySlots.has(i)) continue
+      if (this.busySlots[i] !== 0) continue
       if (this.slots[i] !== null) {
         const count = this.perWorkerCompleted[i]!
         if (count < bestWarmCount) {
@@ -152,22 +165,45 @@ export class MainSolidWorkerPool {
     return bestWarm ?? firstCold
   }
 
+  private dequeueTask(): QueuedSolidTask<any> | null {
+    while (this.queueHead < this.queue.length) {
+      const task = this.queue[this.queueHead]!
+      this.queue[this.queueHead] = undefined as unknown as QueuedSolidTask<any>
+      this.queueHead++
+      if (this.queueHead === this.queue.length) {
+        this.queue.length = 0
+        this.queueHead = 0
+      } else if (this.queueHead >= 64 && this.queueHead * 2 >= this.queue.length) {
+        this.queue.splice(0, this.queueHead)
+        this.queueHead = 0
+      }
+      if (task.aborted) continue
+      this.activeQueuedCount--
+      return task
+    }
+    return null
+  }
+
   private pump(): void {
     if (this.closed) return
 
-    while (this.queue.length > 0) {
+    while (this.activeQueuedCount > 0 && this.activeSlotCount < this.poolSize) {
       const slotIdx = this.findAvailableSlot()
       if (slotIdx === null) break
 
-      const task = this.queue.shift()!
+      const task = this.dequeueTask()
+      if (!task) break
       task.cleanupAbort?.()
 
       if (task.options.signal?.aborted) {
+        task.aborted = true
         task.reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
         continue
       }
 
-      this.busySlots.add(slotIdx)
+      task.aborted = true
+      this.busySlots[slotIdx] = 1
+      this.activeSlotCount++
       const client = this.getOrCreateSlot(slotIdx)
 
       client
@@ -177,14 +213,16 @@ export class MainSolidWorkerPool {
         })
         .then(
           result => {
-            this.busySlots.delete(slotIdx)
+            this.busySlots[slotIdx] = 0
+            this.activeSlotCount--
             this.perWorkerCompleted[slotIdx]!++
             this.completedTasks++
             task.resolve(result)
             this.pump()
           },
           error => {
-            this.busySlots.delete(slotIdx)
+            this.busySlots[slotIdx] = 0
+            this.activeSlotCount--
             task.reject(error)
             this.pump()
           }
@@ -196,8 +234,10 @@ export class MainSolidWorkerPool {
    * Cancels all queued and currently active jobs across all worker slots.
    */
   cancelAll(): void {
-    while (this.queue.length > 0) {
-      const task = this.queue.shift()!
+    while (true) {
+      const task = this.dequeueTask()
+      if (!task) break
+      task.aborted = true
       task.cleanupAbort?.()
       task.reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
     }
@@ -216,14 +256,15 @@ export class MainSolidWorkerPool {
       this.slots[i]?.dispose()
       this.slots[i] = null
     }
-    this.busySlots.clear()
+    this.busySlots.fill(0)
+    this.activeSlotCount = 0
   }
 
   getStats(): WorkerPoolStats {
     return {
       poolSize: this.poolSize,
-      activeTasks: this.busySlots.size,
-      queuedTasks: this.queue.length,
+      activeTasks: this.activeSlotCount,
+      queuedTasks: this.activeQueuedCount,
       completedTasks: this.completedTasks,
       perWorkerCompleted: [...this.perWorkerCompleted],
     }

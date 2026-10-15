@@ -18,7 +18,6 @@ fn plane(z: f64) -> Surface {
 }
 
 #[test]
-
 #[cfg(feature = "codec")]
 fn general_ss_branch_graph_without_graph_patch() {
     let xy = plane(0.);
@@ -43,13 +42,13 @@ fn general_ss_branch_graph_without_graph_patch() {
     assert_native_wire_parity(&native);
     assert!(graph.complete);
     assert!(!graph.boolean_mutation_authority);
-    // Query-grade topology flag may be true only when complete; Boolean stays false.
+    // Geometric coverage does not prove ownership of the branch/trim graph.
+    assert!(!graph.permits_topology_authorship());
     let audit = verify_general_ss_branch_graph(&graph, &context).unwrap();
     assert!(audit.notes.contains(&"no_graph_patch_iso_fixture"));
     let traces = rational_traces_from_ss_report(&report).unwrap();
     assert!(!traces.is_empty());
 }
-
 
 fn assert_native_wire_parity(report: &SurfaceSurfaceIntersection) {
     let context = &report.tolerance;
@@ -57,17 +56,17 @@ fn assert_native_wire_parity(report: &SurfaceSurfaceIntersection) {
     verify_general_ss_branch_graph(&native, context).unwrap();
     #[cfg(feature = "codec")]
     {
-    let wire = value_codec::to_value(report).unwrap();
-    let decoded = branch_graph_from_ss_report(&wire, context).unwrap();
-    assert_eq!(native, decoded);
-    assert_eq!(
-        rational_traces_from_branch_graph(&native),
-        rational_traces_from_ss_report(&wire).unwrap()
-    );
-    assert_eq!(
-        native.permits_topology_authorship(),
-        decoded.permits_topology_authorship()
-    );
+        let wire = value_codec::to_value(report).unwrap();
+        let decoded = branch_graph_from_ss_report(&wire, context).unwrap();
+        assert_eq!(native, decoded);
+        assert_eq!(
+            rational_traces_from_branch_graph(&native),
+            rational_traces_from_ss_report(&wire).unwrap()
+        );
+        assert_eq!(
+            native.permits_topology_authorship(),
+            decoded.permits_topology_authorship()
+        );
     }
 }
 #[test]
@@ -121,6 +120,8 @@ fn native_and_wire_paths_agree_for_continuation_tangency_and_unresolved_coverage
                 junction: true,
             }),
         ],
+        coverage_proof: nurbs_core::ss_intersection::CoverageProof::Unproven,
+        topology_proven: false,
         unresolved: vec![],
         boxes_visited: 1,
         bernstein_excluded: 0,
@@ -157,9 +158,13 @@ fn native_graph_refuses_a_different_tolerance_context() {
     spec.policy.push_str("-different");
     let other = ToleranceContext::new(spec).unwrap();
     assert!(branch_graph_from_surface_intersection(&report, &other).is_err());
+    #[cfg(feature = "codec")]
+    {
+        let wire = value_codec::to_value(&report).unwrap();
+        assert!(branch_graph_from_ss_report(&wire, &other).is_err());
+    }
 }
 #[test]
-
 #[cfg(feature = "codec")]
 fn legacy_trace_adapter_retains_empty_sample_and_headerless_line_behavior() {
     let mut report = value_codec::json!({"components":[{"kind":"empty"},{"kind":"curve","pcurveFirst":{"kind":"line","start":[0,0],"end":[1,1],"correspondence":"exact_affine"}}]});
@@ -170,4 +175,39 @@ fn legacy_trace_adapter_retains_empty_sample_and_headerless_line_behavior() {
     assert!(rational_traces_from_ss_report(&report).unwrap().is_empty());
     report["components"][1]["pcurveFirst"]["start"] = value_codec::json!([0]);
     assert!(rational_traces_from_ss_report(&report).is_err());
+}
+
+#[test]
+#[cfg(feature = "codec")]
+fn wire_without_coverage_scope_never_inherits_authority() {
+    let report =
+        nurbs_core::ss_intersection::intersect_surface_surface_report(&plane(0.), &plane(0.), None)
+            .unwrap();
+    let mut wire = value_codec::to_value(&report).unwrap();
+    wire["coverage"]["proofScope"] = value_codec::json!("unproven");
+    let graph = branch_graph_from_ss_report(&wire, &report.tolerance).unwrap();
+    assert!(!graph.complete);
+    assert!(!graph.permits_topology_authorship());
+}
+
+#[test]
+fn unproved_line_correspondence_is_preserved_by_both_adapters() {
+    let a = plane(0.);
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            p[2] = p[0] - 0.5;
+        }
+    }
+    let report =
+        nurbs_core::ss_intersection::intersect_surface_surface_report(&a, &b, None).unwrap();
+    assert!(!report.complete());
+    assert_native_wire_parity(&report);
+    let graph = branch_graph_from_surface_intersection(&report, &report.tolerance).unwrap();
+    assert!(!graph.components.is_empty());
+    for branch in &graph.components {
+        if let GeneralPcurve::Line { correspondence, .. } = branch.pcurve_first {
+            assert_eq!(correspondence, TraceCorrespondence::CandidateOnly);
+        }
+    }
 }

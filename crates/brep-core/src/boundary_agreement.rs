@@ -34,10 +34,16 @@ pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
             "Boundary agreement budget must be in 1..1000000",
         ));
     }
+    let total_coedges: usize = model
+        .faces
+        .iter()
+        .flat_map(|f| std::iter::once(&f.outer).chain(&f.holes))
+        .map(|&w| model.loops[w].coedges.len())
+        .sum();
     let mut report = Report {
         complete: true,
         cells: 0,
-        uses: Vec::new(),
+        uses: Vec::with_capacity(total_coedges),
     };
     for (face_id, face) in model.faces.iter().enumerate() {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
@@ -97,10 +103,19 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
     if max_work == 0 || max_work > cad_predicates::MAX_WORK {
         return Err(Error::new("BREP_AGREEMENT_BUDGET","Exact boundary work must be in 1..1000000"));
     }
-    let mut report=ExactReport{all_equal:true,joins:Vec::new(),all_joins_exact:true,work:0,uses:Vec::new()};
+    let total_wires: usize = model.faces.iter().map(|f| 1 + f.holes.len()).sum();
+    let total_coedges: usize = model
+        .faces
+        .iter()
+        .flat_map(|f| std::iter::once(&f.outer).chain(&f.holes))
+        .map(|&w| model.loops[w].coedges.len())
+        .sum();
+    let mut report=ExactReport{all_equal:true,joins:Vec::with_capacity(total_wires),all_joins_exact:true,work:0,uses:Vec::with_capacity(total_coedges)};
+    let mut curves = Vec::new();
     for (face_id,face) in model.faces.iter().enumerate() {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
-            let curves=model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>();
+            curves.clear();
+            curves.extend(model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()));
             let closed=nurbs_core::trim_domain::exact_loop_joins(&curves)?;
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));

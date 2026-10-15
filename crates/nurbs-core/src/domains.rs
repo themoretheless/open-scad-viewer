@@ -59,6 +59,8 @@ pub mod surfaces {
     pub use crate::optical_shapes;
     pub use crate::wing_loft;
     pub use crate::profile_spring;
+    pub use crate::bellows;
+    pub use crate::sphere_envelope;
     pub use crate::function_surface;
     pub use crate::boundary_fill;
     pub use crate::coons;
@@ -129,6 +131,7 @@ pub mod offsets {
     pub use crate::curve_offset;
     pub use crate::curve_offset_join;
     pub use crate::curve_offset_wire;
+    pub use crate::planar_toolpath;
     pub use crate::surface_offset;
     pub use crate::offset;
 }
@@ -151,6 +154,7 @@ pub mod queries {
     pub use crate::surface_shape_operator;
     pub use crate::surface_contact;
     pub use crate::surface_contact_search;
+    pub use crate::parallel_sections;
     pub use crate::surface_distance;
     pub use crate::radial_bounds;
     pub use crate::geodesic;

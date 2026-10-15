@@ -653,17 +653,17 @@ export const createRationalBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep
 import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../nurbsConstructors'
 export type ProgressiveBrepSweepOptions=ProgressiveGuidedSurfaceSweepOptions & {capCorrection?:{quantum:number;tolerance:number;maxWork:number};circleCorrection?:{quantum:number;tolerance:number;maxWork:number};
  /** Explicit native radial caps; requires a kernel with this operation. */
- annularCaps?:{maxWork?:number;maxProducts?:number;maxPairs?:number;maxCells?:number;smoothnessMaxWork?:number}}
+ annularCaps?:{automatic?:boolean;maxWork?:number;maxProducts?:number;maxPairs?:number;maxCells?:number;smoothnessMaxWork?:number;geometricMaxCells?:number}}
 export interface ProgressiveAnnularFilling {
  method:'authored-smooth-endpoint-annular-filling';sourceFillingCovered:boolean;filledCapErrorUpper:[number,number]|null
- withinBudget:boolean;exactWork:number;constructionExactWork:number;fillingExactWork:number
+ withinBudget:boolean;exactWork:number;constructionExactWork:number;fillingExactWork:number;selectionExactWork?:number
  products:number;endpointCells:number;sourceUvFacesInjective:boolean;sourceUvPairsClassified:boolean
  reason:string;solidGeometryCertified:false
 }
 export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
- capRepresentation?:'radial-annular'|'closed';capFaceGroups?:[number[],number[]];capFaces?:number[];planarCapFaces?:number[]
+ capRepresentation?:'radial-annular'|'closed'|'legacy';capSelectionExactWork?:number;capFaceGroups?:[number[],number[]];capFaces?:number[];planarCapFaces?:number[]
  retainedAnnularFilling?:ProgressiveAnnularFilling|null
- retainedSmoothness?:UnbudgetedAnnularMiterBoundaryReport['retainedSmoothness']
+ retainedSmoothness?:(Omit<NonNullable<UnbudgetedAnnularMiterBoundaryReport['retainedSmoothness']>,'capWallContinuity'> & {capWallContinuity:'C0'|'absent'})|null
  bodyDecompositionErrorUpper?:number|null;bodyDecompositionProducts?:number
  capProjection?:{idealCapDomainsCertified:boolean;normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null;
   cells:number;exactWork:number;reason:string|null;scope:'constructor-owned-endpoint-plane-projection'}|null
@@ -678,25 +678,44 @@ export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveM
   scope:'constructor-owned-retained-endpoint-regions';continuousBound:false;globalEmbeddingCertified:false}|null}
 export type ProgressiveBodyBoundaryEvidence=Omit<ProgressiveBrepBody,'model'|'approximation'> & {budget:number;closedPath:boolean}
 const progressiveBodyRequests=new WeakMap<ProgressiveBrepBody,string>()
+const progressiveBodyOperations=new WeakMap<ProgressiveBrepBody,string>()
 const progressiveAnnularSources=new WeakSet<ProgressiveBrepBody>()
+type ProgressiveCapOwnership=Pick<ProgressiveBrepBody,'capRepresentation'|'capSelectionExactWork'|'capFaceGroups'|'capFaces'|'planarCapFaces'|'retainedAnnularFilling'>
+// Validate transport ownership, never infer cap geometry from face positions.
+function copyProgressiveCapOwnership(result:ProgressiveCapOwnership,faces:number,closed:boolean):ProgressiveCapOwnership {
+ const {capRepresentation,capFaceGroups,capFaces,planarCapFaces}=result
+ if(!['radial-annular','legacy','closed'].includes(capRepresentation??'')||
+  !Array.isArray(capFaceGroups)||capFaceGroups.length!==2||!capFaceGroups.every(Array.isArray)||
+  !Array.isArray(capFaces)||!Array.isArray(planarCapFaces))throw new Error('Native physical cap ownership is unavailable')
+ const flat=capFaceGroups.flat()
+ if(flat.length!==capFaces.length||flat.some((face,index)=>face!==capFaces[index])||
+  new Set(flat).size!==flat.length||flat.some(face=>!Number.isInteger(face)||face<0||face>=faces)||
+  new Set(planarCapFaces).size!==planarCapFaces.length||planarCapFaces.some(face=>!flat.includes(face))||
+  (closed?(capRepresentation!=='closed'||flat.length!==0||planarCapFaces.length!==0)
+   :capRepresentation==='closed'||capFaceGroups.some(group=>group.length===0))||
+  (capRepresentation==='radial-annular'&&planarCapFaces.length!==0)||
+  (capRepresentation==='legacy'&&(capFaceGroups.some(group=>group.length!==1)||planarCapFaces.length!==2)))
+  throw new Error('Invalid native physical cap ownership')
+ return {capRepresentation,capSelectionExactWork:result.capSelectionExactWork,
+  capFaceGroups:capFaceGroups.map(group=>group.slice()) as [number[],number[]],capFaces:capFaces.slice(),planarCapFaces:planarCapFaces.slice(),
+  retainedAnnularFilling:result.retainedAnnularFilling}
+}
 /** Replay the owned original request in Rust; audit the actual reconstructed surfaces. */
 function prepareCertifiedProgressiveStations(source:ProgressiveBrepBody,options:{quantum:number;wallTolerance:number;maxWork:number;smoothnessMaxWork:number}) {
  const encoded=progressiveBodyRequests.get(source)
  if(!encoded)throw new Error('Missing owned progressive station source')
  const annular=progressiveAnnularSources.has(source)
- const result=callGeometryRust<{planarCapFaces?:number[];stationReconstruction:{reason:string;source:string;globalEmbeddingCertified:false;profileSmoothness:MiterProfileSmoothness|null;reconstruction:{model:NurbsBrep|null;wallDisplacementUpper:number|null;work:number;reason:string}|null;boundaryCertificate:SweepBoundaryCertificate|null}}>(annular?'brep_nurbs_progressive_profile_annular_body_reconstruct_stations':'brep_nurbs_progressive_profile_body_reconstruct_stations',{
+ const result=callGeometryRust<ProgressiveCapOwnership & {stationReconstruction:{reason:string;source:string;globalEmbeddingCertified:false;profileSmoothness:MiterProfileSmoothness|null;reconstruction:{model:NurbsBrep|null;wallDisplacementUpper:number|null;work:number;reason:string}|null;boundaryCertificate:SweepBoundaryCertificate|null}}>((progressiveBodyOperations.get(source)??'brep_nurbs_progressive_profile_body')+'_reconstruct_stations',{
   ...JSON.parse(encoded),expected_source_model:source.model,station_quantum:options.quantum,station_tolerance:options.wallTolerance,station_max_work:options.maxWork,smoothness_max_work:options.smoothnessMaxWork,
  })
  const native=result.stationReconstruction,model=native.reconstruction?.model,certificate=native.boundaryCertificate
  if(!model||!certificate||!native.profileSmoothness)throw new Error('Native station reconstruction unproved: '+native.reason)
  if(!certificate.continuousBound||certificate.withinBudget!==true)throw new Error('Station boundary unproved or over original budget')
- if(annular){
-  if(!Array.isArray(result.planarCapFaces))throw new Error('Native annular cap selection is unavailable')
-  nativeSweepPlanarCapSelections.set(model,result.planarCapFaces.slice())
- }
- return {model,method:certificate.method,boundaryCertificate:certificate,...boundaryReceiptFields(certificate),
+ const capOwnership:ProgressiveCapOwnership=annular?copyProgressiveCapOwnership(result,model.faces.length,certificate.closed):{}
+ if(capOwnership.planarCapFaces)nativeSweepPlanarCapSelections.set(model,capOwnership.planarCapFaces.slice())
+ return {model,...capOwnership,method:certificate.method,boundaryCertificate:certificate,...boundaryReceiptFields(certificate),
   profileSmoothness:native.profileSmoothness,globalEmbeddingCertified:false as const,
-  stationReconstruction:{source:native.source,closedPath:certificate.closed,work:native.reconstruction!.work,wallDisplacementUpper:native.reconstruction!.wallDisplacementUpper},
+  stationReconstruction:{...capOwnership,source:native.source,closedPath:certificate.closed,work:native.reconstruction!.work,wallDisplacementUpper:native.reconstruction!.wallDisplacementUpper},
  }
 }
 export function reconstructCertifiedProgressiveStations(...args:Parameters<typeof prepareCertifiedProgressiveStations>) {
@@ -713,12 +732,13 @@ export async function reconstructCertifiedProgressiveStationsAsync(source:Progre
 /** Open-path caps or closed-path periodic shells, constrained by the shared B-rep face budget. Twist values are degrees. */
 export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveBrepSweepOptions):ProgressiveBrepBody=>{
  const annular=options.annularCaps
- const request={loops,path,...(annular?{annular_cap_max_work:annular.maxWork??1000000,annular_cap_max_products:annular.maxProducts??100000,annular_cap_max_pairs:annular.maxPairs??10000,annular_cap_max_cells:annular.maxCells??100000,smoothness_max_work:annular.smoothnessMaxWork??2000000}:{}),...(options.circleCorrection?{circle_correction_quantum:options.circleCorrection.quantum,circle_correction_tolerance:options.circleCorrection.tolerance,circle_correction_max_work:options.circleCorrection.maxWork}:{}),...(options.capCorrection?{cap_correction_quantum:options.capCorrection.quantum,cap_correction_tolerance:options.capCorrection.tolerance,cap_correction_max_work:options.capCorrection.maxWork}:{}),...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
+ const request={loops,path,...(annular?{annular_cap_max_work:annular.maxWork??1000000,annular_cap_max_products:annular.maxProducts??100000,annular_cap_max_pairs:annular.maxPairs??10000,annular_cap_max_cells:annular.maxCells??100000,smoothness_max_work:annular.smoothnessMaxWork??2000000,geometric_g2_max_cells:annular.geometricMaxCells??(annular.smoothnessMaxWork===0?0:128)}:{}),...(options.circleCorrection?{circle_correction_quantum:options.circleCorrection.quantum,circle_correction_tolerance:options.circleCorrection.tolerance,circle_correction_max_work:options.circleCorrection.maxWork}:{}),...(options.capCorrection?{cap_correction_quantum:options.capCorrection.quantum,cap_correction_tolerance:options.capCorrection.tolerance,cap_correction_max_work:options.capCorrection.maxWork}:{}),...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
   scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
   twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
   ...(options.rmfTransportSteps===undefined?{}:{rmf_transport_steps:options.rmfTransportSteps}),...(options.errorMaxCells===undefined?{}:{error_max_cells:options.errorMaxCells}),...(options.errorMaxProducts===undefined?{}:{error_max_products:options.errorMaxProducts}),normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000}
  const encoded=JSON.stringify(request)
- const result=callGeometryRust<ProgressiveBrepBody>(annular?'brep_nurbs_progressive_profile_annular_body':'brep_nurbs_progressive_profile_body',JSON.parse(encoded))
+ const operation=annular?(annular.automatic?'brep_nurbs_progressive_profile_auto_body':'brep_nurbs_progressive_profile_annular_body'):'brep_nurbs_progressive_profile_body'
+ const result=callGeometryRust<ProgressiveBrepBody>(operation,JSON.parse(encoded))
  if(annular){
   if(!Array.isArray(result.planarCapFaces)||!result.retainedSmoothness)throw new Error('Native annular body evidence is unavailable')
   progressiveAnnularSources.add(result)
@@ -726,6 +746,7 @@ export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCu
   result.profileSmoothness=result.retainedSmoothness.walls
  }
  progressiveBodyRequests.set(result,encoded)
+ progressiveBodyOperations.set(result,operation)
  if(options.circleCorrection&&(typeof result.profileCorrectionErrorUpper!=='number'||!Number.isFinite(result.profileCorrectionErrorUpper)||result.profileCorrectionErrorUpper<0))throw new Error('Native progressive profile circle correction is unavailable or unproved')
  if(options.circleCorrection&&!annular)result.profileSmoothness=inspectMiterProfileSmoothness(result.model,result.approximation.report.closedPath?[]:[result.model.faces.length-2,result.model.faces.length-1])
  return result
@@ -758,7 +779,7 @@ export async function* streamProgressiveBrepProfileBody(
  if(!spans||spans>64)throw new Error('Progressive body exceeds64 section spans')
  const first=previewProgressiveNurbsProfiles(profiles,path,scale,twist,options,options.initialSections??5)
  // Mirror native face reservation for previews; Rust validates final topology.
- const maximum=Math.min(options.maxSections??257,Math.floor((1024-(first.report.closedPath?0:options.annularCaps?spans:2))/spans)+1)
+ const maximum=Math.min(options.maxSections??257,Math.floor((1024-(first.report.closedPath?0:options.annularCaps&&!options.annularCaps.automatic?spans:2))/spans)+1)
  const bounded={...options,maxSections:maximum}
  if((options.initialSections??5)>maximum)throw new Error('Progressive body initial sections exceed face budget')
  const stream=streamProgressiveNurbsProfiles(profiles,path,scale,twist,bounded,control)
