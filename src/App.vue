@@ -876,7 +876,7 @@ const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key),
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
 let lastStorageNotice = 0
-const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) } })
+const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) }, edit: () => renderer?.previewCsgSource(code.value) })
 let buildGeneration = 0
 let storageDebounce: ReturnType<typeof setTimeout> | null = null
 let workspaceEditGeneration = 0

@@ -1,4 +1,4 @@
-import {evaluateNurbsCurve,type NurbsCurve} from './nurbsCurve'
+import {evaluateNurbsCurve,evaluateNurbsCurvePoints,type NurbsCurve} from './nurbsCurve'
 import type { DirectSketch, Point2 } from './directModeling'
 import type { Vec3, SketchPlane } from './directSketchGeometry'
 export type SnapKind = 'vertex' | 'midpoint' | 'center' | 'edge' | 'intersection' | 'axis' | 'grid' | 'quadrant' | 'tangent' | 'perpendicular' | 'origin' | 'bounds-center'
@@ -17,7 +17,7 @@ export function resolveModelingSnap(point: Vec3, geometry: SnapGeometry, options
   const radius = options.radius ?? 10, screen = options.project(point)
   let best: { result: SnapResult; distance: number; priority: number } | undefined
   const offer = (target: Vec3, kind: SnapKind, guide?: [Vec3, Vec3]) => {
-    if (!target.every(Number.isFinite)) return
+    if (!Number.isFinite(target[0]) || !Number.isFinite(target[1]) || !Number.isFinite(target[2])) return
     if(options.keypoints===false&&['center','bounds-center','midpoint','quadrant','origin'].includes(kind))return
     if(options.relations===false&&['tangent','perpendicular','intersection'].includes(kind))return
     const constrained = options.constrain?.(target) ?? target
@@ -112,15 +112,23 @@ export function sketchSnapGeometry(sketches: readonly DirectSketch[]): SnapGeome
     if(sketch.retainedProfile){
       for(const curve of sketch.retainedProfile.loops.flat()){
         const start=curve.knots[curve.degree],end=curve.knots[curve.controlPoints.length]
-        const evaluate=(t:number)=>p3(evaluateNurbsCurve(curve,t).point as Point2)
-        geometry.points.push({point:evaluate(start),kind:'vertex'},{point:evaluate(end),kind:'vertex'},{point:evaluate((start+end)/2),kind:'midpoint'})
-        const spatial:NurbsCurve={...curve,controlPoints:curve.controlPoints.map(p=>p3(p as Point2))}
+        const params=[start,end,(start+end)/2]
+        const spans:{lo:number;hi:number;count:number}[]=[]
         for(let span=curve.degree;span<curve.controlPoints.length;span++){
           const lo=curve.knots[span],hi=curve.knots[span+1];if(hi<=lo)continue
           const count=curve.degree===1?1:16
-          let a=evaluate(lo)
+          spans.push({lo,hi,count})
+          params.push(lo)
+          for(let i=0;i<count;i++)params.push(lo+(hi-lo)*(i+1)/count)
+        }
+        const evaluated=evaluateNurbsCurvePoints(curve,params).map(p=>p3(p as Point2))
+        geometry.points.push({point:evaluated[0],kind:'vertex'},{point:evaluated[1],kind:'vertex'},{point:evaluated[2],kind:'midpoint'})
+        const spatial:NurbsCurve={...curve,controlPoints:curve.controlPoints.map(p=>p3(p as Point2))}
+        let idx=3
+        for(const {lo,hi,count} of spans){
+          let a=evaluated[idx++]
           for(let i=0;i<count;i++){
-            const start=lo+(hi-lo)*i/count,end=lo+(hi-lo)*(i+1)/count,b=evaluate(end)
+            const start=lo+(hi-lo)*i/count,end=lo+(hi-lo)*(i+1)/count,b=evaluated[idx++]
             geometry.segments.push({a,b,...(curve.degree===1?{}:{nurbs:{curve:spatial,start,end}})});a=b
           }
         }

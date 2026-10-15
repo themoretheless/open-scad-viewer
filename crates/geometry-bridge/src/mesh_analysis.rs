@@ -203,6 +203,18 @@ pub enum AnalysisBuffers {
         /// flags bit 0: strict manifold output (always set on success).
         stats: [u32; 8],
     },
+    SmoothTriangleList {
+        positions: Vec<f32>,
+        normals: Vec<f32>,
+    },
+    VertexNormals {
+        vertices: Vec<f32>,
+    },
+    ExpandedDisplayMesh {
+        vertices: Vec<f32>,
+        indices: Vec<u32>,
+        floats: Vec<f64>,
+    },
 }
 
 thread_local! {
@@ -389,6 +401,31 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 19 => result.edges.diagnostics.crease as usize,
                 20 => result.edges.diagnostics.non_manifold as usize,
                 21 => result.edges.diagnostics.degenerate as usize,
+                _ => 0,
+            },
+            AnalysisBuffers::SmoothTriangleList { positions, normals } => match slot {
+                0 => positions.as_ptr() as usize,
+                1 => positions.len(),
+                2 => normals.as_ptr() as usize,
+                3 => normals.len(),
+                _ => 0,
+            },
+            AnalysisBuffers::VertexNormals { vertices } => match slot {
+                0 => vertices.as_ptr() as usize,
+                1 => vertices.len(),
+                _ => 0,
+            },
+            AnalysisBuffers::ExpandedDisplayMesh {
+                vertices,
+                indices,
+                floats,
+            } => match slot {
+                0 => vertices.as_ptr() as usize,
+                1 => vertices.len(),
+                2 => indices.as_ptr() as usize,
+                3 => indices.len(),
+                4 => floats.as_ptr() as usize,
+                5 => floats.len(),
                 _ => 0,
             },
         }

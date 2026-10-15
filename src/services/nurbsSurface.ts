@@ -80,3 +80,52 @@ export function measureNurbsSurfaceDistance(a:NurbsSurface,b:NurbsSurface,tolera
 export function transformNurbsSurface(surface:NurbsSurface,matrix:number[][]):NurbsSurface {return callNurbsRust("surface_affine",{surface,matrix})}
 
 export function transformNurbsSurfacePatches(patches:NurbsSurface[],matrix:number[][]):NurbsSurface[] {return callNurbsRust("patches_affine",{patches,matrix})}
+
+import type { GpuNurbsTessellationResult } from './gpuNurbsTessellate'
+
+/**
+ * Evaluates and tessellates a tensor-product rational B-spline surface on the
+ * GPU via WebGPU compute shaders (`gpuNurbsTessellate.ts`). Returns `null` when
+ * the surface uses periodic knot wrapping.
+ */
+export async function tessellateNurbsSurfaceOnGpu(
+  surface: NurbsSurface,
+  subdivisionsU = 32,
+  subdivisionsV = 32,
+): Promise<GpuNurbsTessellationResult | null> {
+  if (surface.periodicU || surface.periodicV) return null
+  const numCtrlU = surface.controlPoints.length
+  const numCtrlV = numCtrlU > 0 ? surface.controlPoints[0].length : 0
+  if (numCtrlU === 0 || numCtrlV === 0) return null
+
+  const controlPoints = new Float32Array(numCtrlU * numCtrlV * 3)
+  const weights = new Float32Array(numCtrlU * numCtrlV)
+  for (let i = 0; i < numCtrlU; i++) {
+    const row = surface.controlPoints[i]
+    const wRow = surface.weights[i]
+    for (let j = 0; j < numCtrlV; j++) {
+      const idx = i + j * numCtrlU
+      const pt = row[j]
+      controlPoints[idx * 3] = pt[0]
+      controlPoints[idx * 3 + 1] = pt[1]
+      controlPoints[idx * 3 + 2] = pt[2]
+      weights[idx] = wRow?.[j] ?? 1
+    }
+  }
+
+  const { runGpuNurbsTessellate } = await import('./gpuNurbsTessellate')
+  return runGpuNurbsTessellate(
+    {
+      degreeU: surface.degreeU,
+      degreeV: surface.degreeV,
+      knotsU: new Float32Array(surface.knotsU),
+      knotsV: new Float32Array(surface.knotsV),
+      controlPoints,
+      weights,
+      numCpU: numCtrlU,
+      numCpV: numCtrlV,
+    },
+    subdivisionsU,
+    subdivisionsV,
+  )
+}

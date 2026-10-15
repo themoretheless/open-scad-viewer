@@ -74,6 +74,12 @@ interface KernelExports extends WebAssembly.Exports {
  abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
  abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number):bigint
+ abi_certified_error_add(a:number,b:number):number
+ abi_certified_error_mul(a:number,b:number):number
+ abi_certified_error_sqrt_two(value:number):number
+ abi_smooth_triangle_list(vp:number,vl:number,ip:number,il:number,fmt:number,cosCrease:number):bigint
+ abi_fill_vertex_normals(vp:number,vl:number,ip:number,il:number):bigint
+ abi_expand_flat_triangles(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
 }
 declare const __G1_SHARED_GEOMETRY_MODULE__: boolean
 const sharedModuleRequired = typeof __G1_SHARED_GEOMETRY_MODULE__ !== 'undefined' && __G1_SHARED_GEOMETRY_MODULE__

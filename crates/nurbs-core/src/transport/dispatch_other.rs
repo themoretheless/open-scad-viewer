@@ -567,6 +567,11 @@ pub(super) fn dispatch_other(v:Value,op:String)->Result<Value> {
                 Ok(Value::Null)
             }
             "curve_evaluate" => encode(c.evaluate(field(&v, "u")?)?),
+            "curve_evaluate_points" => encode(c.evaluate_points(&field::<Vec<f64>>(&v, "parameters")?)?),
+            "curve_sample" => encode(c.sample_uniform(
+                field(&v, "segments")?,
+                optional_field::<bool>(&v, "includeEnd")?.unwrap_or(true),
+            )?),
             "curve_insert" => encode(c.insert(field(&v, "u")?, field(&v, "count")?)?),
             "curve_trim" => encode(c.trim(field(&v, "a")?, field(&v, "b")?)?),
             "curve_split" => encode(c.split(field(&v, "u")?)?),

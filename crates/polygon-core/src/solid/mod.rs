@@ -3,6 +3,7 @@ pub mod boolean;
 pub mod brep;
 pub mod bvh;
 pub mod bvh_query;
+pub mod display;
 pub mod edges;
 pub mod edit;
 pub mod export_file;

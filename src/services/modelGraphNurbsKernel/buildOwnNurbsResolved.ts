@@ -2,7 +2,7 @@ import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSwee
 import type { BodyArguments, BodyResolver, Mesh, MiterArguments, MiterResolver, OwnNurbsRequest, SweepArguments, SweepResolver, Value } from '../rushGraphNurbsKernel'
 import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, createBrepCylinder, createBrepFrustum, createBrepGear, createBrepSphere, createBrepTorus, createBrepTube, createCappedBrepLoftSurfaces, createCappedBrepLoftWithCaps, createMiterBrepProfileBody, createNaturalBrepSectionLoft, createProgressiveBrepProfileBody, createProgressiveMiterBrepProfileBody, extrudeBrepCurves, extrudeBrepPolygon, filletNurbsBrepEdges, reconstructCertifiedMiterStations, revolveBrepProfile, tessellateNurbsBrep, transformCertifiedMiterBody, transformNurbsBrep } from '../geometry/brep'
 import type { CertifiedMiterBoundaryOwner, NurbsBrep } from '../geometry/brep'
-import { elevateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, nurbsCurveBounds, reverseNurbsCurve, transformNurbsCurve, trimNurbsCurve, validateNurbsCurve } from '../nurbsCurve'
+import { elevateNurbsCurve, evaluateNurbsCurve, evaluateNurbsCurvePoints, insertNurbsKnot, nurbsCurveBounds, reverseNurbsCurve, transformNurbsCurve, trimNurbsCurve, validateNurbsCurve } from '../nurbsCurve'
 import type { NurbsCurve } from '../nurbsCurve'
 import { elevateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, nurbsSurfaceBounds, reverseNurbsSurface, transformNurbsSurface, transformNurbsSurfacePatches, trimNurbsSurface, validateNurbsSurface } from '../nurbsSurface'
 import type { NurbsSurface } from '../nurbsSurface'
@@ -476,8 +476,8 @@ export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsReques
                     if (n.trim && n.trim_curves)
                         throw new Error('Use only one trim representation.');
                     const sample = (id: string) => { const c = needCurve(id); if (c.controlPoints[0].length !== 2)
-                        throw new Error('UV trim requires a 2D curve.'); const a = c.knots[c.degree], b = c.knots[c.controlPoints.length]; const first = evaluateNurbsCurve(c, a).point, last = evaluateNurbsCurve(c, b).point; if (Math.hypot(...first.map((v, i) => v - last[i])) > 1e-9)
-                        throw new Error('UV trim curve must be closed.'); return Array.from({ length: n.trim_segments }, (_, i) => evaluateNurbsCurve(c, a + (b - a) * i / n.trim_segments).point); };
+                        throw new Error('UV trim requires a 2D curve.'); const a = c.knots[c.degree], b = c.knots[c.controlPoints.length]; const params = [a, b, ...Array.from({ length: n.trim_segments }, (_, i) => a + (b - a) * i / n.trim_segments)]; const pts = evaluateNurbsCurvePoints(c, params), first = pts[0], last = pts[1]; if (Math.hypot(...first.map((v, i) => v - last[i])) > 1e-9)
+                        throw new Error('UV trim curve must be closed.'); return pts.slice(2); };
                     const trim = n.trim_curves ? { outer: sample(n.trim_curves.outer), holes: n.trim_curves.holes.map(sample) } : n.trim;
                     result = { kind: 'mesh', data: tessellateNurbsSurface(needSurface(n.input), { segmentsU: n.segments_u, segmentsV: n.segments_v, ...(trim ? { trim } : {}) }) };
                     break;

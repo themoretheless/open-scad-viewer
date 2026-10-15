@@ -1,7 +1,6 @@
 import { readSvgDocumentAsync, type SvgOptions } from './svgDocument'
 import type { MeshData } from '../core/mesh'
-import { defaultGeometryKernel } from './cadGeometryKernel'
-import { transformPoint } from './math3d'
+import { callGeometryRust, warmGeometryKernel } from './geometry/kernel'
 import { MAX_WORKSPACE_SOURCE_LENGTH } from './workspaceDocument'
 
 export type SvgContours = [number, number][][]
@@ -32,24 +31,8 @@ export async function svgContours(svg: string, options: SvgOptions = {}): Promis
 
 /** Geometry plus conversion diagnostics, shared by the panel and MCP. */
 export async function svgProfile(svg: string, options: SvgOptions = {}) {
-  const parsed = await readSvgDocumentAsync(svg, options)
-  const session = await defaultGeometryKernel.openEvalSession()
-  try {
-    const sections = parsed.regions.map(region => {
-      const rings = region.contours.map(ring => ring.map(point => [point[0], point[1]] as [number, number]))
-      if (!rings.length || !rings[0]?.length) return session.kernel.empty2()
-      return session.kernel.polygon(
-        rings,
-        region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
-      )
-    })
-    const merged = sections.length === 0
-      ? session.kernel.empty2()
-      : sections.length === 1 ? sections[0] : session.kernel.boolean2('union', sections)
-    return { contours: bounded(session.kernel.polygons(merged)), warnings: parsed.warnings, widthMm: parsed.widthMm, heightMm: parsed.heightMm }
-  } finally {
-    session.dispose()
-  }
+  const parsed = await readSvgDocumentAsync(svg, options, 'profile')
+  return { contours: bounded(parsed.contours ?? []), warnings: parsed.warnings, widthMm: parsed.widthMm, heightMm: parsed.heightMm }
 }
 export function contoursSvg(contours: SvgContours): string {
   bounded(contours)
@@ -97,57 +80,15 @@ export async function meshSvgContours(meshes: readonly SvgProjectionMesh[], opti
       throw new Error('SVG projection requires a valid triangle mesh and affine transform.')
     }
   }
-  const faceId = face ? selected[0].faceIds[face.triangleIndex] : undefined
-  const includesTriangle = (mesh: SvgProjectionMesh, triangle: number) => !face
-    || (faceId === undefined ? triangle === face.triangleIndex : mesh.faceIds[triangle] === faceId)
-  // A small selected face remains exportable even in a large assembly.
-  let triangleCount = 0
-  for (const mesh of selected) for (let triangle = 0; triangle < mesh.indices.length / 3; triangle++) {
-    if (includesTriangle(mesh, triangle) && ++triangleCount > 20000) throw new Error('SVG projection is limited to 20000 triangles.')
-  }
-  const point = (mesh: SvgProjectionMesh, index: number): [number, number, number] => {
-    const vertex = mesh.indices[index]
-    if (!Number.isInteger(vertex) || vertex < 0 || vertex * 6 + 2 >= mesh.vertices.length) throw new Error('SVG projection contains an invalid vertex index.')
-    const position = transformPoint(mesh.transform, [mesh.vertices[vertex * 6], mesh.vertices[vertex * 6 + 1], mesh.vertices[vertex * 6 + 2]])
-    if (!position.every(Number.isFinite)) throw new Error('SVG projection contains non-finite coordinates.')
-    return position
-  }
-  let origin = [0, 0, 0]
-  let u = options.axis === 'x' ? [0, 1, 0] : [1, 0, 0]
-  let v = options.axis === 'z' || !options.axis ? [0, 1, 0] : [0, 0, 1]
-  let normal: number[] | undefined
-  if (face) {
-    const mesh = selected[0], triangle = face.triangleIndex
-    origin = point(mesh, triangle * 3)
-    const b = point(mesh, triangle * 3 + 1), c = point(mesh, triangle * 3 + 2)
-    const ab = b.map((x, i) => x - origin[i]), ac = c.map((x, i) => x - origin[i])
-    const length = Math.hypot(...ab)
-    normal = [ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0]]
-    const normalLength = Math.hypot(...normal)
-    if (!(normalLength > 0) || !Number.isFinite(normalLength)) throw new Error('Degenerate face.')
-    u = ab.map(x => x / length)
-    normal = normal.map(x => x / normalLength)
-    v = [normal[1] * u[2] - normal[2] * u[1], normal[2] * u[0] - normal[0] * u[2], normal[0] * u[1] - normal[1] * u[0]]
-  }
-  const triangles: SvgContours = []
-  for (const mesh of selected) for (let i = 0; i < mesh.indices.length; i += 3) {
-    if (!includesTriangle(mesh, i / 3)) continue
-    const ring = [0, 1, 2].map(j => {
-      const p = point(mesh, i + j).map((x, k) => x - origin[k])
-      if (normal && Math.abs(p.reduce((sum, x, k) => sum + x * normal![k], 0)) > 1e-5) {
-        throw new Error('The selected surface is not planar; use a projection.')
-      }
-      return [p.reduce((sum, x, k) => sum + x * u[k], 0), p.reduce((sum, x, k) => sum + x * v[k], 0)] as [number, number]
-    })
-    const area = (ring[1][0] - ring[0][0]) * (ring[2][1] - ring[0][1]) - (ring[1][1] - ring[0][1]) * (ring[2][0] - ring[0][0])
-    if (!Number.isFinite(area)) throw new Error('SVG projection coordinates exceed the numeric range.')
-    if (Math.abs(area) > 1e-12) triangles.push(area > 0 ? ring : ring.reverse())
-  }
-  if (!triangles.length) return bounded([])
-  const session = await defaultGeometryKernel.openEvalSession()
-  try {
-    return bounded(session.kernel.polygons(session.kernel.polygon(triangles, 'NonZero')))
-  } finally {
-    session.dispose()
-  }
+  await warmGeometryKernel()
+  return callGeometryRust<SvgContours>('mesh_svg_contours', {
+    meshes: selected.map(mesh => ({
+      vertexBits: new Uint32Array(mesh.vertices.buffer, mesh.vertices.byteOffset, mesh.vertices.length),
+      indices: mesh.indices,
+      transform: Array.from(mesh.transform),
+      faceIds: mesh.faceIds,
+    })),
+    axis: options.axis,
+    faceTriangle: face ? face.triangleIndex : undefined,
+  })
 }

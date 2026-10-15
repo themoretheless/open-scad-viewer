@@ -13,6 +13,7 @@ const OPS: &[&str] = &[
     "mesh_shell_sampled",
     "mesh_boolean",
     "mesh_section",
+    "mesh_svg_contours",
     "mesh_display_inspect",
     "mesh_hit_point",
     "mesh_hit_normal",
@@ -96,6 +97,7 @@ fn handle(v: Value) -> Result<Value> {
             },
         )?),
         // Mesh sections, planned toolpaths and validated G-code previews.
+        "mesh_svg_contours" => super::mesh_svg::contours(&v),
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;

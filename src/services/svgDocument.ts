@@ -18,6 +18,7 @@ export interface SvgOptions {
 
 export interface SvgDocumentResult {
   regions: { contours: [number, number][][]; fillRule: 'nonzero' | 'evenodd' }[]
+  contours?: [number, number][][]
   widthMm: number
   heightMm: number
   normalizedSvg: string
@@ -35,7 +36,7 @@ function fontBase64(bytes: Uint8Array): string {
 function prepareSvgDocument(
   source: string,
   options: SvgOptions = {},
-  action: 'parse' | 'preview' = 'parse',
+  action: 'parse' | 'preview' | 'profile' = 'parse',
   legacyDpi = false,
 ) {
   if (new TextEncoder().encode(source).length > SVG_MAX_BYTES) throw new Error('SVG exceeds 4 MiB.')
@@ -62,7 +63,7 @@ function prepareSvgDocument(
 export function readSvgDocument(
   source: string,
   options: SvgOptions = {},
-  action: 'parse' | 'preview' = 'parse',
+  action: 'parse' | 'preview' | 'profile' = 'parse',
   legacyDpi = false,
 ): SvgDocumentResult {
   return callGeometryRust<SvgDocumentResult>('svg', prepareSvgDocument(source, options, action, legacyDpi))
@@ -71,7 +72,7 @@ export function readSvgDocument(
 export async function readSvgDocumentAsync(
   source: string,
   options: SvgOptions = {},
-  action: 'parse' | 'preview' = 'parse',
+  action: 'parse' | 'preview' | 'profile' = 'parse',
   legacyDpi = false,
 ): Promise<SvgDocumentResult> {
   // Validate and capture mutable options/fonts before yielding to compilation.

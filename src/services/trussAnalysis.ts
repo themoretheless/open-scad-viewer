@@ -142,3 +142,5 @@ export function solveTrussNonlinear(
 ): TrussNonlinearResponse {
   return callGeometryRust<TrussNonlinearResponse>('truss_nonlinear', {...model, ...options})
 }
+
+
