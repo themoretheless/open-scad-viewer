@@ -2,7 +2,9 @@
 use crate::{Result,check};
 pub struct Approximation { pub fit:crate::helix::Approximation }
 #[cfg(feature="codec")]
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for Approximation{
+ #[cfg(feature = "codec")]
  fn to_value(&self)->value_codec::Value{
   value_codec::json!({"curve":self.fit.curve,"report":{"spans":self.fit.spans,"budget":self.fit.budget,
    "realArithmeticErrorEstimate":self.fit.real_arithmetic_error_estimate,"continuousBound":false,

@@ -7,7 +7,9 @@ pub struct Approximation {
     pub real_arithmetic_error_estimate: f64,
 }
 #[cfg(feature = "codec")]
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for Approximation {
+    #[cfg(feature = "codec")]
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"patches":self.patches,"report":{
             "spans":self.spans,"budget":self.budget,

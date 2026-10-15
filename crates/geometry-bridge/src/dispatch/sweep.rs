@@ -94,24 +94,10 @@ fn handle(v: Value) -> Result<Value> {
             sweep_cap_evidence::inspect(&field(&v,"model")?,&field::<Vec<usize>>(&v,"capFaces")?,field(&v,"maxWalls")?,
                 field(options,"tolerance")?,field(options,"maxProducts")?,field(options,"maxCells")?,field(options,"maxWork")?)
         }
-        "brep_miter_station_smoothness_audit" => {
-            let model = field(&v,"model")?; let caps: Vec<usize> = field(&v,"capFaces")?; let max_work = field(&v,"maxWork")?;
-            let report = brep_core::miter_seams::inspect(&model,&caps,max_work,true)?;
-            Ok(miter_smoothness::station(&report,max_work))
-        }
-        "brep_miter_profile_smoothness_audit" => {
-            let model = field(&v,"model")?; let caps: Vec<usize> = field(&v,"capFaces")?; let max_work = field(&v,"maxWork")?;
-            let report = brep_core::miter_seams::inspect_profile(&model,&caps,max_work)?;
-            Ok(miter_smoothness::profile(&report,max_work,!caps.is_empty()))
-        }
-        "brep_sweep_retained_decomposition_audit" => {
-            let r=brep_core::sweep_retained::decomposition(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?,field(&v,"maxProducts")?,field(&v,"maxFaces")?,field(&v,"maxExactWork")?)?;
-            Ok(json!({"certified":r.error_upper.is_some(),"wallErrorUpper":r.error_upper,"inspectedFaces":r.inspected_faces,"products":r.products,"reason":r.reason}))
-        }
-        "brep_sweep_retained_correspondence_audit" => {
-            let r=brep_core::sweep_retained::inspect(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?,field(&v,"maxFaces")?,field(&v,"maxExactWork")?)?;
-            Ok(json!({"exact":r.exact,"wallErrorUpper":if r.exact {Some(0)} else {None},"inspectedFaces":r.inspected_faces,"exactWork":r.work,"reason":r.reason}))
-        }
+        "brep_miter_station_smoothness_audit" => cad_sweep_smoothness::diagnose(v, false),
+        "brep_miter_profile_smoothness_audit" => cad_sweep_smoothness::diagnose(v, true),
+        "brep_sweep_retained_decomposition_audit" => cad_sweep_smoothness::diagnose_decomposition(v),
+        "brep_sweep_retained_correspondence_audit" => cad_sweep_smoothness::diagnose_correspondence(v),
         "brep_sweep_retained_cap_decomposition_audit" => {
             let r=brep_core::sweep_retained::cap_decomposition(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"endpoints")?,brep_core::sweep_cap_contacts::Budgets {
                 max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,

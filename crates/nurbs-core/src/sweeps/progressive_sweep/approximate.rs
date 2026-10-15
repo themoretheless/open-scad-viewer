@@ -1,4 +1,5 @@
 use super::*;
+
 pub fn approximate(
     profile: &Curve,
     path: &Curve,

@@ -95,18 +95,3 @@ mod tests {
         }
     }
 }
-
-impl crate::curve::Curve {
-    /// Typed control-point hull bounds (`bounds_value` keeps the wire form).
-    pub fn bounds(&self) -> Result<Bounds> {
-        self.validate()?;
-        from_points(&self.control_points)
-    }
-}
-impl crate::surface::Surface {
-    /// Typed control-point hull bounds (`bounds_value` keeps the wire form).
-    pub fn bounds(&self) -> Result<Bounds> {
-        self.validate()?;
-        from_points(&self.control_points.iter().flatten().cloned().collect::<Vec<_>>())
-    }
-}

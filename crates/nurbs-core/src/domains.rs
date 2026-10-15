@@ -63,7 +63,9 @@ pub mod surfaces {
     pub use crate::extrusion_patches;
     pub use crate::hermite_patch;
     pub use crate::natural_loft;
+    #[cfg(feature = "codec")]
     pub use crate::guided_loft;
+    #[cfg(feature = "codec")]
     pub use crate::loft_alignment;
     pub use crate::patches;
     pub use crate::scaled_sweep;
@@ -179,6 +181,7 @@ pub mod parameterization {
     pub use crate::chord_fill_selection;
     pub use crate::surface_parameter_bounds;
     pub use crate::trimmed_surface_distance;
+    #[cfg(feature = "codec")]
     pub use crate::loft_reparameterization;
     pub use crate::boundary_partition;
     pub use crate::bezier_extraction;

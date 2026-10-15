@@ -1,6 +1,6 @@
 //! Conditional boundary-set error composition. Premise provenance, topology,
 //! orientation and global embedding must be established independently.
-use crate::sweep_support::error_upper;
+use crate::numerics::error_upper;
 #[derive(Clone)]
 pub struct Premises {
     pub ideal_domains_certified: bool,

@@ -13,6 +13,12 @@ const OPS: &[&str] = &[
     "mesh_shell_sampled",
     "mesh_boolean",
     "mesh_section",
+    "mesh_display_inspect",
+    "mesh_hit_point",
+    "mesh_hit_normal",
+    "mesh_measure",
+    "mesh_editor",
+    "mesh_world_area",
     "mesh_inspect",
     "mesh_build_surfaces",
     "mesh_thicken",
@@ -103,6 +109,19 @@ fn handle(v: Value) -> Result<Value> {
                     "sourceTriangles": contour.source_triangles,
                 })).collect::<Vec<_>>(),
             }))
+        }
+        "mesh_display_inspect" | "mesh_hit_point" | "mesh_hit_normal" | "mesh_measure" => {
+            mesh_display::dispatch(v)
+        }
+        "mesh_editor" => mesh_editor::dispatch(v),
+        "mesh_world_area" => {
+            let state: [f64; 2] = field(&v, "state")?;
+            let mut area = mesh_topology::measure::SurfaceArea {
+                sum: state[0],
+                correction: state[1],
+            };
+            area.add_triangles(&field::<Vec<f64>>(&v, "points")?, field(&v, "matrix")?)?;
+            encode([area.sum, area.correction])
         }
         "mesh_inspect" => encode(field::<Mesh>(&v, "mesh")?.inspect()?),
         "mesh_build_surfaces" => print_geometry::dispatch(v),

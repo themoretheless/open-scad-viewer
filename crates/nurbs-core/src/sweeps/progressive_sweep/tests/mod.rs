@@ -1,5 +1,59 @@
 use super::*;
-pub(super) fn law(a: f64, b: f64) -> Curve {
+
+#[test]
+fn contact_union_work_exhaustion_keeps_only_known_profile_refusal_bound() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    for profile_count in [32,64] {
+    let profiles=vec![profile.clone();profile_count];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let guide=crate::primitives::line([2.,0.,0.],[2.,0.,10.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    let opts=Options {max_sections:9,max_deviation:1e-30,..options()};
+    let level=MultiSweep::new(&profiles,&path,&scale,&twist,opts).unwrap()
+        .with_contact_guide(&guide,0,1.).unwrap().preview_at(9).unwrap();
+    assert!(!level.report.accepted);
+    assert_eq!(level.report.sampled_control_deviation,0.);
+    if profile_count==32 {
+        // Reused original position/offset work now fits this complete union;
+        // a proven upper above the tiny tolerance still refuses acceptance.
+        assert!(level.report.continuous_bound);
+        assert!(level.report.continuous_error_upper.unwrap()>opts.max_deviation);
+    }else{
+        assert!(!level.report.continuous_bound);
+        assert!(level.report.continuous_error_upper.is_none());
+    }
+    assert!(level.report.known_profile_error_upper.unwrap()>opts.max_deviation);
+    assert!(level.report.error_certificate_cells<=10000);
+    }
+}
+
+#[test]
+fn contact_anchor_preserves_original_reference_profile_across_all_contours() {
+    let profiles = vec![
+        crate::primitives::line([0.5, 0., 0.], [1., 0., 0.]).unwrap(),
+        crate::primitives::line([1., 0., 0.], [2., 0., 0.]).unwrap(),
+    ];
+    let path = crate::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let guide = crate::primitives::line([2., 0., 0.], [2., 0., 10.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let multi = MultiSweep::new(&profiles, &path, &scale, &twist, options())
+        .unwrap().with_contact_guide(&guide, 1, 1.).unwrap();
+    for sweep in &multi.sweeps {
+        let (source, parameter) = sweep.contact_source.unwrap();
+        assert!(std::ptr::eq(source, &profiles[1]));
+        assert_eq!(parameter, 1.);
+        assert_eq!(sweep.contact_point, Some([2., 0., 0.]));
+        let fitted = sweep.contact_fit_jet([0.25, 0.5], 100).unwrap();
+        assert!(fitted.reason.is_none());
+        let value = fitted.fit.unwrap().value.unwrap();
+        assert!(value[0] <= 1. && 1. <= value[1]);
+    }
+    let reoriented = multi.with_orientation_guide(&guide).unwrap();
+    assert!(reoriented.sweeps.iter().all(|s| s.contact_source.is_none() && s.contact_point.is_none()));
+}
+fn law(a: f64, b: f64) -> Curve {
     Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],

@@ -1,10 +1,10 @@
 //! Native approximate edit decisions and rollback results.
 use super::periodic_edits::SeamCertificate;
-use super::{Axis, Curve, Result, Surface, ToleranceContext, check, numeric};
-use super::common::{
-    context, exact_curve, exact_surface, rebuild_candidate, rebuild_surface_error, refit_curve,
+use super::{
+    Axis, Curve, Result, Surface, ToleranceContext, check, context,
+    exact_curve, exact_surface, numeric, rebuild_candidate, rebuild_surface_error,
+    refit_curve, seam_certificate,
 };
-use super::periodic_edits::seam_certificate;
 #[cfg(feature = "codec")]
 pub mod serialization;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,10 +1,10 @@
 //! Global distance between complete positive-weight tensor-product surfaces.
 //! All nonempty knot rectangles and their pairings remain covered until pruned
 //! by a proven lower bound. Trimmed B-rep faces need additional domain handling.
+use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};
 use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::{Result, check, resource, surface::Surface};
 #[cfg(feature = "codec")]
-#[path="surface_distance/serialization.rs"]
 mod serialization;
 
 fn spans(degree: usize, knots: &[f64], count: usize) -> Vec<usize> {
@@ -614,5 +614,3 @@ pub fn nearest_point(
         cells: report.cells,
     })
 }
-
-use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};

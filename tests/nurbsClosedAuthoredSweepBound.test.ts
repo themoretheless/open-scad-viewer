@@ -33,7 +33,7 @@ it.each(['parameter','arc_length'] as const)('certifies the actual closed author
  const volume=inspectSweepVolume(body.model,[],DEFAULT_SWEEP_VOLUME_BUDGETS)
  expect(volume).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,
   allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true}})
- expect(volume.orientations).toEqual([{shell:0,expectedOutward:true,outward:true,attempts:expect.any(Number)}])
+ expect(volume.orientations).toMatchObject([{shell:0,expectedOutward:true,outward:true,attempts:expect.any(Number),normalMethods:expect.any(Array),unresolved:[]}])
 },60000)
 it('certifies a closed circular profile with rotating original authored axes within the shared budget',()=>{
  const rotatingAxis={degree:path.degree,knots:path.knots,weights:path.weights,

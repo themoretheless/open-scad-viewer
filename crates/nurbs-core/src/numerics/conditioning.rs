@@ -48,7 +48,7 @@ pub fn curve(source: &Curve) -> Result<Report> {
     source.validate()?;
     Ok(report(
         source.weights.iter().copied(),
-        crate::bounds::from_points(&source.control_points)?,
+        source.bounds()?,
         vec![span(
             &source.knots,
             source.degree,
@@ -60,7 +60,7 @@ pub fn surface(source: &Surface) -> Result<Report> {
     source.validate()?;
     Ok(report(
         source.weights.iter().flatten().copied(),
-        crate::bounds::from_points(&source.control_points.iter().flatten().map(|p|p.to_vec()).collect::<Vec<_>>())?,
+        source.bounds()?,
         vec![
             span(
                 &source.knots_u,

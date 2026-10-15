@@ -14,6 +14,7 @@ pub struct Diagnostics {
     pub total_pairs: usize,
 }
 impl Diagnostics {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> Value {
         json!({"scope":"represented-offset-chain","method":"outward-line-pair-interval-exact/2",
             "crossings":self.crossings,"contacts":self.contacts,"uncertain":self.uncertain,

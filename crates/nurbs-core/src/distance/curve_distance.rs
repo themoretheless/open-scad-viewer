@@ -1,9 +1,9 @@
 //! Global distance bounds for positive-weight NURBS curves. Each nonempty knot
 //! span is enclosed by interval de Boor evaluation; no display mesh is used.
+use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};
 use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::{Result, check, curve::Curve, resource};
 #[cfg(feature = "codec")]
-#[path="curve_distance/serialization.rs"]
 mod serialization;
 
 /// Homogeneous de Boor, with outward rounding of every arithmetic operation.
@@ -649,5 +649,3 @@ pub fn nearest_point(
         cells: report.cells,
     })
 }
-
-use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};

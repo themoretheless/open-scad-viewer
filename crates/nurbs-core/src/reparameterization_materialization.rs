@@ -1,7 +1,7 @@
 //! Algebraic span composition with bounded, representable knot preimages.
 //! The final gate compares against the original source and entire authored map.
 use super::{
-    LegacyMapPiece, bound_reparameterization_preimages, budget_controls, certify_reparameterization,
+    MapPiece, bound_reparameterization_preimages, budget_controls, certify_reparameterization,
     certify_reparameterized_curve_retention, compose_bezier_with_piece, map_pieces,
 };
 use crate::{Result, check, curve::Curve};
@@ -54,7 +54,7 @@ fn join(parts: Vec<Curve>, tolerance: f64) -> Result<Curve> {
     Ok(result)
 }
 
-fn piece(curve: &Curve, piece: &LegacyMapPiece, preimages: &mut Vec<Value>) -> Result<Vec<Curve>> {
+fn piece(curve: &Curve, piece: &MapPiece, preimages: &mut Vec<Value>) -> Result<Vec<Curve>> {
     if piece.values.len() == 2 && piece.weights[0] == piece.weights[1] {
         let mut result = curve.trim(piece.range[0], piece.range[1])?;
         for knot in &mut result.knots {
@@ -123,7 +123,7 @@ fn piece(curve: &Curve, piece: &LegacyMapPiece, preimages: &mut Vec<Value>) -> R
     Ok(result)
 }
 
-fn restrict_piece(piece: &LegacyMapPiece, domain: [f64; 2], range: [f64; 2]) -> Result<LegacyMapPiece> {
+fn restrict_piece(piece: &MapPiece, domain: [f64; 2], range: [f64; 2]) -> Result<MapPiece> {
     // Scalar map controls are parameters, not geometric coordinates. Keep
     // their homogeneous subdivision independent of Curve's coordinate cap.
     let split = |net: &[[f64; 2]], parameter: f64| {
@@ -168,7 +168,7 @@ fn restrict_piece(piece: &LegacyMapPiece, domain: [f64; 2], range: [f64; 2]) -> 
         values.iter().all(|v| v.is_finite()) && weights.iter().all(|&w| w.is_finite() && w > 0.),
         "Map subdivision left its finite positive representation window",
     )?;
-    Ok(LegacyMapPiece {
+    Ok(MapPiece {
         domain,
         range,
         values,

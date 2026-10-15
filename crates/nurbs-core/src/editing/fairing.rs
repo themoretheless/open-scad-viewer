@@ -584,3 +584,4 @@ mod tests {
         assert!(measure_fairness_report(&noisy_cubic(), 300).is_err());
     }
 }
+

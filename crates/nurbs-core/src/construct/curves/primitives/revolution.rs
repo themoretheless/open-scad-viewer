@@ -1,7 +1,7 @@
 //! Surfaces of revolution and extruded side surfaces built on conic profiles:
 //! cylinders, cones, spheres, ellipsoids, hyperboloids and tori. No caps.
 use crate::{Result, check, curve::Curve, surface::{Surface, revolve}};
-use super::{ellipse_arc, hyperbola};
+use super::conics::{ellipse_arc, hyperbola};
 
 fn radii(values: &[f64]) -> Result<()> {
     check(

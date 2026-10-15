@@ -1,12 +1,12 @@
 //! Certified inverse brackets for nonlinear knot splitting. These brackets are
 //! not representable exact knots and must not be promoted to exact materialization.
-use super::{LegacyMapPiece, certify_reparameterization, map_pieces};
+use super::{MapPiece, certify_reparameterization, map_pieces};
 use crate::distance_bounds::Interval as I;
 use crate::{Result, check, numeric, resource};
 use value_codec::{Value, json};
 
 pub(super) enum Map {
-    Pieces(Vec<LegacyMapPiece>),
+    Pieces(Vec<MapPiece>),
     Composition(Vec<Map>),
 }
 impl Map {
@@ -86,7 +86,7 @@ fn de_casteljau(mut controls: Vec<I>, t: I) -> Result<I> {
     }
     Ok(controls[0])
 }
-fn derivative_piece(piece: &LegacyMapPiece, input: I) -> Result<I> {
+fn derivative_piece(piece: &MapPiece, input: I) -> Result<I> {
     let extent = I::point(piece.domain[1]).sub(I::point(piece.domain[0]))?;
     let t = input
         .sub(I::point(piece.domain[0]))?
@@ -121,7 +121,7 @@ fn derivative_piece(piece: &LegacyMapPiece, input: I) -> Result<I> {
 fn choose(n: usize, k: usize) -> u64 {
     (0..k.min(n - k)).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
-pub(super) fn prove_increasing(piece: &LegacyMapPiece) -> Result<[f64; 2]> {
+pub(super) fn prove_increasing(piece: &MapPiece) -> Result<[f64; 2]> {
     // Pairwise form of P'Q-PQ' avoids subtracting two large products.
     // Its degree is 2*n-2; all arithmetic encloses the authored binary64 data.
     let n = piece.values.len() - 1;
@@ -180,7 +180,7 @@ pub(super) fn prove_increasing(piece: &LegacyMapPiece) -> Result<[f64; 2]> {
         .div(I::point(piece.domain[1]).sub(I::point(piece.domain[0]))?)?;
     Ok([physical.lo, physical.hi])
 }
-fn enclose_piece(piece: &LegacyMapPiece, input: I) -> Result<I> {
+fn enclose_piece(piece: &MapPiece, input: I) -> Result<I> {
     // Authored endpoints are exact real ratios (value*weight)/weight.
     if input.lo == input.hi {
         if input.lo == piece.domain[0] {
@@ -348,7 +348,7 @@ mod monotonicity_tests {
     use super::*;
     #[test]
     fn subdivision_proves_positive_derivative_with_negative_control() {
-        let piece = LegacyMapPiece {
+        let piece = MapPiece {
             domain: [0., 1.],
             range: [0., 1.],
             values: vec![0., 1., 0., 1.],
@@ -356,7 +356,7 @@ mod monotonicity_tests {
         };
         // This derivative vanishes at 1/2 and must refuse.
         assert!(prove_increasing(&piece).is_err());
-        let piece = LegacyMapPiece {
+        let piece = MapPiece {
             values: vec![0., 0.6, 0.4, 1.],
             ..piece
         };
@@ -365,7 +365,7 @@ mod monotonicity_tests {
     }
     #[test]
     fn pairwise_derivative_avoids_large_weight_cancellation() {
-        let piece = LegacyMapPiece {
+        let piece = MapPiece {
             domain: [0., 1.],
             range: [0., 1.],
             values: vec![0., 1.],

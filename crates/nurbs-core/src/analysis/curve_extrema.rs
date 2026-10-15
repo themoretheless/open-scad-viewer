@@ -314,7 +314,7 @@ fn tight_box(curve: &Curve, tolerance: f64) -> Result<Bounds> {
         .collect::<Result<Vec<_>>>()?;
     let mut tight = from_points(&points)?;
     // Evaluation rounding stays inside the positive-weight control hull.
-    let control = from_points(&curve.control_points)?;
+    let control = curve.bounds()?;
     for axis in 0..dimension {
         tight.min[axis] = next_down(tight.min[axis].max(control.min[axis]));
         tight.max[axis] = next_up(tight.max[axis].min(control.max[axis]));
@@ -358,7 +358,7 @@ mod tests {
     fn parabola_tight_bounds_shrink_control_box_to_analytic_answer() {
         // y(t) = 2t(1−t) peaks at y = 1/2 for t = 1/2; x(t) = 2t is monotone.
         let curve = quadratic(&[[0., 0.], [1., 1.], [2., 0.]]);
-        let control = from_points(&curve.control_points).unwrap();
+        let control = curve.bounds().unwrap();
         assert_eq!(control.max[1], 1.);
         let extrema = axis_extrema(&curve, 1).unwrap();
         assert_eq!(extrema.len(), 1);

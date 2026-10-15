@@ -7,7 +7,9 @@ pub struct Approximation {
     pub hermite_error_estimate: f64,
 }
 #[cfg(feature = "codec")]
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for Approximation {
+    #[cfg(feature = "codec")]
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"curve":self.fit.curve,"report":{
             "spans":self.fit.spans,"budget":self.fit.budget,

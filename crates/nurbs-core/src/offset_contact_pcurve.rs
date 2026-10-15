@@ -25,6 +25,7 @@ pub struct Report {
     pub reason: &'static str,
 }
 impl Report {
+    #[cfg(feature = "codec")]
     pub fn to_value(&self) -> value_codec::Value {
         use value_codec::json;
         json!({"method":"interval-contact-pcurve-correspondence","scope":"original-source-parameter-branch","side":self.side,

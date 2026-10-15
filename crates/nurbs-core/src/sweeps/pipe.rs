@@ -20,7 +20,7 @@ pub fn checked(
     require_finite_point(&initial_normal, "initial_normal")?;
     let (center, tangent) = crate::framed_sweep::sample(path, path.domain()[0])?;
     let profile = crate::primitives::circle(center, tangent, radius)?;
-    crate::sweeps::framed_sweep::checked_sweep(&profile, path, initial_normal, sections, max_deviation)
+    crate::framed_sweep::checked_sweep(&profile, path, initial_normal, sections, max_deviation)
 }
 
 /// Radius law is a positive rational scalar curve encoded as [radius,0,0].
