@@ -95,7 +95,6 @@ export function extractSemanticEdges(
   )
 }
 
-import { runGpuSemanticEdges } from './gpuSemanticEdges'
 
 function validateIndices(indices: Uint32Array, vertexCount: number) {
   for (let i = 0; i < indices.length; i++) {
@@ -126,6 +125,7 @@ export async function extractSemanticEdgesGpu(
       triangleIndices.length % 3 === 0 &&
       Number.isFinite(requestedCreaseAngle)
     ) {
+      const { runGpuSemanticEdges } = await import('./gpuSemanticEdges')
       const gpuResult = await runGpuSemanticEdges(vertices, triangleIndices, {
         strideFloats: VERTEX_STRIDE,
         creaseAngleDegrees: clamp(requestedCreaseAngle, 0, 180),

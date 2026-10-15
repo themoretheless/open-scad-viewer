@@ -90,5 +90,4 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
   context.fillText(`Y ${bounds.min[1].toFixed(2)} … ${bounds.max[1].toFixed(2)} mm`, 0, 0); context.restore()
 }
 
-export { runGpuFilterGcodeSegments, referenceFilterGcodeSegments, type GcodeFilterOptions, type GcodeSegmentFilterResult } from './gpuGcodePreview'
 

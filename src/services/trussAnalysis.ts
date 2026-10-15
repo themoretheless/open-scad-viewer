@@ -143,5 +143,4 @@ export function solveTrussNonlinear(
   return callGeometryRust<TrussNonlinearResponse>('truss_nonlinear', {...model, ...options})
 }
 
-export { runGpuTrussSolver, referenceSolveTrussPcg, assembleTrussCsr, type TrussPcgOptions } from './gpuTrussSolver'
 

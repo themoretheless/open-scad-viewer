@@ -81,7 +81,7 @@ export function transformNurbsSurface(surface:NurbsSurface,matrix:number[][]):Nu
 
 export function transformNurbsSurfacePatches(patches:NurbsSurface[],matrix:number[][]):NurbsSurface[] {return callNurbsRust("patches_affine",{patches,matrix})}
 
-import { runGpuNurbsTessellate, type GpuNurbsTessellationResult } from './gpuNurbsTessellate'
+import type { GpuNurbsTessellationResult } from './gpuNurbsTessellate'
 
 /**
  * Evaluates and tessellates a tensor-product rational B-spline surface on the
@@ -113,6 +113,7 @@ export async function tessellateNurbsSurfaceOnGpu(
     }
   }
 
+  const { runGpuNurbsTessellate } = await import('./gpuNurbsTessellate')
   return runGpuNurbsTessellate(
     {
       degreeU: surface.degreeU,
