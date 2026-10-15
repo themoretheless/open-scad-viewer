@@ -1,0 +1,19 @@
+{
+  "scope": "finite independent OCCT topology and exact retained bilinear-span volume; no ideal-motion proof",
+  "passed": true,
+  "valid": true,
+  "faces": 6,
+  "shells": 1,
+  "solids": 1,
+  "expectedVolume": 63.987006274872975,
+  "expectedExact": [
+    "15573728046940840590346545594009415",
+    "243388915243820045087367015432192"
+  ],
+  "volume": 63.98700627487298,
+  "volumeError": 7.105427357601002e-15,
+  "integrationEstimate": 1.356214676439547e-16,
+  "fixtureSha256": "70d42128ec48ca6e8d73d4f67026ca7c4e8511411321a869f0785ee9eda9c480",
+  "stepSha256": "1f5917ee3af552ba417be6d2e3c6ce76095a8484d5cd81fb48afc18e85041925",
+  "oracleSha256": "05aca5ea3ab6d70004662c4a9502fc1b6682e54e273cf3f70caafc0785a8acc2"
+}

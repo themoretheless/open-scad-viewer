@@ -1,0 +1,36 @@
+{
+  "schema": "native-test-partition/1",
+  "complete": true,
+  "disjoint": true,
+  "full": {
+    "cases": 5799,
+    "sha256": "f7ef351dc2ecb123df997f46348b62fbecd4c26cd2bd28ada489160a86417dcf"
+  },
+  "serial": {
+    "cases": 44,
+    "sha256": "ad34329795ab5212c023871dcced19c155431428d7b97eb192db447ab8642ee8"
+  },
+  "parallel": {
+    "cases": 5755,
+    "sha256": "7326aae1e41cbb108aed5fd9b8e091217153c310671d766fc2dd1e11dbbe0c49"
+  },
+  "selector": "aag",
+  "qualificationClaim": "none",
+  "logs": [
+    {
+      "path": "/tmp/osv-general-merged-catalog-full-v1.log",
+      "sha256": "1ba7c412fc2b9d2808d8186376dbc2a820a25cfcf76c092a46329f54732a6753",
+      "byteLength": 553160
+    },
+    {
+      "path": "/tmp/osv-general-merged-catalog-serial-v1.log",
+      "sha256": "8c4761eeabf2c964185378a3c6ef593ab724d7377cfb586841f1affc434096cd",
+      "byteLength": 74026
+    },
+    {
+      "path": "/tmp/osv-general-merged-catalog-parallel-v1.log",
+      "sha256": "662d4b1e497bd15344a2c969d546a7aee049766485aa0a329e5dfcfbb60c1071",
+      "byteLength": 550535
+    }
+  ]
+}
