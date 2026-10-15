@@ -40,7 +40,9 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # The merged kernel rebuild measured 14m40 and the complete Node suite 28m49.
+    # Allow cold builds and packaging; individual test deadlines/proof budgets stay fixed.
+    timeout-minutes: 60
     # Bound glibc's retained allocator arenas across disposable Node workers.
     # The memory probe keeps its original 4+24 jobs and byte/slope limits.
     env:

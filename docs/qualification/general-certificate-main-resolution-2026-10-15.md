@@ -66,3 +66,8 @@ mismatch is retained as a diagnostic, never converted into a passing assertion.
 The intersection query codec module retains its explicit `cfg(feature = "codec")`
 gate, matching the restored optional dependency; typed native queries compile
 without importing transport serialization. Default-feature behavior is unchanged.
+
+The Node CI job allowance is 60 minutes: the observed merged-kernel rebuild
+alone took 14m40 and the preceding complete local Node invocation took 28m49,
+exceeding the former 40-minute combined-job allowance before packaging. Individual
+test deadlines, mathematical work limits and every test remain unchanged.
