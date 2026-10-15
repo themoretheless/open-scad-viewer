@@ -4,6 +4,8 @@
 //! spurious exp(total curvature) multiplier. Each cell encloses the original
 //! omega, then charges variation and a constant-skew quadratic remainder.
 //! This is an uncorrected source-normal cover, not a sweep/Solid certificate.
+mod frame_jets;
+pub(in crate::sweeps::progressive_sweep) use frame_jets::frame_jets;
 use super::endpoint_jets;
 use crate::numerics::interval_vec3::{Vec3, add, cross, div, dot_tight, norm, scale, sub};
 use crate::sweeps::progressive_miter::{

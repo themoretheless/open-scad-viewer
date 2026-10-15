@@ -146,7 +146,12 @@ pub(super) fn original_jets(
     t: [f64; 2],
     max: usize,
     offset: Option<&Curve>,
+    transport: Option<&OriginalRmfTransportReport>,
 ) -> Result<Option<frame::Report>> {
+    if let Some(transport) = transport {
+        return super::super::rmf_transport::frame_jets(transport, s.path, s.twist, t, max)
+            .map(Some);
+    }
     if let Some((a, n)) = s.frame_laws {
         return frame::certify_twisted(a, n, s.twist, t, max).map(Some);
     }
@@ -236,4 +241,17 @@ mod tests {
         assert!(exact_offset(&p, &g, &mut work, 5).unwrap().is_none());
         assert_eq!(work, 0);
     }
+}
+
+/// Children cover the entire parent including the shared binary64 boundary.
+pub(super) fn split_axis(b: Box3, axis: usize) -> Option<[Box3; 2]> {
+    let mid = crate::distance_bounds::midpoint(b[axis][0], b[axis][1]);
+    if !(b[axis][0] < mid && mid < b[axis][1]) {
+        return None;
+    }
+    let mut left = b;
+    let mut right = b;
+    left[axis][1] = mid;
+    right[axis][0] = mid;
+    Some([left, right])
 }

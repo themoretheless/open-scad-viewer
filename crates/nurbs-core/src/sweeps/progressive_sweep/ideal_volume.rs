@@ -28,6 +28,9 @@ pub struct IdealVolumeReport {
     pub projection: [[f64; 3]; 3],
     pub reason: Option<&'static str>,
 }
+mod arc;
+mod arc_frames;
+mod cell;
 mod charts;
 use charts::*;
 impl MultiSweep<'_> {
@@ -70,10 +73,6 @@ impl MultiSweep<'_> {
         let s = &self.sweeps[0];
         if self.source_is_closed()? {
             out.reason = Some("ideal-volume-closed-quotient-required");
-            return Ok(out);
-        }
-        if s.options.spacing != Spacing::Parameter {
-            out.reason = Some("ideal-volume-arc-jets-unproved");
             return Ok(out);
         }
         if !surface_c0(caps[0])
@@ -143,132 +142,149 @@ impl MultiSweep<'_> {
         } else {
             None
         };
-        let mut pending = vec![[[0., 1.]; 3]];
+        let transport = if s.frame_laws.is_none()
+            && s.orientation_guide.is_none()
+            && s.options.orientation == Orientation::RotationMinimizing
+        {
+            if let Some([steps, _, _]) = s.spatial_rmf_error_limits {
+                let report = super::rmf_transport::certify_original_rmf_transport(
+                    s.path,
+                    s.options.normal,
+                    steps,
+                    max_cells - out.cells,
+                    max_exact_work - out.exact_work,
+                    false,
+                )?;
+                out.cells += report.cells;
+                out.exact_work += report.exact_work;
+                if report.status != Status::Certified {
+                    out.reason = report.reason;
+                    return Ok(out);
+                }
+                Some(report)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let arc = if s.options.spacing != Spacing::Parameter {
+            let Some(map) = arc::ArcMap::build(s.path, &mut out.cells, max_cells)? else {
+                out.reason = Some("ideal-volume-original-arc-map-unproved");
+                return Ok(out);
+            };
+            Some(map)
+        } else {
+            None
+        };
+        let mut shared_guide = false;
+        let guide_arc = if arc.is_some() {
+            if let Some(guide) = s.orientation_guide {
+                let identity = super::arc_guide::certify(s.path, guide, max_cells - out.cells)?;
+                out.cells += identity.cells;
+                shared_guide = identity.scale_upper.is_some();
+                if shared_guide {
+                    None
+                } else {
+                    let Some(map) = arc::ArcMap::build(guide, &mut out.cells, max_cells)? else {
+                        out.reason = Some("ideal-volume-guide-arc-map-unproved");
+                        return Ok(out);
+                    };
+                    Some(map)
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let context = cell::Context {
+            s,
+            caps,
+            basis,
+            start,
+            zero,
+            offset,
+            anchor,
+            transport,
+            arc,
+            guide_arc,
+            shared_guide,
+        };
+        let mut pending = vec![([[0., 1.]; 3], None)];
         let mut lower = f64::INFINITY;
-        while let Some(b) = pending.pop() {
+        while let Some((b, cached)) = pending.pop() {
+            let bound = if let Some(bound) = cached {
+                bound
+            } else {
+                context.bound(b, projection, &mut out, max_cells)?
+            };
+            match bound {
+                cell::Bound::Lower(value) if value > 0. => {
+                    lower = lower.min(value);
+                    continue;
+                }
+                cell::Bound::Unsupported(reason) => {
+                    out.reason = Some(reason);
+                    return Ok(out);
+                }
+                _ => {}
+            }
             if out.cells == max_cells {
                 return Ok(out);
             }
-            out.cells += 1;
-            out.boxes += 1;
-            let Some(a) = cap_jets(caps[0], [b[0], b[1]], &mut out.cells, max_cells)? else {
-                return Ok(out);
-            };
-            let Some(z) = cap_jets(caps[1], [b[0], b[1]], &mut out.cells, max_cells)? else {
-                return Ok(out);
-            };
-            let t = I::new(b[2][0], b[2][1])?;
-            let one = I::point(1.).sub(t)?;
-            let mut q = [[I::point(0.); 3]; 3];
-            for j in 0..3 {
-                q[j] = local(iv::add(iv::scale(a[j], one)?, iv::scale(z[j], t)?)?, basis)?;
-            }
-            // q[0] is an affine position, q[1..] are linear differential vectors.
-            q[0] = iv::sub(q[0], local(start, basis)?)?;
-            let qt = local(iv::sub(z[0], a[0])?, basis)?;
-            let fit = if let Some(anchor) = anchor {
-                let fit = if let Some(offset) = &offset {
-                    frame::certify_contact_fit(
-                        &zero,
-                        offset,
-                        s.scale,
-                        s.affine_laws,
-                        anchor,
-                        b[2],
-                        max_cells - out.cells,
-                    )?
-                } else {
-                    frame::certify_contact_fit(
-                        s.path,
-                        s.orientation_guide.unwrap(),
-                        s.scale,
-                        s.affine_laws,
-                        anchor,
-                        b[2],
-                        max_cells - out.cells,
-                    )?
+            if caps[0] != caps[1] {
+                let axis = (0..3)
+                    .max_by(|&i, &j| (b[i][1] - b[i][0]).total_cmp(&(b[j][1] - b[j][0])))
+                    .unwrap();
+                let Some(children) = split_axis(b, axis) else {
+                    out.reason = Some("ideal-volume-precision-limit");
+                    return Ok(out);
                 };
-                out.cells += fit.cells;
-                if fit.status != Status::Certified {
-                    return Ok(out);
-                }
-                let value = fit.value.unwrap();
-                if value[0] <= 0. {
-                    out.reason = Some("ideal-volume-contact-positivity-unproved");
-                    return Ok(out);
-                }
-                Some([
-                    I::new(value[0], value[1])?,
-                    I::new(fit.first.unwrap()[0], fit.first.unwrap()[1])?,
-                    I::new(fit.second.unwrap()[0], fit.second.unwrap()[1])?,
-                ])
-            } else {
-                None
-            };
-            let Some(mut f) = original_jets(s, b[2], max_cells - out.cells, offset.as_ref())?
-            else {
-                out.reason = Some("ideal-volume-original-frame-jets-unproved");
-                return Ok(out);
-            };
-            let actual = frame::control_trajectories_with_fit(
-                s.path,
-                s.scale,
-                s.affine_laws,
-                &[encode(q[0])],
-                b[2],
-                max_cells - out.cells,
-                f.clone(),
-                fit,
-            )?;
-            out.cells += actual.cells;
-            let Some(actual) = actual.jets else {
-                return Ok(out);
-            };
-            // Reuse the SAME original frame enclosure without charging its
-            // source work twice. UV derivatives have no positional translation
-            // or center, so do not subtract independent wide position boxes.
-            f.cells = 0;
-            let affine = s.affine_laws.map(|(a, _)| (a, &zero));
-            let linear = frame::control_trajectories_with_fit(
-                &zero,
-                s.scale,
-                affine,
-                &[encode(q[1]), encode(q[2]), encode(qt)],
-                b[2],
-                max_cells - out.cells,
-                f,
-                fit,
-            )?;
-            out.cells += linear.cells;
-            let Some(linear) = linear.jets else {
-                return Ok(out);
-            };
-            let columns = [
-                decode(linear[0].value)?,
-                decode(linear[1].value)?,
-                iv::add(decode(actual[0].first)?, decode(linear[2].value)?)?,
-            ];
-            let bound = margin(columns, projection)?;
-            if bound > 0. {
-                lower = lower.min(bound);
+                pending.push((children[1], None));
+                pending.push((children[0], None));
                 continue;
             }
-            // Deterministic longest normalized side. Children cover the parent
-            // including their shared boundary; every failed parent is charged.
-            let axis = (0..3)
-                .max_by(|&i, &j| (b[i][1] - b[i][0]).total_cmp(&(b[j][1] - b[j][0])))
-                .unwrap();
-            let mid = crate::distance_bounds::midpoint(b[axis][0], b[axis][1]);
-            if !(b[axis][0] < mid && mid < b[axis][1]) {
+            // Native lookahead chooses the split that most improves the worst
+            // child bound. Every attempted child is charged, even discarded
+            // axes. Cache the chosen pair, so no proof is repeated for credit.
+            let mut axes = [0, 1, 2];
+            axes.sort_by(|&i, &j| (b[j][1] - b[j][0]).total_cmp(&(b[i][1] - b[i][0])));
+            let mut best = None;
+            let mut best_score = f64::NEG_INFINITY;
+            for axis in axes {
+                let Some(children) = split_axis(b, axis) else {
+                    continue;
+                };
+                let left = context.bound(children[0], projection, &mut out, max_cells)?;
+                let right = context.bound(children[1], projection, &mut out, max_cells)?;
+                for bound in [left, right] {
+                    if let cell::Bound::Unsupported(reason) = bound {
+                        out.reason = Some(reason);
+                        return Ok(out);
+                    }
+                }
+                let score = match (left, right) {
+                    (cell::Bound::Lower(a), cell::Bound::Lower(b)) => a.min(b),
+                    _ => f64::NEG_INFINITY,
+                };
+                if best.is_none() || score > best_score {
+                    best = Some((children, [left, right]));
+                    best_score = score;
+                }
+                if score > 0. {
+                    break;
+                }
+                if out.cells == max_cells {
+                    return Ok(out);
+                }
+            }
+            let Some((children, bounds)) = best else {
                 out.reason = Some("ideal-volume-precision-limit");
                 return Ok(out);
-            }
-            let mut left = b;
-            let mut right = b;
-            left[axis][1] = mid;
-            right[axis][0] = mid;
-            pending.push(right);
-            pending.push(left);
+            };
+            pending.push((children[1], Some(bounds[1])));
+            pending.push((children[0], Some(bounds[0])));
         }
         out.embedding_certified = true;
         out.regularity_certified = true;

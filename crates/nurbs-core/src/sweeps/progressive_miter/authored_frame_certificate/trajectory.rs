@@ -389,6 +389,12 @@ pub(crate) fn control_trajectories_with_fit(
     path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
     traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,
 )->Result<TrajectoriesReport>{
+    control_trajectories_with_phase(path,scale,affine,qs,traversal,max_cells,frame,transverse_fit,PathPhase::identity(traversal))
+}
+pub(crate) fn control_trajectories_with_phase(
+    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
+    traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,path_phase:PathPhase,
+)->Result<TrajectoriesReport>{
     check(
         max_cells <= 100000 && frame.cells <= max_cells,
         "Control trajectory work exceeds budget",
@@ -408,12 +414,12 @@ pub(crate) fn control_trajectories_with_fit(
         return Ok(out);
     }
     out.reason = Some("path-law-enclosure-unresolved");
-    let p = vector_certificate::certify_traversal(path, traversal, max_cells - out.cells, false)?;
+    let p = vector_certificate::certify_traversal(path, path_phase.traversal, max_cells - out.cells, false)?;
     out.cells += p.cells;
     if p.status != Status::Certified {
         return Ok(out);
     }
-    let path_jet = jet(path, &p)?;
+    let path_jet = super::phase::path_position(jet(path, &p)?,path_phase)?;
     out.reason = Some("scale-law-enclosure-unresolved");
     let s = super::super::scalar_certificate::certify_traversal(
         scale,

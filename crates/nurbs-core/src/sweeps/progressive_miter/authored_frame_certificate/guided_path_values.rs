@@ -382,14 +382,10 @@ fn path_guide_jets(path:&Curve,guide:&Curve,twist:&Curve,traversal:[f64;2],max_c
     let width = I::point(b).sub(I::point(a))?;
     let jerk = mul(decode(p.third.unwrap())?, width.mul(width)?.mul(width)?)?;
     out.reason = Some("path-tangent-nonzero-unproved");
-    let Some(t) = normalize(Jet {
-        v: position.d,
-        d: position.dd,
-        dd: jerk,
-    })?
-    else {
-        return Ok(out);
+    let tangent=if original_offset {super::phase::source_tangent(position.d,position.dd,jerk)?}else {
+        normalize(Jet{v:position.d,d:position.dd,dd:jerk})?
     };
+    let Some(t)=tangent else{return Ok(out);};
     let offset = if original_offset {rail} else {Jet {
         v: sub(rail.v, position.v)?,
         d: sub(rail.d, position.d)?,

@@ -659,6 +659,11 @@ fn spatial_bishop_transport_and_saddle_caps_work_at_six_nondyadic_stations() {
         ),
     };
     assert!(body.report().continuous_bound && body.report().within_budget);
+    let ideal=IdealLimits{projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
+    let stronger=construct_with_ideal(&sweep,&[4],6,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),ideal).unwrap();
+    let Attempt::Certified(stronger)=stronger else {panic!("Original spatial Bishop volume refused");};
+    assert!(stronger.report().ideal_volume.as_ref().unwrap().embedding_certified);assert_eq!(stronger.model(),body.model());
+
     assert!(
         body.model()
             .faces
