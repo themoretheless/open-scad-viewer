@@ -1,6 +1,6 @@
 use super::*;
 
-fn validate_breaks(breaks: &[f64]) -> Result<()> {
+pub(super) fn validate_breaks(breaks: &[f64]) -> Result<()> {
     if breaks.len() < 2
         || breaks.iter().any(|value| !value.is_finite())
         || breaks.windows(2).any(|pair| pair[0] >= pair[1])
@@ -19,7 +19,7 @@ fn validate_breaks(breaks: &[f64]) -> Result<()> {
 pub fn arrange_multispan_branch_graph_uv(
     context: &ToleranceContext,
     knot_breaks: [&[f64]; 2],
-    graph: &nurbs_intersect::nurbs_ss::BranchGraph,
+    graph: &crate::nurbs_ss_g6::BranchGraph,
     support_index: usize,
     resource_limit: usize,
 ) -> Result<MultiSpanUvArrangement> {

@@ -231,7 +231,7 @@ pub(super) fn control_value_with_fit(
     let batch=control_values_with_fit(path,scale,affine,&[q],traversal,max_cells,frame,transverse_fit)?;
     Ok(ControlValueReport {status:batch.status,cells:batch.cells,value:batch.values.map(|v|v[0]),reason:batch.reason})
 }
-pub(super) fn control_values_with_fit(
+pub(crate) fn control_values_with_fit(
     path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
     traversal:[f64;2],max_cells:usize,frame:ValuesReport,transverse_fit:Option<I>,
 )->Result<ControlValuesReport>{

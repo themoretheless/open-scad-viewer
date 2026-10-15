@@ -381,4 +381,3 @@ pub unsafe extern "C" fn abi_expand_flat_triangles(
 ) -> u64 {
     unsafe { geometry_bridge::abi::abi_expand_flat_triangles(vp, vl, ip, il, fmt) }
 }
-

@@ -1,0 +1,109 @@
+TAP version 13
+# Subtest: new oversized file fails, pinned file may shrink but not grow
+ok 1 - new oversized file fails, pinned file may shrink but not grow
+  ---
+  duration_ms: 5.067166
+  type: 'test'
+  ...
+# Subtest: upward crate dependency is a layering violation
+ok 2 - upward crate dependency is a layering violation
+  ---
+  duration_ms: 0.333708
+  type: 'test'
+  ...
+# Subtest: update only lowers pins and drops fixed violations
+ok 3 - update only lowers pins and drops fixed violations
+  ---
+  duration_ms: 15.913292
+  type: 'test'
+  ...
+# Subtest: historical executor exemption requires exact archived bytes, including short edits
+ok 4 - historical executor exemption requires exact archived bytes, including short edits
+  ---
+  duration_ms: 6.5895
+  type: 'test'
+  ...
+# Subtest: reports all drift without rewriting archives or evidence
+ok 5 - reports all drift without rewriting archives or evidence
+  ---
+  duration_ms: 53.210542
+  type: 'test'
+  ...
+# wasm-opt cache hit: 11dedbb4400226ba393d1713add9c1b128a55c56301a1abd748a25d4db187fc5
+# wasm-opt cache write skipped: EEXIST: file already exists, mkdir '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/wasm-cache-test-q1oE71/file'
+# wasm-opt cache hit: 11dedbb4400226ba393d1713add9c1b128a55c56301a1abd748a25d4db187fc5
+# Subtest: reuses validated bytes and invalidates input, tool and flags independently
+ok 6 - reuses validated bytes and invalidates input, tool and flags independently
+  ---
+  duration_ms: 12.8845
+  type: 'test'
+  ...
+# Subtest: damaged or mismatched entries are replaced without trusting their bytes
+ok 7 - damaged or mismatched entries are replaced without trusting their bytes
+  ---
+  duration_ms: 7.967792
+  type: 'test'
+  ...
+# Subtest: does not cache optimizer failure or invalid output
+ok 8 - does not cache optimizer failure or invalid output
+  ---
+  duration_ms: 0.975667
+  type: 'test'
+  ...
+# Subtest: unwritable cache location does not discard a valid optimization
+ok 9 - unwritable cache location does not discard a valid optimization
+  ---
+  duration_ms: 1.79625
+  type: 'test'
+  ...
+# Subtest: oversized cache entry is a miss and is repaired
+ok 10 - oversized cache entry is a miss and is repaired
+  ---
+  duration_ms: 3.678667
+  type: 'test'
+  ...
+# wasm-opt cache hit: 11dedbb4400226ba393d1713add9c1b128a55c56301a1abd748a25d4db187fc5
+# Subtest: concurrent misses publish one complete entry without scratch leftovers
+ok 11 - concurrent misses publish one complete entry without scratch leftovers
+  ---
+  duration_ms: 106.861583
+  type: 'test'
+  ...
+# wasm-opt: 42 -> 39 bytes (7.1% smaller)
+# wasm-opt: 42 -> 39 bytes (7.1% smaller)
+# wasm-opt cache hit: 0ff07623182bddf1b69c189a6743d14d2a5e6ec6c4aae592d0cd10047f7f15be
+# [parse exception: expected list (at 1:0)]
+# Fatal: error parsing wasm (try --debug for more info)
+# Subtest: repeated optimization preserves Cargo input and produces identical runnable bytes
+ok 12 - repeated optimization preserves Cargo input and produces identical runnable bytes
+  ---
+  duration_ms: 732.802666
+  type: 'test'
+  ...
+# Subtest: optimizer failure is catchable and does not alter the input
+ok 13 - optimizer failure is catchable and does not alter the input
+  ---
+  duration_ms: 361.16725
+  type: 'test'
+  ...
+# Subtest: explicit native optimizer rejects missing or unrecognized tools before changing Cargo input
+ok 14 - explicit native optimizer rejects missing or unrecognized tools before changing Cargo input
+  ---
+  duration_ms: 44.9515
+  type: 'test'
+  ...
+# Subtest: native and bundled optimizers agree on executable fixture bytes
+ok 15 - native and bundled optimizers agree on executable fixture bytes # SKIP
+  ---
+  duration_ms: 0.278917
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 1813.7815

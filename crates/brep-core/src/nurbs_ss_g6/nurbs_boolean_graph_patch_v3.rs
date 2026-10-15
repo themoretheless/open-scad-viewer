@@ -1,6 +1,22 @@
 use super::*;
 
-fn ruled_side(bottom_a: [f64; 3], bottom_b: [f64; 3], top: Curve) -> Result<Surface> {
+pub(super) fn unit_domain(mut curve: Curve) -> Curve {
+    let [lo, hi] = curve.domain();
+    for knot in &mut curve.knots {
+        *knot = (*knot - lo) / (hi - lo);
+    }
+    curve
+}
+
+pub(super) fn edge_between(model: &Model, a: usize, b: usize) -> Result<usize> {
+    model
+        .edges
+        .iter()
+        .position(|edge| edge.vertices == [a.min(b), a.max(b)])
+        .ok_or_else(|| refuse("V3 clipped box edge is missing"))
+}
+
+pub(super) fn ruled_side(bottom_a: [f64; 3], bottom_b: [f64; 3], top: Curve) -> Result<Surface> {
     let degree = top.degree;
     let single_span = top.control_points.len() == degree + 1 && top.knots.len() == 2 * (degree + 1);
     let (bottom_points, bottom_weights) = if single_span {
@@ -118,7 +134,7 @@ pub(super) fn clipped_graph_solid(
 /// Certified V3 author for one canonical graph solid and one affine cutter.
 /// Complete rows: intersection and source-minus-cutter difference. Union and
 /// cutter-minus-source difference remain typed refusals.
-fn nurbs_boolean_graph_patch_transverse(
+pub(super) fn nurbs_boolean_graph_patch_transverse(
     a: &Model,
     b: &Model,
     operation: &str,

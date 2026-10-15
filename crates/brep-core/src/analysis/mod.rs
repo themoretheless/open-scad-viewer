@@ -1,8 +1,11 @@
 //! Display-independent mass properties. Green's theorem integrates each authored
 //! UV trim; the divergence theorem integrates the oriented closed boundary.
 //! Convergence evidence is numerical, never a geometric solid certificate.
+#[cfg(feature = "codec")]
+mod serialization;
+pub mod surface_classify;
 use super::*;
-use nurbs_intersect::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
 use crate::solid_audit::{SolidAuditCertificate, audit_solid};
 use cad_predicates::ToleranceSpecIdentity;
 
@@ -16,5 +19,3 @@ mod tests;
 pub use certified_cylinder_radius::*;
 pub use certified_mass_properties::*;
 pub use mass_properties::*;
-
-pub mod surface_classify;

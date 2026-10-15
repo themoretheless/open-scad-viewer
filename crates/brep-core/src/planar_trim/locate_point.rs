@@ -121,11 +121,11 @@ pub(crate) fn conform_profiles(
 }
 
 #[derive(Clone)]
-struct Fragment {
-    span: Span,
-    source_loop: usize,
+pub(super) struct Fragment {
+    pub(super) span: Span,
+    pub(super) source_loop: usize,
 }
-fn material(operation: &str, a: bool, b: bool) -> bool {
+pub(super) fn material(operation: &str, a: bool, b: bool) -> bool {
     match operation {
         "union" => a || b,
         "intersection" => a && b,
@@ -383,7 +383,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
  validate(&result,tolerance)?;Ok(result)
 }
 #[cfg(test)]mod offset_tests{
- use super::*;
+ use super::super::*;
  fn area(loops:&[Vec<Curve>])->f64{loops.iter().map(|w|signed_area(w,1e-7).unwrap()).sum()}
  fn rectangle(w:f64,h:f64)->Vec<Curve>{crate::sketch::polygon_wire(vec![[0.,0.],[w,0.],[w,h],[0.,h]]).unwrap()}
  #[test]fn rectangle_round_expansion_and_sharp_erosion(){
@@ -408,7 +408,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
 }
 
 #[cfg(test)]mod offset_topology_tests{
- use super::*;
+ use super::super::*;
  fn disk(x:f64,r:f64)->Vec<Curve>{let mut wire=crate::sketch::circle_wire(r).unwrap();for c in &mut wire{for p in &mut c.control_points{p[0]+=x;}}wire}
  fn area(loops:&[Vec<Curve>])->f64{loops.iter().map(|w|signed_area(w,1e-7).unwrap()).sum()}
  #[test]fn expansion_merges_separate_islands(){

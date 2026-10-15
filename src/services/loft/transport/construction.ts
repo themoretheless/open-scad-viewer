@@ -35,3 +35,4 @@ export interface MatchedNurbsLoft {
 }
 /** Certified scaled boundary jets with whole-curve section/guide retention bounds. */
 export const matchNurbsLoftEnds=(surface:NurbsSurface,curves:NurbsCurve[],parameters:number[],budget:number,start?:LoftEndConstraint,end?:LoftEndConstraint,guides:NurbsCurve[]=[],guideParameters:number[]=[]):MatchedNurbsLoft=>callNurbsRust('surface_loft_match_ends',{surface,curves,parameters,budget,start,end,guides,guide_parameters:guideParameters})
+

@@ -52,6 +52,14 @@ fn solid_typestate_is_not_weakened() {
     assert_eq!(mixed.certificate().shared_face_count, 1);
     assert_eq!(mixed.boundary_faces().len(), 10);
     assert_eq!(mixed.manifold_decomposition().len(), 2);
+    let (step, _) = export_complex_step(&mixed).unwrap();
+    let (step_back, step_cert) = import_complex_step(&step).unwrap();
+    assert_eq!(step_back.certificate().shared_face_count, 1);
+    assert!(step_cert.supplemental_incidence_preserved);
+    let (iges, _) = export_complex_iges(&mixed).unwrap();
+    let (iges_back, iges_cert) = import_complex_iges(&iges).unwrap();
+    assert_eq!(iges_back.boundary_faces().len(), 10);
+    assert!(iges_cert.direct_manifold_payloads);
     assert_eq!(
         mixed
             .try_into_globally_audited_solid_set()
@@ -231,5 +239,11 @@ fn sheet_solid_compound_transform_permutation_and_resources() {
             .unwrap_err()
             .code,
         "BREP_COMPLEX_RESOURCE_LIMIT"
+    );
+    assert_eq!(
+        import_complex_step("OSV-CLOSE-TOPOLOGY-STEP/1\nBOGUS\nEND")
+            .unwrap_err()
+            .code,
+        "BREP_COMPLEX_INTERCHANGE_REFUSED"
     );
 }

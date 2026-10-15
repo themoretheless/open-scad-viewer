@@ -2,6 +2,9 @@
 //! Implemented here in Rust; no external geometry engine. Binary64 predicates
 //! use a common normalized frame. Results are stitched and topology-checked;
 //! this is not an exact-arithmetic or globally certified geometry algorithm.
+#[cfg(feature = "codec")]
+#[path = "../boolean/serialization.rs"]
+mod serialization;
 use crate::{
     BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, dot, norm, scale, sub,
 };
@@ -16,8 +19,8 @@ type Point = math_core::V3;
 mod tests;
 
 mod operation;
-mod vertex_manifold;
-mod evaluate;
+mod boolean;
+mod difference_many_refs;
 pub use operation::*;
-use vertex_manifold::*;
-pub use evaluate::*;
+pub use boolean::*;
+pub use difference_many_refs::*;

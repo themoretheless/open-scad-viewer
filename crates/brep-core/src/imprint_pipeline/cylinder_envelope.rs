@@ -1,5 +1,117 @@
 use super::*;
 
+/// Exact material-left rounded profile, shared by extrusion and revolution.
+pub(crate) fn rounded_profile_curves(
+    source: &Model,
+    profile: &[[f64; 2]],
+    rounded: &[bool],
+    radius: f64,
+    z0: f64,
+) -> Result<Vec<Curve>> {
+    if profile.len() < 3
+        || profile.len() != rounded.len()
+        || !(radius.is_finite() && radius > 0. && z0.is_finite())
+    {
+        return Err(refuse("Rounded convex prism parameters are invalid"));
+    }
+    let n = profile.len();
+    let mut entry = profile.to_vec();
+    let mut exit = profile.to_vec();
+    let mut arcs = vec![None; n];
+    let mut tangent = vec![0.; n];
+    for i in 0..n {
+        if !rounded[i] {
+            continue;
+        }
+        let p = profile[i];
+        let prev = profile[(i + n - 1) % n];
+        let next = profile[(i + 1) % n];
+        let unit = |d: [f64; 2]| {
+            let length = d[0].hypot(d[1]);
+            (length > 1e-12).then_some([d[0] / length, d[1] / length])
+        };
+        let u = unit([prev[0] - p[0], prev[1] - p[1]])
+            .ok_or_else(|| refuse("Rounded profile has a collapsed incoming edge"))?;
+        let v = unit([next[0] - p[0], next[1] - p[1]])
+            .ok_or_else(|| refuse("Rounded profile has a collapsed outgoing edge"))?;
+        if u[0] * v[1] - u[1] * v[0] >= -1e-12 {
+            return Err(refuse("Selected profile corner must be convex"));
+        }
+        let theta = (u[0] * v[0] + u[1] * v[1]).clamp(-1., 1.).acos();
+        let turn = std::f64::consts::PI - theta;
+        if !(theta > 1e-6 && turn > 1e-6) {
+            return Err(refuse("Rounded profile requires strict convexity"));
+        }
+        let distance = radius / (theta * 0.5).tan();
+        let bisector_length = (u[0] + v[0]).hypot(u[1] + v[1]);
+        let center_distance = radius / (theta * 0.5).sin();
+        let center = [
+            p[0] + center_distance * (u[0] + v[0]) / bisector_length,
+            p[1] + center_distance * (u[1] + v[1]) / bisector_length,
+        ];
+        entry[i] = [p[0] + distance * u[0], p[1] + distance * u[1]];
+        exit[i] = [p[0] + distance * v[0], p[1] + distance * v[1]];
+        tangent[i] = distance;
+        let start = (entry[i][1] - center[1]).atan2(entry[i][0] - center[0]);
+        arcs[i] = Some(CircleArc {
+            center,
+            radius,
+            start,
+            sweep: turn,
+        });
+    }
+    for i in 0..n {
+        let length = (profile[(i + 1) % n][0] - profile[i][0])
+            .hypot(profile[(i + 1) % n][1] - profile[i][1]);
+        if tangent[i] + tangent[(i + 1) % n] >= length - source.tolerance_mm * 8. {
+            return Err(refuse("Fillet radius collides on an adjacent profile edge"));
+        }
+    }
+    let mut curves = Vec::with_capacity(n * 2);
+    for i in 0..n {
+        if let Some(arc) = arcs[i] {
+            curves.push(arc_curve(arc, z0));
+        }
+        let next = (i + 1) % n;
+        curves.push(crate::line(
+            vec![exit[i][0], exit[i][1], z0],
+            vec![entry[next][0], entry[next][1], z0],
+        ));
+    }
+    // Nonadjacent boundary spans must be proved disjoint. A valid adjacent
+    // tangent budget alone does not exclude a collision across a concave notch.
+    let mut spec = cad_predicates::ToleranceContext::default_valid().specification().clone();
+    spec.linear_abs = source.tolerance_mm;
+    let bounds: Vec<_> = curves.iter().map(|curve| {
+        let mut min = [f64::INFINITY; 2];
+        let mut max = [f64::NEG_INFINITY; 2];
+        for point in &curve.control_points {
+            for axis in 0..2 { min[axis] = min[axis].min(point[axis]); max[axis] = max[axis].max(point[axis]); }
+        }
+        (min, max)
+    }).collect();
+    for i in 0..curves.len() {
+        for j in i + 2..curves.len() {
+            if i == 0 && j + 1 == curves.len() { continue; }
+            let (a_min, a_max) = bounds[i];
+            let (b_min, b_max) = bounds[j];
+            if (0..2).any(|axis| a_max[axis] + source.tolerance_mm < b_min[axis] || b_max[axis] + source.tolerance_mm < a_min[axis]) { continue; }
+            let report = nurbs_core::intersection::intersect_curve_curve_report(
+                &curves[i],
+                &curves[j],
+                Some(cad_predicates::ToleranceContext::new(spec.clone())
+                    .map_err(|_| refuse("Invalid fillet collision tolerance"))?),
+            )?;
+            if !report.report.unresolved.is_empty() || !report.report.components.is_empty() {
+                return Err(refuse(
+                    "Fillet boundary collides with a nonadjacent span or separation is unresolved",
+                ));
+            }
+        }
+    }
+    Ok(curves)
+}
+
 /// Parallel cylinder wall imprint from Complete generator-line events.
 ///
 /// After a Complete imprint plan is certified, author the retained circular

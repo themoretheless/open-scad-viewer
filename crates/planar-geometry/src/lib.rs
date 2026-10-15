@@ -45,6 +45,14 @@ pub(crate) fn error(message: impl Into<String>) -> Error {
 pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
     math_core::ensure(condition, INVALID_INPUT, message)
 }
+
+pub mod sketch_shapes;
+
+pub mod sketch_offset;
+
+pub mod sketch_transform;
+
+pub mod sketch_trim;
 /// `a + (b - a) * t` per coordinate: the crate's one 2D point interpolation.
 #[inline(always)]
 pub(crate) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
@@ -55,8 +63,3 @@ pub(crate) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 pub(crate) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
     math_core::norm2(math_core::sub2(a, b))
 }
-
-pub mod sketch_shapes;
-pub mod sketch_transform;
-pub mod sketch_offset;
-pub mod sketch_trim;

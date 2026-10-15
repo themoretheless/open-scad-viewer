@@ -3,8 +3,8 @@ import type { GeometryBuildRequest, GeometryCancelRequest, GeometryWorkerEvent, 
 import type { GeometryEvaluationResult } from '../../core/build'
 import { MAX_GEOMETRY_SOURCE_CHARACTERS } from '../../core/geometryExecution'
 import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../../core/nativeGeometry'
-import { hasBoundedDataProperties, hasExactKeys, isBuildError, isCancelReason, isDenseExactArray, isExecutionDescriptor, isFloat32Payload, isMeshData, isNonNegativeFiniteNumber, isNonNegativeSafeInteger, isPhase, isPhaseTimings, isQuality, isRecord, isUint32Payload, optionalKey } from './isRecord'
-import { isWellFormedUnicode } from '../../core/unicode'
+import { hasBoundedDataProperties, hasExactKeys, isBuildError, isCancelReason, isDenseExactArray, isExecutionDescriptor, isFloat32Payload, isMeshData, isPhase, isPhaseTimings, isQuality, isRecord, isUint32Payload, optionalKey } from './isRecord'
+import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger, isWellFormedUnicode } from '../workerPayloadPrimitives'
 import { sha256Hex } from '../../core/sha256'
 
 /**

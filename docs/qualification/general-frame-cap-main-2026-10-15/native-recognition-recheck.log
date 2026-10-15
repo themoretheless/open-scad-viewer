@@ -1,0 +1,12 @@
+
+running 1 test
+test aag_features::tests::solid_primitives_have_no_holes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1110 filtered out; finished in 33.01s
+
+
+running 1 test
+test aag_features::tests::nested_pockets_form_a_hierarchy ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1110 filtered out; finished in 65.66s
+

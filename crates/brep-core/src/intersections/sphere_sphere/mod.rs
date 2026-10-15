@@ -16,28 +16,29 @@
 //! lifts: planar sections of a stereographic patch are exact circles (or lines
 //! through the UV origin when the plane contains the patch pole) clipped to
 //! the patch quarter-disk. Nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
+mod frames;
+pub mod pole_charts;
+pub use pole_charts::{ImplicitSphereSection, WorldCircleClip, recognize_any};
 use super::*;
 use crate::Model;
 
 /// Recognition tolerance relative to radius for the canonical structure
 /// screen (vertex distances, frame orthonormality, control points).
-#[doc(hidden)] pub const RECOGNITION: f64 = 1e-9;
+pub const RECOGNITION: f64 = 1e-9;
 /// Relative scale under which the UV circle degenerates to a UV line (the
 /// section plane contains the patch pole, e.g. a great circle whose plane is
 /// perpendicular to the sphere axis).
 const UV_LINE: f64 = 1e-12;
+const TAU: f64 = std::f64::consts::TAU;
 const LINEAR: [f64; 3] = [0., 0.5, 1.];
 const SQUARE: [f64; 3] = [0., 0., 1.];
-#[doc(hidden)] pub const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
+pub const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
 
-mod frames;
-pub mod pole_charts;
-pub use pole_charts::{ImplicitSphereSection, WorldCircleClip, recognize_any};
 mod sphere_patch_circle;
-mod intersect_sphere_sphere;
+mod lift_clipped;
 #[cfg(test)]
 mod tests;
 pub use sphere_patch_circle::*;
-pub use intersect_sphere_sphere::*;
-
-use std::f64::consts::TAU;
+pub use lift_clipped::*;

@@ -12,14 +12,17 @@ use nurbs_intersect::predicate_evidence::{
     ComposedEvidence, EvidenceClaim, PredicateEvidence, compose_predicate_evidence,
 };
 use crate::{ChangeKind, ChangeProvenance, Model, TopoId, TopoKind, TopologyChange};
-use nurbs_intersect::RationalCurveDefinition;
+pub use nurbs_intersect::RationalCurveDefinition;
+
+
+#[cfg(test)]
+#[path = "../tests/trim_sew.rs"]
+mod tests;
 
 mod chart_kind;
 mod authorized_heal_plan;
 mod prove_curve_pcurve_correspondence;
 mod classify_imprint_circle_events;
-#[cfg(test)]
-mod tests;
 pub use chart_kind::*;
 pub use authorized_heal_plan::*;
 pub use prove_curve_pcurve_correspondence::*;

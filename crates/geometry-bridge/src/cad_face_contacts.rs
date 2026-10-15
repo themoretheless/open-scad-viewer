@@ -94,8 +94,7 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         "individualPairs":r.boundary.intersections.pairs.pairs.len(),
         "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
         "groupCells":r.boundary.intersections.pairs.group_cells,
-        "contactCells":r.boundary.intersections.pairs.cells,
-        "contactDomainCells":r.boundary.intersections.pairs.domain_cells,
+        "contactCells":r.boundary.intersections.pairs.cells,"contactDomainCells":r.boundary.intersections.pairs.domain_cells,
         "disjointGroups":group_output(&r.boundary.intersections.pairs),
         "unresolvedPairs":r.boundary.intersections.pairs.pairs.iter().filter(|p|p.reason!="shared-boundary" && p.reason!="pair-disjoint").take(16).map(|p|json!({"faces":p.faces,"reason":p.reason,"sourceChartCells":p.source_chart_cells})).collect::<Vec<_>>(),
         "nesting":r.nesting.as_ref().map(|n|json!({"rolesConsistent":n.roles_consistent,
@@ -229,8 +228,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
+            (witness,r.cells+p.hull_cells+p.source_chart_cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells+p.source_chart_cells,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,

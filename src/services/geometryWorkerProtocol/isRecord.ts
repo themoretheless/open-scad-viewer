@@ -5,6 +5,7 @@ import type { GeometryExecutionDescriptor } from '../../core/geometryExecution'
 import type { GeometryPhaseTimings, GeometryQuality } from '../../core/build'
 import type { MeshData } from '../../core/mesh'
 import { isNativeGeometryArtifact } from '../../core/nativeGeometry'
+import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger } from '../workerPayloadPrimitives'
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   if (value === null || Array.isArray(value) || typeof value !== 'object') return false
@@ -74,14 +75,6 @@ export function optionalKey(
   predicate: (candidate: unknown) => boolean,
 ): boolean {
   return !Object.hasOwn(value, key) || predicate(value[key])
-}
-
-export function isNonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0
-}
-
-export function isNonNegativeFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
 export function isPhaseTimings(value: unknown): value is GeometryPhaseTimings {

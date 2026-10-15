@@ -188,10 +188,16 @@ fn inspect_impl(
             }
             let sa = &model.faces[a].surface;
             let sb = &model.faces[b].surface;
-            let mut boundary = if let Some(c)=caps.iter().find(|c|
-                [c[0].min(c[1]),c[0].max(c[1])]==[a,b]) {
-                Some(SharedBoundary::SweepCap {cap:c[0],wall:c[1],edge:c[2]})
-            } else if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
+            let mut boundary = if let Some(c) = caps
+                .iter()
+                .find(|c| [c[0].min(c[1]), c[0].max(c[1])] == [a, b])
+            {
+                Some(SharedBoundary::SweepCap {
+                    cap: c[0],
+                    wall: c[1],
+                    edge: c[2],
+                })
+            } else if let Some(c) = hulls.iter().find(|c| c.faces == [a, b]) {
                 Some(SharedBoundary::ExactHull(c.clone()))
             } else if let Some(c) = joint_exact_domain.then(||crate::boundary_hull_contact::certify(model,[a,b])).flatten() {
                 // Only the joint embedding audit authorizes this recomputation.
@@ -242,7 +248,7 @@ fn inspect_impl(
             // Exact control-hull separation also applies to closed bodies
             // after the joint boundary, trim and injectivity prerequisites.
             // The plain face-contact API retains its trim-search accounting.
-            let (hull_disjoint,hull_cells)=if boundary.is_none() && volume_separation.is_none() && !periodic && joint_exact_domain {
+            let (hull_disjoint,hull_cells)=if boundary.is_none() && volume_separation.is_none() && !periodic && (sweep_hulls || joint_exact_domain) {
                 crate::control_hull_separation::inspect(sa,sb,
                     (limits.cells-out.cells).min(pair_cells/2).min(64))
             } else { (false,0) };

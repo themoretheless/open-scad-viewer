@@ -1,0 +1,6 @@
+{
+  "architecture": "X64",
+  "imageVersion": "20261004.327.1",
+  "runner": "ubuntu-24.04",
+  "imageOS": "ubuntu24"
+}

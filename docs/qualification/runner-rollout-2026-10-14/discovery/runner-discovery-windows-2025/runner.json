@@ -1,0 +1,6 @@
+{
+  "imageVersion": "20260925.250.1",
+  "architecture": "X64",
+  "runner": "windows-2025",
+  "imageOS": "win25-vs2026"
+}

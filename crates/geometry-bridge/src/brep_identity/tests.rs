@@ -1,7 +1,7 @@
 //! Pinned against the host derivers in src/core/semanticProgram.ts; every
 //! expected digest below was produced by running the TS functions in node.
 use super::*;
-use super::identity_digest::js_f64;
+use super::canonical_json::js_f64;
 use value_codec::json;
 
 fn root_path() -> Vec<Value> {

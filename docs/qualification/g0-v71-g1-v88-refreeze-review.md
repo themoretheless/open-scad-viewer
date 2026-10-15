@@ -1,5 +1,7 @@
 # G0 v71 / G1 v88 re-freeze review
 
-Append-only module split: cad-step step_interchange_v3.rs becomes a directory module with identical bodies and public paths; no new capability; preserve ownRust53.
+OwnRust55 preserves the exact d883 Rust/WASM artifact and finite STEP/UI evidence. OwnRust54, G0v70 and G1v87 remain immutable in commit 71e411e0c.
 
-Preserve ownRust53, G0v70, G1v87 and all earlier records byte for byte. Bind current source, observed ownRust54 WASM, fixtures, transport tests and executors in new append-only records. No previous G1 result is imported: all 4740 clean semantic work units remain incomplete for this version. No G0/G1 approval or production cutover is claimed.
+Hosted Node 20 passed 5855 tests and timed out only the combined five-body sync/async streaming regression after 33.751 seconds against a 30-second limit. The regression now reports each of the five unchanged fixtures independently, retaining every assertion, the original timeout and all native geometric budgets. This changes test scheduling only; no geometry algorithm or certificate is changed.
+
+All 4740 successor semantic work units remain incomplete; no universal geometry or clean G0/G1 approval is inferred.

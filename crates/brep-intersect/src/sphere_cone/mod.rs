@@ -43,7 +43,9 @@
 //! iso-v lines across all four cone side patches, an exact UV circle on a
 //! cap face, and per-patch UV circles/lines on the sphere. Nothing here
 //! authorizes a topology change.
-use brep_core::intersections::{CanonicalCone, recognize_cone};
+#[cfg(feature = "codec")]
+mod serialization;
+use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;

@@ -8,6 +8,7 @@
 //! fitted curves, snapping, or tessellation participate in these queries.
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 
+#[cfg(feature = "codec")]
 mod codec;
 mod curve_coincidence;
 mod curve_curve;

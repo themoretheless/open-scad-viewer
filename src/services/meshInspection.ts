@@ -1,3 +1,4 @@
+import {callGeometryRust} from './geometry/kernel'
 import type {
   MeshData,
   MeshProvenanceRun,
@@ -6,50 +7,6 @@ import type {
 import { type Aabb3, type Vec3 } from './math3d'
 
 const VERTEX_STRIDE = 6
-const SCRATCH_WORLD_PTS = new Float64Array(9)
-
-function writeWorldVertex(
-  vertices: Float32Array,
-  m: Float32Array,
-  vertexIndex: number,
-  out: Float64Array,
-  outOffset: number,
-): boolean {
-  if (!Number.isInteger(vertexIndex) || vertexIndex < 0) return false
-  const o = vertexIndex * VERTEX_STRIDE
-  if (o + 2 >= vertices.length) return false
-  const x = vertices[o]
-  const y = vertices[o + 1]
-  const z = vertices[o + 2]
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return false
-  const w = m[12] * x + m[13] * y + m[14] * z + m[15]
-  const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
-  const px = (m[0] * x + m[1] * y + m[2] * z + m[3]) * iw
-  const py = (m[4] * x + m[5] * y + m[6] * z + m[7]) * iw
-  const pz = (m[8] * x + m[9] * y + m[10] * z + m[11]) * iw
-  if (!Number.isFinite(px) || !Number.isFinite(py) || !Number.isFinite(pz)) return false
-  out[outOffset] = px
-  out[outOffset + 1] = py
-  out[outOffset + 2] = pz
-  return true
-}
-
-function writeWorldTriangle(
-  vertices: Float32Array,
-  indices: Uint32Array,
-  triangleIndex: number,
-  m: Float32Array,
-  out: Float64Array,
-): boolean {
-  if (!Number.isInteger(triangleIndex) || triangleIndex < 0) return false
-  const o = triangleIndex * 3
-  if (o + 2 >= indices.length) return false
-  return (
-    writeWorldVertex(vertices, m, indices[o], out, 0) &&
-    writeWorldVertex(vertices, m, indices[o + 1], out, 3) &&
-    writeWorldVertex(vertices, m, indices[o + 2], out, 6)
-  )
-}
 
 type MeshWithTopology = MeshData & {
   /** Optional while older worker responses are still in flight. */
@@ -209,36 +166,8 @@ export function resolveProvenance(
 
 /** Build the object-level facts displayed by an Inspect panel. */
 export function inspectMesh(mesh: MeshData, index: number): MeshInspection {
-  const vertices = mesh.vertices
-  const m = mesh.transform
-  if (m.length !== 16) throw new Error('Expected 16-element matrix')
-  let minX = Infinity, minY = Infinity, minZ = Infinity
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
-  let found = false
-  const vertexSlots = Math.ceil(vertices.length / VERTEX_STRIDE)
-  for (let i = 0; i < vertexSlots; i++) {
-    if (writeWorldVertex(vertices, m, i, SCRATCH_WORLD_PTS, 0)) {
-      found = true
-      const px = SCRATCH_WORLD_PTS[0]
-      const py = SCRATCH_WORLD_PTS[1]
-      const pz = SCRATCH_WORLD_PTS[2]
-      if (px < minX) minX = px
-      if (py < minY) minY = py
-      if (pz < minZ) minZ = pz
-      if (px > maxX) maxX = px
-      if (py > maxY) maxY = py
-      if (pz > maxZ) maxZ = pz
-    }
-  }
-  return {
-    index,
-    vertices: Math.floor(vertices.length / VERTEX_STRIDE),
-    triangles: Math.floor(mesh.indices.length / 3),
-    bounds: found ? { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] } : null,
-    dimensions: found ? [maxX - minX, maxY - minY, maxZ - minZ] : [0, 0, 0],
-    center: found ? [(minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2] : null,
-    topology: (mesh as MeshWithTopology).topology ?? null,
-  }
+  const geometry=callGeometryRust<Pick<MeshInspection,'bounds'|'dimensions'|'center'>>('mesh_display_inspect',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),transform:mesh.transform})
+  return {index,vertices:Math.floor(mesh.vertices.length/VERTEX_STRIDE),triangles:Math.floor(mesh.indices.length/3),...geometry,topology:(mesh as MeshWithTopology).topology??null}
 }
 
 /** Interpolate a triangle hit into world space using BVH barycentric weights. */
@@ -247,70 +176,18 @@ export function computeHitWorldPoint(
   triangleIndex: number,
   barycentric: readonly [number, number, number],
 ): Vec3 | null {
-  if (mesh.transform.length !== 16) throw new Error('Expected 16-element matrix')
-  const w0 = barycentric[0], w1 = barycentric[1], w2 = barycentric[2]
-  if (barycentric.length !== 3 || !Number.isFinite(w0) || !Number.isFinite(w1) || !Number.isFinite(w2)) {
-    return null
-  }
-  if (!writeWorldTriangle(mesh.vertices, mesh.indices, triangleIndex, mesh.transform, SCRATCH_WORLD_PTS)) {
-    return null
-  }
-  const px = SCRATCH_WORLD_PTS[0] * w0 + SCRATCH_WORLD_PTS[3] * w1 + SCRATCH_WORLD_PTS[6] * w2
-  const py = SCRATCH_WORLD_PTS[1] * w0 + SCRATCH_WORLD_PTS[4] * w1 + SCRATCH_WORLD_PTS[7] * w2
-  const pz = SCRATCH_WORLD_PTS[2] * w0 + SCRATCH_WORLD_PTS[5] * w1 + SCRATCH_WORLD_PTS[8] * w2
-  return Number.isFinite(px) && Number.isFinite(py) && Number.isFinite(pz) ? [px, py, pz] : null
+  return callGeometryRust('mesh_hit_point',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex,barycentric})
 }
 
 /** Compute a flat, unit-length world-space normal for the hit triangle. */
 export function computeHitNormal(mesh: MeshData, triangleIndex: number): Vec3 | null {
-  if (mesh.transform.length !== 16) throw new Error('Expected 16-element matrix')
-  if (!writeWorldTriangle(mesh.vertices, mesh.indices, triangleIndex, mesh.transform, SCRATCH_WORLD_PTS)) {
-    return null
-  }
-  const abx = SCRATCH_WORLD_PTS[3] - SCRATCH_WORLD_PTS[0]
-  const aby = SCRATCH_WORLD_PTS[4] - SCRATCH_WORLD_PTS[1]
-  const abz = SCRATCH_WORLD_PTS[5] - SCRATCH_WORLD_PTS[2]
-  const acx = SCRATCH_WORLD_PTS[6] - SCRATCH_WORLD_PTS[0]
-  const acy = SCRATCH_WORLD_PTS[7] - SCRATCH_WORLD_PTS[1]
-  const acz = SCRATCH_WORLD_PTS[8] - SCRATCH_WORLD_PTS[2]
-  const nx = aby * acz - abz * acy
-  const ny = abz * acx - abx * acz
-  const nz = abx * acy - aby * acx
-  const length = Math.hypot(Math.hypot(nx, ny), nz)
-  const scale = abx * abx + aby * aby + abz * abz + acx * acx + acy * acy + acz * acz
-  if (!Number.isFinite(length) || length <= scale * Number.EPSILON * 16) {
-    return null
-  }
-  return [nx / length, ny / length, nz / length]
+  return callGeometryRust('mesh_hit_normal',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex})
 }
 
 /** Summarize an exact two-point measurement in world coordinates. */
 export function summarizeMeasurement(start: Vec3, end: Vec3): MeasurementSummary {
-  const s0 = start[0], s1 = start[1], s2 = start[2]
-  const e0 = end[0], e1 = end[1], e2 = end[2]
-  if (
-    start.length !== 3 ||
-    end.length !== 3 ||
-    !Number.isFinite(s0) ||
-    !Number.isFinite(s1) ||
-    !Number.isFinite(s2) ||
-    !Number.isFinite(e0) ||
-    !Number.isFinite(e1) ||
-    !Number.isFinite(e2)
-  ) {
+  if (![...start, ...end].every(Number.isFinite)) {
     throw new RangeError('Measurement points must contain finite coordinates')
   }
-  const dx = e0 - s0
-  const dy = e1 - s1
-  const dz = e2 - s2
-  const distance = Math.hypot(Math.hypot(dx, dy), dz)
-  return {
-    start: [s0, s1, s2],
-    end: [e0, e1, e2],
-    delta: [dx, dy, dz],
-    deltaX: dx,
-    deltaY: dy,
-    deltaZ: dz,
-    distance,
-  }
+  return callGeometryRust('mesh_measure',{start,end})
 }

@@ -2,6 +2,8 @@
 //! Admission additionally requires the joint exact-boundary/trim prerequisites.
 use crate::{Model, Result};
 use nurbs_core::{surface::Surface, surface_linear_monotonicity};
+#[path = "boundary_stitched_contact/general.rs"]
+mod general;
 
 #[derive(Clone, Debug)]
 pub struct Certificate {
@@ -34,12 +36,15 @@ fn natural_edges(model: &Model, face: usize) -> Option<Vec<(usize, usize, bool)>
         }
         let a = &p.control_points[0];
         let b = &p.control_points[1];
+        let s=&face.surface;
+        let domain=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
+            [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
         let axis = (0..2).find(|&k| {
-            a[k] == b[k]
-                && (a[k] == 0. || a[k] == 1.)
-                && ((a[1 - k] == 0. && b[1 - k] == 1.) || (a[1 - k] == 1. && b[1 - k] == 0.))
+            let d=domain[k];let f=domain[1-k];
+            a[k] == b[k] && (a[k] == d[0] || a[k] == d[1])
+                && ((a[1-k]==f[0]&&b[1-k]==f[1])||(a[1-k]==f[1]&&b[1-k]==f[0]))
         })?;
-        let max = a[axis] == 1.;
+        let max = a[axis] == domain[axis][1];
         if sides.iter().any(|&(_, k, m)| k == axis && m == max) {
             return None;
         }
@@ -178,19 +183,17 @@ pub(crate) fn certify(model: &Model, faces: [usize; 2], max_cells: usize) -> Res
         let Some(&(_, other, bmax)) = b.iter().find(|x| x.0 == edge) else {
             continue;
         };
-        if axis != other {
-            continue;
-        }
-        let Some(merged) = stitch(
-            &model.faces[faces[0]].surface,
-            &model.faces[faces[1]].surface,
-            axis,
-            amax,
-            bmax,
-        ) else {
-            continue;
+        let first=&model.faces[faces[0]].surface;
+        let second=&model.faces[faces[1]].surface;
+        let merged=if axis==other {stitch(first,second,axis,amax,bmax)}else{None};
+        let r=if let Some(merged)=merged {
+            surface_linear_monotonicity::inspect_candidate(&merged,max_cells-out.cells)?
+        }else {
+            // Leave work for the existing independent contact fallbacks.
+            let Some(report)=general::certify(first,second,[axis,other],[amax,bmax],
+                (max_cells-out.cells).min(256))? else {continue;};
+            report
         };
-        let r = surface_linear_monotonicity::inspect_candidate(&merged, max_cells - out.cells)?;
         out.cells += r.cells;
         if r.certified {
             let curve = &model.edges[edge].curve;

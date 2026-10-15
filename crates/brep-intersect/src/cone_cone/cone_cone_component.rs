@@ -21,22 +21,22 @@ pub enum ConeConeComponent {
 
 /// The second cone's linear radius profile oriented into the shared axial
 /// coordinate s (first cone's bottom ring center at s = 0, axis +axis).
-struct OrientedProfile<'a> {
-    cone: &'a CanonicalCone,
+pub(super) struct OrientedProfile<'a> {
+    pub(super) cone: &'a CanonicalCone,
     /// Shared coordinate of this cone's own bottom ring center.
-    origin: f64,
+    pub(super) origin: f64,
     /// +1 when its axis agrees with the shared axis, -1 when flipped.
-    sign: f64,
+    pub(super) sign: f64,
 }
 impl OrientedProfile<'_> {
-    fn lo(&self) -> f64 {
+    pub(super) fn lo(&self) -> f64 {
         if self.sign > 0. {
             self.origin
         } else {
             self.origin - self.cone.height
         }
     }
-    fn hi(&self) -> f64 {
+    pub(super) fn hi(&self) -> f64 {
         if self.sign > 0. {
             self.origin + self.cone.height
         } else {
@@ -44,15 +44,15 @@ impl OrientedProfile<'_> {
         }
     }
     /// Radius profile rho(s) in the shared coordinate; linear between rings.
-    fn radius(&self, s: f64) -> f64 {
+    pub(super) fn radius(&self, s: f64) -> f64 {
         self.cone.r_bottom + self.cone.slope * self.sign * (s - self.origin)
     }
     /// Side-patch v parameter of the shared height s (iso-v lift line).
-    fn v(&self, s: f64) -> f64 {
+    pub(super) fn v(&self, s: f64) -> f64 {
         self.sign * (s - self.origin) / self.cone.height
     }
     /// Dimensionless taper of the radius profile in the shared coordinate.
-    fn taper(&self) -> f64 {
+    pub(super) fn taper(&self) -> f64 {
         self.cone.slope * self.sign
     }
 }
@@ -71,7 +71,7 @@ pub(super) fn norm3(v: [f64; 3]) -> f64 {
 /// Exact circle component at the shared axial position `s`, with iso-v
 /// lifts on all four side patches of both cones and a 16-sample residual
 /// bound against both side profile equations.
-fn circle_component(
+pub(super) fn circle_component(
     first: &CanonicalCone,
     profile: &OrientedProfile,
     s: f64,
@@ -306,22 +306,4 @@ pub fn intersect_cone_cone(
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for ConeConeComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                first_uv,
-                second_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"firstUv":first_uv,"secondUv":second_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }

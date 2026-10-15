@@ -1,0 +1,28 @@
+{
+  "scope": "Interrupted local pre-fast-path diagnostic; zero qualification credit; no clean G1 execution",
+  "sourceGitBlob": "aebd92d90446b927e4a19b9d3d50f22a9ecb4dc3",
+  "minimumElapsedSeconds": 854.89,
+  "exitCode": 130,
+  "records": [
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-diagnostic/observation.json.gz",
+      "sha256": "fd607a37a84734291957f0ac04c5a6484e8fb35723937aec0596b7043f0eaa86",
+      "uncompressedSha256": "b1bd9a1b4fc7c5db6b32f01ade5223fcba419f0cc58313f225b846b5a23b6aba"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-diagnostic/surface_linear_monotonicity.rs.gz",
+      "sha256": "c053fc91258b5a1a83926ec95fc4d02a935f2e155306730700a253d013ece026",
+      "uncompressedSha256": "81781d9f5c2d2ce8a1e20243d10361ee45e3253685af660bfa3f08945a97005f"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-diagnostic/osv-merged-nonplanar-matrix.log.gz",
+      "sha256": "d9f763e4cf3d987af2cf7b0fb26be4559da856fc8ed43cfc6c97d2cac18f0929",
+      "uncompressedSha256": "811cc64b75c0cf244590fed69ab242c786dbe73aa9632b781fac7d25eee1ec15"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-diagnostic/osv-merged-wasm-build.log.gz",
+      "sha256": "7dad65b252e7bed13883765faaa24231e1c92ef2abdfa98c36a49c3a11a8ce40",
+      "uncompressedSha256": "8f849901af2d4098ca87a1eae1058634e9370267e30eea6d22437f77ad5f1cbe"
+    }
+  ]
+}

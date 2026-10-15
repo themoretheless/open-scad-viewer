@@ -62,8 +62,7 @@ pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;
 pub use crate::construct::curves::curve_extension;
 pub use numerics::interval_eval;
-#[path = "legacy/curve_distance.rs"]
-pub mod curve_distance;
+pub use crate::distance::curve_distance;
 pub use crate::certificates::curve_decomposition_certificate;
 use numerics::exact_curve_segments;
 pub use crate::analysis::curve_deviation;
@@ -147,6 +146,7 @@ pub use crate::analysis::curve_regularity;
 pub use crate::sweeps::audit::pair as sweep_pair_audit;
 pub use crate::analysis::surface_injectivity;
 pub use crate::analysis::surface_regularity;
+pub use crate::analysis::surface_correspondence;
 pub use crate::join::surface_join;
 pub use crate::join::surface_g1;
 pub use crate::join::surface_g2;
@@ -154,8 +154,7 @@ pub use crate::analysis::surface_shape_operator;
 pub use crate::editing::surface_edit;
 pub use crate::intersection::surface_contact;
 pub use crate::intersection::surface_contact_search;
-#[path = "legacy/surface_distance.rs"]
-pub mod surface_distance;
+pub use crate::distance::surface_distance;
 pub use crate::analysis::surface_monotonicity;
 pub use crate::analysis::surface_linear_monotonicity;
 pub use crate::sweeps::audit::wall as sweep_wall_audit;

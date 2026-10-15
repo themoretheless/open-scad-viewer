@@ -81,40 +81,83 @@ pub(super) fn recognize_analytic_tube(model: &Model) -> Option<AnalyticTube> {
     for (face_index, face) in model.faces.iter().enumerate() {
         let s = &face.surface;
         if s.degree_u == 1 && s.degree_v == 1 {
-            if face.holes.len() != 1 || s.weights.iter().flatten().any(|w| (*w-1.).abs()>1e-12) { return None; }
+            if face.holes.len() != 1 || s.weights.iter().flatten().any(|w| (*w - 1.).abs() > 1e-12)
+            {
+                return None;
+            }
             continue;
         }
-        if !face.holes.is_empty() || s.periodic_u || s.periodic_v
-            || s.knots_u != [0.,0.,0.,1.,1.,1.] || s.knots_v != [0.,0.,1.,1.]
-            || s.control_points.len()!=3 || s.control_points.iter().any(|row|row.len()!=2)
-            || !crate::intersections::recognize::unit_square_boundary(model, face_index) {
+        if !face.holes.is_empty()
+            || s.periodic_u
+            || s.periodic_v
+            || s.knots_u != [0., 0., 0., 1., 1., 1.]
+            || s.knots_v != [0., 0., 1., 1.]
+            || s.control_points.len() != 3
+            || s.control_points.iter().any(|row| row.len() != 2)
+            || !crate::intersections::recognize::unit_square_boundary(model, face_index)
+        {
             return None;
         }
-        for i in 0..3 { for j in 0..2 {
-            let expected=if i==1 { std::f64::consts::FRAC_1_SQRT_2 } else { 1. };
-            if (s.weights[i][j]-expected).abs()>1e-12 { return None; }
-        }}
-        let local = |i:usize,j:usize| {
-            let p=&s.control_points[i][j];
-            let d=sub3([p[0],p[1],p[2]],origin);
-            [dot3(d,first),dot3(d,second),dot3(d,axis)]
+        for i in 0..3 {
+            for j in 0..2 {
+                let expected = if i == 1 {
+                    std::f64::consts::FRAC_1_SQRT_2
+                } else {
+                    1.
+                };
+                if (s.weights[i][j] - expected).abs() > 1e-12 {
+                    return None;
+                }
+            }
+        }
+        let local = |i: usize, j: usize| {
+            let p = &s.control_points[i][j];
+            let d = sub3([p[0], p[1], p[2]], origin);
+            [dot3(d, first), dot3(d, second), dot3(d, axis)]
         };
-        let a=local(0,0); let b=local(2,0);
-        let r=a[0].hypot(a[1]);
-        let slot=if (r-outer).abs()<=tolerance {0} else if (r-inner).abs()<=tolerance {1} else {return None};
-        radius_counts[slot]+=1;
-        if (b[0].hypot(b[1])-r).abs()>tolerance || (a[0]*b[0]+a[1]*b[1]).abs()>tolerance*r {return None;}
-        let start_z=a[2]; let end_z=local(0,1)[2];
-        if !((start_z.abs()<=tolerance && (end_z-height).abs()<=tolerance)
-            || ((start_z-height).abs()<=tolerance && end_z.abs()<=tolerance)) {return None;}
-        for j in 0..2 { for i in 0..3 {
-            let p=local(i,j);
-            let xy=if i==0 {[a[0],a[1]]} else if i==2 {[b[0],b[1]]} else {[a[0]+b[0],a[1]+b[1]]};
-            let expected_z=if j==0 {start_z} else {end_z};
-            if (p[0]-xy[0]).hypot(p[1]-xy[1]).hypot(p[2]-expected_z)>tolerance {return None;}
-        }}
+        let a = local(0, 0);
+        let b = local(2, 0);
+        let r = a[0].hypot(a[1]);
+        let slot = if (r - outer).abs() <= tolerance {
+            0
+        } else if (r - inner).abs() <= tolerance {
+            1
+        } else {
+            return None;
+        };
+        radius_counts[slot] += 1;
+        if (b[0].hypot(b[1]) - r).abs() > tolerance
+            || (a[0] * b[0] + a[1] * b[1]).abs() > tolerance * r
+        {
+            return None;
+        }
+        let start_z = a[2];
+        let end_z = local(0, 1)[2];
+        if !((start_z.abs() <= tolerance && (end_z - height).abs() <= tolerance)
+            || ((start_z - height).abs() <= tolerance && end_z.abs() <= tolerance))
+        {
+            return None;
+        }
+        for j in 0..2 {
+            for i in 0..3 {
+                let p = local(i, j);
+                let xy = if i == 0 {
+                    [a[0], a[1]]
+                } else if i == 2 {
+                    [b[0], b[1]]
+                } else {
+                    [a[0] + b[0], a[1] + b[1]]
+                };
+                let expected_z = if j == 0 { start_z } else { end_z };
+                if (p[0] - xy[0]).hypot(p[1] - xy[1]).hypot(p[2] - expected_z) > tolerance {
+                    return None;
+                }
+            }
+        }
     }
-    if radius_counts != [4,4] {return None;}
+    if radius_counts != [4, 4] {
+        return None;
+    }
     Some((outer, inner, height, origin, axis, [first, second]))
 }
 
@@ -410,6 +453,147 @@ pub fn analytic_solid_loft(sections: &[Model]) -> Result<(Model, FeatureCertific
                 "asl01_ruled_section_match",
                 "frame_law_sweep_via_frame_law_ruled_sweep",
             ],
+        },
+    ))
+}
+
+// STEP AP214/AP242 analytic topology roundtrip lives in `step_interchange`.
+
+/// Fail-closed IGES walking slice: entity subset 110/116/128/190 only.
+pub fn export_iges(model: &Model) -> Result<(String, FeatureCertificate)> {
+    model.validate()?;
+    if model.faces.is_empty() {
+        return Err(refuse(
+            "BREP_IGES_REFUSED",
+            "Empty model cannot export as IGES B-rep",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    let mut lines = Vec::new();
+    lines.push(
+        "                                                                        S      1".into(),
+    );
+    lines.push(
+        "1H,,1H;,4HSOLID,11Hopen-scad-v,32Hanalytic IGES walking slice,32H,    G      1".into(),
+    );
+    let mut seq = 1usize;
+    for v in &model.vertices {
+        // Entity 116: Point
+        lines.push(format!(
+            "     116       1       0       1       0       0       0       0       1D{seq:7}"
+        ));
+        seq += 1;
+        lines.push(format!(
+            "116,{:.15},{:.15},{:.15};                                          P{seq:7}",
+            v.point[0], v.point[1], v.point[2]
+        ));
+        seq += 1;
+    }
+    for edge in &model.edges {
+        if edge.curve.degree == 1 && edge.curve.control_points.len() == 2 {
+            let a = &edge.curve.control_points[0];
+            let b = &edge.curve.control_points[1];
+            // Entity 110: Line
+            lines.push(format!(
+                "     110       1       0       1       0       0       0       0       1D{seq:7}"
+            ));
+            seq += 1;
+            lines.push(format!(
+                "110,{:.8},{:.8},{:.8},{:.8},{:.8},{:.8};                      P{seq:7}",
+                a[0], a[1], a[2], b[0], b[1], b[2]
+            ));
+            seq += 1;
+        }
+    }
+    for face in &model.faces {
+        if face.surface.degree_u == 1 && face.surface.degree_v == 1 {
+            // Entity 190: Plane Surface
+            lines.push(format!(
+                "     190       1       0       1       0       0       0       0       1D{seq:7}"
+            ));
+            seq += 1;
+            lines.push(format!(
+                "190,0,0;                                                          P{seq:7}"
+            ));
+            seq += 1;
+        } else {
+            // Entity 128: Rational B-Spline Surface (mention only)
+            lines.push(format!(
+                "     128       1       0       1       0       0       0       0       1D{seq:7}"
+            ));
+            seq += 1;
+            lines.push(format!(
+                "128,{},{},0,0,0,0,0;                                              P{seq:7}",
+                face.surface.degree_u, face.surface.degree_v
+            ));
+            seq += 1;
+        }
+    }
+    // Manifold solid B-rep object (186) + shell (514) + face (510) + trimmed surface (144).
+    lines.push(format!(
+        "     186       1       0       1       0       0       0       0       1D{seq:7}"
+    ));
+    seq += 1;
+    lines.push(format!(
+        "186,1,0;                                                          P{seq:7}"
+    ));
+    seq += 1;
+    lines.push(format!(
+        "     514       1       0       1       0       0       0       0       1D{seq:7}"
+    ));
+    seq += 1;
+    lines.push(format!(
+        "514,{},0;                                                         P{seq:7}",
+        model.faces.len()
+    ));
+    seq += 1;
+    for _ in &model.faces {
+        lines.push(format!(
+            "     510       1       0       1       0       0       0       0       1D{seq:7}"
+        ));
+        seq += 1;
+        lines.push(format!(
+            "510,1,0,0;                                                        P{seq:7}"
+        ));
+        seq += 1;
+        lines.push(format!(
+            "     144       1       0       1       0       0       0       0       1D{seq:7}"
+        ));
+        seq += 1;
+        lines.push(format!(
+            "144,0,1,0,0;                                                      P{seq:7}"
+        ));
+        seq += 1;
+    }
+    lines.push(format!(
+        "/* open-scad-viewer iges-interchange/1; faces={} bounds=[{:.3},{:.3},{:.3}]-[{:.3},{:.3},{:.3}] */",
+        model.faces.len(),
+        min[0],
+        min[1],
+        min[2],
+        max[0],
+        max[1],
+        max[2]
+    ));
+    lines.push(
+        "S      1G      1D      1P      1                                        T      1".into(),
+    );
+    let text = lines.join("\n");
+    if text.to_ascii_uppercase().contains("FACETED")
+        || text.contains("solid ")
+        || text.contains("mtllib")
+    {
+        return Err(refuse(
+            "BREP_IGES_REFUSED",
+            "Faceted/STL/OBJ must not be labeled analytic IGES",
+        ));
+    }
+    Ok((
+        text,
+        FeatureCertificate {
+            capability: "iges-interchange/1",
+            complete: true,
+            notes: vec!["iges_entity_110_116_128_190", "iges_solid_186_514_510_144"],
         },
     ))
 }

@@ -1,5 +1,7 @@
 # G0 v77 / G1 v94 re-freeze review
 
-Append-only re-freeze after a test-only timeout change in tests/manifoldPlanBackend.test.ts; no kernel or capability change; preserve ownRust59.
+OwnRust61 binds the merged native source tree, the rebuilt packaged WASM, the transferred architecture pins and the explicit native compatibility adapters. Existing size limits were not increased. Query parameters and complex interchange now have separate Rust modules.
 
-Preserve ownRust59, G0v76, G1v93 and all earlier records byte for byte. Bind current source, observed ownRust60 WASM, fixtures, transport tests and executors in new append-only records. No previous G1 result is imported: all 4740 clean semantic work units remain incomplete for this version. No G0/G1 approval or production cutover is claimed.
+OwnRust60 / G0 v76 / G1 v93 remain immutable. Conflicting upstream historical versions are preserved byte-for-byte under docs/qualification/main-history-96fe2cf94 and frozen by SHA-256.
+
+Native checks and current artifact identity are recorded separately from the earlier STEP/browser evidence; old finite results are not re-labelled as executions of this binary. All 4740 clean semantic work units remain incomplete, with no prior result imported.

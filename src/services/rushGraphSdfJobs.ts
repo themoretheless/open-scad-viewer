@@ -41,3 +41,4 @@ export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
     }
     return jobs
 }
+
