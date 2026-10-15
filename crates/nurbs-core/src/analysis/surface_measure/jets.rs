@@ -125,7 +125,20 @@ fn evaluate_bernstein(mut points: Vec<[I; 4]>, t: I) -> Result<[I; 4]> {
     for count in (1..points.len()).rev() {
         for i in 0..count {
             for k in 0..4 {
-                points[i][k] = points[i][k].mul(beta)?.add(points[i + 1][k].mul(t)?)?;
+                let a = points[i][k];
+                let b = points[i + 1][k];
+                let mut value = a.mul(beta)?.add(b.mul(t)?)?;
+                // All three expressions enclose the SAME original de
+                // Casteljau value. Their intersection preserves t+(1-t)=1
+                // without assuming independent coefficient intervals exact.
+                // Skip only an overflowing optional rearrangement.
+                if let Ok(affine) = b.sub(a).and_then(|d| d.mul(t)).and_then(|d| a.add(d)) {
+                    value = value.intersect(affine.lo, affine.hi)?;
+                }
+                if let Ok(affine) = a.sub(b).and_then(|d| d.mul(beta)).and_then(|d| b.add(d)) {
+                    value = value.intersect(affine.lo, affine.hi)?;
+                }
+                points[i][k] = value;
             }
         }
     }
@@ -207,6 +220,27 @@ mod tests {
     use super::*;
     fn contains(i: I, value: f64) {
         assert!(i.lo <= value && value <= i.hi, "{value} outside {i:?}");
+    }
+    #[test]
+    fn bernstein_rearrangements_preserve_complement_correlation_and_interval_inputs() {
+        let t = I::new(0.75, 1.).unwrap();
+        let points = vec![[I::point(1.); 4], [I::point(1.125); 4]];
+        let out = evaluate_bernstein(points, t).unwrap();
+        for v in out {
+            assert!(v.lo <= 1.09375 && v.hi >= 1.125);
+            assert!(v.hi - v.lo < 0.031250000001);
+        }
+        let a = I::new(1., 1.01).unwrap();
+        let b = I::new(1.125, 1.13).unwrap();
+        let out = evaluate_bernstein(vec![[a; 4], [b; 4]], t).unwrap();
+        for a in [1., 1.005, 1.01] {
+            for b in [1.125, 1.1275, 1.13] {
+                for t in [0.75, 0.875, 1.] {
+                    let value = (1. - t) * a + t * b;
+                    assert!(out[0].lo <= value && value <= out[0].hi);
+                }
+            }
+        }
     }
     #[test]
     fn stable_jets_on_ulp_wide_queries_match_original_rational_derivatives() {

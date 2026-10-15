@@ -62,9 +62,13 @@ pub(super) fn premises(
             r.reason,
         )
     } else {
-        // Corrected-Frenet and holonomy-corrected spatial Bishop jets require
-        // their own source derivative owners. Do not borrow open raw jets.
-        if s.options.orientation != Orientation::FixedNormal {
+        // Explicit spatial Bishop uses its OWN corrected derivative owner and
+        // periodic source theorem. Corrected-Frenet/implicit fallback modes
+        // still require their original source derivative owners.
+        if s.options.orientation != Orientation::FixedNormal
+            && !(s.options.orientation == Orientation::RotationMinimizing
+                && s.spatial_rmf_error_limits.is_some())
+        {
             out.reason = Some("ideal-volume-closed-frame-jets-unproved");
             return Ok(false);
         }

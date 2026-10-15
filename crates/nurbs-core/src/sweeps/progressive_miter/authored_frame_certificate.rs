@@ -32,7 +32,7 @@ pub use guided_path_values::{certify_path_guide_values,certify_path_guide_contro
 mod phase;
 pub(crate) use phase::{PathPhase,compose_and_twist,certify_guided_phase_jets,certify_phase_guide_width};
 mod bishop_jets;
-pub(crate) use bishop_jets::certify_bishop_jets;
+pub(crate) use bishop_jets::{BishopCorrection,certify_bishop_jets,certify_arc_corrected_bishop_jets,certify_bishop_phase_jets};
 mod trajectory;
 pub use trajectory::{TrajectoriesReport,ControlValuesReport,ControlValueReport, TrajectoryReport, certify_control_trajectory, certify_control_value, certify_control_trajectories, certify_control_values};
 pub use guided_axis::{certify_authored_guide, certify_authored_guide_values};

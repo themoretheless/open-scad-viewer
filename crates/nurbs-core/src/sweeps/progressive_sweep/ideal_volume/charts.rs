@@ -149,6 +149,12 @@ pub(super) fn original_jets(
     transport: Option<&OriginalRmfTransportReport>,
 ) -> Result<Option<frame::Report>> {
     if let Some(transport) = transport {
+        if transport.closing_angle.is_some() {
+            return super::super::rmf_transport::closed_frame_jets(
+                transport, s.path, s.twist, t, max,
+            )
+            .map(Some);
+        }
         return super::super::rmf_transport::frame_jets(transport, s.path, s.twist, t, max)
             .map(Some);
     }

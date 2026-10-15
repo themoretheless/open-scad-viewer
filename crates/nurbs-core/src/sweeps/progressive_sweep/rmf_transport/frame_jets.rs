@@ -10,6 +10,36 @@ pub(in crate::sweeps::progressive_sweep) fn frame_jets(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<frame::Report> {
+    original_jets(
+        transport,
+        path,
+        twist,
+        traversal,
+        frame::PathPhase::identity(traversal),
+        max_cells,
+        false,
+    )
+}
+pub(in crate::sweeps::progressive_sweep) fn phase_jets(
+    transport: &OriginalRmfTransportReport,
+    path: &Curve,
+    twist: &Curve,
+    station: [f64; 2],
+    phase: frame::PathPhase,
+    max_cells: usize,
+) -> Result<frame::Report> {
+    original_jets(transport, path, twist, station, phase, max_cells, true)
+}
+fn original_jets(
+    transport: &OriginalRmfTransportReport,
+    path: &Curve,
+    twist: &Curve,
+    station: [f64; 2],
+    phase: frame::PathPhase,
+    max_cells: usize,
+    composed: bool,
+) -> Result<frame::Report> {
+    let traversal = phase.traversal;
     check(
         max_cells <= 100000
             && traversal.iter().all(|x| x.is_finite())
@@ -29,6 +59,7 @@ pub(in crate::sweeps::progressive_sweep) fn frame_jets(
     };
     if transport.status != Status::Certified
         || transport.closing_angle.is_some()
+        || transport.original_arc_length.is_some()
         || transport.arc_corrected_normals.is_some()
         || transport.arc_corrected_binormals.is_some()
     {
@@ -59,8 +90,19 @@ pub(in crate::sweeps::progressive_sweep) fn frame_jets(
     let Some(n) = normals else {
         return Ok(unresolved(cells, "bishop-cover-query-missing"));
     };
-    let mut result =
-        frame::certify_bishop_jets(path, encode(n), twist, traversal, max_cells - cells)?;
+    let mut result = if composed {
+        frame::certify_bishop_phase_jets(
+            path,
+            encode(n),
+            twist,
+            station,
+            phase,
+            max_cells - cells,
+            None,
+        )?
+    } else {
+        frame::certify_bishop_jets(path, encode(n), twist, traversal, max_cells - cells)?
+    };
     result.cells += cells;
     Ok(result)
 }

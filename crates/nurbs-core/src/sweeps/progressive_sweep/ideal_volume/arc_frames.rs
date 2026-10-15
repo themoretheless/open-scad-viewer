@@ -38,9 +38,17 @@ pub(super) fn arc_frame(
         return frame::certify_fixed_path(s.path, s.options.normal, s.twist, station, max)
             .map(Some);
     }
-    let raw = if let Some(transport) = transport {
-        super::super::rmf_transport::frame_jets(transport, s.path, zero, p.traversal, max)?
-    } else {
+    if let Some(transport) = transport {
+        return if transport.closing_angle.is_some() {
+            super::super::rmf_transport::closed_phase_jets(
+                transport, s.path, s.twist, station, p, max,
+            )
+        } else {
+            super::super::rmf_transport::phase_jets(transport, s.path, s.twist, station, p, max)
+        }
+        .map(Some);
+    }
+    let raw = {
         match s.options.orientation {
             Orientation::FixedNormal => {
                 frame::certify_fixed_normal_path(s.path, s.options.normal, zero, p.traversal, max)?
@@ -74,4 +82,76 @@ pub(super) fn compose_width(
         w.second = Some([dd.lo, dd.hi]);
     }
     Ok(w)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn original_inverse_arc_phase_composes_both_correction_jets_in_station_units() {
+        // Analytic nonuniform forward line; the correction is a specified open
+        // angular law, not a claim of closed holonomy for this line.
+        let path = Curve {
+            degree: 2,
+            knots: vec![-3., -3., -3., 5., 5., 5.],
+            control_points: vec![vec![0.; 3], vec![0., 0., 0.5], vec![0., 0., 2.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let zero = constant_vector_law([0.; 3]).unwrap();
+        let mut spent = 0;
+        let map = arc::ArcMap::build(&path, &mut spent, 100000)
+            .unwrap()
+            .unwrap();
+        for station in [0.125_f64, 0.5, 0.875] {
+            let range = [station - 0.0001, station + 0.0001];
+            let phase = map.phase(range, &mut spent, 100000).unwrap().unwrap();
+            let t = I::new(phase.traversal[0], phase.traversal[1]).unwrap();
+            let alpha = t.add(t.mul(t).unwrap()).unwrap().div(I::point(4.)).unwrap();
+            let trig = crate::sweeps::progressive_miter::trigonometric_certificate::certify([
+                alpha.lo, alpha.hi,
+            ])
+            .unwrap();
+            let raw = frame::certify_arc_corrected_bishop_jets(
+                &path,
+                [trig.cos, trig.sin, [0., 0.]],
+                &zero,
+                phase.traversal,
+                10000,
+                [0.5, 0.5],
+                [2., 2.],
+            )
+            .unwrap();
+            let composed = frame::compose_and_twist(raw, phase, &zero, range, 10000).unwrap();
+            assert_eq!(composed.status, Status::Certified);
+            let out = frame::certify_bishop_phase_jets(
+                &path,
+                [trig.cos, trig.sin, [0., 0.]],
+                &zero,
+                range,
+                phase,
+                10000,
+                Some(frame::BishopCorrection::OriginalArc {
+                    angle: I::point(0.5),
+                }),
+            )
+            .unwrap();
+            assert_eq!(out.status, Status::Certified);
+            let angle = 0.5 * station;
+            let n = out.transverse.unwrap();
+            for (ranges, values) in [n.value, n.first, n.second].into_iter().zip([
+                [angle.cos(), angle.sin(), 0.],
+                [-0.5 * angle.sin(), 0.5 * angle.cos(), 0.],
+                [-0.25 * angle.cos(), -0.25 * angle.sin(), 0.],
+            ]) {
+                for k in 0..3 {
+                    assert!(
+                        ranges[k][0] <= values[k] && values[k] <= ranges[k][1],
+                        "{ranges:?} vs {values:?}"
+                    );
+                    assert!(ranges[k][1] - ranges[k][0] < 0.01);
+                }
+            }
+        }
+    }
 }

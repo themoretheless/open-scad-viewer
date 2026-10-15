@@ -55,6 +55,8 @@ impl Context<'_, '_> {
         out: &mut IdealVolumeReport,
         max_cells: usize,
     ) -> Result<Enclosed> {
+        // A larger aggregate atlas ledger never widens primitive query limits.
+        let max_cells = max_cells.min(out.cells.saturating_add(100000));
         let caps = self.caps;
         let s = self.s;
         let basis = self.basis;

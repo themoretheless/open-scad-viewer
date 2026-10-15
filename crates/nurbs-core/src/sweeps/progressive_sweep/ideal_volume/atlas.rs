@@ -53,6 +53,29 @@ fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
         .all(|x| x.is_finite())
         .then_some(inverse)
 }
+/// ONE invertible diagonal change x=S*xi on the complete joint chart.
+/// A thin carrier and a long path must not make the SPD proposal depend on
+/// arbitrary normalized parameter units. This never changes source jets/knots.
+fn coordinate_scale(columns: [V3; 3]) -> Option<[f64; 3]> {
+    let mut scale = [0.; 3];
+    for j in 0..3 {
+        let mid = columns[j].map(|x| crate::distance_bounds::midpoint(x.lo, x.hi));
+        let norm = mid[0].hypot(mid[1]).hypot(mid[2]);
+        let s = 1. / norm;
+        if !s.is_finite() || s <= 0. {
+            return None;
+        }
+        scale[j] = s;
+    }
+    Some(scale)
+}
+fn scaled(columns: [V3; 3], scale: [f64; 3]) -> Result<[V3; 3]> {
+    Ok([
+        iv::scale(columns[0], I::point(scale[0]))?,
+        iv::scale(columns[1], I::point(scale[1]))?,
+        iv::scale(columns[2], I::point(scale[2]))?,
+    ])
+}
 /// One constant metric on the ENTIRE joint convex chart. Smaller original
 /// enclosures may prove its SPD condition when their entrywise matrix union
 /// loses correlations. Different metrics in separate pieces are never used.
@@ -64,13 +87,20 @@ fn monotone_hull(
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<bool> {
-    let Some(inverse) = inverse_proposal(projected(columns, projection)?) else {
+    let root = projected(columns, projection)?;
+    let Some(scale) = coordinate_scale(root) else {
+        return Ok(false);
+    };
+    let Ok(root_scaled) = scaled(root, scale) else {
+        return Ok(false);
+    };
+    let Some(inverse) = inverse_proposal(root_scaled) else {
         return Ok(false);
     };
     let mut pending = pieces.to_vec();
     let mut visits = 0;
     while let Some(b) = pending.pop() {
-        if visits == 16 || out.cells == max {
+        if visits == 256 || out.cells == max {
             return Ok(false);
         }
         visits += 1;
@@ -80,8 +110,12 @@ fn monotone_hull(
             // The rounded inverse supplies no proof. All original one-sided
             // Jacobians on every source piece must satisfy the outward SPD
             // test for this SAME R*P, including both closed seam limits.
-            if margin(projected(e.columns, projection)?, inverse).is_ok_and(|x| x > 0.) {
-                continue;
+            // DF*S is the derivative in xi coordinates. BOTH S and the left
+            // metric are fixed across every subcell/seam piece of this hull.
+            if let Ok(normalized) = scaled(projected(e.columns, projection)?, scale) {
+                if margin(normalized, inverse).is_ok_and(|x| x > 0.) {
+                    continue;
+                }
             }
         }
         let axis = match e {
@@ -96,6 +130,28 @@ fn monotone_hull(
     Ok(true)
 }
 
+// Proof/search results belong to ONE immutable source context and aggregate
+// ledger. Negative entries only skip a completed bounded metric proposal;
+// they never classify geometry. Budget-stopped proposals are not cached.
+fn cached_metric(
+    pieces: &[Box3],
+    columns: [V3; 3],
+    projection: [[f64; 3]; 3],
+    query: &mut impl FnMut(Box3, &mut IdealVolumeReport) -> Result<Enclosed>,
+    out: &mut IdealVolumeReport,
+    max: usize,
+    cache: &mut BTreeMap<Vec<[[u64; 2]; 3]>, bool>,
+) -> Result<bool> {
+    let k = pieces.iter().map(|b| key(*b)).collect::<Vec<_>>();
+    if let Some(proven) = cache.get(&k) {
+        return Ok(*proven);
+    }
+    let proven = monotone_hull(pieces, columns, projection, query, out, max)?;
+    if proven || out.cells < max {
+        cache.insert(k, proven);
+    }
+    Ok(proven)
+}
 fn hull(a: Box3, b: Box3) -> Box3 {
     std::array::from_fn(|i| [a[i][0].min(b[i][0]), a[i][1].max(b[i][1])])
 }
@@ -122,6 +178,7 @@ pub(super) fn certify(
 ) -> Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
+    let mut metrics = BTreeMap::new();
     let mut query = |b, out: &mut IdealVolumeReport| -> Result<Enclosed> {
         if let Some(e) = cache.get(&key(b)) {
             return Ok(*e);
@@ -140,6 +197,15 @@ pub(super) fn certify(
         out.cells += 1;
         let ea = query(a, out)?;
         let eb = if a == b { ea } else { query(b, out)? };
+        // Strict separation completes this pair without an expensive joint
+        // hull query. Querying an unused hull could exhaust work AFTER the
+        // actual proof had finished, and made final reported work depend on
+        // whether that irrelevant query was stopped by the budget.
+        if let (Enclosed::Value(x), Enclosed::Value(y)) = (ea, eb) {
+            if a != b && separated(x.value, y.value) {
+                continue;
+            }
+        }
         let h = hull(a, b);
         let eh = if h == a {
             ea
@@ -156,17 +222,20 @@ pub(super) fn certify(
                 return Ok(());
             }
         }
-        if let (Enclosed::Value(x), Enclosed::Value(y)) = (ea, eb) {
-            if a != b && separated(x.value, y.value) {
-                continue;
-            }
-        }
         if let Enclosed::Value(e) = eh {
             if regular(e.columns, projection)? {
                 continue;
             }
             if h[2][1] - h[2][0] <= 0.125
-                && monotone_hull(&[h], e.columns, projection, &mut query, out, max_cells)?
+                && cached_metric(
+                    &[h],
+                    e.columns,
+                    projection,
+                    &mut query,
+                    out,
+                    max_cells,
+                    &mut metrics,
+                )?
             {
                 continue;
             }
@@ -177,6 +246,13 @@ pub(super) fn certify(
             // Both pieces have dt/d(lift)=1. Query ORIGINAL parameters; never
             // round/translate knot vectors or pretend endpoints are distinct.
             if early[2][1] <= late[2][0] && late[2][0] > early[2][1] {
+                // A wrapped proof is a separate bounded stage, even when its
+                // source boxes are cached. Do not enter it after an ordinary
+                // trial exhausted the aggregate ledger.
+                if out.cells == max_cells {
+                    return Ok(());
+                }
+                out.cells += 1;
                 let mut tail = h;
                 let mut head = h;
                 tail[2] = [late[2][0], 1.];
@@ -205,13 +281,14 @@ pub(super) fn certify(
                         continue;
                     }
                     if (1. - tail[2][0]) + head[2][1] <= 0.125
-                        && monotone_hull(
+                        && cached_metric(
                             &[tail, head],
                             columns,
                             projection,
                             &mut query,
                             out,
                             max_cells,
+                            &mut metrics,
                         )?
                     {
                         continue;
@@ -287,5 +364,28 @@ mod tests {
         singular[2] = [0.; 3];
         assert!(!regular(a.map(|v| v.map(I::point)), singular).unwrap());
         assert!(!separated([I::point(0.); 3], [I::point(0.); 3]));
+    }
+    #[test]
+    fn one_fixed_coordinate_scale_balances_thin_carrier_and_long_traversal() {
+        let r = I::point(1. / 128.);
+        let w = I::point(16.);
+        let c = I::new(0.99, 1.).unwrap();
+        let s = I::new(-0.05, 0.05).unwrap();
+        let z = I::point(0.);
+        let columns = [
+            [r.mul(c).unwrap(), z, r.mul(s).unwrap()],
+            [z, r, z],
+            [w.mul(s).unwrap(), z, w.mul(c).unwrap()],
+        ];
+        let inverse = inverse_proposal(columns).unwrap();
+        assert!(margin(columns, inverse).unwrap() < 0.);
+        let scale = coordinate_scale(columns).unwrap();
+        assert!(scale.iter().all(|x| x.is_finite() && *x > 0.));
+        let normalized = scaled(columns, scale).unwrap();
+        let inverse = inverse_proposal(normalized).unwrap();
+        assert!(margin(normalized, inverse).unwrap() > 0.9);
+        let singular = [[1., 0., 0.], [0., 1., 0.], [0.; 3]];
+        assert!(!regular(columns, singular).unwrap());
+        assert!(coordinate_scale(projected(columns, singular).unwrap()).is_none());
     }
 }

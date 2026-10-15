@@ -5,7 +5,9 @@
 //! omega, then charges variation and a constant-skew quadratic remainder.
 //! This is an uncorrected source-normal cover, not a sweep/Solid certificate.
 mod frame_jets;
-pub(in crate::sweeps::progressive_sweep) use frame_jets::frame_jets;
+mod closed_frame_jets;
+pub(in crate::sweeps::progressive_sweep) use closed_frame_jets::{closed_frame_jets,closed_phase_jets};
+pub(in crate::sweeps::progressive_sweep) use frame_jets::{frame_jets,phase_jets};
 use super::endpoint_jets;
 use crate::numerics::interval_vec3::{Vec3, add, cross, div, dot_tight, norm, scale, sub};
 use crate::sweeps::progressive_miter::{
@@ -32,6 +34,9 @@ pub struct OriginalRmfTransportReport {
     pub cover: Option<Vec<RmfNormalCell>>,
     /// Original closing-to-initial Bishop rotation, before correction.
     pub closing_angle: Option<[f64; 2]>,
+    /// SAME original total arc length paid for by the corrected cover owner.
+    /// Present only with a complete closed arc-holonomy correction.
+    pub original_arc_length: Option<[f64; 2]>,
     /// Source Bishop normals corrected by original arc-length fraction.
     /// This does not certify the constructor's sampled-chord correction.
     pub arc_corrected_normals: Option<Vec<[[f64; 2]; 3]>>,
@@ -148,6 +153,7 @@ fn certify_original_rmf_transport_impl(
         exact_work: 0,
         cover: None,
         closing_angle: None,
+        original_arc_length: None,
         arc_corrected_normals: None,
         arc_corrected_binormals: None,
         reason: Some("rmf-original-C1-unproved"),
@@ -330,6 +336,7 @@ fn certify_original_rmf_transport_impl(
             prefix = next_prefix;
         }
         out.closing_angle = Some(angle);
+        out.original_arc_length = Some([total.lo,total.hi]);
         out.arc_corrected_normals = Some(corrected);
         out.arc_corrected_binormals = Some(binormals);
     }
@@ -392,6 +399,7 @@ pub fn certify_original_rmf_section_images(
                 transport.reason = Some("rmf-source-section-image-work-unproved");
                 transport.cover = None;
                 transport.closing_angle = None;
+                transport.original_arc_length = None;
                 transport.arc_corrected_normals = None;
                 transport.arc_corrected_binormals = None;
                 return Ok(OriginalRmfSectionImagesReport {

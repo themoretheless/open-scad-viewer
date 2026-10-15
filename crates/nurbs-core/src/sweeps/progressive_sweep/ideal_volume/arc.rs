@@ -12,6 +12,8 @@ struct Cell {
     tangent_rate: V3,
 }
 pub(super) struct ArcMap {
+    // Immutable original coefficients, never a fitted inverse/proxy curve.
+    path: Curve,
     cells: Vec<Cell>,
     stations: Vec<[f64; 2]>,
     nodes: Vec<f64>,
@@ -20,6 +22,7 @@ pub(super) struct ArcMap {
 }
 impl ArcMap {
     pub(super) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
+        let max = max.min(spent.saturating_add(100000));
         let [a, b] = path.domain();
         let width = I::point(b).sub(I::point(a))?;
         let mut pending = (0..64)
@@ -128,6 +131,7 @@ impl ArcMap {
         stations.push([1., 1.]);
         nodes.push(1.);
         Ok(Some(Self {
+            path: path.clone(),
             cells,
             stations,
             nodes,
@@ -225,13 +229,55 @@ impl ArcMap {
         } else if station == [1., 1.] {
             traversal = [1., 1.];
         }
-        let first = self.total.div(speed)?;
-        let second = I::point(0.).sub(
+        let mut first = self.total.div(speed)?;
+        let mut second = I::point(0.).sub(
             self.total
                 .mul(self.total)?
                 .mul(rate)?
                 .div(speed.mul(speed)?.mul(speed)?)?,
         )?;
+        if traversal[0] < traversal[1] {
+            // Narrowed inverse parameters must get their OWN original jets;
+            // keeping full-cell tangents/rates leaves a permanent derivative
+            // uncertainty floor even as station boxes are subdivided.
+            let fresh =
+                vector_certificate::certify_traversal(&self.path, traversal, max - *spent, false)?;
+            *spent += fresh.cells;
+            if fresh.status != Status::Certified {
+                return Ok(None);
+            }
+            let [a, b] = self.path.domain();
+            let width = I::point(b).sub(I::point(a))?;
+            let v = iv::scale(decode(fresh.first.unwrap())?, width)?;
+            let acc = iv::scale(decode(fresh.second.unwrap())?, width.mul(width)?)?;
+            let w = iv::norm(v)?;
+            if w.lo > 0. {
+                let wt = iv::dot_tight(v, acc)?.div(w)?;
+                let next_first = self.total.div(w)?;
+                let next_second = I::point(0.).sub(
+                    self.total
+                        .mul(self.total)?
+                        .mul(wt)?
+                        .div(w.mul(w)?.mul(w)?)?,
+                )?;
+                first = first.intersect(next_first.lo, next_first.hi)?;
+                second = second.intersect(next_second.lo, next_second.hi)?;
+                let tangent = iv::div(v, w)?;
+                let omega = iv::div(iv::cross(v, acc)?, w.mul(w)?)?;
+                let tangent_rate = iv::cross(omega, tangent)?;
+                let jets = [
+                    iv::scale(tangent, self.total)?,
+                    iv::scale(tangent_rate, self.total.mul(self.total)?.div(w)?)?,
+                ];
+                if let Some(old) = &mut position {
+                    for a in 0..2 {
+                        for k in 0..3 {
+                            old[a][k] = old[a][k].intersect(jets[a][k].lo, jets[a][k].hi)?;
+                        }
+                    }
+                }
+            }
+        }
         Ok(Some(frame::PathPhase {
             traversal,
             first,

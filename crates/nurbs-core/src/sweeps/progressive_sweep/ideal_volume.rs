@@ -63,6 +63,8 @@ impl MultiSweep<'_> {
     /// literal traversal-independent carrier. Wrapped charts then certify the
     /// UV x S1 quotient, not injectivity of the duplicated endpoint cube.
     /// Invalid/unowned trim regions are not admitted.
+    /// The explicit aggregate budget may be up to 1,000,000 cells. Individual
+    /// source stages retain their 100,000-cell ceiling; no implicit work is added.
     pub fn certify_ideal_volume_atlas(
         &self,
         caps: [&Surface; 2],
@@ -81,7 +83,7 @@ impl MultiSweep<'_> {
         atlas: bool,
     ) -> Result<IdealVolumeReport> {
         check(
-            max_cells <= 100000
+            max_cells <= if atlas { 1000000 } else { 100000 }
                 && max_exact_work <= 1000000
                 && projection.iter().flatten().all(|x| x.is_finite()),
             "Invalid ideal volume limits or projection",
@@ -123,11 +125,12 @@ impl MultiSweep<'_> {
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
         if closed {
-            if !closed::premises(s, caps, &mut out, max_cells, max_exact_work)? {
+            if !closed::premises(s, caps, &mut out, max_cells.min(100000), max_exact_work)? {
                 return Ok(out);
             }
         } else {
-            let smooth = s.certify_original_frame_smoothness(1, max_cells, max_exact_work)?;
+            let smooth =
+                s.certify_original_frame_smoothness(1, max_cells.min(100000), max_exact_work)?;
             out.cells += smooth.cells;
             out.exact_work += smooth.exact_work;
             if !smooth.source_frame_smoothness_certified {
@@ -136,8 +139,13 @@ impl MultiSweep<'_> {
             }
         }
         let zero = constant_vector_law([0.; 3])?;
-        let Some(initial) =
-            super::profile_domain::original_frame(s, &zero, [0., 0.], max_cells - out.cells, true)?
+        let Some(initial) = super::profile_domain::original_frame(
+            s,
+            &zero,
+            [0., 0.],
+            (max_cells - out.cells).min(100000),
+            true,
+        )?
         else {
             out.reason = Some("ideal-volume-initial-frame-unproved");
             return Ok(out);
@@ -155,7 +163,7 @@ impl MultiSweep<'_> {
         let start = crate::sweeps::progressive_miter::vector_certificate::certify_values_traversal(
             s.path,
             [0., 0.],
-            max_cells - out.cells,
+            (max_cells - out.cells).min(100000),
             false,
         )?;
         out.cells += start.cells;
@@ -170,7 +178,7 @@ impl MultiSweep<'_> {
             None
         };
         let anchor = if s.contact_point.is_some() {
-            let report = super::contact_anchor::certify(s, max_cells - out.cells)?;
+            let report = super::contact_anchor::certify(s, (max_cells - out.cells).min(100000))?;
             out.cells += report.cells;
             let Some(q) = report
                 .coordinates
@@ -192,9 +200,9 @@ impl MultiSweep<'_> {
                     s.path,
                     s.options.normal,
                     steps,
-                    max_cells - out.cells,
+                    (max_cells - out.cells).min(100000),
                     max_exact_work - out.exact_work,
-                    false,
+                    closed,
                 )?;
                 out.cells += report.cells;
                 out.exact_work += report.exact_work;
@@ -221,7 +229,8 @@ impl MultiSweep<'_> {
         let mut shared_guide = false;
         let guide_arc = if arc.is_some() {
             if let Some(guide) = s.orientation_guide {
-                let identity = super::arc_guide::certify(s.path, guide, max_cells - out.cells)?;
+                let identity =
+                    super::arc_guide::certify(s.path, guide, (max_cells - out.cells).min(100000))?;
                 out.cells += identity.cells;
                 shared_guide = identity.scale_upper.is_some();
                 if shared_guide {

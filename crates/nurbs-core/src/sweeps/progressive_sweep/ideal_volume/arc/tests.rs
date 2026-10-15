@@ -76,3 +76,36 @@ fn an_original_interior_zero_speed_never_produces_an_inverse_map() {
     assert!(ArcMap::build(&p, &mut work, 200).unwrap().is_none());
     assert!(work <= 200);
 }
+
+#[test]
+fn refined_original_arc_jets_remove_fictitious_bending_on_a_nonuniform_line() {
+    // Original normalized P(t)=(0,0,t+t²), with a different source knot domain.
+    // Arc station makes P(s)=(0,0,2s): its second spatial jet is exactly zero.
+    let p = curve(
+        vec![vec![0.; 3], vec![0., 0., 0.5], vec![0., 0., 2.]],
+        [-3., 5.],
+    );
+    let original = p.clone();
+    let mut build = 0;
+    let map = ArcMap::build(&p, &mut build, 100000).unwrap().unwrap();
+    for station in [[0.13, 0.1301], [0.5, 0.5001], [0.97, 0.9701]] {
+        let mut work = 0;
+        let phase = map.phase(station, &mut work, 10000).unwrap().unwrap();
+        let [first, second] = phase.position_jets.unwrap();
+        for k in 0..3 {
+            contains(first[k], if k == 2 { 2. } else { 0. });
+            contains(second[k], 0.);
+            assert!(second[k].hi - second[k].lo < 1e-10, "{second:?}");
+        }
+        for s in station {
+            let t = ((1. + 8. * s).sqrt() - 1.) / 2.;
+            assert!(phase.traversal[0] <= t && t <= phase.traversal[1]);
+            contains(phase.first, 2. / (1. + 2. * t));
+            contains(phase.second, -8. / (1. + 2. * t).powi(3));
+        }
+        let mut short = 0;
+        assert!(map.phase(station, &mut short, work - 1).unwrap().is_none());
+        assert!(short <= work - 1);
+    }
+    assert_eq!(p, original);
+}
