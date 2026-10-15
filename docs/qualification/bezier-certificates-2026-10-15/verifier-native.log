@@ -1,0 +1,11 @@
+
+running 7 tests
+test profile_certificate::tests::empty_material_has_a_complete_empty_certificate ... ok
+test profile_certificate::arithmetic::tests::even_stationary_zero_and_endpoint_cusps_are_monotone ... ok
+test profile_certificate::tests::source_binding_includes_weights_knots_tolerance_signed_zero_and_layout ... ok
+test profile_certificate::tests::exact_nested_profile_roundtrip_and_claim_tampering ... ok
+test profile_certificate::tests::rational_circle_and_affine_ellipse_retain_original_definitions ... ok
+test profile_certificate::tests::same_side_curved_cusp_has_an_algebraic_certificate_in_both_frames ... ok
+test profile_certificate::tests::crossing_overlap_open_wire_and_wrong_winding_never_certify ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 956 filtered out; finished in 1.78s

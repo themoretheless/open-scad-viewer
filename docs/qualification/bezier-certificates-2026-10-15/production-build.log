@@ -1,0 +1,211 @@
+vite v8.3.0 building client environment for production...
+transforming...
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/services/rushFrontendScene.ts is dynamically imported by src/services/openscadParser.ts but also statically imported by src/workers/geometry.worker.ts, dynamic import will not move module into another chunk.
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 9.6s of this 10.0s build (96%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - compact-runtime-chunks renderChunk (96%, 9.6s, 12 calls)
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - vite:asset load (3 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 3.8s of this 13.1s build (29%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - compact-runtime-chunks renderChunk (28%, 3.7s, 18 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - vite:asset load (4 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 3.5s of this 13.1s build (27%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - compact-runtime-chunks renderChunk (26%, 3.4s, 18 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - vite:asset load (4 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 3.9s of this 13.1s build (30%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - compact-runtime-chunks renderChunk (29%, 3.8s, 18 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - vite:asset load (4 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✓ 543 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/nurbs-Dpja_DkO.js                            0.02 kB
+dist/assets/inspectCurrentCurveChain-CxjF_M3m.js         0.60 kB
+dist/assets/rolldown-runtime-mLt-WK_h.js                 0.71 kB
+dist/assets/rushFrontend-_y31KOBJ.js                     0.79 kB
+dist/assets/curveOffsetDiagnostics-BBAneifW.js           1.08 kB
+dist/assets/assemblyFrameExport-DN0_TWFj.js              1.36 kB
+dist/assets/solidNurbsEdit-DbvClqKP.js                   1.99 kB
+dist/assets/assemblyAnimation-BTgGwbOA.js                3.09 kB
+dist/assets/solidTrimmedCurveOffset-Zpg-vOX2.js          3.57 kB
+dist/assets/solidCurveOffset-BZA8dO59.js                 5.11 kB
+dist/index.html                                          5.29 kB │ gzip:     1.54 kB
+dist/assets/worker-wasm-packing-C4RfKZQj.js              6.77 kB
+dist/assets/kernel-DLx3OJWb.js                           8.47 kB
+dist/assets/rushGraphNurbsCompiler-CuyAS7N_.js           9.41 kB
+dist/assets/drawingSheets-ndJeV4Zf.js                   10.74 kB
+dist/assets/svg.worker-B0zqfiJT.js                      14.23 kB
+dist/assets/gcodePreview.worker-CuXjbE-Z.js             15.19 kB
+dist/assets/photogrammetry.worker-lqo5fCmN.js           17.69 kB
+dist/assets/exactSolidRuntime-l4OdkPpC.js               23.38 kB
+dist/assets/openScadTextRuntime-B_QKhAbm.js             25.39 kB
+dist/assets/nurbsConstructors-DaxIj2E5.js               26.89 kB
+dist/assets/solidRushGraphImport-DNBcAEdP.js            42.56 kB
+dist/assets/directExtrusion-hbKsKTuV.js                 43.40 kB
+dist/assets/mainSolid.worker-CZnvqaVd.js                76.88 kB
+dist/assets/meshTopology-B9_MzUxv.js                    97.64 kB
+dist/assets/harfbuzz-bytes-MSK2w4Yx.js                 165.59 kB
+dist/assets/geometry.worker-CgHPcb9n.js                458.74 kB
+dist/assets/SketchCleanupControls-CNtox2FM.css           0.25 kB │ gzip:     0.16 kB
+dist/assets/DirectActionsControls-C_OWHNqd.css           0.33 kB │ gzip:     0.20 kB
+dist/assets/ImageTraceControls-5bGK6yew.css              0.34 kB │ gzip:     0.20 kB
+dist/assets/AssemblyAnimationControls-DWN2AoJz.css       0.37 kB │ gzip:     0.21 kB
+dist/assets/DrawingSheetsControls-oI2NGUQm.css           0.39 kB │ gzip:     0.22 kB
+dist/assets/CadQuantityInput-D2Ym11Yn.css                0.47 kB │ gzip:     0.28 kB
+dist/assets/LiveBodyPatternControls-DltR07Cg.css         0.47 kB │ gzip:     0.23 kB
+dist/assets/round-solid-options-C-aTzrR4.css             0.59 kB │ gzip:     0.32 kB
+dist/assets/SolidVolumeDistance-ufzvdPpS.css             0.75 kB │ gzip:     0.33 kB
+dist/assets/main-sketch-tools-CgOZ0rzG.css               0.85 kB │ gzip:     0.38 kB
+dist/assets/StructuralSectionsPanel-DO5o65UX.css         0.99 kB │ gzip:     0.44 kB
+dist/assets/downloadArtifact-D0wEnRoz.css                1.00 kB │ gzip:     0.50 kB
+dist/assets/BondedSolidPanel-ePwNYYTl.css                1.02 kB │ gzip:     0.46 kB
+dist/assets/MainModelingTools-ymHkpnPy.css               1.65 kB │ gzip:     0.59 kB
+dist/assets/MechanicalGenerator-CyvCCVTY.css             1.87 kB │ gzip:     0.69 kB
+dist/assets/PhotogrammetryPanel-CHGBZMcA.css             2.17 kB │ gzip:     0.70 kB
+dist/assets/SvgPanel-D5GliP4Q.css                        2.55 kB │ gzip:     0.87 kB
+dist/assets/ScanPlanePanel-CoJ9OQAC.css                  2.87 kB │ gzip:     0.86 kB
+dist/assets/CadWorkbenchPanel-B684DdNP.css               3.48 kB │ gzip:     0.95 kB
+dist/assets/NominalTrussPanel-B55Pwr1V.css               3.81 kB │ gzip:     1.03 kB
+dist/assets/meshEditing-BWAuyjVr.css                     6.17 kB │ gzip:     1.74 kB
+dist/assets/SceneOutliner-DD7DpWif.css                   7.82 kB │ gzip:     1.84 kB
+dist/assets/MeshModeler-Db6ewS-C.css                     9.67 kB │ gzip:     2.20 kB
+dist/assets/FunctionReference-BUtVUpuz.css              10.59 kB │ gzip:     2.32 kB
+dist/assets/InspectPanel-B86HhZhU.css                   12.12 kB │ gzip:     2.62 kB
+dist/assets/DirectModeler-Bl03dETg.css                  27.77 kB │ gzip:     5.02 kB
+dist/assets/index-BbaYV_s4.css                          43.84 kB │ gzip:     8.40 kB
+dist/assets/ImageTraceControls-Cvnmhk0U.js               0.07 kB │ gzip:     0.08 kB
+dist/assets/bytes-vqUKTMpM.js                            0.07 kB │ gzip:     0.09 kB
+dist/assets/cadNurbsStep-_vTj75BV.js                     0.07 kB │ gzip:     0.08 kB
+dist/assets/_plugin-vue_export-helper-BDNMzG2s.js        0.08 kB │ gzip:     0.09 kB
+dist/assets/svgWorkerClient-CdFplaZh.js                  0.08 kB │ gzip:     0.08 kB
+dist/assets/wasmBrotliPacking-Uo6h5W8i.js                0.10 kB │ gzip:     0.10 kB
+dist/assets/meshConvert-vm3IFaWU.js                      0.10 kB │ gzip:     0.10 kB
+dist/assets/rushFrontend-BCg5IakB.js                     0.11 kB │ gzip:     0.11 kB
+dist/assets/solidPreviewWorker-4AsPXqrx.js               0.19 kB │ gzip:     0.17 kB
+dist/assets/detect-Bw7DlkWE.js                           0.19 kB │ gzip:     0.16 kB
+dist/assets/meshJson-CVKQT5bI.js                         0.20 kB │ gzip:     0.15 kB
+dist/assets/meshExportFormats-BLqhAnQ2.js                0.22 kB │ gzip:     0.15 kB
+dist/assets/solidSceneEdit-CJLRlyVz.js                   0.23 kB │ gzip:     0.18 kB
+dist/assets/cadNurbsStep-DZDqIAfO.js                     0.25 kB │ gzip:     0.18 kB
+dist/assets/tessellation-BJQIrlTS.js                     0.28 kB │ gzip:     0.21 kB
+dist/assets/nurbsSurface-BQbv3wx7.js                     0.34 kB │ gzip:     0.21 kB
+dist/assets/meshFlatten-Zm0pzOZf.js                      0.35 kB │ gzip:     0.25 kB
+dist/assets/directBodies-C6KPYKNB.js                     0.38 kB │ gzip:     0.26 kB
+dist/assets/meshExportAdapter-CsbB8aWL.js                0.39 kB │ gzip:     0.27 kB
+dist/assets/solidMaterial-zu5mKHCm.js                    0.42 kB │ gzip:     0.32 kB
+dist/assets/previewSolidCurveOffset-Dy4LdpAH.js          0.62 kB │ gzip:     0.33 kB
+dist/assets/solidBlenderExchange-CFy8matD.js             0.69 kB │ gzip:     0.44 kB
+dist/assets/safeStorage-BLm4OzSk.js                      0.70 kB │ gzip:     0.34 kB
+dist/assets/solidNurbs-TtwANzQ_.js                       0.75 kB │ gzip:     0.40 kB
+dist/assets/CoonsPreparationControls-Dyl_k69S.js         0.90 kB │ gzip:     0.60 kB
+dist/assets/codeHighlight-CozsFvJa.js                    1.16 kB │ gzip:     0.72 kB
+dist/assets/preload-helper-DzCuhLFR.js                   1.17 kB │ gzip:     0.68 kB
+dist/assets/CurveOffsetPreview-BdsUwYI_.js               1.24 kB │ gzip:     0.64 kB
+dist/assets/meshImportKernel-uUV8ovEJ.js                 1.28 kB │ gzip:     0.60 kB
+dist/assets/meshExportFormats-Dg-TbH8C.js                1.29 kB │ gzip:     0.69 kB
+dist/assets/SketchCleanupControls-C0iIMWMs.js            1.50 kB │ gzip:     0.99 kB
+dist/assets/mainSketchAssociation-Dn0JSE1a.js            1.55 kB │ gzip:     0.83 kB
+dist/assets/solidStepExchange-D8TG17VB.js                1.58 kB │ gzip:     0.82 kB
+dist/assets/meshFormats-DxlqHkeA.js                      1.65 kB │ gzip:     0.84 kB
+dist/assets/editableSketchOperations-CIdsjNu_.js         1.71 kB │ gzip:     0.79 kB
+dist/assets/meshTopology-CnIPGfW-.js                     1.71 kB │ gzip:     0.83 kB
+dist/assets/downloadArtifact-ts-ARweE.js                 1.82 kB │ gzip:     1.04 kB
+dist/assets/mainSourceEditing-ZzEGFtO3.js                1.94 kB │ gzip:     0.95 kB
+dist/assets/CadQuantityInput-BbzbNFt5.js                 1.98 kB │ gzip:     1.13 kB
+dist/assets/surface-selection-C3P2ay_j.js                2.01 kB │ gzip:     0.94 kB
+dist/assets/ShellDistanceSummary-DbwuWfu2.js             2.11 kB │ gzip:     1.16 kB
+dist/assets/exactSolidClient-DyQQnoVq.js                 2.24 kB │ gzip:     1.02 kB
+dist/assets/CurvePointTrimControls-BzIfru2k.js           2.30 kB │ gzip:     1.22 kB
+dist/assets/editableSketchPath-C4nWyxK6.js               2.33 kB │ gzip:     1.10 kB
+dist/assets/polygon-CDhYFLam.js                          2.43 kB │ gzip:     1.07 kB
+dist/assets/wasm-host-Dod-aAB_.js                        2.45 kB │ gzip:     1.02 kB
+dist/assets/workspaceIndexedDb-DrYVuDSh.js               2.82 kB │ gzip:     1.13 kB
+dist/assets/CurveOffsetControls-L73oAVmz.js              2.94 kB │ gzip:     1.45 kB
+dist/assets/stlImport-CnkVkynf.js                        3.02 kB │ gzip:     1.45 kB
+dist/assets/math3d-BqeUwk53.js                           3.53 kB │ gzip:     1.56 kB
+dist/assets/LiveBodyPatternControls-dSVW_JPv.js          3.81 kB │ gzip:     1.64 kB
+dist/assets/round-solid-options-CvHHqyRj.js              4.33 kB │ gzip:     1.82 kB
+dist/assets/rush-frontend-Ba9r6JBS.js                    4.35 kB │ gzip:     1.97 kB
+dist/assets/solid-draft-storage-BEWrmvsQ.js              4.46 kB │ gzip:     1.69 kB
+dist/assets/solidStepAssembly-DXFoC6wf.js                4.68 kB │ gzip:     2.23 kB
+dist/assets/SolidVolumeDistance-C6492leH.js              4.89 kB │ gzip:     2.41 kB
+dist/assets/solidBridge-O0ZAdazG.js                      4.97 kB │ gzip:     2.08 kB
+dist/assets/CurveOffsetConstructionInfo-BXduw2lU.js      5.09 kB │ gzip:     2.35 kB
+dist/assets/DirectActionsControls-lH0msYfW.js            5.27 kB │ gzip:     2.51 kB
+dist/assets/svgWorkerClient-CZnZYPSL.js                  5.47 kB │ gzip:     2.25 kB
+dist/assets/BondedSolidPanel-CNAQYNQ-.js                 5.61 kB │ gzip:     2.79 kB
+dist/assets/ScanPlanePanel-lc9XksAf.js                   5.81 kB │ gzip:     2.61 kB
+dist/assets/StructuralSectionsPanel-CCXn4GjQ.js          6.36 kB │ gzip:     2.87 kB
+dist/assets/ImageTraceControls-BNhbwlXH.js               7.51 kB │ gzip:     3.38 kB
+dist/assets/workspaceDocument-C9lMIX2_.js                7.84 kB │ gzip:     3.01 kB
+dist/assets/mainSolidWorker-B7EJhv-J.js                  8.85 kB │ gzip:     3.45 kB
+dist/assets/binary-codec--sGg_M-n.js                    10.58 kB │ gzip:     4.69 kB
+dist/assets/InspectPanel-D6cJuZAo.js                    11.39 kB │ gzip:     4.00 kB
+dist/assets/SceneOutliner-aF7cuKUH.js                   11.68 kB │ gzip:     4.39 kB
+dist/assets/command-registry-C4gPZiUl.js                12.59 kB │ gzip:     3.45 kB
+dist/assets/sweep-viewport-evidence-C2pLFORb.js         13.93 kB │ gzip:     3.72 kB
+dist/assets/brepInspectionCache-BmQolyIi.js             14.01 kB │ gzip:     5.13 kB
+dist/assets/AssemblyAnimationControls-q3i9fvTT.js       14.04 kB │ gzip:     5.44 kB
+dist/assets/renderer-resources-CSrvEB1R.js              14.50 kB │ gzip:     3.84 kB
+dist/assets/cadStepIndexedDb-CIyxf79d.js                15.04 kB │ gzip:     5.74 kB
+dist/assets/main-sketch-tools-LTyDtv7K.js               15.36 kB │ gzip:     5.85 kB
+dist/assets/DrawingSheetsControls-BP8CoSGR.js           15.79 kB │ gzip:     5.26 kB
+dist/assets/openscadCompiler-Bpeqqepk.js                18.94 kB │ gzip:     5.55 kB
+dist/assets/direct-modeling-COA668_s.js                 19.82 kB │ gzip:     6.62 kB
+dist/assets/SvgPanel-BieK4ChT.js                        20.35 kB │ gzip:     8.04 kB
+dist/assets/solid-gpu-view-Cqoc711P.js                  21.58 kB │ gzip:     7.34 kB
+dist/assets/meshEditing-C1S2OdSR.js                     25.43 kB │ gzip:    10.38 kB
+dist/assets/NominalTrussPanel-aD2SSCua.js               25.93 kB │ gzip:     8.98 kB
+dist/assets/MainModelingTools-DTWtEJ1O.js               26.52 kB │ gzip:    10.33 kB
+dist/assets/renderer-shaders-B1MTT5_V.js                26.57 kB │ gzip:     4.56 kB
+dist/assets/meshConvert-DU4kkOPc.js                     30.04 kB │ gzip:     9.63 kB
+dist/assets/renderer-gpu-passes-kObIZ1s7.js             30.57 kB │ gzip:     9.48 kB
+dist/assets/PhotogrammetryPanel-Bk-gI1jK.js             37.38 kB │ gzip:    14.21 kB
+dist/assets/wasmStreaming-Crc03LmF.js                   38.69 kB │ gzip:    14.04 kB
+dist/assets/MeshModeler-BXpEo12m.js                     39.10 kB │ gzip:    11.26 kB
+dist/assets/mainSolidWorkerClient-eSty14HG.js           45.69 kB │ gzip:    12.94 kB
+dist/assets/FunctionReference-DDWG4y65.js               49.80 kB │ gzip:    16.29 kB
+dist/assets/renderer-152maaB-.js                        63.67 kB │ gzip:    17.58 kB
+dist/assets/vr-core-bytes-D-hCHE33.js                   64.91 kB │ gzip:    51.92 kB
+dist/assets/CadWorkbenchPanel-hZHkADn4.js               67.56 kB │ gzip:    23.08 kB
+dist/assets/MechanicalGenerator-CQ3pAYIr.js             76.91 kB │ gzip:    23.79 kB
+dist/assets/vue-CQy2Nllq.js                             77.54 kB │ gzip:    30.49 kB
+dist/assets/wasm-brotli-bytes-Bmmsw5O9.js              107.19 kB │ gzip:    92.39 kB
+dist/assets/photogrammetry-bytes-Ifzd3Ua-.js           224.49 kB │ gzip:   182.13 kB
+dist/assets/index-DfL7y1Sv.js                          234.22 kB │ gzip:    73.10 kB
+dist/assets/DirectModeler-DMdHddry.js                  382.62 kB │ gzip:   110.60 kB
+dist/assets/language-kernel-bytes-DLyuBJkA.js          487.98 kB │ gzip:   421.72 kB
+dist/assets/geometry-kernel-bytes-CQRcB-jd.js        3,767.37 kB │ gzip: 3,260.68 kB
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 3020 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 52.58s
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 52.0s of this 52.4s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - compact-runtime-chunks renderChunk (50%, 26.1s, 103 calls)
+  - vite:vue transform (5%, 2.5s, 142 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+2 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - vite:worker-import-meta-url transform (8 calls)
+  - vite:asset load (5 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.

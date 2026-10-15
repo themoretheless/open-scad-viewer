@@ -1,0 +1,11 @@
+{
+  "url": "http://127.0.0.1:5710",
+  "artifactSha256": "2e7bc66d4bf26b4f5101ca872d665db6fdd48a30ea7f84bd8e4689d0dbc7547b",
+  "fixture": "ellipse-solid.json",
+  "smoothBrepPreview": false,
+  "displayed": "retained rational ellipse extrusion",
+  "fpsObserved": 120,
+  "consoleWarningsOrErrors": [],
+  "savedDocumentRecoveryVerified": true,
+  "note": "The initial import tab became unavailable; a fresh tab restored and displayed the same saved fixture. This does not establish an import latency bound."
+}

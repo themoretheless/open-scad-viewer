@@ -1,0 +1,6 @@
+
+running 2 tests
+test transform::profile_tests::polygon_profile_admits_nonsingular_shear ... ok
+test transform::profile_tests::reflected_circle_keeps_material_orientation_and_scaled_area ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 961 filtered out; finished in 0.22s

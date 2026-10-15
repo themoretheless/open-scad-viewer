@@ -1,0 +1,44 @@
+
+running 40 tests
+test bezier_profile::coincidence_ops::cut_tests::cuts_are_coalesced_in_world_units_and_never_by_absolute_parameter_distance ... ok
+test bezier_profile::departure_ops::tests::clockwise_precedence_includes_cardinal_and_opposite_rays_in_each_frame ... ok
+test bezier_profile::implicit_joint_tests::curved_third_order_difference_is_a_valid_cusp_component ... ok
+test bezier_profile::coincidence_ops::tests::shared_cuts_use_another_coordinate_when_the_first_inverse_is_flat ... ok
+test bezier_profile::tests::accepts_clockwise_path_and_negative_height ... ok
+test bezier_profile::rational_representation_tests::rational_green_bounds_enclose_an_independent_polynomial_integral ... ok
+test bezier_profile::tests::affine_curved_tangency_boolean_preserves_both_retained_carriers ... ok
+test bezier_profile::tests::compound_contacts_and_unproved_containment_are_refused ... ok
+test bezier_profile::parameter_domain_tests::normalization_keeps_cusp_geometry_on_small_and_large_parameter_domains ... ok
+test bezier_profile::tests::a_retraced_spur_cancels_without_removing_the_curved_region ... ok
+test bezier_profile::rational_representation_tests::polynomial_quadratic_profile_has_exact_green_integral ... ok
+test bezier_profile::tests::constant_cubic_passes_have_no_even_odd_material ... ok
+test bezier_profile::tests::identical_bezier_booleans_do_not_duplicate_boundaries ... ok
+test bezier_profile::tests::exact_cubic_extrusion_retains_controls_and_cap_trims ... ok
+test bezier_profile::tests::non_dyadic_cusp_keeps_its_material_area ... ok
+test bezier_profile::tests::interior_semicubical_cusp_splits_original_curve_without_chords ... ok
+test bezier_profile::nodal_parent_tests::nodal_parent_survives_stationary_splitting_and_affine_transform ... ok
+test bezier_profile::tests::rejects_crossing_and_unresolved_boundaries_without_chording ... ok
+test bezier_profile::tests::partial_collinear_cubic_overlap_keeps_union_and_difference_area ... ok
+test bezier_profile::tests::retraced_straight_cubic_with_nonlinear_speed_cancels_a_line ... ok
+test bezier_profile::tests::diagonal_self_touching_cusps_keep_the_same_topology_after_affine_transform ... ok
+test bezier_profile::tests::overlapping_bounds_do_not_imply_nested_or_intersecting_profiles ... ok
+test bezier_profile::tests::self_crossing_even_odd_profile_splits_into_retained_components ... ok
+test bezier_profile::tests::tangent_cusp_components_use_departure_order_instead_of_equal_tangents ... ok
+test bezier_profile::tests::third_order_contact_boolean_preserves_cubic_cusp_and_area ... ok
+test bezier_profile::implicit_joint_tests::same_side_curved_cusp_lens_with_nonlinear_speed_keeps_exact_carriers ... ok
+test bezier_profile::tests::edited_smooth_joint_uses_proved_adaptive_separator ... ok
+test bezier_profile::tests::partial_line_cubic_overlap_deduplicates_different_degrees ... ok
+test bezier_profile::tests::repeated_curved_boundaries_cancel_by_even_odd_multiplicity ... ok
+test bezier_profile::tests::zero_first_jets_at_self_touching_cusps_keep_separate_regions ... ok
+test bezier_profile::rational_representation_tests::rational_cubic_common_factor_keeps_source_and_extrudes ... ok
+test bezier_profile::tests::concave_holes_use_separated_hull_winding_without_replacing_curves ... ok
+test bezier_profile::tests::compound_holes_and_nested_islands_keep_exact_curves ... ok
+test bezier_profile::tests::external_endpoint_tangency_has_empty_intersection ... ok
+test bezier_profile::departure_ops::tests::indistinguishable_departures_are_refused_with_bounded_work ... ok
+test bezier_profile::tests::curved_partial_overlap_boolean_retains_source_cubics ... ok
+test bezier_profile::tests::monotone_cubic_with_reversing_controls_keeps_exact_profile_and_overlap ... ok
+test bezier_profile::tests::partial_curved_coincidence_with_different_injective_axes_keeps_material ... ok
+test bezier_profile::tests::transverse_bezier_booleans_retain_cubic_fragments_and_close_solids ... ok
+test bezier_profile::tests::mixed_cubic_and_rational_circle_boolean_retains_both_carriers ... ok
+
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 923 filtered out; finished in 2.73s

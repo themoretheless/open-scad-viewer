@@ -1,0 +1,154 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Blocking waiting for file lock on build directory
+   Compiling cad-predicates v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/cad-predicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 19.59s
+     Running unittests src/lib.rs (crates/target/debug/build/cad-predicates/88b4a62cf077612b/out/cad_predicates-88b4a62cf077612b)
+
+running 56 tests
+test bezier_identity::tests::identical_authored_controls_keep_cancellation_deadline_and_positive_weight_obligations ... ok
+test bezier_identity::tests::exhausted_budget_and_nonpositive_weights_never_certify ... ok
+test bezier_identity::tests::rational_quadratic_and_cubic_identity_uses_all_coordinates ... ok
+test bezier_identity::tests::degree_elevation_and_weight_scaling_are_exact ... ok
+test bezier_composition_identity::tests::reduced_power_degrees_compare_missing_coefficients_as_zero ... ok
+test bezier_composition_identity::tests::rational_surface_weights_participate_in_the_exact_composition ... ok
+test bspline_internal_jets::plane_incidence::discriminant_tests::discriminant_budget_or_invalid_normal_never_becomes_zero_proof ... ok
+test bspline_endpoint_jets::tests::unequal_end_spans_use_original_parameter_derivative_scaling ... ok
+test bspline_internal_jets::direction_tests::tangent_identity_owns_position_speed_jumps_and_exact_refusals ... ok
+test bezier_composition_identity::tests::missing_weights_and_work_do_not_establish_identity ... ok
+test bezier_strip_jets::tests::rational_seam_weights_scale_and_second_order_mismatch ... ok
+test bspline_endpoint_jets::tests::multispan_original_jets_detect_one_bit_and_knot_parameterization ... ok
+test bspline_internal_jets::direction_tests::rational_conic_direction_curvature_does_not_infer_second_arc_jet ... ok
+test bspline_internal_jets::direction_tests::direction_jets_keep_speed_changes_separate_and_refuse_reversal_and_partial_work ... ok
+test bezier_strip_jets::tests::exact_linear_second_jets_and_one_ulp_difference ... ok
+test bspline_endpoint_jets::tests::projective_scale_must_match_all_original_endpoint_jets ... ok
+test bezier_composition_identity::tests::diagonal_graph_composition_is_exact_for_polynomial_and_rational_pcurves ... ok
+test bspline_internal_jets::plane_incidence::discriminant_tests::original_discriminant_distinguishes_double_root_gap_and_two_roots ... ok
+test bspline_internal_jets::plane_incidence::tests::original_plane_query_budget_and_invalid_parameter_do_not_return_a_sign ... ok
+test bspline_internal_jets::plane_incidence::tests::original_cubic_plane_incidence_proves_nondyadic_basis_zero_and_preserves_residual ... ok
+test bspline_internal_jets::plane_roots::tests::scalar_isolation_separates_closed_endpoint_root_and_close_interior_root ... ok
+test bspline_internal_jets::plane_roots::tests::original_bezier_mixed_orders_are_complete_and_not_sampled ... ok
+test planar_bezier_roots::stationary_tests::stationary_cusp_preserves_distinct_derivative_multiplicities_and_uncertainty ... ok
+test planar_bezier_roots::tests::exhausted_predicate_work_never_becomes_a_disjoint_or_coincident_report ... ok
+test planar_bezier_roots::implicit::tests::quartic_eliminant_keeps_distinct_pair_parameters_and_a_double_contact ... ok
+test planar_bezier_roots::implicit::tests::inverse_filters_contacts_outside_the_finite_carrier_and_preserves_pair_parameters ... ok
+test planar_bezier_roots::implicit::tests::rational_conic_keeps_original_weights_and_irrational_observation_box ... ok
+test planar_bezier_roots::implicit::tests::singular_carrier_returns_both_node_preimages_and_only_the_true_cusp_preimage ... ok
+test bspline_knot_jets::tests::repeated_knot_positive_projective_scale_needs_exact_jets_and_shared_work ... ok
+test planar_bezier_roots::implicit::tests::common_carrier_and_resource_exhaustion_do_not_claim_empty_intersections ... ok
+test bspline_internal_jets::tests::original_simple_knot_rational_c4_requires_every_exact_cartesian_jet ... ok
+test planar_bezier_roots::implicit::tests::exceptional_inverse_fiber_censuses_self_nodes_but_does_not_double_count_a_cusp ... ok
+test bspline_internal_jets::plane_roots::tests::original_nonbezier_span_and_degree_25_contact_keep_true_orders ... ok
+test planar_bezier_roots::tests::fraction_free_sturm_preserves_multiplicity_and_endpoint_ownership ... ok
+test bspline_internal_jets::tests::mixed_multiplicities_cover_all_original_joins ... ok
+test bspline_internal_jets::tests::cartesian_identity_does_not_require_constant_homogeneous_scale ... ok
+test projective_strip_jets::conic_tests::restricted_conic_proof_never_falls_through_to_a_general_identity ... ok
+test tests::cancelling_products_keep_the_roundoff_component ... ok
+test tests::identical_expansion_subtraction_is_exact_and_still_charged ... ok
+test tests::ordinary_sign_zero_and_handedness_use_authored_bits ... ok
+test planar_bezier_roots::tests::projected_coordinate_retains_multiple_contacts_and_nearby_bifurcations ... ok
+test projective_strip_jets::conic_tests::tiny_second_jet_damage_and_varying_weights_are_not_promoted ... ok
+test tests::rational_denominators_do_not_become_rounded_input_leaves ... ok
+test tests::residual_classification_requires_matching_enclosure_and_respects_gray_band ... ok
+test tests::serialized_tolerance_identity_cannot_be_substituted ... ok
+test tests::direction_dot_retains_cancellation_and_refuses_work_exhaustion ... ok
+test planar_bezier_roots::implicit::tests::nonlinear_parameter_maps_retain_third_order_contact_and_affine_covariance ... ok
+test tests::admission_preserves_source_and_context_identity ... ok
+test bspline_internal_jets::tests::cartesian_endpoints_accept_varying_homogeneous_scale_and_nonclamped_domains ... ok
+test planar_bezier_roots::tests::isolates_non_dyadic_multiple_root_and_distinguishes_both_nearby_perturbations ... ok
+test planar_bezier_roots::tests::common_coordinate_uses_actual_monotonicity_and_original_weights ... ok
+test bspline_internal_jets::tests::fourth_jet_is_not_inferred_from_third_jet ... ok
+test tests::uniform_extreme_exponents_can_normalize_but_unsafe_products_refuse ... ok
+test tests::work_cancellation_deadline_and_expansion_capacity_fail_explicitly ... ok
+test tests::portable_tolerance_identity_round_trips_and_detects_policy_changes ... ok
+test projective_strip_jets::conic_tests::canonical_relation_agrees_with_the_general_projective_predicate ... ok
+
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/construction3_recipes.rs (crates/target/debug/build/cad-predicates/d6d5968426a917df/out/construction3_recipes-d6d5968426a917df)
+
+running 23 tests
+test coplanar_query_distinguishes_off_plane_degeneracy_and_resource_failure ... ok
+test batch_replay_is_atomic_and_uses_one_budget ... ok
+test coplanar_endpoint_replay_retains_exact_coordinates ... ok
+test binary_recipe_roundtrip_replays_exactly_and_rejects_every_truncation ... ok
+test empty_batches_observe_cancellation_and_deadlines ... ok
+test exact_degenerate_parallel_and_contained_classification ... ok
+test exact_point_order_deduplicates_recipes_without_merging_rounded_neighbors ... ok
+test graph_replay_rebinds_verified_source_and_rejects_structural_or_value_tampering ... ok
+test coplanar_face_contacts_reduce_to_point_or_segment_without_duplicate_vertices ... ok
+test finite_domain_uses_exact_boundary_signs_not_enclosure_centers_or_tolerance ... ok
+test point_triangle_reports_all_features_and_exact_off_plane_sign ... ok
+test singleton_overlap_endpoints_are_exactly_equal_and_context_checked ... ok
+test portable_graph_preserves_shared_dependencies_and_authored_rationals ... ok
+test unified_segment_triangle_covers_crossing_coplanar_empty_and_degenerate_cases ... ok
+test unified_query_never_publishes_partial_geometry_when_work_expires ... ok
+test triangle_pair_assembles_exact_shared_segments_contacts_and_explicit_coplanarity ... ok
+test retained_third_and_nested_plane_inputs_preserve_exact_zero ... ok
+test closed_domains_classify_every_triangle_feature_and_segment_boundary ... ok
+test overlap_endpoint_recipes_survive_source_handle_drop_and_enforce_depth_limit ... ok
+test coplanar_hexagon_is_canonical_convex_and_exact_in_every_projection ... ok
+test affine_rational_oracle_checks_coordinates_parameters_and_incidence ... ok
+test rational_polygon_matrix_matches_independent_sequential_clipping ... ok
+test coplanar_clipping_matches_boundary_enumeration_under_affine_placements ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+
+     Running tests/construction_recipes.rs (crates/target/debug/build/cad-predicates/f396efd69dca5c01/out/construction_recipes-f396efd69dca5c01)
+
+running 12 tests
+test all_constructed_orientation_permutations_preserve_exact_incidence ... ok
+test broad_binary_exponent_spans_preserve_the_unreduced_exact_path ... ok
+test construction_and_followup_enforce_context_budget_cancellation_and_error_bounds ... ok
+test constructed_one_third_is_not_its_rounded_center ... ok
+test nearly_parallel_lines_are_not_coerced_to_parallel_or_coincident ... ok
+test constructed_endpoints_detect_exact_degeneracy_and_validate_before_cancel ... ok
+test diamond_dag_shares_ancestors_without_exponential_evaluation_or_debug_output ... ok
+test endpoint_order_and_affine_placement_preserve_exact_intersection ... ok
+test construction_chains_keep_exact_recipes_and_refuse_the_depth_boundary_atomically ... ok
+test rational_line_matrix_matches_separate_affine_oracle_and_parameter_correspondence ... ok
+test nested_general_intersections_match_the_separate_rational_oracle ... ok
+test combined_graph_node_cap_counts_unique_dependencies_and_preserves_inputs ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/independent_oracle.rs (crates/target/debug/build/cad-predicates/2adc54bd69ca2a2c/out/independent_oracle-2adc54bd69ca2a2c)
+
+running 10 tests
+test authentic_leaf_admission_rejects_nonfinite_noncanonical_and_out_of_range_inputs ... ok
+test context_identity_tracks_source_revision_bits_and_tolerance_policy ... ok
+test distance_rejects_wrong_dimensions_and_negative_radius_without_coercion ... ok
+test finite_work_precision_cancel_and_deadline_bounds_fail_explicitly ... ok
+test foreign_arena_references_are_rejected_even_with_equal_source_labels ... ok
+test invalid_tolerance_profiles_do_not_create_contexts ... ok
+test missing_or_foreign_residual_evidence_never_becomes_a_model_decision ... ok
+test model_classification_uses_proven_enclosures_and_keeps_thresholds_indeterminate ... ok
+test native_signs_match_independent_rational_candidate_corpus ... ok
+test residual_evidence_that_exceeds_the_entity_error_cap_is_refused ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/planar_singularities.rs (crates/target/debug/build/cad-predicates/cd8f35842653ec9c/out/planar_singularities-cd8f35842653ec9c)
+
+running 3 tests
+test degree_nine_seventh_order_cusp_does_not_create_a_second_branch ... ok
+test nonprimitive_rational_cubic_cancels_only_an_exact_homogeneous_factor ... ok
+test degree_nine_census_retains_a_sixfold_cusp_and_an_independent_simple_contact ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+   Doc-tests cad_predicates
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

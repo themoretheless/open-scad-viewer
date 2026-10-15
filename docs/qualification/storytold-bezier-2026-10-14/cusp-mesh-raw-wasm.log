@@ -1,0 +1,2 @@
+Raw WASM smoke passed: dyadic and non-dyadic cusps, rotated contact, three curved-overlap operations
+New raw WASM smoke passed: nonlinear cusp, retained extrusion volume37.8, real tessellation, original nodal carrier, coarse-domain refusal

@@ -1,6 +1,8 @@
 //! Tessellation and interchange preserve topological face identity.
 use super::*;
 use std::collections::BTreeMap;
+#[path="brep_cusp_sampling.rs"]
+mod cusp_sampling;
 
 pub struct Tessellation {
     /// Exact shell ownership from tessellation traversal, one entry per triangle.
@@ -317,6 +319,9 @@ impl EdgeSamplingRegistry {
             }
             if !changed {break;}
         }
+        // A distinct curved cusp can have coincident chords on a uniform
+        // parameter grid. Refine its shared schedule before allocating positions.
+        cusp_sampling::refine(model,&mut schedule,&parallel_edges)?;
         let count = model.vertices.len() + schedule.iter().map(|n| n - 1).sum::<usize>();
         if count > 60000 {
             return Err(input("B-rep boundary sampling exceeds 60000 positions"));
@@ -1703,6 +1708,49 @@ mod registry_tests {
                 .message
                 .contains("20000 triangles")
         );
+    }
+    #[test]
+    fn curved_cusp_prism_mesh_keeps_shared_edges_and_authored_geometry() {
+        let cubic = |points: &[[f64; 2]]| nurbs_core::curve::Curve {
+            degree: 3, knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: points.iter().map(|p| p.to_vec()).collect(),
+            weights: vec![1.; 4], periodic: false,
+        };
+        let a = cubic(&[[0., 0.], [2., 0.], [4., 2.], [6., 6.]]);
+        let b = cubic(&[[0., 0.], [2., 0.], [6., 2.], [12., 12.]]);
+        let closing = nurbs_core::curve::Curve {
+            degree: 1, knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![12., 12.], vec![6., 6.]],
+            weights: vec![1.; 2], periodic: false,
+        };
+        for rotated in [false, true] {
+            let mut wire = vec![b.clone(), closing.clone(), a.reverse().unwrap()];
+            if rotated {
+                for c in &mut wire { for p in &mut c.control_points {
+                    let (x, y) = (p[0], p[1]);
+                    p[0] = 17. + x - y; p[1] = -9. + x + y;
+                }}
+            }
+            let normalized = brep_core::bezier_profile::normalize(&[wire], 1e-7).unwrap();
+            let model = brep_core::prism::extrude(&normalized, 0., 3.).unwrap();
+            let before = value_codec::to_string(&model).unwrap();
+            for detail in [1, 2, 3, 4, 8, 16, 32] {
+                let tess = nurbs(&model, detail).unwrap_or_else(|e|
+                    panic!("cusp rotated={rotated} detail={detail}: {e}"));
+                let report = &tess.built.report;
+                assert!(report.closed);
+                assert_eq!(components(&tess.built.mesh), 1);
+                assert_eq!(report.orientation_conflicts, 0);
+                assert_eq!(report.non_manifold_edges, 0);
+                assert_eq!(report.degenerate_triangles, 0);
+                assert_eq!(tess.face_ids.iter().copied().collect::<BTreeSet<_>>().len(), model.faces.len());
+                if detail == 32 {
+                    let exact = if rotated { 75.6 } else { 37.8 };
+                    assert!((report.signed_volume_mm3 - exact).abs() / exact < 0.003);
+                }
+                assert_eq!(value_codec::to_string(&model).unwrap(), before);
+            }
+        }
     }
     #[test]
     fn curved_prism_xor_keeps_contacting_components_and_trim_samples_separate() {

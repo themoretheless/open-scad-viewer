@@ -13,7 +13,7 @@ The current compact interface is retained. Geometry runs in Rust; TypeScript han
 
 ## Exact profiles and resource limits
 
-- Authored Bézier extrusion preserves cubic control points in B-rep edges and cap trims. Native admission supports up to 32 closed mixed boundaries, each with 3–128 line/cubic/circular rational quadratic spans, within the shared 1024-face budget. Each cubic must be monotone on at least one axis; adjacent control hulls must be separated apart from their shared endpoint, and nonadjacent spans must have a resolved intersection report with no intersections. Adjacent hull separation includes adaptive candidate axes checked with outward-rounded bounds. Holes and nested islands use convex containment where available, or native interval separation and bounded winding decisions for concave boundaries; separate curves with overlapping bounds can be admitted when their boundaries are proved disjoint. Unresolved self-intersections and ambiguous relationships are refused. Display tessellation does not replace retained curves. Native polynomial Bézier union/intersection/difference now resolve transverse curve intersections, trim original curves and assemble validated material-left boundaries. Identical spans are deduplicated. Mixed cubic/circular rational operands retain both original carriers. Supporting-plane endpoint tangencies admit separate external components; holes touching their containing boundary are refused. Partial coincidence is admitted only when an intersection overlap has an independently matching retained Bernstein carrier; straight and curved partial overlap, including projective parameter maps, have native regression coverage. Self-intersections can be normalized with even-odd material: native exact stationary roots and intersections split source spans, side probes require normal-coordinate monotonicity and separation from all other complete curve hulls, and angular traversal produces validated closed components. Tolerance-ambiguous contacts, unproved overlap identities, unresolved events, nonmanifold XOR contacts and unresolved singular ordering are refused. This is bounded numerical geometry, not an unlimited certified general Boolean implementation.
+- Authored Bézier extrusion preserves cubic control points in B-rep edges and cap trims. Native admission supports up to 32 closed mixed boundaries, each with 3–128 line/cubic/circular rational quadratic spans, within the shared 1024-face budget. Each retained span must have a proved injective coordinate. Source normalization can split stationary points and resolve self-nodes before this admission. Adjacent joins use either separated control hulls or a complete algebraic census proving only the exact shared endpoint; nonadjacent spans require a complete contact census with no intersections. Adjacent hull separation includes adaptive candidate axes checked with outward-rounded bounds. Holes and nested islands use convex containment where available, or native interval separation and bounded winding decisions for concave boundaries; separate curves with overlapping bounds can be admitted when their boundaries are proved disjoint. Self-intersections with a complete arrangement can be normalized; unresolved or tolerance-ambiguous relationships are refused. Display tessellation does not replace retained curves. Native polynomial Bézier union/intersection/difference now resolve transverse curve intersections, trim original curves and assemble validated material-left boundaries. Identical spans are deduplicated. Mixed cubic/circular rational operands retain both original carriers. Supporting-plane endpoint tangencies admit separate external components; holes touching their containing boundary are refused. Partial coincidence is admitted only when an intersection overlap has an independently matching retained Bernstein carrier; straight and curved partial overlap, including projective parameter maps, have native regression coverage. Self-intersections can be normalized with even-odd material: native exact stationary roots and intersections split source spans, side probes require normal-coordinate monotonicity and separation from all other complete curve hulls, and angular traversal produces validated closed components. Tolerance-ambiguous contacts, unproved overlap identities, unresolved events, nonmanifold XOR contacts and unresolved singular ordering are refused. This is bounded numerical geometry, not an unlimited certified general Boolean implementation.
 - Outline Stroke no longer has the old 256-span UI/profile barrier. Native planar profiles admit up to 1022 spans, subject to 2048 arrangement fragments and the existing 1024-face solid budget (including caps). These are bounded resource limits, not an unlimited-contour promise.
 
 ## Action script example
@@ -114,3 +114,68 @@ Final packaged qualification: the standard geometry build and unchanged Binaryen
 
 
 Production bundling passed. The final geometry JS chunk measures 3,953,958 bytes; its explicit budget is 3,970,000, retaining 16,042 bytes of headroom. Independent production checks passed for the packed geometry payload, the matching 12,022,663-byte streamed WASM, and uniqueness of packed artifacts. Generated, public and production geometry WASM bytes are identical. The global distribution size gate remains incomplete: it stops at `MainModelingTools` (107,258 > 107,000 bytes), and the independently changed renderer also exceeds its existing limit (137,576 > 132,000 bytes). Neither unrelated chunk budget was changed.
+
+## Proper planar cubic singularities and curved joints (2026-10-14)
+
+The planar adapter now has a general moving-line implicit reduction for proper degree-two/three rational carriers. An exact fraction-free matrix kernel constructs a linear rational inverse, checked against the original homogeneous source coefficients. A coprime exceptional fiber establishes that the inverse is valid away from the carrier's singular point. Substitution of the second carrier produces a polynomial of degree at most nine. The existing exact Sturm/GCD machinery counts all distinct roots and their multiplicities; exact algebraic sign queries filter parameters outside the finite source span and enclose both retained parameters. The exceptional fiber preserves both preimages of a node. A cusp with only one preimage is not reported as a second branch. Coincidence of implicit carriers alone does not authorize overlap: the existing finite-range, homogeneous-coefficient agreement admission still owns that decision.
+
+Adjacent curved spans whose control hulls overlap can now be admitted by a complete algebraic census proving that their only contact is the exact shared endpoint. This includes same-side third-order cusp lenses with different nonlinear parameter maps. Difference can retain externally touching material components; hole/parent contact restrictions and the previous XOR refusal remain. No closing chord or polygon replacement is introduced.
+
+Normalization keeps each stationary piece's authored parent and uses its original definition for contact and self-node decisions. If a source has an injective coordinate, only that coordinate's stationary parameters need splitting; unrelated coordinate extrema no longer perturb exact curved-contact identities. A source lacking an injective coordinate still splits at the complete coordinate stationary census. Endpoint/control conformance remains explicitly bounded as above.
+
+Cut coalescence now measures an outward enclosure of the original source image, rather than an absolute parameter difference. Its L1 bound is `min(4096 * EPSILON * coordinate_scale, 0.001 * geometry_tolerance)` and both original domain endpoints are preserved. Coordinate inversion chooses the smallest geometric residual across usable axes. The scalar contact parameter enclosure is at most eight machine epsilons (or the stricter conditioning-derived bound). Normalization tangents are measured in a unit parameter domain; clamped reversal and scalar endpoint mapping preserve both domain endpoints exactly. Regressions include domains `1e-15`, `1` and `1e8`.
+
+These remain bounded numerical profile operations, with the existing `numerical_uncertified` status. Nonprimitive/unsupported definitions, unseparated root boxes, excessive expansion growth, or exhausted work/precision limits return an explicit unresolved decision. A failed root census never becomes an empty contact list. Native and packaged qualification for this revision is recorded after the running builds finish.
+
+Root transport now checks outward images of the original unit-domain carrier against the represented parameter observation. A coarse knot domain cannot silently turn a meaningful interior contact into an endpoint or collapse distinct interior events. Endpoint coalescence must fit the explicit roundoff geometry bound. The regression for a one-ULP knot domain refuses the operation, while the existing transverse cubic Boolean regression remains admitted.
+
+## Cusp mesh and final qualification (2026-10-15)
+
+Distinct curved cusp branches can share a display chord on equal parameter grids.
+The mesher now refines their shared edge schedules using interval departure-order
+bounds, including anisotropic cap coordinates, and propagates counts across ruled
+faces. It preserves authored geometry and existing vertex/triangle budgets. The
+source mesher diagnostic passed all 15 registry tests. A fresh standard WASM build
+passed the real cusp extrusion/mesh smoke tests at all seven subdivision levels,
+followed by all 95 profile/drawing/specification/worker tests on the final package.
+
+Production bundling and the unchanged distribution verifier are green (171
+artifacts, geometry JS 3,699,795 bytes, entry 234,016 bytes). Generated, public and
+production geometry WASM hashes match: `6ce47a0cf18b241ba3a39d09f9fa0cabf8371a0228aca89e90534f0bdb347f0f`.
+The production browser imported the retained cusp profile and its 37.8 mm³ BRep
+body, displayed the actual triangle mesh with smooth preview disabled, and had
+no warning/error console entries. Source/control definitions were not moved.
+This qualifies the admitted bounded numerical operations described above; it does
+not replace their explicit precision/resource/unsupported-definition refusals.
+Evidence and the saved test project are in
+`docs/qualification/storytold-bezier-2026-10-14/`.
+
+Fresh Vue/MCP type checks and scoped formatting/whitespace validation passed after the final browser check.
+
+
+## 2026-10-15 — checkable Rust profile certificates
+
+General polynomial/rational quadratics and rational cubics now retain their
+original controls through profile validation, Booleans and extrusion. Affine
+ellipses are supported; rational Green integration uses outward error bounds.
+Exact root reduction cancels verified common homogeneous polynomial factors.
+
+A separate exact-rational Rust verifier checks source-bit-bound portable
+certificates for closure, injectivity, the full pair census, orientation and
+nesting, including algebraic same-side cusp joints. Native standalone and
+WASM verification agree. Unknown, stale, incomplete or false proofs refuse.
+This certifies represented profile topology, not construction history,
+reported numerical area or arbitrary 3D solids. Global geometryStatus remains
+numerical_uncertified; callers request and verify the scoped certificate.
+
+Qualification: [2026-10-15 report](qualification/bezier-certificates-2026-10-15/README.md).
+104 predicate tests, 49 targeted native profile/certificate/transform tests,
+6 native bridge tests and 98 packaged host tests pass. The corrected compression
+bootstrap passes 26 additional host checks. Production verification passes
+173 artifacts without changing size budgets. Browser display/recovery of the
+rational ellipse extrusion was inspected with smooth B-rep preview disabled,
+at about 120 FPS and no console warnings/errors.
+
+The broader native profile filter completed 80 tests; its one remaining
+unrelated closed spatial RMF mode matrix was explicitly stopped. No full
+workspace or full sweep-matrix pass is claimed.

@@ -1,0 +1,10 @@
+
+running 6 tests
+test brep_profile::tests::even_odd_refuses_crossings_and_contacting_holes ... ok
+test brep_profile::tests::empty_and_boolean_profiles_have_no_solid_or_mesh_placeholder ... ok
+test brep_profile::tests::even_odd_normalizes_unordered_original_rings_and_retains_holes ... ok
+test brep_profile::tests::profile_certificate_native_transport_rechecks_proof_and_scope ... ok
+test brep_profile::tests::offsets_retained_regions_and_reports_empty_material ... ok
+test brep_profile::tests::cleanup_retained_circle_keeps_holes_and_refuses_budget_or_invalid_deviation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 425 filtered out; finished in 0.22s

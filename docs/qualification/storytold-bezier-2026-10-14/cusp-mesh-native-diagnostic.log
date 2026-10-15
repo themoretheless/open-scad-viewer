@@ -1,0 +1,19 @@
+
+running 15 tests
+test brep::registry_tests::planar_hole_bridge_repair_preserves_directed_boundary_and_samples ... ok
+test brep::registry_tests::empty_brep_returns_an_empty_mesh_without_claiming_a_closed_shell ... ok
+test brep::registry_tests::represented_cross_refuses_rounded_zero_and_overflow ... ok
+test brep::registry_tests::coincident_uv_samples_from_different_topology_are_rejected ... ok
+test brep::registry_tests::shared_edge_registry_gives_identical_indices_to_adjacent_faces ... ok
+test brep::registry_tests::nearby_disconnected_shells_keep_distinct_authored_vertices ... ok
+test brep::registry_tests::curved_trim_holes_preserve_registry_ownership_through_bridge_refinement ... ok
+test brep::registry_tests::periodic_step_sphere_tessellates_with_shared_seam_and_poles ... ok
+test brep::cusp_sampling::tests::curved_cusp_refines_the_correct_carrier_without_moving_controls ... ok
+test brep::registry_tests::curved_prism_xor_keeps_contacting_components_and_trim_samples_separate ... ok
+test brep::registry_tests::corrected_fixed_normal_hollow_body_tessellates_original_boundary ... ok
+test brep::registry_tests::curved_cusp_prism_mesh_keeps_shared_edges_and_authored_geometry ... ok
+test brep::registry_tests::torus_periodic_seams_preserve_genus_and_obey_triangle_budget ... ok
+test brep::registry_tests::poles_round_holes_and_partial_turns_share_edge_indices_at_each_detail ... ok
+test brep::registry_tests::dense_ruled_hollow_preview_preserves_all_faces_and_curved_edge_detail ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.69s

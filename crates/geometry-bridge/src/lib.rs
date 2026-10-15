@@ -650,7 +650,9 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_offset"
         | "brep_profile_boolean"
         | "brep_profile_signed_area"
-        | "brep_profile_display" => brep_profile::dispatch(v),
+        | "brep_profile_display"
+        | "brep_profile_certify"
+        | "brep_profile_verify_certificate" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "svg_color_trace" => {
             let tree = svg::parse_tree(&field::<String>(&v, "svg")?, 96., None)?;

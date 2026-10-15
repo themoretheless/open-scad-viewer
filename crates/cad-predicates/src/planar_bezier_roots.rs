@@ -5,6 +5,9 @@ use crate::{
     Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef, PredicateContext,
     Reason, Sign, exact_inputs,
 };
+#[path = "planar_bezier_implicit.rs"]
+mod implicit;
+pub use implicit::*;
 type Poly = Vec<Expansion>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlanarReduction {
@@ -35,6 +38,26 @@ pub struct PlanarScalarDecision {
     pub work_used: u64,
     pub context: ContextIdentity,
 }
+/// Exact positive content reduction keeps repeated-root PRS coefficients
+/// small. The bounded integer fast path is optional: wider expansions retain
+/// their exact coefficients and the normal work/precision guards still apply.
+fn primitive_common(
+    values: &mut [Expansion],
+    ctx: &mut PredicateContext<'_>,
+) -> Result<(), Reason> {
+    if values.len() > 24 {
+        return Ok(());
+    }
+    let mut padded = std::array::from_fn::<_, 24, _>(|i| {
+        values
+            .get(i)
+            .cloned()
+            .unwrap_or_else(|| Expansion::scalar(0.))
+    });
+    Expansion::reduce_projective(&mut padded, ctx)?;
+    values.clone_from_slice(&padded[..values.len()]);
+    Ok(())
+}
 fn trim(p: &mut Poly) {
     while p.len() > 1 && p.last().unwrap().sign() == Sign::Zero {
         p.pop();
@@ -45,6 +68,7 @@ fn zero(p: &Poly) -> bool {
 }
 fn normalize(p: &mut Poly, ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
     trim(p);
+    primitive_common(p, ctx)?;
     Expansion::normalize_common(p, ctx)
 }
 const BINOMIAL: [[u64; 17]; 17] = {
@@ -173,6 +197,7 @@ fn pseudo_divide(
         let split = q.len();
         let mut both = q;
         both.extend(r);
+        primitive_common(&mut both, ctx)?;
         Expansion::normalize_common(&mut both, ctx)?;
         r = both.split_off(split);
         q = both;

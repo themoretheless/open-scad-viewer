@@ -1,0 +1,639 @@
+{
+  "wasmSha256": "2e7bc66d4bf26b4f5101ca872d665db6fdd48a30ea7f84bd8e4689d0dbc7547b",
+  "records": [
+    {
+      "name": "same-side-cusp",
+      "loops": [
+        [
+          {
+            "degree": 3,
+            "knots": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                0,
+                0
+              ],
+              [
+                2,
+                0
+              ],
+              [
+                6,
+                2
+              ],
+              [
+                12,
+                12
+              ]
+            ],
+            "weights": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 1,
+            "knots": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                12,
+                12
+              ],
+              [
+                6,
+                6
+              ]
+            ],
+            "weights": [
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 3,
+            "knots": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                6,
+                6
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                2,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "weights": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "periodic": false
+          }
+        ]
+      ],
+      "toleranceMm": 1e-7,
+      "certificate": {
+        "monotoneAxes": [
+          0,
+          0,
+          0
+        ],
+        "nestingDepth": [
+          0
+        ],
+        "orientation": [
+          1
+        ],
+        "orientationDepth": 0,
+        "scope": "represented-profile-topology",
+        "separatingNormals": [
+          65535,
+          65535,
+          0
+        ],
+        "source": "represented-profile-v1/3e7ad7f29abcaf48/1/w3/c3/4/8/0/0000000000000000/0000000000000000/4000000000000000/0000000000000000/4018000000000000/4000000000000000/4028000000000000/4028000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/c1/2/4/0/4028000000000000/4028000000000000/4018000000000000/4018000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/c3/4/8/0/4018000000000000/4018000000000000/4010000000000000/4000000000000000/4000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000",
+        "subdivisionDepth": 0,
+        "version": 1
+      },
+      "verified": {
+        "nestingDepth": [
+          0
+        ],
+        "pieces": 3,
+        "scope": "represented-profile-topology",
+        "spans": 3,
+        "status": "verified"
+      },
+      "areaMm2": 12.600000000000003,
+      "mesh": {
+        "boundaryEdges": 0,
+        "closed": true,
+        "construction": "triangle_mesh",
+        "degenerateTriangles": 0,
+        "errorBoundCertified": false,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "selfIntersectionStatus": "not_checked",
+        "signedVolumeMm3": 37.80219769477844,
+        "triangleCount": 608,
+        "vertexCount": 306
+      },
+      "elapsedMs": 447.194708
+    },
+    {
+      "name": "affine-cusp",
+      "loops": [
+        [
+          {
+            "degree": 3,
+            "knots": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                17,
+                -9
+              ],
+              [
+                19,
+                -7
+              ],
+              [
+                21,
+                -1
+              ],
+              [
+                17,
+                15
+              ]
+            ],
+            "weights": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 1,
+            "knots": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                17,
+                15
+              ],
+              [
+                17,
+                3
+              ]
+            ],
+            "weights": [
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 3,
+            "knots": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                17,
+                3
+              ],
+              [
+                19,
+                -3
+              ],
+              [
+                19,
+                -7
+              ],
+              [
+                17,
+                -9
+              ]
+            ],
+            "weights": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "periodic": false
+          }
+        ]
+      ],
+      "toleranceMm": 1e-7,
+      "certificate": {
+        "monotoneAxes": [
+          1,
+          1,
+          1
+        ],
+        "nestingDepth": [
+          0
+        ],
+        "orientation": [
+          1
+        ],
+        "orientationDepth": 0,
+        "scope": "represented-profile-topology",
+        "separatingNormals": [
+          65535,
+          65535,
+          1
+        ],
+        "source": "represented-profile-v1/3e7ad7f29abcaf48/1/w3/c3/4/8/0/4031000000000000/c022000000000000/4033000000000000/c01c000000000000/4035000000000000/bff0000000000000/4031000000000000/402e000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/c1/2/4/0/4031000000000000/402e000000000000/4031000000000000/4008000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/c3/4/8/0/4031000000000000/4008000000000000/4033000000000000/c008000000000000/4033000000000000/c01c000000000000/4031000000000000/c022000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000",
+        "subdivisionDepth": 0,
+        "version": 1
+      },
+      "verified": {
+        "nestingDepth": [
+          0
+        ],
+        "pieces": 3,
+        "scope": "represented-profile-topology",
+        "spans": 3,
+        "status": "verified"
+      },
+      "areaMm2": 25.200000000000006,
+      "mesh": {
+        "boundaryEdges": 0,
+        "closed": true,
+        "construction": "triangle_mesh",
+        "degenerateTriangles": 0,
+        "errorBoundCertified": false,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "selfIntersectionStatus": "not_checked",
+        "signedVolumeMm3": 75.60439538955688,
+        "triangleCount": 608,
+        "vertexCount": 306
+      },
+      "elapsedMs": 208.58620899999983
+    },
+    {
+      "name": "nonprimitive-rational-cubic",
+      "loops": [
+        [
+          {
+            "degree": 1,
+            "knots": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                0,
+                0
+              ],
+              [
+                10,
+                0
+              ]
+            ],
+            "weights": [
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 1,
+            "knots": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                10,
+                0
+              ],
+              [
+                10,
+                5
+              ]
+            ],
+            "weights": [
+              1,
+              1
+            ],
+            "periodic": false
+          },
+          {
+            "degree": 3,
+            "knots": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "controlPoints": [
+              [
+                10,
+                5
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                2.5,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "weights": [
+              6,
+              5,
+              4,
+              3
+            ],
+            "periodic": false
+          }
+        ]
+      ],
+      "toleranceMm": 1e-7,
+      "certificate": {
+        "monotoneAxes": [
+          0,
+          1,
+          0
+        ],
+        "nestingDepth": [
+          0
+        ],
+        "orientation": [
+          1
+        ],
+        "orientationDepth": null,
+        "scope": "represented-profile-topology",
+        "separatingNormals": [
+          0,
+          1,
+          0
+        ],
+        "source": "represented-profile-v1/3e7ad7f29abcaf48/1/w3/c1/2/4/0/0000000000000000/0000000000000000/4024000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/c1/2/4/0/4024000000000000/0000000000000000/4024000000000000/4014000000000000/3ff0000000000000/3ff0000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/c3/4/8/0/4024000000000000/4014000000000000/4018000000000000/3ff0000000000000/4004000000000000/0000000000000000/0000000000000000/0000000000000000/4018000000000000/4014000000000000/4010000000000000/4008000000000000/0000000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000",
+        "subdivisionDepth": 0,
+        "version": 1
+      },
+      "verified": {
+        "nestingDepth": [
+          0
+        ],
+        "pieces": 3,
+        "scope": "represented-profile-topology",
+        "spans": 3,
+        "status": "verified"
+      },
+      "areaMm2": 16.66666666674748,
+      "mesh": {
+        "boundaryEdges": 0,
+        "closed": true,
+        "construction": "triangle_mesh",
+        "degenerateTriangles": 0,
+        "errorBoundCertified": false,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "selfIntersectionStatus": "not_checked",
+        "signedVolumeMm3": 50.0244140625,
+        "triangleCount": 132,
+        "vertexCount": 68
+      },
+      "elapsedMs": 85.07270800000015
+    },
+    {
+      "name": "retained-rational-ellipse",
+      "loops": [
+        [
+          {
+            "controlPoints": [
+              [
+                6,
+                0
+              ],
+              [
+                8,
+                4
+              ],
+              [
+                2,
+                4
+              ]
+            ],
+            "degree": 2,
+            "knots": [
+              0,
+              0,
+              0,
+              1,
+              1,
+              1
+            ],
+            "periodic": false,
+            "weights": [
+              1,
+              0.7071067811865476,
+              1
+            ]
+          },
+          {
+            "controlPoints": [
+              [
+                2,
+                4
+              ],
+              [
+                -4,
+                4
+              ],
+              [
+                -6,
+                0
+              ]
+            ],
+            "degree": 2,
+            "knots": [
+              0,
+              0,
+              0,
+              1,
+              1,
+              1
+            ],
+            "periodic": false,
+            "weights": [
+              1,
+              0.7071067811865476,
+              1
+            ]
+          },
+          {
+            "controlPoints": [
+              [
+                -6,
+                0
+              ],
+              [
+                -8,
+                -4
+              ],
+              [
+                -2,
+                -4
+              ]
+            ],
+            "degree": 2,
+            "knots": [
+              0,
+              0,
+              0,
+              1,
+              1,
+              1
+            ],
+            "periodic": false,
+            "weights": [
+              1,
+              0.7071067811865476,
+              1
+            ]
+          },
+          {
+            "controlPoints": [
+              [
+                -2,
+                -4
+              ],
+              [
+                4,
+                -4
+              ],
+              [
+                6,
+                0
+              ]
+            ],
+            "degree": 2,
+            "knots": [
+              0,
+              0,
+              0,
+              1,
+              1,
+              1
+            ],
+            "periodic": false,
+            "weights": [
+              1,
+              0.7071067811865476,
+              1
+            ]
+          }
+        ]
+      ],
+      "toleranceMm": 1e-7,
+      "certificate": {
+        "monotoneAxes": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "nestingDepth": [
+          0
+        ],
+        "orientation": [
+          1
+        ],
+        "orientationDepth": null,
+        "scope": "represented-profile-topology",
+        "separatingNormals": [
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "source": "represented-profile-v1/3e7ad7f29abcaf48/1/w4/c2/3/6/0/4018000000000000/0000000000000000/4020000000000000/4010000000000000/4000000000000000/4010000000000000/3ff0000000000000/3fe6a09e667f3bcd/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/c2/3/6/0/4000000000000000/4010000000000000/c010000000000000/4010000000000000/c018000000000000/0000000000000000/3ff0000000000000/3fe6a09e667f3bcd/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/c2/3/6/0/c018000000000000/0000000000000000/c020000000000000/c010000000000000/c000000000000000/c010000000000000/3ff0000000000000/3fe6a09e667f3bcd/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000/c2/3/6/0/c000000000000000/c010000000000000/4010000000000000/c010000000000000/4018000000000000/0000000000000000/3ff0000000000000/3fe6a09e667f3bcd/3ff0000000000000/0000000000000000/0000000000000000/0000000000000000/3ff0000000000000/3ff0000000000000/3ff0000000000000",
+        "subdivisionDepth": 0,
+        "version": 1
+      },
+      "verified": {
+        "nestingDepth": [
+          0
+        ],
+        "pieces": 4,
+        "scope": "represented-profile-topology",
+        "spans": 4,
+        "status": "verified"
+      },
+      "areaMm2": 75.3982236869152,
+      "mesh": {
+        "boundaryEdges": 0,
+        "closed": true,
+        "construction": "triangle_mesh",
+        "degenerateTriangles": 0,
+        "errorBoundCertified": false,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "selfIntersectionStatus": "not_checked",
+        "signedVolumeMm3": 226.1032479109134,
+        "triangleCount": 628,
+        "vertexCount": 316
+      },
+      "elapsedMs": 479.29754100000014
+    }
+  ]
+}

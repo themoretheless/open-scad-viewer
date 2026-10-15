@@ -1,0 +1,25 @@
+{
+  "wasmSha256": "2e7bc66d4bf26b4f5101ca872d665db6fdd48a30ea7f84bd8e4689d0dbc7547b",
+  "fixtures": [
+    {
+      "name": "same-side-cusp",
+      "status": "verified",
+      "elapsedMs": 447.194708
+    },
+    {
+      "name": "affine-cusp",
+      "status": "verified",
+      "elapsedMs": 208.58620899999983
+    },
+    {
+      "name": "nonprimitive-rational-cubic",
+      "status": "verified",
+      "elapsedMs": 85.07270800000015
+    },
+    {
+      "name": "retained-rational-ellipse",
+      "status": "verified",
+      "elapsedMs": 479.29754100000014
+    }
+  ]
+}

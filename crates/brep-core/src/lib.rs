@@ -64,6 +64,7 @@ pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
 pub mod bezier_profile;
+pub mod profile_certificate;
 pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;

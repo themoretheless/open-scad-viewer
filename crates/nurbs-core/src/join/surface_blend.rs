@@ -26,7 +26,7 @@ fn fields(s:&Surface,end:bool,gain:f64,reverse:bool,order:usize)->Result<Vec<Cur
     s.validate()?;
     let nv=s.control_points[0].len();
     let v=if end {s.knots_v[nv]} else {s.knots_v[s.degree_v]};
-    let basis=crate::curve::basis::basis(s.degree_v,&s.knots_v,nv,v,s.periodic_v)?;
+    let basis=crate::curve::basis(s.degree_v,&s.knots_v,nv,v,s.periodic_v)?;
     let derivatives=[basis.basis,basis.d1,basis.d2];
     let scale=s.weights.iter().flatten().copied().fold(0_f64,f64::max);
     let mut result=Vec::new();

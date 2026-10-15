@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /private/tmp/osv-bezier-push-20261015
+
+
+ Test Files  8 passed (8)
+      Tests  98 passed (98)
+   Start at  13:43:47
+   Duration  14.17s (transform 11.18s, setup 0ms, import 13.59s, tests 24.37s, environment 4ms)

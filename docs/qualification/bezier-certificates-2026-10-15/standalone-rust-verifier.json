@@ -1,0 +1,58 @@
+[
+  {
+    "fixture": "affine-cusp-verify.json",
+    "verification": {
+      "nestingDepth": [
+        0
+      ],
+      "pieces": 3,
+      "scope": "represented-profile-topology",
+      "spans": 3,
+      "status": "verified"
+    },
+    "tamperedExitCode": 1,
+    "tamperedReason": "Certificate orientation or material-left nesting claim is false"
+  },
+  {
+    "fixture": "nonprimitive-rational-cubic-verify.json",
+    "verification": {
+      "nestingDepth": [
+        0
+      ],
+      "pieces": 3,
+      "scope": "represented-profile-topology",
+      "spans": 3,
+      "status": "verified"
+    },
+    "tamperedExitCode": 1,
+    "tamperedReason": "Certificate orientation or material-left nesting claim is false"
+  },
+  {
+    "fixture": "retained-rational-ellipse-verify.json",
+    "verification": {
+      "nestingDepth": [
+        0
+      ],
+      "pieces": 4,
+      "scope": "represented-profile-topology",
+      "spans": 4,
+      "status": "verified"
+    },
+    "tamperedExitCode": 1,
+    "tamperedReason": "Certificate orientation or material-left nesting claim is false"
+  },
+  {
+    "fixture": "same-side-cusp-verify.json",
+    "verification": {
+      "nestingDepth": [
+        0
+      ],
+      "pieces": 3,
+      "scope": "represented-profile-topology",
+      "spans": 3,
+      "status": "verified"
+    },
+    "tamperedExitCode": 1,
+    "tamperedReason": "Certificate orientation or material-left nesting claim is false"
+  }
+]

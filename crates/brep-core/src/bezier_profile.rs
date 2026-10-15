@@ -1,4 +1,4 @@
-//! Conservative admission of one closed polynomial Bézier boundary.
+//! Conservative admission of positive-weight rational Bézier boundaries.
 //! Definitions are retained. Injective spans and shared-endpoint separation are
 //! proved from Bernstein control hulls; other pairs use interval intersection.
 use crate::{Curve, Error, Result};
@@ -15,6 +15,14 @@ mod coincidence_ops;
 mod departure_ops;
 #[path = "bezier_profile_joint.rs"]
 mod joint_ops;
+#[path = "bezier_profile_area.rs"]
+mod area_ops;
+/// Keep the specialized line/circle arrangement where it applies; route
+/// polynomial quadratics, general conics and rational cubics to this kernel.
+pub fn requires_general(curve: &Curve, tolerance: f64) -> bool {
+    curve.degree == 3 || (curve.degree == 2 &&
+        crate::planar_trim::span_green_area(curve, [0.,0.], tolerance).is_err())
+}
 fn refused(message: &str) -> Error {
     Error::new("BREP_UNSUPPORTED_BEZIER_PROFILE", message)
 }
@@ -26,7 +34,7 @@ fn controls(curve: &Curve) -> Result<Vec<[f64; 2]>> {
             .control_points
             .iter()
             .any(|p| p.len() != 2 || p.iter().any(|x| !x.is_finite() || x.abs() > 1e6))
-        || (curve.degree != 2 && curve.weights.iter().any(|w| *w != curve.weights[0]))
+        || curve.periodic
         || curve.knots[..=curve.degree]
             .iter()
             .any(|t| *t != curve.domain()[0])
@@ -35,11 +43,8 @@ fn controls(curve: &Curve) -> Result<Vec<[f64; 2]>> {
             .any(|t| *t != curve.domain()[1])
     {
         return Err(refused(
-            "Bézier admission requires clamped lines, cubic spans or circular rational arcs",
+            "Bézier admission requires clamped positive-weight planar spans of degree 1..3",
         ));
-    }
-    if curve.degree == 2 {
-        crate::planar_trim::span_green_area(curve, [0., 0.], 1e-7)?;
     }
     Ok(curve.control_points.iter().map(|p| [p[0], p[1]]).collect())
 }
@@ -149,7 +154,7 @@ fn choose(n: usize, k: usize) -> f64 {
 /// Green integral of polynomial Bernstein spans; sign is admitted only outside
 /// a conservative floating-point cancellation allowance and the area floor.
 pub fn signed_area(wire: &[Curve], tolerance: f64) -> Result<f64> {
-    if wire.is_empty() {
+    if wire.is_empty() || !tolerance.is_finite() || tolerance <= 0. {
         return Err(refused("Empty Bézier boundary"));
     }
     let origin = controls(&wire[0])?[0];
@@ -157,6 +162,7 @@ pub fn signed_area(wire: &[Curve], tolerance: f64) -> Result<f64> {
     let mut magnitude = 0.;
     let mut scale = 0f64;
     let mut extent = 0f64;
+    let mut integration_error = 0.;
     for curve in wire {
         let raw = controls(curve)?;
         for p in &raw {
@@ -169,9 +175,19 @@ pub fn signed_area(wire: &[Curve], tolerance: f64) -> Result<f64> {
             .iter()
             .map(|q| [q[0] - origin[0], q[1] - origin[1]])
             .collect();
-        if curve.degree == 2 {
-            let contribution = crate::planar_trim::span_green_area(curve, origin, tolerance)?;
+        if curve.degree > 1 && curve.weights.iter().any(|w| *w != curve.weights[0]) {
+            if curve.degree == 2 {
+                if let Ok(contribution) = crate::planar_trim::span_green_area(curve, origin, tolerance) {
+                    area += contribution;
+                    magnitude += contribution.abs() + extent * extent;
+                    continue;
+                }
+            }
+            let bounds = area_ops::integral(curve,origin,
+                (tolerance * extent.max(1.) * 0.125).max(512.*f64::EPSILON*extent.max(1.).powi(2)))?;
+            let contribution = bounds.lo + (bounds.hi-bounds.lo)*0.5;
             area += contribution;
+            integration_error += (contribution-bounds.lo).max(bounds.hi-contribution).next_up();
             magnitude += contribution.abs() + extent * extent;
             continue;
         }
@@ -186,7 +202,7 @@ pub fn signed_area(wire: &[Curve], tolerance: f64) -> Result<f64> {
             }
         }
     }
-    let error = 128. * f64::EPSILON * (magnitude + scale * extent * wire.len() as f64);
+    let error = integration_error + 128. * f64::EPSILON * (magnitude + scale * extent * wire.len() as f64);
     if !area.is_finite() || area.abs() <= error + 64. * tolerance * tolerance {
         return Err(refused("Bézier boundary orientation is unresolved"));
     }
@@ -219,7 +235,9 @@ pub fn validate_single_wire(wire: &[Curve], tolerance: f64) -> Result<f64> {
                 None
             };
             if let Some(point) = shared {
-                if !shared_hulls_separate(&points[i], &points[j], point) {
+                if !shared_hulls_separate(&points[i], &points[j], point)
+                    && !joint_ops::exact_endpoint_only(&wire[i], &wire[j], point, tolerance)?
+                {
                     return Err(refused(
                         "Bézier joint control-hull separation is unresolved",
                     ));
@@ -1331,4 +1349,198 @@ pub fn validate_profile(wires: &[Vec<Curve>], tolerance: f64) -> Result<f64> {
         area += a;
     }
     Ok(area)
+}
+
+#[cfg(test)]
+mod implicit_joint_tests {
+    use super::*;
+    fn cubic(p: Vec<Vec<f64>>) -> Curve {
+        Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: p,
+            weights: vec![1.; 4],
+            periodic: false,
+        }
+    }
+    #[test]
+    fn same_side_curved_cusp_lens_with_nonlinear_speed_keeps_exact_carriers() {
+        let a = cubic(vec![vec![0., 0.], vec![2., 0.], vec![4., 2.], vec![6., 6.]]);
+        let b = cubic(vec![
+            vec![0., 0.],
+            vec![2., 0.],
+            vec![6., 2.],
+            vec![12., 12.],
+        ]);
+        for transformed in [false, true] {
+            let mut wire = vec![
+                b.clone(),
+                Curve::from_polyline(vec![vec![12., 12.], vec![6., 6.]]).unwrap(),
+                a.reverse().unwrap(),
+            ];
+            if transformed {
+                for c in &mut wire {
+                    for p in &mut c.control_points {
+                        let (x, y) = (p[0], p[1]);
+                        p[0] = 17. + x - y;
+                        p[1] = -9. + x + y;
+                    }
+                }
+            }
+            let before = wire
+                .iter()
+                .map(|c| c.control_points.clone())
+                .collect::<Vec<_>>();
+            let expected = if transformed { 25.2 } else { 12.6 };
+            assert!((validate_single_wire(&wire, 1e-7).unwrap() - expected).abs() < 1e-8);
+            let normalized = normalize(&[wire.clone()], 1e-7).unwrap();
+            assert_eq!(normalized.len(), 1);
+            assert!((signed_area(&normalized[0], 1e-7).unwrap() - expected).abs() < 1e-8);
+            assert!(normalized[0].iter().filter(|c| c.degree == 3).count() >= 2);
+            assert_eq!(
+                wire.iter()
+                    .map(|c| c.control_points.clone())
+                    .collect::<Vec<_>>(),
+                before
+            );
+        }
+    }
+    #[test]
+    fn curved_third_order_difference_is_a_valid_cusp_component() {
+        let region = |y: [f64; 4]| {
+            let c = cubic((0..4).map(|i| vec![10. * i as f64, y[i]]).collect());
+            vec![
+                Curve::from_polyline(vec![vec![0., -2.], vec![30., -2.]]).unwrap(),
+                Curve::from_polyline(vec![vec![30., -2.], vec![30., y[3]]]).unwrap(),
+                c.reverse().unwrap(),
+                Curve::from_polyline(vec![vec![0., y[0]], vec![0., -2.]]).unwrap(),
+            ]
+        };
+        let a = region([0., 0., 1., 3.]);
+        let b = region([0., 0., 1., 6.]);
+        let r = boolean(&[b], &[a], "difference", 1e-7).unwrap();
+        assert_eq!(r.len(), 1);
+        assert!((signed_area(&r[0], 1e-7).unwrap() - 22.5).abs() < 1e-7);
+    }
+}
+
+#[cfg(test)]
+mod rational_representation_tests {
+    use super::*;
+    fn retained_cubic()->Curve {
+        // Exact binary64 source: H(t)=3(1+t)*(10t,5t²,1).
+        Curve{degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![2.5,0.],vec![6.,1.],vec![10.,5.]],
+            weights:vec![3.,4.,5.,6.],periodic:false}
+    }
+    fn region(c:Curve)->Vec<Curve> {
+        vec![Curve::from_polyline(vec![vec![0.,0.],vec![10.,0.]]).unwrap(),
+            Curve::from_polyline(vec![vec![10.,0.],vec![10.,5.]]).unwrap(),c.reverse().unwrap()]
+    }
+    #[test]
+    fn rational_cubic_common_factor_keeps_source_and_extrudes() {
+        let c=retained_cubic();let wire=region(c.clone());let before=wire.clone();
+        assert!((validate_single_wire(&wire,1e-7).unwrap()-50./3.).abs()<1e-6);
+        let certificate=crate::profile_certificate::certify(&[wire.clone()],1e-7).unwrap();
+        crate::profile_certificate::verify(&[wire.clone()],1e-7,&certificate).unwrap();
+        let solid=crate::prism::extrude(&[wire.clone()],0.,3.).unwrap();
+        solid.validate().unwrap();
+        assert!(solid.edges.iter().any(|e|e.curve.degree==3&&e.curve.weights.iter().any(|w|*w!=e.curve.weights[0])));
+        assert_eq!(wire,before);
+        let result=boolean(&[wire.clone()],&[wire.clone()],"intersection",1e-7).unwrap();
+        assert!((validate_profile(&result,1e-7).unwrap()-50./3.).abs()<1e-6);
+        assert!(boolean(&[wire.clone()],&[wire],"difference",1e-7).unwrap().is_empty());
+    }
+    #[test]
+    fn polynomial_quadratic_profile_has_exact_green_integral() {
+        let c=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![5.,0.],vec![10.,5.]],
+            weights:vec![1.;3],periodic:false};
+        let wire=region(c.clone());
+        assert!(requires_general(&c,1e-7));
+        assert!((validate_single_wire(&wire,1e-7).unwrap()-50./3.).abs()<1e-12);
+        crate::prism::extrude(&[wire.clone()],0.,3.).unwrap().validate().unwrap();
+        // Different degrees and a nonconstant common homogeneous factor must
+        // still describe the same retained boundary in Boolean operations.
+        let rational=region(retained_cubic());
+        assert!(boolean(&[wire.clone()],&[rational.clone()],"difference",1e-7).unwrap().is_empty());
+        let union=boolean(&[wire],&[rational],"union",1e-7).unwrap();
+        assert!((validate_profile(&union,1e-7).unwrap()-50./3.).abs()<1e-6);
+    }
+    #[test]
+    fn rational_green_bounds_enclose_an_independent_polynomial_integral() {
+        let c=retained_cubic();
+        let bounds=area_ops::integral(&c,[0.,0.],1e-8).unwrap();
+        // Open parabola contribution: 1/2 integral (10t*10t-5t²*10)dt=25/3.
+        assert!(bounds.lo<=25./3.&&25./3.<=bounds.hi);
+        assert!(bounds.hi-bounds.lo<2.1e-8);
+    }
+}
+
+#[cfg(test)]
+mod parameter_domain_tests {
+    use super::*;
+    #[test]
+    fn normalization_keeps_cusp_geometry_on_small_and_large_parameter_domains() {
+        for end in [1e-15, 1., 1e8] {
+            let c = Curve {
+                degree: 3,
+                knots: vec![0., 0., 0., 0., end, end, end, end],
+                control_points: vec![vec![3., -1.], vec![-1., 1.], vec![-1., -1.], vec![3., 1.]],
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            let wire = vec![
+                c,
+                Curve::from_polyline(vec![vec![3., 1.], vec![3., -1.]]).unwrap(),
+            ];
+            let result = normalize(&[wire], 1e-7).unwrap();
+            assert_eq!(result.len(), 1);
+            assert!((signed_area(&result[0], 1e-7).unwrap() - 2.4).abs() < 1e-8);
+            assert_eq!(result[0].iter().filter(|c| c.degree == 3).count(), 2);
+        }
+    }
+}
+
+#[cfg(test)]
+mod nodal_parent_tests {
+    use super::*;
+    #[test]
+    fn nodal_parent_survives_stationary_splitting_and_affine_transform() {
+        for transformed in [false, true] {
+            let c = Curve {
+                degree: 3,
+                knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+                control_points: vec![
+                    vec![9., -18.],
+                    vec![-7., 26.],
+                    vec![-7., -26.],
+                    vec![9., 18.],
+                ],
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            let mut wire = vec![
+                c,
+                Curve::from_polyline(vec![vec![9., 18.], vec![9., -18.]]).unwrap(),
+            ];
+            if transformed {
+                for c in &mut wire {
+                    for p in &mut c.control_points {
+                        let (x, y) = (p[0], p[1]);
+                        p[0] = 17. + x - y;
+                        p[1] = -9. + x + y;
+                    }
+                }
+            }
+            let result = normalize(&[wire], 1e-7).unwrap();
+            assert_eq!(result.len(), 2);
+            let area = result
+                .iter()
+                .map(|w| signed_area(w, 1e-7).unwrap())
+                .sum::<f64>();
+            assert!((area - if transformed { 288. } else { 144. }).abs() < 1e-6);
+            assert!(result.iter().flatten().any(|c| c.degree == 3));
+        }
+    }
 }
