@@ -122,7 +122,11 @@ const jsChunkBudgets = [
   // add ~6 kB; measured: 113,721 bytes.
   // Key-light contact shadows (depth-only pass, shadow-map bindings, UI
   // toggle) add ~13 kB; measured: 126,965 bytes.
-  [/^assets\/renderer-[^/]+\.js$/, 132_000],
+  // Hardware-offloading port: zero-alloc camera/overlay/BSP hot paths and
+  // the WBOIT/CSG/picker pass wiring (pass bodies and the CSG parser stay
+  // in renderer-gpu-passes / csg-preview-parse) add ~12 kB over the
+  // 124,140-byte pre-port build; measured: 135,764 bytes.
+  [/^assets\/renderer-[^/]+\.js$/, 138_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
   // Splitting the ModelGraph emitter match into per-kind methods adds 4 kB of

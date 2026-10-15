@@ -67,8 +67,10 @@ export default defineConfig({
             { name: 'solid-gpu-view', test: /src[\\/]services[\\/]solidGpuView/ },
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
+            // Live CSG preview lowering is loaded on first edit; keep it with its compiler, not in the renderer.
+            { name: 'csg-preview-parse', test: /src[\\/]services[\\/](gpuCsgParse|openscadCompiler)\.ts$/ },
             // Keep independent GPU preview and compute passes out of renderer control code.
-            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit|gpuPicker|gpuZeroCopyPipeline|gpuSlicer|gpuBvhRaycast|gpuSubdivision|gpuGcodePreview|gpuImageTrace|gpuTrussSolver|gpuSemanticEdges|gpuNurbsTessellate|gpuMarchingCubes)\.ts$/, includeDependenciesRecursively: false },
+            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpu[A-Z][A-Za-z]*|webgpuRenderer[\\/]gpuPasses)\.ts$|crates[\\/]compute-core[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],

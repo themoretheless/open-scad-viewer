@@ -577,7 +577,7 @@ export class WebGPURenderer {
   getCsgPreviewTree(): GpuCsgTree | null { return this.gpuPasses.csgTree }
   /** Live-typing CSG preview; the next published mesh build replaces it. */
   previewCsgSource(source: string) {
-    if (this.currentStatus.status === 'ready' && this.gpuPasses.previewSource(source)) this.requestRender()
+    if (this.currentStatus.status === 'ready') void this.gpuPasses.previewSource(source).then(ok => { if (ok && !this.dead) this.requestRender() })
   }
   getTransparencyMode(): TransparencyMode { return this.gpuPasses.transparencyMode }
   setTransparencyMode(mode: TransparencyMode): void {
@@ -604,7 +604,7 @@ export class WebGPURenderer {
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
     this.cancelPendingHover()
-    this.gpuPasses.csgTree = null
+    this.gpuPasses.clearCsg()
     const dev = this.dev
     if (!dev || !this.initialized || this.dead || this.lost) return
 

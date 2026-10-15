@@ -4,7 +4,8 @@
  * multi-plane slicer. Every pass is created lazily, so a renderer that never
  * enables them pays nothing, and CPU fallbacks stay in the pass modules.
  */
-import { GpuCsgRenderer, parseOpenScadCsgTree, type GpuCsgTree } from '../gpuCsgPreview'
+import { GpuCsgRenderer } from '../gpuCsgRenderer'
+import type { GpuCsgTree } from '../gpuCsgTypes'
 import { GpuPicker, type GpuPickerMesh } from '../gpuPicker'
 import { GpuWboitRenderer } from '../gpuWboit'
 import { GpuBufferArena } from '../gpuZeroCopyPipeline'
@@ -58,11 +59,19 @@ export class RendererGpuPasses {
     return this.csgTree !== null && this.csgTree.terms.length > 0
   }
 
-  /** Parses live source into a CSG preview tree; syntax errors during typing are not fatal. */
-  previewSource(source: string): boolean {
+  private previewSequence = 0
+
+  /**
+   * Parses live source into a CSG preview tree; syntax errors during typing
+   * are not fatal. The OpenSCAD lowering is loaded on first use, and a stale
+   * parse never overwrites a newer one.
+   */
+  async previewSource(source: string): Promise<boolean> {
+    const sequence = ++this.previewSequence
     try {
+      const { parseOpenScadCsgTree } = await import('../gpuCsgParse')
       const tree = parseOpenScadCsgTree(source)
-      if (!tree) return false
+      if (!tree || sequence !== this.previewSequence) return false
       this.csgTree = tree
       return true
     } catch {
@@ -166,7 +175,14 @@ export class RendererGpuPasses {
     wboit.composite(input.dev, input.enc, input.colorView, input.fmt)
   }
 
+  /** Drops the live preview, including any parse still in flight. */
+  clearCsg() {
+    this.previewSequence++
+    this.csgTree = null
+  }
+
   destroy() {
+    this.previewSequence++
     this.csgRenderer?.destroy()
     this.csgRenderer = null
     this.releaseDepth()
