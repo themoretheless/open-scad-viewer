@@ -44,3 +44,9 @@ limits; singular, intersecting or unresolved input is refused. Moving-frame
 approximation plus retained-body validation does not establish ideal-body
 embedding or G1/G2. Sharp seams remain explicitly C0. Finite Node, Chromium and
 independent STEP checks are recorded separately from the full semantic matrix.
+
+The subsequent main `c406d1908a0ac324388516dc4b0645c4887edaa1` has exactly
+one tree change relative to `e3a2d0715`: the budget-one retained quarter-chart
+assertion. That assertion is applied to the resolved tree. Repeated recursive
+merge conflicts arise from multiple historical merge bases, not new source
+changes; the previously reviewed resolution is retained in full.
