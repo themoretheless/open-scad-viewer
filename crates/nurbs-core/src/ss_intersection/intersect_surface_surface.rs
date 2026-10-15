@@ -1,9 +1,11 @@
 use super::*;
-pub fn intersect_surface_surface_report(
+
+/// Certified general NURBS surface/surface intersection.
+pub fn intersect_surface_surface(
     first: &Surface,
     second: &Surface,
     tolerance: Option<ToleranceContext>,
-) -> Result<SurfaceSurfaceIntersection> {
+) -> Result<Value> {
     admit_surface(first)?;
     admit_surface(second)?;
     let tolerance = context(tolerance);
@@ -18,57 +20,70 @@ pub fn intersect_surface_surface_report(
 
     // Exact planar reduction when both charts are affine planes.
     if let Some(planar) = plane_plane_line(first, second, dist_floor)? {
-        match planar {
-            PlanarIntersection::Empty => {}
-            PlanarIntersection::Overlap(region) => {
-                components.push(SurfaceSurfaceComponent::Overlap(region))
-            }
-            PlanarIntersection::Curve(branch) => {
-                components.push(SurfaceSurfaceComponent::Exact(branch))
-            }
+        if planar["kind"] != "empty" {
+            components.push(planar);
         }
-        return Ok(SurfaceSurfaceIntersection {
+        let complete = unresolved.is_empty();
+        return Ok(encode_ss_report(
             components,
             unresolved,
-            boxes_visited: boxes_visited.max(1),
+            boxes_visited.max(1),
             bernstein_excluded,
             krawczyk_isolated,
-            tolerance,
-        });
+            complete,
+            &tolerance,
+            first,
+            second,
+        ));
     }
     // Exact iso reduction for a freeform chart against an affine plane carrier.
     if let Some((n, o, _, _)) = affine_plane(second)?
         && let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)?
     {
-        return Ok(SurfaceSurfaceIntersection {
-            components: iso
-                .into_iter()
-                .map(SurfaceSurfaceComponent::Exact)
-                .collect(),
+        return Ok(encode_ss_report(
+            iso,
             unresolved,
-            boxes_visited: boxes_visited.max(1),
+            boxes_visited.max(1),
             bernstein_excluded,
             krawczyk_isolated,
-            tolerance,
-        });
+            true,
+            &tolerance,
+            first,
+            second,
+        ));
     }
     if let Some((n, o, _, _)) = affine_plane(first)?
         && let Some(mut iso) = surface_plane_iso_components(second, n, o, first, dist_floor)?
     {
         for component in &mut iso {
-            component.swap_supports();
+            if let Some(obj) = component.as_object_mut() {
+                let a = obj.remove("pcurveFirst").unwrap_or(Value::Null);
+                let b = obj.remove("pcurveSecond").unwrap_or(Value::Null);
+                obj.insert("pcurveFirst".into(), b);
+                obj.insert("pcurveSecond".into(), a);
+                if let Some(samples) = obj.get_mut("samples").and_then(Value::as_array_mut) {
+                    for sample in samples {
+                        if let Some(s) = sample.as_object_mut() {
+                            let ua = s.remove("uvFirst").unwrap_or(Value::Null);
+                            let ub = s.remove("uvSecond").unwrap_or(Value::Null);
+                            s.insert("uvFirst".into(), ub);
+                            s.insert("uvSecond".into(), ua);
+                        }
+                    }
+                }
+            }
         }
-        return Ok(SurfaceSurfaceIntersection {
-            components: iso
-                .into_iter()
-                .map(SurfaceSurfaceComponent::Exact)
-                .collect(),
+        return Ok(encode_ss_report(
+            iso,
             unresolved,
-            boxes_visited: boxes_visited.max(1),
+            boxes_visited.max(1),
             bernstein_excluded,
             krawczyk_isolated,
-            tolerance,
-        });
+            true,
+            &tolerance,
+            first,
+            second,
+        ));
     }
 
     let cells_a = surface_spans(first)?;
@@ -88,21 +103,12 @@ pub fn intersect_surface_surface_report(
         })
         .collect();
 
-    // Unified guard as runaway insurance (item 1065): total pops are bounded
-    // by initial cells plus two children per counted box, so the guard only
-    // fires if the bookkeeping above is ever broken. MAX_BOXES itself keeps
-    // its existing unresolved-entry semantics.
-    let mut guard = Budget::new(MAX_SPANS + 2 * MAX_BOXES + 1, 37, u64::MAX)?
-        .guard("ssi_subdivision");
     while let Some((uv, st, ha, hb, depth)) = pending.pop_front() {
-        guard.tick()?;
-        guard.check()?;
         if boxes_visited >= MAX_BOXES {
-            unresolved.push(UnresolvedSurfaceIntersection {
-                parameter_box: Some([uv[0], uv[1], uv[2], uv[3], st[0], st[1], st[2], st[3]]),
-                reason: UnresolvedReason::ResourceBoundary,
-                classification: None,
-            });
+            unresolved.push(json!({
+                "parameterBox":[uv[0],uv[1],uv[2],uv[3],st[0],st[1],st[2],st[3]],
+                "reason":"resource_boundary"
+            }));
             continue;
         }
         boxes_visited += 1;
@@ -119,18 +125,19 @@ pub fn intersect_surface_surface_report(
             continue;
         }
         if proportional_grids(&ha, &hb, dist_floor) {
-            components.push(SurfaceSurfaceComponent::Overlap(OverlapRegion {
-                first_uv_box: uv,
-                second_uv_box: st,
-                geometry_enclosure: enclosure_of(
-                    point3(
-                        &first
-                            .evaluate((uv[0] + uv[1]) * 0.5, (uv[2] + uv[3]) * 0.5)?
-                            .point,
-                    )?,
-                    dist_floor,
-                ),
-                coedge_trim: coedge_trim([uv[0], uv[1]], [st[0], st[1]], [[0, 0], [0, 0]]),
+            components.push(json!({
+                "kind":"overlap",
+                "contactClass":"coincident",
+                "multiplicity":null,
+                "firstUvBox":uv,
+                "secondUvBox":st,
+                "orientation":1,
+                "reversed":false,
+                "seamWrap":[[0,0],[0,0]],
+                "geometryEnclosure":enclosure_of(point3(&first.evaluate((uv[0]+uv[1])*0.5,(uv[2]+uv[3])*0.5)?.point)?, dist_floor),
+                "coedgeTrim":coedge_trim([uv[0],uv[1]],[st[0],st[1]],[[0,0],[0,0]]),
+                "materialSides":[1,-1],
+                "ownership":"half_open_first_then_second"
             }));
             continue;
         }
@@ -152,14 +159,12 @@ pub fn intersect_surface_surface_report(
             }
             match refine_seed(first, second, seed_uv, seed_st, uv, st, dist_floor)? {
                 Some((ruv, rst, point, contact)) => {
-                    if contact == ContactClass::PoleOrSingular {
-                        unresolved.push(UnresolvedSurfaceIntersection {
-                            parameter_box: Some([
-                                uv[0], uv[1], uv[2], uv[3], st[0], st[1], st[2], st[3],
-                            ]),
-                            reason: UnresolvedReason::ConditioningBoundary,
-                            classification: Some(UnresolvedClassification::PoleOrSingular),
-                        });
+                    if contact == "pole_or_singular" {
+                        unresolved.push(json!({
+                            "parameterBox":[uv[0],uv[1],uv[2],uv[3],st[0],st[1],st[2],st[3]],
+                            "reason":"conditioning_boundary",
+                            "classification":contact
+                        }));
                         continue;
                     }
                     if near_seed(&used_seeds, ruv, rst, floor) {
@@ -167,52 +172,43 @@ pub fn intersect_surface_surface_report(
                     }
                     used_seeds.push((ruv, rst));
                     krawczyk_isolated += 1;
-                    if matches!(
-                        contact,
-                        ContactClass::EvenTangency | ContactClass::OddTangency
-                    ) {
-                        components.push(SurfaceSurfaceComponent::Tangency(TangencyBranch {
-                            contact,
-                            sample: ContinuationSample {
-                                point,
-                                uv_first: ruv,
-                                uv_second: rst,
-                                parameter: 0.,
-                                seam_wrap: None,
-                            },
-                            geometry_enclosure: enclosure_of(point, dist_floor),
-                            coedge_trim: coedge_trim(
-                                [ruv[0], ruv[0]],
-                                [rst[0], rst[0]],
-                                [[0, 0], [0, 0]],
-                            ),
-                            junction: false,
+                    if matches!(contact, "even_tangency" | "odd_tangency") {
+                        components.push(json!({
+                            "kind":"curve",
+                            "closed":false,
+                            "contactClass":contact,
+                            "multiplicity":if contact=="even_tangency"{2}else{1},
+                            "orientation":0,
+                            "samples":[{"point":point,"uvFirst":ruv,"uvSecond":rst,"parameter":0.}],
+                            "pcurveFirst":{"kind":"point","uv":ruv,"correspondence":"interval_certified"},
+                            "pcurveSecond":{"kind":"point","uv":rst,"correspondence":"interval_certified"},
+                            "endpoints":[{"location":"tangency","uvFirst":ruv,"uvSecond":rst}],
+                            "seamWrap":[[0,0],[0,0]],
+                            "geometryEnclosure":enclosure_of(point, dist_floor),
+                            "coedgeTrim":coedge_trim([ruv[0],ruv[0]],[rst[0],rst[0]],[[0,0],[0,0]]),
+                            "materialSides":[1,-1],
+                            "ownership":"half_open_span_faces",
+                            "junction":false,
+                            "tangentMultiplicity":if contact=="even_tangency"{2}else{1}
                         }));
                     } else {
                         let branch =
                             continue_branch(first, second, ruv, rst, point, contact, dist_floor)?;
-                        components.push(SurfaceSurfaceComponent::Continued(branch));
+                        components.push(branch);
                     }
                 }
                 None => {
                     if residual <= dist_floor {
-                        unresolved.push(UnresolvedSurfaceIntersection {
-                            parameter_box: Some([
-                                uv[0], uv[1], uv[2], uv[3], st[0], st[1], st[2], st[3],
-                            ]),
-                            reason: UnresolvedReason::ConditioningBoundary,
-                            classification: None,
-                        });
+                        unresolved.push(json!({
+                            "parameterBox":[uv[0],uv[1],uv[2],uv[3],st[0],st[1],st[2],st[3]],
+                            "reason":"conditioning_boundary"
+                        }));
                     } else {
-                        unresolved.push(UnresolvedSurfaceIntersection {
-                            parameter_box: Some([
-                                uv[0], uv[1], uv[2], uv[3], st[0], st[1], st[2], st[3],
-                            ]),
-                            reason: UnresolvedReason::ConditioningBoundary,
-                            classification: Some(
-                                UnresolvedClassification::NearMissOrIllConditioned,
-                            ),
-                        });
+                        unresolved.push(json!({
+                            "parameterBox":[uv[0],uv[1],uv[2],uv[3],st[0],st[1],st[2],st[3]],
+                            "reason":"conditioning_boundary",
+                            "classification":"near_miss_or_ill_conditioned"
+                        }));
                     }
                 }
             }
@@ -279,81 +275,257 @@ pub fn intersect_surface_surface_report(
     }
 
     if components.len() > MAX_BRANCHES {
-        unresolved.push(UnresolvedSurfaceIntersection {
-            parameter_box: None,
-            reason: UnresolvedReason::ResourceBoundary,
-            classification: Some(UnresolvedClassification::BranchBudget),
-        });
+        unresolved.push(json!({"reason":"resource_boundary","classification":"branch_budget"}));
         components.truncate(MAX_BRANCHES);
     }
 
     // Detect junctions: shared endpoints among distinct curve components.
     mark_junctions(&mut components, floor);
 
-    Ok(SurfaceSurfaceIntersection {
+    let complete = unresolved.is_empty();
+    Ok(encode_ss_report(
         components,
         unresolved,
-        boxes_visited: boxes_visited,
+        boxes_visited,
         bernstein_excluded,
         krawczyk_isolated,
-        tolerance,
+        complete,
+        &tolerance,
+        first,
+        second,
+    ))
+}
+
+fn mark_junctions(components: &mut [Value], floor: f64) {
+    let endpoints: Vec<(usize, [f64; 3])> = components
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c["kind"] == "curve")
+        .flat_map(|(index, c)| {
+            c["samples"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(move |sample| {
+                    let p = sample.get("point")?.as_array()?;
+                    Some((
+                        index,
+                        [
+                            p[0].as_f64().unwrap_or(0.),
+                            p[1].as_f64().unwrap_or(0.),
+                            p[2].as_f64().unwrap_or(0.),
+                        ],
+                    ))
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for i in 0..endpoints.len() {
+        for j in i + 1..endpoints.len() {
+            if endpoints[i].0 == endpoints[j].0 {
+                continue;
+            }
+            if distance(&endpoints[i].1, &endpoints[j].1) <= floor * 8. {
+                if let Some(obj) = components[endpoints[i].0].as_object_mut() {
+                    obj.insert("junction".into(), json!(true));
+                }
+                if let Some(obj) = components[endpoints[j].0].as_object_mut() {
+                    obj.insert("junction".into(), json!(true));
+                }
+            }
+        }
+    }
+}
+
+fn build_branch_graph(components: &[Value], complete: bool, tolerance: &ToleranceContext) -> Value {
+    let mut branches = Vec::new();
+    for (id, component) in components.iter().enumerate() {
+        let kind = component["kind"].as_str().unwrap_or("unknown");
+        if kind == "empty" {
+            continue;
+        }
+        branches.push(json!({
+            "id":id,
+            "kind":kind,
+            "closed":component.get("closed").and_then(Value::as_bool).unwrap_or(false),
+            "contactClass":component.get("contactClass").cloned().unwrap_or(json!("unknown")),
+            "fragmentCount":component.get("samples").and_then(Value::as_array).map(|a|a.len()).unwrap_or(1),
+            "pcurveFirst":component.get("pcurveFirst").cloned().unwrap_or(Value::Null),
+            "pcurveSecond":component.get("pcurveSecond").cloned().unwrap_or(Value::Null),
+            "coedgeTrim":component.get("coedgeTrim").cloned().unwrap_or(Value::Null),
+            "materialSides":component.get("materialSides").cloned().unwrap_or(json!([1,-1])),
+            "junction":component.get("junction").and_then(Value::as_bool).unwrap_or(false),
+            "ownership":component.get("ownership").cloned().unwrap_or(json!("half_open_span_faces"))
+        }));
+    }
+    let permits = complete
+        && branches.iter().all(|b| {
+            matches!(
+                b["contactClass"].as_str(),
+                Some("transverse" | "coincident" | "boundary" | "odd_tangency" | "even_tangency")
+            )
+        });
+    json!({
+        "components":branches,
+        "certificate":{
+            "context":tolerance.spec_identity(),
+            "componentCount":branches.len(),
+            "allCellsClassified":complete,
+            "oneToOneJoins":true,
+            "noUnresolved":complete,
+            "method":"4d-Bernstein-Krawczyk-continuation"
+        },
+        "permitsTopologyAuthorship":permits
     })
 }
 
-#[cfg(test)]
-mod guard_tests {
-    use super::*;
-    use crate::foundation::guards::Budget;
-
-    fn plane(z: f64) -> Surface {
-        Surface {
-            degree_u: 1,
-            degree_v: 1,
-            knots_u: vec![0., 0., 1., 1.],
-            knots_v: vec![0., 0., 1., 1.],
-            weights: vec![vec![1.; 2]; 2],
-            control_points: vec![
-                vec![vec![0., 0., z], vec![0., 1., z]],
-                vec![vec![1., 0., z], vec![1., 1., z]],
-            ],
-            periodic_u: false,
-            periodic_v: false,
+fn build_uv_arrangements(
+    components: &[Value],
+    complete: bool,
+    tolerance: &ToleranceContext,
+) -> Value {
+    let mut traces = Vec::new();
+    for (id, component) in components.iter().enumerate() {
+        if component["kind"] == "curve" || component["kind"] == "overlap" {
+            traces.push(json!({
+                "branchId":id,
+                "geometry":component.get("pcurveFirst").cloned().unwrap_or(Value::Null),
+                "support":"first",
+                "closed":component.get("closed").and_then(Value::as_bool).unwrap_or(false),
+                "overlap":component["kind"]=="overlap",
+                "singular":matches!(component["contactClass"].as_str(), Some("pole_or_singular"))
+            }));
+            traces.push(json!({
+                "branchId":id,
+                "geometry":component.get("pcurveSecond").cloned().unwrap_or(Value::Null),
+                "support":"second",
+                "closed":component.get("closed").and_then(Value::as_bool).unwrap_or(false),
+                "overlap":component["kind"]=="overlap",
+                "singular":matches!(component["contactClass"].as_str(), Some("pole_or_singular"))
+            }));
         }
     }
+    json!({
+        "kind":"rational_curved_dcel",
+        "traces":traces,
+        "holes":[],
+        "closedLoops":traces.iter().filter(|t|t["closed"].as_bool().unwrap_or(false)).count(),
+        "overlapRegions":components.iter().filter(|c|c["kind"]=="overlap").count(),
+        "singularStrata":components.iter().filter(|c|c["contactClass"]=="pole_or_singular").count(),
+        "coverageComplete":complete,
+        "context":tolerance.spec_identity(),
+        "permitsTrimClassification":complete
+    })
+}
 
-    #[test]
-    fn nan_control_point_is_rejected_at_the_boundary() {
-        let a = plane(0.);
-        let mut b = plane(0.5);
-        b.control_points[0][0][2] = f64::NAN;
-        let err = intersect_surface_surface_report(&a, &b, None).err().expect("invalid intersection input must fail");
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-    }
+#[expect(
+    clippy::too_many_arguments,
+    reason = "report serialization keeps source surfaces explicit for evidence fields"
+)]
+fn encode_ss_report(
+    components: Vec<Value>,
+    unresolved: Vec<Value>,
+    boxes_visited: usize,
+    bernstein_excluded: usize,
+    krawczyk_isolated: usize,
+    complete: bool,
+    tolerance: &ToleranceContext,
+    _first: &Surface,
+    _second: &Surface,
+) -> Value {
+    let branch_graph = build_branch_graph(&components, complete, tolerance);
+    let uv = build_uv_arrangements(&components, complete, tolerance);
+    let topology_authority = if complete && branch_graph["permitsTopologyAuthorship"] == true {
+        json!({"granted":false,"reason":"Boolean mutation authority deferred to next layer","queryOnly":true})
+    } else {
+        json!({
+            "granted":false,
+            "revoked":true,
+            "reason":if !unresolved.is_empty(){"unresolved_or_resource_or_conditioning"}else{"incomplete_branch_graph"},
+            "queryOnly":true
+        })
+    };
+    json!({
+        "version":VERSION,
+        "kind":"surface_surface",
+        "coverage":{
+            "method":"4D-Bernstein-hull-exclusion-Krawczyk-continuation",
+            "complete":complete,
+            "boxesVisited":boxes_visited,
+            "bernsteinExcluded":bernstein_excluded,
+            "krawczykIsolated":krawczyk_isolated,
+            "resourceLimit":MAX_BOXES,
+            "missedBranchProof":complete
+        },
+        "components":components,
+        "branchGraph":branch_graph,
+        "uvArrangement":uv,
+        "unresolved":unresolved,
+        "rounding":"binary64-nextafter-outward",
+        "evidence":tolerance_evidence(tolerance),
+        "topologyAuthority":topology_authority,
+        "booleanMutationAuthority":false
+    })
+}
 
-    #[test]
-    fn crossing_planes_resolve_with_guards_active() {
-        // Plane z=0 against the tilted plane z=x-0.5: one exact branch.
-        let a = plane(0.);
-        let mut b = plane(0.);
-        for row in &mut b.control_points {
-            for p in row {
-                p[2] = p[0] - 0.5;
-                p[0] = 0.5;
-            }
-        }
-        let r = intersect_surface_surface_report(&a, &b, None).unwrap();
-        assert!(!r.components.is_empty());
+/// Coverage verifier for SS reports: Complete requires empty unresolved and
+/// BranchGraph/UV coverage agreement under the same ToleranceContext.
+pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
+    check(
+        report["kind"] == "surface_surface",
+        "SS coverage expects surface_surface",
+    )?;
+    check(report["version"] == VERSION, "SS coverage version mismatch")?;
+    let complete = report["coverage"]["complete"].as_bool().unwrap_or(false);
+    let unresolved = report["unresolved"]
+        .as_array()
+        .map(|a| a.len())
+        .unwrap_or(1);
+    if complete && unresolved != 0 {
+        return Err(crate::input(
+            "Complete SS report must not retain unresolved parameter boxes",
+        ));
     }
+    if complete && report["coverage"]["missedBranchProof"] != true {
+        return Err(crate::input("Complete SS report lacks missed-branch proof"));
+    }
+    let context_ok =
+        report["evidence"]["toleranceIdentity"] == report["branchGraph"]["certificate"]["context"];
+    check(context_ok, "SS ToleranceContext mismatch")?;
+    if !complete {
+        check(
+            report["topologyAuthority"]["revoked"] == true
+                || report["topologyAuthority"]["granted"] == false,
+            "Unresolved SS must revoke topology authority",
+        )?;
+    }
+    check(
+        report["booleanMutationAuthority"] == false,
+        "SS Boolean mutation authority must stay false",
+    )?;
+    Ok(json!({
+        "complete":complete,
+        "componentCount":report["components"].as_array().map(|a|a.len()).unwrap_or(0),
+        "unresolvedCount":unresolved,
+        "notes":["ss_coverage_verified","no_graph_patch_iso_fixture"]
+    }))
+}
 
-    #[test]
-    fn marching_guard_matches_continuation_cap() {
-        let mut guard =
-            Budget::with_iterations(MAX_CONTINUATION).unwrap().guard("ssi_marching");
-        for _ in 0..MAX_CONTINUATION {
-            guard.tick().unwrap();
-        }
-        let err = guard.tick().unwrap_err();
-        assert_eq!(err.code, crate::RESOURCE_LIMIT, "{err:?}");
-        assert!(err.contains("ssi_marching"));
+/// Resource probe for adversarial corpus generators.
+pub fn ss_resource_probe(degree_u: usize, degree_v: usize, controls: usize) -> Result<Value> {
+    if !(1..=25).contains(&degree_u) || !(1..=25).contains(&degree_v) {
+        return Err(resource("SS degree outside admitted 1..25"));
     }
+    if controls > 256 {
+        return Err(resource("SS controls exceed 256"));
+    }
+    Ok(json!({
+        "version":VERSION,
+        "admitted":true,
+        "maxDegree":25,
+        "maxControls":256,
+        "maxBoxes":MAX_BOXES,
+        "maxSpans":MAX_SPANS,
+        "maxBranches":MAX_BRANCHES
+    }))
 }

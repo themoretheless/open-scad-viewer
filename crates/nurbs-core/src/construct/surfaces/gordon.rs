@@ -6,6 +6,7 @@ mod cartesian;
 #[path = "gordon/tangent_fields.rs"]
 mod tangent_fields;
 #[path = "gordon/tangent_audit.rs"]
+#[cfg(feature = "codec")]
 mod tangent_audit;
 use crate::{
     Result, check,
@@ -179,6 +180,7 @@ pub fn patch(
 /// Cartesian Gordon interpolation with independent rational crossing weights.
 /// Every authored section and guide must pass a bounded whole-domain retention
 /// audit. Returned certificates are numerical, never exact-identity claims.
+#[cfg(feature = "codec")]
 pub fn patch_cartesian(
     u_curves: &[Curve], v_curves: &[Curve],
     parameters_u: &[f64], parameters_v: &[f64],
@@ -194,6 +196,7 @@ pub fn patch_cartesian(
 /// Cartesian network interpolation with authored dP/dV boundary fields.
 /// V and tangent-curve U parameters are normalized to [0,1]. Curve and tangent
 /// certificates must both establish their complete-domain numerical bounds.
+#[cfg(feature = "codec")]
 pub fn patch_cartesian_with_tangents(
     u:&[Curve],v:&[Curve],pu:&[f64],pv:&[f64],tangents:&[Curve;2],
     tolerance:f64,max_cells:usize,max_map_evaluations:usize,
@@ -206,6 +209,7 @@ pub fn patch_cartesian_with_tangents(
 /// Certifies the complete boundary dP/dv field against contiguous target curves.
 /// Uses original tensor controls and outward arithmetic; incomplete work returns
 /// accepted:false and no error bound, never an exact-identity certificate.
+#[cfg(feature = "codec")]
 pub fn certify_boundary_v_tangent(
     surface:&Surface,targets:&[Curve],end:bool,tolerance:f64,max_cells:usize,
 )->Result<value_codec::Value> {
@@ -214,6 +218,7 @@ pub fn certify_boundary_v_tangent(
 
 /// Certifies normalized dP/dV against authored dP/dt controls multiplied
 /// by the original station extent, including subtraction and scaling rounding.
+#[cfg(feature = "codec")]
 pub fn certify_authored_boundary_v_tangent(
     surface: &Surface, target: &Curve, end: bool, parameters: &[f64],
     tolerance: f64, max_cells: usize,

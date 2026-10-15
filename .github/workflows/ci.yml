@@ -111,7 +111,9 @@ jobs:
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    # Hosted Windows exceeded 90 minutes during the full proof workspace.
+    # Keep every test and numerical/work limit; allow the job to complete.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:

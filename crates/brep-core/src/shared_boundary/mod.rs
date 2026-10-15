@@ -9,6 +9,7 @@ use cad_predicates::{
 };
 use nurbs_core::{curve::Curve, surface::Surface};
 mod monotone_coordinate;
+pub mod bilinear_graph;
 
 mod certificate;
 mod separates_surfaces;

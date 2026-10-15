@@ -45,6 +45,18 @@ const OPS: &[&str] = &[
     "sdf_prepare_batch",
     "sdf_finish",
     "surface_tessellate",
+    "stl_decode_binary",
+    "mesh_soup_render",
+    "mesh_import",
+    "mesh_import_finalize",
+    "truss_force_markers",
+    "affine_matrix",
+    "planar_rectangle_corners",
+    "nurbs_circle_quadrants",
+    "solid_program_execute_report",
+    "solid_program_execute",
+    "transparent_bsp_build",
+    "transparent_triangle_split",
     "scene_flatten",
     "body_bounds",
 ];
@@ -202,6 +214,34 @@ fn handle(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             &field(&v, "options")?,
         )?),
+        "stl_decode_binary" | "mesh_soup_render" | "mesh_import" | "mesh_import_finalize" => {
+            mesh_import::dispatch(v)
+        }
+        "truss_force_markers" => encode(geometry_ops::force_markers::build(
+            &field::<Vec<[f64; 3]>>(&v, "nodes")?,
+            &field::<Vec<[usize; 2]>>(&v, "members")?,
+            &field::<Vec<f64>>(&v, "forces")?,
+            field(&v, "marker")?,
+        )?),
+        "affine_matrix" => {
+            let operation: String = field(&v, "operation")?;
+            let vector = field(&v, "vector")?;
+            let matrix = match operation.as_str() {
+                "translate" => Some(math_core::affine::translation(vector)),
+                "scale" => Some(math_core::affine::scaling(vector)),
+                "rotate" => Some(math_core::affine::euler_degrees(vector)),
+                "mirror" => math_core::affine::reflection(vector),
+                _ => return Err(input("Unknown affine operation")),
+            };
+            encode(matrix)
+        }
+        "planar_rectangle_corners" => encode(planar_geometry::primitives::rectangle_corners(
+            field(&v, "size")?,
+            field(&v, "center")?,
+        )?),
+        "nurbs_circle_quadrants" => encode(nurbs_core::primitives::circle_quadrants(field(
+            &v, "radius",
+        )?)?),
         "scene_flatten" => {
             let meshes = field::<Vec<Value>>(&v, "meshes")?
                 .into_iter()
@@ -220,6 +260,62 @@ fn handle(v: Value) -> Result<Value> {
                 polygon_core::scene_flatten::bounds(&field::<Vec<Vec<f64>>>(&v, "positions")?)?;
             encode(json!({"min":min,"max":max}))
         }
+        "solid_program_execute_report" => {
+            let program: geometry_ops::solid_program::Program = field(&v, "program")?;
+            let report = polygon_core::solid::program::execute_report(&program, 200_000)?;
+            let mut warnings = report
+                .slice_reductions
+                .iter()
+                .map(|reduction| {
+                    format!(
+                        "linear_extrude slices were clamped to the engine limit {}",
+                        reduction.maximum
+                    )
+                })
+                .collect::<Vec<_>>();
+            warnings.extend(report.profile_diagnostics.iter().map(|diagnostic| {
+                match diagnostic.issue {
+                    polygon_core::solid::profile_program::Issue::EmptyContours => {
+                        "polygon() outlines produced an empty cross-section".to_string()
+                    }
+                    polygon_core::solid::profile_program::Issue::InvalidContours => {
+                        "polygon() outlines did not produce a valid cross-section".to_string()
+                    }
+                }
+            }));
+            warnings.extend(
+                report
+                    .mesh_failures
+                    .iter()
+                    .map(|_| "polyhedron() topology did not produce a manifold solid".to_string()),
+            );
+            warnings.extend(
+                report
+                    .resize_diagnostics
+                    .iter()
+                    .map(|event| event.message()),
+            );
+            warnings.extend(
+                report
+                    .sweep_warnings
+                    .iter()
+                    .map(|event| event.warning.message(event.maximum)),
+            );
+            let reduced = !report.slice_reductions.is_empty()
+                || report.sweep_warnings.iter().any(|event| {
+                    matches!(
+                        event.warning.kind,
+                        geometry_ops::fragment_resolution::WarningKind::Clamped
+                    )
+                });
+            Ok(json!({"meshes":report.meshes,"warnings":warnings,"reduced":reduced}))
+        }
+        "solid_program_execute" => {
+            let program: geometry_ops::solid_program::Program = field(&v, "program")?;
+            encode(polygon_core::solid::program::execute(&program, 200_000)?)
+        }
+        "transparent_bsp_build" => transparent_bsp::build(v),
+        "transparent_triangle_split" => transparent_bsp::split(v),
         _ => unreachable!("route admits only OPS"),
     }
 }

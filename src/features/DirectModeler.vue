@@ -3501,5 +3501,4 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     <div v-else-if="notice && !((gpuRetryVisible || gpuInitializing) && notice===gpuFailureNotice)" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
   </section>
 </template>
-
 <style scoped src="./DirectModeler.scoped.css"></style>

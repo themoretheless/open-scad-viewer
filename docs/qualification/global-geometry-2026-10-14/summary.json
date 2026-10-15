@@ -1,0 +1,237 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "sourceCheckpoint": "d3ef96f24a564cf17944f9af5a7ad67a3e458699",
+  "sourceBinding": "OwnRust64 sourceBundle binds final files; the checkpoint alone is not a content identity.",
+  "qualificationClaim": "none",
+  "scope": "Finite native frame/cap matrices and read-only pole-sphere queries; no arbitrary geometry, pole Boolean, UI matrix or production approval inferred.",
+  "native": {
+    "status": "passed",
+    "scope": "Focused new native geometry qualification; not the full workspace",
+    "tests": 147,
+    "matrixCells": 288,
+    "matrixPassed": 216,
+    "matrixRefused": 72,
+    "groups": {
+      "intersections": 132,
+      "graph-predicate": 2,
+      "monotonicity": 11,
+      "nonplanar-matrix": 1,
+      "frame-cap-matrix": 1
+    }
+  },
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 56,
+    "pinnedLayerViolations": 0,
+    "newOversizedPathsRelativeToGeometryPredecessor": 0,
+    "raisedPins": 0
+  },
+  "typedWithoutCodecs": {
+    "status": "passed",
+    "packages": [
+      "brep-core",
+      "nurbs-intersect",
+      "brep-intersect"
+    ]
+  },
+  "wasm": {
+    "sha256": "12241a08fbb3bd749d90f6ff9955d7157601b1e433cb6ac33f7e0b4784872b47",
+    "byteLength": 12007711,
+    "optimizer": "Native Binaryen 116 matching pinned package version; all four optimizer tests passed, including executable fixture byte parity."
+  },
+  "node": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/node.json",
+    "sha256": "f23fa1d259884e7f5fc7a9af1529704e54b34845937757488d16a4d37361c1c2",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "browser": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/browser.json",
+    "sha256": "3f9a6300415d8f0c07ccbd83535389db59d061eaaaa77fb2d521e4279f91cc53",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "typechecks": {
+    "status": "passed"
+  },
+  "applicationDistribution": {
+    "status": "passed",
+    "artifacts": 161,
+    "assetBytes": 8342395,
+    "rawWasmBytes": 15497545,
+    "sizeBudgetsChanged": false
+  },
+  "localFullWorkspace": {
+    "status": "running-with-wall-clock-refusals",
+    "sourceLogSnapshot": {
+      "path": "docs/qualification/global-geometry-2026-10-14/workspace-partial.log.gz",
+      "sha256": "8147b265c842060a1c6790a1599ee9b1a1268ca4f64f831545bc6ab6cc4a89db",
+      "uncompressedSha256": "702e184e741e1f5a6b4235ce0eb5d0677ac66e30d6b53fb6f07048bfe98d0cab",
+      "uncompressedBytes": 139103
+    },
+    "knownRefusals": [
+      "aag_features::tests::nested_pockets_form_a_hierarchy",
+      "aag_features::tests::pocket_corpus_recall_and_hierarchy"
+    ],
+    "reason": "NURBS_RESOURCE_LIMIT: 60000ms wall-clock fixture budget under shared host load; unchanged limits. Hosted full CI is required."
+  },
+  "localFullHostSuite": {
+    "status": "running-with-wall-clock-refusals",
+    "sourceLogSnapshot": {
+      "path": "docs/qualification/global-geometry-2026-10-14/host-suite-partial.log.gz",
+      "sha256": "dbe08325628a75670098097eb78ae8cdcd0166cb93512916286b75269c4a32bb",
+      "uncompressedSha256": "f9479fec6a87943ccdfd1d7d3fe632ff6f00b7c3b2e936e75da88d67b178b567",
+      "uncompressedBytes": 1904
+    },
+    "knownRefusals": [
+      "reports the stated tolerance when a subtraction falls back to the numerical trace",
+      "retains geometry and identities through 20 edits, command cancellation, full Undo/Redo and draft reload"
+    ],
+    "reason": "Unchanged 30000ms and 20000ms fixture limits; hosted full CI is required."
+  },
+  "delivery": {
+    "ci": "pending",
+    "g1": "pending",
+    "requiredG1Units": 4740,
+    "requiredG1Fragments": 132,
+    "priorFragmentsImported": 0,
+    "approval": "not-approved"
+  },
+  "fixtures": {
+    "path": "docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz",
+    "sha256": "e461067c3aa3dcd13d59844ad2681211e95733f5d0ef4e15ab1f32c2a74d9227"
+  },
+  "logs": {
+    "intersections": {
+      "path": "docs/qualification/global-geometry-2026-10-14/intersections.log.gz",
+      "sha256": "e432d93e404d4eaa77ac1726b28bf6b7993c7065533050bcda98f6a41f0e0051",
+      "uncompressedSha256": "c048e5504864054df5c229e10d64eb9884b1f65241f91ff572994ee78b1ac10a",
+      "uncompressedBytes": 10634
+    },
+    "graph-predicate": {
+      "path": "docs/qualification/global-geometry-2026-10-14/graph-predicate.log.gz",
+      "sha256": "1e99cf8a00cf6da1d024875a7f1cbb8a1b4d371ca532b5ef047d16a56556ed4b",
+      "uncompressedSha256": "8203ecdc591bc0baf026496335ba2df492651febb41748fbbc50e746b0c2b71a",
+      "uncompressedBytes": 326
+    },
+    "monotonicity": {
+      "path": "docs/qualification/global-geometry-2026-10-14/monotonicity.log.gz",
+      "sha256": "0ad668aceef744026a9552e172f7a5f67cdb517b3946af7d42dbb761d4f129c3",
+      "uncompressedSha256": "8e2ee4fff61056ba1bcc2ec86727406d45baad8cdcf0d2e0362fd1494300c6fe",
+      "uncompressedBytes": 27073
+    },
+    "nonplanar-matrix": {
+      "path": "docs/qualification/global-geometry-2026-10-14/nonplanar-matrix.log.gz",
+      "sha256": "a4dc253d8e7e7b797c0ac75d779f43cedc5dba4c0e0bcdff6cfb82ec6dbc4775",
+      "uncompressedSha256": "34bdf3d9efb00d9ea6829b4828688cdda5cad1b5f5ff0f3d3628d76fc4860a83",
+      "uncompressedBytes": 362
+    },
+    "frame-cap-matrix": {
+      "path": "docs/qualification/global-geometry-2026-10-14/frame-cap-matrix.log.gz",
+      "sha256": "6c417c66de6c30b4a161ebaeb23e75416e167e1922721676cd402f8d816de464",
+      "uncompressedSha256": "141a82124a575b5b20e779453000d7f683020e113d38d3c5eb4073fd676f869a",
+      "uncompressedBytes": 320
+    },
+    "no-codec": {
+      "path": "docs/qualification/global-geometry-2026-10-14/no-codec.log.gz",
+      "sha256": "60fb1f54edf07c35902badca5bdcd3d05296b145163e9732ba42d3977fd8b435",
+      "uncompressedSha256": "e6ca1cd26ae7042d68c10a83d809c4bc886f0fac449c70c6f853a34497c22c21",
+      "uncompressedBytes": 14776
+    },
+    "workspace-check": {
+      "path": "docs/qualification/global-geometry-2026-10-14/workspace-check.log.gz",
+      "sha256": "cebcc95c29f097c2210fb668823b09d7d498edfad1c18dbf76600608514deb71",
+      "uncompressedSha256": "0a22e1a2a312d741626bef884225ab5ec5141b6ff91499231490ea9d10f7a543",
+      "uncompressedBytes": 19984
+    },
+    "optimizer-parity": {
+      "path": "docs/qualification/global-geometry-2026-10-14/optimizer-parity.log.gz",
+      "sha256": "88ba9afa8f4278c0b7cafbce4f0aeb36ca4c87d2c9552c56486938f949d2e596",
+      "uncompressedSha256": "f922834d59472e126bcde196ad0f1cc300e2fc9bf7fe698cece3be5924f06841",
+      "uncompressedBytes": 920
+    },
+    "wasm-build": {
+      "path": "docs/qualification/global-geometry-2026-10-14/wasm-build.log.gz",
+      "sha256": "5ac883443ab03f857c1934b137321926041e93b96a95344ab62afe86f0e8ee96",
+      "uncompressedSha256": "89dec92821dd658396d83c5c0a058a73f31a1d25fe0302807a2012a6a917daa6",
+      "uncompressedBytes": 20688
+    },
+    "cold-geometry-build": {
+      "path": "docs/qualification/global-geometry-2026-10-14/cold-geometry-build.log.gz",
+      "sha256": "5507579a2ad25419c88a8d5187fcb18b9211a9152729229b28483edffb60b5cd",
+      "uncompressedSha256": "9ddc26115ca38ace26634f35c1e41687a35792186813feb32dc1d7cbaa0b42e0",
+      "uncompressedBytes": 14574
+    },
+    "node": {
+      "path": "docs/qualification/global-geometry-2026-10-14/node.log.gz",
+      "sha256": "ffe5dcc5567a1dd450713e8e667bf889457b3243b16433493fae65b9b53bb65e",
+      "uncompressedSha256": "f5d4b2b0f8705318c2d6ba0774f56f8d25f6123888653b497bd6f2d2b030ef2c",
+      "uncompressedBytes": 5944
+    },
+    "browser": {
+      "path": "docs/qualification/global-geometry-2026-10-14/browser.log.gz",
+      "sha256": "2533543920157acf19d80131f55bcae91c46040308c4184583d3e522f63cf759",
+      "uncompressedSha256": "f6080e6034c1df561ab4ebfa0d74e70a5047c3a45dbcd9f1feeed5de56fbd49c",
+      "uncompressedBytes": 6004
+    },
+    "app-build": {
+      "path": "docs/qualification/global-geometry-2026-10-14/app-build.log.gz",
+      "sha256": "77cb055e9d38e905644cdc62ba538c3cba2b8d54a19f31cd33b6b7cd4563ce2d",
+      "uncompressedSha256": "8ffb8eb903c730c1b366c3b5d355f70ad9372f8a0ea363e6ad027ba1e6cb7f12",
+      "uncompressedBytes": 14339
+    },
+    "typechecks": {
+      "path": "docs/qualification/global-geometry-2026-10-14/typechecks.log.gz",
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    "architecture": {
+      "path": "docs/qualification/global-geometry-2026-10-14/architecture.log.gz",
+      "sha256": "8b8946761f80354722edcda08847186268dd9fc6eb53f077105875ab33a9cee0",
+      "uncompressedSha256": "692c0ee4c243840a152292e8a9f86fb45822b836b0eb0b6f3dfa5b3545105186",
+      "uncompressedBytes": 70
+    },
+    "library-structure": {
+      "path": "docs/qualification/global-geometry-2026-10-14/library-structure.log.gz",
+      "sha256": "bd23f7647f3ba11d89e59656abb885ed7d9d003f6bff821b59a02e8af218fbc6",
+      "uncompressedSha256": "6cdbd475ee9028eccd2c00fd2f74e94c545c4c039eed6011ed67ca57d9a86404",
+      "uncompressedBytes": 80
+    },
+    "ownership": {
+      "path": "docs/qualification/global-geometry-2026-10-14/ownership.log.gz",
+      "sha256": "a42fb0e7f413f26696b3c21b3c47073028a6d4571139d91cdf51428c3bb3f324",
+      "uncompressedSha256": "d24becc061733e0eb9474c546f6897f61767012ed82f25876701f9bf175dc512",
+      "uncompressedBytes": 83
+    },
+    "pocket-resource-refusal": {
+      "path": "docs/qualification/global-geometry-2026-10-14/pocket-resource-refusal.log.gz",
+      "sha256": "d152e1cd88396a9ba1273947a95935d4b6295d01988d0ff25bcd9cc36dab0261",
+      "uncompressedSha256": "8295294980b1f90a78d3f40ce93dff955cdeea0cb169560a31e668ecd56714ea",
+      "uncompressedBytes": 742
+    },
+    "ui-resource-refusal": {
+      "path": "docs/qualification/global-geometry-2026-10-14/ui-resource-refusal.log.gz",
+      "sha256": "033a70f8a01491ad24736da6c69ef056949409153f6b2781994ddce5adced3a3",
+      "uncompressedSha256": "dcaa7df114145103d6662c88c3279af33ab1b3d4bb9c0d97f0dd918e907651f5",
+      "uncompressedBytes": 2263
+    },
+    "workspace-partial": {
+      "path": "docs/qualification/global-geometry-2026-10-14/workspace-partial.log.gz",
+      "sha256": "8147b265c842060a1c6790a1599ee9b1a1268ca4f64f831545bc6ab6cc4a89db",
+      "uncompressedSha256": "702e184e741e1f5a6b4235ce0eb5d0677ac66e30d6b53fb6f07048bfe98d0cab",
+      "uncompressedBytes": 139103
+    },
+    "host-suite-partial": {
+      "path": "docs/qualification/global-geometry-2026-10-14/host-suite-partial.log.gz",
+      "sha256": "dbe08325628a75670098097eb78ae8cdcd0166cb93512916286b75269c4a32bb",
+      "uncompressedSha256": "f9479fec6a87943ccdfd1d7d3fe632ff6f00b7c3b2e936e75da88d67b178b567",
+      "uncompressedBytes": 1904
+    }
+  }
+}

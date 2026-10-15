@@ -428,6 +428,7 @@ pub(super) fn fixed_normal_patch_error(sweep:&Sweep<'_>,count:usize,max_cells:us
 pub(super) fn fixed_normal_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
     check(max_products<=1000000,"Patch decomposition work exceeds1000000 products")?;
     if shared_length.is_some()&&sweep.options.orientation==Orientation::FixedNormal&&sweep.frame_laws.is_none()
+        &&!original_line(sweep.path)
         &&sweep.orientation_guide.is_none()&&sweep.contact_point.is_none()&&sweep.options.spacing!=Spacing::Parameter{
         check(count>=sweep.options.initial_sections&&count<=sweep.options.max_sections,"Section count outside configured sweep")?;
         check(max_cells<=100000,"FixedNormal section work exceeds100000 cells")?;

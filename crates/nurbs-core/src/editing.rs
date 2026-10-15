@@ -1,5 +1,5 @@
 //! Прямое редактирование, морфинг и сглаживание.
-pub use crate::edit;
+pub mod edit;
 pub mod weight_edit;
 pub mod surface_edit;
 pub mod direct_edit;

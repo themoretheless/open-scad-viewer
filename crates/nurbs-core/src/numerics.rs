@@ -11,7 +11,7 @@ pub mod compensated;
 pub mod conditioning;
 pub mod convex_distance;
 pub mod dual;
-pub use crate::interval_eval;
+pub mod interval_eval;
 pub mod interval_newton;
 pub mod normal_cone;
 pub mod obb_tree;

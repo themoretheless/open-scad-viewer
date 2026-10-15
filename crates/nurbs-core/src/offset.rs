@@ -11,9 +11,9 @@ pub mod chord;
 /// Offset chord-chain diagnostics (formerly `crate::curve_offset_diagnostics`;
 /// module directory `offset/diagnostics/`).
 pub(crate) mod diagnostics;
-pub use crate::curve_offset;
-pub use crate::curve_offset_join;
-pub use crate::curve_offset_wire;
+pub mod curve_offset;
+pub mod curve_offset_join;
+pub mod curve_offset_wire;
 pub mod surface_offset;
 /// Surface-pair fillet surfaces: rolling-ball, variable-radius, chordal,
 /// G2 and hold-line fillets built on offset-surface intersection marching.

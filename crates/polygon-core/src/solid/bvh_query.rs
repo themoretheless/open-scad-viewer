@@ -273,7 +273,7 @@ mod tests {
     fn agrees_with_frozen_host_queries() {
         use value_codec::{Value, from_str, from_value};
         let fixture: Value = from_str(include_str!(
-            "../../tests/fixtures/bvh-query-parity-v1.json"
+            "../../../mesh-query/tests/fixtures/bvh-query-parity-v1.json"
         ))
         .unwrap();
         let vertices: Vec<f32> = from_value(fixture["vertices"].clone()).unwrap();

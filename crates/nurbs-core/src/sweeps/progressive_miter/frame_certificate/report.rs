@@ -221,7 +221,7 @@ impl Report {
             self.station_point(edge, fraction, authored, s, t)
         }
     }
-    fn edge_path_enclosures(&self,edge:usize,fraction:[f64;2])->Result<(VectorEnclosure,VectorEnclosure,VectorEnclosure)> {
+    pub(super) fn edge_path_enclosures(&self,edge:usize,fraction:[f64;2])->Result<(VectorEnclosure,VectorEnclosure,VectorEnclosure)> {
         let sites=self.sites.as_ref().unwrap();let lengths=self.cumulative_lengths.as_ref().unwrap();
         let f=I::new(fraction[0],fraction[1])?;
         let a=point(sites[edge]);let b=point(sites[(edge+1)%sites.len()]);
@@ -544,7 +544,7 @@ pub(super) fn corner(a: V, b: V, n: V, limit: f64) -> Result<(V, V)> {
 pub(super) fn encode(a: V) -> VectorEnclosure {
     a.map(|x| [x.lo, x.hi])
 }
-fn decode(a: VectorEnclosure) -> Result<V> {
+pub(super) fn decode(a: VectorEnclosure) -> Result<V> {
     Ok([
         I::new(a[0][0], a[0][1])?,
         I::new(a[1][0], a[1][1])?,

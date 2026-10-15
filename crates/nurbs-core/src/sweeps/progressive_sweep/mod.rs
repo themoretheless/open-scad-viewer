@@ -1,28 +1,15 @@
 //! Progressive profile transport with simultaneous scale and angular twist.
 //!
 //! Each level is a retained piecewise-linear NURBS patch set. Refinement compares
-//! profile controls against fourfold finer transport; this is sampled evidence,
-//! not a continuous RMF, injectivity, or rounding-inclusive certificate.
-use crate::{Result, check, sweep_support::vec3_ext::norm, curve::Curve, surface::Surface};
+//! profile controls against fourfold finer transport. Open parameter-spaced
+//! authored frames also carry original-law continuous retained-patch error
+//! certificates. Other transport, global injectivity and capped-body admission
+//! remain separate obligations; sampled acceptance is not their proof.
+use crate::{Result, check, core::vec3_ext::norm, curve::Curve, surface::Surface};
 use math_core::{cross, dot, sub};
 use std::f64::consts::TAU;
 
 type V = [f64; 3];
-
-
-#[cfg(feature = "codec")]
-mod serialization;
-
-#[cfg(test)]
-#[path="tests/mod.rs"]
-mod tests;
-
-mod orientation;
-mod sweep;
-mod approximate;
-pub use orientation::*;
-pub use approximate::*;
-
 mod authored_error;
 mod evidence_api;
 mod section_frames;
@@ -43,3 +30,17 @@ pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,En
 pub use retained_regularity::{RetainedRegularityReport, inspect as inspect_retained_regularity};
 pub use contact_anchor::{ContactAnchorReport, ContactFitReport};
 pub use authored_error::{InitialCoordinatesReport, SectionInterpolationReport, PatchErrorReport};
+
+
+#[cfg(feature = "codec")]
+#[path = "../progressive_sweep/serialization.rs"]
+mod serialization;
+
+#[cfg(test)]
+#[path = "../progressive_sweep/tests/mod.rs"]
+mod tests;
+
+mod orientation;
+mod approximate;
+pub use orientation::*;
+pub use approximate::*;

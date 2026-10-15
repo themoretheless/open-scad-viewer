@@ -148,6 +148,7 @@ pub fn scaled_sweep(
 }
 /// A retained RMF loft admitted only by a whole-domain, rounding-inclusive
 /// deviation certificate. The fourfold comparison remains a separate diagnostic.
+#[cfg(feature = "codec")]
 pub fn checked_profile_sweep(
     profile: &Curve,
     path: &Curve,
@@ -158,6 +159,7 @@ pub fn checked_profile_sweep(
 ) -> Result<value_codec::Value> {
     checked_profile_sweep_with_cells(profile, path, scale, normal, sections, budget, 16384)
 }
+#[cfg(feature = "codec")]
 pub fn checked_profile_sweep_with_cells(
     profile: &Curve,
     path: &Curve,

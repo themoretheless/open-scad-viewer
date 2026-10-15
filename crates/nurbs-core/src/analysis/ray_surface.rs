@@ -673,5 +673,6 @@ pub fn ray_intersections(
         roots,
         unresolved,
         cells: line.cells,
+        profile_parameterization: line.profile_parameterization,
     })
 }

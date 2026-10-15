@@ -27,7 +27,7 @@ pub(super) fn arc(radius: f64, z: f64, quadrant: usize) -> Curve {
 // Rational t -> ((1-t*t)/(1+t*t), 2*t/(1+t*t)). Unlike the
 // symmetric sqrt(1/2) weight, these binary coefficients satisfy the circle
 // identity exactly. Sphere trims and their equator edges share this traversal.
-fn rational_quarter_arc(radius:f64,z:f64,quadrant:usize)->Curve{
+pub(super) fn rational_quarter_arc(radius:f64,z:f64,quadrant:usize)->Curve{
     let mut curve=arc(radius,z,quadrant);
     curve.weights=vec![1.,1.,2.];
     curve
@@ -96,7 +96,7 @@ impl Builder {
             faces: vec![],
         }
     }
-    fn ring(&mut self, radius: f64, z: f64) -> [usize; 4] {
+    pub(super) fn ring(&mut self, radius: f64, z: f64) -> [usize; 4] {
         if radius == 0. {
             let id = self.model.vertices.len();
             self.model.vertices.push(Vertex { point: [0., 0., z] });

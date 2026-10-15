@@ -30,6 +30,9 @@ const LINEAR: [f64; 3] = [0., 0.5, 1.];
 const SQUARE: [f64; 3] = [0., 0., 1.];
 #[doc(hidden)] pub const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
 
+mod frames;
+pub mod pole_charts;
+pub use pole_charts::{ImplicitSphereSection, WorldCircleClip, recognize_any};
 mod sphere_patch_circle;
 mod intersect_sphere_sphere;
 #[cfg(test)]

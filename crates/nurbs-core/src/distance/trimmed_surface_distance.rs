@@ -1,5 +1,6 @@
 //! Distance over UV-trimmed surface images. Only proven outside cells are
 //! removed, and only proven inside points may supply an upper distance bound.
+use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};
 use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::surface_distance::{Patch, Witness, at, patch_lower, patches};
 use crate::{
@@ -250,9 +251,9 @@ impl Search for TrimmedSearch<'_> {
         let mid = if selected.location == Location::Unresolved {
             self.domains.regions[side]
                 .split_hint(selected.patch.domain, axis)
-                .unwrap_or_else(|| midpoint([lo, hi]))
+                .unwrap_or_else(|| midpoint(lo, hi))
         } else {
-            midpoint([lo, hi])
+            midpoint(lo, hi)
         };
         let mut children = [None, None];
         for (i, range) in [[lo, mid], [mid, hi]].into_iter().enumerate() {
@@ -353,75 +354,16 @@ pub fn distance(
         }
     }
     refine_witness(a, b, &mut domains, &mut best, &mut cells, max_cells)?;
-    let reason;
-    loop {
-        let upper = best.as_ref().map_or(f64::INFINITY, |w| w.upper);
-        while heap.peek().is_some_and(|c| c.lower > upper) {
-            heap.pop();
-        }
-        let lower = heap.peek().map_or(upper, |c| c.lower).min(upper);
-        if best.is_some() && upper - lower <= tolerance_mm {
-            reason = "tolerance";
-            break;
-        }
-        if heap.is_empty() {
-            reason = "empty-domain";
-            break;
-        }
-        if domains.cells == domains.max {
-            reason = "domain-work-limit";
-            break;
-        }
-        if cells + 2 > max_cells {
-            reason = "work-limit";
-            break;
-        }
-        let cell = heap.pop().unwrap();
-        let (side, axis, score) = (0..2)
-            .flat_map(|side| (0..2).map(move |axis| (side, axis)))
-            .map(|(side, axis)| (side, axis, cell.parts[side].score(axis)))
-            .max_by(|a, b| a.2.total_cmp(&b.2))
-            .unwrap();
-        if score < 0. {
-            heap.push(cell);
-            reason = "precision-limit";
-            break;
-        }
-        let selected = &cell.parts[side];
-        let [lo, hi] = selected.patch.domain[axis];
-        let mid = if selected.location == Location::Unresolved {
-            domains.regions[side]
-                .split_hint(selected.patch.domain, axis)
-                .unwrap_or_else(|| midpoint(lo, hi))
-        } else {
-            midpoint(lo, hi)
-        };
-        for range in [[lo, mid], [mid, hi]] {
-            cells += 1;
-            let mut domain = selected.patch.domain;
-            domain[axis] = range;
-            let location = if selected.location == Location::Inside {
-                Location::Inside
-            } else {
-                domains.classify(side, domain)?
-            };
-            if location == Location::Outside {
-                continue;
-            }
-            let patch = Patch::new([a, b][side], selected.patch.span, domain)?;
-            let mut parts = cell.parts.clone();
-            parts[side] = Part { patch, location };
-            sample_pair(a, b, &parts, &mut domains, &mut best)?;
-            let lower = patch_lower(&parts[0].patch, &parts[1].patch)?.max(axis_lower);
-            if best.as_ref().is_none_or(|w| lower <= w.upper) {
-                heap.push(Cell {
-                    parts,
-                    lower,
-                    order: cells,
-                });
-            }
-        }
-    }
+    let mut search = TrimmedSearch {
+        a,
+        b,
+        domains,
+        best,
+        axis_lower,
+    };
+    let outcome =
+        crate::distance::subdivision::run(&mut search, &mut queue, cells, max_cells, tolerance_mm)?;
+    let best = search.best;
     let upper_bound_mm = best.as_ref().map(|w| w.upper);
     // Result control points must be finite before leaving the module (1093).
     if let Some(w) = &best {

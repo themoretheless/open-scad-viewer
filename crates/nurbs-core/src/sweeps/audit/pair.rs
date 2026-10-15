@@ -2,7 +2,7 @@
 //! Shared boundaries require a boundary-only intersection certificate;
 //! matching boundary data alone never excludes interior intersections. This never substitutes for self-patch
 //! injectivity or shell containment.
-use crate::{Result, check, surface::Surface};
+use crate::{Result, check, foundation::guards::Budget, surface::Surface};
 use std::collections::BTreeSet;
 #[derive(Clone, Debug)]
 pub struct UnresolvedPair {
@@ -30,7 +30,7 @@ pub(crate) fn matching_boundaries(a: &Surface, b: &Surface) -> Vec<[(usize, usiz
             (s.degree_v, &s.knots_v, s.control_points[0].len(), s.periodic_v)
         };
         if periodic { return None; }
-        let domain = crate::sweep_support::audit::natural_domain(knots, degree, count);
+        let domain = crate::certificates::audit::natural_domain(knots, degree, count);
         let repeated = if end == 0 { &knots[..=degree] } else { &knots[count..] };
         if repeated.len() != degree + 1 || repeated.iter().any(|k| *k != domain[end]) {
             return None;
@@ -425,7 +425,11 @@ pub fn inspect(
     let mut tree = Vec::new();
     let root = build((0..patches.len()).collect(), &boxes, &mut tree);
     let mut pending = vec![(root, root)];
+    // Unified guard as a typed backstop: each pop pushes at most three new
+    // entries and pushing stops once `max_pairs` is hit.
+    let mut guard = Budget::with_iterations(4 * max_pairs + 16)?.guard("sweep_audit_pair");
     while let Some((ai, bi)) = pending.pop() {
+        guard.tick()?;
         let a = &tree[ai];
         let b = &tree[bi];
         if ai == bi && a.children.is_none() {

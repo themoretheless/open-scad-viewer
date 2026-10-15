@@ -280,7 +280,7 @@ pub fn distance_between_face_sets(
             )?;
             cells += r.cells;
             domain_cells += r.domain_cells;
-            if r.reason == "empty-domain" {
+            if r.reason == nurbs_core::DistanceStopReason::EmptyDomain {
                 empty_pair = true;
                 break;
             }

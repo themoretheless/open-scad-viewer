@@ -4,5 +4,7 @@ use nurbs_intersect::{self as queries, Options, SurfaceTrace};
 
 mod dispatch;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
+#[cfg(test)]
+mod pole_chart_tests;
 pub use dispatch::*;

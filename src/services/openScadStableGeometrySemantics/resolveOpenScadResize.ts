@@ -53,6 +53,7 @@ export function resolveOpenScadRotateExtrude(
   input: OpenScadRotateExtrudeResolutionInput,
   context: OpenScadStableGeometryContext = SILENT_CONTEXT,
 ): OpenScadRotateExtrudeResolution {
+  if (!Number.isFinite(input.profileXMin) || !Number.isFinite(input.profileXMax) || input.profileXMin > input.profileXMax) throw new Error('Invalid revolution profile bounds')
   let angle = finiteNumberOr(input.angle, 360)
   if (input.angle !== undefined && angle === 360 && input.angle !== 360) context.warn({
     code: 'OPENSCAD_ROTATE_EXTRUDE_ANGLE_DEFAULTED',

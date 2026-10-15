@@ -208,3 +208,4 @@ pub(in crate::foundation) fn periodic_error(source: &Curve, target: &Curve) -> R
     }
     Ok(next_up(error + lipschitz * (b - a) / 2048.))
 }
+

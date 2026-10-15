@@ -27,7 +27,7 @@ import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, ele
 import {createMappedNaturalLoft,createCartesianGuidedLoft,createControlTangentCartesianGuidedLoft,createAutoCartesianGuidedLoft,createAutoControlTangentCartesianGuidedLoft,certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
 import { autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves,boundaryFillNurbsSurfaces,triangularNurbsPatch,gordonNurbsSurface,closedLoftNurbsCurves,clampedLoftNurbsCurves,naturalLoftNurbsCurves,loftAlignedNurbsCurves,sweepNurbsCurve,loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve } from './nurbsConstructors';
 import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './geometry/tessellation';
-export { collectSdfJobs, buildOwnNurbs, buildOwnNurbsAsync } from './modelGraphNurbsKernel/collectSdfJobs'
+export { buildOwnNurbs, buildOwnNurbsAsync } from './rushGraphNurbsKernel/buildOwnNurbs'
 export type Mesh = ReturnType<typeof tessellateNurbsSurface>;
 export type Value = {kind:'profile';data:PolygonProfile} | {kind:'patches';data:NurbsSurfaceSet} | {kind:'subdivision';data:SubdivisionCage} | {kind:'sdf';data:SdfField} | {kind:'brep';data:NurbsBrep} | {
     kind: 'curve';
@@ -50,11 +50,7 @@ export type OwnNurbsRequest = {
         v?: number;
     }>;
 };
-/** An sdf_tessellate job whose input subtree is pure SDF (no mesh inputs). */
-export interface SdfTessellationJob {
-    field: import('./geometry/sdf').SdfField
-    grid: { min: number[]; max: number[]; cells: number[] }
-}
+export {collectSdfJobs,type SdfTessellationJob} from './rushGraphSdfJobs'
 
 export type SweepArguments=Parameters<typeof progressiveSweepNurbsProfiles>
 export type SweepResolver=(nodeId:string,args:SweepArguments)=>ReturnType<typeof progressiveSweepNurbsProfiles>

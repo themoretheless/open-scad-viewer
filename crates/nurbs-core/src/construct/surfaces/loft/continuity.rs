@@ -1,7 +1,7 @@
 //! Checked end-seam matching with complete section and guide retention bounds.
 use crate::{
     Result, check,
-    join::continuity::{self, SurfaceJetReport},
+    continuity::{self, SurfaceJetReport},
     curve::Curve,
     surface::{Axis, Surface},
 };

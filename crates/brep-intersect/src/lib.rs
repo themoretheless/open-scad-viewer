@@ -41,3 +41,6 @@ pub use brep_core::intersections::{SpherePatchCircle, SphereSphereComponent, int
 mod sphere_sphere { pub use brep_core::intersections::sphere_sphere::*; }
 
 use brep_core::intersections::{CanonicalPlane, recognize_plane};
+
+#[cfg(test)]
+mod pole_chart_qualification;

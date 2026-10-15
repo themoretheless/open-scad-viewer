@@ -8,7 +8,7 @@
 //! - Fit-and-refine: least-squares fit from a minimal control net, inserting a
 //!   knot at the worst-residual span until the max-norm deviation at the data
 //!   sites meets the tolerance, then optional certified knot removal.
-use super::native_knot_removal::remove_curve_knot_report;
+use super::approximate_edits::remove_curve_knot_report;
 use super::{Curve, Result, check, distance, next_up, numeric, resource, solve};
 use crate::curve::basis;
 use crate::foundation::guards::{Budget, require_finite_at};
@@ -498,7 +498,7 @@ pub fn fit_curve_adaptive(
                 // declined — simplification is best-effort and must not
                 // discard a converged refinement.
                 if let Ok(edit) = remove_curve_knot_report(&curve, knot, tolerance, None) {
-                    if edit.accepted {
+                    if edit.certificate.accepted {
                         curve = edit.curve;
                         removed = true;
                     }

@@ -23,20 +23,20 @@ fn exact_segments(c: &Curve) -> Option<Vec<Curve>> {
         return None;
     }
     if c.periodic {
-        return crate::numerics::exact_curve_segments::inspect(c);
+        return crate::exact_curve_segments::inspect(c);
     }
     if c.knots[..=c.degree].iter().any(|k| *k != c.knots[c.degree])
         || c.knots[n..].iter().any(|k| *k != c.knots[n])
     {
-        return crate::numerics::exact_curve_segments::inspect(c);
+        return crate::exact_curve_segments::inspect(c);
     }
     for knot in &c.knots[c.degree + 1..n] {
         if c.knots.iter().filter(|k| *k == knot).count() != c.degree {
-            return crate::numerics::exact_curve_segments::inspect(c);
+            return crate::exact_curve_segments::inspect(c);
         }
     }
     Some(
-        crate::sweep_support::audit::curve_span_domains(c)
+        crate::certificates::audit::curve_span_domains(c)
             .into_iter()
             .map(|(i, _)| Curve {
                 degree: c.degree,
@@ -114,7 +114,7 @@ pub fn inspect(
                         if scale == 1. {
                             exact_segments(curve)
                         } else {
-                            exact_segments(&crate::numerics::exact_curve_segments::scaled_curve(
+                            exact_segments(&crate::exact_curve_segments::scaled_curve(
                                 curve, scale,
                             )?)
                         }
@@ -309,7 +309,7 @@ mod tests {
         let off_grid = f64::from_bits(1f64.to_bits() + 1);
         let mut rounded = curve;
         rounded.control_points[0][0] = off_grid;
-        assert!(crate::numerics::exact_curve_segments::scaled_curve(&rounded, 3.).is_none());
+        assert!(crate::exact_curve_segments::scaled_curve(&rounded, 3.).is_none());
     }
     fn square(x: f64, y: f64, size: f64) -> Vec<Curve> {
         let points = [

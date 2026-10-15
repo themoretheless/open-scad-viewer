@@ -38,6 +38,11 @@ pub fn inspect_sweep_with_projections(model:&Model,tolerance_uv:f64,limits:Limit
     caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)),proposals)
 }
+/// Generic authored carriers, including nonplanar caps, may request a bounded
+/// linear projection proof. No planar cap specialization is inferred.
+pub fn inspect_with_linear(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize)->Result<Report> {
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,None,&[])
+}
 fn inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
     caps:Option<(&[usize],crate::sweep_cap_contacts::Budgets)>,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     if !(1..=1000000).contains(&limits.orientation_cells)
@@ -492,9 +497,8 @@ mod tests {
         assert_eq!(r.orientations[0].outward,Some(true));assert_eq!(format!("{m:?}"),before);
     }
     #[test]
-    #[ignore = "Roadmap gate: curved face embedding remains unproven"]
     fn authored_curved_primitives_have_certified_volume_validity(){
-        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{
+        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere_exact(2.).unwrap())]{
             let r=inspect(&m,1e-8,limits()).unwrap();
             if !r.boundary.agreement.all_equal {
                 for use_ in &r.boundary.agreement.uses {

@@ -224,3 +224,4 @@ pub(in crate::sweeps::progressive_sweep) fn control_trajectory(
     report.cells += initial.cells;
     Ok(report)
 }
+

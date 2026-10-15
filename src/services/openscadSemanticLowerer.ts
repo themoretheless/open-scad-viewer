@@ -105,7 +105,6 @@ export {
 } from './semanticProgramTrust'
 
 export const MAX_SHAPES = 1_000
-export const MAX_FN = 256
 export const MAX_EXTRUDE_SLICES = 512
 
 export type RGBA = [number, number, number, number]

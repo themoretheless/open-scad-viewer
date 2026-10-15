@@ -277,7 +277,7 @@ pub fn intersect_plane_sphere(
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
     let (Some(plane), Some(sphere)) = (
         recognize_plane(plane_model)?,
-        sphere_sphere::recognize(sphere_model)?,
+        sphere_sphere::recognize_any(sphere_model)?,
     ) else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);

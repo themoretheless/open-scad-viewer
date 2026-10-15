@@ -773,14 +773,6 @@ impl Compiler {
                         for (component,value) in fields {law[&component]=raw(value)?;} law
                     } else {raw(value)?};
                 }
-                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("cap_correction_authored_frame")) {
-                    let value=raw(args.remove(at).1)?;
-                    node["cap_correction_authored_frame"]=match value {
-                        J::Bool(b)=>J::Bool(b),
-                        J::Number(n) if n.as_f64()==Some(0.) || n.as_f64()==Some(1.) => J::Bool(n.as_f64()==Some(1.)),
-                        _=>return Err(crate::error("cap_correction_authored_frame expects true or false")),
-                    };
-                }
                 for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
             }
             {
@@ -809,11 +801,6 @@ impl Compiler {
         }
         if name=="brep_progressive_sweep" || name=="progressive_sweep" || name=="profile_sweep" || name=="framed_sweep" || name=="scaled_sweep" || name=="two_guide_sweep" || name=="twist_sweep" {
             let mut node=json!({"op":name});
-            if name=="brep_progressive_sweep" {
-                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
-                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}
-                }
-            }
             if ["progressive_sweep","brep_progressive_sweep"].contains(&name) {
                 if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("orientation_guide")) {
                     node["orientation_guide"]=json!(self.geometry(args.remove(at).1)?);
@@ -839,11 +826,8 @@ impl Compiler {
                         node[key]=law;
                     }
                 }
-                for key in ["orientation","spacing","initial_sections","max_sections","length_tolerance","length_max_cells","contact_parameter","contact_profile","rmf_transport_steps","error_max_cells","error_max_products"] {
+                for key in ["orientation","spacing","initial_sections","max_sections","length_tolerance","length_max_cells","contact_parameter","contact_profile"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
-                        if ["rmf_transport_steps","error_max_cells","error_max_products"].contains(&key) && !["progressive_sweep","brep_progressive_sweep"].contains(&name) {
-                            return Err(crate::error("Spatial RMF proof options require progressive_sweep or brep_progressive_sweep"));
-                        }
                         let value=raw(args.remove(at).1)?;
                         node[key]=if ["orientation","spacing"].contains(&key) {
                             J::String(value.as_str().or_else(||value.get("text").and_then(J::as_str)).ok_or_else(||crate::error(format!("{key} must be a text choice")))?.to_owned())
