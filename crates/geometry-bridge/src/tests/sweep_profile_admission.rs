@@ -312,10 +312,22 @@ fn snapshot_volume_summary_preserves_outcomes_and_pair_accounting() {
 
 #[test]
 fn authored_affine_miter_refines_against_complete_corrected_boundary() {
-    let source: Value = value_codec::from_str(include_str!(
+    let mut source: Value = value_codec::from_str(include_str!(
         "../fixtures/combined-frame-affine-cap-refinement-request.json"
     ))
     .unwrap();
+    let coarse = progressive_miter(source.clone()).unwrap();
+    let coarse_error = coarse["boundaryCertificate"]["errorUpper"].as_f64().unwrap();
+    let source_error = coarse["approximation"]["report"]["certifiedErrorUpper"].as_f64().unwrap();
+    let mut fine = source.clone();
+    fine["options"]["initialSteps"] = json!(16);
+    let fine = progressive_miter(fine).unwrap();
+    let fine_error = fine["boundaryCertificate"]["errorUpper"].as_f64().unwrap();
+    assert!(source_error < coarse_error && fine_error < coarse_error);
+    // The first source-wall proof must fit while the corrected full boundary
+    // needs another level, independently of future source-bound tightening.
+    let budget = (source_error.max(fine_error) + coarse_error) * 0.5;
+    source["options"]["maxDeviation"] = json!(budget);
     let before = source.clone();
     let body = progressive_miter(source.clone()).unwrap();
     let report = &body["approximation"]["report"];
@@ -323,7 +335,7 @@ fn authored_affine_miter_refines_against_complete_corrected_boundary() {
     assert!(report["steps"].as_u64().unwrap() > 1);
     assert_eq!(body["boundaryCertificate"]["continuousBound"], json!(true));
     assert_eq!(body["boundaryCertificate"]["withinBudget"], json!(true));
-    assert!(body["boundaryCertificate"]["errorUpper"].as_f64().unwrap() <= 2.);
+    assert!(body["boundaryCertificate"]["errorUpper"].as_f64().unwrap() <= budget);
     assert_eq!(body["volume"]["solidGeometryCertified"], json!(true));
     assert!(
         body["approximation"]["levels"]

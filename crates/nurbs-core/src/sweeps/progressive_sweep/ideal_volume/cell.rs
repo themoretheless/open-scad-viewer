@@ -1,10 +1,22 @@
 //! One reusable original-volume differential enclosure. Failed trials and
 //! discarded subdivision proposals spend the SAME owner ledger.
 use super::*;
+use std::{cell::RefCell, collections::BTreeMap};
 #[derive(Clone, Copy)]
 pub(super) enum Bound {
     Lower(f64),
     Unavailable,
+    Unsupported(&'static str),
+}
+#[derive(Clone, Copy)]
+pub(super) struct Enclosure {
+    pub(super) value: V3,
+    pub(super) columns: [V3; 3],
+}
+#[derive(Clone, Copy)]
+pub(super) enum Enclosed {
+    Value(Enclosure),
+    Unavailable(Option<usize>),
     Unsupported(&'static str),
 }
 pub(super) struct Context<'a, 'b> {
@@ -19,6 +31,9 @@ pub(super) struct Context<'a, 'b> {
     pub(super) arc: Option<arc::ArcMap>,
     pub(super) guide_arc: Option<arc::ArcMap>,
     pub(super) shared_guide: bool,
+    // Allocated only for ONE atlas certificate and its ONE aggregate ledger.
+    // No source proof or cache credit escapes into another call/budget.
+    pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::Pose>>>,
 }
 impl Context<'_, '_> {
     pub(super) fn bound(
@@ -28,6 +43,18 @@ impl Context<'_, '_> {
         out: &mut IdealVolumeReport,
         max_cells: usize,
     ) -> Result<Bound> {
+        Ok(match self.enclose(b, out, max_cells)? {
+            Enclosed::Value(e) => Bound::Lower(margin(e.columns, projection)?),
+            Enclosed::Unavailable(_) => Bound::Unavailable,
+            Enclosed::Unsupported(reason) => Bound::Unsupported(reason),
+        })
+    }
+    pub(super) fn enclose(
+        &self,
+        b: Box3,
+        out: &mut IdealVolumeReport,
+        max_cells: usize,
+    ) -> Result<Enclosed> {
         let caps = self.caps;
         let s = self.s;
         let basis = self.basis;
@@ -35,18 +62,18 @@ impl Context<'_, '_> {
         let zero = &self.zero;
         let anchor = self.anchor;
         if out.cells == max_cells {
-            return Ok(Bound::Unavailable);
+            return Ok(Enclosed::Unavailable(None));
         }
         out.cells += 1;
         out.boxes += 1;
         let Some(a) = cap_jets(caps[0], [b[0], b[1]], &mut out.cells, max_cells)? else {
-            return Ok(Bound::Unavailable);
+            return Ok(Enclosed::Unavailable(None));
         };
         let z = if caps[0] == caps[1] {
             a
         } else {
             let Some(z) = cap_jets(caps[1], [b[0], b[1]], &mut out.cells, max_cells)? else {
-                return Ok(Bound::Unavailable);
+                return Ok(Enclosed::Unavailable(None));
             };
             z
         };
@@ -70,9 +97,14 @@ impl Context<'_, '_> {
         } else {
             local(iv::sub(z[0], a[0])?, basis)?
         };
+        if let Some(cache) = &self.poses {
+            if let Some(pose) = cache.borrow().get(&b[2].map(f64::to_bits)) {
+                return Ok(Enclosed::Value(pose.enclose(q, qt)?));
+            }
+        }
         let phase = if let Some(map) = &self.arc {
             let Some(p) = map.phase(b[2], &mut out.cells, max_cells)? else {
-                return Ok(Bound::Unavailable);
+                return Ok(Enclosed::Unavailable(Some(2)));
             };
             p
         } else {
@@ -81,7 +113,7 @@ impl Context<'_, '_> {
         let guide_phase = if s.orientation_guide.is_some() {
             if let Some(map) = &self.guide_arc {
                 let Some(g) = map.phase(b[2], &mut out.cells, max_cells)? else {
-                    return Ok(Bound::Unavailable);
+                    return Ok(Enclosed::Unavailable(Some(2)));
                 };
                 Some(g)
             } else {
@@ -140,12 +172,12 @@ impl Context<'_, '_> {
             };
             out.cells += fit.cells;
             if fit.status != Status::Certified {
-                return Ok(Bound::Unavailable);
+                return Ok(Enclosed::Unavailable(None));
             }
             let value = fit.value.unwrap();
             if value[0] <= 0. {
                 out.reason = Some("ideal-volume-contact-positivity-unproved");
-                return Ok(Bound::Unavailable);
+                return Ok(Enclosed::Unavailable(None));
             }
             Some([
                 I::new(value[0], value[1])?,
@@ -177,13 +209,63 @@ impl Context<'_, '_> {
             )?
         };
         let Some(mut f) = frame else {
-            return Ok(Bound::Unsupported(
+            return Ok(Enclosed::Unsupported(
                 "ideal-volume-original-frame-jets-unproved",
             ));
         };
         if f.status != Status::Certified {
             out.cells += f.cells;
-            return Ok(Bound::Unavailable);
+            return Ok(Enclosed::Unavailable(Some(2)));
+        }
+        out.cells += f.cells;
+        f.cells = 0;
+        if let Some(cache) = &self.poses {
+            let origin = frame::control_trajectories_with_phase(
+                s.path,
+                s.scale,
+                s.affine_laws,
+                &[[[0., 0.]; 3]],
+                b[2],
+                max_cells - out.cells,
+                f.clone(),
+                fit,
+                phase,
+            )?;
+            out.cells += origin.cells;
+            let Some(origin) = origin.jets else {
+                return Ok(Enclosed::Unavailable(None));
+            };
+            let axes = std::array::from_fn::<_, 3, _>(|j| {
+                std::array::from_fn::<_, 3, _>(|i| {
+                    let x = if i == j { 1. } else { 0. };
+                    [x, x]
+                })
+            });
+            let linear = frame::control_trajectories_with_fit(
+                zero,
+                s.scale,
+                s.affine_laws.map(|(a, _)| (a, zero)),
+                &axes,
+                b[2],
+                max_cells - out.cells,
+                f,
+                fit,
+            )?;
+            out.cells += linear.cells;
+            let Some(linear) = linear.jets else {
+                return Ok(Enclosed::Unavailable(None));
+            };
+            let pose = pose::Pose {
+                origin: [decode(origin[0].value)?, decode(origin[0].first)?],
+                linear: [
+                    [decode(linear[0].value)?, decode(linear[0].first)?],
+                    [decode(linear[1].value)?, decode(linear[1].first)?],
+                    [decode(linear[2].value)?, decode(linear[2].first)?],
+                ],
+            };
+            let e = pose.enclose(q, qt)?;
+            cache.borrow_mut().insert(b[2].map(f64::to_bits), pose);
+            return Ok(Enclosed::Value(e));
         }
         let actual = frame::control_trajectories_with_phase(
             s.path,
@@ -198,7 +280,7 @@ impl Context<'_, '_> {
         )?;
         out.cells += actual.cells;
         let Some(actual) = actual.jets else {
-            return Ok(Bound::Unavailable);
+            return Ok(Enclosed::Unavailable(None));
         };
         // Reuse the SAME original frame enclosure without charging its
         // source work twice. UV derivatives have no positional translation
@@ -217,13 +299,16 @@ impl Context<'_, '_> {
         )?;
         out.cells += linear.cells;
         let Some(linear) = linear.jets else {
-            return Ok(Bound::Unavailable);
+            return Ok(Enclosed::Unavailable(None));
         };
         let columns = [
             decode(linear[0].value)?,
             decode(linear[1].value)?,
             iv::add(decode(actual[0].first)?, decode(linear[2].value)?)?,
         ];
-        Ok(Bound::Lower(margin(columns, projection)?))
+        Ok(Enclosed::Value(Enclosure {
+            value: decode(actual[0].value)?,
+            columns,
+        }))
     }
 }

@@ -1,0 +1,291 @@
+//! Exhaustive pairs of ORIGINAL parameter boxes, never retained-model boxes.
+//!
+//! For a convex hull H, every averaged Jacobian along a segment lies in the
+//! entrywise interval matrix DF(H). If its projected interval determinant
+//! excludes zero, ALL matrices in that box are nonsingular. Consequently
+//! F(x)-F(y)=M(x-y) cannot vanish for distinct x,y in H. Pointwise determinant
+//! signs, or the union of endpoint Jacobians, do NOT prove this property.
+//! Piecewise C1 source maps use the same segment integral and one-sided jets;
+//! the owner has independently established continuity across the source knots.
+use super::{cell::Enclosed, *};
+use std::collections::BTreeMap;
+
+fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
+    let mut p = [[I::point(0.); 3]; 3];
+    for j in 0..3 {
+        for i in 0..3 {
+            p[j][i] = iv::dot_tight(projection[i].map(I::point), columns[j])?;
+        }
+    }
+    Ok(p)
+}
+fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
+    let c = projected(columns, projection)?;
+    let det = iv::dot_tight(c[0], iv::cross(c[1], c[2])?)?;
+    Ok(det.lo > 0. || det.hi < 0.)
+}
+fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
+    let mid = columns.map(|c| c.map(|x| crate::distance_bounds::midpoint(x.lo, x.hi)));
+    let cross = |a: [f64; 3], b: [f64; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let cofactors = [
+        cross(mid[1], mid[2]),
+        cross(mid[2], mid[0]),
+        cross(mid[0], mid[1]),
+    ];
+    let det = mid[0]
+        .iter()
+        .zip(cofactors[0])
+        .map(|(a, b)| a * b)
+        .sum::<f64>();
+    if !det.is_finite() || det == 0. {
+        return None;
+    }
+    let inverse = cofactors.map(|r| r.map(|x| x / det));
+    inverse
+        .iter()
+        .flatten()
+        .all(|x| x.is_finite())
+        .then_some(inverse)
+}
+/// One constant metric on the ENTIRE joint convex chart. Smaller original
+/// enclosures may prove its SPD condition when their entrywise matrix union
+/// loses correlations. Different metrics in separate pieces are never used.
+fn monotone_hull(
+    pieces: &[Box3],
+    columns: [V3; 3],
+    projection: [[f64; 3]; 3],
+    query: &mut impl FnMut(Box3, &mut IdealVolumeReport) -> Result<Enclosed>,
+    out: &mut IdealVolumeReport,
+    max: usize,
+) -> Result<bool> {
+    let Some(inverse) = inverse_proposal(projected(columns, projection)?) else {
+        return Ok(false);
+    };
+    let mut pending = pieces.to_vec();
+    let mut visits = 0;
+    while let Some(b) = pending.pop() {
+        if visits == 16 || out.cells == max {
+            return Ok(false);
+        }
+        visits += 1;
+        out.cells += 1;
+        let e = query(b, out)?;
+        if let Enclosed::Value(e) = e {
+            // The rounded inverse supplies no proof. All original one-sided
+            // Jacobians on every source piece must satisfy the outward SPD
+            // test for this SAME R*P, including both closed seam limits.
+            if margin(projected(e.columns, projection)?, inverse).is_ok_and(|x| x > 0.) {
+                continue;
+            }
+        }
+        let axis = match e {
+            Enclosed::Unavailable(Some(i)) => i,
+            _ => widest(b).0,
+        };
+        let Some(children) = split_axis(b, axis) else {
+            return Ok(false);
+        };
+        pending.extend(children);
+    }
+    Ok(true)
+}
+
+fn hull(a: Box3, b: Box3) -> Box3 {
+    std::array::from_fn(|i| [a[i][0].min(b[i][0]), a[i][1].max(b[i][1])])
+}
+fn separated(a: V3, b: V3) -> bool {
+    (0..3).any(|i| a[i].hi < b[i].lo || b[i].hi < a[i].lo)
+}
+fn key(b: Box3) -> [[u64; 2]; 3] {
+    b.map(|x| x.map(f64::to_bits))
+}
+fn widest(b: Box3) -> (usize, f64) {
+    // Temporal jet ambiguity is usually the first obstruction for a turning
+    // source. This is only a refinement heuristic, never admission evidence.
+    (0..3)
+        .map(|i| (i, (b[i][1] - b[i][0]) * if i == 2 { 32. } else { 1. }))
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap()
+}
+pub(super) fn certify(
+    context: &cell::Context<'_, '_>,
+    projection: [[f64; 3]; 3],
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    closed: bool,
+) -> Result<()> {
+    out.reason = Some("ideal-volume-work-limit");
+    let mut cache = BTreeMap::new();
+    let mut query = |b, out: &mut IdealVolumeReport| -> Result<Enclosed> {
+        if let Some(e) = cache.get(&key(b)) {
+            return Ok(*e);
+        }
+        let e = context.enclose(b, out, max_cells)?;
+        cache.insert(key(b), e);
+        Ok(e)
+    };
+    let root = [[0., 1.]; 3];
+    let mut pairs = vec![(root, root)];
+    while let Some((a, b)) = pairs.pop() {
+        // Pair inspection itself is bounded, including cache-only visits.
+        if out.cells == max_cells {
+            return Ok(());
+        }
+        out.cells += 1;
+        let ea = query(a, out)?;
+        let eb = if a == b { ea } else { query(b, out)? };
+        let h = hull(a, b);
+        let eh = if h == a {
+            ea
+        } else if h == b {
+            eb
+        } else {
+            // Enclose the ENTIRE convex hull. Endpoint/leaf unions leave the
+            // intermediate segment unproved and must never replace this query.
+            query(h, out)?
+        };
+        for e in [ea, eb, eh] {
+            if let Enclosed::Unsupported(reason) = e {
+                out.reason = Some(reason);
+                return Ok(());
+            }
+        }
+        if let (Enclosed::Value(x), Enclosed::Value(y)) = (ea, eb) {
+            if a != b && separated(x.value, y.value) {
+                continue;
+            }
+        }
+        if let Enclosed::Value(e) = eh {
+            if regular(e.columns, projection)? {
+                continue;
+            }
+            if h[2][1] - h[2][0] <= 0.125
+                && monotone_hull(&[h], e.columns, projection, &mut query, out, max_cells)?
+            {
+                continue;
+            }
+        }
+        if closed && a != b {
+            let (early, late) = if a[2][0] <= b[2][0] { (a, b) } else { (b, a) };
+            // Disjoint temporal intervals lift to [late.start, 1+early.end].
+            // Both pieces have dt/d(lift)=1. Query ORIGINAL parameters; never
+            // round/translate knot vectors or pretend endpoints are distinct.
+            if early[2][1] <= late[2][0] && late[2][0] > early[2][1] {
+                let mut tail = h;
+                let mut head = h;
+                tail[2] = [late[2][0], 1.];
+                head[2] = [0., early[2][1]];
+                let et = query(tail, out)?;
+                let eh = query(head, out)?;
+                for e in [et, eh] {
+                    if let Enclosed::Unsupported(reason) = e {
+                        out.reason = Some(reason);
+                        return Ok(());
+                    }
+                }
+                if let (Enclosed::Value(t), Enclosed::Value(h)) = (et, eh) {
+                    let mut columns = t.columns;
+                    for j in 0..3 {
+                        for i in 0..3 {
+                            columns[j][i] = I::new(
+                                columns[j][i].lo.min(h.columns[j][i].lo),
+                                columns[j][i].hi.max(h.columns[j][i].hi),
+                            )?;
+                        }
+                    }
+                    // ONE complete interval matrix and projection for the
+                    // lifted hull, including both one-sided seam limits.
+                    if regular(columns, projection)? {
+                        continue;
+                    }
+                    if (1. - tail[2][0]) + head[2][1] <= 0.125
+                        && monotone_hull(
+                            &[tail, head],
+                            columns,
+                            projection,
+                            &mut query,
+                            out,
+                            max_cells,
+                        )?
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+        if out.cells == max_cells {
+            return Ok(());
+        }
+        let (mut axis, wa) = widest(a);
+        let (ib, wb) = widest(b);
+        let mut split_b = a != b && wb > wa;
+        let e = if split_b { eb } else { ea };
+        if split_b {
+            axis = ib;
+        }
+        let preferred = match e {
+            Enclosed::Unavailable(Some(axis)) => Some(axis),
+            _ => match eh {
+                Enclosed::Unavailable(Some(axis)) => Some(axis),
+                _ => None,
+            },
+        };
+        if let Some(preferred) = preferred {
+            axis = preferred;
+            split_b = a != b && b[axis][1] - b[axis][0] > a[axis][1] - a[axis][0];
+        }
+        let Some(children) = split_axis(if split_b { b } else { a }, axis) else {
+            out.reason = Some("ideal-volume-atlas-precision-limit");
+            return Ok(());
+        };
+        if a == b {
+            // All unordered pairs in this diagonal square, including both
+            // child diagonals. Symmetry supplies the reversed cross pair.
+            pairs.push((children[0], children[1]));
+            pairs.push((children[1], children[1]));
+            pairs.push((children[0], children[0]));
+        } else if split_b {
+            pairs.push((a, children[1]));
+            pairs.push((a, children[0]));
+        } else {
+            pairs.push((children[1], b));
+            pairs.push((children[0], b));
+        }
+    }
+    // No partial-cover flags: every diagonal and distinct pair was resolved.
+    out.embedding_certified = true;
+    out.regularity_certified = true;
+    out.parameter_topology_preserved = true;
+    out.reason = None;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn regular_interval_matrix_is_stronger_than_endpoint_determinant_signs() {
+        // A and B both have det=11, but their convex average is singular
+        // somewhere. A pair of positive pointwise signs supplies no admission.
+        let a = [[1., -1., 0.], [10., 1., 0.], [0., 0., 1.]];
+        let b = [[1., 10., 0.], [-1., 1., 0.], [0., 0., 1.]];
+        let p = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+        for m in [a, b] {
+            assert!(regular(m.map(|v| v.map(I::point)), p).unwrap());
+        }
+        let enclosed = std::array::from_fn(|j| {
+            std::array::from_fn(|i| I::new(a[j][i].min(b[j][i]), a[j][i].max(b[j][i])).unwrap())
+        });
+        assert!(!regular(enclosed, p).unwrap());
+        let mut singular = p;
+        singular[2] = [0.; 3];
+        assert!(!regular(a.map(|v| v.map(I::point)), singular).unwrap());
+        assert!(!separated([I::point(0.); 3], [I::point(0.); 3]));
+    }
+}

@@ -237,3 +237,61 @@ fn spatial_bishop_ideal_embedding_survives_owned_public_json_construction() {
     assert!(short["model"].is_null());
     assert_eq!(short["idealBodyEmbeddingCertified"], false);
 }
+
+#[test]
+fn original_atlas_is_constructor_owned_and_cannot_borrow_monotonicity_or_caller_flags() {
+    let mut request = fixture()["sweep"].clone();
+    request["idealBody"] = json!({"method":"atlas","projection":[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],"maxCells":100000,"maxExactWork":1000000});
+    let full = dispatch(request.clone()).unwrap();
+    assert_eq!(full["certified"],true,"{full:?}");
+    assert_eq!(full["idealBody"]["proofMethod"],"atlas");
+    assert_eq!(full["idealBodyEmbeddingCertified"],true);
+    assert!(full["idealBody"]["monotonicityLower"].is_null());
+    assert_eq!(full["smoothnessCertified"],false);
+    assert_eq!(full["seamContinuity"],"C0");
+    let mut legacy = request.clone(); legacy["idealBody"]["method"] = json!("monotone");
+    let legacy = dispatch(legacy).unwrap();
+    assert_eq!(full["model"],legacy["model"]);
+    for limit in [0,full["idealBody"]["cells"].as_u64().unwrap()-1] {
+        let mut short = request.clone(); short["idealBody"]["maxCells"] = json!(limit);
+        short["idealBodyEmbeddingCertified"] = json!(true);
+        let refused = dispatch(short).unwrap();
+        assert_eq!(refused["certified"],false);
+        assert_eq!(refused["idealBodyEmbeddingCertified"],false);
+        assert_eq!(refused["solidGeometryCertified"],true);
+        assert!(refused["model"].is_null());
+    }
+    request["idealBody"]["method"] = json!("trust-caller");
+    assert!(dispatch(request).is_err());
+}
+
+#[test]
+fn closed_spatial_bishop_native_json_qualifies_only_the_original_periodic_frame() {
+    use nurbs_core::{curve::Curve,progressive_sweep::constant_vector_law};
+    let path=Curve {degree:7,knots:[vec![2.;8],vec![5.;8]].concat(),
+        control_points:vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![2.,1.,0.],vec![3.,3.,1.],
+            vec![-3.,3.,-1.],vec![-2.,1.,0.],vec![-1.,0.,0.],vec![0.,0.,0.]],weights:vec![1.;8],periodic:false};
+    let profile=nurbs_core::primitives::line([0.,0.,0.125],[0.,0.,0.25]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    for spacing in ["parameter","arc_length"] {
+        for order in [1,2] {
+            let request=json!({"op":"surface_progressive_sweep_closed_path_frame_smoothness",
+                "profiles":[profile],"path":path,"scale":scale,"twist":twist,"normal":[0.,0.,1.],
+                "orientation":"rmf","spacing":spacing,"initial_sections":5,"max_sections":17,"max_deviation":0.01,
+                "length_tolerance":0.001,"length_max_cells":100000,
+                "rmf_transport_steps":128,"error_max_cells":100000,"error_max_products":1000000,
+                "order":order,"maxCells":100000,"maxExactWork":1000000});
+            let r=dispatch(request.clone()).unwrap();
+            assert_eq!(r["closedSourceFrameSmoothnessCertified"],true,"{r:?}");
+            assert_eq!(r["method"],"original-periodic-bishop-ode-with-arc-holonomy");
+            assert_eq!(r["scope"],"closed-original-path-frame-only");
+            for flag in ["retainedSeamsCertified","capJoinsCertified","profileJoinsCertified","continuousBound","solidCertified"] {
+                assert_eq!(r[flag],false,"{flag}");
+            }
+            for key in ["maxCells","maxExactWork"] {
+                let mut short=request.clone();short[key]=json!(0);short["closedSourceFrameSmoothnessCertified"]=json!(true);
+                assert_eq!(dispatch(short).unwrap()["closedSourceFrameSmoothnessCertified"],false);
+            }
+        }
+    }
+}

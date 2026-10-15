@@ -392,10 +392,25 @@ fn path_guide_jets(path:&Curve,guide:&Curve,twist:&Curve,traversal:[f64;2],max_c
         dd: sub(rail.dd, position.dd)?,
     }};
     out.reason = Some("guide-transverse-direction-unproved");
-    let Some(b) = normalize(cross_jet(t, offset)?)? else {
-        return Ok(out);
+    let axis=original_offset.then(|| (0..3).find(|&i| {
+        let sign=guide.control_points[0][i].signum();
+        path.control_points.iter().all(|p|p[i]==path.control_points[0][i])
+            && guide.control_points.iter().all(|p|p[i]*sign>0. && (0..3).all(|k|k==i||p[k]==0.))
+    })).flatten();
+    let (t,b,n)=if let Some(axis)=axis {
+        // The owning exact-offset proof supplied THIS original rail difference.
+        // Its signed axis is orthogonal to every original path tangent. The
+        // projected unit normal is therefore exactly constant, even when the
+        // offset magnitude varies rationally. No independent rail boxes or
+        // rounded subtraction can establish this identity.
+        let mut t=t;t.v[axis]=I::point(0.);t.d[axis]=I::point(0.);t.dd[axis]=I::point(0.);
+        let mut value=[I::point(0.);3];value[axis]=I::point(guide.control_points[0][axis].signum());
+        let n=Jet {v:value,d:[I::point(0.);3],dd:[I::point(0.);3]};
+        (t,cross_jet(t,n)?,n)
+    }else {
+        let Some(b)=normalize(cross_jet(t,offset)?)? else {return Ok(out);};
+        (t,b,cross_jet(b,t)?)
     };
-    let n = cross_jet(b, t)?;
     out.longitudinal = Some(encode(t));
     out.transverse = Some(encode(n));
     out.binormal = Some(encode(b));

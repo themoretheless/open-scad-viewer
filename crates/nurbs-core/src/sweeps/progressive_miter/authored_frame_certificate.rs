@@ -123,6 +123,17 @@ pub fn certify_twisted_values(
     out.status = Status::Certified;
     Ok(out)
 }
+// Literal original source-axis identity. Positive rational weights preserve
+// a strictly signed axis seed and the orthogonal longitudinal plane. This
+// removes Gram-Schmidt interval dependency; it does not approximate a frame.
+fn source_axis_normal(axis:&Curve,normal:&Curve)->Option<(usize,f64)> {
+    (0..3).find_map(|i| {
+        let sign=normal.control_points[0][i].signum();
+        (sign!=0. && axis.control_points.iter().all(|p|p[i]==0.)
+            && normal.control_points.iter().all(|p|p[i]*sign>0. && (0..3).all(|k|k==i||p[k]==0.)))
+            .then_some((i,sign))
+    })
+}
 #[derive(Clone, Copy)]
 struct Jet {
     v: V,
@@ -460,10 +471,16 @@ pub fn certify(
         return Ok(out);
     };
     out.reason = Some("transverse-nonparallel-unproved");
-    let Some(binormal) = normalize(cross_jet(t, jet(transverse, &b)?)?)? else {
-        return Ok(out);
+    let (t,binormal,normal)=if let Some((axis,sign))=source_axis_normal(longitudinal,transverse) {
+        let mut t=t;
+        t.v[axis]=I::point(0.);t.d[axis]=I::point(0.);t.dd[axis]=I::point(0.);
+        let mut value=[I::point(0.);3];value[axis]=I::point(sign);
+        let normal=Jet {v:value,d:[I::point(0.);3],dd:[I::point(0.);3]};
+        (t,cross_jet(t,normal)?,normal)
+    }else {
+        let Some(binormal)=normalize(cross_jet(t,jet(transverse,&b)?)?)? else {return Ok(out);};
+        (t,binormal,cross_jet(binormal,t)?)
     };
-    let normal = cross_jet(binormal, t)?;
     out.longitudinal = Some(encode(t));
     out.transverse = Some(encode(normal));
     out.binormal = Some(encode(binormal));

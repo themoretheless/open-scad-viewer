@@ -317,6 +317,57 @@ pub fn construct_with_ideal(
     limits: Limits,
     ideal: IdealLimits,
 ) -> Result<Attempt> {
+    construct_with_ideal_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        ideal,
+        false,
+    )
+}
+/// Same constructor-owned admission, using the exhaustive ORIGINAL parameter
+/// pair cover instead of the sufficient global strong-monotonicity metric.
+pub fn construct_with_ideal_atlas(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+) -> Result<Attempt> {
+    construct_with_ideal_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        ideal,
+        true,
+    )
+}
+fn construct_with_ideal_impl(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+    atlas: bool,
+) -> Result<Attempt> {
     // Validate stronger limits even when an earlier geometric stage refuses.
     if ideal.cells > 100000
         || ideal.exact_work > 1000000
@@ -360,7 +411,13 @@ pub fn construct_with_ideal(
             return Ok(Attempt::Refused(Box::new(body.report)));
         }
     }
-    let proof = sweep.certify_ideal_volume(
+    let certify = if atlas {
+        MultiSweep::certify_ideal_volume_atlas
+    } else {
+        MultiSweep::certify_ideal_volume
+    };
+    let proof = certify(
+        sweep,
         [&source_caps[0].surface, &source_caps[1].surface],
         ideal.projection,
         ideal.cells - profile_cells,

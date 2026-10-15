@@ -115,6 +115,15 @@ pub fn construct(v: Value) -> Result<Value> {
     let retained_caps = caps(&v["retainedCaps"])?;
     let limits = field::<Value>(&v, "limits")?;
     let ideal = optional::<Value>(&v, "idealBody")?;
+    let ideal_method = ideal
+        .as_ref()
+        .map(|i| optional::<String>(i, "method"))
+        .transpose()?
+        .flatten()
+        .unwrap_or_else(|| "monotone".to_owned());
+    if !matches!(ideal_method.as_str(), "monotone" | "atlas") {
+        return Err(input("Unknown original ideal-body proof method"));
+    }
     let ideal_limits = ideal
         .as_ref()
         .map(|i| -> Result<owned::IdealLimits> {
@@ -140,7 +149,12 @@ pub fn construct(v: Value) -> Result<Value> {
     let source_caps = [&source_caps[0], &source_caps[1]];
     let retained_caps = [&retained_caps[0], &retained_caps[1]];
     let attempt = if let Some(ideal) = ideal_limits {
-        owned::construct_with_ideal(
+        let construct = if ideal_method == "atlas" {
+            owned::construct_with_ideal_atlas
+        } else {
+            owned::construct_with_ideal
+        };
+        construct(
             &sweep,
             &loop_sizes,
             sections,
@@ -173,7 +187,7 @@ pub fn construct(v: Value) -> Result<Value> {
         "sourceCells":r.source_cells,"sourceProducts":r.source_products,"sourceExactWork":r.source_exact_work,
         "reason":r.reason,"scope":"original-sweep-law-and-authored-filled-caps",
         "idealBodyEmbeddingCertified":r.ideal_volume.as_ref().is_some_and(|p|p.embedding_certified),
-        "idealBody":r.ideal_volume.as_ref().map(|p|json!({"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"monotonicityLower":p.monotonicity_lower,"projection":p.projection,"reason":p.reason})),"smoothnessCertified":false,"seamContinuity":"C0",
+        "idealBody":r.ideal_volume.as_ref().map(|p|json!({"proofMethod":ideal_method,"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"monotonicityLower":p.monotonicity_lower,"projection":p.projection,"reason":p.reason})),"smoothnessCertified":false,"seamContinuity":"C0",
         "regularity":r.regularity.as_ref().map(|p|json!({"proven":p.all_faces_regular_modulo_poles,"cells":p.cells,"unresolvedFaces":p.unresolved_faces})),
         "solidGeometryCertified":r.volume.as_ref().is_some_and(|p|p.proven)}),
     )

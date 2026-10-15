@@ -308,6 +308,29 @@ impl Sweep<'_> {
         let seam=super::endpoint_jets::certify(self.twist,order,max_exact_work-out.exact_work)?;
         out.exact_work+=seam.exact_work;
         if !seam.certified {out.reason=Some("closed-path-frame-endpoint-jets-unproved");return Ok(out);}
+        if self.options.orientation==Orientation::RotationMinimizing && self.spatial_rmf_error_limits.is_some() {
+            // The ORIGINAL Bishop ODE exists on the positive-speed source.
+            // Closing its holonomy by alpha=angle*normalized_arc makes N(1)=N(0).
+            // Its corrected angular field is omega+alpha' T. Periodic Ck tangent
+            // jets and periodic correction rates give a periodic Ck solution.
+            // In parameter mode the speed jets must also match: direction-only
+            // identities do not prove periodic derivatives of alpha(t).
+            // Keep the same original Cartesian smoothness owner for both
+            // policies here; geometric-only clock/seam joins remain unproved.
+            if !path_ok {
+                out.reason=Some("closed-bishop-source-cartesian-jets-unproved");return Ok(out);
+            }
+            let regular=crate::curve_regularity::inspect(self.path,max_cells-out.cells)?;
+            out.cells+=regular.cells;
+            if !regular.spanwise_regular {out.reason=Some("closed-bishop-source-speed-unproved");return Ok(out);}
+            let initial=frame::certify_fixed_path_values(self.path,self.options.normal,self.twist,[0.,0.],max_cells-out.cells)?;
+            out.cells+=initial.cells;
+            out.closed_source_frame_smoothness_certified=initial.status==Status::Certified;
+            out.reason=if out.closed_source_frame_smoothness_certified {None}else{Some("closed-bishop-initial-seed-unproved")};
+            // Frame well-posedness/smoothness only. This is neither a corrected
+            // derivative enclosure nor a retained/source boundary certificate.
+            return Ok(out);
+        }
         if self.options.orientation!=Orientation::FixedNormal {
             let plane=super::source_plane::certify(self.path,self.options.normal,max_exact_work-out.exact_work)?;
             out.exact_work+=plane.exact_work;

@@ -20,6 +20,7 @@ pub struct IdealVolumeReport {
     pub embedding_certified: bool,
     pub regularity_certified: bool,
     /// Relative to the declared UV trim region, whose validity is not inferred.
+    /// The traversal factor is [0,1] for open sources, S1 for proved quotients.
     pub parameter_topology_preserved: bool,
     pub cells: usize,
     pub exact_work: u64,
@@ -30,8 +31,11 @@ pub struct IdealVolumeReport {
 }
 mod arc;
 mod arc_frames;
+mod atlas;
 mod cell;
 mod charts;
+mod closed;
+mod pose;
 use charts::*;
 impl MultiSweep<'_> {
     /// Certify the ORIGINAL filled volume F(u,v,t)=pose(t)[(1-t) C0+t C1].
@@ -45,6 +49,36 @@ impl MultiSweep<'_> {
         projection: [[f64; 3]; 3],
         max_cells: usize,
         max_exact_work: u64,
+    ) -> Result<IdealVolumeReport> {
+        self.certify_ideal_volume_impl(caps, projection, max_cells, max_exact_work, false)
+    }
+    /// Exhaustive original-map pair cover. Each pair is either strictly
+    /// separated in world space or belongs to ONE convex parameter hull whose
+    /// entire interval Jacobian matrix is regular, or whose full subdivision
+    /// shares ONE proved strong-monotonicity metric. This is a sufficient global
+    /// embedding theorem even when no single strong-monotonicity metric exists.
+    /// All pair visits, failed trials and source restrictions share the ledger.
+    /// `monotonicity_lower` stays None; this method does not prove monotonicity.
+    /// Closed traversals require exact native endpoint ownership and ONE
+    /// literal traversal-independent carrier. Wrapped charts then certify the
+    /// UV x S1 quotient, not injectivity of the duplicated endpoint cube.
+    /// Invalid/unowned trim regions are not admitted.
+    pub fn certify_ideal_volume_atlas(
+        &self,
+        caps: [&Surface; 2],
+        projection: [[f64; 3]; 3],
+        max_cells: usize,
+        max_exact_work: u64,
+    ) -> Result<IdealVolumeReport> {
+        self.certify_ideal_volume_impl(caps, projection, max_cells, max_exact_work, true)
+    }
+    fn certify_ideal_volume_impl(
+        &self,
+        caps: [&Surface; 2],
+        projection: [[f64; 3]; 3],
+        max_cells: usize,
+        max_exact_work: u64,
+        atlas: bool,
     ) -> Result<IdealVolumeReport> {
         check(
             max_cells <= 100000
@@ -71,7 +105,8 @@ impl MultiSweep<'_> {
             reason: Some("ideal-volume-work-limit"),
         };
         let s = &self.sweeps[0];
-        if self.source_is_closed()? {
+        let closed = self.source_is_closed()?;
+        if closed && !atlas {
             out.reason = Some("ideal-volume-closed-quotient-required");
             return Ok(out);
         }
@@ -87,12 +122,18 @@ impl MultiSweep<'_> {
         // This proves frame continuity independently of cell subdivision. The
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
-        let smooth = s.certify_original_frame_smoothness(1, max_cells, max_exact_work)?;
-        out.cells += smooth.cells;
-        out.exact_work += smooth.exact_work;
-        if !smooth.source_frame_smoothness_certified {
-            out.reason = smooth.reason;
-            return Ok(out);
+        if closed {
+            if !closed::premises(s, caps, &mut out, max_cells, max_exact_work)? {
+                return Ok(out);
+            }
+        } else {
+            let smooth = s.certify_original_frame_smoothness(1, max_cells, max_exact_work)?;
+            out.cells += smooth.cells;
+            out.exact_work += smooth.exact_work;
+            if !smooth.source_frame_smoothness_certified {
+                out.reason = smooth.reason;
+                return Ok(out);
+            }
         }
         let zero = constant_vector_law([0.; 3])?;
         let Some(initial) =
@@ -210,7 +251,12 @@ impl MultiSweep<'_> {
             arc,
             guide_arc,
             shared_guide,
+            poses: atlas.then(Default::default),
         };
+        if atlas {
+            atlas::certify(&context, projection, &mut out, max_cells, closed)?;
+            return Ok(out);
+        }
         let mut pending = vec![([[0., 1.]; 3], None)];
         let mut lower = f64::INFINITY;
         while let Some((b, cached)) = pending.pop() {
