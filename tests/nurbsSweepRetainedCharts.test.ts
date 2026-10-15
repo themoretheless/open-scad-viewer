@@ -15,6 +15,7 @@ it('proves a full rational quarter chart with one oblique projection and refuses
  expect(report.projection[1]![2]).toBeGreaterThan(0)
  // Main's fixed P-matrix/weighted-metric proof certifies the whole chart in one cell.
  expect(report).toMatchObject({cells:1,rowWeights:[1,1],profileParameterization:null})
+ expect(inspectSurfaceLinearInjectivity(quarter,1)).toMatchObject({certified:true,cells:1,reason:null})
  expect(inspectSurfaceLinearInjectivity(quarter,0)).toMatchObject({certified:false,cells:0,reason:'cell-budget-exhausted'})
  expect(inspectSurfaceLinearInjectivity(quarter,100,[[1,0,0],[0,0,1]]).certified).toBe(false)
  expect(inspectSurfaceLinearInjectivity(quarter,1000,[[-1,0,0],[0,0,1]]).certified).toBe(false)
