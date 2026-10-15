@@ -1,0 +1,233 @@
+{
+  "schema": "source-pair-atlas-native-qualification-v1",
+  "baselineRevision": "3e6044fed",
+  "nativeCheckpointPassed": true,
+  "sourceGuardVerified": true,
+  "inputsSha256": "ea77a226e56cd0727488a47b0ea3873f41d716377d109be0b6941d76c3958acb",
+  "checks": [
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "attempts/02/logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 114.002,
+      "testResults": [
+        {
+          "passed": 1568,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reusedFromInputGuard": "attempts/02/native-inputs.json",
+      "verifiedOnlyInputDifference": [
+        "crates/geometry-bridge/src/tests/sweep_profile_admission.rs"
+      ],
+      "scopeJustification": "Only a cfg(test) geometry-bridge unit fixture changed; geometry-bridge is not a dependency of nurbs-core or brep-core. All original geometry, lower unit/integration tests, manifests and other guarded inputs are byte-identical."
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--",
+        "--nocapture"
+      ],
+      "log": "attempts/02/logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 7.789,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reusedFromInputGuard": "attempts/02/native-inputs.json",
+      "verifiedOnlyInputDifference": [
+        "crates/geometry-bridge/src/tests/sweep_profile_admission.rs"
+      ],
+      "scopeJustification": "Only a cfg(test) geometry-bridge unit fixture changed; geometry-bridge is not a dependency of nurbs-core or brep-core. All original geometry, lower unit/integration tests, manifests and other guarded inputs are byte-identical."
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "attempts/02/logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 268.999,
+      "testResults": [
+        {
+          "passed": 1067,
+          "failed": 0,
+          "ignored": 3
+        }
+      ],
+      "reusedFromInputGuard": "attempts/02/native-inputs.json",
+      "verifiedOnlyInputDifference": [
+        "crates/geometry-bridge/src/tests/sweep_profile_admission.rs"
+      ],
+      "scopeJustification": "Only a cfg(test) geometry-bridge unit fixture changed; geometry-bridge is not a dependency of nurbs-core or brep-core. All original geometry, lower unit/integration tests, manifests and other guarded inputs are byte-identical."
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "attempts/02/logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 24.005,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reusedFromInputGuard": "attempts/02/native-inputs.json",
+      "verifiedOnlyInputDifference": [
+        "crates/geometry-bridge/src/tests/sweep_profile_admission.rs"
+      ],
+      "scopeJustification": "Only a cfg(test) geometry-bridge unit fixture changed; geometry-bridge is not a dependency of nurbs-core or brep-core. All original geometry, lower unit/integration tests, manifests and other guarded inputs are byte-identical."
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 202.187,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 10.957,
+      "testResults": [
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 22.805,
+      "testResults": []
+    }
+  ],
+  "publicWasmRebuilt": false,
+  "freshCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "independentStepQualified": false,
+  "browserQualified": false,
+  "fullGoalComplete": false,
+  "qualificationRunOption": "--resume-lower-checks",
+  "totalPassed": 3046,
+  "totalIgnored": 4,
+  "codeRevision": "ee5ac5e9d7df593f3b04bf283e5669246366aa66",
+  "validationScope": "Native original pair/quotient source volumes, periodic original Bishop C1/C2, unchanged retained-boundary admission, native JSON and listed direct STEP fixture only.",
+  "clippyStatus": "not rerun; predecessor baseline diagnostics remain separate",
+  "notes": [
+    "No TypeScript geometry changed.",
+    "The four reused lower-crate checks are byte-identity guarded against the only later change, a higher-adapter cfg(test) fixture; see each check scopeJustification.",
+    "Native direct STEP fixture exchange passed; this is not independent OCCT qualification of new closed source volumes.",
+    "Historical failures are preserved in attempts/01, attempts/02 and diagnostic logs.",
+    "Whole goal remains active; corrected closed spatial volume jets, general cap atlases and complete applicable source/retained G1/G2 remain open."
+  ]
+}
