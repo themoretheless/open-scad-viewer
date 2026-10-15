@@ -72,7 +72,8 @@ next.wasm = {path:artifact,publishedPath:'public/wasm/geometry-kernel.wasm',sha2
 const tracked = execFileSync('git',['ls-files','crates','src','scripts'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>/\.(rs|toml|ts|mjs|mts)$/.test(p))
 next.sourceBundle.paths = [...new Set([...previous.sourceBundle.paths,...tracked,
   ...report.logs.map(x=>x.path).filter(p=>!p.endsWith('.step')), reportPath, fixturePath,
-  'scripts/release-own-rust-v74.mjs','scripts/generalBoundaryChecks.mjs','scripts/qualify-general-boundary.mts',
+  'scripts/release-own-rust-v74.mjs','scripts/verify-native-test-partition.mjs',
+  'tests/nativeTestPartition.test.mjs','scripts/generalBoundaryChecks.mjs','scripts/qualify-general-boundary.mts',
   'scripts/qualify-general-boundary-browser.mjs','scripts/verify-general-boundary-step.py',
   'docs/qualification/general-frame-cap-certificate-2026-10-15.md',
   'docs/qualification/g0-v88-g1-v105-refreeze-review.md',
