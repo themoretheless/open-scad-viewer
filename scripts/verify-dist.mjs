@@ -108,7 +108,8 @@ const limits = new Map([
 // Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
 // Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
 // Native lattice printability/strength screens and weak-spot markers: measured 4,113,186 bytes.
-const geometryChunkBudget = 4_120_000
+// Resolved main plus general frame/cap proofs: measured 4,138,000 bytes.
+const geometryChunkBudget = 4_145_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 103_000],
@@ -385,7 +386,8 @@ for (const [name, artifact, compression] of [
 // Keep a 9,759-byte delivery margin for the measured cross-host packaging variation.
 // ownRust50 source-cell proofs: measured 8,379,122 local asset bytes.
 // Keep a bounded margin for the existing Node 20/22 build variation.
-const totalBudget = 8_390_000
+// Resolved main with the rebuilt general frame/cap kernel: measured 8,404,489 bytes.
+const totalBudget = 8_420_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 

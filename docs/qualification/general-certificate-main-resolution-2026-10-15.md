@@ -50,3 +50,15 @@ one tree change relative to `e3a2d0715`: the budget-one retained quarter-chart
 assertion. That assertion is applied to the resolved tree. Repeated recursive
 merge conflicts arise from multiple historical merge bases, not new source
 changes; the previously reviewed resolution is retained in full.
+
+The library audit also restores centralized workspace dependency ownership in
+all eight affected manifests, retaining bridge-svg's new mesh-section dependency.
+The nurbs-intersect codec dependency is optional again. The strict audit includes
+all 18 native kernels, including both intersection crates. Cargo's resolved
+full-workspace feature sets are identical before and after this repair for all
+360 packages; the no-default-features graph now excludes the wire codec.
+
+The runtime-manifest diagnostic still distinguishes the historical qualified
+active manifests from newly executed kernel bytes. Rebuilding/refreezing alone
+cannot activate pending manifests or grant production qualification. This known
+mismatch is retained as a diagnostic, never converted into a passing assertion.

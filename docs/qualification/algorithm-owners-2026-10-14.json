@@ -11269,7 +11269,7 @@
     },
     {
       "file": "src/harfbuzzjs.d.ts",
-      "sha256": "620343020162090bbc89a4b1b84e96898b13b011ee175b972844479882ec93f7",
+      "sha256": "1e7096d034d588277223fb5927739fe6135bcb7a735b7ca70be47936a4f11490",
       "generated": false,
       "owner": "application-host",
       "decision": "host",
@@ -18637,7 +18637,7 @@
     },
     {
       "file": "src/services/gcodePreviewGeometry.ts",
-      "sha256": "cc8153c829a5e5360595bfc6cfe84b7c70b2c4e1376e0ce5fd34200523c4491b",
+      "sha256": "2ae9dc95e6305d66d9e2b2cbd5c0ee0f5a6d4200bb3284e6d0c9435904489ace",
       "generated": false,
       "owner": "gcode-core + gcode-optimize + printer-core",
       "decision": "gcode",
@@ -21137,7 +21137,7 @@
     },
     {
       "file": "src/services/geometry/subdivision.ts",
-      "sha256": "a5a8c79f320b924c1dd421f9629cbb39c246220b5be86a122a8366e84dbcff4a",
+      "sha256": "f879c5651c733dd9c622ba169623bb5ea4cd4f7e6517970c75edf4a87fef4fa3",
       "generated": false,
       "owner": "subdivision-core",
       "decision": "subdivision",
@@ -37372,7 +37372,7 @@
     },
     {
       "file": "src/services/solidGpuView.ts",
-      "sha256": "bbfdc31e03da008311895862ec322ec289e31c30aeeccdbdba752ff1c3bb35e3",
+      "sha256": "08d08173e17dcdb09e502a4c54bc0bc06cc4153b254746aa4487a65bc900dbeb",
       "generated": false,
       "owner": "polygon-core",
       "decision": "mesh-display",
@@ -41355,7 +41355,7 @@
     },
     {
       "file": "src/services/trussAnalysis.ts",
-      "sha256": "30de2fd012c066710c634721907965a46a8c8f28360009caf206a1c9c9eb0e76",
+      "sha256": "e25ebb6073877e327f9443ceb952d640eee3f5c197900ca2606bdc27ac10f286",
       "generated": false,
       "owner": "mechanics-core + mechanical-core",
       "decision": "mechanics",
