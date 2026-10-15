@@ -1,0 +1,86 @@
+{
+  "scope": "finite native protocol, filled-cap, budget-refusal and STEP checks; no UI or universal acceptance claim",
+  "passed": 11,
+  "records": [
+    {
+      "name": "original-moving-frame-filled-caps",
+      "passed": true,
+      "certified": true,
+      "continuousBound": true,
+      "reason": null
+    },
+    {
+      "name": "authored-reference-whole-boundary",
+      "passed": true,
+      "certified": true,
+      "continuousBound": true,
+      "reason": null
+    },
+    {
+      "name": "refuse-sourceCells-despite-client-flags",
+      "passed": true,
+      "certified": false,
+      "continuousBound": false,
+      "reason": "source-wall-bound-unproved"
+    },
+    {
+      "name": "refuse-sourceProducts-despite-client-flags",
+      "passed": true,
+      "certified": false,
+      "continuousBound": false,
+      "reason": "source-cap-decomposition-work-limit"
+    },
+    {
+      "name": "refuse-sourceExactWork-despite-client-flags",
+      "passed": true,
+      "certified": false,
+      "continuousBound": false,
+      "reason": "source-cap-boundary-unproved"
+    },
+    {
+      "name": "refuse-regularityCells-despite-client-flags",
+      "passed": true,
+      "certified": false,
+      "continuousBound": true,
+      "reason": "whole-boundary-regularity-unproved"
+    },
+    {
+      "name": "refuse-unfinished-solid-pairs",
+      "passed": true,
+      "certified": false,
+      "continuousBound": true,
+      "reason": "solid-geometry-unproved"
+    },
+    {
+      "name": "refuse-referenceVolume",
+      "passed": true,
+      "certified": false,
+      "continuousBound": true,
+      "reason": "solid-geometry-unproved"
+    },
+    {
+      "name": "refuse-retainedVolume",
+      "passed": true,
+      "certified": false,
+      "continuousBound": true,
+      "reason": "solid-geometry-unproved"
+    },
+    {
+      "name": "reject-invalid-source-before-zero-budget",
+      "passed": true,
+      "certified": false
+    },
+    {
+      "name": "direct-step-topology-round-trip",
+      "passed": true
+    }
+  ],
+  "browser": "151.0.7922.34",
+  "fixtureSha256": "70d42128ec48ca6e8d73d4f67026ca7c4e8511411321a869f0785ee9eda9c480",
+  "artifact": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "e5d85b502ae6071f37f4d693a557ae853bbdea75d8b9bac3d6416f86b2327760",
+    "geometryWasmByteLength": 12076702,
+    "publicAndPackedVerified": true
+  }
+}

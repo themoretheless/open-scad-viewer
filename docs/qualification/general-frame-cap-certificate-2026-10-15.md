@@ -102,5 +102,27 @@ representation can be proved within finite work. Source cap boundary composition
 and whole-shell contact audits retain their explicit representation/refusal
 limits. The common UV correspondence is authored, not inferred by sampling.
 
-Validation results and rebuilt WASM hashes must be added after the candidate
-checks finish. Existing frozen qualifications must remain immutable.
+## Observed finite validation
+
+Native source commit `a90a7f33b` passed all 1108 BRep tests (three manual tests
+ignored), 1545 NURBS tests, seven public correspondence/math regressions and
+four new bridge/STEP tests. The four source-owned tests include 16 combinations
+of authored/guide frames, affine laws, rational weights and parameter/arc-length
+spacing, quadratic filled cap interiors, non-unit cap UV domains, shared-budget
+refusals and spatial Bishop transport on six non-dyadic stations. The existing
+closed spatial and four-contour arc transport regressions also pass. Typed
+geometry without wire codecs compiles.
+
+The stable-source geometry WASM is 12,076,702 bytes, SHA256
+`e5d85b502ae6071f37f4d693a557ae853bbdea75d8b9bac3d6416f86b2327760`.
+Node and Chromium each pass 11 new protocol/refusal/STEP checks. The previous
+96-case Node matrix still returns 72 proofs and 24 expected typed refusals.
+Independent OCCT imports the nonplanar capped body as one valid solid with six
+faces and one shell. Its volume differs from the exact original binary64
+bilinear-span divergence integral by `7.105427357601002e-15` cubic millimetres.
+Raw logs, build inputs and finite reports are retained in
+`general-frame-cap-2026-10-15/summary.json`.
+
+These observations do not complete semantic G1 or assert universal geometric
+acceptance. Existing frozen qualifications remain immutable; a new G1 freeze
+must start at zero and execute all required work again.
