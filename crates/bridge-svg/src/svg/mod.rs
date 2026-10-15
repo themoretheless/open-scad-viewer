@@ -26,6 +26,7 @@ mod invalid;
 mod preflight_inner;
 mod legacy_source;
 mod region;
+mod profile;
 #[cfg(test)]
 mod tests;
 use invalid::*;

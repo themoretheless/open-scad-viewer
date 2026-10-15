@@ -343,7 +343,7 @@ pub(crate) fn dispatch(v: Value) -> Result<Value> {
         .as_str()
         .ok_or_else(|| invalid("SVG source must be a string"))?;
     let action = v["action"].as_str().unwrap_or("parse");
-    if !matches!(action, "parse" | "preview") {
+    if !matches!(action, "parse" | "preview" | "profile") {
         return Err(invalid("Unknown SVG action"));
     }
     let dpi = number(&v, "dpi", 72., 0.001, 1_000_000.)?;
@@ -455,6 +455,10 @@ pub(crate) fn dispatch(v: Value) -> Result<Value> {
     }
     if normalized.len() > MAX_SOURCE {
         return Err(limit("Normalized SVG exceeds 4 MiB"));
+    }
+    if action == "profile" {
+        let contours = super::profile::merge_profile(regions.into_iter().map(|r| (r.contours, r.rule)).collect())?;
+        return Ok(json!({"contours": contours, "widthMm": width, "heightMm": height, "warnings": warnings}));
     }
     Ok(
         json!({"regions":regions.into_iter().map(|r|json!({"contours":r.contours,"fillRule":match r.rule{FillRule::NonZero=>"nonzero",FillRule::EvenOdd=>"evenodd"}})).collect::<Vec<_>>(),"widthMm":width,"heightMm":height,"normalizedSvg":normalized,"warnings":warnings}),

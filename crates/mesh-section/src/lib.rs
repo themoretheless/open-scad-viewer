@@ -382,6 +382,211 @@ pub fn slice(mesh: &MeshView<'_>, z: f64) -> Result<Rings> {
     planar(&rings, &vec![], "union")
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct SvgProjectionMesh<'a> {
+    /// Interleaved 6-float vertex buffer (`[x, y, z, nx, ny, nz, ...]`).
+    pub vertices: &'a [f32],
+    pub indices: &'a [u32],
+    pub transform: [f64; 16],
+    pub face_ids: &'a [u32],
+}
+
+pub fn bounded_svg_contours(contours: Rings) -> Result<Rings> {
+    let total_points: usize = contours.iter().map(|ring| ring.len()).sum();
+    if total_points > 20000 {
+        return Err(error(
+            "SVG_CONTOUR_LIMIT",
+            "SVG exceeds 20000 contour points.",
+        ));
+    }
+    if contours.is_empty()
+        || contours
+            .iter()
+            .any(|ring| ring.len() < 3 || ring.iter().any(|p| !p[0].is_finite() || !p[1].is_finite()))
+    {
+        return Err(error("SVG_EMPTY_AREA", "SVG has no finite area."));
+    }
+    for ring in &contours {
+        let [x, y] = ring[0];
+        let mut twice_area = 0.0;
+        for (i, a) in ring.iter().enumerate() {
+            let b = ring[(i + 1) % ring.len()];
+            twice_area += (a[0] - x) * (b[1] - y) - (b[0] - x) * (a[1] - y);
+        }
+        if !twice_area.is_finite() || twice_area == 0.0 {
+            return Err(error("SVG_EMPTY_AREA", "SVG has no finite area."));
+        }
+    }
+    Ok(contours)
+}
+
+pub fn svg_contours(
+    meshes: &[SvgProjectionMesh<'_>],
+    axis: Option<&str>,
+    face_triangle: Option<usize>,
+) -> Result<Rings> {
+    if let Some(axis) = axis
+        && !matches!(axis, "x" | "y" | "z")
+    {
+        return Err(error(
+            "SVG_INVALID_AXIS",
+            "SVG projection axis must be x, y or z.",
+        ));
+    }
+    if let Some(triangle_index) = face_triangle
+        && (meshes.len() != 1 || triangle_index * 3 + 2 >= meshes[0].indices.len())
+    {
+        return Err(error("SVG_INVALID_FACE", "Select a valid planar face."));
+    }
+    for mesh in meshes {
+        if mesh.vertices.len() % 6 != 0
+            || mesh.indices.len() % 3 != 0
+            || !mesh.transform.iter().all(|v| v.is_finite())
+            || mesh.transform[12] != 0.0
+            || mesh.transform[13] != 0.0
+            || mesh.transform[14] != 0.0
+            || mesh.transform[15] != 1.0
+            || (!mesh.face_ids.is_empty() && mesh.face_ids.len() != mesh.indices.len() / 3)
+        {
+            return Err(error(
+                "SVG_INVALID_MESH",
+                "SVG projection requires a valid triangle mesh and affine transform.",
+            ));
+        }
+    }
+    let face_id = face_triangle.and_then(|tri| meshes[0].face_ids.get(tri).copied());
+    let includes_triangle = |mesh: &SvgProjectionMesh<'_>, triangle: usize| -> bool {
+        match face_triangle {
+            None => true,
+            Some(target) => match face_id {
+                None => triangle == target,
+                Some(id) => mesh.face_ids.get(triangle).copied() == Some(id),
+            },
+        }
+    };
+    let mut triangle_count = 0usize;
+    for mesh in meshes {
+        for triangle in 0..(mesh.indices.len() / 3) {
+            if includes_triangle(mesh, triangle) {
+                triangle_count += 1;
+                if triangle_count > 20000 {
+                    return Err(error(
+                        "SVG_TRIANGLE_LIMIT",
+                        "SVG projection is limited to 20000 triangles.",
+                    ));
+                }
+            }
+        }
+    }
+    let point = |mesh: &SvgProjectionMesh<'_>, index: usize| -> Result<[f64; 3]> {
+        let vertex = mesh.indices[index] as usize;
+        if vertex * 6 + 2 >= mesh.vertices.len() {
+            return Err(error(
+                "SVG_INVALID_VERTEX_INDEX",
+                "SVG projection contains an invalid vertex index.",
+            ));
+        }
+        let x = mesh.vertices[vertex * 6] as f64;
+        let y = mesh.vertices[vertex * 6 + 1] as f64;
+        let z = mesh.vertices[vertex * 6 + 2] as f64;
+        let m = &mesh.transform;
+        let w = m[12] * x + m[13] * y + m[14] * z + m[15];
+        let iw = if w.is_finite() && w.abs() > 1e-12 {
+            1.0 / w
+        } else {
+            1.0
+        };
+        let pos = [
+            (m[0] * x + m[1] * y + m[2] * z + m[3]) * iw,
+            (m[4] * x + m[5] * y + m[6] * z + m[7]) * iw,
+            (m[8] * x + m[9] * y + m[10] * z + m[11]) * iw,
+        ];
+        if !pos.iter().all(|v| v.is_finite()) {
+            return Err(error(
+                "SVG_NONFINITE_COORDINATES",
+                "SVG projection contains non-finite coordinates.",
+            ));
+        }
+        Ok(pos)
+    };
+    let mut origin = [0.0, 0.0, 0.0];
+    let mut u = if axis == Some("x") {
+        [0.0, 1.0, 0.0]
+    } else {
+        [1.0, 0.0, 0.0]
+    };
+    let mut v = if axis == Some("z") || axis.is_none() {
+        [0.0, 1.0, 0.0]
+    } else {
+        [0.0, 0.0, 1.0]
+    };
+    let mut normal: Option<[f64; 3]> = None;
+    if let Some(triangle) = face_triangle {
+        let mesh = &meshes[0];
+        origin = point(mesh, triangle * 3)?;
+        let b = point(mesh, triangle * 3 + 1)?;
+        let c = point(mesh, triangle * 3 + 2)?;
+        let ab = sub(b, origin);
+        let ac = sub(c, origin);
+        let length = ab[0].hypot(ab[1]).hypot(ab[2]);
+        let n = cross(ab, ac);
+        let normal_length = n[0].hypot(n[1]).hypot(n[2]);
+        if !(normal_length > 0.0) || !normal_length.is_finite() {
+            return Err(error("SVG_DEGENERATE_FACE", "Degenerate face."));
+        }
+        u = [ab[0] / length, ab[1] / length, ab[2] / length];
+        let unit_n = [
+            n[0] / normal_length,
+            n[1] / normal_length,
+            n[2] / normal_length,
+        ];
+        v = cross(unit_n, u);
+        normal = Some(unit_n);
+    }
+    let mut triangles = Vec::new();
+    for mesh in meshes {
+        for i in (0..mesh.indices.len()).step_by(3) {
+            if !includes_triangle(mesh, i / 3) {
+                continue;
+            }
+            let mut ring = Vec::with_capacity(3);
+            for j in 0..3 {
+                let p = sub(point(mesh, i + j)?, origin);
+                if let Some(n) = normal
+                    && (p[0] * n[0] + p[1] * n[1] + p[2] * n[2]).abs() > 1e-5
+                {
+                    return Err(error(
+                        "SVG_NONPLANAR_FACE",
+                        "The selected surface is not planar; use a projection.",
+                    ));
+                }
+                ring.push([
+                    p[0] * u[0] + p[1] * u[1] + p[2] * u[2],
+                    p[0] * v[0] + p[1] * v[1] + p[2] * v[2],
+                ]);
+            }
+            let area = (ring[1][0] - ring[0][0]) * (ring[2][1] - ring[0][1])
+                - (ring[1][1] - ring[0][1]) * (ring[2][0] - ring[0][0]);
+            if !area.is_finite() {
+                return Err(error(
+                    "SVG_NUMERIC_RANGE",
+                    "SVG projection coordinates exceed the numeric range.",
+                ));
+            }
+            if area.abs() > 1e-12 {
+                if area <= 0.0 {
+                    ring.reverse();
+                }
+                triangles.push(ring);
+            }
+        }
+    }
+    if triangles.is_empty() {
+        return bounded_svg_contours(Vec::new());
+    }
+    bounded_svg_contours(planar_geometry::rings::nonzero(&triangles)?)
+}
+
 #[cfg(test)]
 mod display_precision_tests {
     use super::*;

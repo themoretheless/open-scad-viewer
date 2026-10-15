@@ -122,6 +122,19 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field::<Vec<Curve>>(&v, "loop")?,
             tolerance,
         )?),
+        Some("brep_profile_display") => {
+            let loops: Vec<Vec<Curve>> = field(&v, "loops")?;
+            let mut out = Vec::with_capacity(loops.len());
+            for wire in loops {
+                let mut ring = Vec::new();
+                for curve in wire {
+                    let count = if curve.degree == 1 { 1 } else { 24 };
+                    ring.extend(curve.sample_uniform(count, false)?);
+                }
+                out.push(ring);
+            }
+            encode(out)
+        }
         _ => Err(input("Unknown retained profile request")),
     }
 }
