@@ -102,6 +102,14 @@ import {
 import { TextureResources } from './textureResources'
 import { fillObjectUniform, fillSceneUniforms } from './uniformFill'
 import { blendMorphPositions, clampDistanceValue, extractPositions, sameTypedArray } from './webgpuRenderer/sampledLanesMatch'
+import type { GpuCsgTree } from './gpuCsgPreview'
+import type { GpuWboitRenderer } from './gpuWboit'
+import type { GpuBufferArena } from './gpuZeroCopyPipeline'
+import type { SlicerResult } from './gpuSlicer'
+import { writeOverlaySlot, type OverlaySlot } from './webgpuRenderer/overlaySlot'
+import { drawTransparentEntities, groupByShadingModel } from './webgpuRenderer/transparentDraws'
+import { RendererGpuPasses, type TransparencyMode } from './webgpuRenderer/gpuPasses'
+export type { GpuCsgTree } from './gpuCsgPreview'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -149,15 +157,6 @@ interface GMesh {
 /** Shared empty list so render() never allocates when there are no ghosts. */
 const NO_GHOST_MESHES: GMesh[] = []
 
-/** Persistent capacity-grown vertex buffer for transient overlay geometry. */
-interface OverlaySlot {
-  buffer: GPUBuffer | null
-  /** Allocated size in bytes; may exceed the currently written data. */
-  capacity: number
-  /** Vertices to draw this frame (stride 28 bytes). */
-  count: number
-}
-
 interface Bounds {
   center: [number, number, number]
   radius: number
@@ -201,7 +200,6 @@ const GRID_MIN_EXTENT = 200
 const GRID_FADE_DISTANCES = 6
 const CLICK_MOVE_THRESHOLD = 3
 const MAX_EDGE_BUFFER_BYTES = 32 * 1024 * 1024
-const MAX_OVERLAY_BUFFER_BYTES = 16 * 1024 * 1024
 const MAX_DEPTH_CANDIDATES = 32
 const MAX_DEPTH_CONTINUATIONS = 256
 const WHEEL_HISTORY_IDLE_MS = 250
@@ -257,6 +255,7 @@ export class WebGPURenderer {
   private sceneBG!: GPUBindGroup
   private depth: GPUTexture | null = null
   private depthView: GPUTextureView | null = null
+  private readonly gpuPasses = new RendererGpuPasses()
 
   private meshes: GMesh[] = []
   private readonly nativePicking = new NativePickingCache()
@@ -574,8 +573,38 @@ export class WebGPURenderer {
     dev.queue.writeBuffer(this.gridVB, 0, axis)
   }
 
+  setCsgPreviewTree(tree: GpuCsgTree | null) { this.gpuPasses.csgTree = tree; this.requestRender() }
+  getCsgPreviewTree(): GpuCsgTree | null { return this.gpuPasses.csgTree }
+  /** Live-typing CSG preview; the next published mesh build replaces it. */
+  previewCsgSource(source: string) {
+    if (this.currentStatus.status === 'ready' && this.gpuPasses.previewSource(source)) this.requestRender()
+  }
+  getTransparencyMode(): TransparencyMode { return this.gpuPasses.transparencyMode }
+  setTransparencyMode(mode: TransparencyMode): void {
+    if (this.gpuPasses.transparencyMode !== mode) { this.gpuPasses.transparencyMode = mode; this.requestRender() }
+  }
+  get wboitRenderer(): GpuWboitRenderer { return this.gpuPasses.wboitRenderer }
+  getBufferArena(): GpuBufferArena | null {
+    return !this.dev || this.dead || this.lost ? null : this.gpuPasses.bufferArena(this.dev)
+  }
+  sliceSceneMeshesGpu(options: Parameters<RendererGpuPasses['slice']>[1]): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
+    return this.gpuPasses.slice(this.meshes, options)
+  }
+  async gpuPickAt(clientX: number, clientY: number): Promise<number | null> {
+    const canvas = this.canvas, dev = this.dev
+    if (!canvas || !dev || !this.initialized || this.dead || this.lost || this.meshes.length === 0) return null
+    const rect = canvas.getBoundingClientRect()
+    const px = clientX - rect.left, py = clientY - rect.top
+    if (px < 0 || py < 0 || px >= rect.width || py >= rect.height) return null
+    return this.gpuPasses.pick(dev, this.meshes, {
+      cameraViewProjection: this.cameraState().viewProjection, viewportWidth: rect.width, viewportHeight: rect.height,
+      sectionNormal: this.sectionNormal, sectionOffset: this.sectionOffset, sectionEnabled: this.sectionEnabled,
+    }, px, py)
+  }
+
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
     this.cancelPendingHover()
+    this.gpuPasses.csgTree = null
     const dev = this.dev
     if (!dev || !this.initialized || this.dead || this.lost) return
 
@@ -1563,6 +1592,7 @@ export class WebGPURenderer {
       this.depth?.destroy()
       this.depth = null
       this.depthView = null
+      this.gpuPasses.releaseDepth()
       return changed
     }
 
@@ -1584,6 +1614,7 @@ export class WebGPURenderer {
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       })
       this.depthView = this.depth.createView()
+      this.gpuPasses.releaseDepth()
     }
     this.drawable = true
     return changed
@@ -1657,14 +1688,17 @@ export class WebGPURenderer {
     // Classify draws before encoding: the shadow depth pass runs ahead of the
     // main pass and draws the same opaque set.
     const transitioning = this.geometryGhosts.length > 0 || hasMorph
+    const useWboit = this.gpuPasses.transparencyMode === 'wboit'
     this.viewFrustum.update(viewProjection)
-    this.opaqueDraws.length = this.edgeDraws.length = 0
-    this.transparentSort.begin()
+    this.opaqueDraws.length = this.edgeDraws.length = this.transparentDraws.length = 0
+    if (!useWboit) this.transparentSort.begin()
     for (let index = 0; index < this.meshes.length; index++) {
       const mesh = this.meshes[index]
       if (!this.isMeshVisible(index) || (!mesh.morph && !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
-      if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
-      else this.opaqueDraws.push(mesh)
+      if (isTransparentAlpha(mesh.alpha)) {
+        if (useWboit) this.transparentDraws.push(mesh)
+        else this.transparentSort.add(index, mesh.worldBounds.center)
+      } else this.opaqueDraws.push(mesh)
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
       if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
     }
@@ -1715,6 +1749,10 @@ export class WebGPURenderer {
       }
     }
 
+    // GPU CSG Preview: evaluate Boolean terms on WebGPU hardware when active
+    const isCsgActive = this.gpuPasses.csgActive
+    if (isCsgActive) this.gpuPasses.encodeCsg(dev, enc, ctx.getCurrentTexture().createView(), this.fmt, canvas.width, canvas.height, viewProjection, eye)
+
     // Cached in updateSize; the fallback covers depth textures the cache miss
     // predates (tests and external texture swaps) without per-frame allocation.
     const depthView = this.depthView ?? this.depth.createView()
@@ -1727,7 +1765,7 @@ export class WebGPURenderer {
           b: this.backgroundColor[2],
           a: 1,
         },
-        loadOp: 'clear', storeOp: 'store',
+        loadOp: isCsgActive ? 'load' : 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
         view: depthView,
@@ -1756,74 +1794,58 @@ export class WebGPURenderer {
       pass.draw(this.measurementVC)
     }
 
-    const customOpaque = this.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
-    if (!customOpaque && (transitioning || !this.opaqueInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced' }), this.sceneBG, this.opaqueDraws, false, this.textures.shadowBG ?? undefined))) {
-      this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('mesh'), this.sceneBG, this.opaqueDraws, false, this.textures.shadowBG ?? undefined)
-    } else if (customOpaque) {
-      // Mixed materials: draw each shading-model group with its resolved mesh
-      // pipeline (source order preserved); instancing serves the default path.
-      for (const group of this.groupByShadingModel(this.opaqueDraws)) {
-        const shaderId = resolveMeshShaderId(group[0].shadingModel)
-        this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(shaderId), this.sceneBG, group,
-          false, this.extraBindGroupForShader(shaderId))
-      }
-    }
-
-    // Section cap: redraw the opaque meshes with the inverted-clip cap shader
-    // (front-face culling, depth write on, compare less — same depth state as
-    // the surface pass). Only the clipped side's back faces survive, so a
-    // closed solid's interior reads as a filled, unlit cut surface. Runs only
-    // when the section plane clips and surfaces are on screen (opaque draws);
-    // xray routes everything through the transparent pass, so it skips caps.
-    if (this.sectionEnabled && this.displayMode !== 'xray' && this.opaqueDraws.length) {
-      // The cap layout still has the inert group(2); bind it explicitly: bundles
-      // start with empty state, and after matcap/PBR surfaces the pass holds
-      // an incompatible group(2).
-      this.sectionCapBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('meshSectionCap'), this.sceneBG, this.opaqueDraws,
-        false, this.extraBindGroupForShader('meshSectionCap'))
-    }
-
-    pass.setPipeline(this.meshTransparentPipeline())
-    pass.setBindGroup(0, this.sceneBG)
-    // The mesh surface shader samples the shadow map at group(2).
-    if (this.textures.shadowBG) pass.setBindGroup(2, this.textures.shadowBG)
-    const ghostMeshes = this.geometryGhosts.length
-      ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
-      : NO_GHOST_MESHES
-    ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
-    const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
-    this.transparentDraws.length = 0
-    for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
-    const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
-    if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), this.sceneBG, this.transparentDraws, false, this.textures.shadowBG ?? undefined))) {
-      for (const g of this.transparentDraws) {
-        pass.setBindGroup(1, g.bg)
-        this.setObjectStyleImmediate(pass, g)
-        pass.setVertexBuffer(0, g.vb)
-        pass.setVertexBuffer(1, g.morphSlot!)
-        pass.setIndexBuffer(g.ib, 'uint32')
-        pass.drawIndexed(g.ic)
-      }
-    } else if (customTransparent) {
-      // Mixed materials: per-entity pass with the resolved transparent pipeline
-      // for each shading model (uniform variant; immediates serve 'mesh' only).
-      let activeModel: ShadingModel | null = null
-      for (const g of this.transparentDraws) {
-        if (g.shadingModel !== activeModel) {
-          activeModel = g.shadingModel
-          const shaderId = resolveMeshShaderId(activeModel)
-          pass.setPipeline(activeModel === 'phong'
-            ? this.meshTransparentPipeline()
-            : this.getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }))
-          const extraGroup = this.extraBindGroupForShader(shaderId)
-          if (extraGroup) pass.setBindGroup(2, extraGroup)
+    if (!isCsgActive) {
+      const customOpaque = this.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
+      if (!customOpaque && (transitioning || !this.opaqueInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced' }), this.sceneBG, this.opaqueDraws, false, this.textures.shadowBG ?? undefined))) {
+        this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('mesh'), this.sceneBG, this.opaqueDraws, false, this.textures.shadowBG ?? undefined)
+      } else if (customOpaque) {
+        // Mixed materials: draw each shading-model group with its resolved mesh
+        // pipeline (source order preserved); instancing serves the default path.
+        for (const group of groupByShadingModel(this.opaqueDraws)) {
+          const shaderId = resolveMeshShaderId(group[0].shadingModel)
+          this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(shaderId), this.sceneBG, group,
+            false, this.extraBindGroupForShader(shaderId))
         }
-        pass.setBindGroup(1, g.bg)
-        if (activeModel === 'phong') this.setObjectStyleImmediate(pass, g)
-        pass.setVertexBuffer(0, g.vb)
-        pass.setVertexBuffer(1, g.morphSlot!)
-        pass.setIndexBuffer(g.ib, 'uint32')
-        pass.drawIndexed(g.ic)
+      }
+
+      // Section cap: redraw the opaque meshes with the inverted-clip cap shader
+      // (front-face culling, depth write on, compare less — same depth state as
+      // the surface pass). Only the clipped side's back faces survive, so a
+      // closed solid's interior reads as a filled, unlit cut surface. Runs only
+      // when the section plane clips and surfaces are on screen (opaque draws);
+      // xray routes everything through the transparent pass, so it skips caps.
+      if (this.sectionEnabled && this.displayMode !== 'xray' && this.opaqueDraws.length) {
+        // The cap layout still has the inert group(2); bind it explicitly: bundles
+        // start with empty state, and after matcap/PBR surfaces the pass holds
+        // an incompatible group(2).
+        this.sectionCapBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('meshSectionCap'), this.sceneBG, this.opaqueDraws,
+          false, this.extraBindGroupForShader('meshSectionCap'))
+      }
+
+      if (!useWboit) {
+        pass.setPipeline(this.meshTransparentPipeline())
+        pass.setBindGroup(0, this.sceneBG)
+        // The mesh surface shader samples the shadow map at group(2).
+        if (this.textures.shadowBG) pass.setBindGroup(2, this.textures.shadowBG)
+        const ghostMeshes = this.geometryGhosts.length
+          ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+          : NO_GHOST_MESHES
+        ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
+        const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
+        this.transparentDraws.length = 0
+        for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
+        const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
+        const setStyle = (target: GPURenderPassEncoder, g: GMesh) => this.setObjectStyleImmediate(target, g)
+        if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), this.sceneBG, this.transparentDraws, false, this.textures.shadowBG ?? undefined))) {
+          drawTransparentEntities(pass, this.transparentDraws, setStyle)
+        } else if (customTransparent) {
+          // Mixed materials: per-entity pass with the resolved transparent pipeline
+          // for each shading model (uniform variant; immediates serve 'mesh' only).
+          drawTransparentEntities(pass, this.transparentDraws, setStyle, model => {
+            const shaderId = resolveMeshShaderId(model)
+            return [model === 'phong' ? this.meshTransparentPipeline() : this.getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }), this.extraBindGroupForShader(shaderId)]
+          })
+        }
       }
     }
 
@@ -1905,6 +1927,15 @@ export class WebGPURenderer {
     }
 
     pass.end()
+
+    if (!isCsgActive && useWboit) {
+      for (const ghost of this.geometryGhosts) for (const gMesh of ghost.meshes) if (gMesh.alpha > 0) this.transparentDraws.push(gMesh)
+      this.gpuPasses.encodeWboit(this.transparentDraws, {
+        dev, enc, depthView, colorView: ctx.getCurrentTexture().createView(), fmt: this.fmt, width: canvas.width, height: canvas.height,
+        sceneBG: this.sceneBG, shadowBG: this.textures.shadowBG, objectLayout: this.pipelines.objectLayout,
+        vertexLayouts: this.pipelines.vertexLayouts.mesh, extraBindGroupForShader: id => this.extraBindGroupForShader(id),
+      })
+    }
     dev.queue.submit([enc.finish()])
     const token = this.pendingFrameToken
     this.pendingFrameToken = null
@@ -1982,20 +2013,6 @@ export class WebGPURenderer {
     // map holds mid-morph depth, so the final geometry needs one re-render.
     if (morphFinished) { this.clearDrawCaches(); this.invalidateShadowMap() }
     return active
-  }
-
-  /**
-   * Groups draws by shading model, preserving first-seen order. Used only when
-   * a scene mixes materials; the all-default path skips the allocation.
-   */
-  private groupByShadingModel(draws: readonly GMesh[]): GMesh[][] {
-    const groups = new Map<ShadingModel, GMesh[]>()
-    for (const mesh of draws) {
-      const group = groups.get(mesh.shadingModel)
-      if (group) group.push(mesh)
-      else groups.set(mesh.shadingModel, [mesh])
-    }
-    return [...groups.values()]
   }
 
   private setObjectStyleImmediate(pass: GPURenderPassEncoder, mesh: GMesh) {
@@ -2410,44 +2427,6 @@ export class WebGPURenderer {
     this.releaseOverlaySlot(this.sourceLineSlot)
   }
 
-  /**
-   * Uploads overlay vertices into a persistent buffer, growing its capacity
-   * with headroom only when the current allocation is too small. Per-frame
-   * hover updates therefore reuse the same GPU buffer via queue.writeBuffer
-   * instead of a destroy/create pair.
-   */
-  private writeOverlaySlot(slot: OverlaySlot, values: number[]) {
-    slot.count = 0
-    const dev = this.dev
-    if (!dev || !values.length) return
-    const data = new Float32Array(values)
-    const maxBytes = Math.min(MAX_OVERLAY_BUFFER_BYTES, dev.limits.maxBufferSize)
-    if (data.byteLength > maxBytes) return
-    if (!slot.buffer || slot.capacity < data.byteLength) {
-      const capacity = Math.min(maxBytes, Math.max(4096, data.byteLength * 2))
-      let replacement: GPUBuffer | null = null
-      try {
-        replacement = dev.createBuffer({ size: capacity, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
-        dev.queue.writeBuffer(replacement, 0, data)
-      } catch {
-        replacement?.destroy()
-        return
-      }
-      const previous = slot.buffer
-      slot.buffer = replacement
-      slot.capacity = capacity
-      slot.count = values.length / 7
-      previous?.destroy()
-      return
-    }
-    try {
-      dev.queue.writeBuffer(slot.buffer, 0, data)
-      slot.count = values.length / 7
-    } catch {
-      slot.count = 0
-    }
-  }
-
   private appendColoredPositions(target: number[], positions: Float32Array, color: readonly number[]) {
     for (let offset = 0; offset + 2 < positions.length; offset += 3) {
       target.push(positions[offset], positions[offset + 1], positions[offset + 2], ...color)
@@ -2551,9 +2530,9 @@ export class WebGPURenderer {
     if (this.selectedHit) add(this.selectedHit, false)
     if (this.hoveredHit && !this.sameOverlayTarget(this.selectedHit, this.hoveredHit)) add(this.hoveredHit, true)
 
-    this.writeOverlaySlot(this.selectionFaceSlot, faceValues)
-    this.writeOverlaySlot(this.selectionLineSlot, lineValues)
-    this.writeOverlaySlot(this.deepSelectionLineSlot, deepLineValues)
+    writeOverlaySlot(this.dev, this.selectionFaceSlot, faceValues)
+    writeOverlaySlot(this.dev, this.selectionLineSlot, lineValues)
+    writeOverlaySlot(this.dev, this.deepSelectionLineSlot, deepLineValues)
   }
 
   private rebuildSourceHighlightOverlay() {
@@ -2581,8 +2560,8 @@ export class WebGPURenderer {
       if (geometry.truncated) break
     }
 
-    this.writeOverlaySlot(this.sourceFaceSlot, faceValues)
-    this.writeOverlaySlot(this.sourceLineSlot, lineValues)
+    writeOverlaySlot(this.dev, this.sourceFaceSlot, faceValues)
+    writeOverlaySlot(this.dev, this.sourceLineSlot, lineValues)
   }
 
   private onDown = (e: PointerEvent) => {
@@ -2839,6 +2818,7 @@ export class WebGPURenderer {
     this.depth?.destroy()
     this.depth = null
     this.depthView = null
+    this.gpuPasses.destroy()
     this.sceneUB?.destroy()
     this.sceneUB = null
     this.morphDummyVB?.destroy()

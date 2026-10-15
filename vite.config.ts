@@ -67,6 +67,8 @@ export default defineConfig({
             { name: 'solid-gpu-view', test: /src[\\/]services[\\/]solidGpuView/ },
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
+            // Keep independent GPU preview and compute passes out of renderer control code.
+            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit|gpuPicker|gpuZeroCopyPipeline|gpuSlicer|gpuBvhRaycast|gpuSubdivision|gpuGcodePreview|gpuImageTrace|gpuTrussSolver|gpuSemanticEdges|gpuNurbsTessellate|gpuMarchingCubes)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],

@@ -82,3 +82,26 @@ export const tessellateSdfGpuAware=(field:SdfField,grid:SdfGrid):PolygonBuild=>{
  if(primed){gpuPending.delete(key);return callGeometryRust('sdf_finish',{id:primed.id,values:primed.values})}
  return tessellateSdf(field,grid)
 }
+
+import { runGpuMarchingIsosurface, type MarchingOutput } from '../gpuMarchingCubes'
+
+/**
+ * Extracts an isosurface mesh directly on the GPU from a sampled SDF scalar
+ * grid via the WebGPU Marching Tetrahedra compute pipeline.
+ */
+export async function tessellateSdfMarchingCubesGpu(
+  scalarField: Float32Array,
+  grid: SdfGrid,
+  isoValue = 0,
+): Promise<MarchingOutput | null> {
+  if (grid.cells.length < 3 || grid.min.length < 3 || grid.max.length < 3) return null
+  return runGpuMarchingIsosurface(
+    {
+      cells: [grid.cells[0], grid.cells[1], grid.cells[2]],
+      min: [grid.min[0], grid.min[1], grid.min[2]],
+      max: [grid.max[0], grid.max[1], grid.max[2]],
+      isoLevel: isoValue,
+    },
+    scalarField,
+  )
+}
