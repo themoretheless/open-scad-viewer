@@ -71,3 +71,11 @@ The Node CI job allowance is 60 minutes: the observed merged-kernel rebuild
 alone took 14m40 and the preceding complete local Node invocation took 28m49,
 exceeding the former 40-minute combined-job allowance before packaging. Individual
 test deadlines, mathematical work limits and every test remain unchanged.
+
+Four-thread execution on the shared audit host still exhausted recognition's
+original wall budgets. Native execution therefore partitions the complete test
+catalog by the identical `aag` name substring: matching tests run serially, all
+others run in the normal parallel workspace invocation. Both invocations are
+mandatory and their catalogs must be disjoint with union equal to the full
+catalog. No test, ignore policy, mathematical limit or individual wall budget
+is removed or enlarged. The same partition is used in CI.

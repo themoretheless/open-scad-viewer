@@ -32,7 +32,12 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - name: Check typed geometry without wire codecs
         run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
@@ -154,7 +159,12 @@ jobs:
       # Hosted Windows smoke does not qualify the software DX12 adapter. An
       # unavailable Vulkan adapter exercises the existing optional-GPU skip;
       # COMPUTE_REQUIRE_GPU keeps required GPU runs fail-closed.
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
         env:
           WGPU_BACKEND: ${{ runner.os == 'Windows' && 'vulkan' || 'metal' }}
       - run: node node_modules/vitest/vitest.mjs run tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
