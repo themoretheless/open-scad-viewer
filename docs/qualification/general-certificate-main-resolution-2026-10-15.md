@@ -62,3 +62,7 @@ The runtime-manifest diagnostic still distinguishes the historical qualified
 active manifests from newly executed kernel bytes. Rebuilding/refreezing alone
 cannot activate pending manifests or grant production qualification. This known
 mismatch is retained as a diagnostic, never converted into a passing assertion.
+
+The intersection query codec module retains its explicit `cfg(feature = "codec")`
+gate, matching the restored optional dependency; typed native queries compile
+without importing transport serialization. Default-feature behavior is unchanged.
