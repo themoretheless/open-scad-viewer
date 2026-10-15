@@ -4,6 +4,7 @@ use crate::{
     check, distance_bounds::Interval as I, surface::Surface, surface_measure::jets, Result,
 };
 mod bernstein_minors;
+mod bernstein_symmetric;
 
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
@@ -105,6 +106,12 @@ fn inspect_weighted(
     inspect_metric(s, projection, [scale, 1.], max_cells, max_depth)
 }
 
+/// Fixed common metric, strictly positive symmetric Jacobian only. This
+/// contract can glue continuous charts across C0 seams; a P-matrix result on
+/// either chart alone is insufficient for that conclusion.
+pub fn inspect_strong_metric(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],max_cells:usize)->Result<Report> {
+    inspect_metric_impl(s,projection,row_weights,[[1.,1.];2],max_cells,12,true)
+}
 fn inspect_metric(
     s: &Surface,
     projection: [[i8; 3]; 2],
@@ -112,7 +119,18 @@ fn inspect_metric(
     max_cells: usize,
     max_depth: usize,
 ) -> Result<Report> {
+    inspect_metric_impl(s,projection,row_weights,[[1.,1.];2],max_cells,max_depth,false)
+}
+/// Strict common-metric proof after a constant affine change of source
+/// parameter units. Rates enclose the exact constant source derivatives with
+/// respect to the common parameters; original knots and poles stay unchanged.
+pub fn inspect_strong_reparameterized(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],rates:[[f64;2];2],max_cells:usize)->Result<Report> {
+    inspect_metric_impl(s,projection,row_weights,rates,max_cells,12,true)
+}
+fn inspect_metric_impl(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],rates:[[f64;2];2],max_cells:usize,max_depth:usize,strong_only:bool)->Result<Report> {
     s.validate()?;
+    let columns=[I::new(rates[0][0],rates[0][1])?,I::new(rates[1][0],rates[1][1])?];
+    check(columns.iter().all(|r|r.lo>0.||r.hi<0.),"Parameter rates must exclude zero")?;
     check(
         max_cells <= 100000
             && s.control_points.iter().flatten().all(|p| p.len() == 3)
@@ -156,7 +174,7 @@ fn inspect_metric(
     // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
     // A C0 knot join is excluded from this alternative. Strong monotonicity
     // below remains valid for the existing piecewise smooth continuous case.
-    let continuously_differentiable = (0..2).all(|k| {
+    let continuously_differentiable = !strong_only && (0..2).all(|k| {
         knots[k]
             .iter()
             .filter(|v| **v > knots[k][degrees[k]] && **v < knots[k][counts[k]])
@@ -259,6 +277,7 @@ fn inspect_metric(
                         projected[row][axis].hi.min(other.hi),
                     )?;
                     projected[row][axis] = projected[row][axis].mul(I::point(row_weights[row]))?;
+                    if rates[axis]!=[1.,1.] {projected[row][axis]=projected[row][axis].mul(columns[axis])?;}
                 }
             }
             let [[uu, uv], [vu, vv]] = projected;
@@ -277,8 +296,8 @@ fn inspect_metric(
         // Correlated polynomial minors resolve only an otherwise unknown cell,
         // including numerical enclosure failures, under the same counted cell.
         let result = if !matches!(&result, Ok(1) | Ok(-1))
-            && continuously_differentiable
-            && bernstein_minors::certify(s, span, domain, projection).unwrap_or(false)
+            && ((strong_only && bernstein_symmetric::certify(s,span,domain,projection,row_weights,rates).unwrap_or(false))
+                || (continuously_differentiable && bernstein_minors::certify(s,span,domain,projection).unwrap_or(false)))
         {
             Ok(1)
         } else {

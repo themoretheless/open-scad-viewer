@@ -684,8 +684,9 @@ pub(crate) fn polar_poly_derivative(a: &PolarPoly,axis: usize,domain: [[f64;2];2
 }
 pub(crate) fn polar_poly_mul(a: &PolarPoly,b: &PolarPoly) -> Result<PolarPoly> {
     let [p,q,r,t] = [a.len()-1,a[0].len()-1,b.len()-1,b[0].len()-1];
-    // Current callers cap each source degree at eight, hence all binomial
-    // coefficients here (degree <=24) are exactly representable integers.
+    // Valid source degrees are at most 25. Products use degree at most 50;
+    // all binomial coefficients and integer recurrence intermediates fit u64,
+    // and the final coefficients are exactly representable in binary64.
     let choose = |n: usize,k: usize| {
         let mut value=1u64;
         for i in 0..k.min(n-k) { value=value*(n-i) as u64/(i+1) as u64; }

@@ -86,6 +86,7 @@ fn profile_control_bounds(wire: &[Curve]) -> ([f64; 2], [f64; 2]) {
     }
     (min, max)
 }
+mod parametric_edges;
 struct Builder {
     model: Model,
     edges: BTreeMap<(usize, usize), usize>,

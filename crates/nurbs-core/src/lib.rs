@@ -146,6 +146,7 @@ pub use crate::analysis::curve_regularity;
 pub use crate::sweeps::audit::pair as sweep_pair_audit;
 pub use crate::analysis::surface_injectivity;
 pub use crate::analysis::surface_regularity;
+pub use crate::analysis::surface_correspondence;
 pub use crate::join::surface_join;
 pub use crate::join::surface_g1;
 pub use crate::join::surface_g2;

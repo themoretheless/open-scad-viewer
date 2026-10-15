@@ -45,6 +45,10 @@ mod body_edit;
 pub mod boundary_agreement;
 pub mod watertight;
 pub mod boundary_embedding;
+pub mod boundary_certificate;
+pub mod sweep_boundary_owned;
+#[cfg(test)]
+mod sweep_boundary_owned_tests;
 pub mod boundary_hull_contact;
 pub mod close_topology;
 pub mod coverage_verifier;

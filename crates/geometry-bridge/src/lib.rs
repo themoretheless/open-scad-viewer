@@ -41,6 +41,8 @@ mod cad_body_affine;
 mod cad_body_keypoints;
 mod cad_boolean;
 mod cad_boundary_agreement;
+mod cad_boundary_certificate;
+mod cad_sweep_boundary;
 mod cad_bridge_curve;
 mod cad_centered_lattice;
 mod cad_clearance;
