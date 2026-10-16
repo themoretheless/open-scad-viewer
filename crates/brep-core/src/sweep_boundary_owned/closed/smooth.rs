@@ -81,12 +81,19 @@ pub struct BindingReport {
     pub reason: &'static str,
     // Source-to-actual signed tensor coordinate permutations, one per face.
     gauges: Vec<u8>,
+    source_slots: Vec<usize>,
 }
 impl BindingReport {
+    pub(super) fn source_face(&self, slot: usize) -> Option<usize> {
+        self.certified
+            .then(|| self.source_slots.get(slot).copied())
+            .flatten()
+            .filter(|i| *i != usize::MAX)
+    }
     pub fn reparameterized_faces(&self) -> usize {
         self.gauges.iter().filter(|&&g| g != 0).count()
     }
-    fn orientation_reversed(&self, face: usize) -> Option<bool> {
+    pub(super) fn orientation_reversed(&self, face: usize) -> Option<bool> {
         self.gauges.get(face).map(|g| g.count_ones() % 2 != 0)
     }
 }
@@ -161,7 +168,13 @@ fn exact_add(a: f64, b: f64) -> Option<f64> {
     let ar = a - av;
     (s.is_finite() && ar + br == 0.).then_some(s)
 }
-fn exact_mul(a: f64, b: f64) -> Option<f64> {
+pub(super) fn exact_mul(a: f64, b: f64) -> Option<f64> {
+    if a == 1. && b.is_finite() {
+        return Some(b);
+    }
+    if b == 1. && a.is_finite() {
+        return Some(a);
+    }
     if a == 0. || b == 0. {
         return Some(0.);
     }
@@ -173,7 +186,7 @@ fn exact_mul(a: f64, b: f64) -> Option<f64> {
         && a.mul_add(b, -p) == 0.)
         .then_some(p)
 }
-fn image(pose: AffinePose, p: &[f64], origin: [f64; 3]) -> Option<[f64; 3]> {
+pub(super) fn image(pose: AffinePose, p: &[f64], origin: [f64; 3]) -> Option<[f64; 3]> {
     let p = [
         exact_add(p[0], -origin[0])?,
         exact_add(p[1], -origin[1])?,
@@ -191,7 +204,8 @@ fn matches_gauge(
     model: &Model,
     index: usize,
     source: &Curve,
-    pose: &[AffinePose; 6],
+    pose: &[AffinePose],
+    time_weights: &[f64],
     origin: [f64; 3],
     out: &mut BindingReport,
     max: u64,
@@ -201,14 +215,14 @@ fn matches_gauge(
     let flip_u = gauge & 1 != 0;
     let flip_v = gauge & 2 != 0;
     let degrees = if swap {
-        [5, source.degree]
+        [pose.len() - 1, source.degree]
     } else {
-        [source.degree, 5]
+        [source.degree, pose.len() - 1]
     };
     let shape = if swap {
-        [6, source.control_points.len()]
+        [pose.len(), source.control_points.len()]
     } else {
-        [source.control_points.len(), 6]
+        [source.control_points.len(), pose.len()]
     };
     let face = &model.faces[index];
     let s = &face.surface;
@@ -226,7 +240,7 @@ fn matches_gauge(
         return Ok(false);
     }
     for (i, p) in source.control_points.iter().enumerate() {
-        for j in 0..6 {
+        for j in 0..pose.len() {
             let Some(q) = image(pose[j], p, origin) else {
                 return Ok(false);
             };
@@ -237,13 +251,16 @@ fn matches_gauge(
             if flip_v {
                 v = shape[1] - 1 - v;
             }
+            let Some(weight) = exact_mul(source.weights[i], time_weights[j]) else {
+                return Ok(false);
+            };
             for k in 0..3 {
                 if out.exact_work == max {
                     out.reason = "affine-wall-binding-work-limit";
                     return Ok(false);
                 }
                 out.exact_work += 1;
-                if s.weights[u][v] != source.weights[i] || s.control_points[u][v][k] != q[k] {
+                if s.weights[u][v] != weight || s.control_points[u][v][k] != q[k] {
                     return Ok(false);
                 }
             }
@@ -274,13 +291,24 @@ fn matches_face(
     model: &Model,
     index: usize,
     source: &Curve,
-    pose: &[AffinePose; 6],
+    pose: &[AffinePose],
+    time_weights: &[f64],
     origin: [f64; 3],
     out: &mut BindingReport,
     max: u64,
 ) -> Result<Option<u8>> {
     for gauge in 0..8 {
-        if matches_gauge(model, index, source, pose, origin, out, max, gauge)? {
+        if matches_gauge(
+            model,
+            index,
+            source,
+            pose,
+            time_weights,
+            origin,
+            out,
+            max,
+            gauge,
+        )? {
             return Ok(Some(gauge));
         }
         if out.exact_work == max {
@@ -296,6 +324,35 @@ fn binding(
     origin: [f64; 3],
     max: u64,
 ) -> Result<BindingReport> {
+    let p = poses.iter().map(|p| p.as_slice()).collect::<Vec<_>>();
+    let weights = vec![&[1.; 6][..]; poses.len()];
+    binding_impl(model, profiles, &p, &weights, origin, max)
+}
+pub(super) fn binding_rational(
+    model: &Model,
+    profiles: &[Vec<Curve>],
+    poses: &[nurbs_core::affine_volume::RationalPiece],
+    origin: [f64; 3],
+    max: u64,
+) -> Result<BindingReport> {
+    let p = poses
+        .iter()
+        .map(|p| p.controls.as_slice())
+        .collect::<Vec<_>>();
+    let w = poses
+        .iter()
+        .map(|p| p.weights.as_slice())
+        .collect::<Vec<_>>();
+    binding_impl(model, profiles, &p, &w, origin, max)
+}
+fn binding_impl(
+    model: &Model,
+    profiles: &[Vec<Curve>],
+    poses: &[&[AffinePose]],
+    time_weights: &[&[f64]],
+    origin: [f64; 3],
+    max: u64,
+) -> Result<BindingReport> {
     model.validate()?;
     let mut out = BindingReport {
         certified: false,
@@ -303,6 +360,7 @@ fn binding(
         exact_work: 0,
         reason: "affine-wall-coverage-unproved",
         gauges: vec![0; model.faces.len()],
+        source_slots: vec![usize::MAX; model.faces.len()],
     };
     let spans = profiles.iter().map(Vec::len).sum::<usize>();
     if model.faces.len() != spans * poses.len()
@@ -335,9 +393,16 @@ fn binding(
                     if used[actual] {
                         continue;
                     }
-                    if let Some(gauge) =
-                        matches_face(model, actual, source, pose, origin, &mut out, max)?
-                    {
+                    if let Some(gauge) = matches_face(
+                        model,
+                        actual,
+                        source,
+                        pose,
+                        time_weights[layer],
+                        origin,
+                        &mut out,
+                        max,
+                    )? {
                         matched = Some((actual, gauge));
                         break;
                     }
@@ -350,6 +415,7 @@ fn binding(
                 };
                 used[actual] = true;
                 out.gauges[actual] = gauge;
+                out.source_slots[index] = actual;
                 out.faces += 1;
             }
         }

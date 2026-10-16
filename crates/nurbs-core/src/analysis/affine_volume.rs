@@ -1,4 +1,4 @@
-//! Global filled-carrier atlas for coefficient-owned piecewise quintic poses.
+//! Global filled-carrier atlas for coefficient-owned polynomial/rational poses.
 //! F(u,v,t)=T(t)+A(t)(Q(u,v)-origin). UV trims, wall/carrier binding, original-law
 //! approximation, shell orientation and G1/G2 are separate owner obligations.
 use crate::distance_bounds::Interval as I;
@@ -14,6 +14,47 @@ use std::collections::BTreeMap;
 /// Three matrix columns followed by translation; all values are literal source
 /// coefficients, not interval samples or caller-supplied successful proofs.
 pub type Pose = [[f64; 3]; 4];
+mod rational;
+pub use rational::{
+    ColumnFactor, PreconditionedReport, ProofCoordinates, RationalPiece, certify_rational,
+    certify_rational_preconditioned, jacobian_orientation_rational,
+};
+#[derive(Clone, Copy)]
+enum Motion<'a> {
+    Quintic(&'a [[Pose; 6]]),
+    Rational(&'a [RationalPiece]),
+}
+impl<'a> Motion<'a> {
+    fn len(self) -> usize {
+        match self {
+            Self::Quintic(p) => p.len(),
+            Self::Rational(p) => p.len(),
+        }
+    }
+    fn valid(self) -> bool {
+        match self {
+            Self::Quintic(p) => p
+                .iter()
+                .flatten()
+                .flatten()
+                .flatten()
+                .all(|x| x.is_finite() && x.abs() <= 1e9),
+            Self::Rational(p) => p.iter().all(RationalPiece::valid),
+        }
+    }
+    fn endpoints(self, i: usize) -> (&'a Pose, &'a Pose) {
+        match self {
+            Self::Quintic(p) => (&p[i][0], &p[i][5]),
+            Self::Rational(p) => (&p[i].controls[0], p[i].controls.last().unwrap()),
+        }
+    }
+    fn enclose(self, i: usize, t: I) -> Result<EnclosedPose> {
+        match self {
+            Self::Quintic(p) => pose_on(&p[i], t, p.len()),
+            Self::Rational(p) => rational::pose_on(&p[i], t, p.len()),
+        }
+    }
+}
 type Box3 = [[f64; 2]; 3];
 fn bezier(mut a: Vec<I>, t: I) -> Result<I> {
     let hull = I::new(
@@ -86,8 +127,9 @@ fn union(a: &mut EnclosedPose, b: EnclosedPose) -> Result<()> {
 struct Context<'a> {
     carrier: &'a Surface,
     origin: [f64; 3],
-    pieces: &'a [[Pose; 6]],
+    pieces: Motion<'a>,
     poses: BTreeMap<[u64; 2], EnclosedPose>,
+    coordinates: Option<ProofCoordinates>,
 }
 impl Context<'_> {
     fn temporal(
@@ -118,7 +160,13 @@ impl Context<'_> {
             if local.hi < 0. || local.lo > 1. {
                 continue;
             }
-            let value = pose_on(&self.pieces[i], local.intersect(0., 1.)?, count)?;
+            let local = local.intersect(0., 1.)?;
+            let value = match (self.pieces, self.coordinates.as_ref()) {
+                (Motion::Rational(p), Some(c)) => {
+                    rational::pose_in_coordinates(&p[i], local, count, c)?
+                }
+                _ => self.pieces.enclose(i, local)?,
+            };
             if let Some(p) = &mut pose {
                 union(p, value)?;
             } else {
@@ -150,6 +198,15 @@ impl Context<'_> {
             return Ok(Enclosed::Unavailable(Some(axis)));
         }
         q[0] = iv::sub(q[0], self.origin.map(I::point))?;
+        if let Some(f) = self
+            .coordinates
+            .as_ref()
+            .and_then(|c| c.column_factor.as_ref())
+        {
+            for jet in &mut q {
+                jet[f.base] = jet[f.base].add(jet[f.dependent].mul(I::point(f.scale))?)?;
+            }
+        }
         let Some(pose) = self.temporal(b[2], out, max)? else {
             return Ok(Enclosed::Unavailable(Some(2)));
         };
@@ -173,21 +230,63 @@ pub fn certify(
     max_cells: usize,
     max_exact_work: u64,
 ) -> Result<IdealVolumeReport> {
+    certify_motion(
+        carrier,
+        origin,
+        Motion::Quintic(pieces),
+        closed,
+        projection,
+        max_cells,
+        max_exact_work,
+    )
+}
+fn certify_motion(
+    carrier: &Surface,
+    origin: [f64; 3],
+    pieces: Motion<'_>,
+    closed: bool,
+    projection: [[f64; 3]; 3],
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<IdealVolumeReport> {
+    certify_motion_impl(
+        carrier,
+        origin,
+        pieces,
+        closed,
+        projection,
+        max_cells,
+        max_exact_work,
+        false,
+        &mut None,
+    )
+}
+fn certify_motion_impl(
+    carrier: &Surface,
+    origin: [f64; 3],
+    pieces: Motion<'_>,
+    closed: bool,
+    projection: [[f64; 3]; 3],
+    max_cells: usize,
+    max_exact_work: u64,
+    precondition: bool,
+    coordinates: &mut Option<ProofCoordinates>,
+) -> Result<IdealVolumeReport> {
     carrier.validate()?;
     check(
-        (1..=1024).contains(&pieces.len())
+        carrier
+            .control_points
+            .iter()
+            .flatten()
+            .all(|p| p.len() == 3)
+            && (1..=1024).contains(&pieces.len())
             && max_cells <= 1000000
             && max_exact_work <= 1000000
             && origin
                 .iter()
                 .chain(projection.iter().flatten())
                 .all(|x| x.is_finite() && x.abs() <= 1e9)
-            && pieces
-                .iter()
-                .flatten()
-                .flatten()
-                .flatten()
-                .all(|x| x.is_finite() && x.abs() <= 1e9),
+            && pieces.valid(),
         "Invalid affine filled-volume inputs or budgets",
     )?;
     let mut out = IdealVolumeReport {
@@ -205,10 +304,9 @@ pub fn certify(
         out.reason = Some("affine-volume-carrier-basis-unproved");
         return Ok(out);
     }
-    let pairs = pieces
-        .windows(2)
-        .map(|p| (&p[0][5], &p[1][0]))
-        .chain(closed.then(|| (&pieces.last().unwrap()[5], &pieces[0][0])));
+    let pairs = (0..pieces.len() - 1)
+        .map(|i| (pieces.endpoints(i).1, pieces.endpoints(i + 1).0))
+        .chain(closed.then(|| (pieces.endpoints(pieces.len() - 1).1, pieces.endpoints(0).0)));
     for (a, b) in pairs {
         for col in 0..4 {
             for k in 0..3 {
@@ -229,7 +327,68 @@ pub fn certify(
         origin,
         pieces,
         poses: BTreeMap::new(),
+        coordinates: None,
     };
+    if precondition && out.cells < max_cells {
+        // A single native proposal from ORIGINAL point jets. Its invertibility
+        // is independently proved; no point regularity supplies atlas credit.
+        if let Enclosed::Value(e) =
+            context.enclose([[0.5; 2], [0.5; 2], [0.125; 2]], &mut out, max_cells)?
+        {
+            if out.cells < max_cells {
+                out.cells += 1;
+                // Literal coefficient directions retain the global radial and
+                // carrier axes better than an arbitrary rotated point basis.
+                // This average is ONLY an inverse proposal; the atlas still
+                // evaluates every original coefficient with outward rounding.
+                let proposal = match pieces {
+                    Motion::Rational(p) => {
+                        let a = p[0].controls[0];
+                        let b = p[p.len() / 2].controls[0];
+                        let d = p[0].controls[1];
+                        [
+                            a[0],
+                            std::array::from_fn(|k| a[1][k] * 0.5 + b[1][k] * 0.5),
+                            std::array::from_fn(|k| d[0][k] - a[0][k]),
+                        ]
+                    }
+                    _ => [[0.; 3]; 3],
+                };
+                if let Some(p) = atlas::inverse_proposal(proposal.map(|v| v.map(I::point)))
+                    .or_else(|| atlas::inverse_proposal(e.columns))
+                {
+                    let determinant = iv::dot_tight(
+                        p[0].map(I::point),
+                        iv::cross(p[1].map(I::point), p[2].map(I::point))?,
+                    )?;
+                    if determinant.lo > 0. || determinant.hi < 0. {
+                        let factor = match pieces {
+                            Motion::Rational(p) => {
+                                match rational::prove_factor(p, &mut out.exact_work, max_exact_work)
+                                {
+                                    Ok(f) => f,
+                                    Err(()) => {
+                                        out.reason = Some("affine-volume-column-factor-work-limit");
+                                        return Ok(out);
+                                    }
+                                }
+                            }
+                            _ => None,
+                        };
+                        let c = ProofCoordinates {
+                            rows: p,
+                            offset: pieces.endpoints(0).0[3],
+                            determinant: [determinant.lo, determinant.hi],
+                            column_factor: factor,
+                        };
+                        context.poses.clear();
+                        context.coordinates = Some(c.clone());
+                        *coordinates = Some(c);
+                    }
+                }
+            }
+        }
+    }
     atlas::certify_map(
         |b, out, max| context.enclose(b, out, max),
         projection,
@@ -256,10 +415,19 @@ pub fn jacobian_orientation(
     point: [f64; 3],
     max_cells: usize,
 ) -> Result<OrientationReport> {
+    orientation_motion(carrier, origin, Motion::Quintic(pieces), point, max_cells)
+}
+fn orientation_motion(
+    carrier: &Surface,
+    origin: [f64; 3],
+    pieces: Motion<'_>,
+    point: [f64; 3],
+    max_cells: usize,
+) -> Result<OrientationReport> {
     // Reuse complete raw-input validation; a zero-budget certificate performs
     // no geometry queries and supplies no atlas/closure credit to this helper.
     let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
-    let mut work = certify(carrier, origin, pieces, false, projection, 0, 0)?;
+    let mut work = certify_motion(carrier, origin, pieces, false, projection, 0, 0)?;
     check(
         max_cells <= 100000
             && point
@@ -281,6 +449,7 @@ pub fn jacobian_orientation(
         origin,
         pieces,
         poses: BTreeMap::new(),
+        coordinates: None,
     };
     if let Enclosed::Value(e) = context.enclose(point.map(|x| [x, x]), &mut work, max_cells)? {
         let d = iv::dot_tight(e.columns[0], iv::cross(e.columns[1], e.columns[2])?)?;

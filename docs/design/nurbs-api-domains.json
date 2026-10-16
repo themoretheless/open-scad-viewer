@@ -167,6 +167,7 @@
     "bezier_extraction"
   ],
   "validation": [
+    "affine_volume",
     "curve_self_intersection",
     "surface_self_intersection",
     "curve_decomposition_certificate",
@@ -175,6 +176,7 @@
     "sweep_pair_audit",
     "surface_injectivity",
     "surface_regularity",
+    "surface_correspondence",
     "surface_monotonicity",
     "surface_linear_monotonicity",
     "sweep_wall_audit",

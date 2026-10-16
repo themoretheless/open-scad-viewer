@@ -444,3 +444,5 @@ pub use closed::{SmoothClosedAttempt,SmoothClosedBody,SmoothClosedLimits,SmoothC
 pub use closed::OriginalClosedLimits;
 pub use closed::{OriginalClosedReport,AffineWallBindingReport};
 pub use closed::verify_smooth_closed_with_ideal_atlas;
+pub use closed::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
+    construct_rational_closed_material};

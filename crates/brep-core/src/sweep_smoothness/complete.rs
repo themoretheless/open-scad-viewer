@@ -58,7 +58,7 @@ fn reverse_along(s: &mut Surface, label: &str) -> bool {
 // Every oriented face corner connects two (edge,end) nodes in the link
 // of its authored vertex. One connected degree-two graph is mandatory;
 // merely counting two uses per edge would admit pinched vertex neighborhoods.
-fn vertex_links(model: &Model) -> bool {
+pub(crate) fn vertex_links(model: &Model) -> bool {
     use std::collections::{BTreeMap, BTreeSet};
     type Node = (usize, usize);
     let mut links = vec![BTreeMap::<Node, Vec<Node>>::new(); model.vertices.len()];

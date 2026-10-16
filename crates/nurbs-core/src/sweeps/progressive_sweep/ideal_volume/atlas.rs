@@ -24,7 +24,7 @@ fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
     let det = iv::dot_tight(c[0], iv::cross(c[1], c[2])?)?;
     Ok(det.lo > 0. || det.hi < 0.)
 }
-fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
+pub(crate) fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
     let mid = columns.map(|c| c.map(|x| crate::distance_bounds::midpoint(x.lo, x.hi)));
     let cross = |a: [f64; 3], b: [f64; 3]| {
         [
