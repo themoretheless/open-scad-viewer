@@ -371,7 +371,15 @@ mod tests {
         q["maxSpans"] = json!(1000);
         let report = crate::dispatch(q.clone()).unwrap();
         assert_eq!(report["allFacesInjective"], json!(true));
-        assert_eq!(report["spans"], json!(968));
+        let required = field::<usize>(&report, "spans").unwrap();
+        assert!(required > 0 && required <= 1000);
+        let accounted = report["faces"].as_array().unwrap().iter()
+            .map(|f| field::<usize>(&f["result"], "spans").unwrap()).sum::<usize>();
+        assert_eq!(required, accounted);
+        q["maxSpans"] = json!(required - 1);
+        let short = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(short["allFacesInjective"], json!(false));
+        assert_eq!(field::<usize>(&short, "spans").unwrap(), required - 1);
         assert_eq!(report["absenceProven"], json!(false));
         for f in report["faces"].as_array().unwrap() {
             assert_eq!(
