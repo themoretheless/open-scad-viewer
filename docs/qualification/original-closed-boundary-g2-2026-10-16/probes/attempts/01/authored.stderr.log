@@ -1,0 +1,4 @@
+
+thread 'main' (3652449) panicked at /private/tmp/osv-ideal-source-boundary-g2-20261016/docs/qualification/original-closed-boundary-g2-2026-10-16/probes/step_matrix.rs:23:61:
+called `Result::unwrap()` on an `Err` value: Error { code: "NURBS_INVALID_INPUT", message: "Spatial RMF proof limits require an unguided RMF source" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

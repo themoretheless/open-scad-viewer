@@ -1,5 +1,10 @@
 # Original source volume and complete retained boundary smoothness
 
+Historical checkpoint scope follows. Later native owners extend it: see
+`bishop-source-volume.md`, `closed-material-body.md`, `owned-affine-volume-solid.md`
+and `original-closed-boundary-gk.md` for spatial/arc/closed source atlases and the
+strict original/retained Gk chain. Their qualification records remain separate.
+
 This work extends PR #57 (`1447375db27b676002a057cef39df2958cc6faac`). All geometry, predicates, ownership, budget handling and decisions are in Rust. The bridge only decodes requests and serializes native reports. This is a native development checkpoint; the public WASM and frozen delivery qualifications have not been updated for it.
 
 ## Original filled source volume

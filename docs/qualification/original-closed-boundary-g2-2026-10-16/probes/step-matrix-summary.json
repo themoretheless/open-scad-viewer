@@ -1,0 +1,532 @@
+{
+  "schema": "original-boundary-g2-additional-native-step-v1",
+  "coreInputsSha256": "d6b5289088813ec90acdf49a473c43330e6b63082b17a959e3b42f74db628cb7",
+  "codeRevision": "182f91c694210c50dd4552ba0d5ea4b828c8353e",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "runnerSha256": "df5d78be8905dbc7722383741bc2ddd1f5ad344141c44e224593d964fa6d7a0d",
+  "driverSha256": "723b635a25b10ef69fbf7faaa2a5b4d2495bbe409ee92daed1e59a4f12074109",
+  "binarySha256": "6063cdda926495fcad8b3a3dbff31d69512fef7783b34c3c4f691d91157da8b5",
+  "externalStepQualified": false,
+  "allPassed": false,
+  "cases": [
+    {
+      "name": "rmf",
+      "fixture": "rmf.json",
+      "fixtureSha256": "45448a069a44b22c1c5d9d8a61df6b6ff542fec214e039ffeabb102a37a2be0c",
+      "exitCode": 0,
+      "elapsedSeconds": 19.907,
+      "result": {
+        "boundaryErrorUpper": 0.03594321192732288,
+        "counts": {
+          "bodies": 1,
+          "edges": 256,
+          "faces": 128,
+          "loops": 128,
+          "shells": 1,
+          "vertices": 128
+        },
+        "nativeStepRoundtripPassed": true,
+        "orientation": {
+          "cells": 134,
+          "determinant": [
+            0.0031762600277163316,
+            0.003176260027716422
+          ],
+          "reason": "owned-world-jacobian-sign",
+          "sign": 1
+        },
+        "originalBoundaryG2": true,
+        "originalVolume": {
+          "boxes": 102,
+          "cells": 21125,
+          "embeddingCertified": true,
+          "exactWork": 368,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "retainedBinding": {
+          "certified": true,
+          "exactWork": 69936,
+          "inspectedFaces": 128,
+          "reason": "exact-affine-filled-carrier-wall-union"
+        },
+        "retainedBoundaryG2": true,
+        "retainedVolume": {
+          "boxes": 48,
+          "cells": 670,
+          "embeddingCertified": true,
+          "exactWork": 384,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "proofMethod": "coefficient-owned-filled-volume-atlas",
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "sourceSmoothness": {
+          "cells": 35,
+          "differentialCompatibilityCertified": true,
+          "exactWork": 129604,
+          "frameCertified": true,
+          "inspectedProfileJoins": 4,
+          "lawsCertified": true,
+          "order": 2,
+          "products": 12,
+          "profilesCertified": true,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "authored",
+      "fixture": "authored.json",
+      "fixtureSha256": "71f712dfb2e30acc30939420173d8a7899967832184b19d3f9a5d63b971c3c33",
+      "exitCode": 0,
+      "elapsedSeconds": 18.431,
+      "result": {
+        "boundaryErrorUpper": 0.04016662525757323,
+        "counts": {
+          "bodies": 1,
+          "edges": 256,
+          "faces": 128,
+          "loops": 128,
+          "shells": 1,
+          "vertices": 128
+        },
+        "nativeStepRoundtripPassed": true,
+        "orientation": {
+          "cells": 134,
+          "determinant": [
+            0.003917062975847569,
+            0.003917062975847678
+          ],
+          "reason": "owned-world-jacobian-sign",
+          "sign": 1
+        },
+        "originalBoundaryG2": true,
+        "originalVolume": {
+          "boxes": 2339,
+          "cells": 26437,
+          "embeddingCertified": true,
+          "exactWork": 72,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "retainedBinding": {
+          "certified": true,
+          "exactWork": 70000,
+          "inspectedFaces": 128,
+          "reason": "exact-affine-filled-carrier-wall-union"
+        },
+        "retainedBoundaryG2": true,
+        "retainedVolume": {
+          "boxes": 48,
+          "cells": 670,
+          "embeddingCertified": true,
+          "exactWork": 384,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "proofMethod": "coefficient-owned-filled-volume-atlas",
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "sourceSmoothness": {
+          "cells": 92,
+          "differentialCompatibilityCertified": true,
+          "exactWork": 9126,
+          "frameCertified": true,
+          "inspectedProfileJoins": 4,
+          "lawsCertified": true,
+          "order": 2,
+          "products": 12,
+          "profilesCertified": true,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "guided",
+      "fixture": "guided.json",
+      "fixtureSha256": "77ddeb4e21bb0ffd6183e6302c72b8f57f6b2160f164c6630419e017b2e911df",
+      "exitCode": 0,
+      "elapsedSeconds": 74.945,
+      "result": {
+        "boundaryErrorUpper": 0.0020261391738317833,
+        "counts": {
+          "bodies": 1,
+          "edges": 1024,
+          "faces": 512,
+          "loops": 512,
+          "shells": 1,
+          "vertices": 512
+        },
+        "nativeStepRoundtripPassed": true,
+        "orientation": {
+          "cells": 518,
+          "determinant": [
+            0.003951668532779447,
+            0.003951668532779556
+          ],
+          "reason": "owned-world-jacobian-sign",
+          "sign": 1
+        },
+        "originalBoundaryG2": true,
+        "originalVolume": {
+          "boxes": 2337,
+          "cells": 28789,
+          "embeddingCertified": true,
+          "exactWork": 104,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "retainedBinding": {
+          "certified": true,
+          "exactWork": 280816,
+          "inspectedFaces": 512,
+          "reason": "exact-affine-filled-carrier-wall-union"
+        },
+        "retainedBoundaryG2": true,
+        "retainedVolume": {
+          "boxes": 44,
+          "cells": 1576,
+          "embeddingCertified": true,
+          "exactWork": 1536,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "proofMethod": "coefficient-owned-filled-volume-atlas",
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "sourceSmoothness": {
+          "cells": 296,
+          "differentialCompatibilityCertified": true,
+          "exactWork": 130060,
+          "frameCertified": true,
+          "inspectedProfileJoins": 4,
+          "lawsCertified": true,
+          "order": 2,
+          "products": 12,
+          "profilesCertified": true,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "hole",
+      "fixture": "hole.json",
+      "fixtureSha256": "ebb839ca6075c8c8371a5c839ad554803e45222d9d8e4e046fb46f97c2f2a9ee",
+      "exitCode": 101,
+      "elapsedSeconds": 23.989
+    },
+    {
+      "name": "reversed-hole",
+      "fixture": "reversed-hole.json",
+      "fixtureSha256": "971abd4611f4260b37139bfd9f737390e7b227a32cc9bc2faac4d6ec984cbce9",
+      "exitCode": 101,
+      "elapsedSeconds": 24.15
+    },
+    {
+      "name": "nonplanar",
+      "fixture": "nonplanar.json",
+      "fixtureSha256": "0b760ff8aa3315da2cd74a66b5b030e41c355cf62cccfcdf8a3ed106aa7ce4e0",
+      "exitCode": 0,
+      "elapsedSeconds": 29.38,
+      "result": {
+        "boundaryErrorUpper": 0.044664551912423814,
+        "counts": {
+          "bodies": 1,
+          "edges": 256,
+          "faces": 128,
+          "loops": 128,
+          "shells": 1,
+          "vertices": 128
+        },
+        "nativeStepRoundtripPassed": true,
+        "orientation": {
+          "cells": 134,
+          "determinant": [
+            0.028586327547777835,
+            0.02858632754777864
+          ],
+          "reason": "owned-world-jacobian-sign",
+          "sign": 1
+        },
+        "originalBoundaryG2": true,
+        "originalVolume": {
+          "boxes": 130,
+          "cells": 21473,
+          "embeddingCertified": true,
+          "exactWork": 368,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "retainedBinding": {
+          "certified": true,
+          "exactWork": 88512,
+          "inspectedFaces": 128,
+          "reason": "exact-affine-filled-carrier-wall-union"
+        },
+        "retainedBoundaryG2": true,
+        "retainedVolume": {
+          "boxes": 48,
+          "cells": 670,
+          "embeddingCertified": true,
+          "exactWork": 384,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "proofMethod": "coefficient-owned-filled-volume-atlas",
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "sourceSmoothness": {
+          "cells": 27,
+          "differentialCompatibilityCertified": true,
+          "exactWork": 129680,
+          "frameCertified": true,
+          "inspectedProfileJoins": 4,
+          "lawsCertified": true,
+          "order": 2,
+          "products": 20,
+          "profilesCertified": true,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "forty-intervals",
+      "fixture": "forty-intervals.json",
+      "fixtureSha256": "5c1c7ac012547cf1544b2e6bc56f36594aa2b6eee6324578f7632156398f81cd",
+      "exitCode": 0,
+      "elapsedSeconds": 23.29,
+      "result": {
+        "boundaryErrorUpper": 0.02437472083965524,
+        "counts": {
+          "bodies": 1,
+          "edges": 320,
+          "faces": 160,
+          "loops": 160,
+          "shells": 1,
+          "vertices": 160
+        },
+        "nativeStepRoundtripPassed": true,
+        "orientation": {
+          "cells": 166,
+          "determinant": [
+            0.0031870277120314913,
+            0.003187027712031582
+          ],
+          "reason": "owned-world-jacobian-sign",
+          "sign": 1
+        },
+        "originalBoundaryG2": true,
+        "originalVolume": {
+          "boxes": 102,
+          "cells": 21125,
+          "embeddingCertified": true,
+          "exactWork": 368,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "retainedBinding": {
+          "certified": true,
+          "exactWork": 87792,
+          "inspectedFaces": 160,
+          "reason": "exact-affine-filled-carrier-wall-union"
+        },
+        "retainedBoundaryG2": true,
+        "retainedVolume": {
+          "boxes": 48,
+          "cells": 740,
+          "embeddingCertified": true,
+          "exactWork": 480,
+          "parameterTopologyPreserved": true,
+          "projection": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "proofMethod": "coefficient-owned-filled-volume-atlas",
+          "reason": null,
+          "volumeRegularityCertified": true
+        },
+        "sourceSmoothness": {
+          "cells": 35,
+          "differentialCompatibilityCertified": true,
+          "exactWork": 129604,
+          "frameCertified": true,
+          "inspectedProfileJoins": 4,
+          "lawsCertified": true,
+          "order": 2,
+          "products": 12,
+          "profilesCertified": true,
+          "reason": null
+        }
+      }
+    }
+  ]
+}
