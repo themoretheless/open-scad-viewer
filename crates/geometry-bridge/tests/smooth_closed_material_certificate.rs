@@ -20,7 +20,10 @@ fn assert_full(r: &Value) {
     assert_eq!(r["seamContinuity"], "G2");
     assert_eq!(r["physicalCapCount"], 0);
     assert!(r["filledCapErrorUpper"].is_null());
-    assert_eq!(r["idealSourceSmoothnessCertified"], false);
+    assert_eq!(
+        r["idealSourceSmoothnessCertified"],
+        !r["original"]["smoothness"].is_null()
+    );
     assert_eq!(r["original"]["certified"], true);
     assert_eq!(r["original"]["material"]["certified"], true);
     for p in [&r["original"]["volume"], &r["retainedVolume"]] {
@@ -130,7 +133,9 @@ fn supplied_model_audit_recomputes_source_binding_and_global_volume() {
 }
 #[test]
 fn native_step_roundtrip_recomputes_g2_global_volume_topology_and_orientation() {
-    let request = fixture();
+    let mut request = fixture();
+    request["originalSmoothness"] =
+        json!({"order":2,"maxCells":100000,"maxExactWork":1000000,"maxProducts":1000000});
     let r = dispatch(request.clone()).unwrap();
     assert_full(&r);
     let model: brep_core::Model = value_codec::from_value(r["model"].clone()).unwrap();
@@ -160,4 +165,53 @@ fn native_step_roundtrip_recomputes_g2_global_volume_topology_and_orientation() 
     audit["model"] = value_codec::to_value(&restored).unwrap();
     let r = dispatch(audit).unwrap();
     assert_full(&r);
+    assert_eq!(r["idealSourceBoundaryG2Certified"], true);
+}
+
+#[test]
+fn original_boundary_g2_owns_the_same_source_volume_and_refuses_short_budgets() {
+    let mut request = fixture();
+    request["originalSmoothness"] =
+        json!({"order":2,"maxCells":100000,"maxExactWork":1000000,"maxProducts":1000000});
+    let full = dispatch(request.clone()).unwrap();
+    assert_full(&full);
+    assert_eq!(full["idealSourceBoundaryG1Certified"], true);
+    assert_eq!(full["idealSourceBoundaryG2Certified"], true);
+    assert_eq!(full["original"]["smoothness"]["inspectedProfileJoins"], 4);
+    for (request_key, report_key) in [
+        ("maxCells", "cells"),
+        ("maxExactWork", "exactWork"),
+        ("maxProducts", "products"),
+    ] {
+        for budget in [
+            0,
+            full["original"]["smoothness"][report_key].as_u64().unwrap() - 1,
+        ] {
+            let mut short = request.clone();
+            short["originalSmoothness"][request_key] = json!(budget);
+            short["model"] = full["model"].clone();
+            short["idealSourceSmoothnessCertified"] = json!(true);
+            short["idealSourceBoundaryG2Certified"] = json!(true);
+            let r = dispatch(short).unwrap();
+            assert_eq!(r["certified"], false);
+            assert!(r["model"].is_null());
+            assert_eq!(r["idealSourceBoundaryG2Certified"], false);
+            assert_eq!(r["reason"], "original-boundary-smoothness-unproved");
+        }
+    }
+    let mut g1 = request;
+    g1["source"]["profiles"][0]["weights"][1] = json!(0.75);
+    g1["material"]["trims"][0][0]["weights"][1] = json!(0.75);
+    g1["originalSmoothness"]["order"] = json!(1);
+    g1["smoothing"]["order"] = json!(1);
+    let r = dispatch(g1.clone()).unwrap();
+    assert_eq!(r["certified"], true);
+    assert_eq!(r["idealSourceBoundaryG1Certified"], true);
+    assert_eq!(r["idealSourceBoundaryG2Certified"], false);
+    g1["originalSmoothness"]["order"] = json!(2);
+    g1["smoothing"]["order"] = json!(2);
+    let r = dispatch(g1).unwrap();
+    assert_eq!(r["certified"], false);
+    assert!(r["model"].is_null());
+    assert_eq!(r["idealSourceBoundaryG2Certified"], false);
 }

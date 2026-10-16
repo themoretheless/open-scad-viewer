@@ -27,6 +27,18 @@ pub(super) fn construct(
     let a = &s["atlas"];
     let order = field::<usize>(s, "order")?;
     let limits = owned::SmoothClosedLimits {
+        original_smoothness: optional::<Value>(v, "originalSmoothness")?
+            .map(|l| {
+                Ok::<_, crate::Error>(
+                    nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits {
+                        order: field(&l, "order")?,
+                        cells: field(&l, "maxCells")?,
+                        exact_work: field(&l, "maxExactWork")?,
+                        products: field(&l, "maxProducts")?,
+                    },
+                )
+            })
+            .transpose()?,
         source: owned::OriginalClosedLimits {
             source_cells: field(l, "sourceCells")?,
             source_products: field(l, "sourceProducts")?,
@@ -90,6 +102,8 @@ pub(super) fn construct(
     };
     let g1 = r.certified && r.smoothness.as_ref().is_some_and(|s| s.g1_certified);
     let g2 = r.certified && r.smoothness.as_ref().is_some_and(|s| s.g2_certified);
+    let original_g1 = r.certified && r.original.g1_certified();
+    let original_g2 = r.certified && r.original.g2_certified();
     Ok(
         json!({"model":model,"certified":r.certified,"solidGeometryCertified":r.certified,
             "continuousBound":r.continuous_bound,"withinBudget":r.within_budget,"boundaryErrorUpper":r.boundary_error_upper,
@@ -97,11 +111,16 @@ pub(super) fn construct(
             "smoothnessCertified":g1,"fullBoundaryG1Certified":g1,"fullBoundaryG2Certified":g2,
             "seamContinuity":if g2 {"G2"} else if g1 {"G1"} else {"C0"},"order":order,
             "scope":"original-closed-sweep-and-owned-affine-solid","physicalCapCount":0,"filledCapErrorUpper":null,
-            "idealSourceSmoothnessCertified":false,"reason":r.reason,
+            "idealSourceSmoothnessCertified":original_g1,"idealSourceBoundaryG1Certified":original_g1,
+            "idealSourceBoundaryG2Certified":original_g2,"reason":r.reason,
             "original":{"certified":r.original.certified,"cells":r.original.cells,"products":r.original.products,
                 "exactWork":r.original.exact_work,"boundaryErrorUpper":r.original.boundary_error_upper,
                 "decompositionErrorUpper":r.original.decomposition_error_upper,"reason":r.original.reason,
                 "volume":r.original.volume.as_ref().map(atlas),"wall":r.original.wall,
+                "smoothness":r.original.smoothness.as_ref().map(|p|json!({"order":p.order,
+                    "differentialCompatibilityCertified":p.differential_compatibility_certified,
+                    "frameCertified":p.frame_certified,"lawsCertified":p.laws_certified,"profilesCertified":p.profiles_certified,
+                    "inspectedProfileJoins":p.inspected_profile_joins,"cells":p.cells,"exactWork":p.exact_work,"products":p.products,"reason":p.reason})),
                 "material":{"certified":r.original.material.certified,"boundSpans":r.original.material.bound_spans,
                     "exactWork":r.original.material.exact_work,"trim":r.original.material.trim.as_ref().map(|t|json!({"valid":t.valid,
                         "winding":t.winding,"reason":t.reason,"pairs":t.pairs,"cells":t.cells,"domainCells":t.domain_cells}))}},

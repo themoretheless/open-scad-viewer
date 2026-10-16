@@ -64,6 +64,7 @@ fn material() -> (LoftCap, Vec<Curve>) {
 fn limits() -> SmoothClosedLimits {
     SmoothClosedLimits {
         source: super::super::tests::limits().into(),
+        original_smoothness: None,
         candidate: AffineStationLimits {
             quantum: 2f64.powi(-18),
             tolerance: 0.03,
@@ -307,7 +308,17 @@ fn qualified_mode(mode: usize, count: usize, hole: bool, reverse: bool) {
         1e-8,
         0.05,
         &[],
-        limits(),
+        SmoothClosedLimits {
+            original_smoothness: Some(
+                nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits {
+                    order: 2,
+                    cells: 100000,
+                    exact_work: 1000000,
+                    products: 1000000,
+                },
+            ),
+            ..limits()
+        },
     )
     .unwrap()
     {
@@ -339,6 +350,13 @@ fn qualified_mode(mode: usize, count: usize, hole: bool, reverse: bool) {
             && r.continuous_bound
     );
     assert!(r.smoothness.as_ref().unwrap().g2_certified);
+    assert!(
+        r.original
+            .smoothness
+            .as_ref()
+            .unwrap()
+            .differential_compatibility_certified
+    );
     assert_eq!(b.model().shells.len(), sizes.len());
     assert_eq!(b.model().bodies[0].inner_shells.len(), usize::from(hole));
     assert_eq!(

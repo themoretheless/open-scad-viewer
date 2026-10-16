@@ -15,6 +15,8 @@ mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
 pub use projective_strip_jets::*;
+mod curve_geometric_jets;
+pub use curve_geometric_jets::*;
 mod bezier_strip_jets;
 pub use bezier_strip_jets::*;
 mod bspline_internal_jets;

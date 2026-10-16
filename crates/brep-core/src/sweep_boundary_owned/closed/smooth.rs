@@ -10,14 +10,18 @@ use nurbs_core::{
 #[derive(Clone, Copy)]
 pub struct SmoothClosedLimits {
     pub source: OriginalClosedLimits,
+    /// When requested, original differential compatibility is a strict stage.
+    pub original_smoothness:
+        Option<nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits>,
     pub candidate: AffineStationLimits,
     pub smoothness: crate::sweep_smoothness::complete::Limits,
     pub atlas: IdealLimits,
     pub binding_work: u64,
     pub orientation_cells: usize,
 }
-/// Original regularity/embedding/topology and boundary-error stages. This does
-/// not assert original-frame or original-boundary G1/G2.
+/// Original regularity/embedding/topology and boundary-error stages. Optional
+/// differential compatibility completes Gk only together with these owned
+/// original volume, material and trace proofs.
 pub struct OriginalReport {
     pub certified: bool,
     pub material: MaterialReport,
@@ -29,6 +33,19 @@ pub struct OriginalReport {
     pub products: usize,
     pub exact_work: u64,
     pub reason: Option<&'static str>,
+    pub smoothness: Option<nurbs_core::progressive_sweep::OriginalBoundarySmoothnessReport>,
+}
+impl OriginalReport {
+    pub fn g1_certified(&self) -> bool {
+        self.certified
+            && self
+                .smoothness
+                .as_ref()
+                .is_some_and(|p| p.differential_compatibility_certified)
+    }
+    pub fn g2_certified(&self) -> bool {
+        self.g1_certified() && self.smoothness.as_ref().is_some_and(|p| p.order == 2)
+    }
 }
 impl From<ClosedReport> for OriginalReport {
     fn from(r: ClosedReport) -> Self {
@@ -52,6 +69,7 @@ impl From<ClosedReport> for OriginalReport {
             products: r.source_products,
             exact_work: r.ownership_exact_work,
             reason: r.reason,
+            smoothness: None,
         }
     }
 }
@@ -337,6 +355,12 @@ fn construct_impl(
             > nurbs_core::continuity::MAX_PROJECTIVE_SEAM_COLLECTION_WORK
         || limits.smoothness.agreement_work > 1000000
         || limits.smoothness.regularity_cells > 100000
+        || limits.original_smoothness.is_some_and(|l| {
+            l.order != limits.smoothness.order
+                || l.cells > 100000
+                || l.exact_work > 1000000
+                || l.products > 1000000
+        })
     {
         return Err(fail("Invalid smooth closed material limits"));
     }
@@ -364,6 +388,14 @@ fn construct_impl(
     let mut out = report(source);
     if !out.original.certified {
         return Ok(refused(out, "original-closed-source-unproved"));
+    }
+    if let Some(limits) = limits.original_smoothness {
+        let proof = sweep.certify_original_closed_boundary_smoothness(loop_sizes, limits)?;
+        let certified = proof.differential_compatibility_certified;
+        out.original.smoothness = Some(proof);
+        if !certified {
+            return Ok(refused(out, "original-boundary-smoothness-unproved"));
+        }
     }
     let candidate = affine_station_walls(&profiles, &rows, sharp, true, limits.candidate)?;
     out.displacement_upper = candidate.displacement_upper;

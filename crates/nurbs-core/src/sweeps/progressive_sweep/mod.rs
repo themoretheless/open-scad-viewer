@@ -20,6 +20,8 @@ mod source_line;
 mod retained_regularity;
 mod retained_smoothness;
 mod original_smoothness;
+mod original_boundary_smoothness;
+pub use original_boundary_smoothness::{OriginalBoundarySmoothnessLimits,OriginalBoundarySmoothnessReport};
 mod endpoint_jets;
 mod rmf_transport;
 pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesReport,RmfNormalCell,certify_original_rmf_transport,certify_original_rmf_section_images};
