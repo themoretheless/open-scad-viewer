@@ -2,6 +2,8 @@
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
 mod smooth_stations;
+mod affine_stations;
+pub use affine_stations::{AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls};
 pub use smooth_stations::{SmoothStationWalls,smooth_station_walls};
 mod polygon_stations;
 pub use polygon_stations::{PolygonStationWalls, smooth_polygon_station_walls};
@@ -112,6 +114,10 @@ pub(crate) fn periodic_material_section_loft(sections: &[Vec<Vec<Curve>>]) -> Re
         return Err(err("Periodic material loft needs a repeated seam and four sections"));
     }
     section_loft_impl(sections, None, None, true, true)
+}
+pub(crate) fn periodic_material_loft_surfaces(sections: &[Vec<Vec<Curve>>], sides: &[Vec<Surface>]) -> Result<Model> {
+    if sections.len() < 4 { return Err(err("Periodic material loft needs a repeated seam and four sections")); }
+    section_loft_impl(sections, None, Some(sides), true, true)
 }
 fn section_loft(
     sections: &[Vec<Vec<Curve>>],

@@ -133,6 +133,111 @@ fn options(spatial: bool, spacing: Spacing) -> Options {
         max_deviation: 0.05,
     }
 }
+#[test]
+fn original_interior_fold_is_refused_even_when_the_same_retained_boundary_is_a_valid_solid() {
+    let (mut material, _) = material(false, false);
+    let r = 1. / 128.;
+    // A cubic chart with straight, monotone square boundaries. The two
+    // interiors below share every boundary coefficient, curve and preview.
+    let grid = [-r, -r / 2., r / 2., r];
+    material.surface = Surface {
+        degree_u: 3,
+        degree_v: 3,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: grid
+            .iter()
+            .map(|y| grid.iter().map(|z| vec![0., *y, *z]).collect())
+            .collect(),
+        weights: vec![vec![1.; 4]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+    material.trims = vec![
+        (0..4)
+            .map(|i| Curve {
+                degree: 1,
+                knots: vec![0., 0., 1., 1.],
+                control_points: vec![uv[i].to_vec(), uv[(i + 1) % 4].to_vec()],
+                weights: vec![1.; 2],
+                periodic: false,
+            })
+            .collect(),
+    ];
+    let profiles = vec![
+        material.surface.iso(Axis::V, 0.).unwrap(),
+        material.surface.iso(Axis::U, 1.).unwrap(),
+        material
+            .surface
+            .iso(Axis::V, 1.)
+            .unwrap()
+            .reverse()
+            .unwrap(),
+        material
+            .surface
+            .iso(Axis::U, 0.)
+            .unwrap()
+            .reverse()
+            .unwrap(),
+    ];
+    let path = path(false, true);
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let sweep = MultiSweep::new(
+        &profiles,
+        &path,
+        &scale,
+        &twist,
+        options(true, Spacing::Parameter),
+    )
+    .unwrap()
+    .with_spatial_rmf_error_limits(1024, 100000, 1000000)
+    .unwrap();
+    let original_material = material.clone();
+    let valid = assert_body(
+        construct_closed_with_ideal_atlas(&sweep, &[4], 33, &material, 1e-8, 0.05, limits())
+            .unwrap(),
+    );
+    assert!(valid.report().volume.as_ref().unwrap().proven);
+    // Reverse the chart's transverse derivative in its interior while leaving
+    // the entire authored boundary untouched. This is not a boundary defect.
+    for j in 1..3 {
+        material.surface.control_points[1][j][1] = 8. * r;
+        material.surface.control_points[2][j][1] = -8. * r;
+    }
+    assert_eq!(
+        original_material.surface.iso(Axis::V, 0.).unwrap(),
+        material.surface.iso(Axis::V, 0.).unwrap()
+    );
+    assert_eq!(
+        original_material.surface.iso(Axis::V, 1.).unwrap(),
+        material.surface.iso(Axis::V, 1.).unwrap()
+    );
+    assert_eq!(
+        original_material.surface.iso(Axis::U, 0.).unwrap(),
+        material.surface.iso(Axis::U, 0.).unwrap()
+    );
+    assert_eq!(
+        original_material.surface.iso(Axis::U, 1.).unwrap(),
+        material.surface.iso(Axis::U, 1.).unwrap()
+    );
+    match construct_closed_with_ideal_atlas(&sweep, &[4], 33, &material, 1e-8, 0.05, limits())
+        .unwrap()
+    {
+        ClosedAttempt::Certified(_) => panic!("folded original material received body credit"),
+        ClosedAttempt::Refused(r) => {
+            assert!(r.material.certified && r.material.bound_spans == 4);
+            let ideal = r.ideal_volume.as_ref().unwrap();
+            assert!(!ideal.embedding_certified && !ideal.parameter_topology_preserved);
+            assert!(!r.certified && r.retained_walls.is_none() && r.volume.is_none());
+            eprintln!(
+                "folded original interior refused: {:?}; source cells={}",
+                r.reason, ideal.cells
+            );
+        }
+    }
+}
 fn assert_body(attempt: ClosedAttempt) -> Box<ClosedBody> {
     match attempt {
         ClosedAttempt::Certified(body) => {

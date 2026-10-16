@@ -99,7 +99,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     require(
         matches!(limits.order, 1 | 2)
-            && limits.exact_work <= 2000000
+            && limits.exact_work <= continuity::MAX_PROJECTIVE_SEAM_COLLECTION_WORK
             && limits.agreement_work <= 1000000
             && limits.regularity_cells <= 100000,
         "Invalid complete boundary smoothness budget",

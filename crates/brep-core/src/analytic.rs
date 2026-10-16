@@ -6,9 +6,9 @@ mod sphere_poles;
 mod sphere_regular;
 pub use sphere_poles::{sphere_exact, sphere_pole_charts};
 mod rational_loft;
-pub(crate) use rational_loft::{periodic_material_section_loft, retained_section_partition};
+pub(crate) use rational_loft::{periodic_material_section_loft, periodic_material_loft_surfaces, retained_section_partition};
 pub use rational_loft::{ProgressiveBodyEvidence,EndpointCapCorrection,progressive_profile_body_with_evidence,progressive_profile_body_with_evidence_and_correction,progressive_profile_body_with_rmf_policy};
-pub use rational_loft::{periodic_section_loft, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, SmoothStationWalls, smooth_station_walls, progressive_profile_body};
+pub use rational_loft::{AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls, periodic_section_loft, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, SmoothStationWalls, smooth_station_walls, progressive_profile_body};
 pub(crate) use loft::piecewise_ruled_loft;
 pub use loft::ruled_loft;
 

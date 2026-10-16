@@ -114,6 +114,7 @@ mod uv_regions;
 pub mod volume_validity;
 pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
+    AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls,
     revolve_wire_angle, ruled_loft, periodic_section_loft, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, smooth_station_walls, SmoothStationWalls, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, progressive_profile_body, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};

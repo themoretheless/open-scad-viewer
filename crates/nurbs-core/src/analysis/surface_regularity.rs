@@ -1,5 +1,6 @@
 //! Sufficient interval proof of nonzero normals on original knot rectangles.
 use crate::{Result, check, resource, surface::Surface, surface_measure::jets};
+mod bernstein;
 #[derive(Clone, Debug)]
 pub struct UnresolvedCell {
     pub domain: [[f64; 2]; 2],
@@ -24,6 +25,9 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
         (1..=100000).contains(&max_cells),
         "Regularity needs 1..100000 cells",
     )?;
+    if let Some(report) = bernstein::inspect(surface, max_cells)? {
+        return Ok(report);
+    }
     let mut pending = Vec::new();
     for u in surface.degree_u..surface.control_points.len() {
         if surface.knots_u[u] == surface.knots_u[u + 1] {

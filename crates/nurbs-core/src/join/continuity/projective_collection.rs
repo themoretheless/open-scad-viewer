@@ -3,6 +3,10 @@
 use crate::{Result, check, surface::Surface};
 use super::{ExactStripJetReport, inspect_surface_projective_strip_jets, inspect_surface_exact_strip_jets};
 
+/// Aggregate collection ceiling; each seam still receives at most 1M work.
+/// A complete closed cubic profile atlas can have 256 owned seams.
+pub const MAX_PROJECTIVE_SEAM_COLLECTION_WORK:u64=4_000_000;
+
 pub struct ProjectiveSeam {
     pub patches: [usize; 2],
     pub boundaries: [String; 2],
@@ -45,7 +49,7 @@ pub fn inspect_exact_seam_collection(
 fn inspect_collection(
     patches: &[Surface], seams: &[ProjectiveSeam], max_work: u64, projective: bool, rational_proposal:bool, stop_after_refusal:bool,
 ) -> Result<ProjectiveSeamCollectionReport> {
-    check(max_work <= 2000000 && patches.len() <= 4096 && seams.len() <= 4096,
+    check(max_work <= MAX_PROJECTIVE_SEAM_COLLECTION_WORK && patches.len() <= 4096 && seams.len() <= 4096,
         "Invalid exact seam collection limits")?;
     // Validate the entire declaration before consuming any proof work.
     for seam in seams {
