@@ -1,0 +1,17 @@
+{
+  "schema": "original-affine-physical-development-checkpoint/1",
+  "frozenCodeRevision": "49bafb25557018ffe8e09dd24f784f699287470d",
+  "inputCount": 3817,
+  "inputsSha256": "9d944c894bc839993b2aff2410d226532b2b1820cc40e4661276b54e3fa82303",
+  "focusedPhysicalChartCasesPassed": 4,
+  "focusedClosedGuidedCasesPassed": 6,
+  "focusedErrorCasesPassed": 76,
+  "nativeJsonStepPending": true,
+  "fullFrozenSourceQualificationPending": true,
+  "privateWasmRuntimeQualified": false,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "freshCiQualified": false,
+  "fullGoalComplete": false
+}
