@@ -1,0 +1,22 @@
+{
+  "schema": "arc-bishop-source-checkpoint/1",
+  "frozenCodeRevision": "995fb51cd468244c4100a27d91d09a5f32874e53",
+  "inputsSha256": "99ee8a1f33701671695008fa8d1c6e9821b1af30c4bd95581381c41a9e73d7d8",
+  "sourceGuardVerified": true,
+  "nurbsPassed": 1620,
+  "nurbsFailed": 0,
+  "nativeJsonStepPassed": 1,
+  "independentOcctPassed": true,
+  "privateReleaseWasmRuntimeQualified": true,
+  "originalAndActualGlobalG2OneSourceQualified": true,
+  "boundaryErrorUpperMm": 0.02637521968151867,
+  "faces": 256,
+  "retainedVolumeErrorMm3": 1.0972125985553305e-16,
+  "completeKernelRegressionPending": true,
+  "publicWasmRebuilt": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "freshCiQualified": false,
+  "fullGoalComplete": false,
+  "scope": "One exact Mobius-clock spatial Bishop source. Arbitrary moving frames/nonplanar physical end caps remain open."
+}
