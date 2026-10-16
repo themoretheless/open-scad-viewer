@@ -11,6 +11,7 @@ pub(super) struct Tube {
 }
 mod affine;
 mod atlas;
+mod carrier;
 mod frame_bounds;
 mod plane;
 impl Tube {
@@ -33,7 +34,7 @@ impl Tube {
         closed: bool,
     ) -> Result<Option<Self>> {
         let s = c.s;
-        if c.arc.is_none() || c.caps[0] != c.caps[1] || s.contact_point.is_some() {
+        if c.arc.is_none() || (closed && c.caps[0] != c.caps[1]) || s.contact_point.is_some() {
             return Ok(None);
         }
         let path = s.path;
@@ -69,6 +70,17 @@ impl Tube {
         {
             return Ok(None);
         }
+        if c.caps[0] != c.caps[1]
+            && !plane::certify_frame(
+                path,
+                c.caps[1],
+                s.frame_laws.map(|(a, _)| a),
+                &mut out.exact_work,
+                exact,
+            )?
+        {
+            return Ok(None);
+        }
         if c.transport.is_none() {
             let stage = max.min(out.cells.saturating_add(100000));
             let Some(phase) = c
@@ -86,10 +98,16 @@ impl Tube {
         // This global contraction proves BOTH injectivity and rank two over
         // the complete natural carrier rectangle, including one-sided knots.
         // Validity and binding of its material trims remain BRep obligations.
-        let cover =
-            crate::surface_injectivity::certify_contraction(cap, (max - out.cells).min(100000))?;
-        out.cells += cover.spans;
-        if !cover.proven {
+        if c.caps[0] == c.caps[1] {
+            let cover = crate::surface_injectivity::certify_contraction(
+                cap,
+                (max - out.cells).min(100000),
+            )?;
+            out.cells += cover.spans;
+            if !cover.proven {
+                return Ok(None);
+            }
+        } else if !carrier::certify_pair(c.caps, out, max)? {
             return Ok(None);
         }
         let origin = path.control_points[0]
@@ -98,18 +116,23 @@ impl Tube {
             .map(I::point)
             .collect::<Vec<_>>();
         let mut radius = 0_f64;
-        for q in cap.control_points.iter().flatten() {
-            if out.cells == max {
-                return Ok(None);
+        for (i, cap) in c.caps.iter().enumerate() {
+            if i == 1 && c.caps[0] == c.caps[1] {
+                continue;
             }
-            out.cells += 1;
-            radius = radius.max(
-                crate::distance_bounds::box_distance(
-                    &q.iter().copied().map(I::point).collect::<Vec<_>>(),
-                    &origin,
-                )?
-                .1,
-            );
+            for q in cap.control_points.iter().flatten() {
+                if out.cells == max {
+                    return Ok(None);
+                }
+                out.cells += 1;
+                radius = radius.max(
+                    crate::distance_bounds::box_distance(
+                        &q.iter().copied().map(I::point).collect::<Vec<_>>(),
+                        &origin,
+                    )?
+                    .1,
+                );
+            }
         }
         let Some(radius) = affine::radius(s, radius, out, max)? else {
             return Ok(None);
@@ -304,3 +327,6 @@ mod tests {
 mod affine_tests;
 #[cfg(test)]
 mod general_tests;
+
+#[cfg(test)]
+mod carrier_tests;

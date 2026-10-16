@@ -369,7 +369,7 @@ fn construct_with_ideal_impl(
     atlas: bool,
 ) -> Result<Attempt> {
     // Validate stronger limits even when an earlier geometric stage refuses.
-    if ideal.cells > 100000
+    if ideal.cells > if atlas { 1000000 } else { 100000 }
         || ideal.exact_work > 1000000
         || ideal.projection.iter().flatten().any(|x| !x.is_finite())
     {
@@ -388,27 +388,19 @@ fn construct_with_ideal_impl(
     let Attempt::Certified(mut body) = attempt else {
         return Ok(attempt);
     };
-    let domain = |s: &nurbs_core::surface::Surface| {
-        [
-            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
-            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
-        ]
-    };
-    if source_caps[0].trims != source_caps[1].trims
-        || domain(&source_caps[0].surface) != domain(&source_caps[1].surface)
-    {
-        body.report.certified = false;
-        body.report.reason = Some("ideal-body-common-trim-region-unproved");
-        return Ok(Attempt::Refused(Box::new(body.report)));
+    let mut trim_work = 0;
+    if !common_trim_region::certify(source_caps, &mut trim_work, ideal.exact_work)? {
+        return Ok(ideal_refused(body, ideal, 0, trim_work, "ideal-body-common-trim-region-unproved"));
     }
     let mut profile_cells = 0;
     for profile in sweep.source_profiles() {
-        let regular = nurbs_core::curve_regularity::inspect(profile, ideal.cells - profile_cells)?;
+        if profile_cells == ideal.cells {
+            return Ok(ideal_refused(body, ideal, profile_cells, trim_work, "ideal-volume-work-limit"));
+        }
+        let regular = nurbs_core::curve_regularity::inspect(profile, (ideal.cells - profile_cells).min(100000))?;
         profile_cells += regular.cells;
         if !regular.spanwise_regular {
-            body.report.certified = false;
-            body.report.reason = Some("ideal-body-original-profile-regularity-unproved");
-            return Ok(Attempt::Refused(Box::new(body.report)));
+            return Ok(ideal_refused(body, ideal, profile_cells, trim_work, "ideal-body-original-profile-regularity-unproved"));
         }
     }
     let certify = if atlas {
@@ -421,9 +413,10 @@ fn construct_with_ideal_impl(
         [&source_caps[0].surface, &source_caps[1].surface],
         ideal.projection,
         ideal.cells - profile_cells,
-        ideal.exact_work,
+        ideal.exact_work - trim_work,
     )?;
     let mut proof = proof;
+    proof.exact_work += trim_work;
     proof.cells += profile_cells;
     let proven = proof.embedding_certified
         && proof.regularity_certified
@@ -446,3 +439,16 @@ pub use closed::{OriginalClosedReport,AffineWallBindingReport};
 pub use closed::verify_smooth_closed_with_ideal_atlas;
 pub use closed::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
     construct_rational_closed_material,verify_rational_closed_material};
+
+mod common_trim_region;
+
+fn ideal_refused(mut body: Box<CertifiedBody>, ideal: IdealLimits, cells: usize, exact_work: u64, reason: &'static str) -> Attempt {
+    body.report.certified = false;
+    body.report.reason = Some(reason);
+    body.report.ideal_volume = Some(nurbs_core::progressive_sweep::IdealVolumeReport {
+        embedding_certified: false, regularity_certified: false,
+        parameter_topology_preserved: false, cells, exact_work,
+        boxes: 0, monotonicity_lower: None, projection: ideal.projection, reason: Some(reason),
+    });
+    Attempt::Refused(Box::new(body.report))
+}

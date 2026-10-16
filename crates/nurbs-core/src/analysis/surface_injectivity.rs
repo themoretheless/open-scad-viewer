@@ -93,7 +93,7 @@ fn homogeneous_section_jacobian(net:&[Vec<[I;4]>],degrees:[usize;2],domain:[[f64
     }
     Ok(result)
 }
-fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
+pub(crate) fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
     let a = j.map(|row| row.map(|v| v.lo * 0.5 + v.hi * 0.5));
     let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
     if !det.is_finite() || det == 0. {

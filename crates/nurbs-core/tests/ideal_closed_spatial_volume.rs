@@ -164,9 +164,15 @@ fn closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_u
                 "{p:?}"
             );
             assert!(audit(p.cells, p.exact_work).embedding_certified);
+            // Optional failed atlas proposals can spend extra exact work.
+            // Exhaust the required original closed-frame premise instead of
+            // assuming that a successful whole-search trace is minimal.
+            let frame=sweep.certify_closed_path_frame_smoothness(1,100000,1000000).unwrap();
+            assert!(frame.closed_source_frame_smoothness_certified && frame.exact_work>0);
+            assert!(p.exact_work>=frame.exact_work);
             for (cells, work) in [
                 (p.cells - 1, 1000000),
-                (proof_cells, p.exact_work - 1),
+                (proof_cells, frame.exact_work - 1),
                 (0, 1000000),
                 (proof_cells, 0),
             ] {

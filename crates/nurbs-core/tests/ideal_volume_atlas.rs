@@ -410,7 +410,23 @@ fn closed_quotient_matrix_covers_authored_and_guided_frames_arc_laws_and_rationa
             "mode={mode}/{spacing:?}: {r:?}"
         );
         assert!(!audit(r.cells - 1, 1000000).embedding_certified);
-        assert!(!audit(100000, r.exact_work - 1).embedding_certified);
+        // A failed plane proposal can be skipped when exact work is scarce.
+        // Exhaust the mandatory original frame proof, not a whole-search trace.
+        let (frame_proven, frame_work) = if mode == 1 {
+            let p=sweep.certify_closed_authored_frame_smoothness(1,100000,1000000).unwrap();
+            (p.closed_source_frame_smoothness_certified,p.exact_work)
+        } else if mode == 2 {
+            let p=sweep.certify_closed_guided_frame_smoothness(1,100000,1000000).unwrap();
+            (p.closed_source_frame_smoothness_certified,p.exact_work)
+        } else {
+            let p=sweep.certify_closed_path_frame_smoothness(1,100000,1000000).unwrap();
+            (p.closed_source_frame_smoothness_certified,p.exact_work)
+        };
+        assert!(frame_proven && frame_work>0 && frame_work<=r.exact_work);
+        let short=audit(100000,frame_work-1);
+        assert!(!short.embedding_certified && !short.regularity_certified
+            && !short.parameter_topology_preserved,"{short:?}");
+        assert!(short.cells<=100000 && short.exact_work<frame_work);
         eprintln!("closed matrix {mode}/{spacing:?}: {r:?}");
     }
     assert_eq!(
