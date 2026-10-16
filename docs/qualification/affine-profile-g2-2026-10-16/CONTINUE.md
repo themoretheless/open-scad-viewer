@@ -27,19 +27,22 @@ and collapsed negatives stay unproved. Original filled-interior fold integration
 shares every profile boundary coefficient with a certified valid Solid but its
 original global atlas refuses (work-limited/unproved, not a collision witness).
 
-FULL FRESH NATIVE DRIVER IS RUNNING. NURBS lib completed successfully: 1575 passed; current stage is source-volume-matrices. Tool exec session **73882** belongs to:
-`python3 docs/qualification/affine-profile-g2-2026-10-16/validate.py`.
-Do not restart on an observation timeout. Read `summary.json`, then wait/poll the
-actual session. All checks run fresh, no inherited lower NURBS credit, because
-NURBS regularity/collection ceilings changed. Guard: **3733 inputs**,
-**0864343ba9e6748addbf92a61e706c80c5c00c2cb31169ca3fa1ba13b5dd25b4**.
-Native inputs are frozen until the driver terminates. Code commit changed no input
-bytes. Qualification docs/logs are deliberately uncommitted while being written.
-Full BRep previously took ~21 minutes (arc source cases); expect finite CPU work.
-Driver checks: NURBS lib; all four source-volume integration matrices; surface
-regularity/G2 integrations; BRep except AAG; AAG serial; bridge lib; native
-JSON/STEP owners; no-codec libraries. Successful focused checks do not substitute
-for terminal full qualification or public WASM/CI/STEP/browser results.
+FULL FRESH NATIVE DRIVER TERMINATED SUCCESSFULLY: **3094 passed, 4 ignored**.
+Exec session 73882 returned exit 0; no process from this driver remains running.
+All eight checks ran fresh (no inherited lower credit), and the final source guard
+was verified unchanged again before saving this result. Guard: 3733 inputs,
+0864343ba9e6748addbf92a61e706c80c5c00c2cb31169ca3fa1ba13b5dd25b4.
+Qualified code is d1956c93609ddf68869289d6e0556c2652cde1a0. Counts: NURBS1575,
+source-volume integrations21, regularity/G2 integrations11, BRep1091+44serialAAG
+(3 ignored), bridge340 (1 ignored), native JSON/STEP3+9, no-codec build passed.
+No public WASM/new CI/external STEP/browser credit is inferred.
+
+Development of the next filled-volume owner continues in a SEPARATE linked
+worktree `/private/tmp/osv-affine-volume-atlas-20261016`, branch
+`codex/affine-volume-atlas`, based on this checkpoint. Its new code has focused
+prototype checks only; do not apply this full native guard to that changed code.
+The full objective remains active. Preserve both worktrees and unrelated primary
+checkout work. Read that worktree's native source/current state before continuing.
 
 The independent full global-volume diagnostic DID terminate: old session 50989,
 exit 101, 458.24 seconds, actual boundary/volume false, pending pair [94,96],
