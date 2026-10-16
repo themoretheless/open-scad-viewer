@@ -188,7 +188,7 @@ pub(super) fn original_jets(
 // Error-free TwoDiff: a zero residual proves the stored subtraction exact.
 // Coordinate ceilings keep every intermediate finite. An inexact difference
 // falls back to independent original jets, never to a rounded proxy curve.
-pub(super) fn exact_offset(
+pub(in crate::sweeps::progressive_sweep) fn exact_offset(
     path: &Curve,
     guide: &Curve,
     spent: &mut usize,

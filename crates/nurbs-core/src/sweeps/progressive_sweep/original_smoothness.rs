@@ -1,5 +1,6 @@
 //! Sufficient open original-frame C1/C2, separate from retained seams/error.
 use super::*;
+mod guided_arc;
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate as frame, scalar_certificate::Status,
 };
@@ -264,20 +265,38 @@ impl Sweep<'_> {
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-guided-frame-mode-unproved")};
         let Some(guide)=self.orientation_guide else{return Ok(out);};
         if self.frame_laws.is_some()||self.path.periodic||guide.periodic||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
+        // Keep the cheaper sufficient Cartesian route. A failed source jet
+        // query is charged before trying the geometric arc owner.
+        let mut cartesian=true;
         for (curve,k) in [(self.path,order+1),(guide,order),(self.twist,order)] {
-            if !knot_continuity(curve,k,&mut out.exact_work,max_exact_work)?{out.reason=Some("closed-guided-frame-knot-jets-unproved");return Ok(out);}
-            let seam=super::endpoint_jets::certify(curve,k,max_exact_work-out.exact_work)?;out.exact_work+=seam.exact_work;
-            if !seam.certified{out.reason=Some("closed-guided-frame-endpoint-jets-unproved");return Ok(out);}
+            if !knot_continuity(curve,k,&mut out.exact_work,max_exact_work)? {
+                out.reason=Some("closed-guided-frame-knot-jets-unproved");cartesian=false;break;
+            }
+            let seam=super::endpoint_jets::certify(curve,k,max_exact_work-out.exact_work)?;
+            out.exact_work+=seam.exact_work;
+            if !seam.certified {
+                out.reason=Some("closed-guided-frame-endpoint-jets-unproved");cartesian=false;break;
+            }
+        }
+        if !cartesian {
+            return if self.options.spacing==Spacing::Parameter {Ok(out)}
+                else {guided_arc::certify(self,guide,out,max_cells,max_exact_work)};
         }
         if self.options.spacing!=Spacing::Parameter {
             for curve in [self.path,guide] {
                 let regular=crate::curve_regularity::inspect(curve,max_cells-out.cells)?;out.cells+=regular.cells;
-                if !regular.spanwise_regular{out.reason=Some("closed-guided-arc-source-speed-unproved");return Ok(out);}
+                if !regular.spanwise_regular {out.reason=Some("closed-guided-arc-source-speed-unproved");return Ok(out);}
             }
-            let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,max_cells-out.cells)?;
-            out.cells+=cells;out.closed_source_frame_smoothness_certified=status==Status::Certified;
-            out.reason=if out.closed_source_frame_smoothness_certified{None}else{Some("closed-guided-independent-frame-cover-unproved")};
-        }else{
+            // This strong Cartesian-product proposal is bounded independently
+            // of the caller allowance. A true station correspondence can be
+            // regular even when unrelated path/guide parameters are singular.
+            let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,(max_cells-out.cells).min(4096))?;
+            out.cells+=cells;
+            if status!=Status::Certified {
+                return guided_arc::certify(self,guide,out,max_cells,max_exact_work);
+            }
+            out.closed_source_frame_smoothness_certified=true;out.reason=None;
+        }else {
             let cover=frame::certify_guided_cover(self.path,guide,self.twist,max_cells)?;
             out.cells=cover.cells;out.closed_source_frame_smoothness_certified=cover.status==Status::Certified;
             out.reason=if out.closed_source_frame_smoothness_certified{None}else{cover.reason};

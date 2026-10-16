@@ -1,7 +1,7 @@
 //! Original frame jets in the station coordinate, with independently proved
 //! normalized source-parameter maps. No inverse derivative is guessed.
 use super::*;
-pub(super) fn arc_frame(
+pub(in crate::sweeps::progressive_sweep) fn arc_frame(
     s: &Sweep<'_>,
     station: [f64; 2],
     p: frame::PathPhase,

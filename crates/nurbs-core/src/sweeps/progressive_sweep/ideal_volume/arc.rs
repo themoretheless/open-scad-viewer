@@ -11,7 +11,7 @@ struct Cell {
     tangent: V3,
     tangent_rate: V3,
 }
-pub(super) struct ArcMap {
+pub(in crate::sweeps::progressive_sweep) struct ArcMap {
     // Immutable original coefficients, never a fitted inverse/proxy curve.
     path: Curve,
     cells: Vec<Cell>,
@@ -22,7 +22,7 @@ pub(super) struct ArcMap {
 }
 impl ArcMap {
     pub(super) fn length(&self) -> I { self.total }
-    pub(super) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
+    pub(in crate::sweeps::progressive_sweep) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
         let max = max.min(spent.saturating_add(100000));
         let [a, b] = path.domain();
         let width = I::point(b).sub(I::point(a))?;
@@ -153,7 +153,7 @@ impl ArcMap {
             prefixes,
         }))
     }
-    pub(super) fn phase(
+    pub(in crate::sweeps::progressive_sweep) fn phase(
         &self,
         station: [f64; 2],
         spent: &mut usize,

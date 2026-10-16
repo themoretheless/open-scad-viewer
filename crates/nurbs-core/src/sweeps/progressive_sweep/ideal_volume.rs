@@ -29,8 +29,8 @@ pub struct IdealVolumeReport {
     pub projection: [[f64; 3]; 3],
     pub reason: Option<&'static str>,
 }
-mod arc;
-mod arc_frames;
+pub(super) mod arc;
+pub(super) mod arc_frames;
 pub(crate) mod atlas;
 pub(crate) mod cell;
 pub(crate) mod charts;
