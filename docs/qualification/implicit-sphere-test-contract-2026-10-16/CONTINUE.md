@@ -55,7 +55,8 @@ ABI qualification, not a public package, Node 20 floor, browser or UI result.
   arc translation/frame/law jets and complete knot/seam coverage together.
 - See the predecessor CONTINUE for the separate ordered-fiber theorem needed
   when smooth flat end caps make a volume parameterization singular at its ends.
-  An inner-wall cusp is a mandatory negative case; planar tangency alone is G0.
+  An inner-wall cusp is a mandatory negative case; tangency must not bypass
+  oriented boundary regularity.
 - Public package/fingerprints, browser/Rush/viewport/Solid UI, full semantic G1,
   fresh main integration and CI remain separate unfinished gates.
 

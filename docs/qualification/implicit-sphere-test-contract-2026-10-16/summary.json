@@ -492,7 +492,8 @@
     "logSha256": "4624e79627fd8356a632f8660e71f4ac4049caa9eb5c1d39664ed0c203a5d3a9",
     "observedCause": "Cargo reused no-codec cad-predicates metadata whose dependency information omitted the new quadric module despite its unconditional source export",
     "recovery": "cargo clean -p cad-predicates --profile dev; regenerate metadata and recheck; no source edits",
-    "cleanLog": "/private/tmp/osv-implicit-sphere-stale-predicate-cache-clean-20261016.log"
+    "cleanLog": "/private/tmp/osv-implicit-sphere-stale-predicate-cache-clean-20261016.log",
+    "preservedCleanLog": "logs/predicate-dev-cache-clean.log"
   },
   "regeneratedNoCodecMetadata": [
     {
@@ -539,5 +540,27 @@
       "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a"
     }
   ],
-  "privateWasmRuntimeInputGuard": "wasm-runtime-inputs.json"
+  "privateWasmRuntimeInputGuard": "wasm-runtime-inputs.json",
+  "supplementaryLogs": [
+    {
+      "path": "logs/predicate-dev-cache-clean.log",
+      "sha256": "1a175db7aca4b78579a7d36853849f0bb3b6a6615a50263f1c842db1aeef9b70"
+    },
+    {
+      "path": "logs/private-release-wasm-final.log",
+      "sha256": "af13d4e770790f055218181deefb5996d2fda51ec13b249dd9a1d5dd0d02d2e1"
+    },
+    {
+      "path": "logs/private-sphere-wasm-runtime-final.log",
+      "sha256": "1d2944b648337d4dc04fc722dcd9de1d6f7a20680165ce82c129906205ab61e2"
+    },
+    {
+      "path": "logs/private-rational-cap-wasm-runtime-final.log",
+      "sha256": "c1889910b16df2eb35d9c4b022e6fed254fa6c9b099079662dc6714192440fde"
+    },
+    {
+      "path": "logs/focused-sphere-signed-gauges-final.log",
+      "sha256": "a9b2299287c6ecf3ce92cadc435e2fd56a1388eaba668b3a75676e43993af24d"
+    }
+  ]
 }
