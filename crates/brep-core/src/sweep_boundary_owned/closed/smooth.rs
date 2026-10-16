@@ -1,5 +1,6 @@
 //! Constructor-owned G1/G2 Solid from one original filled material chart and
-//! one exact affine quintic motion. No caller model/report or allowed pair list.
+//! one exact affine quintic motion. Audit recomputes supplied geometry; no
+//! caller report or allowed pair list supplies proof credit.
 use super::*;
 use crate::{AffinePose, AffineStationLimits, affine_station_walls};
 use nurbs_core::{
@@ -78,6 +79,16 @@ pub struct BindingReport {
     pub faces: usize,
     pub exact_work: u64,
     pub reason: &'static str,
+    // Source-to-actual signed tensor coordinate permutations, one per face.
+    gauges: Vec<u8>,
+}
+impl BindingReport {
+    pub fn reparameterized_faces(&self) -> usize {
+        self.gauges.iter().filter(|&&g| g != 0).count()
+    }
+    fn orientation_reversed(&self, face: usize) -> Option<bool> {
+        self.gauges.get(face).map(|g| g.count_ones() % 2 != 0)
+    }
 }
 pub struct SmoothClosedReport {
     pub certified: bool,
@@ -176,6 +187,108 @@ fn image(pose: AffinePose, p: &[f64], origin: [f64; 3]) -> Option<[f64; 3]> {
     }
     Some(q)
 }
+fn matches_gauge(
+    model: &Model,
+    index: usize,
+    source: &Curve,
+    pose: &[AffinePose; 6],
+    origin: [f64; 3],
+    out: &mut BindingReport,
+    max: u64,
+    gauge: u8,
+) -> Result<bool> {
+    let swap = gauge & 4 != 0;
+    let flip_u = gauge & 1 != 0;
+    let flip_v = gauge & 2 != 0;
+    let degrees = if swap {
+        [5, source.degree]
+    } else {
+        [source.degree, 5]
+    };
+    let shape = if swap {
+        [6, source.control_points.len()]
+    } else {
+        [source.control_points.len(), 6]
+    };
+    let face = &model.faces[index];
+    let s = &face.surface;
+    out.reason = "affine-wall-coefficient-identity-unproved";
+    if s.degree_u != degrees[0]
+        || s.degree_v != degrees[1]
+        || s.periodic_u
+        || s.periodic_v
+        || s.knots_u != [vec![0.; degrees[0] + 1], vec![1.; degrees[0] + 1]].concat()
+        || s.knots_v != [vec![0.; degrees[1] + 1], vec![1.; degrees[1] + 1]].concat()
+        || s.control_points.len() != shape[0]
+        || s.control_points[0].len() != shape[1]
+        || !face.holes.is_empty()
+    {
+        return Ok(false);
+    }
+    for (i, p) in source.control_points.iter().enumerate() {
+        for j in 0..6 {
+            let Some(q) = image(pose[j], p, origin) else {
+                return Ok(false);
+            };
+            let [mut u, mut v] = if swap { [j, i] } else { [i, j] };
+            if flip_u {
+                u = shape[0] - 1 - u;
+            }
+            if flip_v {
+                v = shape[1] - 1 - v;
+            }
+            for k in 0..3 {
+                if out.exact_work == max {
+                    out.reason = "affine-wall-binding-work-limit";
+                    return Ok(false);
+                }
+                out.exact_work += 1;
+                if s.weights[u][v] != source.weights[i] || s.control_points[u][v][k] != q[k] {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+    out.reason = "affine-wall-full-domain-unproved";
+    let coedges = model.loops[face.outer]
+        .coedges
+        .iter()
+        .map(|c| Coedge {
+            world: &model.edges[c.edge].curve,
+            uv: &c.pcurve,
+            reversed: c.reversed,
+        })
+        .collect::<Vec<_>>();
+    let proof =
+        retained_wall_domain_certificate::inspect(s, &coedges, false, max - out.exact_work)?;
+    out.exact_work += proof.work;
+    if !proof.domain_certified {
+        return Ok(false);
+    }
+    Ok(true)
+}
+// The eight exact symmetries of the normalized tensor square. Native
+// construction tries identity first and retains its existing exact-work cost.
+// Other gauges copy/reindex coefficients only: no rounded knot or pole refit.
+fn matches_face(
+    model: &Model,
+    index: usize,
+    source: &Curve,
+    pose: &[AffinePose; 6],
+    origin: [f64; 3],
+    out: &mut BindingReport,
+    max: u64,
+) -> Result<Option<u8>> {
+    for gauge in 0..8 {
+        if matches_gauge(model, index, source, pose, origin, out, max, gauge)? {
+            return Ok(Some(gauge));
+        }
+        if out.exact_work == max {
+            return Ok(None);
+        }
+    }
+    Ok(None)
+}
 fn binding(
     model: &Model,
     profiles: &[Vec<Curve>],
@@ -189,6 +302,7 @@ fn binding(
         faces: 0,
         exact_work: 0,
         reason: "affine-wall-coverage-unproved",
+        gauges: vec![0; model.faces.len()],
     };
     let spans = profiles.iter().map(Vec::len).sum::<usize>();
     if model.faces.len() != spans * poses.len()
@@ -200,6 +314,7 @@ fn binding(
     {
         return Ok(out);
     }
+    let mut used = vec![false; model.faces.len()];
     let mut offset = 0;
     for (ring, wire) in profiles.iter().enumerate() {
         if model.shells[ring].faces.len() != poses.len() * wire.len() {
@@ -208,68 +323,40 @@ fn binding(
         for (layer, pose) in poses.iter().enumerate() {
             for (span, source) in wire.iter().enumerate() {
                 let index = layer * spans + offset + span;
-                if !model.shells[ring].faces.iter().any(|u| u.face == index) {
-                    return Ok(out);
-                }
-                let face = &model.faces[index];
-                let s = &face.surface;
-                out.reason = "affine-wall-coefficient-identity-unproved";
-                if s.degree_u != source.degree
-                    || s.degree_v != 5
-                    || s.periodic_u
-                    || s.periodic_v
-                    || s.knots_u
-                        != [vec![0.; source.degree + 1], vec![1.; source.degree + 1]].concat()
-                    || s.knots_v != [vec![0.; 6], vec![1.; 6]].concat()
-                    || s.control_points.len() != source.control_points.len()
-                    || s.control_points[0].len() != 6
-                    || !face.holes.is_empty()
-                {
-                    return Ok(out);
-                }
-                for (i, p) in source.control_points.iter().enumerate() {
-                    for j in 0..6 {
-                        let Some(q) = image(pose[j], p, origin) else {
-                            return Ok(out);
-                        };
-                        for k in 0..3 {
-                            if out.exact_work == max {
-                                out.reason = "affine-wall-binding-work-limit";
-                                return Ok(out);
-                            }
-                            out.exact_work += 1;
-                            if s.weights[i][j] != source.weights[i]
-                                || s.control_points[i][j][k] != q[k]
-                            {
-                                return Ok(out);
-                            }
-                        }
+                // Native ordering is the first proposal. STEP may group outer
+                // and inner shell faces differently. Every fallback comparison
+                // shares this exact ledger; every actual face is used once.
+                let shell = &model.shells[ring];
+                let candidates = std::iter::once(index)
+                    .filter(|&i| shell.faces.iter().any(|u| u.face == i))
+                    .chain(shell.faces.iter().map(|u| u.face).filter(|&i| i != index));
+                let mut matched = None;
+                for actual in candidates {
+                    if used[actual] {
+                        continue;
+                    }
+                    if let Some(gauge) =
+                        matches_face(model, actual, source, pose, origin, &mut out, max)?
+                    {
+                        matched = Some((actual, gauge));
+                        break;
+                    }
+                    if out.exact_work == max {
+                        return Ok(out);
                     }
                 }
-                out.reason = "affine-wall-full-domain-unproved";
-                let coedges = model.loops[face.outer]
-                    .coedges
-                    .iter()
-                    .map(|c| Coedge {
-                        world: &model.edges[c.edge].curve,
-                        uv: &c.pcurve,
-                        reversed: c.reversed,
-                    })
-                    .collect::<Vec<_>>();
-                let proof = retained_wall_domain_certificate::inspect(
-                    s,
-                    &coedges,
-                    false,
-                    max - out.exact_work,
-                )?;
-                out.exact_work += proof.work;
-                if !proof.domain_certified {
+                let Some((actual, gauge)) = matched else {
                     return Ok(out);
-                }
+                };
+                used[actual] = true;
+                out.gauges[actual] = gauge;
                 out.faces += 1;
             }
         }
         offset += wire.len();
+    }
+    if used.iter().any(|u| !*u) {
+        return Ok(out);
     }
     out.certified = true;
     out.reason = "exact-affine-filled-carrier-wall-union";
@@ -507,7 +594,14 @@ fn construct_impl(
             return Ok(refused(out, "actual-affine-orientation-work-limit"));
         }
         out.orientation_cells += 1;
-        if u.reversed != reversed {
+        let Some(gauge_reversed) = out
+            .binding
+            .as_ref()
+            .and_then(|b| b.orientation_reversed(u.face))
+        else {
+            return Ok(refused(out, "actual-affine-chart-orientation-unproved"));
+        };
+        if u.reversed != (reversed ^ gauge_reversed) {
             return Ok(refused(out, "actual-affine-material-orientation-unproved"));
         }
     }

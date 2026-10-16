@@ -682,6 +682,110 @@ fn exact_wall_binding_refuses_sub_tolerance_geometry_weights_and_domain_changes(
             .unwrap()
             .certified
     );
+    for gauge in 1_u8..8 {
+        let mut chart = model.clone();
+        for face in 0..chart.faces.len() {
+            let outer = chart.faces[face].outer;
+            let s = &mut chart.faces[face].surface;
+            if gauge & 4 != 0 {
+                std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+                std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+                let old = std::mem::take(&mut s.control_points);
+                s.control_points = (0..old[0].len())
+                    .map(|j| old.iter().map(|r| r[j].clone()).collect())
+                    .collect();
+                let old = std::mem::take(&mut s.weights);
+                s.weights = (0..old[0].len())
+                    .map(|j| old.iter().map(|r| r[j]).collect())
+                    .collect();
+            }
+            if gauge & 1 != 0 {
+                s.control_points.reverse();
+                s.weights.reverse();
+            }
+            if gauge & 2 != 0 {
+                for r in &mut s.control_points {
+                    r.reverse();
+                }
+                for r in &mut s.weights {
+                    r.reverse();
+                }
+            }
+            for c in &mut chart.loops[outer].coedges {
+                for p in &mut c.pcurve.control_points {
+                    if gauge & 4 != 0 {
+                        p.swap(0, 1);
+                    }
+                    if gauge & 1 != 0 {
+                        p[0] = 1. - p[0];
+                    }
+                    if gauge & 2 != 0 {
+                        p[1] = 1. - p[1];
+                    }
+                }
+            }
+            if gauge.count_ones() % 2 != 0 {
+                // Keep native outer UV winding and world coedge ownership
+                // after reflecting the chart. Face-use sense changes below.
+                let wire = &mut chart.loops[outer];
+                wire.coedges.reverse();
+                for c in &mut wire.coedges {
+                    c.reversed = !c.reversed;
+                    c.pcurve = c.pcurve.reverse().unwrap();
+                }
+            }
+        }
+        for shell in &mut chart.shells {
+            for u in &mut shell.faces {
+                u.reversed ^= gauge.count_ones() % 2 != 0;
+            }
+        }
+        chart.validate().unwrap();
+        let proof = binding(&chart, &p.profiles, &poses, origin, 1000000).unwrap();
+        assert!(proof.certified, "gauge {gauge}: {}", proof.reason);
+        assert_eq!(proof.reparameterized_faces(), model.faces.len());
+        assert_eq!(
+            proof.orientation_reversed(0),
+            Some(gauge.count_ones() % 2 != 0)
+        );
+        let smooth =
+            crate::sweep_smoothness::complete::inspect(&chart, limits().smoothness).unwrap();
+        assert!(smooth.g2_certified, "complete actual gauge {gauge}");
+        if gauge == 5 {
+            let short = binding(&chart, &p.profiles, &poses, origin, proof.exact_work - 1).unwrap();
+            assert!(!short.certified && short.exact_work < proof.exact_work);
+        }
+    }
+    let mut permuted = model.clone();
+    let n = permuted.faces.len();
+    permuted.faces.reverse();
+    for shell in &mut permuted.shells {
+        for u in &mut shell.faces {
+            u.face = n - 1 - u.face;
+        }
+    }
+    permuted.validate().unwrap();
+    let proof = binding(&permuted, &p.profiles, &poses, origin, 1000000).unwrap();
+    assert!(proof.certified, "{}", proof.reason);
+    assert_eq!(proof.faces, n);
+    for max in [0, proof.exact_work - 1] {
+        let short = binding(&permuted, &p.profiles, &poses, origin, max).unwrap();
+        assert!(!short.certified && short.exact_work <= max);
+    }
+    let mut duplicate = p.profiles.clone();
+    duplicate[0][1] = duplicate[0][0].clone();
+    assert!(
+        !binding(&permuted, &duplicate, &poses, origin, 1000000)
+            .unwrap()
+            .certified
+    );
+    permuted.faces[0].surface.control_points[1][2][0] += 1e-10;
+    permuted.validate().unwrap();
+    assert!(
+        !binding(&permuted, &p.profiles, &poses, origin, 1000000)
+            .unwrap()
+            .certified
+    );
     for which in 0..3 {
         let mut changed = model.clone();
         if which == 0 {
