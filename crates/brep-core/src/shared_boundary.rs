@@ -323,21 +323,45 @@ fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->b
 // Exact quarter-disk trim: its interior has 1-u²-v²>0 and its circular
 // boundary has equality. This is a UV-domain certificate, independent of
 // recognition of any particular analytic solid.
-fn quarter_disk_trim(model:&Model,face:&crate::Face)->bool{
-    if !face.holes.is_empty(){return false;}
-    let uses=&model.loops[face.outer].coedges;if uses.len()!=3{return false;}
-    let line=|p:&Curve,a:[f64;2],b:[f64;2]|p.degree==1&&!p.periodic&&p.knots==[0.,0.,1.,1.]&&p.weights==[1.,1.]&&p.control_points==[a.to_vec(),b.to_vec()];
-    uses.iter().any(|c|line(&c.pcurve,[0.,0.],[1.,0.]))
-        &&uses.iter().any(|c|line(&c.pcurve,[0.,1.],[0.,0.]))
-        &&uses.iter().any(|c|{let p=&c.pcurve;p.degree==2&&!p.periodic&&p.knots==[0.,0.,0.,1.,1.,1.]&&p.weights==[1.,1.,2.]&&p.control_points==[vec![1.,0.],vec![1.,1.],vec![0.,1.]]})
+fn quarter_disk_chart(model:&Model,face:&crate::Face)->Option<Surface> {
+    if !face.holes.is_empty(){return None;}
+    let uses=&model.loops[face.outer].coedges;if uses.len()!=3 || uses.iter().any(|c|c.pcurve.control_points.iter().any(|p|p.len()!=2)){return None;}
+    let s=&face.surface;
+    if s.degree_u!=2 || s.degree_v!=2 || s.control_points.len()!=3 || s.control_points[0].len()!=3
+        || s.knots_u!=[0.,0.,0.,1.,1.,1.] || s.knots_v!=[0.,0.,0.,1.,1.,1.] {return None;}
+    let line=|p:&Curve,a:[f64;2],b:[f64;2]|p.degree==1&&!p.periodic&&p.knots==[0.,0.,1.,1.] && p.weights.len()==2 && p.weights.iter().all(|w|w.is_finite()&&*w>0.)
+        && (p.control_points==[a.to_vec(),b.to_vec()] || p.control_points==[b.to_vec(),a.to_vec()]);
+    let arc=|p:&Curve|p.degree==2&&!p.periodic&&p.knots==[0.,0.,0.,1.,1.,1.] && p.weights.len()==3 && p.weights.iter().all(|w|w.is_finite()&&*w>0.)
+        && ((p.control_points==[vec![1.,0.],vec![1.,1.],vec![0.,1.]] && p.weights[0]==p.weights[1] && p.weights[2]==2.*p.weights[0])
+            ||(p.control_points==[vec![0.,1.],vec![1.,1.],vec![1.,0.]] && p.weights[2]==p.weights[1] && p.weights[0]==2.*p.weights[2]));
+    for gauge in 0_u8..8 {
+        let mut curves=uses.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>();let mut exact=true;
+        for c in &mut curves {for p in &mut c.control_points {
+            if gauge&4!=0 {p.swap(0,1);}
+            for k in 0..2 {if gauge&(1<<k)!=0 {
+                // Error-free 1-x, never a snapped UV coefficient.
+                let x=p[k];let sum=1.-x;let bv=sum-1.;let av=sum-bv;
+                if !sum.is_finite() || (1.-av)+(-x-bv)!=0. {exact=false;break;}
+                p[k]=sum;
+            }}
+        }}
+        if !exact || !curves.iter().any(|p|line(p,[0.,0.],[1.,0.])) || !curves.iter().any(|p|line(p,[0.,1.],[0.,0.])) || !curves.iter().any(arc) {continue;}
+        // A signed parameter-square bijection, using ONLY original coefficients.
+        // No fitting or world-geometry change transfers the canonical disk proof.
+        let mut canonical=crate::face_injectivity::canonical_pole_surface(s,usize::from(gauge&4!=0));
+        if gauge&1!=0 {canonical.control_points.reverse();canonical.weights.reverse();}
+        if gauge&2!=0 {for r in &mut canonical.control_points {r.reverse();}for r in &mut canonical.weights {r.reverse();}}
+        return Some(canonical);
+    }
+    None
 }
 fn disk_sided(s:&Surface,axis:usize,plane:f64)->Option<bool>{
     if s.degree_u!=2||s.degree_v!=2||s.periodic_u||s.periodic_v
         ||s.knots_u!=[0.,0.,0.,1.,1.,1.]||s.knots_v!=[0.,0.,0.,1.,1.,1.]
-        ||s.control_points.len()!=3||s.control_points[0].len()!=3||s.weights[0][0]!=1.{return None;}
+        ||s.control_points.len()!=3||s.control_points[0].len()!=3{return None;}
     let pole=s.control_points[0][0][axis];if pole==plane{return None;}
     for i in 0..3{for j in 0..3{
-        let factor=1.-f64::from(i==2)-f64::from(j==2);
+        let factor=(1.-f64::from(i==2)-f64::from(j==2))*s.weights[0][0];
         // This determinant is (z-plane)*weight-(pole-plane)*factor.
         // Subtractions remain inside the exact predicate, not rounded inputs.
         let values=[plane,0.,0.,s.control_points[i][j][axis],factor,0.,pole,s.weights[i][j],1.,plane,0.,1.];
@@ -350,12 +374,12 @@ fn disk_sided(s:&Surface,axis:usize,plane:f64)->Option<bool>{
 }
 fn opposite_disk_sides(model:&Model,faces:[usize;2],ca:&crate::Coedge,cb:&crate::Coedge)->crate::Result<bool>{
     let a=&model.faces[faces[0]];let b=&model.faces[faces[1]];
-    if !quarter_disk_trim(model,a)||!quarter_disk_trim(model,b){return Ok(false);}
+    let (Some(qa),Some(qb))=(quarter_disk_chart(model,a),quarter_disk_chart(model,b)) else{return Ok(false);};
     let edge=&model.edges[ca.edge].curve;
     for axis in 0..3{
         let plane=edge.control_points[0][axis];
         if !edge.control_points.iter().all(|p|p[axis]==plane){continue;}
-        if let (Some(sa),Some(sb))=(disk_sided(&a.surface,axis,plane),disk_sided(&b.surface,axis,plane)){
+        if let (Some(sa),Some(sb))=(disk_sided(&qa,axis,plane),disk_sided(&qb,axis,plane)){
             if sa==sb{continue;}
             let equal=|face:&crate::Face,c:&crate::Coedge|nurbs_core::curve_surface_agreement::verify_exact(edge,&c.pcurve,&face.surface,c.reversed,32768)
                 .map(|d|d.is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal));

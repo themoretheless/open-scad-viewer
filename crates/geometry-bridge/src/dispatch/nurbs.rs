@@ -13,6 +13,8 @@ const OPS: &[&str] = &[
     "brep_nurbs_revolve",
     "brep_nurbs_sphere",
     "brep_nurbs_sphere_exact",
+    "brep_implicit_sphere_source_construct",
+    "brep_implicit_sphere_source_audit",
     "brep_nurbs_gear",
     "brep_nurbs_torus",
     "brep_nurbs_push_face",
@@ -146,6 +148,8 @@ fn handle(v: Value) -> Result<Value> {
                 .unwrap_or(360.),
         )?),
         "brep_nurbs_sphere" | "brep_nurbs_sphere_exact" => cad_face_contacts::sphere(v),
+        "brep_implicit_sphere_source_construct" => cad_implicit_body::sphere(v, false),
+        "brep_implicit_sphere_source_audit" => cad_implicit_body::sphere(v, true),
         "brep_nurbs_gear" => {
             let number = |name: &str, default: f64| -> f64 {
                 v.get(name).and_then(Value::as_f64).unwrap_or(default)
@@ -329,7 +333,11 @@ fn handle(v: Value) -> Result<Value> {
             &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
             &field::<Vec<f64>>(&v, "parameters")?,
         )?),
-        operation @ ("brep_nurbs_smooth_polygon_station_body" | "brep_nurbs_section_loft_surfaces" | "brep_nurbs_rational_section_loft") => crate::polygon_station_body::dispatch(operation,&v),
+        operation @ ("brep_nurbs_smooth_polygon_station_body"
+        | "brep_nurbs_section_loft_surfaces"
+        | "brep_nurbs_rational_section_loft") => {
+            crate::polygon_station_body::dispatch(operation, &v)
+        }
         "brep_nurbs_smooth_station_walls" => {
             let report = brep_core::analytic::smooth_station_walls(
                 &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,

@@ -5,6 +5,8 @@
 //! construction results as authored input. Opaque references prevent accidental
 //! cross-source reuse; they do not authenticate arbitrary caller assertions.
 mod arithmetic;
+mod bezier_quadric_identity;
+pub use bezier_quadric_identity::*;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
 mod line_chart_identity;
@@ -36,7 +38,7 @@ pub use construction::*;
 pub use construction3::*;
 pub use context::*;
 
-pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-11";
+pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-12";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sign {

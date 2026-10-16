@@ -83,7 +83,7 @@ pub(super) fn diagnose_sweep_volume_with_projections(
     Ok(
         json!({"regularBoundarySolidCertified":regularity.as_ref().is_some_and(|p|r.proven && p.all_faces_regular_modulo_poles),
         "boundaryRegularity":regularity.as_ref().map(|p|json!({"allFacesRegular":p.all_faces_regular,"allFacesRegularModuloPoles":p.all_faces_regular_modulo_poles,
-            "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(face,p)|p.as_ref().map(|p|json!({"face":face,"edge":p.edge,"vertex":p.vertex,"collapsedEnd":p.collapsed_end,"proven":p.proof.proven,"cells":p.proof.cells}))).collect::<Vec<_>>(),
+            "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(face,p)|p.as_ref().map(|p|json!({"face":face,"edge":p.edge,"vertex":p.vertex,"collapsedAxis":p.collapsed_axis,"collapsedEnd":p.collapsed_end,"proven":p.proof.proven,"cells":p.proof.cells}))).collect::<Vec<_>>(),
             "cells":p.cells,"unresolvedFaces":p.unresolved_faces,"scope":"whole-retained-boundary-piecewise-regular"})),
         "solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
@@ -262,7 +262,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "face": face.face,
             "linearRowWeights":face.linear.as_ref().map(|linear|linear.row_weights),
             "linearProfileParameterization":face.linear.as_ref().and_then(|linear|linear.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower}))),
-            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
+            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedAxis":q.collapsed_axis,"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
                 "proven":q.proven(),"polar":q.polar.as_ref().map(|p|json!({"proven":p.proven,"cells":p.cells,"reason":p.reason,"derivativeBounds":p.derivative_bounds,"dominanceMarginLower":p.dominance_margin_lower})),"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
                 "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),

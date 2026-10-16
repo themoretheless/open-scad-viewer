@@ -337,6 +337,23 @@ mod tests {
         assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_none());
     }
     #[test]
+    fn affine_corners_never_admit_an_interior_fold_or_hide_proposal_work() {
+        // All four corners project to a perfect affine rectangle, while
+        // x(u)=6u-15u²+10u³ reverses direction twice in its interior.
+        let s=Surface {degree_u:3,degree_v:2,
+            knots_u:vec![0.,0.,0.,0.,1.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+            control_points:[0.,2.,-1.,1.].into_iter().map(|x|vec![vec![x,0.,0.],vec![x,0.5,1.],vec![x,1.,0.]]).collect(),
+            weights:vec![vec![1.;3];4],periodic_u:false,periodic_v:false};
+        assert!(affine_corner_projective_hint(&s).is_some());
+        let before=format!("{s:?}");
+        for budget in [1,2,4,16,100] {
+            let r=certify(&s,budget).unwrap();
+            assert!(!r.proven,"corner proposal admitted a folded surface");
+            assert!(r.spans<=budget);
+        }
+        assert_eq!(format!("{s:?}"),before);
+    }
+    #[test]
     fn diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage(){
         let mut s=Surface{degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
             control_points:vec![vec![vec![2.,0.,0.],vec![2.,0.,4.]],vec![vec![2.,2.,0.],vec![2.,2.,4.]],vec![vec![0.,2.,0.],vec![0.,2.,4.]]],
@@ -501,6 +518,16 @@ pub fn certify(s:&Surface,max_spans:usize)->Result<Report> {
     let mut report=certify_contraction(s,max_spans)?;
     if report.proven || report.reason=="collapsed-boundary-requires-quotient-proof" || report.reason=="periodic-domain" || report.reason=="work-limit" {return Ok(report);}
     if s.control_points.iter().flatten().all(|p|p==&s.control_points[0][0]) {return Ok(report);}
+    // A reflected/rotated parameter chart may move the useful projective
+    // origin away from control[0][0]. Corner data only selects ONE proposal;
+    // the complete original interval-Jacobian proof still supplies admission.
+    let hint=affine_corner_projective_hint(s);
+    if let Some(projection)=hint {
+        if report.spans==max_spans {report.reason="work-limit";return Ok(report);}
+        let(q,cells)=projective_projection_work(s,[projection[0],projection[1]],projection[2],max_spans-report.spans)?;
+        report.spans+=cells;
+        if let Some(q)=q {report.proven=true;report.projective_projection=Some(projection);report.contraction_upper=Some(q);report.reason="global-projective-projection-contraction";return Ok(report);}
+    }
     for basis in LINEAR_PROJECTIONS {
         if report.spans==max_spans { report.reason="work-limit"; return Ok(report); }
         let (q,cells)=linear_projection_work(s,basis,max_spans-report.spans)?;
@@ -508,6 +535,7 @@ pub fn certify(s:&Surface,max_spans:usize)->Result<Report> {
         if let Some(q)=q {report.proven=true;report.linear_projection=Some(basis);report.contraction_upper=Some(q);report.reason="global-linear-projection-contraction";return Ok(report);}
     }
     for projection in projective_projections(s){
+        if hint==Some(projection) {continue;}
         if report.spans==max_spans{report.reason="work-limit";return Ok(report);}
         let (q,cells)=projective_projection_work(s,[projection[0],projection[1]],projection[2],max_spans-report.spans)?;
         report.spans+=cells;
@@ -748,4 +776,55 @@ fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
         for j in 0..2{let origin=s.control_points[0][0][free[j]];rows[j][3]=if origin==0.{0.}else{-origin};}
         rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent-rows[2][axis]*anchor;rows
     })
+}
+
+// Bounded raw-control proposal ranking. A small parallelogram residual is NOT
+// an affine identity, injectivity proof or regularity claim. All rejected and
+// accepted interval trials remain in the caller's original shared span ledger.
+fn affine_corner_projective_hint(s:&Surface)->Option<[[f64;4];3]> {
+    let last=s.control_points.len()-1;let end=s.control_points[0].len()-1;
+    let corners=[&s.control_points[0][0],&s.control_points[0][end],&s.control_points[last][0],&s.control_points[last][end]];
+    let mut best:Option<(f64,[[f64;4];3])>=None;
+    // Interior samples only break ties between raw proposals. They cannot
+    // establish an identity or admit geometry; every chosen candidate still
+    // needs the whole-domain interval proof and original shared span budget.
+    let domain=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
+                [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
+    let samples=[(0.25,0.25),(0.75,0.25),(0.5,0.5),(0.25,0.75),(0.75,0.75)]
+        .into_iter().map(|(u,v)|s.evaluate(domain[0][0]+u*(domain[0][1]-domain[0][0]),domain[1][0]+v*(domain[1][1]-domain[1][0])).ok().map(|p|(u,v,p.point)))
+        .collect::<Option<Vec<_>>>()?;
+    for (origin,anchor) in [(0,2),(2,0),(1,3),(3,1),(0,1),(1,0),(2,3),(3,2)] {
+        for i in 0..6 {
+            let axis=[2,2,0,0,1,1][i];let free=match axis {2=>[0,1],0=>[1,2],_=>[0,2]};
+            let at=corners[anchor][axis];
+            let extent=s.control_points.iter().flatten().map(|p|(p[axis]-at).abs()).fold(0.,f64::max);
+            let mut p=[[0.;4];3];p[0][free[0]]=1.;p[1][free[1]]=1.;p[2][axis]=if i%2==0 {1.}else{-1.};p[2][3]=extent-p[2][axis]*at;
+            for j in 0..2 {p[j][3]=-corners[origin][free[j]];}
+            if p.iter().flatten().any(|x|!x.is_finite()) {continue;}
+            let mut values=[[0.;2];4];let mut valid=true;
+            for (n,c) in corners.iter().enumerate() {
+                let d=p[2][axis]*c[axis]+p[2][3];
+                if !d.is_finite() || d<=0. {valid=false;break;}
+                for j in 0..2 {values[n][j]=(c[free[j]]+p[j][3])/d;valid&=values[n][j].is_finite();}
+            }
+            if !valid {continue;}
+            let a=[values[2][0]-values[0][0],values[2][1]-values[0][1]];
+            let b=[values[1][0]-values[0][0],values[1][1]-values[0][1]];
+            let det=a[0]*b[1]-a[1]*b[0];if !det.is_finite() || det==0. {continue;}
+            let scale=values.iter().flatten().map(|x|x.abs()).fold(1.,f64::max);
+            let mut score=(0..2).map(|j|(values[0][j]+values[3][j]-values[1][j]-values[2][j]).abs()/scale).fold(0.,f64::max);
+            if !score.is_finite() || score>1e-12 {continue;}
+            for &(u,v,c) in &samples {
+                let d=p[2][axis]*c[axis]+p[2][3];if !d.is_finite() || d<=0. {valid=false;break;}
+                for j in 0..2 {
+                    let actual=(c[free[j]]+p[j][3])/d;
+                    let expected=values[0][j]+u*a[j]+v*b[j];
+                    if !actual.is_finite() || !expected.is_finite() {valid=false;break;}
+                    score=score.max((actual-expected).abs()/scale);
+                }
+            }
+            if valid && score.is_finite() && best.as_ref().is_none_or(|(old,_)|score<*old) {best=Some((score,p));}
+        }
+    }
+    best.map(|(_,p)|p)
 }

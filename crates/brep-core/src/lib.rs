@@ -93,6 +93,7 @@ pub mod sweep_retained_walls;
 pub mod sweep_retained_charts;
 pub mod sweep_retained_decomposition;
 pub mod sweep_smoothness;
+pub mod source_implicit_body;
 pub mod sweep_miter_layout;
 pub mod sweep_station_reconstruction;
 pub mod sweep_affine_boundary;

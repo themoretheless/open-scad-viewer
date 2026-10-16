@@ -501,3 +501,14 @@ fn brep_pair_identifies_curved_edge_without_claiming_face_validity() {
     assert!(inspect_pair(&m, faces).unwrap().is_none());
     assert!(inspect_opposite_pair(&m, [0, 0]).is_err());
 }
+
+#[test]
+fn reflected_step_face_senses_preserve_exact_quarter_disk_side_ownership() {
+    let original=crate::analytic::sphere_exact(3.).unwrap();
+    let mut canonical=crate::face_senses::canonical_face_senses(&original).unwrap();
+    let before=canonical.clone();
+    for faces in [[0,4],[1,5],[2,6],[3,7]] {assert!(certify_opposite(&canonical,faces).unwrap().is_some(),"{faces:?}");}
+    assert_eq!(canonical,before);
+    canonical.faces[4].surface.control_points[1][1][2]=canonical.faces[4].surface.control_points[1][1][2].next_up();
+    assert!(certify_opposite(&canonical,[0,4]).unwrap().is_none());
+}

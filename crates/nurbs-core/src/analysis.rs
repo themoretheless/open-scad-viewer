@@ -10,6 +10,7 @@ pub mod curve_plane;
 pub mod curve_regularity;
 pub mod surface_regularity;
 pub mod affine_volume;
+pub mod implicit_quadric;
 pub mod surface_correspondence;
 pub mod surface_injectivity;
 pub mod surface_monotonicity;
