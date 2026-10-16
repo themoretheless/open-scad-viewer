@@ -1,6 +1,6 @@
 //! Original arc-station path chord error, including inverse-length residuals.
 use super::*;
-pub(super) fn upper(
+pub(in crate::sweeps::progressive_sweep::authored_error) fn upper(
     path: &Curve,
     traversal: [f64; 2],
     station: [f64; 2],
@@ -37,11 +37,15 @@ pub(super) fn upper(
         }
         let bound = bound(&source, station, length, residual).ok();
         if let Some(bound) =
-            bound.filter(|b| *b <= target || range[1] - range[0] <= 2_f64.powi(-16))
+            bound.filter(|b| *b <= target || range[1] - range[0] <= 2_f64.powi(-9))
         {
             error = error.max(bound);
             continue;
         }
+        // A bounded proposal must not chase an unattainable speed enclosure
+        // at a stationary endpoint forever. No partial derivative cover is
+        // returned; the owner may keep its independent coarse error bound.
+        if range[1]-range[0]<=2_f64.powi(-9) {return Ok((spent,None));}
         let mid = crate::distance_bounds::midpoint(range[0], range[1]);
         if !(range[0] < mid && mid < range[1]) {
             return Ok((spent, None));

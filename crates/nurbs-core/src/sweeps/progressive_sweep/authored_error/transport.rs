@@ -1,7 +1,7 @@
 //! Original parameter and arc-length transport enclosures.
 use super::*;
 use super::super::rmf_transport;
-mod arc_chord;
+pub(super) mod arc_chord;
 
 pub(super) fn guided_section_interpolation_mode(
     sweep: &Sweep<'_>, count: usize, max_cells: usize, mode:OriginalTransport,

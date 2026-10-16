@@ -1,12 +1,14 @@
-//! Local embedding in physical transverse coordinates of an ORIGINAL Bishop
-//! tube. The reference frame is ONE exact (existential) orthonormal frame at a
-//! chart endpoint, not independent world-coordinate boxes for its columns.
+//! Local embedding in physical transverse coordinates of an ORIGINAL moving
+//! orthonormal frame. One exact endpoint reference supplies the spectral gap;
+//! independent world-coordinate frame boxes never supply inverse credit.
 use super::*;
 
 pub(super) struct Tube {
     radius: I,
+    path_aligned: bool,
 }
 mod atlas;
+mod frame_bounds;
 mod plane;
 impl Tube {
     pub(super) fn certify(
@@ -25,16 +27,13 @@ impl Tube {
         out: &mut IdealVolumeReport,
         max: usize,
         exact: u64,
+        closed: bool,
     ) -> Result<Option<Self>> {
         let s = c.s;
         if c.arc.is_none()
-            || c.transport.is_none()
             || c.caps[0] != c.caps[1]
             || s.affine_laws.is_some()
-            || s.frame_laws.is_some()
-            || s.orientation_guide.is_some()
             || s.contact_point.is_some()
-            || s.options.orientation != Orientation::RotationMinimizing
             || s.scale
                 .control_points
                 .iter()
@@ -59,8 +58,35 @@ impl Tube {
         }
         out.cells += 1;
         let cap = c.caps[0];
-        if !plane::certify(path, cap, &mut out.exact_work, exact)? || out.cells == max {
+        // Integrating the tangent-rate bound across source knots/seams needs
+        // its OWN connected position/forward-tangent premises. An authored
+        // smooth frame does not establish any path derivative continuity.
+        if c.transport.is_none() && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
             return Ok(None);
+        }
+        if !plane::certify_frame(
+            path,
+            cap,
+            s.frame_laws.map(|(a, _)| a),
+            &mut out.exact_work,
+            exact,
+        )? || out.cells == max
+        {
+            return Ok(None);
+        }
+        if c.transport.is_none() {
+            let stage = max.min(out.cells.saturating_add(100000));
+            let Some(phase) = c
+                .arc
+                .as_ref()
+                .unwrap()
+                .phase([0., 0.], &mut out.cells, stage)?
+            else {
+                return Ok(None);
+            };
+            if frame_bounds::jets(c, [0., 0.], phase, out, max)?.is_none() {
+                return Ok(None);
+            }
         }
         // This global contraction proves BOTH injectivity and rank two over
         // the complete natural carrier rectangle, including one-sided knots.
@@ -92,6 +118,8 @@ impl Tube {
         }
         Ok(Some(Self {
             radius: I::point(radius),
+            path_aligned: s.frame_laws.is_none()
+                && (s.orientation_guide.is_some() || s.options.orientation != Orientation::Fixed),
         }))
     }
 
@@ -116,12 +144,14 @@ impl Tube {
         }
         let map = c.arc.as_ref().unwrap();
         let length = map.length();
-        let transport = c.transport.as_ref().unwrap();
-        let angle = transport
-            .closing_angle
+        let angle = c
+            .transport
+            .as_ref()
+            .and_then(|t| t.closing_angle)
             .map_or(0., |a| a[0].abs().max(a[1].abs()));
         let mut curvature = 0_f64;
         let mut angular = 0_f64;
+        let mut singular_floor = I::point(1.);
         for b in pieces {
             let stage_max = max.min(out.cells.saturating_add(100000));
             let Some(phase) = map.phase(b[2], &mut out.cells, stage_max)? else {
@@ -132,6 +162,24 @@ impl Tube {
             };
             // C_s=L T, hence ||T_s|| <= ||C_ss||/L_lower.
             let k = iv::norm(jets[1])?.div(length)?.hi;
+            if c.transport.is_none() {
+                let Some(frame) = frame_bounds::jets(c, b[2], phase, out, max)? else {
+                    return Ok(false);
+                };
+                let omega = frame_bounds::angular(&frame)?;
+                let floor = if self.path_aligned {
+                    I::point(1.)
+                } else {
+                    frame_bounds::singular_floor(
+                        iv::div(jets[0], length)?,
+                        decode(frame.longitudinal.as_ref().unwrap().value)?,
+                    )?
+                };
+                singular_floor = I::point(singular_floor.lo.min(floor.lo));
+                curvature = curvature.max(k);
+                angular = angular.max(omega);
+                continue;
+            }
             if out.cells == max {
                 return Ok(false);
             }
@@ -154,25 +202,38 @@ impl Tube {
             curvature = curvature.max(k);
             angular = angular.max(omega);
         }
-        tube_bound(
+        tube_bound_with_floor(
             width,
             self.radius,
             length,
             I::point(curvature),
             I::point(angular),
+            singular_floor,
         )
     }
 }
 
 /// For G(x,y,s)=C(s)+x N(s)+y B(s), |(x,y)|<=rho, choose the
-/// SAME exact frame R0 at one endpoint and change coordinate z=L*s.
-/// ||R0^T DG diag(1,1,1/L)-I||F² is bounded by
-/// 2*(Omega*d)² + (K*d+rho*Omega/L)². If <1, every averaged
+/// SAME exact columns A0=[N0,B0,T0] at one endpoint and z=L*s.
+/// ||DG diag(1,1,1/L)-A0||F² is bounded by
+/// 2*(Omega*d)² + (K*d+rho*Omega/L)². If below sigma_min(A0)²,
+/// every averaged
 /// Jacobian on the convex physical disk x temporal lift is nonsingular.
 /// Thus G is injective and regular there. The independently proved regular
 /// injective Q transfers this to source UV, without requiring its image convex.
-/// The bound covers both seam pieces with the SAME periodic frame R0.
+/// The bound covers both seam pieces with the SAME periodic reference. For
+/// path-aligned frames A0 is orthonormal and the spectral floor is one.
 fn tube_bound(width: I, radius: I, length: I, curvature: I, angular: I) -> Result<bool> {
+    tube_bound_with_floor(width, radius, length, curvature, angular, I::point(1.))
+}
+fn tube_bound_with_floor(
+    width: I,
+    radius: I,
+    length: I,
+    curvature: I,
+    angular: I,
+    floor: I,
+) -> Result<bool> {
     if length.lo <= 0. {
         return Ok(false);
     }
@@ -181,7 +242,7 @@ fn tube_bound(width: I, radius: I, length: I, curvature: I, angular: I) -> Resul
         .mul(width)?
         .add(radius.mul(angular)?.div(length)?)?;
     let squared = I::point(2.).mul(turn.mul(turn)?)?.add(axial.mul(axial)?)?;
-    Ok(squared.hi < 1.)
+    Ok(squared.hi < floor.lo)
 }
 
 #[cfg(test)]
@@ -206,3 +267,5 @@ mod tests {
         assert!(!test(0., 2., 10., 0., 5.)); // strict bound, focal equality refuses
     }
 }
+#[cfg(test)]
+mod general_tests;

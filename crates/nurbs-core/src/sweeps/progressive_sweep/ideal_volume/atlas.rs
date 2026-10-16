@@ -245,7 +245,7 @@ pub(super) fn certify(
 ) -> Result<()> {
     let identity=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]].map(|v|v.map(I::point));
     let tube=if regular(identity,projection)? {
-        intrinsic::Tube::prepare(context,out,max_cells,max_exact_work)?
+        intrinsic::Tube::prepare(context,out,max_cells,max_exact_work,closed)?
     }else {None};
     if let Some(tube)=tube {return tube.certify(context,out,max_cells,closed);}
     certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)

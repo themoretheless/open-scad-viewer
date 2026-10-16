@@ -213,11 +213,30 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
             endpoints[station][control]=upper;endpoint_upper=endpoint_upper.max(upper);
         }
     }
+    // ONE complete original-path chord cover is shared by every uniform
+    // station interval in this profile. The endpoint trajectory errors below
+    // already own inverse-length residuals. This geometric proposal never
+    // depends on the admission tolerance or a rounded inverse path.
+    let global_chord=if path.control_points.len()==path.degree+1 {
+        let mut max_width=0_f64;
+        for i in 0..count-1 {
+            if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+            out.cells+=1;
+            let lo=i as f64/(count-1) as f64;let hi=(i+1)as f64/(count-1)as f64;
+            max_width=max_width.max(I::point(hi).sub(I::point(lo))?.hi);
+        }
+        if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+        let (cells,bound)=transport::arc_chord::upper(path,[0.,1.],[0.,max_width],division.total.bounds,0.,false,max_cells-out.cells)?;
+        out.cells+=cells;
+        if bound.is_none() && out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+        bound
+    }else {None};
     let mut error=0_f64;
     for station in 0..count-1{
         let interval=[station as f64/(count-1) as f64,(station+1) as f64/(count-1) as f64];
         let width=I::point(interval[1]).sub(I::point(interval[0]))?;
-        let position=I::point(division.total.bounds[1]).mul(width)?.div(I::point(2.))?;
+        let coarse=I::point(division.total.bounds[1]).mul(width)?.div(I::point(2.))?;
+        let position=I::new(0.,global_chord.map_or(coarse.hi,|c|c.min(coarse.hi)))?;
         let batch=if let Some((axis,normal))=frame_laws {
             let batch=authored_frame_certificate::certify_control_trajectories(&zero,sweep.scale,sweep.twist,
                 axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
