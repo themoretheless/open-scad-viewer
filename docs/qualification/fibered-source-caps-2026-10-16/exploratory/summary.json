@@ -1,0 +1,36 @@
+{
+  "schema": "original-fibered-source-exploratory-evidence/1",
+  "productionCode": "a24cc8934793256d4d6f028fadc7b2ab45a9f3ad",
+  "nativeJsonTests": 3,
+  "nativeStepTests": 4,
+  "independentOcctCases": 4,
+  "frozenFullQualificationPending": true,
+  "privateWasmRuntimeQualified": false,
+  "fullGoalComplete": false,
+  "logs": [
+    {
+      "path": "exploratory/osv-source-fibered-json-step-seven-20261016.log",
+      "sha256": "09f82a5af8a02d42c4f634ff1ce1bca9d40aa6a0f61b629c9ef4922e2027b5f1"
+    },
+    {
+      "path": "exploratory/osv-source-fibered-step-reference-20261016.log",
+      "sha256": "b3747edb78719fcb73128fee5346e3fd8dd776135445de4590ff36a90bc0cc49"
+    },
+    {
+      "path": "exploratory/osv-source-fibered-occt-20261016.log",
+      "sha256": "06a80d4df3e27c39acf223b94ec327bee4e863015d2480f235609ad9bc3c61c8"
+    }
+  ],
+  "developmentFailures": [
+    {
+      "path": "osv-source-fibered-json-step-matrix-20261016.log",
+      "sha256": "4eb0423a563cbb3572d41b401a2e021f7413c59f74024160e5a9ba37bf6fdc4a",
+      "qualificationCredit": false
+    },
+    {
+      "path": "osv-source-fibered-step-tests-20261016.log",
+      "sha256": "55b1d12c7485c5cae942918466fa81e08450a3373fa6acf3b5ce10f55a20b53b",
+      "qualificationCredit": false
+    }
+  ]
+}
