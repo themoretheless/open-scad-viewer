@@ -1,5 +1,28 @@
 //! Original arc-station path chord error, including inverse-length residuals.
 use super::*;
+pub(in crate::sweeps::progressive_sweep) struct GlobalChord {
+    pub cells:usize,
+    pub bound:Option<f64>,
+    pub budget_stopped:bool,
+}
+/// One immutable original source/count/length proof for a complete profile
+/// union. The MultiSweep owner binds identical path and station policy and
+/// charges these cells ONCE before passing the opaque result to its profiles.
+pub(in crate::sweeps::progressive_sweep) fn global(path:&Curve,count:usize,length:[f64;2],max:usize)->Result<GlobalChord>{
+    path.validate()?;
+    check(count>=2 && count<=16384 && max<=100000,"Invalid shared arc chord limits")?;
+    let mut cells=0;let mut width=0_f64;
+    for i in 0..count-1 {
+        if cells==max {return Ok(GlobalChord {cells,bound:None,budget_stopped:true});}
+        cells+=1;
+        let lo=i as f64/(count-1)as f64;let hi=(i+1)as f64/(count-1)as f64;
+        width=width.max(I::point(hi).sub(I::point(lo))?.hi);
+    }
+    if cells==max {return Ok(GlobalChord {cells,bound:None,budget_stopped:true});}
+    let (work,bound)=upper(path,[0.,1.],[0.,width],length,0.,false,max-cells)?;
+    cells+=work;
+    Ok(GlobalChord {cells,budget_stopped:bound.is_none() && cells==max,bound})
+}
 pub(in crate::sweeps::progressive_sweep::authored_error) fn upper(
     path: &Curve,
     traversal: [f64; 2],

@@ -171,7 +171,7 @@ impl MultiSweep<'_> {
             &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
         let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
             && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
-            && !first.path.periodic&&!path_is_closed(first.path)?)) {
+            && !first.path.periodic&&(first.frame_laws.is_some()||!path_is_closed(first.path)?))) {
             if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
                 check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
                     "Shared length certificate requires identical original source and spacing")?;
@@ -186,6 +186,15 @@ impl MultiSweep<'_> {
             }else{None}
         }else{None};
         let mut cells=shared_length.as_ref().map_or(0,|report|report.cells);
+        let shared_chord=if let Some(length)=shared_length.as_ref().filter(|l|l.within_tolerance) {
+            if first.path.control_points.len()==first.path.degree+1
+                && !authored_error::original_line(first.path)
+                && (first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed
+                    && first.orientation_guide.is_none() && first.contact_point.is_none())) {
+                let global=authored_error::shared_global_chord(first.path,count,length.total.bounds,cell_limit-cells)?;
+                cells+=global.cells;Some(global)
+            }else {None}
+        }else {None};
         let shared_guide=if shared_guided&&shared_length.is_some()&&cells<cell_limit {
             let guide=first.orientation_guide.unwrap();
             check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
@@ -209,7 +218,7 @@ impl MultiSweep<'_> {
         }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_chord.as_ref())?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(
