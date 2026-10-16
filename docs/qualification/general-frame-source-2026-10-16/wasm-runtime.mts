@@ -39,6 +39,13 @@ const imported=request({op:'brep_nurbs_import_step_v9',text:exported.text});asse
 for(const key of ['vertices','edges','loops','faces','shells','bodies']) assert.equal(imported.model[key].length,built.model[key].length)
 const restored=request({...input,op:'brep_sweep_smooth_closed_material_audit',model:imported.model});full(restored,'STEP re-audit')
 assert.equal(restored.boundaryErrorUpper,built.boundaryErrorUpper)
+// Negating both the original longitudinal and twist laws preserves the
+// physical frame action after its own initial-coordinate transform. It also
+// exercises a negative longitudinal/path dot without trusting shell flags.
+const reversed=structuredClone(input)
+reversed.source.frame_axis.controlPoints=reversed.source.frame_axis.controlPoints.map((p:number[])=>p.map(x=>-x))
+reversed.source.twist.controlPoints=reversed.source.twist.controlPoints.map((p:number[])=>p.map(x=>-x))
+const reversedBody=request(reversed);full(reversedBody,'negative longitudinal')
 for(const parameter of [false,true]) {
     const refused=structuredClone(input)
     refused.model=built.model;refused.certified=true;refused.idealSourceBoundaryG2Certified=true
@@ -47,5 +54,5 @@ for(const parameter of [false,true]) {
     const r=request(refused)
     assert.equal(r.certified,false);assert.equal(r.solidGeometryCertified,false);assert.equal(r.model,null)
 }
-writeFileSync(output,JSON.stringify({schema:'original-general-frame-private-wasm-runtime/1',wasmSha256:createHash('sha256').update(binary).digest('hex'),wasmBytes:binary.length,requestSha256:createHash('sha256').update(readFileSync(requestPath)).digest('hex'),passed:true,scope:'One exact tilted authored-frame Mobius-clock body: construct/audit/STEP re-audit and budget/parameter refusal.',faces:built.model.faces.length,boundaryErrorUpper:built.boundaryErrorUpper,publicPackageQualified:false,browserQualified:false,semanticG1MatrixQualified:false,fullGoalComplete:false},null,2)+'\n')
+writeFileSync(output,JSON.stringify({schema:'original-general-frame-private-wasm-runtime/1',wasmSha256:createHash('sha256').update(binary).digest('hex'),wasmBytes:binary.length,requestSha256:createHash('sha256').update(readFileSync(requestPath)).digest('hex'),passed:true,scope:'One exact tilted authored-frame Mobius-clock body: construct/audit/STEP re-audit and budget/parameter refusal.',negativeLongitudinalPassed:true,faces:built.model.faces.length,boundaryErrorUpper:built.boundaryErrorUpper,publicPackageQualified:false,browserQualified:false,semanticG1MatrixQualified:false,fullGoalComplete:false},null,2)+'\n')
 console.log('original tilted authored-frame WASM runtime passed')
