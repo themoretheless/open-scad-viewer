@@ -1,7 +1,7 @@
 use super::*;
 
 impl HealOperation {
-    fn correspondence(&self) -> &BoundaryCorrespondence {
+    pub(super) fn correspondence(&self) -> &BoundaryCorrespondence {
         match self {
             Self::EndpointSnap { correspondence, .. }
             | Self::CurveRefit { correspondence, .. }
@@ -101,7 +101,7 @@ impl HealOperation {
         }
     }
 
-    fn recipe_bytes(&self) -> Vec<u8> {
+    pub(super) fn recipe_bytes(&self) -> Vec<u8> {
         fn push_text(bytes: &mut Vec<u8>, value: &str) {
             push_usize(bytes, value.len());
             bytes.extend_from_slice(value.as_bytes());
@@ -147,7 +147,7 @@ impl HealOperation {
         bytes
     }
 
-    fn recipe_identity(&self) -> String {
+    pub(super) fn recipe_identity(&self) -> String {
         TopoId::derive(
             TopoKind::Body,
             "authorized-heal-recipe",
@@ -162,7 +162,7 @@ impl HealOperation {
         self.write_set_with(&vertex_edge_incidence(model))
     }
 
-    fn write_set_with(&self, incidence: &[Vec<usize>]) -> BTreeSet<(TopoKind, usize)> {
+    pub(super) fn write_set_with(&self, incidence: &[Vec<usize>]) -> BTreeSet<(TopoKind, usize)> {
         let mut writes = BTreeSet::new();
         match self {
             Self::EndpointSnap { vertex, .. } => {
@@ -190,7 +190,7 @@ impl HealOperation {
         self
     }
 
-    fn proof_matches_model_with(
+    pub(super) fn proof_matches_model_with(
         &self,
         model: &Model,
         context: &ToleranceContext,
@@ -236,11 +236,11 @@ impl HealOperation {
 /// Immutable, context-bound authority for gap repair of at most one context cell.
 #[derive(Clone, Debug)]
 pub struct AuthorizedHealPlan {
-    context: ToleranceSpecIdentity,
-    operations: Vec<HealOperation>,
-    per_entity_limit_mm: f64,
-    cumulative_limit_mm: f64,
-    identity: String,
+    pub(super) context: ToleranceSpecIdentity,
+    pub(super) operations: Vec<HealOperation>,
+    pub(super) per_entity_limit_mm: f64,
+    pub(super) cumulative_limit_mm: f64,
+    pub(super) identity: String,
 }
 impl AuthorizedHealPlan {
     pub fn new(
@@ -533,7 +533,7 @@ pub(crate) fn apply_authorized_heal_checked(
     Ok(next)
 }
 
-fn quantize(point: [f64; 3], scale: f64) -> Result<[i64; 3]> {
+pub(super) fn quantize(point: [f64; 3], scale: f64) -> Result<[i64; 3]> {
     if !point.iter().all(|x| x.is_finite()) || !(scale.is_finite() && scale > 0.) {
         return Err(refuse(
             "BREP_SEW_INVALID",

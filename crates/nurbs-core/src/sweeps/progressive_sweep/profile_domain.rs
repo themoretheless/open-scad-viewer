@@ -5,7 +5,7 @@ use crate::sweeps::progressive_miter::{authored_frame_certificate as frame,
     profile_domain_certificate::{Report, certify_original_profile_projection_domain},
     scalar_certificate::Status};
 
-fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
+pub(super) fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
     if let Some((axis,normal))=sweep.frame_laws {return Ok(Some(frame::certify_twisted_values(axis,normal,twist,t,budget)?));}
     if let Some(guide)=sweep.orientation_guide {return Ok(Some(frame::certify_path_guide_values(sweep.path,guide,twist,t,budget)?));}
     // Explicit spatial RMF endpoint material uses the original Bishop cover,

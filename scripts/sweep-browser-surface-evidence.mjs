@@ -149,5 +149,5 @@ export async function checkSurfaceUiEvidence({evidenceOnly,entry,page,file,sourc
      entry.assertions.push({case:file==='oblique-rmf-progressive-sweep.r'||file==='progressive-sweep.r'||file==='affine-progressive-sweep.r'?'rmf-strict-bound-refusal-and-restoration':file==='fixed-progressive-sweep.r'?'fixed-strict-bound-refusal-and-restoration':'closed-strict-bound-refusal-and-restoration',status:'passed'})
     }
     entry.assertions.push({case:'scoped-retained-patch-evidence',status:'passed'})
-
+   
 }

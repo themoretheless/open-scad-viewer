@@ -1,0 +1,22 @@
+{
+  "fragments.tar.gz": {
+    "sha256": "1d56db3e803cbd4eef20aebfebf87d6d984db98d2784c55712196b9625b9bffe",
+    "bytes": 95282
+  },
+  "github-artifacts.json": {
+    "sha256": "ad35d73143329fa3fef7c450be62aa206d0340c2090194a1aee124a6e462d0cb",
+    "bytes": 118776
+  },
+  "github-run.json": {
+    "sha256": "57bd2937e97ea852be4c0d7845fca68eb4c898216e82e62e615e9b491b742b77",
+    "bytes": 353333
+  },
+  "hosted-result.json": {
+    "sha256": "642a01d9f55c0f4ac48386386e7a0ea42339c2142573d964b83d419a874264ed",
+    "bytes": 738
+  },
+  "local-verification.json": {
+    "sha256": "6dae9028633d8ea889aa9381d71a1c1331d5ac84273385a1931077e523bcb005",
+    "bytes": 738
+  }
+}

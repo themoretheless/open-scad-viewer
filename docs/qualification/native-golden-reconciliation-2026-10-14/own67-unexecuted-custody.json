@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "record": "docs/qualification/own-rust-cad-v67.json",
+  "sourceBundleSha256": "2fd021b3da1437437c74f9ad10b5379db8f3cee3b7b88b0055a6d626d920b3ec",
+  "archiveSha256": "152658cd221da1b2a2d1a00363d4486e1ae7eceda0cf7fa5dde5e8c1e9ad84cf",
+  "archiveBytes": 10053195,
+  "candidateRun": "semantic-manifold-g1-candidate-run-v99",
+  "executed": false,
+  "reason": "Local predecessor assertion and shared-load fixture timeouts found before any candidate execution or push."
+}

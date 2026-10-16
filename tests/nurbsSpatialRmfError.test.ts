@@ -186,9 +186,13 @@ it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf
  expect(volume.individualPairs+volume.groupedPairs).toBe(1024*1023/2)
  expect(volume.orientations.map(o=>[o.expectedOutward,o.outward])).toEqual([[true,true],...Array.from({length:holes},()=>[false,false])])
  expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxPairs:1,maxCells:1})).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false})
- // Main's linear-monotonicity proofs certify every face chart within the
- // linear budget; the exhausted pair budget still refuses the global solid.
- if(holes===3)expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxLinearCells:20000,maxPairs:1,maxCells:1})).toMatchObject({allFacesInjective:true,
-  linearCells:file.includes('parameter')?2800:2806,allPairsClassified:false,individualPairs:0,groupedPairs:0,totalPairs:1024*1023/2,
-  nesting:null,solidGeometryCertified:false,regularBoundarySolidCertified:false,boundaryEmbeddingCertified:false})
+ if(holes===3){
+  expect(Number.isSafeInteger(volume.linearCells)).toBe(true)
+  expect(volume.linearCells).toBeGreaterThan(0)
+  expect(volume.linearCells).toBeLessThanOrEqual(DEFAULT_SWEEP_VOLUME_BUDGETS.maxLinearCells)
+  const shortBudget=volume.linearCells-1
+  const short=inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxLinearCells:shortBudget,maxPairs:1,maxCells:1})
+  expect(short).toMatchObject({allFacesInjective:false,solidGeometryCertified:false,boundaryEmbeddingCertified:false})
+  expect(short.linearCells).toBeLessThanOrEqual(shortBudget)
+ }
 },180_000)

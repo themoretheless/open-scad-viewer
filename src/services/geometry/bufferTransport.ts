@@ -6,3 +6,4 @@ export function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], by
   new Uint8Array(kernelRuntime().memory.buffer, ptr, bytes.byteLength).set(bytes)
   return ptr
 }
+

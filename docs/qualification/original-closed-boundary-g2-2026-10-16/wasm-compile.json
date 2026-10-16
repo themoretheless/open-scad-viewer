@@ -1,0 +1,23 @@
+{
+  "schema": "original-boundary-g2-wasm-compile-v1",
+  "qualifiedCodeRevision": "182f91c694210c50dd4552ba0d5ea4b828c8353e",
+  "coreInputsSha256": "d6b5289088813ec90acdf49a473c43330e6b63082b17a959e3b42f74db628cb7",
+  "command": [
+    "cargo",
+    "check",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown"
+  ],
+  "exitCode": 0,
+  "log": "logs/wasm-compile.log",
+  "logSha256": "4e961b94133577680d4b27c1e57b02a16a84fa801dce965732f1b2df591ee119",
+  "compilePassed": true,
+  "publicWasmRebuilt": false,
+  "wasmRuntimeQualified": false,
+  "freshCiQualified": false
+}

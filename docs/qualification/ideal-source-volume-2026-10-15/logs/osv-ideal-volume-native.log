@@ -1,0 +1,1203 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling typenum v1.20.1
+   Compiling libc v0.2.189
+   Compiling const-oid v0.10.2
+   Compiling cfg-if v1.0.4
+   Compiling osv-math v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/math-core)
+   Compiling rustc-hash v2.1.1
+   Compiling cad-predicates v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/cad-predicates)
+   Compiling geometry-ops v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/geometry-ops)
+   Compiling cpufeatures v0.3.1
+   Compiling hybrid-array v0.4.15
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling brep-topology v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/brep-topology)
+warning: associated function `parse` is never used
+   --> brep-topology/src/persistent_naming.rs:198:8
+    |
+186 | impl ChangeKind {
+    | --------------- associated function in this implementation
+...
+198 |     fn parse(value: &str) -> Option<Self> {
+    |        ^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `brep-topology` (lib) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/nurbs-core)
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/offset_contact_trims.rs:539:13
+    |
+539 |             value_codec::json!(1)
+    |             ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/offset_contact_trims.rs:535:13
+    |
+535 |             value_codec::json!(0)
+    |             ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/offset_contact_trims.rs:531:36
+    |
+531 |             assert_eq!(value[key], value_codec::json!(false));
+    |                                    ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:498:37
+    |
+498 |             value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap()
+    |                                     ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:411:46
+    |
+411 |         let before = value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap();
+    |                                              ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:304:37
+    |
+304 |             value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap()
+    |                                     ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:272:46
+    |
+272 |         let before = value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap();
+    |                                              ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2627:62
+     |
+2627 |     let mut wrong=level_request;wrong["rmf_transport_steps"]=value_codec::json!(4095);
+     |                                                              ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2625:76
+     |
+2625 |     let mut incomplete=level_request.clone();incomplete["error_max_cells"]=value_codec::json!(null);
+     |                                                                            ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2623:49
+     |
+2623 |     assert_eq!(configured["report"]["accepted"],value_codec::json!(true));
+     |                                                 ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2622:56
+     |
+2622 |     assert_eq!(configured["report"]["continuousBound"],value_codec::json!(true));
+     |                                                        ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2620:41
+     |
+2620 |     level_request["error_max_products"]=value_codec::json!(1000000);
+     |                                         ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2619:38
+     |
+2619 |     level_request["error_max_cells"]=value_codec::json!(100000);
+     |                                      ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2618:42
+     |
+2618 |     level_request["rmf_transport_steps"]=value_codec::json!(4096);
+     |                                          ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2617:31
+     |
+2617 |     level_request["profiles"]=value_codec::json!([profile]);
+     |                               ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2616:25
+     |
+2616 |     level_request["op"]=value_codec::json!("surface_progressive_sweep_level");
+     |                         ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2609:43
+     |
+2609 |     assert_eq!(refused["continuousBound"],value_codec::json!(false));assert!(refused["patches"].is_null());
+     |                                           ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2607:69
+     |
+2607 |     let mut short_request=request.clone();short_request["maxCells"]=value_codec::json!(fine.cells-1);
+     |                                                                     ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2606:41
+     |
+2606 |     assert_eq!(public["solidCertified"],value_codec::json!(false));
+     |                                         ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2604:39
+     |
+2604 |     assert_eq!(public["withinBudget"],value_codec::json!(true));
+     |                                       ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2603:42
+     |
+2603 |     assert_eq!(public["continuousBound"],value_codec::json!(true));
+     |                                          ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2598:17
+     |
+2598 |     let request=value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale...
+     |                 ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs:403:13
+    |
+403 |             value_codec::json!(
+    |             ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs:400:46
+    |
+400 |         assert_eq!(public["solidCertified"], value_codec::json!(false));
+    |                                              ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs:398:47
+    |
+398 |         assert_eq!(public["continuousBound"], value_codec::json!(true));
+    |                                               ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs:394:23
+    |
+394 | ...   let request = value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":sc...
+    |                     ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:637:43
+    |
+637 |                 .all(|c| c["accepted"] == value_codec::json!(true)
+    |                                           ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:489:43
+    |
+489 |                 .all(|c| c["accepted"] == value_codec::json!(true))
+    |                                           ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:88:52
+   |
+88 |         }).collect::<Vec<_>>();reversed["coedges"]=json!(uses);assert_eq!(inspect(&reversed).unwrap()["domainCertified"],true);
+   |                                                    ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:87:191
+   |
+87 | ...;usage["uv"]["controlPoints"]=json!(points);usage["reversed"]=json!(true);usage
+   |                                                                  ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:87:159
+   |
+87 | ...nwrap().clone();points.reverse();usage["uv"]["controlPoints"]=json!(points);usage["reversed"]=json!(true);usage
+   |                                                                  ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:85:134
+   |
+85 | ...ray().unwrap().clone();uses.rotate_left(1);rotated["coedges"]=json!(uses);assert_eq!(inspect(&rotated).unwrap()["domainCertified"...
+   |                                                                  ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:84:64
+   |
+84 | ...   let mut exact_budget=v.clone();exact_budget["maxWork"]=json!(work);assert_eq!(inspect(&exact_budget).unwrap()["domainCertified...
+   |                                                              ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:83:73
+   |
+83 | ...   let mut direction=v.clone();direction["coedges"][0]["reversed"]=json!(true);assert_eq!(inspect(&direction).unwrap()["domainCer...
+   |                                                                       ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:82:86
+   |
+82 | ...   let mut clipped=v.clone();clipped["coedges"][0]["uv"]["controlPoints"][1][0]=json!(0.5);assert_eq!(inspect(&clipped).unwrap()[...
+   |                                                                                    ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:81:46
+   |
+81 |         let mut hole=v.clone();hole["holes"]=json!([0]);assert_eq!(inspect(&hole).unwrap()["domainCertified"],false);
+   |                                              ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:80:85
+   |
+80 | ...   let mut wrong=v.clone();wrong["coedges"][0]["world"]["controlPoints"][0][2]=json!(0.125);assert_eq!(inspect(&wrong).unwrap()["...
+   |                                                                                   ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:79:52
+   |
+79 |         let mut cutoff=v.clone();cutoff["maxWork"]=json!(work-1);assert_eq!(inspect(&cutoff).unwrap()["domainCertified"],false);
+   |                                                    ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:72:42
+   |
+72 |         v["coedges"][0]["uv"]["weights"]=json!([0.,1.]);
+   |                                          ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:70:45
+   |
+70 |         v["coedges"][0]["world"]["weights"]=json!([1.,1.]);
+   |                                             ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:68:45
+   |
+68 |         }).collect::<Vec<_>>();v["coedges"]=json!(uses);
+   |                                             ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:67:39
+   |
+67 |             usage["world"]["weights"]=json!([2.,1.]);usage
+   |                                       ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:66:64
+   |
+66 |             let mut usage=usage.clone();usage["uv"]["weights"]=json!([2.,1.]);
+   |                                                                ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:60:9
+   |
+60 | ...   json!({"surface":{"degreeU":1,"degreeV":1,"knotsU":[0.,0.,1.,1.],"knotsV":[0.,0.,1.,1.],"controlPoints":[[[0.,0.,0.],[0.,1.,0....
+   |       ^^^^
+
+error: cannot find macro `json` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:57:13
+   |
+57 |             json!({"uv":{"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[a,b],"weights":[1.,1.],"periodic":false},
+   |             ^^^^
+
+error[E0433]: cannot find `tangent_audit` in `super`
+   --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:117:35
+    |
+117 |                     super::super::tangent_audit::verify(&surface, &fields, end, 1e-10, 1000)
+    |                                   ^^^^^^^^^^^^^ could not find `tangent_audit` in `super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:10:5
+    |
+  9 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+ 10 | mod tangent_audit;
+    |     ^^^^^^^^^^^^^
+
+error[E0433]: cannot find `tangent_audit` in `super`
+   --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:138:50
+    |
+138 |                     let rejected = super::super::tangent_audit::verify(
+    |                                                  ^^^^^^^^^^^^^ could not find `tangent_audit` in `super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:10:5
+    |
+  9 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+ 10 | mod tangent_audit;
+    |     ^^^^^^^^^^^^^
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:147:56
+    |
+147 |                     assert_eq!(rejected["errorUpper"], value_codec::Value::Null);
+    |                                                        ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find `tangent_audit` in `super`
+   --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:152:39
+    |
+152 |                         super::super::tangent_audit::verify(&candidate, &fields, end, 1e-10, 1)
+    |                                       ^^^^^^^^^^^^^ could not find `tangent_audit` in `super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:10:5
+    |
+  9 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+ 10 | mod tangent_audit;
+    |     ^^^^^^^^^^^^^
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:155:58
+    |
+155 |                     assert_eq!(incomplete["errorUpper"], value_codec::Value::Null);
+    |                                                          ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find `transport` in the crate root
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs:397:29
+    |
+397 |         let public = crate::transport::dispatch(request).unwrap();
+    |                             ^^^^^^^^^ unresolved import
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/lib.rs:193:5
+    |
+192 | #[cfg(feature = "transport")]
+    |       --------------------- the item is gated behind the `transport` feature
+193 | mod transport;
+    |     ^^^^^^^^^
+help: a similar path exists
+    |
+397 |         let public = crate::progressive_sweep::authored_error::transport::dispatch(request).unwrap();
+    |                             +++++++++++++++++++++++++++++++++++
+
+error[E0433]: cannot find `transport` in the crate root
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2602:23
+     |
+2602 |     let public=crate::transport::dispatch(request.clone()).unwrap();
+     |                       ^^^^^^^^^ unresolved import
+     |
+note: found an item that was configured out
+    --> nurbs-core/src/lib.rs:193:5
+     |
+ 192 | #[cfg(feature = "transport")]
+     |       --------------------- the item is gated behind the `transport` feature
+ 193 | mod transport;
+     |     ^^^^^^^^^
+help: a similar path exists
+     |
+2602 |     let public=crate::progressive_sweep::authored_error::transport::dispatch(request.clone()).unwrap();
+     |                       +++++++++++++++++++++++++++++++++++
+
+error[E0433]: cannot find `transport` in the crate root
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2608:24
+     |
+2608 |     let refused=crate::transport::dispatch(short_request).unwrap();
+     |                        ^^^^^^^^^ unresolved import
+     |
+note: found an item that was configured out
+    --> nurbs-core/src/lib.rs:193:5
+     |
+ 192 | #[cfg(feature = "transport")]
+     |       --------------------- the item is gated behind the `transport` feature
+ 193 | mod transport;
+     |     ^^^^^^^^^
+help: a similar path exists
+     |
+2608 |     let refused=crate::progressive_sweep::authored_error::transport::dispatch(short_request).unwrap();
+     |                        +++++++++++++++++++++++++++++++++++
+
+error[E0433]: cannot find `transport` in the crate root
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2621:27
+     |
+2621 |     let configured=crate::transport::dispatch(level_request.clone()).unwrap();
+     |                           ^^^^^^^^^ unresolved import
+     |
+note: found an item that was configured out
+    --> nurbs-core/src/lib.rs:193:5
+     |
+ 192 | #[cfg(feature = "transport")]
+     |       --------------------- the item is gated behind the `transport` feature
+ 193 | mod transport;
+     |     ^^^^^^^^^
+help: a similar path exists
+     |
+2621 |     let configured=crate::progressive_sweep::authored_error::transport::dispatch(level_request.clone()).unwrap();
+     |                           +++++++++++++++++++++++++++++++++++
+
+error[E0433]: cannot find `transport` in the crate root
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2626:20
+     |
+2626 |     assert!(crate::transport::dispatch(incomplete).is_err());
+     |                    ^^^^^^^^^ unresolved import
+     |
+note: found an item that was configured out
+    --> nurbs-core/src/lib.rs:193:5
+     |
+ 192 | #[cfg(feature = "transport")]
+     |       --------------------- the item is gated behind the `transport` feature
+ 193 | mod transport;
+     |     ^^^^^^^^^
+help: a similar path exists
+     |
+2626 |     assert!(crate::progressive_sweep::authored_error::transport::dispatch(incomplete).is_err());
+     |                    +++++++++++++++++++++++++++++++++++
+
+error[E0433]: cannot find `transport` in the crate root
+    --> nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs:2628:20
+     |
+2628 |     assert!(crate::transport::dispatch(wrong).is_err());
+     |                    ^^^^^^^^^ unresolved import
+     |
+note: found an item that was configured out
+    --> nurbs-core/src/lib.rs:193:5
+     |
+ 192 | #[cfg(feature = "transport")]
+     |       --------------------- the item is gated behind the `transport` feature
+ 193 | mod transport;
+     |     ^^^^^^^^^
+help: a similar path exists
+     |
+2628 |     assert!(crate::progressive_sweep::authored_error::transport::dispatch(wrong).is_err());
+     |                    +++++++++++++++++++++++++++++++++++
+
+error[E0425]: cannot find function `checked` in this scope
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:484:33
+    |
+484 |         let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+    |                                 ^^^^^^^ not found in this scope
+    |
+note: similarly named function `check` defined here
+   --> nurbs-core/src/lib.rs:186:1
+    |
+186 | pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: function `crate::formula::checked` exists but is inaccessible
+   --> nurbs-core/src/construct/curves/formula.rs:42:1
+    |
+ 42 | fn checked(mut p: Poly) -> Result<Poly> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: a function with a similar name exists
+    |
+484 -         let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+484 +         let (_, certificates) = check(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+    |
+help: consider importing one of these functions
+    |
+464 +     use crate::pipe::checked;
+    |
+464 +     use crate::profile_sweep::checked;
+    |
+464 +     use crate::ribbon::checked;
+    |
+
+error[E0425]: cannot find function `patch_cartesian` in module `super::super`
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:631:27
+    |
+631 |             super::super::patch_cartesian(&u, &v, &stations, &stations, 1e-6, 50000, 200000)
+    |                           ^^^^^^^^^^^^^^^ not found in `super::super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:184:8
+    |
+183 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+184 | pub fn patch_cartesian(
+    |        ^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `patch_cartesian_with_tangents` in module `super::super`
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:729:27
+    |
+729 |             super::super::patch_cartesian_with_tangents(
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `super::super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:200:8
+    |
+199 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+200 | pub fn patch_cartesian_with_tangents(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `patch_cartesian_with_tangents` in module `super::super`
+   --> nurbs-core/src/construct/surfaces/gordon/cartesian.rs:764:27
+    |
+764 |             super::super::patch_cartesian_with_tangents(
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `super::super`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/construct/surfaces/gordon.rs:200:8
+    |
+199 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+200 | pub fn patch_cartesian_with_tangents(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `checked_profile_sweep_with_cells` in module `super::super::scalar`
+   --> nurbs-core/src/sweeps/tests/profile_certificate_tests.rs:288:46
+    |
+288 |             let result=super::super::scalar::checked_profile_sweep_with_cells(&p,&path,&law,[1.,0.,0.],count,0.5,65536).unwrap();
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `super::super::scalar`
+    |
+note: found an item that was configured out
+   --> nurbs-core/src/sweeps/scalar.rs:163:8
+    |
+162 | #[cfg(feature = "codec")]
+    |       ----------------- the item is gated behind the `codec` feature
+163 | pub fn checked_profile_sweep_with_cells(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find type `Value` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:53:19
+   |
+53 |     fn fixture()->Value{
+   |                   ^^^^^ not found in this scope
+
+error[E0425]: cannot find type `Value` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:55:22
+   |
+55 |         let uses:Vec<Value>=(0..4).map(|i|{
+   |                      ^^^^^ not found in this scope
+   |
+help: you might be missing a type parameter
+   |
+53 |     fn fixture<Value>()->Value{
+   |               +++++++
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:69:20
+   |
+69 |         assert_eq!(inspect(&v).unwrap()["domainCertified"],true);
+   |                    ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:71:20
+   |
+71 |         assert_eq!(inspect(&v).unwrap()["domainCertified"],false);
+   |                    ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:73:20
+   |
+73 |         assert_eq!(inspect(&v).unwrap()["domainCertified"],false);
+   |                    ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:77:36
+   |
+77 |         let v=fixture();let report=inspect(&v).unwrap();assert_eq!(report["domainCertified"],true);
+   |                                    ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:79:77
+   |
+79 |         let mut cutoff=v.clone();cutoff["maxWork"]=json!(work-1);assert_eq!(inspect(&cutoff).unwrap()["domainCertified"],false);
+   |                                                                             ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:80:109
+   |
+80 | ...]["controlPoints"][0][2]=json!(0.125);assert_eq!(inspect(&wrong).unwrap()["domainCertified"],false);
+   |                                                     ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:81:68
+   |
+81 |         let mut hole=v.clone();hole["holes"]=json!([0]);assert_eq!(inspect(&hole).unwrap()["domainCertified"],false);
+   |                                                                    ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:82:108
+   |
+82 | ...v"]["controlPoints"][1][0]=json!(0.5);assert_eq!(inspect(&clipped).unwrap()["domainCertified"],false);
+   |                                                     ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:83:96
+   |
+83 | ...   let mut direction=v.clone();direction["coedges"][0]["reversed"]=json!(true);assert_eq!(inspect(&direction).unwrap()["domainCer...
+   |                                                                                              ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:84:87
+   |
+84 | ...   let mut exact_budget=v.clone();exact_budget["maxWork"]=json!(work);assert_eq!(inspect(&exact_budget).unwrap()["domainCertified...
+   |                                                                                     ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:85:157
+   |
+85 | ...eft(1);rotated["coedges"]=json!(uses);assert_eq!(inspect(&rotated).unwrap()["domainCertified"],true);
+   |                                                     ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+error[E0425]: cannot find function `inspect` in this scope
+  --> nurbs-core/src/retained_wall_domain.rs:88:75
+   |
+88 |         }).collect::<Vec<_>>();reversed["coedges"]=json!(uses);assert_eq!(inspect(&reversed).unwrap()["domainCertified"],true);
+   |                                                                           ^^^^^^^ not found in this scope
+   |
+note: function `crate::progressive_sweep::retained_regularity::inspect` exists but is inaccessible
+  --> nurbs-core/src/sweeps/progressive_sweep/retained_regularity.rs:13:1
+   |
+13 | pub fn inspect(patches: &[Surface], max_cells: usize) -> Result<RetainedRegularityReport> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing one of these functions
+   |
+52 +     use crate::curve_decomposition_certificate::inspect;
+   |
+52 +     use crate::curve_deviation::inspect;
+   |
+52 +     use crate::curve_join::inspect;
+   |
+52 +     use crate::curve_plane::inspect;
+   |
+   = and 24 other candidates
+
+warning: unnecessary parentheses around function argument
+   --> nurbs-core/src/numerics/robust_solvers/rrqr.rs:334:38
+    |
+334 |         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+    |                                      ^                 ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+334 -         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+334 +         assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
+    |
+
+warning: unused import: `super::*`
+   --> nurbs-core/src/construct/curves/formula.rs:265:9
+    |
+265 |     use super::*;
+    |         ^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+   --> nurbs-core/src/trim/trim_point.rs:166:9
+    |
+166 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused import: `super::*`
+   --> nurbs-core/src/trim/trim_point.rs:256:9
+    |
+256 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused imports: `Options`, `Orientation`, `Spacing`, and `Sweep`
+ --> nurbs-core/src/sweeps/scalar.rs:2:32
+  |
+2 | use super::progressive_sweep::{Options, Orientation, Spacing, Sweep, constant_vector_law};
+  |                                ^^^^^^^  ^^^^^^^^^^^  ^^^^^^^  ^^^^^
+
+warning: unused import: `loft`
+ --> nurbs-core/src/sweeps/scalar.rs:7:24
+  |
+7 |     surface::{Surface, loft},
+  |                        ^^^^
+
+warning: unused import: `super::*`
+  --> nurbs-core/src/retained_wall_domain.rs:52:9
+   |
+52 |     use super::*;
+   |         ^^^^^^^^
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:272:22
+    |
+272 |         let before = value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap();
+    |                      ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:304:13
+    |
+304 |             value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap()
+    |             ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:341:22
+    |
+341 |         let result = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, 1e-12).unwrap();
+    |                      ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:343:26
+    |
+343 |         let s: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    |                          ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:355:22
+    |
+355 |         let coarse = checked_profile_sweep(&p, &arc, &scale, [1., 0., 0.], 3, 1e-6).unwrap();
+    |                      ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:368:21
+    |
+368 |             assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, 1.).is_err());
+    |                     ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:371:17
+    |
+371 |         assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 33, 1.).is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:372:17
+    |
+372 |         assert!(checked_profile_sweep(&p, &path, &scale, [0., 0., 1.], 5, 1.).is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:373:17
+    |
+373 |         assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, -1.).is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:411:22
+    |
+411 |         let before = value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap();
+    |                      ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:412:17
+    |
+412 |         let r = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.01).unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:418:26
+    |
+418 |         let s: Surface = value_codec::from_value(r["surface"].clone()).unwrap();
+    |                          ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:426:27
+    |
+426 |             let alternate=checked_profile_sweep(&p,&path,&scale,[1.,0.,0.],count,1.).unwrap();
+    |                           ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:429:33
+    |
+429 |             let surface:Surface=value_codec::from_value(alternate["surface"].clone()).unwrap();
+    |                                 ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `value_codec` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:498:13
+    |
+498 |             value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap()
+    |             ^^^^^^^^^^^ use of unresolved module or unlinked crate `value_codec`
+    |
+    = help: if you wanted to use a crate named `value_codec`, use `cargo add value_codec` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:500:21
+    |
+500 |         let tight = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.001).unwrap();
+    |                     ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `checked_profile_sweep` in this scope
+   --> nurbs-core/src/sweeps/scalar.rs:504:17
+    |
+504 |         assert!(checked_profile_sweep(&p, &path, &bad, [1., 0., 0.], 17, 1.).is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `intersect_curve_curve` in this scope
+   --> nurbs-core/src/intersection/bounded_curve_tests/mod.rs:6:14
+    |
+  6 |   assert_eq!(intersect_curve_curve(&a,&b,None).unwrap(),intersect_curve_curve_bounded(&a,&b,None,8192).unwrap());
+    |              ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: similarly named function `intersect_curve_curve_report` defined here
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:437:1
+    |
+437 | / pub fn intersect_curve_curve_report(
+438 | |     first: &Curve,
+439 | |     second: &Curve,
+440 | |     tolerance: Option<ToleranceContext>,
+441 | | ) -> Result<CurveCurveIntersection> {
+442 | |     intersect_curve_curve_bounded_report(first,second,tolerance,MAX_BOXES)
+443 | | }
+    | |_^
+help: a function with a similar name exists
+    |
+  6 |   assert_eq!(intersect_curve_curve_report(&a,&b,None).unwrap(),intersect_curve_curve_bounded(&a,&b,None,8192).unwrap());
+    |                                   +++++++
+
+error[E0425]: cannot find function `intersect_curve_curve_bounded` in this scope
+   --> nurbs-core/src/intersection/bounded_curve_tests/mod.rs:6:57
+    |
+  6 |   assert_eq!(intersect_curve_curve(&a,&b,None).unwrap(),intersect_curve_curve_bounded(&a,&b,None,8192).unwrap());
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: similarly named function `intersect_curve_curve_bounded_report` defined here
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:445:1
+    |
+445 | / pub fn intersect_curve_curve_bounded_report(
+446 | |     first: &Curve,
+447 | |     second: &Curve,
+448 | |     tolerance: Option<ToleranceContext>,
+...   |
+453 | |     intersect_curve_curve_report_with_clip_bounded(first, second, tolerance, CLIP_ROUNDS_PER_BOX, max_boxes)
+454 | | }
+    | |_^
+help: a function with a similar name exists
+    |
+  6 |   assert_eq!(intersect_curve_curve(&a,&b,None).unwrap(),intersect_curve_curve_bounded_report(&a,&b,None,8192).unwrap());
+    |                                                                                      +++++++
+
+error[E0425]: cannot find function `intersect_curve_curve_bounded` in this scope
+   --> nurbs-core/src/intersection/bounded_curve_tests/mod.rs:10:14
+    |
+ 10 |   let report=intersect_curve_curve_bounded(&a,&b,None,1).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: similarly named function `intersect_curve_curve_bounded_report` defined here
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:445:1
+    |
+445 | / pub fn intersect_curve_curve_bounded_report(
+446 | |     first: &Curve,
+447 | |     second: &Curve,
+448 | |     tolerance: Option<ToleranceContext>,
+...   |
+453 | |     intersect_curve_curve_report_with_clip_bounded(first, second, tolerance, CLIP_ROUNDS_PER_BOX, max_boxes)
+454 | | }
+    | |_^
+help: a function with a similar name exists
+    |
+ 10 |   let report=intersect_curve_curve_bounded_report(&a,&b,None,1).unwrap();
+    |                                           +++++++
+
+error[E0425]: cannot find function `intersect_curve_curve_bounded` in this scope
+   --> nurbs-core/src/intersection/bounded_curve_tests/mod.rs:13:11
+    |
+ 13 |   assert!(intersect_curve_curve_bounded(&a,&b,None,0).is_err());
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: similarly named function `intersect_curve_curve_bounded_report` defined here
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:445:1
+    |
+445 | / pub fn intersect_curve_curve_bounded_report(
+446 | |     first: &Curve,
+447 | |     second: &Curve,
+448 | |     tolerance: Option<ToleranceContext>,
+...   |
+453 | |     intersect_curve_curve_report_with_clip_bounded(first, second, tolerance, CLIP_ROUNDS_PER_BOX, max_boxes)
+454 | | }
+    | |_^
+help: a function with a similar name exists
+    |
+ 13 |   assert!(intersect_curve_curve_bounded_report(&a,&b,None,0).is_err());
+    |                                        +++++++
+
+error[E0599]: no method named `to_value` found for struct `trimmed_offset_contact::Report` in the current scope
+   --> nurbs-core/src/trimmed_offset_contact.rs:227:22
+    |
+ 18 | pub struct Report {
+    | ----------------- method `to_value` not found for this struct
+...
+227 |         let json = r.to_value();
+    |                      ^^^^^^^^ method not found in `trimmed_offset_contact::Report`
+
+error[E0599]: no method named `to_value` found for struct `offset_source_boundary::Report` in the current scope
+   --> nurbs-core/src/offset_source_boundary.rs:363:22
+    |
+ 31 | pub struct Report {
+    | ----------------- method `to_value` not found for this struct
+...
+363 |         let json = r.to_value();
+    |                      ^^^^^^^^ method not found in `offset_source_boundary::Report`
+
+error[E0599]: no method named `to_value` found for struct `offset_contact_trims::Report` in the current scope
+   --> nurbs-core/src/offset_contact_trims.rs:521:23
+    |
+ 22 | pub struct Report {
+    | ----------------- method `to_value` not found for this struct
+...
+521 |         let value = r.to_value();
+    |                       ^^^^^^^^ method not found in `offset_contact_trims::Report`
+
+warning: unused variable: `i`
+   --> nurbs-core/src/numerics/simd_kernels.rs:271:13
+    |
+271 |         for i in 0..interior {
+    |             ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cell`
+   --> nurbs-core/src/distance/subdivision.rs:244:29
+    |
+244 |         fn split(&mut self, cell: ()) -> Result<Split<()>> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_cell`
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:307:9
+    |
+307 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `du`
+   --> nurbs-core/src/offset/tests/fillet_surfaces.rs:228:10
+    |
+228 |     let (du, dv) = domain(surface);
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_du`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+Some errors have detailed explanations: E0425, E0433, E0599.
+For more information about an error, try `rustc --explain E0425`.
+warning: `nurbs-core` (lib test) generated 16 warnings
+error: could not compile `nurbs-core` (lib test) due to 99 previous errors; 16 warnings emitted

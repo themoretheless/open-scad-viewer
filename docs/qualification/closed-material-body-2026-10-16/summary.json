@@ -1,0 +1,246 @@
+{
+  "schema": "closed-material-body-native-qualification-v1",
+  "baselineRevision": "654d126f6e3fbfafcbf0971257f6a3a5fc4eb6fa",
+  "nativeCheckpointPassed": true,
+  "sourceGuardVerified": true,
+  "inputsSha256": "c8ca4cd63d59ff408dfa372f0397498b37a38a95d094548c7c1ac51e3f48c084",
+  "checks": [
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "../closed-bishop-volume-2026-10-16/logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 109.18,
+      "testResults": [
+        {
+          "passed": 1575,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reusedFromInputGuard": "../closed-bishop-volume-2026-10-16/native-inputs.json",
+      "verifiedHigherOwnerChanges": [
+        "crates/brep-core/src/analytic.rs",
+        "crates/brep-core/src/analytic/rational_loft.rs",
+        "crates/brep-core/src/sweep_boundary_owned.rs",
+        "crates/brep-core/src/sweep_boundary_owned/closed.rs",
+        "crates/brep-core/src/sweep_boundary_owned/closed/tests.rs",
+        "crates/geometry-bridge/src/cad_sweep_boundary.rs",
+        "crates/geometry-bridge/src/cad_sweep_boundary/closed.rs",
+        "crates/geometry-bridge/src/dispatch/sweep.rs",
+        "crates/geometry-bridge/tests/closed_material_certificate.rs",
+        "crates/geometry-bridge/tests/fixtures/closed-material-body-v1.json"
+      ],
+      "scopeJustification": "Only higher BRep and geometry-bridge source/tests changed. Every NURBS source/test/dependency, manifest, workspace lockfile/build configuration and pinned toolchain is byte-identical. Neither higher crate is a dependency of nurbs-core. All changed owners, their JSON/STEP paths and no-codec libraries are tested fresh."
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume",
+        "--",
+        "--nocapture"
+      ],
+      "log": "../closed-bishop-volume-2026-10-16/logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 160.097,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reusedFromInputGuard": "../closed-bishop-volume-2026-10-16/native-inputs.json",
+      "verifiedHigherOwnerChanges": [
+        "crates/brep-core/src/analytic.rs",
+        "crates/brep-core/src/analytic/rational_loft.rs",
+        "crates/brep-core/src/sweep_boundary_owned.rs",
+        "crates/brep-core/src/sweep_boundary_owned/closed.rs",
+        "crates/brep-core/src/sweep_boundary_owned/closed/tests.rs",
+        "crates/geometry-bridge/src/cad_sweep_boundary.rs",
+        "crates/geometry-bridge/src/cad_sweep_boundary/closed.rs",
+        "crates/geometry-bridge/src/dispatch/sweep.rs",
+        "crates/geometry-bridge/tests/closed_material_certificate.rs",
+        "crates/geometry-bridge/tests/fixtures/closed-material-body-v1.json"
+      ],
+      "scopeJustification": "Only higher BRep and geometry-bridge source/tests changed. Every NURBS source/test/dependency, manifest, workspace lockfile/build configuration and pinned toolchain is byte-identical. Neither higher crate is a dependency of nurbs-core. All changed owners, their JSON/STEP paths and no-codec libraries are tested fresh."
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 1258.961,
+      "testResults": [
+        {
+          "passed": 1081,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 23.822,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 208.126,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 43.815,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 4.724,
+      "testResults": []
+    }
+  ],
+  "publicWasmRebuilt": false,
+  "freshCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "independentStepQualified": false,
+  "browserQualified": false,
+  "fullGoalComplete": false,
+  "reusedLowerChecks": 2,
+  "totalPassed": 3073,
+  "totalIgnored": 4,
+  "codeRevision": "8e8552705e0f78c883098a4bbd7e66c4722ebfcb"
+}

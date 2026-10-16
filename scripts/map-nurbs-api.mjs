@@ -12,8 +12,14 @@ const library = read('crates/nurbs-core/src/lib.rs').replace(/pub use ([\w:]+)::
 const exports = [...library.matchAll(/^pub use ((?:crate::)?[\w:]+)(?: as (\w+))?;/gm)]
 const moduleExports = exports.filter(([_, path]) => {
   const source = path.replace(/^crate::/, '').replaceAll('::', '/')
-  return existsSync(resolve(root, 'crates/nurbs-core/src', source + '.rs')) ||
-    existsSync(resolve(root, 'crates/nurbs-core/src', source, 'mod.rs'))
+  if (!existsSync(resolve(root, 'crates/nurbs-core/src', source + '.rs')) &&
+    !existsSync(resolve(root, 'crates/nurbs-core/src', source, 'mod.rs'))) return false
+  // A re-exported function can share a private source module's name (for
+  // example transport::{dispatch, execute}). It is not a public module API.
+  const parts = source.split('/'), leaf = parts.pop(), parent = parts.join('/')
+  const parentPath = ['crates/nurbs-core/src/' + parent + '.rs',
+    'crates/nurbs-core/src/' + parent + '/mod.rs'].find(p => existsSync(resolve(root, p)))
+  return parentPath && new RegExp(`\\bpub\\s+mod\\s+${leaf}\\s*;`).test(read(parentPath))
 })
 const parents = new Set(moduleExports.map(([_, path]) => path.replace(/^crate::/, '').split('::')[0]))
 const catalogModules = new Set(Object.values(domains).flat())

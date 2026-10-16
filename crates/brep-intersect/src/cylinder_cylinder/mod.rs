@@ -29,9 +29,10 @@
 //! radii); a coincident cap plane of nested coaxial cylinders shares the
 //! smaller cap disk and is an honest `CoincidentTrim` region. Nothing here
 //! authorizes a topology change.
-use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
-use super::sphere_cylinder::CylinderPatchCurve;
-use brep_core::intersections::sphere_sphere::RECOGNITION;
+#[cfg(feature = "codec")]
+mod serialization;
+use super::sphere_cylinder::{CanonicalCylinder, CylinderPatchCurve, recognize_cylinder};
+use super::sphere_sphere::RECOGNITION;
 use super::*;
 use brep_core::Model;
 

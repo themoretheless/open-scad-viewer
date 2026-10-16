@@ -1,6 +1,6 @@
 use super::*;
 
-fn exact_iso_pcurve(
+pub(super) fn exact_iso_pcurve(
     surface: &Surface,
     pcurve: &Curve,
 ) -> Result<Option<(Curve, CurvePcurveSupport)>> {
@@ -47,7 +47,7 @@ fn exact_iso_pcurve(
     Ok(None)
 }
 
-fn affine_planar_lift(
+pub(super) fn affine_planar_lift(
     surface: &Surface,
     pcurve: &Curve,
     context: &ToleranceContext,

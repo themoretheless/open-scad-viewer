@@ -1,0 +1,197 @@
+warning: unused workspace dependency `compute-cuda`
+   --> Cargo.toml:114:1
+    |
+114 | compute-cuda = { version = "0.1.0", path = "compute-cuda" }
+    | ^^^^^^^^^^^^
+    |
+    = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `compute-cuda`
+warning: unused workspace dependency `compute-mlx`
+   --> Cargo.toml:115:1
+    |
+115 | compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+    | ^^^^^^^^^^^
+    |
+help: consider removing the workspace dependency `compute-mlx`
+warning: unused workspace dependency `math-compute`
+  --> Cargo.toml:77:1
+   |
+77 | math-compute = { package = "osv-math-compute", version = "0.1.0", path = "math-compute" }
+   | ^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `math-compute`
+warning: workspace (manifest) generated 3 warnings
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /tmp/osv-general-cert-target/.../wgsl_export
+  |                                  ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Checking serde_core v1.0.229
+    Checking zmij v1.0.23
+    Checking memchr v2.8.3
+    Checking itoa v1.0.18
+    Checking osv-math v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/math-core)
+    Checking osv-math-compute v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/math-compute)
+    Checking serde_json v1.0.151
+    Checking serde v1.0.229
+    Checking rbench v0.1.0 (https://github.com/themoretheless/rbench?branch=release#5574db15)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.21s
+warning: unused workspace dependency `compute-cuda`
+   --> Cargo.toml:114:1
+    |
+114 | compute-cuda = { version = "0.1.0", path = "compute-cuda" }
+    | ^^^^^^^^^^^^
+    |
+    = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `compute-cuda`
+warning: unused workspace dependency `compute-mlx`
+   --> Cargo.toml:115:1
+    |
+115 | compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+    | ^^^^^^^^^^^
+    |
+help: consider removing the workspace dependency `compute-mlx`
+warning: unused workspace dependency `math-compute`
+  --> Cargo.toml:77:1
+   |
+77 | math-compute = { package = "osv-math-compute", version = "0.1.0", path = "math-compute" }
+   | ^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `math-compute`
+warning: workspace (manifest) generated 3 warnings
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /tmp/osv-general-cert-target/.../wgsl_export
+  |                                  ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling num-traits v0.2.19
+    Checking tensor-core v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/tensor-core)
+   Compiling syn v2.0.119
+   Compiling zerocopy v0.8.57
+    Checking libm v0.2.16
+   Compiling zerocopy-derive v0.8.57
+    Checking libloading v0.8.9
+   Compiling cfg_aliases v0.2.2
+   Compiling objc2 v0.6.4
+    Checking bitflags v2.13.2
+   Compiling syn v3.0.5
+    Checking objc2-encode v4.1.0
+    Checking foldhash v0.2.0
+   Compiling thiserror v2.0.20
+    Checking hashbrown v0.17.1
+    Checking objc2-core-foundation v0.3.2
+    Checking half v2.7.1
+   Compiling thiserror-impl v2.0.20
+    Checking equivalent v1.0.2
+    Checking indexmap v2.14.2
+   Compiling libc v0.2.189
+    Checking rustc-hash v1.1.0
+    Checking naga-types v30.0.1
+    Checking objc2-foundation v0.3.2
+    Checking block2 v0.6.2
+   Compiling bytemuck_derive v1.12.0
+   Compiling naga v30.0.1
+    Checking bit-vec v0.9.1
+    Checking log v0.4.34
+   Compiling parking_lot_core v0.9.12
+    Checking unicode-width v0.2.2
+    Checking codespan-reporting v0.13.1
+    Checking bit-set v0.10.0
+    Checking objc2-metal v0.3.2
+    Checking bytemuck v1.25.2
+    Checking objc2-core-graphics v0.3.2
+    Checking static_assertions v1.1.0
+    Checking raw-window-handle v0.6.2
+    Checking once_cell v1.21.4
+    Checking arrayvec v0.7.8
+    Checking smallvec v1.16.0
+    Checking scopeguard v1.2.0
+    Checking unicode-ident v1.0.24
+    Checking lock_api v0.4.14
+    Checking objc2-quartz-core v0.3.2
+    Checking wgpu-types v30.0.1
+   Compiling wgpu-hal v30.0.1
+    Checking raw-window-metal v1.1.0
+    Checking parking_lot v0.12.5
+    Checking profiling v1.0.18
+   Compiling wgpu-core v30.0.1
+   Compiling litrs v1.0.0
+   Compiling document-features v0.2.12
+    Checking wgpu-naga-bridge v30.0.1
+   Compiling wgpu v30.0.1
+   Compiling cudarc v0.19.9
+    Checking wgpu-core-deps-apple v30.0.1
+    Checking libloading v0.9.0
+    Checking compute-mlx v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/compute-mlx)
+    Checking gpu-compute v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/gpu-compute)
+    Checking compute-core v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/compute-core)
+    Checking compute-cuda v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/compute-cuda)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 11s
+warning: unused workspace dependency `compute-cuda`
+   --> Cargo.toml:114:1
+    |
+114 | compute-cuda = { version = "0.1.0", path = "compute-cuda" }
+    | ^^^^^^^^^^^^
+    |
+    = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `compute-cuda`
+warning: unused workspace dependency `compute-mlx`
+   --> Cargo.toml:115:1
+    |
+115 | compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+    | ^^^^^^^^^^^
+    |
+help: consider removing the workspace dependency `compute-mlx`
+warning: unused workspace dependency `math-compute`
+  --> Cargo.toml:77:1
+   |
+77 | math-compute = { package = "osv-math-compute", version = "0.1.0", path = "math-compute" }
+   | ^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `math-compute`
+warning: workspace (manifest) generated 3 warnings
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /tmp/osv-general-cert-target/.../wgsl_export
+  |                                  ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Checking half v2.7.1
+    Checking cpufeatures v0.3.1
+   Compiling serde_derive v1.0.229
+    Checking naga v30.0.1
+    Checking tensor-core v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/tensor-core)
+    Checking serde v1.0.229
+    Checking sha2 v0.11.0
+    Checking rbench v0.1.0 (https://github.com/themoretheless/rbench?branch=release#5574db15)
+    Checking wgpu-naga-bridge v30.0.1
+    Checking wgpu-hal v30.0.1
+    Checking wgpu-core-deps-apple v30.0.1
+    Checking wgpu-core v30.0.1
+    Checking wgpu v30.0.1
+    Checking gpu-compute v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/gpu-compute)
+    Checking compute-core v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/compute-core)
+    Checking osv-math-compute v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/math-compute)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 30.21s

@@ -60,15 +60,20 @@ pub fn rational_projective_strip_jet_identity(
         // coefficients lambda=4(w-1), nu=2(2w-1)/w, mu=-2(w-1)nu.
         // Positive w avoids division singularities; these equations are checked
         // without division. Regularity remains the native caller's obligation.
-        if pa == 2 && pb == 2 && s.sub(unit, ctx)?.sign() == Sign::Zero {
+        if pa == 2 && pb == 2 && s.sub(unit, ctx)?.sign() == Sign::Zero
+            && x[3].sub(unit, ctx)?.sign() == Sign::Zero {
             let w = &x[7];
             let two = Expansion::integer(2, ctx)?;
             let mut canonical = true;
             for row in 0..a.len() {
                 for start in [row * 12, start_b + row * 12] {
-                    canonical &= x[start + 3].sub(unit, ctx)?.sign() == Sign::Zero;
-                    canonical &= x[start + 7].sub(w, ctx)?.sign() == Sign::Zero;
-                    canonical &= x[start + 11].sub(unit, ctx)?.sign() == Sign::Zero;
+                    // Positive common along weights may vary by row. Their
+                    // EXACT tensor factorization makes the cross conic weight
+                    // independent of the along parameter. No rounded division.
+                    let gauge=&x[row*12+3];
+                    canonical &= x[start + 3].sub(gauge, ctx)?.sign() == Sign::Zero;
+                    canonical &= x[start + 7].mul(unit,ctx)?.sub(&w.mul(gauge,ctx)?,ctx)?.sign() == Sign::Zero;
+                    canonical &= x[start + 11].sub(gauge, ctx)?.sign() == Sign::Zero;
                 }
                 if !canonical {break;}
             }
@@ -297,6 +302,9 @@ mod conic_tests {
     use super::*;
     use crate::{SourceArena, ToleranceContext, Limits};
     fn audit(weight_scale:f64, damage:bool, varying:bool, order:usize, max_work:u64)->BezierIdentityDecision {
+        audit_gauged(weight_scale,damage,varying,order,max_work,false)
+    }
+    fn audit_gauged(weight_scale:f64, damage:bool, varying:bool, order:usize, max_work:u64, along_gauges:bool)->BezierIdentityDecision {
         let mut values=Vec::new();
         for side in 0..2 {
             for row in 0..6 {
@@ -309,7 +317,8 @@ mod conic_tests {
                         if damage&&side==1&&row==4&&layer==2&&axis==0 {p+=f64::EPSILON;}
                         values.push(p);
                     }
-                    values.push(weight_scale*if layer==1 {if varying&&row==4 {0.5} else {std::f64::consts::FRAC_1_SQRT_2}} else {1.});
+                    let gauge=if along_gauges&&row>0 {if row%2==0 {2.} else {0.5}} else {1.};
+                    values.push(gauge*weight_scale*if layer==1 {if varying&&row==4 {0.5} else {std::f64::consts::FRAC_1_SQRT_2}} else {1.});
                 }
             }
         }
@@ -328,6 +337,18 @@ mod conic_tests {
         assert_eq!(general.outcome,BezierIdentity::Equal);
         assert!(fast.work_used<general.work_used);
         assert!(matches!(audit(1.,false,false,2,fast.work_used-1).outcome,BezierIdentity::Indeterminate(Reason::ResourceLimit)));
+    }
+    #[test]
+    fn exact_tensor_along_weights_agree_with_the_general_rational_predicate() {
+        for order in [1,2] {
+            let fast=audit_gauged(1.,false,false,order,1000000,true);
+            let general=audit_gauged(2.,false,false,order,1000000,true);
+            assert_eq!(fast.outcome,BezierIdentity::Equal);assert_eq!(general.outcome,fast.outcome);
+            assert!(fast.work_used<general.work_used);
+            assert!(matches!(audit_gauged(1.,false,false,order,fast.work_used-1,true).outcome,BezierIdentity::Indeterminate(Reason::ResourceLimit)));
+            assert_eq!(audit_gauged(1.,false,true,order,1000000,true).outcome,BezierIdentity::Different);
+        }
+        assert_eq!(audit_gauged(1.,true,false,2,1000000,true).outcome,BezierIdentity::Different);
     }
     #[test]
     fn tiny_second_jet_damage_and_varying_weights_are_not_promoted() {

@@ -776,4 +776,3 @@ pub unsafe fn abi_expand_flat_triangles(
     });
     packed(geometry(encode(handle)))
 }
-

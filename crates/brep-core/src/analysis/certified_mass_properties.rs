@@ -1,49 +1,5 @@
 use super::*;
 
-pub(super) fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
-    if model.bodies.len() != 1
-        || !model.bodies[0].inner_shells.is_empty()
-        || model.faces.len() != 10
-    {
-        return None;
-    }
-    let mut min = [f64::INFINITY; 3];
-    let mut max = [f64::NEG_INFINITY; 3];
-    for vertex in &model.vertices {
-        for i in 0..3 {
-            min[i] = min[i].min(vertex.point[i]);
-            max[i] = max[i].max(vertex.point[i]);
-        }
-    }
-    let center = [
-        (min[0] + max[0]) / 2.,
-        (min[1] + max[1]) / 2.,
-        (min[2] + max[2]) / 2.,
-    ];
-    let mut radii = model
-        .vertices
-        .iter()
-        .map(|v| (v.point[0] - center[0]).hypot(v.point[1] - center[1]))
-        .collect::<Vec<_>>();
-    radii.sort_by(f64::total_cmp);
-    radii.dedup_by(|a, b| (*a - *b).abs() <= model.tolerance_mm);
-    if radii.len() != 2
-        || radii[0] <= model.tolerance_mm
-        || radii[1] - radii[0] <= model.tolerance_mm
-        || model
-            .faces
-            .iter()
-            .filter(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1)
-            .count()
-            != 8
-    {
-        return None;
-    }
-    Some((radii[1], radii[0], max[2] - min[2], center))
-}
-
-type VerticalPrismEnvelope = (f64, f64, [f64; 3], [[f64; 3]; 3], f64);
-
 pub(super) fn exact_vertical_prism(model: &Model) -> Option<VerticalPrismEnvelope> {
     if model
         .faces
@@ -338,32 +294,7 @@ pub struct MassProperties {
     pub volume_error_estimate_mm3: f64,
     pub evaluations: usize,
 }
-impl value_codec::Serialize for MassProperties {
-    fn to_value(&self) -> value_codec::Value {
-        let mut out = value_codec::Map::new();
-        for (name, value) in [
-            ("surfaceAreaMm2", self.surface_area_mm2.to_value()),
-            ("signedVolumeMm3", self.signed_volume_mm3.to_value()),
-            ("centroid", self.centroid.to_value()),
-            ("inertiaMm5", self.inertia_mm5.to_value()),
-            ("conservativeBounds", self.conservative_bounds.to_value()),
-            (
-                "areaErrorEstimateMm2",
-                self.area_error_estimate_mm2.to_value(),
-            ),
-            (
-                "volumeErrorEstimateMm3",
-                self.volume_error_estimate_mm3.to_value(),
-            ),
-            ("evaluations", self.evaluations.to_value()),
-            ("status", "converged_estimate".to_value()),
-            ("solidGeometryStatus", "not_certified".to_value()),
-        ] {
-            out.insert(name.into(), value);
-        }
-        value_codec::Value::Object(out)
-    }
-}
+
 pub(super) struct Budget {
     pub(super) used: usize,
     pub(super) limit: usize,
@@ -462,5 +393,208 @@ pub(super) fn conditioned_surface_grid(surface: &Surface, budget: &mut Budget) -
         output.sort_by(f64::total_cmp);
         output.dedup();
     }
+    Ok(result)
+}
+/// The outer Green integral must break wherever a trim crosses either surface
+/// knot family. Splitting only the inner U integral misses arbitrarily narrow
+/// V spans and can falsely report quadrature convergence.
+pub(super) fn trim_intervals(
+    curve: &Curve,
+    surface_grid: &[Vec<f64>; 2],
+    tolerance: f64,
+    budget: &mut Budget,
+) -> Result<Vec<[f64; 2]>> {
+    use crate::intersections::{Coverage, CurvePlaneComponent, Options, Plane, curve_plane};
+    let domain = curve.domain();
+    let mut breaks = conditioned_curve_breaks(curve, budget)?;
+    let base_spans = spans(&breaks, domain);
+    // This boundary contributes Q dv = 0 identically.
+    if curve
+        .control_points
+        .iter()
+        .all(|p| p[1] == curve.control_points[0][1])
+    {
+        return Ok(base_spans);
+    }
+    for axis in 0..2 {
+        let knots = &surface_grid[axis];
+        let surface_domain = [knots[0], *knots.last().unwrap()];
+        let surface_spans = spans(knots, surface_domain);
+        let narrowest = surface_spans
+            .iter()
+            .map(|s| s[1] - s[0])
+            .fold(f64::INFINITY, f64::min);
+        let internal = knots
+            .iter()
+            .copied()
+            .filter(|k| *k > surface_domain[0] && *k < surface_domain[1]);
+        let low = curve
+            .control_points
+            .iter()
+            .map(|p| p[axis])
+            .fold(f64::INFINITY, f64::min);
+        let high = curve
+            .control_points
+            .iter()
+            .map(|p| p[axis])
+            .fold(f64::NEG_INFINITY, f64::max);
+        for knot in internal {
+            if knot <= low || knot >= high {
+                continue;
+            }
+            // Linear UV spans have an algebraic inverse. Keep their own knot
+            // endpoints, including C0 derivative breaks, in the schedule.
+            if curve.degree == 1 && curve.weights.iter().all(|w| *w == curve.weights[0]) {
+                for [a, b] in &base_spans {
+                    spend(budget, 2)?;
+                    let x = curve.evaluate(*a)?.point[axis];
+                    let y = curve.evaluate(*b)?.point[axis];
+                    if (x < knot && knot < y) || (y < knot && knot < x) {
+                        breaks.push(a + (b - a) * (knot - x) / (y - x));
+                    }
+                }
+                continue;
+            }
+            // Positive rational weights give a conservative first derivative
+            // bound from homogeneous control differences. Root uncertainty
+            // must be small relative to the narrowest surface knot span.
+            let min_weight = curve.weights.iter().copied().fold(f64::INFINITY, f64::min);
+            let min_span = base_spans
+                .iter()
+                .map(|s| s[1] - s[0])
+                .fold(f64::INFINITY, f64::min);
+            let magnitude = curve
+                .control_points
+                .iter()
+                .map(|p| (p[axis] - knot).abs())
+                .fold(0., f64::max);
+            let mut numerator_delta: f64 = 0.;
+            let mut weight_delta: f64 = 0.;
+            for i in 0..curve.weights.len() - 1 {
+                numerator_delta = numerator_delta.max(
+                    ((curve.control_points[i + 1][axis] - knot) * curve.weights[i + 1]
+                        - (curve.control_points[i][axis] - knot) * curve.weights[i])
+                        .abs(),
+                );
+                weight_delta = weight_delta.max((curve.weights[i + 1] - curve.weights[i]).abs());
+            }
+            let speed_bound = curve.degree as f64 * (numerator_delta + magnitude * weight_delta)
+                / (min_span * min_weight);
+            let residual_target = narrowest * tolerance * 0.01;
+            let parameter_target = (domain[1] - domain[0]) * 1e-13;
+            let parameter_target = parameter_target.min(residual_target / speed_bound);
+            if !parameter_target.is_finite() || parameter_target <= 0. {
+                return Err(Error::new(
+                    "BREP_ANALYSIS_INDETERMINATE",
+                    "Trim knot crossing cannot be isolated at the requested tolerance",
+                ));
+            }
+            spend(budget, curve.control_points.len())?;
+            let remaining = budget.limit.saturating_sub(budget.used).min(65536);
+            if remaining == 0 {
+                spend(budget, 1)?;
+            }
+            let mut lifted = curve.clone();
+            for p in &mut lifted.control_points {
+                p.push(0.);
+            }
+            let mut normal = [0.; 3];
+            normal[axis] = 1.;
+            let report = curve_plane(
+                &lifted,
+                Plane {
+                    normal,
+                    offset: knot,
+                },
+                Options {
+                    distance_tolerance: residual_target,
+                    parameter_tolerance: parameter_target,
+                    max_depth: 64,
+                    max_boxes: remaining,
+                },
+            )?;
+            spend(budget, report.boxes_visited)?;
+            if report.coverage != Coverage::NumericallyResolved || !report.unresolved.is_empty() {
+                return Err(Error::new(
+                    "BREP_ANALYSIS_INDETERMINATE",
+                    "Unresolved trim/surface-knot crossing prevents mass quadrature",
+                ));
+            }
+            for component in report.components {
+                match component {
+                    CurvePlaneComponent::Point(root) => {
+                        if (root.parameter_interval[1] - root.parameter_interval[0]) * speed_bound
+                            > residual_target
+                        {
+                            return Err(Error::new(
+                                "BREP_ANALYSIS_INDETERMINATE",
+                                "Trim knot root uncertainty exceeds mass quadrature tolerance",
+                            ));
+                        }
+                        breaks.push(root.parameter);
+                    }
+                    CurvePlaneComponent::Overlap {
+                        parameter_interval,
+                        control_residual,
+                    } => {
+                        if control_residual != 0. {
+                            return Err(Error::new(
+                                "BREP_ANALYSIS_INDETERMINATE",
+                                "Near-coincident trim knot span prevents mass quadrature",
+                            ));
+                        }
+                        breaks.extend(parameter_interval);
+                    }
+                }
+            }
+        }
+    }
+    breaks.sort_by(f64::total_cmp);
+    breaks.dedup();
+    Ok(breaks
+        .windows(2)
+        .filter_map(|p| (p[0] < p[1]).then_some([p[0], p[1]]))
+        .collect())
+}
+pub(super) fn flux(
+    surface: &Surface,
+    u: f64,
+    v: f64,
+    origin: [f64; 3],
+    orientation: f64,
+    budget: &mut Budget,
+) -> Result<[f64; 11]> {
+    if budget.used >= budget.limit {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Mass-property integration exhausted its evaluation budget",
+        ));
+    }
+    budget.used += 1;
+    let e = surface.evaluate(u, v)?;
+    let (du, dv) = e.first_derivatives().ok_or_else(|| {
+        Error::new(
+            "BREP_ANALYSIS_INDETERMINATE",
+            "Undefined surface derivative in integration domain",
+        )
+    })?;
+    let normal = [
+        du[1] * dv[2] - du[2] * dv[1],
+        du[2] * dv[0] - du[0] * dv[2],
+        du[0] * dv[1] - du[1] * dv[0],
+    ];
+    let area = normal.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let n = normal.map(|x| x * orientation);
+    let p: [f64; 3] = std::array::from_fn(|i| e.point[i] - origin[i]);
+    let mut result = [0.; 11];
+    result[0] = area;
+    result[1] = (0..3).map(|i| p[i] * n[i] / 3.).sum();
+    for i in 0..3 {
+        result[2 + i] = p[i] * p[i] * n[i] / 2.;
+        result[5 + i] = p[i].powi(3) * n[i] / 3.;
+    }
+    result[8] = p[0] * p[0] * p[1] * n[0] / 2.;
+    result[9] = p[0] * p[0] * p[2] * n[0] / 2.;
+    result[10] = p[1] * p[1] * p[2] * n[1] / 2.;
     Ok(result)
 }

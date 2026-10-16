@@ -47,19 +47,20 @@
 //! (parallel/oblique cases) the cap chord is not a component — coverage is
 //! NumericallyResolved, never certified complete, and nothing here
 //! authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::cylinder_cylinder::{arc_parameter, lift_line};
-use brep_core::intersections::{CanonicalPlane, recognize_plane};
+pub(crate) use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::plane_sphere::{
     EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
 };
-use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
+pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
 use super::sphere_cylinder::CylinderPatchCurve;
 use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect};
 use super::*;
 use brep_core::Model;
 
 mod plane_cylinder_component;
-mod serialization;
 #[cfg(test)]
 mod tests;
 pub use plane_cylinder_component::*;

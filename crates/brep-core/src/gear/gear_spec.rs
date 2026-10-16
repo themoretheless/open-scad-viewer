@@ -1,6 +1,6 @@
 use super::*;
 
-fn invalid(message: impl Into<String>) -> Error {
+pub(super) fn invalid(message: impl Into<String>) -> Error {
     Error::new("BREP_INVALID_SIZE", message)
 }
 
@@ -67,11 +67,11 @@ pub struct GearGeometry {
 // 2D outline
 // ---------------------------------------------------------------------------
 
-fn polar(r: f64, a: f64) -> [f64; 2] {
+pub(super) fn polar(r: f64, a: f64) -> [f64; 2] {
     [r * a.cos(), r * a.sin()]
 }
 
-fn line2(a: [f64; 2], b: [f64; 2]) -> Curve {
+pub(super) fn line2(a: [f64; 2], b: [f64; 2]) -> Curve {
     Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],
@@ -83,7 +83,7 @@ fn line2(a: [f64; 2], b: [f64; 2]) -> Curve {
 
 /// Exact circular arc about the origin from `from` to `to` (sweep below a
 /// half turn, either sense).
-fn arc2(r: f64, from: f64, to: f64) -> Result<Curve> {
+pub(super) fn arc2(r: f64, from: f64, to: f64) -> Result<Curve> {
     let sweep = to - from;
     if !(sweep.abs() > 1e-12 && sweep.abs() < ARC_WEIGHT_MAX_SWEEP) {
         return Err(invalid("Gear arc must sweep less than a half turn"));
@@ -105,7 +105,7 @@ fn arc2(r: f64, from: f64, to: f64) -> Result<Curve> {
 
 /// Full circle as `arcs` exact arcs (at least four), counter-clockwise
 /// from +x.
-fn circle2(r: f64, arcs: usize) -> Result<Vec<Curve>> {
+pub(super) fn circle2(r: f64, arcs: usize) -> Result<Vec<Curve>> {
     let arcs = arcs.max(4);
     (0..arcs)
         .map(|q| {
@@ -121,7 +121,7 @@ fn circle2(r: f64, arcs: usize) -> Result<Vec<Curve>> {
 /// Arc count for a circle of radius `r` that must stay outside radius
 /// `inner` even when each arc is displayed as two chords: the inscribed
 /// radius of the chord polygon must clear `inner`.
-fn arcs_clearing(r: f64, inner: f64) -> usize {
+pub(super) fn arcs_clearing(r: f64, inner: f64) -> usize {
     if inner <= 0. || inner >= r {
         return 4;
     }
@@ -139,7 +139,7 @@ pub fn circle_arcs(teeth: usize) -> usize {
 /// Involute of the base circle `base` between roll parameters `t0..t1`,
 /// placed at the tooth centre with half-angle function `half`; `sign` picks
 /// the flank side. Quintic Hermite approximation with an ideal continuous bound.
-fn involute(
+pub(super) fn involute(
     base: f64,
     t0: f64,
     t1: f64,
@@ -179,7 +179,7 @@ fn involute(
     Ok((curve, approximation.real_arithmetic_error_estimate))
 }
 
-fn reverse2(c: &Curve) -> Curve {
+pub(super) fn reverse2(c: &Curve) -> Curve {
     let mut r = c.clone();
     r.control_points.reverse();
     r.weights.reverse();
@@ -367,80 +367,15 @@ pub(super) fn lift(c: &Curve, z: f64) -> Curve {
 }
 
 /// Wall surface of one outline curve between `z0` and `z1`, rotated by
-/// `twist` radians over the height: ruled for zero twist, else a cubic loft
-/// through `levels + 1` rotated copies, refined until the helical sweep is
-/// matched within `SWEEP_FIT`. Returns the surface and its deviation.
+/// `twist` radians over the height: ruled for zero twist, else quintic
+/// endpoint-Hermite spans with an ideal continuous bound at most SWEEP_FIT.
 pub(super) fn wall(c: &Curve, z0: f64, z1: f64, theta0: f64, twist: f64) -> Result<(Surface, f64)> {
-    let h = z1 - z0;
-    if twist.abs() < 1e-15 {
-        let bottom = lift(&rotate2(c, theta0), z0);
-        let top = lift(&rotate2(c, theta0), z1);
-        return Ok((nurbs_core::surface::loft(&[bottom, top])?, 0.));
-    }
-    let schedule = [4usize, 8, 16, 24];
-    for (step, &levels) in schedule.iter().enumerate() {
-        let last = step + 1 == schedule.len();
-        let params: Vec<f64> = (0..=levels).map(|i| i as f64 / levels as f64).collect();
-        let copies: Vec<Curve> = params
-            .iter()
-            .map(|&v| lift(&rotate2(c, theta0 + twist * v), z0 + h * v))
-            .collect();
-        // Interpolate every control-point column across the levels with one
-        // shared knot vector (constant weights along v keep the rational
-        // curves exact at the levels).
-        let n = c.control_points.len();
-        let mut columns: Vec<Curve> = Vec::with_capacity(n);
-        for i in 0..n {
-            let data: Vec<Vec<f64>> = copies.iter().map(|k| k.control_points[i].clone()).collect();
-            columns.push(interpolate(&params, &data)?);
-        }
-        let knots_v = columns[0].knots.clone();
-        let degree_v = columns[0].degree;
-        let m = columns[0].control_points.len();
-        let surface = Surface {
-            degree_u: c.degree,
-            degree_v,
-            knots_u: c.knots.clone(),
-            knots_v,
-            control_points: (0..n).map(|i| columns[i].control_points.clone()).collect(),
-            weights: (0..n).map(|i| vec![c.weights[i]; m]).collect(),
-            periodic_u: false,
-            periodic_v: false,
-        };
-        surface.validate()?;
-        let mut worst: f64 = 0.;
-        let [u0, u1] = c.domain();
-        for i in 0..=8 {
-            let u = u0 + (u1 - u0) * i as f64 / 8.;
-            let base_point = c.evaluate(u)?.point;
-            for j in 0..levels {
-                for k in 1..4 {
-                    let v = (j as f64 + k as f64 / 4.) / levels as f64;
-                    let p = surface.evaluate(u, v)?.point;
-                    let (s, co) = (theta0 + twist * v).sin_cos();
-                    let q = [
-                        co * base_point[0] - s * base_point[1],
-                        s * base_point[0] + co * base_point[1],
-                        z0 + h * v,
-                    ];
-                    worst = worst.max(
-                        ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2))
-                            .sqrt(),
-                    );
-                }
-            }
-        }
-        if worst <= SWEEP_FIT || last {
-            if worst > SWEEP_FIT {
-                return Err(invalid(format!(
-                    "Gear helical wall could not be lofted within {SWEEP_FIT} mm (achieved {worst:.2e}); \
-                     reduce the helix angle or the height"
-                )));
-            }
-            return Ok((surface, worst));
-        }
-    }
-    unreachable!("sweep fit schedule is not empty")
+    let approximation =
+        nurbs_core::helical_sweep::approximate(&lift(c, z0), z1 - z0, theta0, twist, SWEEP_FIT)?;
+    Ok((
+        approximation.surface,
+        approximation.real_arithmetic_error_estimate,
+    ))
 }
 
 /// Iso-curve of a surface at u = 0 or u = 1 (the shared vertical edge).

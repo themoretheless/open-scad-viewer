@@ -54,6 +54,10 @@ export interface SweepVolumeBudgets extends SweepEmbeddingBudgets {
  orientationSpans:number
 }
 export interface SweepVolumeAudit {
+ linearCells:number
+ totalPairs:number
+ individualPairs:number
+ groupedPairs:number
  solidGeometryCertified:boolean
  boundaryEmbeddingCertified:boolean
  allFacesInjective:boolean

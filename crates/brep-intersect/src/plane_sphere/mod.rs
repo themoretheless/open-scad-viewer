@@ -27,8 +27,9 @@
 //! `sphere_sphere::lift_clipped` (clipped arcs, with exact endpoint
 //! inversion), and exact rational quadratic ellipse arcs in the plane UV.
 //! Nothing here authorizes a topology change.
-use brep_core::intersections::sphere_sphere::{self, CanonicalSphere, SpherePatchCircle};
-use brep_core::intersections::{CanonicalPlane, recognize_plane};
+#[cfg(feature = "codec")]
+mod serialization;
+use super::sphere_sphere::{self, CanonicalSphere, RECOGNITION, SpherePatchCircle};
 use super::*;
 use brep_core::Model;
 

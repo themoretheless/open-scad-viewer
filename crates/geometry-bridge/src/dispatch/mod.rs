@@ -6,6 +6,7 @@ pub(crate) mod intersections;
 pub(crate) mod sweep;
 pub(crate) mod interchange;
 pub(crate) mod nurbs;
+pub(crate) mod nurbs_2;
 pub(crate) mod cad;
 pub(crate) mod brep;
 pub(crate) mod general;
@@ -19,6 +20,7 @@ pub(crate) const ROUTES: &[Router] = &[
     sweep::route,
     interchange::route,
     nurbs::route,
+    nurbs_2::route,
     cad::route,
     brep::route,
     general::route,

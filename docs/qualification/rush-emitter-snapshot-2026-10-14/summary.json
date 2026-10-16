@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "qualificationClaim": "none",
+  "scope": "Rush snapshot reference/input migration only; all production Rust sources and all packaged WASM bytes are unchanged from 6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3. Earlier focused geometry and Node/Chromium evidence applies to identical runtime inputs and bytes. Full G1 v100 remains historical with zero successor credit.",
+  "native": {
+    "status": "passed",
+    "scope": "Previously executed focused tests; Rust inputs are unchanged in this source-only successor.",
+    "tests": 147,
+    "matrixCells": 288,
+    "matrixPassed": 216,
+    "matrixRefused": 72,
+    "groups": {
+      "intersections": 132,
+      "graph-predicate": 2,
+      "monotonicity": 11,
+      "nonplanar-matrix": 1,
+      "frame-cap-matrix": 1
+    }
+  },
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 56,
+    "pinnedLayerViolations": 0,
+    "newOversizedPathsRelativeToGeometryPredecessor": 0,
+    "raisedPins": 0
+  },
+  "wasm": {
+    "sha256": "12241a08fbb3bd749d90f6ff9955d7157601b1e433cb6ac33f7e0b4784872b47",
+    "byteLength": 12007711,
+    "optimizer": "Native Binaryen 116 matching pinned package version; all four optimizer tests passed, including executable fixture byte parity.",
+    "rebuildClaim": "Post-fixture incremental build pipeline executed successfully; geometry, language, VR and photogrammetry artifacts were unchanged.",
+    "unchangedFrom": "docs/qualification/own-rust-cad-v64.json"
+  },
+  "node": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/node.json",
+    "sha256": "f23fa1d259884e7f5fc7a9af1529704e54b34845937757488d16a4d37361c1c2",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "browser": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/browser.json",
+    "sha256": "3f9a6300415d8f0c07ccbd83535389db59d061eaaaa77fb2d521e4279f91cc53",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "discovery": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38580241917",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "qualificationWorkUnits": 0,
+    "scope": "Exact hosted image identities, plus the Ubuntu rollout version observed in the archived failed preflight job. No unobserved images admitted."
+  },
+  "browserDiscovery": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38580241917",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "qualificationWorkUnits": 0,
+    "scope": "All four downloaded browser/support trees match V36 byte identities; no execution or host-dependency qualification inferred."
+  },
+  "previousAttempt": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38579028945",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "status": "cancelled-after-exact-image-refusal",
+    "creditImported": 0
+  },
+  "nextCandidate": {
+    "id": "semantic-manifold-g1-candidate-run-v98",
+    "plannedWorkUnits": 4740,
+    "fragments": 132,
+    "completedWorkUnits": 0,
+    "approval": "not-approved"
+  },
+  "goldenReconciliation": {
+    "run": 38591445273,
+    "baselineSource": "2d63a3bec114041daf4cec8a789a882585d18646",
+    "measuredSource": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+    "caseCount": 43,
+    "changedHashes": 6,
+    "comparisonRemoved": false,
+    "numericToleranceAdded": false,
+    "analysisPath": "docs/qualification/native-golden-reconciliation-2026-10-14/verified-analysis.json",
+    "analysisSha256": "30092d91e956a874e781cd57db6f218559e04e32c4ec853fd1eed614eb98c465",
+    "fixturePath": "crates/geometry-bridge/tests/fixtures/golden_numeric.txt",
+    "fixtureSha256": "c7dbd0f9aafcf31acdf212433c33d61aba3ded21ff244485c6d2186cceaffddd"
+  },
+  "rushEmitter": {
+    "run": 38608902537,
+    "baselineSource": "2d63a3bec114041daf4cec8a789a882585d18646",
+    "runtimeSource": "6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3",
+    "testInputOverlay": "Only extra-case language changed from modelgraph/1 to rush/ir-1; original strict snapshot comparator unchanged.",
+    "cases": 81,
+    "passedCases": 54,
+    "expectedRefusalCases": 27,
+    "statusesPreserved": true,
+    "changedSnapshotRows": 54,
+    "numericToleranceChanged": false,
+    "maxObservedNumericDelta": 4.136198938908819e-09,
+    "declaredSketchToleranceMm": 1e-06,
+    "allRemainingNativePackagesPassed": true,
+    "allThreeLinuxClippyCommandsPassed": true
+  },
+  "previousG1": {
+    "run": 38596009263,
+    "source": "6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3",
+    "workUnits": 4740,
+    "fragments": 132,
+    "passed": true,
+    "successorCredit": 0
+  },
+  "deliveryCi": {
+    "source": "6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3",
+    "run": 38597519071,
+    "linuxFailure": "stale Rush emitter snapshot and obsolete extra-case language, now independently reconciled",
+    "windows": "overall 90-minute job timeout with no failed test in available log",
+    "macos": "full workspace passed",
+    "node20": "passed",
+    "node22": "passed",
+    "stepWorkflowsPassed": 4,
+    "nativeJobMinutesBefore": 90,
+    "nativeJobMinutesAfter": 120,
+    "individualTestTimeoutsChanged": false,
+    "mathematicalWorkBudgetsChanged": false
+  }
+}

@@ -14,18 +14,25 @@ pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_
 pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
 pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
 pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
-pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use trajectory::{translated_constant_values,translated_constant_jets,control_values_with_fit};
+pub(crate) use trajectory::{control_trajectories_with_fit,control_trajectories_with_phase};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
 mod guided_path_values;
+pub(crate) use guided_path_values::certify_path_guide_from_offset;
 mod paired_path_values;
 mod guide_width;
 pub use guide_width::{GuideWidthReport, certify_guide_width};
 mod contact_fit;
+pub(crate) use contact_fit::contact_fit_from_width;
 pub use contact_fit::{certify_contact_fit, certify_contact_control_trajectories, certify_contact_control_trajectory};
 mod contact_fit_value;
 pub use contact_fit_value::{ContactFitValueReport, certify_contact_fit_value, certify_contact_control_values, certify_contact_control_value};
 pub use guided_path_values::{certify_path_guide_values,certify_path_guide_control_values,certify_path_guide_control_value,certify_path_guide,certify_path_guide_control_trajectories,certify_path_guide_control_trajectory};
+mod phase;
+pub(crate) use phase::{PathPhase,compose_and_twist,certify_guided_phase_jets,certify_phase_guide_width};
+mod bishop_jets;
+pub(crate) use bishop_jets::{BishopCorrection,certify_bishop_jets,certify_arc_corrected_bishop_jets,certify_bishop_phase_jets};
 mod trajectory;
 pub use trajectory::{TrajectoriesReport,ControlValuesReport,ControlValueReport, TrajectoryReport, certify_control_trajectory, certify_control_value, certify_control_trajectories, certify_control_values};
 pub use guided_axis::{certify_authored_guide, certify_authored_guide_values};
@@ -115,6 +122,17 @@ pub fn certify_twisted_values(
     out.binormal = Some(cross(t.v, rotated)?.map(|x| [x.lo, x.hi]));
     out.status = Status::Certified;
     Ok(out)
+}
+// Literal original source-axis identity. Positive rational weights preserve
+// a strictly signed axis seed and the orthogonal longitudinal plane. This
+// removes Gram-Schmidt interval dependency; it does not approximate a frame.
+fn source_axis_normal(axis:&Curve,normal:&Curve)->Option<(usize,f64)> {
+    (0..3).find_map(|i| {
+        let sign=normal.control_points[0][i].signum();
+        (sign!=0. && axis.control_points.iter().all(|p|p[i]==0.)
+            && normal.control_points.iter().all(|p|p[i]*sign>0. && (0..3).all(|k|k==i||p[k]==0.)))
+            .then_some((i,sign))
+    })
 }
 #[derive(Clone, Copy)]
 struct Jet {
@@ -453,10 +471,16 @@ pub fn certify(
         return Ok(out);
     };
     out.reason = Some("transverse-nonparallel-unproved");
-    let Some(binormal) = normalize(cross_jet(t, jet(transverse, &b)?)?)? else {
-        return Ok(out);
+    let (t,binormal,normal)=if let Some((axis,sign))=source_axis_normal(longitudinal,transverse) {
+        let mut t=t;
+        t.v[axis]=I::point(0.);t.d[axis]=I::point(0.);t.dd[axis]=I::point(0.);
+        let mut value=[I::point(0.);3];value[axis]=I::point(sign);
+        let normal=Jet {v:value,d:[I::point(0.);3],dd:[I::point(0.);3]};
+        (t,cross_jet(t,normal)?,normal)
+    }else {
+        let Some(binormal)=normalize(cross_jet(t,jet(transverse,&b)?)?)? else {return Ok(out);};
+        (t,binormal,cross_jet(binormal,t)?)
     };
-    let normal = cross_jet(binormal, t)?;
     out.longitudinal = Some(encode(t));
     out.transverse = Some(encode(normal));
     out.binormal = Some(encode(binormal));

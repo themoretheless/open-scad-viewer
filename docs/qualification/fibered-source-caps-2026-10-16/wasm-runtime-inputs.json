@@ -1,0 +1,109 @@
+{
+  "schema": "original-fibered-source-private-runtime-correspondence/1",
+  "qualifiedCodeRevision": "a24cc8934793256d4d6f028fadc7b2ab45a9f3ad",
+  "nativeInputsSha256": "ac7fac07d2b0d1f227f50fb96f59e312498cd7b1491305af03f899ed6c9a29ea",
+  "wasmSha256": "614ae302e233bdb23004c7b0bfc2efde43db0ff5dc40b451b017dd4e4f74c0bb",
+  "wasmBytes": 18190172,
+  "node": "v26.11.1",
+  "tsx": "4.23.13",
+  "inputs": [
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/fibered-step/basic/source.json",
+      "sha256": "0572d4eb77a7c86cdb805d33d9379bfaffa718bcd641786dcb88cbe2cc3c7b0e"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/fibered-step/oblique-ascending/source.json",
+      "sha256": "16cd8f6c8bf4e1ce2ef0159615ed0e7863e819a403ad85675bc62ec1f3b814a8"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/fibered-step/oblique-descending/source.json",
+      "sha256": "aab117d951317be85e7a90393560cc6f90e8b35fe01c2f556be8bc7602bba8d8"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/fibered-step/three-pieces/source.json",
+      "sha256": "403ff22b3c588c19cb134306435c3e200c090a945154137f4261182e45a4db96"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/finish.py",
+      "sha256": "68cdd364863d922a557195f6e673a6f8507aad209e80c97eb515793160aa2a02"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/moving-affine-caps.source.json",
+      "sha256": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/nonplanar-caps.source.json",
+      "sha256": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/planar-caps.source.json",
+      "sha256": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/rational-profile-affine-caps.source.json",
+      "sha256": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/rational-profile-caps.source.json",
+      "sha256": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step/reflected-caps.source.json",
+      "sha256": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/sphere-step/sphere-nonbinary-radius.source.json",
+      "sha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/sphere-step/sphere-regular.source.json",
+      "sha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/sphere-step/sphere-translated-poles.source.json",
+      "sha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/sphere-step/sphere-two-poles.source.json",
+      "sha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb"
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/wasm-runtime.mts",
+      "sha256": "bcaf5fae3791ee5543b5374610d6468f482dad8a6c18c4981a230df891554fbf"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime.mts",
+      "sha256": "ae7011446fa1bfd6c1118151f0f85d79a2350a215f366f2343a143f6956dfce2"
+    },
+    {
+      "path": "docs/qualification/rational-cap-source-audit-2026-10-16/wasm-runtime.mts",
+      "sha256": "71ae6cb19ba9b8bec12922bb789752837ff086a1b07aec79c70f45b51a93e6a8"
+    },
+    {
+      "path": "src/services/valueBinaryCodec.ts",
+      "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176"
+    }
+  ],
+  "inputsSha256": "8c5bc1898b2cb5ab8105fd392addd6a160977062b2236d786a749c05aaf04ea7",
+  "inputCorrespondenceVerified": true,
+  "buildLogSha256": "6b947c6e64a4ecfe5c6da5d113902f3a9e268f8584845c2fee44ac947310e101",
+  "runtimeLogSha256": "3e9df0e5889f1d86e465c566033de34d6d7d259c696988e6caabeeeeb2d3d71c",
+  "runtimeReportSha256": "012267a76c59de0ddf360859e8f80a8fbb537f02472c4b53324912d4de56a641",
+  "previousSourceRuntimeReports": [
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/sphere-wasm-runtime-report.json",
+      "sha256": "1e267975aad59fb9a0054abbd5a3b301d8405a23a06f1f063c2b136f8f2cf0cd",
+      "cases": 4
+    },
+    {
+      "path": "docs/qualification/fibered-source-caps-2026-10-16/rational-cap-wasm-runtime-report.json",
+      "sha256": "6d4cf832b1a06346fa027b001ff3542b084f6e8dfa2576c904a6e081ba62060e",
+      "cases": 6
+    }
+  ],
+  "runtimeCases": 14,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

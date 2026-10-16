@@ -1,3 +1,4 @@
+import {isWellFormedUnicode,isNonNegativeSafeInteger,isNonNegativeFiniteNumber} from './workerPayloadPrimitives'
 import {isNativeGeometryArtifact,MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import type { GeometryEvaluationResult, GeometryPhaseTimings, GeometryQuality } from '../core/build'
 import {
@@ -8,7 +9,6 @@ import {
 } from '../core/geometryExecution'
 import type { MeshData } from '../core/mesh'
 import { sha256Hex } from '../core/sha256'
-import { isWellFormedUnicode } from '../core/unicode'
 export { isGeometryEvaluationResultPayload, isGeometryWorkerRequest, isGeometryWorkerEvent } from './geometryWorkerProtocol/isGeometryEvaluationResultPayload'
 
 /**

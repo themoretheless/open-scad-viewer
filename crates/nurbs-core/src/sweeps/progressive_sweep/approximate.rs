@@ -147,6 +147,13 @@ impl<'a> MultiSweep<'a> {
 impl MultiSweep<'_> {
     /// One aggregate preview; does not consume or alter iterator progression.
     pub fn preview_at(&self, count: usize) -> Result<MultiLevel> {
+        let [_,cells,products]=self.sweeps[0].spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+        self.preview_at_with_error_limits(count,cells,products)
+    }
+    /// One caller-owned allowance for the complete wall union. Filled-cap
+    /// owners can pass the remaining source allowance without resetting work.
+    pub fn preview_at_with_error_limits(&self,count:usize,cell_limit:usize,product_limit:usize)->Result<MultiLevel> {
+        check(cell_limit<=100000&&product_limit<=1000000,"Source error work exceeds limits")?;
         check(
             count >= self.options.initial_sections && count <= self.options.max_sections,
             "Preview section count outside configured sweep budget",
@@ -158,7 +165,7 @@ impl MultiSweep<'_> {
         // Measure that shared source once; per-profile pose and decomposition
         // work still consume the remaining aggregate budget.
         let first=&self.sweeps[0];
-        let [_,cell_limit,product_limit]=first.spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
             &&first.orientation_guide.is_some_and(|g|!g.periodic)
             &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};

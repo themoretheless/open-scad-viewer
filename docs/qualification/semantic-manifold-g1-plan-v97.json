@@ -37,8 +37,8 @@
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v96",
-    "previousPlanSha256": "939be45a14ec9512eea723f4ca0494b2cdc0477e02899e4726b5c2fba0e727e2",
-    "reason": "Bind integrated main, restored CAD command protocols, rational contour charts and Bernstein injectivity to rebuilt ownRust64; preserve historical evidence and reset clean work.",
+    "previousPlanSha256": "2214424bac6457210d4af281c546674e16245f40bff09a6bcbabe5b64b0e1342",
+    "reason": "Bind merged native pole-chart intersections, exact authored graph-cap contacts, optional wire codecs, fresh WASM and finite native/Node/browser qualification; reset all G1 clean work without importing historical results.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -248,8 +248,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6a478db9f10f120775b2e44aaf5b1721810fc323653e0c20d9e8296cd3531307",
-          "byteLength": 8711,
+          "value": "b6826bd5ec09caae63fed9046649c988b5b0d178d5b686b62cefabdc48a91cb7",
+          "byteLength": 8710,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -467,7 +467,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6e2bb1928eba6e0fc419fbb6bb7f952e57ca585ab03382e8a267031485ab3f88",
+          "value": "dfa6909182529c1444d170c99cb7335cad791df02200b8f5358e6be53ceee94d",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -500,7 +500,6 @@
         "paths": [
           ".gitattributes",
           ".github/workflows/g1-qualification-clean.yml",
-          "crates/geometry-bridge/examples/polygon-station-step.rs",
           "examples/rush/closed-profile-planar-10.r",
           "examples/rush/closed-profile-spatial-6.r",
           "examples/rush/spatial-bishop-g2-surface-6.r",
@@ -509,8 +508,10 @@
           "scripts/build-vr.mjs",
           "scripts/build-wasm-brotli.mjs",
           "scripts/check-profile-solid-browser.mjs",
+          "scripts/check-sweep-miter-matrix-browser.mjs",
           "scripts/diagnose-g1-webkit-memory.mjs",
           "scripts/export-profile-solid-step.mts",
+          "scripts/export-sweep-step-oracle.mts",
           "scripts/g1-github-actions.mjs",
           "scripts/g1RuntimeIdentity.mjs",
           "scripts/materialize-qualification-kernels.mjs",
@@ -526,8 +527,10 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
-          "scripts/step_rational_basis.py",
-          "scripts/verify-polygon-station-step.py",
+          "scripts/sweep-browser-surface-evidence.mjs",
+          "scripts/sweep-browser-worker-probe.mjs",
+          "scripts/sweep-step-miter-fixtures.mts",
+          "scripts/sweep-step-profile-fixtures.mts",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -542,8 +545,6 @@
           "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
           "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
           "tests/fixtures/mcp-shadow-stdio-server.ts",
-          "tests/fixtures/quintic-polygon-rmf-source.json",
-          "tests/fixtures/quintic-polygon-stations-6.json",
           "tests/fixtures/web-worker-node-harness.ts",
           "tests/geometryKernelModuleDelivery.test.ts",
           "tests/geometryWorkerRealBoundary.test.ts",
@@ -556,7 +557,6 @@
           "tests/profileFramePremises.test.ts",
           "tests/profileSolidAdmission.test.ts",
           "tests/profileSolidRush.test.ts",
-          "tests/quinticPolygonBody.test.ts",
           "tests/spatialBishopSurface.test.ts",
           "vite.qualification.config.ts"
         ],
@@ -564,8 +564,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "9da7a4cf41d4293cf203a61c2024ca7e9f5aa113d542485f2d80bbb6bba46f39",
-          "byteLength": 6429,
+          "value": "efe259df03ac73d9a9dfb73f0fd9a96a540f2502c430735f80d930695d684fde",
+          "byteLength": 6418,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },

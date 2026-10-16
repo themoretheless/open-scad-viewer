@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "qualificationClaim": "none",
+  "scope": "Source-only exact runner-image and diagnostic-fixture successor. Unchanged Rust and WASM; finite original artifact evidence retained without new execution claims. No v97 G1 credit imported.",
+  "native": {
+    "status": "passed",
+    "scope": "Previously executed focused tests; Rust inputs are unchanged in this source-only successor.",
+    "tests": 147,
+    "matrixCells": 288,
+    "matrixPassed": 216,
+    "matrixRefused": 72,
+    "groups": {
+      "intersections": 132,
+      "graph-predicate": 2,
+      "monotonicity": 11,
+      "nonplanar-matrix": 1,
+      "frame-cap-matrix": 1
+    }
+  },
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 56,
+    "pinnedLayerViolations": 0,
+    "newOversizedPathsRelativeToGeometryPredecessor": 0,
+    "raisedPins": 0
+  },
+  "wasm": {
+    "sha256": "12241a08fbb3bd749d90f6ff9955d7157601b1e433cb6ac33f7e0b4784872b47",
+    "byteLength": 12007711,
+    "optimizer": "Native Binaryen 116 matching pinned package version; all four optimizer tests passed, including executable fixture byte parity.",
+    "rebuildClaim": false,
+    "unchangedFrom": "docs/qualification/own-rust-cad-v64.json"
+  },
+  "node": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/node.json",
+    "sha256": "f23fa1d259884e7f5fc7a9af1529704e54b34845937757488d16a4d37361c1c2",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "browser": {
+    "status": "passed",
+    "path": "docs/qualification/global-geometry-2026-10-14/browser.json",
+    "sha256": "3f9a6300415d8f0c07ccbd83535389db59d061eaaaa77fb2d521e4279f91cc53",
+    "passed": 72,
+    "refused": 24,
+    "intersectionKinds": 5
+  },
+  "discovery": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38580241917",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "qualificationWorkUnits": 0,
+    "scope": "Exact hosted image identities, plus the Ubuntu rollout version observed in the archived failed preflight job. No unobserved images admitted."
+  },
+  "browserDiscovery": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38580241917",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "qualificationWorkUnits": 0,
+    "scope": "All four downloaded browser/support trees match V36 byte identities; no execution or host-dependency qualification inferred."
+  },
+  "previousAttempt": {
+    "run": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38579028945",
+    "sourceSha": "bc36da6263d133241f6ea59a88dbf5e0d0786976",
+    "status": "cancelled-after-exact-image-refusal",
+    "creditImported": 0
+  },
+  "nextCandidate": {
+    "id": "semantic-manifold-g1-candidate-run-v98",
+    "plannedWorkUnits": 4740,
+    "fragments": 132,
+    "completedWorkUnits": 0,
+    "approval": "not-approved"
+  }
+}

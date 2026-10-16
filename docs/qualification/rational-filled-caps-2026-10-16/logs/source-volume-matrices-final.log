@@ -1,0 +1,273 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-rational-frame-caps-20261016/crates/nurbs-core)
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 30 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.81s
+     Running tests/ideal_closed_spatial_volume.rs (/private/tmp/osv-ideal-body-g2-20261015/crates/target/debug/build/nurbs-core/e88f44154e38ab2d/out/ideal_closed_spatial_volume-e88f44154e38ab2d)
+
+running 3 tests
+closed spatial original: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 21125, exact_work: 368, boxes: 102, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test corrected_closed_spatial_original_volume_has_global_quotient_embedding ... ok
+test repeated_spatial_loop_has_no_global_credit_despite_regular_closed_bishop_field ... ok
+closed spatial rational=false/Parameter: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 68679, exact_work: 368, boxes: 2742, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_units has been running for over 60 seconds
+closed spatial rational=false/ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 88791, exact_work: 368, boxes: 3909, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+closed spatial rational=true/Parameter: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 78115, exact_work: 368, boxes: 4189, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+closed spatial rational=true/ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 118388, exact_work: 368, boxes: 6318, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_units ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 196.33s
+
+     Running tests/ideal_spatial_volume.rs (/private/tmp/osv-ideal-body-g2-20261015/crates/target/debug/build/nurbs-core/21bd65cec9097041/out/ideal_spatial_volume-21bd65cec9097041)
+
+running 5 tests
+test unresolved_original_spatial_transport_never_supplies_partial_volume_credit ... ok
+test original_arc_guides_and_contact_keep_exact_phase_identity_and_owned_anchor ... ok
+test original_arc_volume_covers_authored_fixed_fixed_normal_frenet_and_planar_rmf_frames ... ok
+test curved_guides_with_different_rational_weights_use_independent_original_arc_maps ... ok
+test original_spatial_bishop_volume_with_filled_caps_affine_laws_and_original_parameter_units ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s
+
+     Running tests/ideal_volume.rs (/private/tmp/osv-ideal-body-g2-20261015/crates/target/debug/build/nurbs-core/d7fcb12a3487d810/out/ideal_volume-d7fcb12a3487d810)
+
+running 5 tests
+test open_spatial_bishop_source_is_c1_c2_without_a_planar_or_curvature_premise ... ok
+test moving_original_frame_filled_nonplanar_carriers_have_global_embedding_and_shared_limit ... ok
+test guided_and_contact_source_maps_use_owned_original_anchor_and_fit ... ok
+test original_rational_weights_independent_domains_affine_laws_and_distinct_caps ... ok
+test a_folded_original_cap_or_discontinuous_law_cannot_receive_a_global_claim ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ideal_volume_atlas.rs (/private/tmp/osv-ideal-body-g2-20261015/crates/target/debug/build/nurbs-core/18b2f650928cd89b/out/ideal_volume_atlas-18b2f650928cd89b)
+
+running 8 tests
+test singular_carrier_and_singular_projection_do_not_receive_atlas_credit ... ok
+half-turn original pair cover: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 436, exact_work: 0, boxes: 23, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test exhaustive_source_pairs_admit_a_half_turn_without_global_monotonicity ... ok
+test original_closed_spatial_bishop_field_is_c1_c2_with_periodic_holonomy_rates ... ok
+test regular_path_with_distinct_parameters_at_the_same_point_has_no_global_credit ... ok
+closed original quotient pair cover: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 1659, exact_work: 4105, boxes: 59, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test exact_closed_source_uses_a_wrapped_quotient_chart_and_shared_work_limits ... ok
+spatial moving carrier Parameter: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 4010, exact_work: 291, boxes: 91, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.015625]], reason: None }
+test near_closed_source_and_locally_regular_double_cover_do_not_receive_quotient_credit ... ok
+closed matrix 0/ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 9095, exact_work: 4212, boxes: 173, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+closed matrix 1/Parameter: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 4023, exact_work: 2100, boxes: 139, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+spatial moving carrier ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 6963, exact_work: 291, boxes: 116, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.015625]], reason: None }
+test open_spatial_atlas_covers_original_arc_bishop_jets_and_distinct_moving_carriers ... ok
+closed matrix 1/ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 8578, exact_work: 2100, boxes: 153, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+closed matrix 2/Parameter: IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 5024, exact_work: 7032, boxes: 139, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }
+test closed_quotient_matrix_covers_authored_and_guided_frames_arc_laws_and_rational_carriers ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+

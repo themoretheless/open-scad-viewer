@@ -1,0 +1,1925 @@
+{
+  "schema": 1,
+  "cells": [
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "rmf",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "authored",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "incompatible-guide"
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "fixed_normal",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "corrected_frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": false,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "typed-refusal",
+      "refusalReason": "zero-curvature-frenet"
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": false,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "parameter",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": false,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": false,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    },
+    {
+      "frame": "frenet",
+      "guide": true,
+      "affine": true,
+      "spacing": "arc_length",
+      "capCorrection": true,
+      "hole": true,
+      "expected": "certified-solid-and-regular-boundary",
+      "refusalReason": null
+    }
+  ]
+}

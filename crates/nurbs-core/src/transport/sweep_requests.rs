@@ -57,8 +57,9 @@ if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progres
         check(rmf_steps.is_some() || (rmf_cells.is_none() && rmf_products.is_none()),
             "RMF error budgets require rmf_transport_steps")?;
         let rmf_limits=if let Some(steps)=rmf_steps {
-            check(["surface_progressive_sweep","surface_progressive_sweep_profiles","surface_progressive_sweep_level"].contains(&op.as_str()),
-                "RMF proof options require a sweep construction operation")?;
+            check(["surface_progressive_sweep","surface_progressive_sweep_profiles","surface_progressive_sweep_level",
+                "surface_progressive_sweep_frame_smoothness","surface_progressive_sweep_closed_path_frame_smoothness"].contains(&op.as_str()),
+                "RMF proof options require a supported sweep operation")?;
             Some([steps,field::<usize>(&v,"error_max_cells")?,field::<usize>(&v,"error_max_products")?])
         }else{None};
         let axes=optional_field::<curve::Curve>(&v,"axis_scale")?;
@@ -144,7 +145,7 @@ if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progres
                 return Ok(json!({"requestedOrder":r.order,
                     "closedSourceFrameSmoothnessCertified":r.closed_source_frame_smoothness_certified,
                     "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"exact-original-path-twist-endpoint-jets-and-frame-cover",
+                    "method":if rmf_limits.is_some() {"original-periodic-bishop-ode-with-arc-holonomy"} else {"exact-original-path-twist-endpoint-jets-and-frame-cover"},
                     "scope":"closed-original-path-frame-only",
                     "pathSeamCertified":false,"retainedSeamsCertified":false,
                     "profileJoinsCertified":false,"capJoinsCertified":false,

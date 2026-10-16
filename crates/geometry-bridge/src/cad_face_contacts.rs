@@ -83,7 +83,7 @@ pub(super) fn diagnose_sweep_volume_with_projections(
     Ok(
         json!({"regularBoundarySolidCertified":regularity.as_ref().is_some_and(|p|r.proven && p.all_faces_regular_modulo_poles),
         "boundaryRegularity":regularity.as_ref().map(|p|json!({"allFacesRegular":p.all_faces_regular,"allFacesRegularModuloPoles":p.all_faces_regular_modulo_poles,
-            "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(face,p)|p.as_ref().map(|p|json!({"face":face,"edge":p.edge,"vertex":p.vertex,"collapsedEnd":p.collapsed_end,"proven":p.proof.proven,"cells":p.proof.cells}))).collect::<Vec<_>>(),
+            "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(face,p)|p.as_ref().map(|p|json!({"face":face,"edge":p.edge,"vertex":p.vertex,"collapsedAxis":p.collapsed_axis,"collapsedEnd":p.collapsed_end,"proven":p.proof.proven,"cells":p.proof.cells}))).collect::<Vec<_>>(),
             "cells":p.cells,"unresolvedFaces":p.unresolved_faces,"scope":"whole-retained-boundary-piecewise-regular"})),
         "solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
@@ -94,8 +94,7 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         "individualPairs":r.boundary.intersections.pairs.pairs.len(),
         "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
         "groupCells":r.boundary.intersections.pairs.group_cells,
-        "contactCells":r.boundary.intersections.pairs.cells,
-        "contactDomainCells":r.boundary.intersections.pairs.domain_cells,
+        "contactCells":r.boundary.intersections.pairs.cells,"contactDomainCells":r.boundary.intersections.pairs.domain_cells,
         "disjointGroups":group_output(&r.boundary.intersections.pairs),
         "unresolvedPairs":r.boundary.intersections.pairs.pairs.iter().filter(|p|p.reason!="shared-boundary" && p.reason!="pair-disjoint").take(16).map(|p|json!({"faces":p.faces,"reason":p.reason,"sourceChartCells":p.source_chart_cells})).collect::<Vec<_>>(),
         "nesting":r.nesting.as_ref().map(|n|json!({"rolesConsistent":n.roles_consistent,
@@ -229,8 +228,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
+            (witness,r.cells+p.hull_cells+p.source_chart_cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells+p.source_chart_cells,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,
@@ -263,7 +262,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "face": face.face,
             "linearRowWeights":face.linear.as_ref().map(|linear|linear.row_weights),
             "linearProfileParameterization":face.linear.as_ref().and_then(|linear|linear.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower}))),
-            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
+            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedAxis":q.collapsed_axis,"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
                 "proven":q.proven(),"polar":q.polar.as_ref().map(|p|json!({"proven":p.proven,"cells":p.cells,"reason":p.reason,"derivativeBounds":p.derivative_bounds,"dominanceMarginLower":p.dominance_margin_lower})),"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
                 "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
@@ -372,7 +371,15 @@ mod tests {
         q["maxSpans"] = json!(1000);
         let report = crate::dispatch(q.clone()).unwrap();
         assert_eq!(report["allFacesInjective"], json!(true));
-        assert_eq!(report["spans"], json!(968));
+        let required = field::<usize>(&report, "spans").unwrap();
+        assert!(required > 0 && required <= 1000);
+        let accounted = report["faces"].as_array().unwrap().iter()
+            .map(|f| field::<usize>(&f["result"], "spans").unwrap()).sum::<usize>();
+        assert_eq!(required, accounted);
+        q["maxSpans"] = json!(required - 1);
+        let short = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(short["allFacesInjective"], json!(false));
+        assert_eq!(field::<usize>(&short, "spans").unwrap(), required - 1);
         assert_eq!(report["absenceProven"], json!(false));
         for f in report["faces"].as_array().unwrap() {
             assert_eq!(

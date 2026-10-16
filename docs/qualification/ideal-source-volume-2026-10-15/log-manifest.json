@@ -1,0 +1,142 @@
+[
+  {
+    "file": "logs/osv-complete-smoothness-diagnostic.log",
+    "sha256": "06f63660f144ad5006747202ba8d9688ac2a8d2e282b05af1e9e6ed809bd10f1",
+    "bytes": 16063
+  },
+  {
+    "file": "logs/osv-complete-smoothness-g2.log",
+    "sha256": "9b0d4fdee29d4b2c64bd8634b667d69edfb4920231435cb32747855308cc8a5e",
+    "bytes": 11433
+  },
+  {
+    "file": "logs/osv-complete-smoothness-native.log",
+    "sha256": "4b57f0c9093826875720fd1c27cfe3fd51feb703193234b01c9829dd7e143253",
+    "bytes": 12518
+  },
+  {
+    "file": "logs/osv-complete-smoothness-order.log",
+    "sha256": "e849bfdc467ad920ccb7cfcbd8c013cbd187f1375d2710e22687a5db2782ca3b",
+    "bytes": 12001
+  },
+  {
+    "file": "logs/osv-complete-smoothness-v3.log",
+    "sha256": "faaf46a305b3edeeda38b64dd084ab0f27397261829a7a9594b178c6869e1bdb",
+    "bytes": 12002
+  },
+  {
+    "file": "logs/osv-complete-smoothness-v4.log",
+    "sha256": "336c680bd8864190232926db404f3cbeebe6a472aae36f306274133a8cc42e1f",
+    "bytes": 11875
+  },
+  {
+    "file": "logs/osv-ideal-brep-aag.log",
+    "sha256": "ae8c1ef8f88d6d0824ace7c1700d6bf4117de2817df87929591a1aec4c9b7beb",
+    "bytes": 13528
+  },
+  {
+    "file": "logs/osv-ideal-brep-full.log",
+    "sha256": "64eda56cc4cc00bbfb62f0c1e90100cfa36bdd7963509a8777a8323b694dad1b",
+    "bytes": 114106
+  },
+  {
+    "file": "logs/osv-ideal-bridge-full-v2.log",
+    "sha256": "d0eb6b62145f23f7a74e3bdfc366d1c36e660ad33d8e1ff15ffff2645062f075",
+    "bytes": 42644
+  },
+  {
+    "file": "logs/osv-ideal-bridge-full.log",
+    "sha256": "b9f11768c376263c656d4fd784e192f96d85000b0cc4f931a961eba499fb78b7",
+    "bytes": 12637
+  },
+  {
+    "file": "logs/osv-ideal-hollow-body.log",
+    "sha256": "fcd415ccc82f1344abaf2bfabe91350bba5fefbe54ca7e292fc185052a491414",
+    "bytes": 11030
+  },
+  {
+    "file": "logs/osv-ideal-native-clippy.log",
+    "sha256": "2d0a8e4b85940df3b749973d33d47f115c6e7d83f50a38454716167ac3be9644",
+    "bytes": 229922
+  },
+  {
+    "file": "logs/osv-ideal-nurbs-full.log",
+    "sha256": "ecec03458e40c7a38091ce29a956552369746c77488f58faaa85e52aa624efa8",
+    "bytes": 172984
+  },
+  {
+    "file": "logs/osv-ideal-nurbs-integration-final.log",
+    "sha256": "7ab45530802e7e97c9bba604294c7d42964be807fe321e1f5b50db1f2ff4399f",
+    "bytes": 8578
+  },
+  {
+    "file": "logs/osv-ideal-oracle-final.log",
+    "sha256": "9b1ecb74fafaf78a1b26ddf794de0ab130c430f3df975abc06de5488beb0e9b4",
+    "bytes": 8524
+  },
+  {
+    "file": "logs/osv-ideal-predicate-clippy.log",
+    "sha256": "c06d1281662e11442e8cad26c5fc55c4fb3a9aa12eda18124593a9ad5e50d205",
+    "bytes": 12456
+  },
+  {
+    "file": "logs/osv-ideal-predicates-full.log",
+    "sha256": "c81b42361c404a7b60ee63d22fab862aa303313c65ba30f86858f239c022bcee",
+    "bytes": 6409
+  },
+  {
+    "file": "logs/osv-ideal-protocol-final-v2.log",
+    "sha256": "2644b2cde176f4b4335adee384777e0e3555a84161a4a1391cb01984bc1a1207",
+    "bytes": 12725
+  },
+  {
+    "file": "logs/osv-ideal-protocol-final.log",
+    "sha256": "c02ad27987d4c68a0f9e7d550afa60ae0791794ac90c13cafa4353ab12e03212",
+    "bytes": 12160
+  },
+  {
+    "file": "logs/osv-ideal-typed-build.log",
+    "sha256": "0f8e4e655c858737fdef70a7542804fffadd054591f2a3f25e00d161dc3ac0d7",
+    "bytes": 15611
+  },
+  {
+    "file": "logs/osv-ideal-volume-correlated.log",
+    "sha256": "dc90003ed72e0739a2e214549a31de5da8c53aff1c430d6ac9c02027b0865a35",
+    "bytes": 8438
+  },
+  {
+    "file": "logs/osv-ideal-volume-guided.log",
+    "sha256": "abf1bb40cf1c0f7445801768bc3aa8e096da405eb554fe024f584eb386a74c0e",
+    "bytes": 9122
+  },
+  {
+    "file": "logs/osv-ideal-volume-integration-v2.log",
+    "sha256": "ecee5fbd8258b109b6d11c1f8d1bfc887ddbb34432ba6c9a5a9048984a23f557",
+    "bytes": 8361
+  },
+  {
+    "file": "logs/osv-ideal-volume-integration.log",
+    "sha256": "6cc37d6851a57a597c11c5cfe6da5a3499380d1f736ed32317cfbbce023a98a2",
+    "bytes": 9418
+  },
+  {
+    "file": "logs/osv-ideal-volume-native.log",
+    "sha256": "f1c16658ac546d22a4342e57a6047aebca34d5facf0a708cdd8020c1922775a9",
+    "bytes": 55705
+  },
+  {
+    "file": "logs/osv-ideal-volume-protocol.log",
+    "sha256": "b998a1dd6af2a73cb7a7697d47d4a461ce8f21b4722f6e848933d1e0963e0691",
+    "bytes": 17307
+  },
+  {
+    "file": "logs/osv-ideal-volume-v4.log",
+    "sha256": "112cb79508c5dbf4c77570b83216c34c6a252200608afee22e513cbab7e594ee",
+    "bytes": 9209
+  },
+  {
+    "file": "logs/osv-owned-ideal-volume.log",
+    "sha256": "2c8d0c4b1a4d38bf56c78dee0436dbcf9cf5754e0e61af5f0c23c8fb0cb3c8b4",
+    "bytes": 11078
+  }
+]

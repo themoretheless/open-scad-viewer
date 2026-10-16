@@ -65,7 +65,7 @@ pub enum PlaneCylinderComponent {
 
 
 /// Plane UV coordinates of a 3D point under the rectangular patch frame.
-fn plane_uv(plane: &CanonicalPlane, point: [f64; 3]) -> [f64; 2] {
+pub(super) fn plane_uv(plane: &CanonicalPlane, point: [f64; 3]) -> [f64; 2] {
     let rel = sub(point, plane.origin);
     [
         dot(rel, plane.u) / (plane.u_len * plane.u_len),
@@ -74,7 +74,7 @@ fn plane_uv(plane: &CanonicalPlane, point: [f64; 3]) -> [f64; 2] {
 }
 
 /// Rectangle half-planes of the patch domain with per-axis bands.
-fn rect_halfplanes(plane: &CanonicalPlane, band: f64) -> [Halfplane2; 4] {
+pub(super) fn rect_halfplanes(plane: &CanonicalPlane, band: f64) -> [Halfplane2; 4] {
     [
         Halfplane2 {
             normal: [-1., 0.],
@@ -101,7 +101,7 @@ fn rect_halfplanes(plane: &CanonicalPlane, band: f64) -> [Halfplane2; 4] {
 
 /// Worst residual over `count` curve samples against the cylinder side
 /// equation and the plane equation.
-fn side_plane_residuals(
+pub(super) fn side_plane_residuals(
     curve: &Curve,
     cylinder: &CanonicalCylinder,
     plane: &CanonicalPlane,
@@ -127,7 +127,7 @@ fn side_plane_residuals(
 /// 3D circle point; the angular direction per arc is fixed by the exact
 /// midpoint image, and the per-quadrant trims use the exact rational-arc
 /// parameter (a quadratic solve in tan(theta), never a linear fraction).
-fn lift_circle_side(
+pub(super) fn lift_circle_side(
     cylinder: &CanonicalCylinder,
     center: [f64; 3],
     v0: f64,
@@ -179,7 +179,7 @@ fn lift_circle_side(
 }
 
 /// Iso-v lines on all four side patches (full circle at height v0).
-fn lift_circle_side_full(cylinder: &CanonicalCylinder, v0: f64) -> Vec<CylinderPatchCurve> {
+pub(super) fn lift_circle_side_full(cylinder: &CanonicalCylinder, v0: f64) -> Vec<CylinderPatchCurve> {
     cylinder
         .sides
         .iter()
@@ -200,13 +200,13 @@ fn lift_circle_side_full(cylinder: &CanonicalCylinder, v0: f64) -> Vec<CylinderP
 /// `[lo0, hi0]` and the unit square. Returns the surviving interval, or the
 /// reason it fails: misses are silent, boundary-coincident lines, band-thin
 /// clips and patch-corner touches are tangencies.
-enum LineClip {
+pub(super) enum LineClip {
     Miss,
     Tangent,
     Span(f64, f64),
 }
 
-fn clip_line_rect(
+pub(super) fn clip_line_rect(
     foot_uv: [f64; 2],
     dir_uv: [f64; 2],
     lo0: f64,

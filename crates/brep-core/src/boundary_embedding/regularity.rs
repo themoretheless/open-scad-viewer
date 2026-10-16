@@ -16,6 +16,7 @@ pub struct Report {
 
 #[derive(Clone, Debug)]
 pub struct PoleReport {
+    pub collapsed_axis:usize,
     pub edge: usize,
     pub vertex: usize,
     pub collapsed_end: usize,
@@ -45,14 +46,15 @@ pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
     };
     for (index, face) in model.faces.iter().enumerate() {
         let remaining = max_cells - out.cells;
-        if let Some((end,edge,vertex)) = crate::face_injectivity::declared_pole(model,index) {
+        if let Some((axis,end,edge,vertex)) = crate::face_injectivity::declared_pole_chart(model,index) {
+            let canonical=crate::face_injectivity::canonical_pole_surface(&face.surface,axis);
             let proof = if remaining >= 64 {
                 Some(nurbs_core::surface_quotient_injectivity::certify_polar_source_frame(
-                    &face.surface,end,8,remaining)?)
+                    &canonical,end,8,remaining)?)
             } else { None };
             out.cells += proof.as_ref().map_or(0,|p|p.cells);
             if !proof.as_ref().is_some_and(|p|p.proven) {out.unresolved_faces.push(index);}
-            out.pole_quotients.push(proof.map(|proof|PoleReport {edge,vertex,collapsed_end:end,proof}));
+            out.pole_quotients.push(proof.map(|proof|PoleReport {collapsed_axis:axis,edge,vertex,collapsed_end:end,proof}));
             out.faces.push(None);
             continue;
         }

@@ -1,0 +1,54 @@
+{
+  "README.md": {
+    "sha256": "2b4320dbccfbd4ad53d4b8820b0688635c88445a355d3557964165d5e3778794",
+    "bytes": 1256
+  },
+  "ci-node22.log.gz": {
+    "sha256": "50aad5f0f1b896ac8db1e3fe84078247b1f575b4f989101bc9deb0674753252f",
+    "bytes": 80606
+  },
+  "clippy-compute.log.gz": {
+    "sha256": "2394c267e5fb1a9466c2d0c79a31d630c2bb08ae7878594234f66e571c664ed9",
+    "bytes": 607
+  },
+  "clippy-math-gpu.log.gz": {
+    "sha256": "3ea1bf479cb0b5cd9929532db1723f1e6e24cf2439348fce10de8fe5cdfeb462",
+    "bytes": 530
+  },
+  "clippy-math.log.gz": {
+    "sha256": "6803586708e8628475fe1baf0c82efabf870e350ad753229d46cfa0542287106",
+    "bytes": 437
+  },
+  "fingerprints-linux.log.gz": {
+    "sha256": "6927c37078149a0bd6fc36a42798fbc62a21e78f2a4d0016f5ce929053f03f3b",
+    "bytes": 8118
+  },
+  "fragments.tar.gz": {
+    "sha256": "9cd1d7af8dd616cab0a6a1ef0c0e108435d94f8f3146a803a6dd92b509992680",
+    "bytes": 95320
+  },
+  "github-artifacts.json": {
+    "sha256": "62e34342515cf38834b6cc777f7062d8f417718ee61254f97516525c245474bf",
+    "bytes": 118377
+  },
+  "github-run.json": {
+    "sha256": "2af4ef288ee39c51ba9916110a9ce456b4159dc7d6b269c58b1077c12fd695c5",
+    "bytes": 353333
+  },
+  "gpu-architecture.log.gz": {
+    "sha256": "21427da8adf86f567ff1d623c9cc0df151944ffe4652cebed111dfb6eb11147e",
+    "bytes": 87
+  },
+  "hosted-result.json": {
+    "sha256": "b91ceafeba1d0402543720245ff5a65f209588acfdef2a763b8bf716deafe851",
+    "bytes": 740
+  },
+  "local-verification.json": {
+    "sha256": "54c58efbb862dbb7fc7269a92b30560a5fbdec82f919cf897234cd1814aa9c77",
+    "bytes": 740
+  },
+  "wasm-build-observations.json": {
+    "sha256": "5f4b5d02d9edf23819de0870bcf0f4caa7b8b4659af226748ea8907c465cb7ff",
+    "bytes": 786
+  }
+}

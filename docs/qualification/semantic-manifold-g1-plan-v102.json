@@ -37,8 +37,8 @@
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v101",
-    "previousPlanSha256": "ae18f7bd55aed3e6b9fb8298730b05630b0e6664d4c9001b6641f65428b87cbb",
-    "reason": "Port lattice strength analysis and skeletal lattices",
+    "previousPlanSha256": "caf8bc925b9ee54e07fa35533edebc8c6138051414942ed0e588d2e3b875d2c9",
+    "reason": "Merged main with native intersection and frame/cap qualification and rebuilt WASM. OwnRust71 binds verified compressed evidence through its text summary, preserving OwnRust70. Full G1 starts at zero.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -248,8 +248,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6a478db9f10f120775b2e44aaf5b1721810fc323653e0c20d9e8296cd3531307",
-          "byteLength": 8711,
+          "value": "b6826bd5ec09caae63fed9046649c988b5b0d178d5b686b62cefabdc48a91cb7",
+          "byteLength": 8710,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -420,6 +420,18 @@
           "byteLength": 4891,
           "verifiedBy": "qualification validator and GitHub preflight recompute exact bytes and enforce every identity"
         }
+      },
+      {
+        "id": "g1-github-actions-environment-v37",
+        "path": "docs/qualification/environment-freeze/g1-github-actions-v37.json",
+        "purpose": "Exact hosted runner labels/image versions, action commit pins, source-SHA protocol, and downloaded archive identity-only boundary for V37 (observed hosted images and downloaded browser payloads).",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "2aa46a750fae63d8f9c78bffa5e78473afeb2af4297f8a211744c368ba07b724",
+          "byteLength": 5487,
+          "verifiedBy": "qualification validator and GitHub preflight recompute exact bytes and enforce every identity"
+        }
       }
     ],
     "bundles": [
@@ -467,7 +479,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "136d69d4a9dd3a5c1577f39b948c1acd1765d46785f1b0967e5c93c46b15a0a9",
+          "value": "fb71e786430d97bcb18d61fe3cec9086ab45868f5c95c38f627fbc002ed4aec5",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -500,7 +512,6 @@
         "paths": [
           ".gitattributes",
           ".github/workflows/g1-qualification-clean.yml",
-          "crates/geometry-bridge/examples/polygon-station-step.rs",
           "examples/rush/closed-profile-planar-10.r",
           "examples/rush/closed-profile-spatial-6.r",
           "examples/rush/spatial-bishop-g2-surface-6.r",
@@ -509,8 +520,10 @@
           "scripts/build-vr.mjs",
           "scripts/build-wasm-brotli.mjs",
           "scripts/check-profile-solid-browser.mjs",
+          "scripts/check-sweep-miter-matrix-browser.mjs",
           "scripts/diagnose-g1-webkit-memory.mjs",
           "scripts/export-profile-solid-step.mts",
+          "scripts/export-sweep-step-oracle.mts",
           "scripts/g1-github-actions.mjs",
           "scripts/g1RuntimeIdentity.mjs",
           "scripts/materialize-qualification-kernels.mjs",
@@ -519,6 +532,7 @@
           "scripts/pack-language-kernel.mjs",
           "scripts/pack-photogrammetry.mjs",
           "scripts/qualificationFrozenArchives.mjs",
+          "scripts/qualificationIncomingMainArchives.mjs",
           "scripts/qualificationKernelModuleDelivery.mjs",
           "scripts/qualificationPlaywrightPackage.mjs",
           "scripts/run-browser-qualification-supervisor.mjs",
@@ -526,8 +540,10 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
-          "scripts/step_rational_basis.py",
-          "scripts/verify-polygon-station-step.py",
+          "scripts/sweep-browser-surface-evidence.mjs",
+          "scripts/sweep-browser-worker-probe.mjs",
+          "scripts/sweep-step-miter-fixtures.mts",
+          "scripts/sweep-step-profile-fixtures.mts",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -542,8 +558,6 @@
           "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
           "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
           "tests/fixtures/mcp-shadow-stdio-server.ts",
-          "tests/fixtures/quintic-polygon-rmf-source.json",
-          "tests/fixtures/quintic-polygon-stations-6.json",
           "tests/fixtures/web-worker-node-harness.ts",
           "tests/geometryKernelModuleDelivery.test.ts",
           "tests/geometryWorkerRealBoundary.test.ts",
@@ -556,7 +570,6 @@
           "tests/profileFramePremises.test.ts",
           "tests/profileSolidAdmission.test.ts",
           "tests/profileSolidRush.test.ts",
-          "tests/quinticPolygonBody.test.ts",
           "tests/spatialBishopSurface.test.ts",
           "vite.qualification.config.ts"
         ],
@@ -564,8 +577,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "a36b8a0f70e9f4480ea5ede65af6b403a3373200c2a30a59f89c7d2558a07187",
-          "byteLength": 6429,
+          "value": "8d026afd7fdc1665ca031788693cf2e4b1d57992bf18be827c81b7ca85a9bd7d",
+          "byteLength": 6529,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },
@@ -607,7 +620,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "ce4857ea8334ae94dadd722e7ee9a679e991ac5dd99de392847fec350cfb9fc6",
+          "value": "d45c6483e2ad6a5e25cf272a4a1b7c08884898f9e536992a1d88e45e9ae79d75",
           "byteLength": 858,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -717,7 +730,7 @@
           "algorithm": "sha256",
           "value": "3ea034ec9c54d470c10fad204eb9b0d20eb9df7855824cee9dbcf719932d4767",
           "byteLength": 34304,
-          "verifiedBy": "V36 canonical Linux tree manifest for chromium_headless_shell-1234; every required supporting tree is checked by the frozen GitHub harness"
+          "verifiedBy": "V37 canonical Linux tree manifest for chromium_headless_shell-1234; every required supporting tree is checked by the frozen GitHub harness"
         }
       }
     },
@@ -746,7 +759,7 @@
           "algorithm": "sha256",
           "value": "62139a6d184fe287860861d6cd5ceee4c7feffca9aba329292c9b66b06a76d19",
           "byteLength": 5139,
-          "verifiedBy": "V36 canonical Linux tree manifest for webkit-2336; every required supporting tree is checked by the frozen GitHub harness"
+          "verifiedBy": "V37 canonical Linux tree manifest for webkit-2336; every required supporting tree is checked by the frozen GitHub harness"
         }
       }
     }

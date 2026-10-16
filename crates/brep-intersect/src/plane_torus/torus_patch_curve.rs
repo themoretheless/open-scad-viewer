@@ -37,7 +37,7 @@ pub enum PlaneTorusComponent {
 }
 
 /// UV line segment with unit knots/weights.
-fn uv_line(from: [f64; 2], to: [f64; 2]) -> Curve {
+pub(super) fn uv_line(from: [f64; 2], to: [f64; 2]) -> Curve {
     Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],
@@ -49,7 +49,7 @@ fn uv_line(from: [f64; 2], to: [f64; 2]) -> Curve {
 
 /// Snap a quadrant-local parameter to a patch boundary at pure rounding
 /// scale (64 binary64 epsilons of the unit parameter interval).
-fn snap_unit(x: f64) -> f64 {
+pub(super) fn snap_unit(x: f64) -> f64 {
     let snap = 64. * f64::EPSILON;
     if x.abs() <= snap {
         0.
@@ -76,7 +76,7 @@ pub(crate) fn torus_residual(torus: &CanonicalTorus, point: [f64; 3]) -> f64 {
 }
 
 /// Worst scaled torus/plane residual over `count` curve samples.
-fn circle_residuals(
+pub(super) fn circle_residuals(
     curve: &Curve,
     torus: &CanonicalTorus,
     plane: &CanonicalPlane,
@@ -98,7 +98,7 @@ fn circle_residuals(
 
 /// Plane-UV ellipse parameterization of the circle
 /// `p(phi) = center + cos(phi) w1 + sin(phi) w2`.
-fn plane_uv_metric(
+pub(super) fn plane_uv_metric(
     plane: &CanonicalPlane,
     center: [f64; 3],
     w1: [f64; 3],
@@ -137,7 +137,7 @@ pub(super) fn arc_parameter(local: f64) -> f64 {
 
 /// Quadrant-local exact arc parameter of an angle, snapped to the patch
 /// seam at pure rounding scale: returns (quadrant, local parameter in [0,1]).
-fn quadrant_local(angle: f64) -> (usize, f64) {
+pub(super) fn quadrant_local(angle: f64) -> (usize, f64) {
     let qv = angle / QUARTER;
     let nearest = qv.round();
     if (qv - nearest).abs() <= 64. * f64::EPSILON * 4. {
@@ -181,7 +181,7 @@ pub(crate) fn lift_parallel(
 /// iso-u line on the revolution-quadrant patch column, clipped per profile
 /// quadrant to the swept eccentric intervals (the circle parameter is the
 /// profile angle).
-fn lift_meridian(
+pub(super) fn lift_meridian(
     torus: &CanonicalTorus,
     revolution: f64,
     arcs: &[(f64, f64)],
@@ -214,7 +214,7 @@ fn lift_meridian(
 /// circle basis vectors (length = radius); the circle parameter coincides
 /// with the torus revolution angle (parallel) or profile angle (meridian).
 #[allow(clippy::too_many_arguments)]
-fn circle_components(
+pub(super) fn circle_components(
     torus: &CanonicalTorus,
     plane: &CanonicalPlane,
     center: [f64; 3],
@@ -438,28 +438,4 @@ pub fn intersect_plane_torus(
         )?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for TorusPatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for PlaneTorusComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                full,
-                plane_uv,
-                torus_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"full":full,"planeUv":plane_uv,"torusUv":torus_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }

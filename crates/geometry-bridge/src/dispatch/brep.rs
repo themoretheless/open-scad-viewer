@@ -3,6 +3,7 @@ use crate::*;
 
 const OPS: &[&str] = &[
     "brep_session",
+    "brep_boundary_certificate",
     "brep_graph",
     "brep_graph_report",
     "brep_scene_plan",
@@ -29,6 +30,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_boundary_certificate" => cad_boundary_certificate::inspect(v),
         "brep_session" => brep_session_abi::dispatch(v),
         "brep_graph" => brep_graph::dispatch(v),
         "brep_graph_report" => Ok(brep_graph::report(v)),

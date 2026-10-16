@@ -1,0 +1,246 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/nurbs-core)
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:313:9
+    |
+313 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 30 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.02s
+     Running tests/ideal_volume_atlas.rs (crates/target/debug/build/nurbs-core/18b2f650928cd89b/out/ideal_volume_atlas-18b2f650928cd89b)
+
+running 1 test
+atlas unresolved pair: [[0.0, 0.25], [0.0, 0.25], [0.53125, 0.5625]]/[[0.75, 1.0], [0.25, 0.5], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.881704618749174, hi: -3.489141023759671 }, Interval { lo: -1.5098643188492713, hi: -0.6724370475971931 }, Interval { lo: -0.09375000000000301, hi: -0.00781249999999854 }], columns: [[Interval { lo: -0.3600401961115718, hi: -0.17570869094108477 }, Interval { lo: -0.16469165651669967, hi: -0.04370042320714422 }, Interval { lo: -0.02929687500000144, hi: 4.163336342344439e-16 }], [Interval { lo: -1.6308776552955066e-14, hi: 0.03150351715978092 }, Interval { lo: -7.460054336362348e-15, hi: 0.014410519945219627 }, Interval { lo: 0.1914062499999944, hi: 0.28125000000000727 }], [Interval { lo: 2.2521523854449663, hi: 13.033768358695847 }, Interval { lo: -24.758956529337745, hi: -19.654699895584024 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.8657593766388216, hi: -3.24035909001658 }, Interval { lo: -2.3178629414519367, hi: -1.4648343232973378 }, Interval { lo: -0.056250000000002215, hi: 0.06640625000000193 }], columns: [[Interval { lo: -0.33499729633404896, hi: -0.1375970000962396 }, Interval { lo: -0.22082895083073817, hi: -0.0702141803161367 }, Interval { lo: -0.04064941406250193, hi: -0.008124999999999258 }], [Interval { lo: -0.03440280321789469, hi: 0.04622876682403837 }, Interval { lo: -0.022678197774672185, hi: 0.030473828259710727 }, Interval { lo: 0.204687499999994, hi: 0.3212890625000084 }], [Interval { lo: 7.950599957394054, hi: 17.912009819402783 }, Interval { lo: -25.47770296489001, hi: -18.254323757550054 }, Interval { lo: -8.177e-321, hi: 8.177e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.146737943495098, hi: -3.078523035290921 }, Interval { lo: -2.3292076330205034, hi: -0.640037791392813 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.3912312047657853, hi: -0.11359523736756967 }, Interval { lo: -0.24568979702750987, hi: -0.0308728540564791 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.09780780119146101, hi: 0.12715014154889878 }, Interval { lo: -0.06142244925688669, hi: 0.07984918403395236 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 1.696916707386112, hi: 18.595216933445595 }, Interval { lo: -27.016843942821822, hi: -16.828510756313335 }, Interval { lo: -8.676e-321, hi: 8.676e-321 }]] })
+atlas unresolved pair: [[0.25, 0.5], [0.0, 0.25], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.5], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.984007259857928, hi: -3.543147053176403 }, Interval { lo: -1.5503372058780458, hi: -0.6971407960746964 }, Interval { lo: -0.09375000000000307, hi: -0.009765624999998411 }], columns: [[Interval { lo: -0.3516017540152065, hi: -0.15753192980924638 }, Interval { lo: -0.16083169581708937, hi: -0.039179689771921905 }, Interval { lo: -0.028808593750001443, hi: 4.276093368282934e-16 }], [Interval { lo: 0.003029460188627432, hi: 0.042754773288268565 }, Interval { lo: 0.0007534555725339947, hi: 0.019557134211366966 }, Interval { lo: 0.19790039062499423, hi: 0.28649902343750755 }], [Interval { lo: 2.506417985986147, hi: 13.38166530758618 }, Interval { lo: -25.46847294071405, hi: -20.073746877799884 }, Interval { lo: -7.164e-321, hi: 7.164e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.888451709602855, hi: -2.654381316467661 }, Interval { lo: -2.9533493764513827, hi: -1.400704367384816 }, Interval { lo: -0.09375000000000312, hi: 0.10156250000000289 }], columns: [[Interval { lo: -0.3770754797797682, hi: -0.09583181987386194 }, Interval { lo: -0.3031782586646649, hi: -0.05599527519438313 }, Interval { lo: -0.06445312500000262, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05727728806783307, hi: 0.0715966100847864 }, Interval { lo: -0.04605239372123114, hi: 0.05756549215153495 }, Interval { lo: 0.1999999999999942, hi: 0.33007812500000866 }], [Interval { lo: 7.27942779556921, hi: 21.75392282372384 }, Interval { lo: -26.044842659452748, hi: -14.665493010408843 }, Interval { lo: -8.854e-321, hi: 8.854e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.177956701199846, hi: -2.5977722936092817 }, Interval { lo: -2.9728538124118797, hi: -0.6364567047810856 }, Interval { lo: -0.09375000000000312, hi: 0.1367187500000038 }], columns: [[Interval { lo: -0.44049207718442546, hi: -0.0929985520269607 }, Interval { lo: -0.3374013304625846, hi: -0.028941339394691918 }, Interval { lo: -0.07324218750000286, hi: 4.440892098500739e-16 }], [Interval { lo: -0.08865249352141422, hi: 0.10250444563413455 }, Interval { lo: -0.06790467028179366, hi: 0.07851477501332343 }, Interval { lo: 0.19423828124999418, hi: 0.3388671875000089 }], [Interval { lo: 1.328967184741385, hi: 22.96509179602159 }, Interval { lo: -27.944825123569963, hi: -13.830372274635769 }, Interval { lo: -1.074e-320, hi: 1.074e-320 }]] })
+atlas unresolved pair: [[0.0, 0.5], [0.25, 0.5], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.5], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.9750062549551437, hi: -3.4891410237596694 }, Interval { lo: -1.5462199144651305, hi: -0.6724370475971924 }, Interval { lo: -0.06562500000000238, hi: 0.10937500000000289 }], columns: [[Interval { lo: -0.3600401961115713, hi: -0.17211120696707496 }, Interval { lo: -0.16469165651669945, hi: -0.04280569471475645 }, Interval { lo: -0.047363281250002144, hi: -0.007656249999999297 }], [Interval { lo: -0.01293894454777564, hi: 0.061881908706699455 }, Interval { lo: -0.005918606406076226, hi: 0.028306378463818303 }, Interval { lo: 0.17968749999999464, hi: 0.29394531250000805 }], [Interval { lo: 2.252152385444959, hi: 13.339287707496004 }, Interval { lo: -25.39863177701144, hi: -19.654699895584013 }, Interval { lo: -7.54e-321, hi: 7.54e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.888451709602855, hi: -2.654381316467661 }, Interval { lo: -2.9533493764513827, hi: -1.400704367384816 }, Interval { lo: -0.09375000000000312, hi: 0.10156250000000289 }], columns: [[Interval { lo: -0.3770754797797682, hi: -0.09583181987386194 }, Interval { lo: -0.3031782586646649, hi: -0.05599527519438313 }, Interval { lo: -0.06445312500000262, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05727728806783307, hi: 0.0715966100847864 }, Interval { lo: -0.04605239372123114, hi: 0.05756549215153495 }, Interval { lo: 0.1999999999999942, hi: 0.33007812500000866 }], [Interval { lo: 7.27942779556921, hi: 21.75392282372384 }, Interval { lo: -26.044842659452748, hi: -14.665493010408843 }, Interval { lo: -8.854e-321, hi: 8.854e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.177956701199846, hi: -2.5534460468485847 }, Interval { lo: -2.9728538124118797, hi: -0.6025043696401966 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.4432624676069714, hi: -0.0929985520269607 }, Interval { lo: -0.33952335140889195, hi: -0.028941339394691918 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.11081561690175949, hi: 0.14406030197228675 }, Interval { lo: -0.08488083785223574, hi: 0.11034508920790596 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 0.795224917359959, hi: 22.96509179602159 }, Interval { lo: -27.944825123569963, hi: -13.32452535922317 }, Interval { lo: -1.075e-320, hi: 1.075e-320 }]] })
+atlas unresolved pair: [[0.0, 0.25], [0.25, 0.5], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.5], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.8779177935133764, hi: -3.4891410237596694 }, Interval { lo: -1.5089224993836006, hi: -0.6724370475971924 }, Interval { lo: -0.05156250000000208, hi: 0.07812500000000194 }], columns: [[Interval { lo: -0.3600401961115713, hi: -0.18299832951999928 }, Interval { lo: -0.16469165651669945, hi: -0.04551342567856156 }, Interval { lo: -0.042480468750001936, hi: -0.008359374999999248 }], [Interval { lo: -1.646866651916052e-14, hi: 0.03094095435335684 }, Interval { lo: -7.53319212397375e-15, hi: 0.014153189231912404 }, Interval { lo: 0.1828124999999946, hi: 0.27993164062500725 }], [Interval { lo: 2.252152385444959, hi: 13.032658840174896 }, Interval { lo: -24.740108141618478, hi: -19.654699895584013 }, Interval { lo: -7.515e-321, hi: 7.515e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.888451709602855, hi: -2.654381316467661 }, Interval { lo: -2.9533493764513827, hi: -1.400704367384816 }, Interval { lo: -0.09375000000000312, hi: 0.10156250000000289 }], columns: [[Interval { lo: -0.3770754797797682, hi: -0.09583181987386194 }, Interval { lo: -0.3031782586646649, hi: -0.05599527519438313 }, Interval { lo: -0.06445312500000262, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05727728806783307, hi: 0.0715966100847864 }, Interval { lo: -0.04605239372123114, hi: 0.05756549215153495 }, Interval { lo: 0.1999999999999942, hi: 0.33007812500000866 }], [Interval { lo: 7.27942779556921, hi: 21.75392282372384 }, Interval { lo: -26.044842659452748, hi: -14.665493010408843 }, Interval { lo: -8.854e-321, hi: 8.854e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.177956701199846, hi: -2.5534460468485847 }, Interval { lo: -2.9728538124118797, hi: -0.6025043696401966 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.4432624676069714, hi: -0.0929985520269607 }, Interval { lo: -0.33952335140889195, hi: -0.028941339394691918 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.11081561690175949, hi: 0.14406030197228675 }, Interval { lo: -0.08488083785223574, hi: 0.11034508920790596 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 0.795224917359959, hi: 22.96509179602159 }, Interval { lo: -27.944825123569963, hi: -13.32452535922317 }, Interval { lo: -1.075e-320, hi: 1.075e-320 }]] })
+atlas unresolved pair: [[0.0, 0.25], [0.25, 0.5], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.5], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.8779177935133764, hi: -3.4891410237596694 }, Interval { lo: -1.5089224993836006, hi: -0.6724370475971924 }, Interval { lo: -0.05156250000000208, hi: 0.07812500000000194 }], columns: [[Interval { lo: -0.3600401961115713, hi: -0.18299832951999928 }, Interval { lo: -0.16469165651669945, hi: -0.04551342567856156 }, Interval { lo: -0.042480468750001936, hi: -0.008359374999999248 }], [Interval { lo: -1.646866651916052e-14, hi: 0.03094095435335684 }, Interval { lo: -7.53319212397375e-15, hi: 0.014153189231912404 }, Interval { lo: 0.1828124999999946, hi: 0.27993164062500725 }], [Interval { lo: 2.252152385444959, hi: 13.032658840174896 }, Interval { lo: -24.740108141618478, hi: -19.654699895584013 }, Interval { lo: -7.515e-321, hi: 7.515e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.8657593766388216, hi: -3.166209910761516 }, Interval { lo: -2.3178629414519367, hi: -1.4167511634638408 }, Interval { lo: -0.09375000000000312, hi: 0.10156250000000289 }], columns: [[Interval { lo: -0.3397276817765062, hi: -0.11755860202396928 }, Interval { lo: -0.22394720302475346, hi: -0.059988814250678674 }, Interval { lo: -0.06445312500000262, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05160420482682925, hi: 0.06450525603353212 }, Interval { lo: -0.03401729666199986, hi: 0.04252162082749689 }, Interval { lo: 0.1999999999999942, hi: 0.33007812500000866 }], [Interval { lo: 7.55428640449769, hi: 17.912009819402783 }, Interval { lo: -25.47770296489001, hi: -17.739870851854587 }, Interval { lo: -8.246e-321, hi: 8.246e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.146737943495098, hi: -3.078523035290921 }, Interval { lo: -2.3292076330205034, hi: -0.640037791392813 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.3912312047657853, hi: -0.11359523736756967 }, Interval { lo: -0.24568979702750987, hi: -0.0308728540564791 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.09780780119146101, hi: 0.12715014154889878 }, Interval { lo: -0.06142244925688669, hi: 0.07984918403395236 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 1.696916707386112, hi: 18.595216933445595 }, Interval { lo: -27.016843942821822, hi: -16.828510756313335 }, Interval { lo: -8.676e-321, hi: 8.676e-321 }]] })
+atlas unresolved pair: [[0.0, 0.25], [0.25, 0.5], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.25], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.8779177935133764, hi: -3.4891410237596694 }, Interval { lo: -1.5089224993836006, hi: -0.6724370475971924 }, Interval { lo: -0.05156250000000208, hi: 0.07812500000000194 }], columns: [[Interval { lo: -0.3600401961115713, hi: -0.18299832951999928 }, Interval { lo: -0.16469165651669945, hi: -0.04551342567856156 }, Interval { lo: -0.042480468750001936, hi: -0.008359374999999248 }], [Interval { lo: -1.646866651916052e-14, hi: 0.03094095435335684 }, Interval { lo: -7.53319212397375e-15, hi: 0.014153189231912404 }, Interval { lo: 0.1828124999999946, hi: 0.27993164062500725 }], [Interval { lo: 2.252152385444959, hi: 13.032658840174896 }, Interval { lo: -24.740108141618478, hi: -19.654699895584013 }, Interval { lo: -7.515e-321, hi: 7.515e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.8657593766388216, hi: -3.2006127139793863 }, Interval { lo: -2.3178629414519367, hi: -1.439429361238497 }, Interval { lo: -0.09375000000000312, hi: 0.0039062500000014095 }], columns: [[Interval { lo: -0.32790171817036323, hi: -0.11755860202396928 }, Interval { lo: -0.21615157253971537, hi: -0.059988814250678674 }, Interval { lo: -0.032226562500001596, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05160420482682925, hi: 0.06235508083241515 }, Interval { lo: -0.03401729666199986, hi: 0.04110423346658084 }, Interval { lo: 0.1999999999999942, hi: 0.30566406250000805 }], [Interval { lo: 7.748737872032605, hi: 17.912009819402783 }, Interval { lo: -25.47770296489001, hi: -17.986557574660456 }, Interval { lo: -8.246e-321, hi: 8.246e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.146737943495098, hi: -3.078523035290921 }, Interval { lo: -2.3292076330205034, hi: -0.640037791392813 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.3912312047657853, hi: -0.11359523736756967 }, Interval { lo: -0.24568979702750987, hi: -0.0308728540564791 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.09780780119146101, hi: 0.12715014154889878 }, Interval { lo: -0.06142244925688669, hi: 0.07984918403395236 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 1.696916707386112, hi: 18.595216933445595 }, Interval { lo: -27.016843942821822, hi: -16.828510756313335 }, Interval { lo: -8.676e-321, hi: 8.676e-321 }]] })
+atlas unresolved pair: [[0.0, 0.25], [0.25, 0.5], [0.53125, 0.5625]]/[[0.75, 1.0], [0.0, 0.25], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.8779177935133764, hi: -3.4891410237596694 }, Interval { lo: -1.5089224993836006, hi: -0.6724370475971924 }, Interval { lo: -0.05156250000000208, hi: 0.07812500000000194 }], columns: [[Interval { lo: -0.3600401961115713, hi: -0.18299832951999928 }, Interval { lo: -0.16469165651669945, hi: -0.04551342567856156 }, Interval { lo: -0.042480468750001936, hi: -0.008359374999999248 }], [Interval { lo: -1.646866651916052e-14, hi: 0.03094095435335684 }, Interval { lo: -7.53319212397375e-15, hi: 0.014153189231912404 }, Interval { lo: 0.1828124999999946, hi: 0.27993164062500725 }], [Interval { lo: 2.252152385444959, hi: 13.032658840174896 }, Interval { lo: -24.740108141618478, hi: -19.654699895584013 }, Interval { lo: -7.515e-321, hi: 7.515e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.8657593766388216, hi: -3.2483744492454893 }, Interval { lo: -2.3178629414519367, hi: -1.4689244697235215 }, Interval { lo: -0.09375000000000312, hi: -0.013671874999998246 }], columns: [[Interval { lo: -0.3198385611661746, hi: -0.11755860202396928 }, Interval { lo: -0.21083636993628016, hi: -0.059988814250678674 }, Interval { lo: -0.02783203125000144, hi: 4.440892098500739e-16 }], [Interval { lo: -0.03440280321789469, hi: 0.04461613542320056 }, Interval { lo: -0.022678197774672185, hi: 0.02941078773902363 }, Interval { lo: 0.1999999999999942, hi: 0.30126953125000794 }], [Interval { lo: 7.9617158841321976, hi: 17.912009819402783 }, Interval { lo: -25.47770296489001, hi: -18.285942947674165 }, Interval { lo: -8.246e-321, hi: 8.246e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.146737943495098, hi: -3.078523035290921 }, Interval { lo: -2.3292076330205034, hi: -0.640037791392813 }, Interval { lo: -0.09375000000000312, hi: 0.1718750000000048 }], columns: [[Interval { lo: -0.3912312047657853, hi: -0.11359523736756967 }, Interval { lo: -0.24568979702750987, hi: -0.0308728540564791 }, Interval { lo: -0.0820312500000031, hi: 4.440892098500739e-16 }], [Interval { lo: -0.09780780119146101, hi: 0.12715014154889878 }, Interval { lo: -0.06142244925688669, hi: 0.07984918403395236 }, Interval { lo: 0.17343749999999478, hi: 0.3476562500000092 }], [Interval { lo: 1.696916707386112, hi: 18.595216933445595 }, Interval { lo: -27.016843942821822, hi: -16.828510756313335 }, Interval { lo: -8.676e-321, hi: 8.676e-321 }]] })
+atlas unresolved pair: [[0.25, 0.5], [0.25, 0.5], [0.53125, 0.5625]]/[[0.5, 1.0], [0.0, 0.5], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.9750062549551415, hi: -3.539546651215287 }, Interval { lo: -1.5462199144651296, hi: -0.6954938795095291 }, Interval { lo: -0.05312500000000216, hi: 0.074218750000002 }], columns: [[Interval { lo: -0.3568898443955943, hi: -0.1721112069670752 }, Interval { lo: -0.163250604522178, hi: -0.042805694714756495 }, Interval { lo: -0.041870117187501936, hi: -0.00828124999999925 }], [Interval { lo: 0.0034081427122073355, hi: 0.042473491885056454 }, Interval { lo: 0.0008476375191011108, hi: 0.019428468854713322 }, Interval { lo: 0.1958007812499942, hi: 0.29174804687500794 }], [Interval { lo: 2.4894669459500647, hi: 13.339287707495995 }, Interval { lo: -25.398631777011424, hi: -20.04581041231882 }, Interval { lo: -7.12e-321, hi: 7.12e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.888451709602855, hi: -2.654381316467661 }, Interval { lo: -2.9533493764513827, hi: -1.400704367384816 }, Interval { lo: -0.09375000000000312, hi: 0.10156250000000289 }], columns: [[Interval { lo: -0.3770754797797682, hi: -0.09583181987386194 }, Interval { lo: -0.3031782586646649, hi: -0.05599527519438313 }, Interval { lo: -0.06445312500000262, hi: 4.440892098500739e-16 }], [Interval { lo: -0.05727728806783307, hi: 0.0715966100847864 }, Interval { lo: -0.04605239372123114, hi: 0.05756549215153495 }, Interval { lo: 0.1999999999999942, hi: 0.33007812500000866 }], [Interval { lo: 7.27942779556921, hi: 21.75392282372384 }, Interval { lo: -26.044842659452748, hi: -14.665493010408843 }, Interval { lo: -8.854e-321, hi: 8.854e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.177956701199846, hi: -2.5977722936092817 }, Interval { lo: -2.9728538124118797, hi: -0.6364567047810856 }, Interval { lo: -0.09375000000000312, hi: 0.1367187500000038 }], columns: [[Interval { lo: -0.44049207718442546, hi: -0.0929985520269607 }, Interval { lo: -0.3374013304625846, hi: -0.028941339394691918 }, Interval { lo: -0.07324218750000286, hi: 4.440892098500739e-16 }], [Interval { lo: -0.08865249352141422, hi: 0.10250444563413455 }, Interval { lo: -0.06790467028179366, hi: 0.07851477501332343 }, Interval { lo: 0.19423828124999418, hi: 0.3388671875000089 }], [Interval { lo: 1.328967184741385, hi: 22.96509179602159 }, Interval { lo: -27.944825123569963, hi: -13.830372274635769 }, Interval { lo: -1.074e-320, hi: 1.074e-320 }]] })
+atlas unresolved pair: [[0.0, 0.5], [0.0, 0.5], [0.5, 0.5625]]/[[0.0, 1.0], [0.5, 1.0], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -4.1130316564500555, hi: -3.4824482269379198 }, Interval { lo: -1.568311530321863, hi: 0.08814132920642251 }, Interval { lo: -0.0937500000000031, hi: 0.10937500000000297 }], columns: [[Interval { lo: -0.37677218816591657, hi: -0.14954919657310747 }, Interval { lo: -0.1697088524905054, hi: 0.0025399050605676137 }, Interval { lo: -0.06640625000000264, hi: 4.336808689942124e-16 }], [Interval { lo: -0.016483783232275676, hi: 0.07064478528113338 }, Interval { lo: -0.007424762296467188, hi: 0.03182040984198058 }, Interval { lo: 0.17968749999999462, hi: 0.29394531250000805 }], [Interval { lo: -3.99493533180374, hi: 13.777464439362697 }, Interval { lo: -25.981327020076897, hi: -19.34338066284793 }, Interval { lo: -7.31e-321, hi: 7.31e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.888451709602855, hi: -2.578011599043913 }, Interval { lo: -2.9533493764513827, hi: -1.3393011757565318 }, Interval { lo: -0.09375000000000284, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.4295796605085951, hi: -0.12850175846722858 }, Interval { lo: -0.34539295290911065, hi: -0.07508457355610736 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.09546214677970297, hi: 0.1241007908136133 }, Interval { lo: -0.07675398953537012, hi: 0.0997801863959807 }, Interval { lo: 0.17187499999999492, hi: 0.35156250000000894 }], [Interval { lo: 6.615666251571833, hi: 21.75392282372384 }, Interval { lo: -26.044842659452748, hi: -13.98307299994305 }, Interval { lo: -8.89e-321, hi: 8.89e-321 }]] }); hull Value(Enclosure { value: [Interval { lo: -4.282865595225822, hi: -2.5421739704076938 }, Interval { lo: -2.9824904014391436, hi: 0.1624915214587385 }, Interval { lo: -0.09375000000000312, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.5303729910477902, hi: -0.09209430789127838 }, Interval { lo: -0.4000323747610993, hi: 0.003575362211601065 }, Interval { lo: -0.10156250000000294, hi: 0.0351562500000013 }], [Interval { lo: -0.1178606646773054, hi: 0.15321886408049637 }, Interval { lo: -0.08889608328025841, hi: 0.11556490826433542 }, Interval { lo: 0.17187499999999492, hi: 0.35156250000000894 }], [Interval { lo: -5.949473632824, hi: 24.164085508254896 }, Interval { lo: -28.90191642728738, hi: -12.686464490077874 }, Interval { lo: -1.2584e-320, hi: 1.2584e-320 }]] })
+atlas unresolved pair: [[0.0, 0.5], [0.0, 0.5], [0.5, 0.5625]]/[[0.0, 0.5], [0.5, 1.0], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -4.1130316564500555, hi: -3.4824482269379198 }, Interval { lo: -1.568311530321863, hi: 0.08814132920642251 }, Interval { lo: -0.0937500000000031, hi: 0.10937500000000297 }], columns: [[Interval { lo: -0.37677218816591657, hi: -0.14954919657310747 }, Interval { lo: -0.1697088524905054, hi: 0.0025399050605676137 }, Interval { lo: -0.06640625000000264, hi: 4.336808689942124e-16 }], [Interval { lo: -0.016483783232275676, hi: 0.07064478528113338 }, Interval { lo: -0.007424762296467188, hi: 0.03182040984198058 }, Interval { lo: 0.17968749999999462, hi: 0.29394531250000805 }], [Interval { lo: -3.99493533180374, hi: 13.777464439362697 }, Interval { lo: -25.981327020076897, hi: -19.34338066284793 }, Interval { lo: -7.31e-321, hi: 7.31e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.75480470411131, hi: -2.578011599043913 }, Interval { lo: -2.845893791101896, hi: -1.3393011757565318 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.41287378482215176, hi: -0.13231325130312113 }, Interval { lo: -0.3319610047404246, hi: -0.07731165836497504 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.01551259885171674, hi: 0.06921005641529925 }, Interval { lo: -0.01247252329950971, hi: 0.05564664241315505 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 6.615666251571833, hi: 20.592340121728547 }, Interval { lo: -24.85060764113773, hi: -13.98307299994305 }, Interval { lo: -7.885e-321, hi: 7.885e-321 }]] }); hull Unavailable(Some(2))
+atlas unresolved pair: [[0.0, 0.5], [0.0, 0.5], [0.53125, 0.5625]]/[[0.0, 0.5], [0.5, 1.0], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -4.020011279469091, hi: -3.4891410237596685 }, Interval { lo: -1.5668063715297178, hi: -0.6724370475971919 }, Interval { lo: -0.0937500000000031, hi: 0.10937500000000297 }], columns: [[Interval { lo: -0.36004019611157245, hi: -0.15147300943196607 }, Interval { lo: -0.16469165651669998, hi: -0.037672778626847585 }, Interval { lo: -0.06640625000000264, hi: 4.336808689942124e-16 }], [Interval { lo: -0.015751758579897374, hi: 0.06750753677094279 }, Interval { lo: -0.007205259972612977, hi: 0.030879685596891734 }, Interval { lo: 0.17968749999999462, hi: 0.29394531250000805 }], [Interval { lo: 2.2521523854449543, hi: 13.551175707947001 }, Interval { lo: -25.747837595524675, hi: -19.654699895584006 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.75480470411131, hi: -2.578011599043913 }, Interval { lo: -2.845893791101896, hi: -1.3393011757565318 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.41287378482215176, hi: -0.13231325130312113 }, Interval { lo: -0.3319610047404246, hi: -0.07731165836497504 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.01551259885171674, hi: 0.06921005641529925 }, Interval { lo: -0.01247252329950971, hi: 0.05564664241315505 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 6.615666251571833, hi: 20.592340121728547 }, Interval { lo: -24.85060764113773, hi: -13.98307299994305 }, Interval { lo: -7.885e-321, hi: 7.885e-321 }]] }); hull Unavailable(Some(2))
+atlas unresolved pair: [[0.0, 0.5], [0.0, 0.25], [0.53125, 0.5625]]/[[0.0, 0.5], [0.5, 1.0], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.98400725985793, hi: -3.489141023759671 }, Interval { lo: -1.5503372058780467, hi: -0.6724370475971931 }, Interval { lo: -0.0937500000000031, hi: 0.007812500000001265 }], columns: [[Interval { lo: -0.3600401961115718, hi: -0.1575319298092461 }, Interval { lo: -0.16469165651669967, hi: -0.039179689771921836 }, Interval { lo: -0.033203125000001596, hi: 4.336808689942124e-16 }], [Interval { lo: -0.013501507354199834, hi: 0.06300703431954784 }, Interval { lo: -0.006175937119383508, hi: 0.02882103989043285 }, Interval { lo: 0.18984374999999443, hi: 0.2875976562500076 }], [Interval { lo: 2.2521523854449663, hi: 13.381665307586191 }, Interval { lo: -25.468472940714065, hi: -19.654699895584024 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.75480470411131, hi: -2.578011599043913 }, Interval { lo: -2.845893791101896, hi: -1.3393011757565318 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.41287378482215176, hi: -0.13231325130312113 }, Interval { lo: -0.3319610047404246, hi: -0.07731165836497504 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.01551259885171674, hi: 0.06921005641529925 }, Interval { lo: -0.01247252329950971, hi: 0.05564664241315505 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 6.615666251571833, hi: 20.592340121728547 }, Interval { lo: -24.85060764113773, hi: -13.98307299994305 }, Interval { lo: -7.885e-321, hi: 7.885e-321 }]] }); hull Unavailable(Some(2))
+atlas unresolved pair: [[0.0, 0.25], [0.0, 0.25], [0.53125, 0.5625]]/[[0.0, 0.5], [0.5, 1.0], [0.5625, 0.625]]; source Value(Enclosure { value: [Interval { lo: -3.881704618749174, hi: -3.489141023759671 }, Interval { lo: -1.5098643188492713, hi: -0.6724370475971931 }, Interval { lo: -0.09375000000000301, hi: -0.00781249999999854 }], columns: [[Interval { lo: -0.3600401961115718, hi: -0.17570869094108477 }, Interval { lo: -0.16469165651669967, hi: -0.04370042320714422 }, Interval { lo: -0.02929687500000144, hi: 4.163336342344439e-16 }], [Interval { lo: -1.6308776552955066e-14, hi: 0.03150351715978092 }, Interval { lo: -7.460054336362348e-15, hi: 0.014410519945219627 }, Interval { lo: 0.1914062499999944, hi: 0.28125000000000727 }], [Interval { lo: 2.2521523854449663, hi: 13.033768358695847 }, Interval { lo: -24.758956529337745, hi: -19.654699895584024 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.75480470411131, hi: -2.578011599043913 }, Interval { lo: -2.845893791101896, hi: -1.3393011757565318 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.41287378482215176, hi: -0.13231325130312113 }, Interval { lo: -0.3319610047404246, hi: -0.07731165836497504 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.01551259885171674, hi: 0.06921005641529925 }, Interval { lo: -0.01247252329950971, hi: 0.05564664241315505 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 6.615666251571833, hi: 20.592340121728547 }, Interval { lo: -24.85060764113773, hi: -13.98307299994305 }, Interval { lo: -7.885e-321, hi: 7.885e-321 }]] }); hull Unavailable(Some(2))
+atlas unresolved pair: [[0.0, 0.25], [0.0, 0.25], [0.53125, 0.5625]]/[[0.0, 0.5], [0.5, 1.0], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.881704618749174, hi: -3.489141023759671 }, Interval { lo: -1.5098643188492713, hi: -0.6724370475971931 }, Interval { lo: -0.09375000000000301, hi: -0.00781249999999854 }], columns: [[Interval { lo: -0.3600401961115718, hi: -0.17570869094108477 }, Interval { lo: -0.16469165651669967, hi: -0.04370042320714422 }, Interval { lo: -0.02929687500000144, hi: 4.163336342344439e-16 }], [Interval { lo: -1.6308776552955066e-14, hi: 0.03150351715978092 }, Interval { lo: -7.460054336362348e-15, hi: 0.014410519945219627 }, Interval { lo: 0.1914062499999944, hi: 0.28125000000000727 }], [Interval { lo: 2.2521523854449663, hi: 13.033768358695847 }, Interval { lo: -24.758956529337745, hi: -19.654699895584024 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.745349565376279, hi: -3.09740430432577 }, Interval { lo: -2.2384892492406423, hi: -1.3713947679145253 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.37198030979326363, hi: -0.16231102438537273 }, Interval { lo: -0.2452080134384962, hi: -0.08282546513020148 }, Interval { lo: -0.048828125000002214, hi: 0.019531250000001294 }], [Interval { lo: -0.013976138807277022, hi: 0.06235508083241952 }, Interval { lo: -0.009213017845965394, hi: 0.04110423346658372 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 7.1653834694278355, hi: 17.231429683030605 }, Interval { lo: -24.614299435069498, hi: -17.246497406242813 }, Interval { lo: -7.673e-321, hi: 7.673e-321 }]] }); hull Unavailable(Some(2))
+atlas unresolved pair: [[0.0, 0.25], [0.0, 0.25], [0.53125, 0.5625]]/[[0.0, 0.5], [0.5, 0.75], [0.5625, 0.59375]]; source Value(Enclosure { value: [Interval { lo: -3.881704618749174, hi: -3.489141023759671 }, Interval { lo: -1.5098643188492713, hi: -0.6724370475971931 }, Interval { lo: -0.09375000000000301, hi: -0.00781249999999854 }], columns: [[Interval { lo: -0.3600401961115718, hi: -0.17570869094108477 }, Interval { lo: -0.16469165651669967, hi: -0.04370042320714422 }, Interval { lo: -0.02929687500000144, hi: 4.163336342344439e-16 }], [Interval { lo: -1.6308776552955066e-14, hi: 0.03150351715978092 }, Interval { lo: -7.460054336362348e-15, hi: 0.014410519945219627 }, Interval { lo: 0.1914062499999944, hi: 0.28125000000000727 }], [Interval { lo: 2.2521523854449663, hi: 13.033768358695847 }, Interval { lo: -24.758956529337745, hi: -19.654699895584024 }, Interval { lo: -7.59e-321, hi: 7.59e-321 }]] })/Value(Enclosure { value: [Interval { lo: -3.710946762158403, hi: -3.09740430432577 }, Interval { lo: -2.2158110514659826, hi: -1.3713947679145253 }, Interval { lo: -0.03750000000000189, hi: 0.18750000000000386 }], columns: [[Interval { lo: -0.3499410139818124, hi: -0.1636469175901909 }, Interval { lo: -0.23067979298910507, hi: -0.08350715620123209 }, Interval { lo: -0.041015625000002214, hi: -0.005468749999998984 }], [Interval { lo: -0.011825963606159694, hi: 0.05805473043018497 }, Interval { lo: -0.007795630485049097, hi: 0.038269458744751204 }, Interval { lo: 0.17187499999999492, hi: 0.29882812500000816 }], [Interval { lo: 7.1653834694278355, hi: 17.036978215495658 }, Interval { lo: -24.367612712263586, hi: -17.246497406242813 }, Interval { lo: -7.673e-321, hi: 7.673e-321 }]] }); hull Unavailable(Some(2))
+
+thread 'closed_quotient_matrix_covers_authored_and_guided_frames_arc_laws_and_rational_carriers' (1105121) panicked at nurbs-core/tests/ideal_volume_atlas.rs:408:9:
+mode=0/ArcLength { tolerance: 0.001, max_cells: 100000 }: IdealVolumeReport { embedding_certified: false, regularity_certified: false, parameter_topology_preserved: false, cells: 100000, exact_work: 4212, boxes: 1794, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: Some("ideal-volume-work-limit") }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test closed_quotient_matrix_covers_authored_and_guided_frames_arc_laws_and_rational_carriers ... FAILED
+
+failures:
+
+failures:
+    closed_quotient_matrix_covers_authored_and_guided_frames_arc_laws_and_rational_carriers
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 2.33s
+
+error: test failed, to rerun pass `-p nurbs-core --test ideal_volume_atlas`

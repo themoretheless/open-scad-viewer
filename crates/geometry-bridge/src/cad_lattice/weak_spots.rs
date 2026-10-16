@@ -263,7 +263,7 @@ fn channel_spots(w: &WeakInput, spots: &mut Vec<Spot>) {
     let seed = w.options["seed"].as_f64().unwrap_or(0.);
     let jitter = w.options["jitter"].as_f64().unwrap_or(0.);
     // Generation limits must not block the rest of the screen.
-    if let Ok(cells) = graph::generate_lightening_cells(
+    if let Ok(cells) = polygon_core::lattice_tools::generate_lightening_cells(
         [w.min[u] + o.rim, w.min[v] + o.rim],
         [w.max[u] - o.rim, w.max[v] - o.rim],
         &o.pattern, o.cell, o.rib, seed, jitter,

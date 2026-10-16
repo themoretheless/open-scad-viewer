@@ -65,6 +65,12 @@ pub fn certify_contact_fit(
     check(anchor.lo > 0., "Contact anchor width must be positive")?;
     super::super::validate_law(scale, true)?;
     let width = certify_guide_width(path, guide, traversal, max_cells)?;
+    contact_fit_from_width(width,scale,affine,[anchor.lo,anchor.hi],traversal,max_cells)
+}
+pub(crate) fn contact_fit_from_width(width:GuideWidthReport,scale:&Curve,affine:Option<(&Curve,&Curve)>,anchor:[f64;2],traversal:[f64;2],max_cells:usize)->Result<GuideWidthReport> {
+    super::super::validate_law(scale,true)?;
+    let anchor=I::new(anchor[0],anchor[1])?;
+    check(anchor.lo>0.&&width.cells<=max_cells,"Invalid original contact width owner or budget")?;
     let mut out = GuideWidthReport {
         status: Status::Unresolved,
         cells: width.cells,

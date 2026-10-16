@@ -56,12 +56,13 @@
 //! is 64 binary64 epsilons plus the recognition-error angular allowances,
 //! and recognition-scale tilts report `NearCoincidence`, never forced.
 //! Nothing here authorizes a topology change.
-use brep_core::intersections::{CanonicalPlane, recognize_plane};
+#[cfg(feature = "codec")]
+mod serialization;
 use super::plane_sphere::{
     EllipseClip, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
 };
 use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect, circle_curve};
-use brep_core::intersections::{CanonicalTorus, recognize_torus};
+pub(crate) use brep_core::intersections::{CanonicalTorus, recognize_torus};
 use super::*;
 use brep_core::Model;
 

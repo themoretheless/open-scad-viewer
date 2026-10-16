@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "sourceSha": "6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3",
+  "frozenG1Artifact": {
+    "sha256": "12241a08fbb3bd749d90f6ff9955d7157601b1e433cb6ac33f7e0b4784872b47",
+    "byteLength": 12007711,
+    "builder": "macos-aarch64, native Binaryen 116",
+    "candidate": "semantic-manifold-g1-candidate-run-v100"
+  },
+  "observedLinuxCiArtifact": {
+    "sha256": "12f2162b30b988c19fcb6ca0d8a019f97ae0de5f7f12b9e3cb62ffb6d588cdb5",
+    "byteLength": 12007974,
+    "currentRun": 38597519071,
+    "previousRun": 38583970477,
+    "byteIdenticalToPreviousCi": true,
+    "coveredByFrozenG1V100": false
+  },
+  "claim": "The complete G1 matrix binds the frozen primary artifact only. No cross-builder byte identity or G1 qualification of the other observed CI artifact is inferred."
+}

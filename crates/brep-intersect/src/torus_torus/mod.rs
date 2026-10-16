@@ -49,8 +49,11 @@
 //! quadrant patch of the profile row, on both 4x4 tilings (the second
 //! torus's profile angle is measured in its own frame — its axis may be
 //! anti-parallel to the first). Nothing here authorizes a topology change.
-use brep_core::intersections::{CanonicalTorus, recognize_torus};
-use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
+#[cfg(feature = "codec")]
+mod serialization;
+use super::plane_torus::{
+    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
+};
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
 use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_curve};

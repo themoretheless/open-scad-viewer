@@ -133,7 +133,7 @@ pub(super) fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-type CylinderEnvelope = ([f64; 3], [f64; 3], f64, [f64; 2]);
+pub(super) type CylinderEnvelope = ([f64; 3], [f64; 3], f64, [f64; 2]);
 
 pub(super) fn cylinder_envelope(model: &Model) -> Result<CylinderEnvelope> {
     let mut min = [f64::INFINITY; 3];
@@ -152,7 +152,7 @@ pub(super) fn cylinder_envelope(model: &Model) -> Result<CylinderEnvelope> {
     Ok((axis_origin, [0., 0., 1.], radius, [min[2], max[2]]))
 }
 
-fn cap_planes(height: [f64; 2]) -> [Plane; 2] {
+pub(super) fn cap_planes(height: [f64; 2]) -> [Plane; 2] {
     [
         Plane {
             normal: [0., 0., 1.],

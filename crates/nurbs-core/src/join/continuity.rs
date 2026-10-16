@@ -18,6 +18,7 @@ pub use exact_strip::{
     ExactStripJetReport, inspect_surface_exact_strip_jets, inspect_surface_projective_strip_jets,
 };
 pub use projective_collection::{
+    MAX_PROJECTIVE_SEAM_COLLECTION_WORK,
     ProjectiveSeam, ProjectiveSeamCollectionReport, inspect_exact_seam_collection,
     inspect_projective_seam_collection,
 };

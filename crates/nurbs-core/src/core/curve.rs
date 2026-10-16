@@ -300,27 +300,13 @@ impl Curve {
                 d2[axis].add(b.d2[i] * w * coordinate);
             }
         }
-        // Values use main's plain left-to-right sums (the golden numeric
-        // behaviour); the compensated sums only supply term magnitudes, so the
-        // reported bound covers recursive summation of all terms.
-        let terms = self.control_points.len() as f64 + 2.;
-        let rounding = (rounding_bound(&point, weight.value()) * terms).next_up();
-        let (mut weight, mut w1, mut w2) = (0., 0., 0.);
-        let mut point = vec![0.; dim];
-        let mut d1 = point.clone();
-        let mut d2 = point.clone();
-        for i in 0..self.control_points.len() {
-            let w = self.weights[i] / scale;
-            weight += b.basis[i] * w;
-            w1 += b.d1[i] * w;
-            w2 += b.d2[i] * w;
-            for axis in 0..dim {
-                let coordinate = self.control_points[i][axis] - origin[axis];
-                point[axis] += b.basis[i] * w * coordinate;
-                d1[axis] += b.d1[i] * w * coordinate;
-                d2[axis] += b.d2[i] * w * coordinate;
-            }
-        }
+        let weight = weight.value();
+        let w1 = w1.value();
+        let w2 = w2.value();
+        let rounding = rounding_bound(&point, weight);
+        let mut point: Vec<f64> = point.iter().map(|a| a.value()).collect();
+        let mut d1: Vec<f64> = d1.iter().map(|a| a.value()).collect();
+        let mut d2: Vec<f64> = d2.iter().map(|a| a.value()).collect();
         numeric(
             weight > 0. && weight.is_finite(),
             "Rational denominator lost its positive finite value",

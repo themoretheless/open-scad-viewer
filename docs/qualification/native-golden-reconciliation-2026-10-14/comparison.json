@@ -1,0 +1,17 @@
+{
+  "baseline": {
+    "changed": [],
+    "cases": 43
+  },
+  "current": {
+    "changed": [
+      "nurbs.curve_distance",
+      "nurbs.curve_separation",
+      "nurbs.intersect_curve_surface",
+      "nurbs.intersect_curve_surface.2",
+      "nurbs.surface_distance",
+      "bridge.cad_mesh_topology.sphere"
+    ],
+    "cases": 43
+  }
+}

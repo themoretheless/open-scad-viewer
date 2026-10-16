@@ -9,7 +9,7 @@ mod spatial_parameter;
 
 mod coordinates;
 pub use coordinates::InitialCoordinatesReport;
-pub(super) use coordinates::{initial_coordinates, fixed_initial_coordinates, fixed_normal_initial_coordinates, guided_initial_coordinates, control_trajectory};
+pub(super) use coordinates::{coordinates_in_basis, initial_coordinates, fixed_initial_coordinates, fixed_normal_initial_coordinates, guided_initial_coordinates, control_trajectory};
 use coordinates::*;
 
 #[derive(Clone, Debug)]

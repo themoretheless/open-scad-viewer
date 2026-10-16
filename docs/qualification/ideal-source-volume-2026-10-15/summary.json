@@ -1,0 +1,69 @@
+{
+  "schema": "ideal-source-volume-native-checkpoint-v1",
+  "baselineRevision": "1447375db27b676002a057cef39df2958cc6faac",
+  "nativeCheckpointPassed": true,
+  "checks": [
+    {
+      "log": "logs/osv-ideal-predicates-full.log",
+      "passed": 56,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-ideal-nurbs-full.log",
+      "passed": 1560,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-ideal-brep-full.log",
+      "passed": 1067,
+      "failed": 0,
+      "ignored": 3
+    },
+    {
+      "log": "logs/osv-ideal-brep-aag.log",
+      "passed": 44,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-ideal-bridge-full-v2.log",
+      "passed": 340,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "log": "logs/osv-ideal-oracle-final.log",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-ideal-protocol-final-v2.log",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "passed": 3078,
+  "failed": 0,
+  "ignored": 4,
+  "typedNoCodecBuildPassed": true,
+  "sourceInputsSha256": "cc30b40b1d820e7b0afda9957d47c932b3692d6092e8fd16de88f9c4c1d9faae",
+  "sourceGuardVerified": true,
+  "sourceGuardInputs": 3709,
+  "overallObjectiveComplete": false,
+  "publicWasmUpdated": false,
+  "ciVerifiedForCheckpoint": false,
+  "semanticG1Qualified": false,
+  "productionCutoverAuthorized": false,
+  "clippy": "24 strict predicate diagnostics and 3 default native deny diagnostics in verified unchanged baseline spans; unresolved",
+  "remaining": [
+    "closed/periodic ideal-volume quotient charts and global inter-chart separation",
+    "original spatial Bishop and curved arc-length volume derivative enclosures",
+    "general corrected-Frenet volume jets and cap atlas correspondence",
+    "general trimmed/multispan/pole smoothness; source-to-retained G1/G2 correspondence",
+    "new WASM artifact and fresh delivery qualification/CI after feature completion"
+  ]
+}

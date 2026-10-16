@@ -30,7 +30,7 @@ pub struct CertifiedTessellation {
     pub surface_to_mesh_deviation_mm: f64,
     pub mesh_to_surface_deviation_mm: f64,
     pub audit: brep_core::solid_audit::SolidAuditCertificate,
-    pub evidence: nurbs_intersect::predicate_evidence::ComposedEvidence,
+    pub evidence: brep_core::predicate_evidence::ComposedEvidence,
     pub change_set: brep_core::ChangeSet,
     pub naming_complete: bool,
     pub max_triangles: usize,
@@ -149,7 +149,7 @@ pub(super) fn finish(
         false,
     )
 }
-fn finish_indexed(
+pub(super) fn finish_indexed(
     mesh: Mesh,
     face_ids: Vec<usize>,
     topology_face_ids: Option<Vec<String>>,
@@ -246,9 +246,9 @@ pub(super) fn is_affine_plane(surface: &Surface, tolerance: f64) -> bool {
 pub(super) struct BoundarySample {
     /// Authored edges this sample lies on: its own coedge's edge, and for
     /// the coedge's start vertex also the previous coedge's edge.
-    edges: [usize; 2],
-    uv: [f64; 2],
-    position: usize,
+    pub(super) edges: [usize; 2],
+    pub(super) uv: [f64; 2],
+    pub(super) position: usize,
 }
 /// Geometric positions belong to authored vertices and edges, never to a
 /// tolerance bucket. Two nearby disconnected shells keep disjoint indices.
@@ -466,7 +466,11 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         if face_ids.len() > 20000 {
-            return Err(input(format!("B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",use_.face,face_ids.len())));
+            return Err(input(format!(
+                "B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",
+                use_.face,
+                face_ids.len()
+            )));
         }
         Ok(())
     }
@@ -476,7 +480,7 @@ pub(super) struct FaceMesh {
     pub(super) shared: Vec<Option<usize>>,
     pub(super) triangles: Vec<[usize; 3]>,
 }
-fn uv_key(point: [f64; 2]) -> [u64; 2] {
+pub(super) fn uv_key(point: [f64; 2]) -> [u64; 2] {
     point.map(|x| if x == 0. { 0 } else { x.to_bits() })
 }
 pub(super) fn triangulate_boundary(
@@ -500,7 +504,18 @@ pub(super) fn triangulate_boundary(
             .iter()
             .map(|wire| wire.iter().map(|p| p.uv).collect())
             .collect::<Vec<_>>(),
-    )?;
+    )
+    .inspect_err(|_error| {
+        #[cfg(test)]
+        eprintln!(
+            "triangulation boundary outer={:?} holes={:?}",
+            outer.iter().map(|p| p.uv).collect::<Vec<_>>(),
+            holes
+                .iter()
+                .map(|w| w.iter().map(|p| p.uv).collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+        );
+    })?;
     let mut out = FaceMesh {
         uv: vec![],
         shared: vec![],
@@ -532,64 +547,4 @@ pub(super) fn triangulate_boundary(
     }
     split_boundary_chords(&mut out, &edges_of);
     Ok(out)
-}
-
-/// A boundary-only triangulation connects boundary samples by chords that
-/// are interior to this face. Along a curved authored edge the face across
-/// it can pick the same chord between the same two samples, and the two
-/// meshes then share an edge that is not authored: four triangles on one 3D
-/// edge, no longer a manifold shell. Split every chord between two samples
-/// of one authored edge at its midpoint with a private interior vertex;
-/// chords lie inside the polygon, so the midpoint does. Samples of a
-/// straight edge are collinear and never chorded, so planar faces keep
-/// their boundary-only triangulation.
-fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
-    let same_edge = |p: usize, q: usize| edges_of[p].iter().any(|e| edges_of[q].contains(e));
-    loop {
-        let mut incidence = BTreeMap::<[usize; 2], Vec<usize>>::new();
-        for (index, t) in mesh.triangles.iter().enumerate() {
-            for k in 0..3 {
-                let (p, q) = (t[k], t[(k + 1) % 3]);
-                incidence
-                    .entry([p.min(q), p.max(q)])
-                    .or_default()
-                    .push(index);
-            }
-        }
-        let chord = incidence.iter().find(|([p, q], tris)| {
-            tris.len() == 2
-                && mesh.shared[*p].is_some()
-                && mesh.shared[*q].is_some()
-                && same_edge(*p, *q)
-        });
-        let Some((&[p, q], tris)) = chord else {
-            return;
-        };
-        let (first, second) = (tris[0].min(tris[1]), tris[0].max(tris[1]));
-        let m = mesh.uv.len();
-        mesh.uv.push([
-            (mesh.uv[p][0] + mesh.uv[q][0]) / 2.,
-            (mesh.uv[p][1] + mesh.uv[q][1]) / 2.,
-        ]);
-        mesh.shared.push(None);
-        let mut replacement = Vec::with_capacity(4);
-        for &index in &[first, second] {
-            let t = mesh.triangles[index];
-            let x = t.into_iter().find(|&v| v != p && v != q).unwrap();
-            // Keep the winding: p -> q -> x becomes p -> m -> x, m -> q -> x.
-            if (0..3).any(|k| t[k] == p && t[(k + 1) % 3] == q) {
-                replacement.push([p, m, x]);
-                replacement.push([m, q, x]);
-            } else {
-                replacement.push([q, m, x]);
-                replacement.push([m, p, x]);
-            }
-        }
-        mesh.triangles.swap_remove(second);
-        mesh.triangles.swap_remove(first);
-        mesh.triangles.extend(replacement);
-    }
-}
-pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
-    nurbs_with_freeform_note(model, segments, FreeformTessNote::SampledUncertified)
 }

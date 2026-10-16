@@ -96,5 +96,10 @@ function openGroupDialog(name: string | null) {
   const source = document.value.groups?.find(group => group.name === name)?.source ?? ''
   emit('edit-group', { name, source, replaces: name })
 }
-  return { bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog }
+function openNewGroupFromMenu(event: MouseEvent) {
+  const menu = (event.currentTarget as HTMLElement).closest('details')
+  if (menu) menu.open = false
+  openGroupDialog(null)
+}
+  return { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog }
 }

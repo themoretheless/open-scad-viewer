@@ -1,6 +1,6 @@
 use super::*;
 
-fn arrange_lifted_uv_impl(
+pub(super) fn arrange_lifted_uv_impl(
     context: &ToleranceContext,
     chart: ChartKind,
     primitives: &[LiftedUvPrimitive],

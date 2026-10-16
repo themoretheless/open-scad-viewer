@@ -5255,17 +5255,18 @@ pub fn export_step_v8(model: &Model) -> Result<(String, StepV8Certificate, StepV
     Ok((text, certificate, report))
 }
 pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV3Report)> {
-    let periodic = periodicized_step_v6(model)?;
-    let mut certificate = certify_step_v8_topology(&periodic)?;
+    // Compatibility API follows STEP /9 source-preserving chart semantics.
+    let mut certificate = certify_step_v8_topology(model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
     certificate.notes.extend([
         "certified_interior_point_selectors",
         "bounded_freeform_poles",
         "general_affine_occurrences",
         "retained_open_shell_products",
+        "authored_nurbs_charts_preserved",
     ]);
     let (text, _, report) =
-        export_step_direct(&periodic, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+        export_step_direct(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
     Ok((text, certificate, report))
 }
 

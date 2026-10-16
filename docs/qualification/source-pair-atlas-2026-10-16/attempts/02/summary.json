@@ -1,0 +1,153 @@
+{
+  "schema": "source-pair-atlas-native-qualification-v1",
+  "baselineRevision": "3e6044fed",
+  "nativeCheckpointPassed": false,
+  "sourceGuardVerified": false,
+  "inputsSha256": "487ab1e27384c3c32ec4bec61602fc953ed0da4488995cef0c6386e344637a3e",
+  "checks": [
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 114.002,
+      "testResults": [
+        {
+          "passed": 1568,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 7.789,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 268.999,
+      "testResults": [
+        {
+          "passed": 1067,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 24.005,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 101,
+      "elapsedSeconds": 213.361,
+      "testResults": [
+        {
+          "passed": 339,
+          "failed": 1,
+          "ignored": 1
+        }
+      ]
+    }
+  ],
+  "publicWasmRebuilt": false,
+  "freshCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "independentStepQualified": false,
+  "browserQualified": false,
+  "fullGoalComplete": false
+}

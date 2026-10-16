@@ -79,20 +79,20 @@ pub fn certified_tessellation_deviation(model: &Model, segments: usize) -> Resul
 pub const FREEFORM_TESSELLATION_CAPABILITY: &str =
     "certified-generic-rational-freeform-tessellation/1";
 
-fn point3(point: &[f64]) -> Option<[f64; 3]> {
+pub(super) fn point3(point: &[f64]) -> Option<[f64; 3]> {
     (point.len() >= 3 && point.iter().take(3).all(|c| c.is_finite()))
         .then(|| [point[0], point[1], point[2]])
 }
 
-fn point_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+pub(super) fn point_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
-fn point_norm(a: [f64; 3]) -> f64 {
+pub(super) fn point_norm(a: [f64; 3]) -> f64 {
     (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt()
 }
 
-fn bezier_clamped_knots(knots: &[f64], degree: usize, controls: usize) -> bool {
+pub(super) fn bezier_clamped_knots(knots: &[f64], degree: usize, controls: usize) -> bool {
     if degree == 0 || controls != degree + 1 || knots.len() != 2 * (degree + 1) {
         return false;
     }
@@ -112,7 +112,7 @@ fn bezier_clamped_knots(knots: &[f64], degree: usize, controls: usize) -> bool {
             .all(|k| (*k - hi).abs() <= 16. * f64::EPSILON * span.max(1.))
 }
 
-fn equal_positive_weights(surface: &Surface) -> bool {
+pub(super) fn equal_positive_weights(surface: &Surface) -> bool {
     let Some(first) = surface.weights.first().and_then(|row| row.first()).copied() else {
         return false;
     };
@@ -123,7 +123,7 @@ fn equal_positive_weights(surface: &Surface) -> bool {
         })
 }
 
-fn control_net_coplanar(surface: &Surface, tolerance: f64) -> bool {
+pub(super) fn control_net_coplanar(surface: &Surface, tolerance: f64) -> bool {
     let pts: Vec<[f64; 3]> = surface
         .control_points
         .iter()
@@ -163,7 +163,7 @@ fn control_net_coplanar(surface: &Surface, tolerance: f64) -> bool {
     })
 }
 
-fn admitted_freeform_bezier_surface(surface: &Surface) -> bool {
+pub(super) fn admitted_freeform_bezier_surface(surface: &Surface) -> bool {
     (1..=3).contains(&surface.degree_u)
         && (1..=3).contains(&surface.degree_v)
         && !surface.periodic_u
@@ -193,7 +193,7 @@ fn admitted_freeform_bezier_surface(surface: &Surface) -> bool {
 }
 
 /// Bernstein second-difference coefficient M = ‖S_uu‖ + 2‖S_uv‖ + ‖S_vv‖.
-fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
+pub(super) fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
     if !admitted_freeform_bezier_surface(surface) {
         return Err(Error::new(
             "BREP_CERTIFIED_TESSELLATION_REFUSED",
@@ -287,7 +287,7 @@ pub struct CertifiedInterval {
     pub lower: f64,
     pub upper: f64,
 }
-fn next_up(value: f64) -> f64 {
+pub(super) fn next_up(value: f64) -> f64 {
     if value == f64::INFINITY {
         value
     } else if value == 0. {
@@ -298,7 +298,7 @@ fn next_up(value: f64) -> f64 {
         f64::from_bits(value.to_bits() - 1)
     }
 }
-fn next_down(value: f64) -> f64 {
+pub(super) fn next_down(value: f64) -> f64 {
     -next_up(-value)
 }
 #[derive(Clone, Debug)]
@@ -317,41 +317,6 @@ pub struct CertifiedMassProperties {
     pub cavity_count: usize,
     pub proof: &'static str,
 }
-impl value_codec::Serialize for CertifiedInterval {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"lower":self.lower,"upper":self.upper})
-    }
-}
-impl value_codec::Serialize for CertifiedMassProperties {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({
-            "capability":self.capability,
-            "status":"certified_enclosure",
-            "surfaceAreaMm2":self.surface_area_mm2,
-            "volumeMm3":self.volume_mm3,
-            "centroid":self.centroid,
-            "inertiaMm5":self.inertia_mm5,
-            "context":self.context,
-            "evidenceClaimCount":self.evidence.claims.len(),
-            "audit":{
-                "ok":self.audit.ok,
-                "bodyCount":self.audit.body_count,
-                "shellCount":self.audit.shell_count,
-                "selfIntersectionPairsCandidate": self.audit.self_intersection_pairs_candidate,
-                "selfIntersectionComplete": self.audit.self_intersection_complete,
-                "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
-            },
-            "changeSet":self.change_set,
-            "namingComplete":self.naming_complete,
-            "composition":{
-                "componentCount":self.component_count,
-                "cavityCount":self.cavity_count,
-                "signedShellComposition":true
-            },
-            "proof":self.proof
-        })
-    }
-}
 
 pub(super) fn enclosure(value: f64, scale: f64) -> CertifiedInterval {
     let error = (value.abs() + scale.abs() + 1.) * f64::EPSILON * 128.;
@@ -363,7 +328,7 @@ pub(super) fn enclosure(value: f64, scale: f64) -> CertifiedInterval {
 pub(super) fn certified_tensor(value: [[f64; 3]; 3], scale: f64) -> [[CertifiedInterval; 3]; 3] {
     value.map(|row| row.map(|entry| enclosure(entry, scale)))
 }
-fn axis_aligned_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
+pub(super) fn axis_aligned_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
     if model.vertices.len() != 8
         || model.faces.len() != 6
         || model.bodies.len() != 1
@@ -396,7 +361,7 @@ pub(super) fn axis_aligned_freeform_box(model: &Model) -> Option<([f64; 3], [f64
     axis_aligned_corners(model)
 }
 
-fn axis_aligned_corners(model: &Model) -> Option<([f64; 3], [f64; 3])> {
+pub(super) fn axis_aligned_corners(model: &Model) -> Option<([f64; 3], [f64; 3])> {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for vertex in &model.vertices {
@@ -419,7 +384,7 @@ fn axis_aligned_corners(model: &Model) -> Option<([f64; 3], [f64; 3])> {
     }
     (corners.len() == 8).then_some((min, max))
 }
-fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
+pub(super) fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
     let axial = mass * radius2 / 2.;
     let transverse = mass * (3. * radius2 + height * height) / 12.;
     std::array::from_fn(|i| {
@@ -428,7 +393,7 @@ fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 
         })
     })
 }
-fn revolution_inertia(axial: f64, transverse: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
+pub(super) fn revolution_inertia(axial: f64, transverse: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
     std::array::from_fn(|i| {
         std::array::from_fn(|j| {
             (if i == j { transverse } else { 0. }) + (axial - transverse) * axis[i] * axis[j]
@@ -445,7 +410,7 @@ pub(super) struct ExactProperties {
     pub(super) scale: f64,
 }
 
-fn polynomial_integral(coefficients: &[f64], height: f64) -> f64 {
+pub(super) fn polynomial_integral(coefficients: &[f64], height: f64) -> f64 {
     coefficients
         .iter()
         .enumerate()
@@ -455,7 +420,7 @@ fn polynomial_integral(coefficients: &[f64], height: f64) -> f64 {
         .sum()
 }
 
-fn conical_properties(cone: crate::intersections::CanonicalCone) -> ExactProperties {
+pub(super) fn conical_properties(cone: crate::intersections::CanonicalCone) -> ExactProperties {
     let (a, b, h) = (
         cone.r_bottom,
         (cone.r_top - cone.r_bottom) / cone.height,
@@ -572,3 +537,46 @@ pub(super) fn exact_component_properties(model: &Model) -> Result<ExactPropertie
         "Certified mass /2 admits recognized analytic shells and exact planar prisms; generic rational/freeform quadrature remains non-certified",
     ))
 }
+pub(super) fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
+    if model.bodies.len() != 1
+        || !model.bodies[0].inner_shells.is_empty()
+        || model.faces.len() != 10
+    {
+        return None;
+    }
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for vertex in &model.vertices {
+        for i in 0..3 {
+            min[i] = min[i].min(vertex.point[i]);
+            max[i] = max[i].max(vertex.point[i]);
+        }
+    }
+    let center = [
+        (min[0] + max[0]) / 2.,
+        (min[1] + max[1]) / 2.,
+        (min[2] + max[2]) / 2.,
+    ];
+    let mut radii = model
+        .vertices
+        .iter()
+        .map(|v| (v.point[0] - center[0]).hypot(v.point[1] - center[1]))
+        .collect::<Vec<_>>();
+    radii.sort_by(f64::total_cmp);
+    radii.dedup_by(|a, b| (*a - *b).abs() <= model.tolerance_mm);
+    if radii.len() != 2
+        || radii[0] <= model.tolerance_mm
+        || radii[1] - radii[0] <= model.tolerance_mm
+        || model
+            .faces
+            .iter()
+            .filter(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1)
+            .count()
+            != 8
+    {
+        return None;
+    }
+    Some((radii[1], radii[0], max[2] - min[2], center))
+}
+
+pub(super) type VerticalPrismEnvelope = (f64, f64, [f64; 3], [[f64; 3]; 3], f64);

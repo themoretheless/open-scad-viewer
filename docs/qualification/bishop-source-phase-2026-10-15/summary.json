@@ -1,0 +1,72 @@
+{
+  "schema": "bishop-source-phase-native-qualification-v1",
+  "baselineRevision": "0807d77d4",
+  "nativeCheckpointPassed": true,
+  "checks": [
+    {
+      "log": "logs/osv-bishop-nurbs-full-final.log",
+      "passed": 1565,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-bishop-volume-matrix-final.log",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-bishop-volume-matrix-final.log",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-bishop-brep-full-final.log",
+      "passed": 1067,
+      "failed": 0,
+      "ignored": 3
+    },
+    {
+      "log": "logs/osv-bishop-brep-aag-final.log",
+      "passed": 44,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "logs/osv-bishop-bridge-full-final.log",
+      "passed": 340,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "log": "logs/osv-bishop-json-full-final.log",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "passed": 3033,
+  "failed": 0,
+  "ignored": 4,
+  "sourceGuardVerified": true,
+  "sourceInputsSha256": "cf80b161b9f8368283118cb624e381b3bb6a2c7e09738b91c580b075125cb598",
+  "sourceGuardInputs": 3718,
+  "typedNoCodecBuildPassed": true,
+  "positiveSourceVolumeMatrixVariants": 16,
+  "originalOdeOracleJetCoordinates": 378,
+  "overallObjectiveComplete": false,
+  "publicWasmUpdated": false,
+  "ciVerifiedForCheckpoint": false,
+  "semanticG1Qualified": false,
+  "productionCutoverAuthorized": false,
+  "clippy": "Not rerun for this checkpoint; prior unchanged baseline diagnostics remain recorded separately.",
+  "remaining": [
+    "closed original Bishop correction jets and exact quotient ownership",
+    "bounded local charts plus exhaustive global inter-chart separation",
+    "general corrected-Frenet principal phase and source-jet correspondence",
+    "general cap atlases, pole and trimmed/multispan smoothness, source/retained G1/G2",
+    "curved arc-length retained-error/constructor coverage and final full combination qualification",
+    "WASM rebuild and successor delivery records, fresh CI/semantic G1/independent STEP/browser"
+  ]
+}

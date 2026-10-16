@@ -1,0 +1,2662 @@
+[
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907736117/zip",
+    "created_at": "2026-10-14T15:26:08Z",
+    "digest": "sha256:3cf2d744603dbcd82d0c01ed4deb10da132087ab83c1abda29bab86e46f71de0",
+    "expired": false,
+    "expires_at": "2026-11-13T15:26:07Z",
+    "id": 11907736117,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNzczNjExNw==",
+    "size_in_bytes": 7164,
+    "updated_at": "2026-10-14T15:26:08Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907736117",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907575383/zip",
+    "created_at": "2026-10-14T15:27:26Z",
+    "digest": "sha256:075cdea813bc31be9fbf23a4b633f624ed63504f434a226264c9db9ec157b7b8",
+    "expired": false,
+    "expires_at": "2026-11-13T15:27:26Z",
+    "id": 11907575383,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNzU3NTM4Mw==",
+    "size_in_bytes": 7158,
+    "updated_at": "2026-10-14T15:27:26Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907575383",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907465359/zip",
+    "created_at": "2026-10-14T15:26:51Z",
+    "digest": "sha256:c578acdc014fa8936f8f4ce7e2fd27efa098f3bf95a60116673b2ba2b59c5542",
+    "expired": false,
+    "expires_at": "2026-11-13T15:26:50Z",
+    "id": 11907465359,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNzQ2NTM1OQ==",
+    "size_in_bytes": 7163,
+    "updated_at": "2026-10-14T15:26:51Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907465359",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907170826/zip",
+    "created_at": "2026-10-14T15:28:26Z",
+    "digest": "sha256:179230c3aa3e628ac37e7b1aabedf5ff33d91bfd9c4de85bdd5a8a58a2dc1125",
+    "expired": false,
+    "expires_at": "2027-01-12T14:48:34Z",
+    "id": 11907170826,
+    "name": "g1-v98-aggregate",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNzE3MDgyNg==",
+    "size_in_bytes": 745,
+    "updated_at": "2026-10-14T15:28:26Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907170826",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907005322/zip",
+    "created_at": "2026-10-14T15:25:04Z",
+    "digest": "sha256:5521332c75e479fcf81226d207da511e8f76dc9694231c88c901c4b931870be6",
+    "expired": false,
+    "expires_at": "2026-11-13T15:25:03Z",
+    "id": 11907005322,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNzAwNTMyMg==",
+    "size_in_bytes": 7161,
+    "updated_at": "2026-10-14T15:25:04Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11907005322",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906975762/zip",
+    "created_at": "2026-10-14T15:26:43Z",
+    "digest": "sha256:92a14428b461f6a2e02f3cffa8a52a383cd8571228861bb00838dbeef3900add",
+    "expired": false,
+    "expires_at": "2026-11-13T15:26:42Z",
+    "id": 11906975762,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjk3NTc2Mg==",
+    "size_in_bytes": 7161,
+    "updated_at": "2026-10-14T15:26:43Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906975762",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906865643/zip",
+    "created_at": "2026-10-14T15:20:18Z",
+    "digest": "sha256:ce45030ba9c28b9e903faa663a170917aabcfaf3e7061accde1528bbd433e418",
+    "expired": false,
+    "expires_at": "2026-11-13T15:20:18Z",
+    "id": 11906865643,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-6",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjg2NTY0Mw==",
+    "size_in_bytes": 7285,
+    "updated_at": "2026-10-14T15:20:18Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906865643",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906856138/zip",
+    "created_at": "2026-10-14T15:22:22Z",
+    "digest": "sha256:2d095b8c5b88a3a82f595e17b13b77bd42e9f19eab09ba3e16c54be7ce7ba134",
+    "expired": false,
+    "expires_at": "2026-11-13T15:22:21Z",
+    "id": 11906856138,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjg1NjEzOA==",
+    "size_in_bytes": 7536,
+    "updated_at": "2026-10-14T15:22:22Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906856138",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906820949/zip",
+    "created_at": "2026-10-14T15:21:14Z",
+    "digest": "sha256:ee77cd08a5f50f124a487fa419cc3bebe93a1af6d9143d34c6830f2f7fb8ca37",
+    "expired": false,
+    "expires_at": "2026-11-13T15:21:13Z",
+    "id": 11906820949,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-8",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjgyMDk0OQ==",
+    "size_in_bytes": 7283,
+    "updated_at": "2026-10-14T15:21:14Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906820949",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906791245/zip",
+    "created_at": "2026-10-14T15:23:03Z",
+    "digest": "sha256:351a133c1ceb5a0b66712f265cd4223974c29310efb6d3279a32d8d599dd096a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:23:02Z",
+    "id": 11906791245,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjc5MTI0NQ==",
+    "size_in_bytes": 7533,
+    "updated_at": "2026-10-14T15:23:03Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906791245",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906701517/zip",
+    "created_at": "2026-10-14T15:23:09Z",
+    "digest": "sha256:f97100b1341da9157d92b1ac4d3f201f4558b317eb299a5eb96af65ab566d755",
+    "expired": false,
+    "expires_at": "2026-11-13T15:23:08Z",
+    "id": 11906701517,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjcwMTUxNw==",
+    "size_in_bytes": 7480,
+    "updated_at": "2026-10-14T15:23:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906701517",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906691989/zip",
+    "created_at": "2026-10-14T15:25:19Z",
+    "digest": "sha256:8099533839c61633f6140a6cec180b11c29cdf93eadc2993b06aca36c9fea6a8",
+    "expired": false,
+    "expires_at": "2026-11-13T15:25:19Z",
+    "id": 11906691989,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjY5MTk4OQ==",
+    "size_in_bytes": 7164,
+    "updated_at": "2026-10-14T15:25:19Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906691989",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906660636/zip",
+    "created_at": "2026-10-14T15:17:32Z",
+    "digest": "sha256:4f28a251bb9daf3fa9e6f652ae111d548c80b5c093451f1b31bdea79db268d67",
+    "expired": false,
+    "expires_at": "2026-11-13T15:17:31Z",
+    "id": 11906660636,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjY2MDYzNg==",
+    "size_in_bytes": 7283,
+    "updated_at": "2026-10-14T15:17:32Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906660636",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906621909/zip",
+    "created_at": "2026-10-14T15:24:09Z",
+    "digest": "sha256:f01f166510a8fdf2ba634aa4bafc2c7b8030bf799a102b1ef61902aac25a5ae5",
+    "expired": false,
+    "expires_at": "2026-11-13T15:24:08Z",
+    "id": 11906621909,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjYyMTkwOQ==",
+    "size_in_bytes": 7479,
+    "updated_at": "2026-10-14T15:24:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906621909",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906606385/zip",
+    "created_at": "2026-10-14T15:21:19Z",
+    "digest": "sha256:e241265a6ee7a510750b2b0b1e3cdc68dea4dbe13c7aba42da7806c49b0480c9",
+    "expired": false,
+    "expires_at": "2026-11-13T15:21:19Z",
+    "id": 11906606385,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjYwNjM4NQ==",
+    "size_in_bytes": 7537,
+    "updated_at": "2026-10-14T15:21:19Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906606385",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906532350/zip",
+    "created_at": "2026-10-14T15:25:48Z",
+    "digest": "sha256:886b54debf5b240b5b181b5c1a6653afaf0caddb862386f69ffa02835b9c4bdc",
+    "expired": false,
+    "expires_at": "2026-11-13T15:25:47Z",
+    "id": 11906532350,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjUzMjM1MA==",
+    "size_in_bytes": 7158,
+    "updated_at": "2026-10-14T15:25:48Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906532350",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906500495/zip",
+    "created_at": "2026-10-14T15:15:59Z",
+    "digest": "sha256:9754a11ad3cea0c1b5fe31d5928985af476b47860bd6ee6969e65671fc90b5a5",
+    "expired": false,
+    "expires_at": "2026-11-13T15:15:58Z",
+    "id": 11906500495,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjUwMDQ5NQ==",
+    "size_in_bytes": 7325,
+    "updated_at": "2026-10-14T15:15:59Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906500495",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906491086/zip",
+    "created_at": "2026-10-14T15:19:13Z",
+    "digest": "sha256:dc498bef410da2e9e89904fa2088bb72ccfd9d25271b9694d45b735ed4dd075b",
+    "expired": false,
+    "expires_at": "2026-11-13T15:19:12Z",
+    "id": 11906491086,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjQ5MTA4Ng==",
+    "size_in_bytes": 7284,
+    "updated_at": "2026-10-14T15:19:13Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906491086",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906422494/zip",
+    "created_at": "2026-10-14T15:25:49Z",
+    "digest": "sha256:a205cafa1ca235b4a7ae30876ae3e7ae10de1a68cba869b635f42bdf8b8ac8fa",
+    "expired": false,
+    "expires_at": "2026-11-13T15:25:49Z",
+    "id": 11906422494,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjQyMjQ5NA==",
+    "size_in_bytes": 7161,
+    "updated_at": "2026-10-14T15:25:49Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906422494",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906372665/zip",
+    "created_at": "2026-10-14T15:25:52Z",
+    "digest": "sha256:aba43348ff8d3cbc65af9789d8ebccce0c1b2663b85ecc2835a8974e2ece9d9f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:25:51Z",
+    "id": 11906372665,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjM3MjY2NQ==",
+    "size_in_bytes": 7163,
+    "updated_at": "2026-10-14T15:25:52Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906372665",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906329683/zip",
+    "created_at": "2026-10-14T15:27:44Z",
+    "digest": "sha256:e6529a61e699bc1ac540c3b0353dbe07694aa896365fe376c4b273dc5fe028d1",
+    "expired": false,
+    "expires_at": "2026-11-13T15:27:44Z",
+    "id": 11906329683,
+    "name": "g1-v98-mcp-memory-slope--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjMyOTY4Mw==",
+    "size_in_bytes": 7164,
+    "updated_at": "2026-10-14T15:27:44Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906329683",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906325092/zip",
+    "created_at": "2026-10-14T15:02:04Z",
+    "digest": "sha256:6fa6ab1a35bae557712ae1c68829a88543c8331e7ba80485f5eabb81161c75cb",
+    "expired": false,
+    "expires_at": "2026-11-13T15:02:03Z",
+    "id": 11906325092,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjMyNTA5Mg==",
+    "size_in_bytes": 7460,
+    "updated_at": "2026-10-14T15:02:04Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906325092",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906300707/zip",
+    "created_at": "2026-10-14T15:03:25Z",
+    "digest": "sha256:96b52c8512128c604101af84d5903a79c0afa828501ddc9b7e2c8dd38c64ec13",
+    "expired": false,
+    "expires_at": "2026-11-13T15:03:24Z",
+    "id": 11906300707,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjMwMDcwNw==",
+    "size_in_bytes": 7459,
+    "updated_at": "2026-10-14T15:03:25Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906300707",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906290938/zip",
+    "created_at": "2026-10-14T15:04:48Z",
+    "digest": "sha256:9ddca6914daf7ab1870a525f65227adb0ba1787aef98da31d14e019f6abcdc42",
+    "expired": false,
+    "expires_at": "2026-11-13T15:04:47Z",
+    "id": 11906290938,
+    "name": "g1-v98-mcp-supervisor-hard-kill--macos-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjI5MDkzOA==",
+    "size_in_bytes": 7511,
+    "updated_at": "2026-10-14T15:04:48Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906290938",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906279450/zip",
+    "created_at": "2026-10-14T15:24:22Z",
+    "digest": "sha256:d4f43abe6ed57a3d1dcda46811d16367064299f8676f1bb3dec8afa372d35318",
+    "expired": false,
+    "expires_at": "2026-11-13T15:24:21Z",
+    "id": 11906279450,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjI3OTQ1MA==",
+    "size_in_bytes": 7518,
+    "updated_at": "2026-10-14T15:24:22Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906279450",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906262136/zip",
+    "created_at": "2026-10-14T15:11:22Z",
+    "digest": "sha256:63755997a2dfb6484c23a8a25facd8b34472e9e244c73210fbcc1f957fb8f550",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:21Z",
+    "id": 11906262136,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjI2MjEzNg==",
+    "size_in_bytes": 7271,
+    "updated_at": "2026-10-14T15:11:22Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906262136",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906221172/zip",
+    "created_at": "2026-10-14T15:05:04Z",
+    "digest": "sha256:05c03f959683eb8a15dcf541fefc411185a90f140cd139e065b706f95b31cbe8",
+    "expired": false,
+    "expires_at": "2026-11-13T15:05:03Z",
+    "id": 11906221172,
+    "name": "g1-v98-mcp-supervisor-hard-kill--macos-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjIyMTE3Mg==",
+    "size_in_bytes": 7513,
+    "updated_at": "2026-10-14T15:05:04Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906221172",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906202271/zip",
+    "created_at": "2026-10-14T15:10:53Z",
+    "digest": "sha256:0898fa79bf7a91c59eb50177bac2c9bc98eb80dbb77a35655571dc7929c7042a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:10:53Z",
+    "id": 11906202271,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjIwMjI3MQ==",
+    "size_in_bytes": 7272,
+    "updated_at": "2026-10-14T15:10:53Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906202271",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906191431/zip",
+    "created_at": "2026-10-14T15:06:15Z",
+    "digest": "sha256:c69ba18299aeea0f977c4956bfc62decbd36c26f351e39e77a743d85fd62c3f9",
+    "expired": false,
+    "expires_at": "2026-11-13T15:06:14Z",
+    "id": 11906191431,
+    "name": "g1-v98-browser-memory-slope--vite-webkit--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjE5MTQzMQ==",
+    "size_in_bytes": 9314,
+    "updated_at": "2026-10-14T15:06:15Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906191431",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906174263/zip",
+    "created_at": "2026-10-14T15:22:04Z",
+    "digest": "sha256:7ad2d78dd7afe7526bdb8684b656473763906f5570197203c6621d7909c72881",
+    "expired": false,
+    "expires_at": "2026-11-13T15:22:03Z",
+    "id": 11906174263,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjE3NDI2Mw==",
+    "size_in_bytes": 7540,
+    "updated_at": "2026-10-14T15:22:04Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906174263",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906148340/zip",
+    "created_at": "2026-10-14T15:17:05Z",
+    "digest": "sha256:ce4ecf091eac7ab8be6f57c0b03c6f27b6cc9260547619dca5aa32e0fb7332e1",
+    "expired": false,
+    "expires_at": "2026-11-13T15:17:04Z",
+    "id": 11906148340,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjE0ODM0MA==",
+    "size_in_bytes": 7284,
+    "updated_at": "2026-10-14T15:17:05Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906148340",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906145283/zip",
+    "created_at": "2026-10-14T14:59:46Z",
+    "digest": "sha256:9ed3fc9b42fbb51f10c50f3c1512b3e0489b40dfd21cb7ac4c5a8d9fd08e0248",
+    "expired": false,
+    "expires_at": "2026-11-13T14:59:45Z",
+    "id": 11906145283,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjE0NTI4Mw==",
+    "size_in_bytes": 7444,
+    "updated_at": "2026-10-14T14:59:46Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906145283",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906140193/zip",
+    "created_at": "2026-10-14T14:59:07Z",
+    "digest": "sha256:6ec3fea07514e1ee1c84ad2caa357b548ab58f0be9e9d87a57fba0356514645b",
+    "expired": false,
+    "expires_at": "2026-11-13T14:59:06Z",
+    "id": 11906140193,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjE0MDE5Mw==",
+    "size_in_bytes": 7444,
+    "updated_at": "2026-10-14T14:59:07Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906140193",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906122016/zip",
+    "created_at": "2026-10-14T15:09:05Z",
+    "digest": "sha256:233a97e226c61ff0be7b2814ebf03f0328a9951d708b6f0783e6f554350a8ac5",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:05Z",
+    "id": 11906122016,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-7",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjEyMjAxNg==",
+    "size_in_bytes": 7273,
+    "updated_at": "2026-10-14T15:09:05Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906122016",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906121672/zip",
+    "created_at": "2026-10-14T15:07:07Z",
+    "digest": "sha256:e3c72b235c2feb1d82c4eee327d96b9cb2653ed9503569be0ee878b881ee58d7",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:06Z",
+    "id": 11906121672,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjEyMTY3Mg==",
+    "size_in_bytes": 7274,
+    "updated_at": "2026-10-14T15:07:07Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906121672",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906068368/zip",
+    "created_at": "2026-10-14T15:17:03Z",
+    "digest": "sha256:ce0d188ed7a39aa109000bd3f2e541d6779b4213706bdea8f4fce41e5aba8b06",
+    "expired": false,
+    "expires_at": "2026-11-13T15:17:02Z",
+    "id": 11906068368,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-6",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjA2ODM2OA==",
+    "size_in_bytes": 7327,
+    "updated_at": "2026-10-14T15:17:03Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906068368",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906018875/zip",
+    "created_at": "2026-10-14T15:19:10Z",
+    "digest": "sha256:9d2f35a9b3ad6a7c0a44075b3647ad4b278c944b7f5054fbd66cf328931cd4dc",
+    "expired": false,
+    "expires_at": "2026-11-13T15:19:08Z",
+    "id": 11906018875,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-10",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjAxODg3NQ==",
+    "size_in_bytes": 7335,
+    "updated_at": "2026-10-14T15:19:10Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906018875",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906015728/zip",
+    "created_at": "2026-10-14T15:01:38Z",
+    "digest": "sha256:bc9edbf63ba03cf5051b4741e67d4c3ce07a1ba9c795242d41755acb9e65e248",
+    "expired": false,
+    "expires_at": "2026-11-13T15:01:37Z",
+    "id": 11906015728,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjAxNTcyOA==",
+    "size_in_bytes": 7437,
+    "updated_at": "2026-10-14T15:01:38Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906015728",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906015385/zip",
+    "created_at": "2026-10-14T14:59:37Z",
+    "digest": "sha256:a97a0d41bb6f3c3cc7e8f7aeea8aa3390e69f24c90c370b562edf6919b809400",
+    "expired": false,
+    "expires_at": "2026-11-13T14:59:36Z",
+    "id": 11906015385,
+    "name": "g1-v98-browser-memory-slope--vite-chromium--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjAxNTM4NQ==",
+    "size_in_bytes": 9612,
+    "updated_at": "2026-10-14T14:59:37Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906015385",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906005040/zip",
+    "created_at": "2026-10-14T14:57:51Z",
+    "digest": "sha256:d59d82108bd903345e2c2eb808f827847d85a38ccbccdd970278c8ff1b6e8d9b",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:51Z",
+    "id": 11906005040,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNjAwNTA0MA==",
+    "size_in_bytes": 7499,
+    "updated_at": "2026-10-14T14:57:51Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11906005040",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905986273/zip",
+    "created_at": "2026-10-14T15:04:55Z",
+    "digest": "sha256:3cd005def9c9cd3389673dd1f6c796fc4a063941d052812a3d7790387dba8995",
+    "expired": false,
+    "expires_at": "2026-11-13T15:04:54Z",
+    "id": 11905986273,
+    "name": "g1-v98-mcp-supervisor-hard-kill--macos-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTk4NjI3Mw==",
+    "size_in_bytes": 7510,
+    "updated_at": "2026-10-14T15:04:55Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905986273",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905974391/zip",
+    "created_at": "2026-10-14T15:22:18Z",
+    "digest": "sha256:a8e65a8bb86c9a96cfe9be4497d7dcdef4a3bf33aea809a9708e02b2960f612f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:22:18Z",
+    "id": 11905974391,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTk3NDM5MQ==",
+    "size_in_bytes": 7498,
+    "updated_at": "2026-10-14T15:22:18Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905974391",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905974153/zip",
+    "created_at": "2026-10-14T15:20:49Z",
+    "digest": "sha256:be16157208e690555e2344e18f4531f6e570f9328eefee192f83a1199d8ab14f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:20:49Z",
+    "id": 11905974153,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-7",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTk3NDE1Mw==",
+    "size_in_bytes": 7283,
+    "updated_at": "2026-10-14T15:20:49Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905974153",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905954651/zip",
+    "created_at": "2026-10-14T15:23:38Z",
+    "digest": "sha256:cf88a3d626350d9a123df889c99d627ab014407e047a5fa0f1d436a6746a3550",
+    "expired": false,
+    "expires_at": "2026-11-13T15:23:38Z",
+    "id": 11905954651,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTk1NDY1MQ==",
+    "size_in_bytes": 7521,
+    "updated_at": "2026-10-14T15:23:38Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905954651",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905947928/zip",
+    "created_at": "2026-10-14T15:13:49Z",
+    "digest": "sha256:4f2630d6a6e997c92b6c86fae52362cf1b379b73e5d724e4493a2776031593af",
+    "expired": false,
+    "expires_at": "2026-11-13T15:13:48Z",
+    "id": 11905947928,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTk0NzkyOA==",
+    "size_in_bytes": 7321,
+    "updated_at": "2026-10-14T15:13:49Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905947928",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905904209/zip",
+    "created_at": "2026-10-14T15:20:14Z",
+    "digest": "sha256:85214895b9cd13974697fe8b47a178f5be6fb694266f7ef13d53f162fca00409",
+    "expired": false,
+    "expires_at": "2026-11-13T15:20:13Z",
+    "id": 11905904209,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTkwNDIwOQ==",
+    "size_in_bytes": 7284,
+    "updated_at": "2026-10-14T15:20:14Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905904209",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905883712/zip",
+    "created_at": "2026-10-14T15:18:27Z",
+    "digest": "sha256:6589e87c0f1a85d337758d514221fa6d3105fbab5e7a375b2d7d7b7d7a49feee",
+    "expired": false,
+    "expires_at": "2026-11-13T15:18:26Z",
+    "id": 11905883712,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-9",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTg4MzcxMg==",
+    "size_in_bytes": 7321,
+    "updated_at": "2026-10-14T15:18:27Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905883712",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905880544/zip",
+    "created_at": "2026-10-14T15:00:05Z",
+    "digest": "sha256:d5f0e17833a5bf15bf754f5f92fbffdf8722909d62ac3144e42fb6dbb80b1fcc",
+    "expired": false,
+    "expires_at": "2026-11-13T15:00:04Z",
+    "id": 11905880544,
+    "name": "g1-v98-browser-memory-slope--vite-chromium--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTg4MDU0NA==",
+    "size_in_bytes": 9612,
+    "updated_at": "2026-10-14T15:00:05Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905880544",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905864096/zip",
+    "created_at": "2026-10-14T15:20:06Z",
+    "digest": "sha256:2bebee3566722f0af156ddd715ed5c0f7491cfab8ffd3bb93d09429a97b2cafb",
+    "expired": false,
+    "expires_at": "2026-11-13T15:20:05Z",
+    "id": 11905864096,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTg2NDA5Ng==",
+    "size_in_bytes": 7287,
+    "updated_at": "2026-10-14T15:20:06Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905864096",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905836917/zip",
+    "created_at": "2026-10-14T15:07:45Z",
+    "digest": "sha256:8b0b87c6b614d0df57705cfdbc7f4fbdc1e73e59a2086dc00705e8057664b0a4",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:44Z",
+    "id": 11905836917,
+    "name": "g1-v98-mcp-supervisor-hard-kill--windows-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgzNjkxNw==",
+    "size_in_bytes": 7472,
+    "updated_at": "2026-10-14T15:07:45Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905836917",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905833389/zip",
+    "created_at": "2026-10-14T15:16:26Z",
+    "digest": "sha256:520e9e00750f378961fc8826d2aedd5377f8a443409c08d293f49586429b7449",
+    "expired": false,
+    "expires_at": "2026-11-13T15:16:25Z",
+    "id": 11905833389,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-8",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgzMzM4OQ==",
+    "size_in_bytes": 7325,
+    "updated_at": "2026-10-14T15:16:26Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905833389",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905820023/zip",
+    "created_at": "2026-10-14T14:57:01Z",
+    "digest": "sha256:93f4a97f5867c2295a5b29e9710420ce0877170b2724837a2304d50854787501",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:01Z",
+    "id": 11905820023,
+    "name": "g1-v98-browser-webkit-actual-vite--vite-webkit--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgyMDAyMw==",
+    "size_in_bytes": 9879,
+    "updated_at": "2026-10-14T14:57:01Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905820023",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905806774/zip",
+    "created_at": "2026-10-14T15:07:12Z",
+    "digest": "sha256:f320a6d57e296f3265f7e1efdb123f71361bd690e684ba5c3dff649e2b9aac3f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:11Z",
+    "id": 11905806774,
+    "name": "g1-v98-mcp-supervisor-hard-kill--windows-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgwNjc3NA==",
+    "size_in_bytes": 7476,
+    "updated_at": "2026-10-14T15:07:12Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905806774",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905804189/zip",
+    "created_at": "2026-10-14T15:21:29Z",
+    "digest": "sha256:ffc9e5da93402a6eacbd2da5fd4115a4173f051c4cf4ae884f4cd88f77835efe",
+    "expired": false,
+    "expires_at": "2026-11-13T15:21:28Z",
+    "id": 11905804189,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-9",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgwNDE4OQ==",
+    "size_in_bytes": 7284,
+    "updated_at": "2026-10-14T15:21:29Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905804189",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905802429/zip",
+    "created_at": "2026-10-14T15:11:01Z",
+    "digest": "sha256:418840b94fe402c44fd0e58bd27db6c19efa0bc155194cb75720fe05f546a4e4",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:00Z",
+    "id": 11905802429,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgwMjQyOQ==",
+    "size_in_bytes": 7277,
+    "updated_at": "2026-10-14T15:11:01Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905802429",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905801113/zip",
+    "created_at": "2026-10-14T15:03:47Z",
+    "digest": "sha256:0d71b33be0787c52ec498ba7bba6990c5aea9f7fa7eec259abcaf915efec0260",
+    "expired": false,
+    "expires_at": "2026-11-13T15:03:46Z",
+    "id": 11905801113,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTgwMTExMw==",
+    "size_in_bytes": 7462,
+    "updated_at": "2026-10-14T15:03:47Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905801113",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905757254/zip",
+    "created_at": "2026-10-14T15:09:30Z",
+    "digest": "sha256:d7a06e80b381501356f092f79ee52336dd037e791bff79d225de61dff1d639fc",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:29Z",
+    "id": 11905757254,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-10",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTc1NzI1NA==",
+    "size_in_bytes": 7286,
+    "updated_at": "2026-10-14T15:09:30Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905757254",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905729725/zip",
+    "created_at": "2026-10-14T15:23:42Z",
+    "digest": "sha256:5313edd76977ee93a2f16cda87fa7254d042c29c8e0cfdb789896ceca26c4b4e",
+    "expired": false,
+    "expires_at": "2026-11-13T15:23:41Z",
+    "id": 11905729725,
+    "name": "g1-v98-dependency-and-cutover-audit--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTcyOTcyNQ==",
+    "size_in_bytes": 7519,
+    "updated_at": "2026-10-14T15:23:42Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905729725",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905677939/zip",
+    "created_at": "2026-10-14T15:13:29Z",
+    "digest": "sha256:1a2fe8117c0072fccefc4b562ea2496d735a552792b54ff69d7098345857217f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:13:27Z",
+    "id": 11905677939,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTY3NzkzOQ==",
+    "size_in_bytes": 7323,
+    "updated_at": "2026-10-14T15:13:29Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905677939",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905640635/zip",
+    "created_at": "2026-10-14T15:00:12Z",
+    "digest": "sha256:48a17e647fcc384ad6186ace05a23e392aa18065f9fb8c99110c92183079eb9a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:00:10Z",
+    "id": 11905640635,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTY0MDYzNQ==",
+    "size_in_bytes": 7446,
+    "updated_at": "2026-10-14T15:00:12Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905640635",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905632297/zip",
+    "created_at": "2026-10-14T15:09:13Z",
+    "digest": "sha256:7fab639d1e596b7254cd92d7d10e43899c55ef79571b0115f00f574eee6ae28a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:12Z",
+    "id": 11905632297,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-6",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTYzMjI5Nw==",
+    "size_in_bytes": 7275,
+    "updated_at": "2026-10-14T15:09:13Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905632297",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905615425/zip",
+    "created_at": "2026-10-14T14:58:43Z",
+    "digest": "sha256:fc9521966bf70f6d7c3d672a898869448b2cc5e08503cb7aab8b461e91dcb98c",
+    "expired": false,
+    "expires_at": "2026-11-13T14:58:42Z",
+    "id": 11905615425,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTYxNTQyNQ==",
+    "size_in_bytes": 7442,
+    "updated_at": "2026-10-14T14:58:43Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905615425",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905597743/zip",
+    "created_at": "2026-10-14T15:11:29Z",
+    "digest": "sha256:8b57bb6cefb877906fa1a4b950518d134646a9a2dad762825ee63064d0703fa0",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:29Z",
+    "id": 11905597743,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-6",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU5Nzc0Mw==",
+    "size_in_bytes": 7275,
+    "updated_at": "2026-10-14T15:11:29Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905597743",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905597382/zip",
+    "created_at": "2026-10-14T15:09:21Z",
+    "digest": "sha256:537e1c2483ccdb981bebfaf06890cc071dee947ea2cfdeb10c8a4faddb801b07",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:20Z",
+    "id": 11905597382,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU5NzM4Mg==",
+    "size_in_bytes": 7276,
+    "updated_at": "2026-10-14T15:09:21Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905597382",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905587913/zip",
+    "created_at": "2026-10-14T15:13:49Z",
+    "digest": "sha256:5a401b2b827d208fa9cca2d6aa78e9adba9f5fb3bc2af81939600bd5fb1064a3",
+    "expired": false,
+    "expires_at": "2026-11-13T15:13:48Z",
+    "id": 11905587913,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU4NzkxMw==",
+    "size_in_bytes": 7325,
+    "updated_at": "2026-10-14T15:13:49Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905587913",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905585907/zip",
+    "created_at": "2026-10-14T15:02:07Z",
+    "digest": "sha256:3360eda3a8b9a6c8ee5fce7360527e7facf1c857d13763872f15fb6f36d2c4b6",
+    "expired": false,
+    "expires_at": "2026-11-13T15:02:07Z",
+    "id": 11905585907,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU4NTkwNw==",
+    "size_in_bytes": 7468,
+    "updated_at": "2026-10-14T15:02:07Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905585907",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905583763/zip",
+    "created_at": "2026-10-14T15:17:44Z",
+    "digest": "sha256:83ad9094f95b19ebc00c6c93a7d3b355b86bfaf8504b4c79a091c3bce190e71a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:17:42Z",
+    "id": 11905583763,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-7",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU4Mzc2Mw==",
+    "size_in_bytes": 7326,
+    "updated_at": "2026-10-14T15:17:44Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905583763",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905577113/zip",
+    "created_at": "2026-10-14T15:07:42Z",
+    "digest": "sha256:dcd44c72c7ab3de21b067538bf967f1404c145156137a086c46d8c745d74bb38",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:41Z",
+    "id": 11905577113,
+    "name": "g1-v98-mcp-supervisor-hard-kill--windows-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU3NzExMw==",
+    "size_in_bytes": 7471,
+    "updated_at": "2026-10-14T15:07:42Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905577113",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905542190/zip",
+    "created_at": "2026-10-14T15:08:48Z",
+    "digest": "sha256:1a3aa5438fe44adcf9c2a0a77bbe9bc3d1421dc6b04dcc3262a02625f721dfa7",
+    "expired": false,
+    "expires_at": "2026-11-13T15:08:47Z",
+    "id": 11905542190,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTU0MjE5MA==",
+    "size_in_bytes": 7273,
+    "updated_at": "2026-10-14T15:08:48Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905542190",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905514672/zip",
+    "created_at": "2026-10-14T15:22:38Z",
+    "digest": "sha256:ed9328f5dfd81f362f5901ddb0a236cabfaaf246340e8cd84b20f1f759b0e2ba",
+    "expired": false,
+    "expires_at": "2026-11-13T15:22:37Z",
+    "id": 11905514672,
+    "name": "g1-v98-mcp-stdio-store-isolation--windows-node20--run-10",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTUxNDY3Mg==",
+    "size_in_bytes": 7292,
+    "updated_at": "2026-10-14T15:22:38Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905514672",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905505932/zip",
+    "created_at": "2026-10-14T15:01:18Z",
+    "digest": "sha256:d7b691d2e77b881c6e349d67daf38ea5acbc3f5d6b15302476c58053e2902d0d",
+    "expired": false,
+    "expires_at": "2026-11-13T15:01:18Z",
+    "id": 11905505932,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTUwNTkzMg==",
+    "size_in_bytes": 7443,
+    "updated_at": "2026-10-14T15:01:18Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905505932",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905345133/zip",
+    "created_at": "2026-10-14T14:56:21Z",
+    "digest": "sha256:a110312f5c4b9be6b1f81e6ab8d6343cc285d9adc9fc9e76d5ac85d437121450",
+    "expired": false,
+    "expires_at": "2026-11-13T14:56:20Z",
+    "id": 11905345133,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTM0NTEzMw==",
+    "size_in_bytes": 7514,
+    "updated_at": "2026-10-14T14:56:21Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905345133",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905341637/zip",
+    "created_at": "2026-10-14T15:04:57Z",
+    "digest": "sha256:479326080c299da7bd4f6b32311f5b49710a021276e1bfaa26683c944b1789bd",
+    "expired": false,
+    "expires_at": "2026-11-13T15:04:55Z",
+    "id": 11905341637,
+    "name": "g1-v98-mcp-supervisor-hard-kill--macos-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTM0MTYzNw==",
+    "size_in_bytes": 7508,
+    "updated_at": "2026-10-14T15:04:57Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905341637",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905332745/zip",
+    "created_at": "2026-10-14T15:11:33Z",
+    "digest": "sha256:89498d91ae77b5d764432627a332c6d5a0a9059618c9f9a2e70430157233490b",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:32Z",
+    "id": 11905332745,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-7",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTMzMjc0NQ==",
+    "size_in_bytes": 7273,
+    "updated_at": "2026-10-14T15:11:33Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905332745",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905312723/zip",
+    "created_at": "2026-10-14T15:11:34Z",
+    "digest": "sha256:2b6e65bf3c58157109eb16c009153ee4a7a86a75ebf55587fc245ac10518ed24",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:33Z",
+    "id": 11905312723,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-8",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTMxMjcyMw==",
+    "size_in_bytes": 7275,
+    "updated_at": "2026-10-14T15:11:34Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905312723",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905272620/zip",
+    "created_at": "2026-10-14T15:09:31Z",
+    "digest": "sha256:9d8edaf462819c89ca1b01da0d75fd5a64ed5726e80a69592a14c113457787fd",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:30Z",
+    "id": 11905272620,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-9",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTI3MjYyMA==",
+    "size_in_bytes": 7273,
+    "updated_at": "2026-10-14T15:09:31Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905272620",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905271097/zip",
+    "created_at": "2026-10-14T15:01:17Z",
+    "digest": "sha256:a73cd272c0c7cbb11de4d04fdc92f8d35ea6d4a028b917842fc0cc04ac561e73",
+    "expired": false,
+    "expires_at": "2026-11-13T15:01:16Z",
+    "id": 11905271097,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTI3MTA5Nw==",
+    "size_in_bytes": 7462,
+    "updated_at": "2026-10-14T15:01:17Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905271097",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905265277/zip",
+    "created_at": "2026-10-14T14:57:08Z",
+    "digest": "sha256:1d5059f26741962a865a1f3c0fefd164b7ca6c8da9b2a08e30458e3545c76fac",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:07Z",
+    "id": 11905265277,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTI2NTI3Nw==",
+    "size_in_bytes": 7495,
+    "updated_at": "2026-10-14T14:57:08Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905265277",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905248030/zip",
+    "created_at": "2026-10-14T15:12:37Z",
+    "digest": "sha256:2ec98cbb77ac0423c8e25912f4951117862548b2565fa1b6dc787aadc05ae06f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:12:36Z",
+    "id": 11905248030,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-10",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTI0ODAzMA==",
+    "size_in_bytes": 7283,
+    "updated_at": "2026-10-14T15:12:37Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905248030",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905190173/zip",
+    "created_at": "2026-10-14T14:55:52Z",
+    "digest": "sha256:0c6800c7dc33124bf281af0bbc72c508ef3474e77a7b974746d68adbc76bc465",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:51Z",
+    "id": 11905190173,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTE5MDE3Mw==",
+    "size_in_bytes": 7516,
+    "updated_at": "2026-10-14T14:55:52Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905190173",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905182627/zip",
+    "created_at": "2026-10-14T15:09:14Z",
+    "digest": "sha256:5ad591fe47f984f636da87eef4500d78c9236678dfd8c41d336bd74c406def75",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:13Z",
+    "id": 11905182627,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTE4MjYyNw==",
+    "size_in_bytes": 7275,
+    "updated_at": "2026-10-14T15:09:14Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905182627",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905145183/zip",
+    "created_at": "2026-10-14T14:51:52Z",
+    "digest": "sha256:19e116222a5d67642baaf8e47ed435579c5a874f990876b93f1079e09d59df64",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:51Z",
+    "id": 11905145183,
+    "name": "g1-v98-browser-chromium-actual-vite--vite-chromium--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTE0NTE4Mw==",
+    "size_in_bytes": 10192,
+    "updated_at": "2026-10-14T14:51:52Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905145183",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905127405/zip",
+    "created_at": "2026-10-14T15:03:52Z",
+    "digest": "sha256:f1438dc2377100d063db1ed460aeb204d57d8016084b5e2a6a71bba63c8bd8c2",
+    "expired": false,
+    "expires_at": "2026-11-13T15:03:51Z",
+    "id": 11905127405,
+    "name": "g1-v98-browser-memory-slope--vite-webkit--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTEyNzQwNQ==",
+    "size_in_bytes": 9314,
+    "updated_at": "2026-10-14T15:03:52Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905127405",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905126167/zip",
+    "created_at": "2026-10-14T14:57:09Z",
+    "digest": "sha256:e39427925b0a4194eb8c2c0dbc3d5d7dd4deceab9241343f7fed699863e4009a",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:08Z",
+    "id": 11905126167,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTEyNjE2Nw==",
+    "size_in_bytes": 7509,
+    "updated_at": "2026-10-14T14:57:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905126167",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905124076/zip",
+    "created_at": "2026-10-14T15:12:58Z",
+    "digest": "sha256:6075d300f34855c2f8b94d0d4952aa098914829fe3285daf265a6b88482b3eb8",
+    "expired": false,
+    "expires_at": "2026-11-13T15:12:58Z",
+    "id": 11905124076,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-9",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTEyNDA3Ng==",
+    "size_in_bytes": 7272,
+    "updated_at": "2026-10-14T15:12:58Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905124076",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905088954/zip",
+    "created_at": "2026-10-14T15:10:53Z",
+    "digest": "sha256:9929fd80893f60a34f38811e183ac0ba0834e679ef3b1a5746e70b092779574b",
+    "expired": false,
+    "expires_at": "2026-11-13T15:10:53Z",
+    "id": 11905088954,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTA4ODk1NA==",
+    "size_in_bytes": 7272,
+    "updated_at": "2026-10-14T15:10:53Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905088954",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905035958/zip",
+    "created_at": "2026-10-14T14:53:40Z",
+    "digest": "sha256:263917bb592c167d1d2cfc3dd8b8155de74c61de4a6fb0010a3b6de5cd819463",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:40Z",
+    "id": 11905035958,
+    "name": "g1-v98-comparator-mutations--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTAzNTk1OA==",
+    "size_in_bytes": 7188,
+    "updated_at": "2026-10-14T14:53:40Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905035958",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905030465/zip",
+    "created_at": "2026-10-14T14:51:14Z",
+    "digest": "sha256:0c7724c33e010bbc29ef5af75263739569825888dcb74d4cfe2c1225a7d2a725",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:14Z",
+    "id": 11905030465,
+    "name": "g1-v98-oracle-differential--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTAzMDQ2NQ==",
+    "size_in_bytes": 7154,
+    "updated_at": "2026-10-14T14:51:14Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905030465",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905023336/zip",
+    "created_at": "2026-10-14T15:07:06Z",
+    "digest": "sha256:228e1f378a3979052ae603d70b36ad1a8b28133a94cbbe16d56c1b5e4d7fc4eb",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:05Z",
+    "id": 11905023336,
+    "name": "g1-v98-mcp-supervisor-hard-kill--windows-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNTAyMzMzNg==",
+    "size_in_bytes": 7481,
+    "updated_at": "2026-10-14T15:07:06Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11905023336",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904992868/zip",
+    "created_at": "2026-10-14T15:03:09Z",
+    "digest": "sha256:13d868e1de9654504057f5e060a0d96be83a49c5fbaa211fc9809b641e450eab",
+    "expired": false,
+    "expires_at": "2026-11-13T15:03:09Z",
+    "id": 11904992868,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDk5Mjg2OA==",
+    "size_in_bytes": 7463,
+    "updated_at": "2026-10-14T15:03:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904992868",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904983728/zip",
+    "created_at": "2026-10-14T15:07:28Z",
+    "digest": "sha256:fd5abc38810b8c59ef3737b788757519a389a43ff72a7a5477a4d2a1865d8e7d",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:27Z",
+    "id": 11904983728,
+    "name": "g1-v98-browser-memory-slope--vite-webkit--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDk4MzcyOA==",
+    "size_in_bytes": 9318,
+    "updated_at": "2026-10-14T15:07:28Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904983728",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904965956/zip",
+    "created_at": "2026-10-14T14:53:25Z",
+    "digest": "sha256:468861721db720ef052b88bce8abda7f82abdf1486ec1f0078a6ae55c9c28e9d",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:24Z",
+    "id": 11904965956,
+    "name": "g1-v98-oracle-differential--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDk2NTk1Ng==",
+    "size_in_bytes": 7160,
+    "updated_at": "2026-10-14T14:53:25Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904965956",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904918162/zip",
+    "created_at": "2026-10-14T15:03:46Z",
+    "digest": "sha256:0761f56b62f27bab327764e04d6985f03151d1f3b38613d2159ad68a0159f117",
+    "expired": false,
+    "expires_at": "2026-11-13T15:03:46Z",
+    "id": 11904918162,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDkxODE2Mg==",
+    "size_in_bytes": 7460,
+    "updated_at": "2026-10-14T15:03:46Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904918162",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904874968/zip",
+    "created_at": "2026-10-14T15:14:20Z",
+    "digest": "sha256:eea4b9dfa8a967363454748d1cacef088aff9df90a64c0b4b3105834e4bb46d4",
+    "expired": false,
+    "expires_at": "2026-11-13T15:14:19Z",
+    "id": 11904874968,
+    "name": "g1-v98-mcp-stdio-store-isolation--macos-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDg3NDk2OA==",
+    "size_in_bytes": 7324,
+    "updated_at": "2026-10-14T15:14:20Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904874968",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904868025/zip",
+    "created_at": "2026-10-14T15:02:42Z",
+    "digest": "sha256:56d4899b5208851fa5ad59bd7da506a662fdf518de4bec558a91973ce762d562",
+    "expired": false,
+    "expires_at": "2026-11-13T15:02:42Z",
+    "id": 11904868025,
+    "name": "g1-v98-browser-memory-slope--vite-chromium--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDg2ODAyNQ==",
+    "size_in_bytes": 9608,
+    "updated_at": "2026-10-14T15:02:42Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904868025",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904862470/zip",
+    "created_at": "2026-10-14T15:00:35Z",
+    "digest": "sha256:5f719b97491c6cc2ee226fa01883761f274ca46f5a4f54a21e879cfdc796f160",
+    "expired": false,
+    "expires_at": "2026-11-13T15:00:26Z",
+    "id": 11904862470,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDg2MjQ3MA==",
+    "size_in_bytes": 7442,
+    "updated_at": "2026-10-14T15:00:35Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904862470",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904813914/zip",
+    "created_at": "2026-10-14T15:07:09Z",
+    "digest": "sha256:f20396e0db55f80d3edca54859ad1a0821633fa026fceb805068619c047553de",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:08Z",
+    "id": 11904813914,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDgxMzkxNA==",
+    "size_in_bytes": 7274,
+    "updated_at": "2026-10-14T15:07:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904813914",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904774107/zip",
+    "created_at": "2026-10-14T15:09:22Z",
+    "digest": "sha256:26a51991bbfded3b04435527154230b92ba07cb140fba2a9beb1f3874c9deb69",
+    "expired": false,
+    "expires_at": "2026-11-13T15:09:21Z",
+    "id": 11904774107,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node20--run-8",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDc3NDEwNw==",
+    "size_in_bytes": 7276,
+    "updated_at": "2026-10-14T15:09:22Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904774107",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904766855/zip",
+    "created_at": "2026-10-14T14:56:40Z",
+    "digest": "sha256:5a0338b5a910cbe90f101add5069b9ec98c4a3eb97f3485dda1a666f92cc9bec",
+    "expired": false,
+    "expires_at": "2026-11-13T14:56:39Z",
+    "id": 11904766855,
+    "name": "g1-v98-browser-webkit-actual-vite--vite-webkit--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDc2Njg1NQ==",
+    "size_in_bytes": 9870,
+    "updated_at": "2026-10-14T14:56:40Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904766855",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904765801/zip",
+    "created_at": "2026-10-14T14:51:07Z",
+    "digest": "sha256:5ab99cbfdacda3210e64b2365c7a40cfe49ae9dbcd74b74781ec5badb16bdad2",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:07Z",
+    "id": 11904765801,
+    "name": "g1-v98-oracle-differential--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDc2NTgwMQ==",
+    "size_in_bytes": 7160,
+    "updated_at": "2026-10-14T14:51:07Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904765801",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904746531/zip",
+    "created_at": "2026-10-14T14:54:36Z",
+    "digest": "sha256:a32d3d1b0f8a95edbeb5de6cac0d30a2ffea25611ff13754c8b32bcec7f3b1bd",
+    "expired": false,
+    "expires_at": "2026-11-13T14:54:35Z",
+    "id": 11904746531,
+    "name": "g1-v98-comparator-mutations--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDc0NjUzMQ==",
+    "size_in_bytes": 7183,
+    "updated_at": "2026-10-14T14:54:36Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904746531",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904673142/zip",
+    "created_at": "2026-10-14T15:02:07Z",
+    "digest": "sha256:1a65c71b98ec41295bef1de38fc242fc213e3ecaf0a549b3db439937ca7a7eed",
+    "expired": false,
+    "expires_at": "2026-11-13T15:02:06Z",
+    "id": 11904673142,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDY3MzE0Mg==",
+    "size_in_bytes": 7464,
+    "updated_at": "2026-10-14T15:02:07Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904673142",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904669056/zip",
+    "created_at": "2026-10-14T15:07:03Z",
+    "digest": "sha256:c43d6bf31ffa2bf4a2b421793d0e348edfa6ca5af4cfe3f114f1e855d6a452f4",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:02Z",
+    "id": 11904669056,
+    "name": "g1-v98-mcp-supervisor-hard-kill--windows-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDY2OTA1Ng==",
+    "size_in_bytes": 7475,
+    "updated_at": "2026-10-14T15:07:03Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904669056",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904668043/zip",
+    "created_at": "2026-10-14T15:01:33Z",
+    "digest": "sha256:eec8e582c06f6266eb192a736a73cacdff5f851929edf836a134e0740bbfddf5",
+    "expired": false,
+    "expires_at": "2026-11-13T15:01:32Z",
+    "id": 11904668043,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDY2ODA0Mw==",
+    "size_in_bytes": 7465,
+    "updated_at": "2026-10-14T15:01:33Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904668043",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904634838/zip",
+    "created_at": "2026-10-14T15:11:29Z",
+    "digest": "sha256:7625130654c100f7d9a3a5d3913b023c4c6e49817932b65b2b710e3a5037596a",
+    "expired": false,
+    "expires_at": "2026-11-13T15:11:28Z",
+    "id": 11904634838,
+    "name": "g1-v98-mcp-stdio-store-isolation--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDYzNDgzOA==",
+    "size_in_bytes": 7272,
+    "updated_at": "2026-10-14T15:11:29Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904634838",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904613238/zip",
+    "created_at": "2026-10-14T15:02:43Z",
+    "digest": "sha256:39b8f08d76ff8ee4ddb3d67bd559dea3359547207527fbe328b4c980ae3a4b0f",
+    "expired": false,
+    "expires_at": "2026-11-13T15:02:43Z",
+    "id": 11904613238,
+    "name": "g1-v98-mcp-supervisor-hard-kill--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDYxMzIzOA==",
+    "size_in_bytes": 7456,
+    "updated_at": "2026-10-14T15:02:43Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904613238",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904599088/zip",
+    "created_at": "2026-10-14T15:07:10Z",
+    "digest": "sha256:5fcaf99d9cebee380eb43af248e2dad6aa481031f16b2e0e3421eb03ffc9ba51",
+    "expired": false,
+    "expires_at": "2026-11-13T15:07:09Z",
+    "id": 11904599088,
+    "name": "g1-v98-mcp-supervisor-hard-kill--macos-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDU5OTA4OA==",
+    "size_in_bytes": 7514,
+    "updated_at": "2026-10-14T15:07:10Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904599088",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904587611/zip",
+    "created_at": "2026-10-14T14:59:02Z",
+    "digest": "sha256:4b44f74bafb671f2c12c18a0544395723eccf80c47c5111645f675a6008df922",
+    "expired": false,
+    "expires_at": "2026-11-13T14:59:01Z",
+    "id": 11904587611,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDU4NzYxMQ==",
+    "size_in_bytes": 7443,
+    "updated_at": "2026-10-14T14:59:02Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904587611",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904572045/zip",
+    "created_at": "2026-10-14T14:55:24Z",
+    "digest": "sha256:bbf6bd8faefa6b9a250709667679628f495ae90a3fcd438b10a5d2dc83aa049f",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:23Z",
+    "id": 11904572045,
+    "name": "g1-v98-comparator-mutations--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDU3MjA0NQ==",
+    "size_in_bytes": 7185,
+    "updated_at": "2026-10-14T14:55:24Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904572045",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904571619/zip",
+    "created_at": "2026-10-14T14:53:09Z",
+    "digest": "sha256:091695504b26bcbf440651a423a60d3fce15fdc55083b6d5a08383e7847de6bc",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:09Z",
+    "id": 11904571619,
+    "name": "g1-v98-oracle-differential--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDU3MTYxOQ==",
+    "size_in_bytes": 7159,
+    "updated_at": "2026-10-14T14:53:09Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904571619",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904529847/zip",
+    "created_at": "2026-10-14T15:00:17Z",
+    "digest": "sha256:49e956c9fd953ca0ad6fd081bceaa69c918808c126b0cbc76653fcf64d3ded5b",
+    "expired": false,
+    "expires_at": "2026-11-13T15:00:16Z",
+    "id": 11904529847,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDUyOTg0Nw==",
+    "size_in_bytes": 7445,
+    "updated_at": "2026-10-14T15:00:17Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904529847",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904494891/zip",
+    "created_at": "2026-10-14T14:59:31Z",
+    "digest": "sha256:d727141a3abcc1d859f7d0ed230c7f7d563b72eb7e4cdaee765d05e053f7a094",
+    "expired": false,
+    "expires_at": "2026-11-13T14:59:30Z",
+    "id": 11904494891,
+    "name": "g1-v98-node-worker-identifiers--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDQ5NDg5MQ==",
+    "size_in_bytes": 7443,
+    "updated_at": "2026-10-14T14:59:31Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904494891",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904413940/zip",
+    "created_at": "2026-10-14T14:53:48Z",
+    "digest": "sha256:b6ce34c35f0b3c562dce57142f4a26ad155f57b1f10ece3845e5668d5835a438",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:47Z",
+    "id": 11904413940,
+    "name": "g1-v98-browser-chromium-actual-vite--vite-chromium--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDQxMzk0MA==",
+    "size_in_bytes": 10193,
+    "updated_at": "2026-10-14T14:53:48Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904413940",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904404882/zip",
+    "created_at": "2026-10-14T14:57:37Z",
+    "digest": "sha256:f2f4c137d7e21408b8702a7a40b6131a6f4afc7ae7fc54ae3c78eb8f6f3d0268",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:36Z",
+    "id": 11904404882,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node22--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDQwNDg4Mg==",
+    "size_in_bytes": 7511,
+    "updated_at": "2026-10-14T14:57:37Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904404882",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904404644/zip",
+    "created_at": "2026-10-14T14:56:21Z",
+    "digest": "sha256:5d8a9cf977c15e2e9a49bb54a33d5539ce7f7f97797b56462f9d18d53202b1b0",
+    "expired": false,
+    "expires_at": "2026-11-13T14:56:20Z",
+    "id": 11904404644,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDQwNDY0NA==",
+    "size_in_bytes": 7516,
+    "updated_at": "2026-10-14T14:56:21Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904404644",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904373739/zip",
+    "created_at": "2026-10-14T14:51:37Z",
+    "digest": "sha256:566196cbc34052bc19397ab4e9c54467f4fa07b7278a9107c5b0bdf6a585e5f9",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:36Z",
+    "id": 11904373739,
+    "name": "g1-v98-oracle-differential--ubuntu-node20--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDM3MzczOQ==",
+    "size_in_bytes": 7160,
+    "updated_at": "2026-10-14T14:51:37Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904373739",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904314978/zip",
+    "created_at": "2026-10-14T14:57:20Z",
+    "digest": "sha256:e7caf2e35f25d696887d61665eba38a7a11046f9a6b1e1be4b856d0a6a3828f0",
+    "expired": false,
+    "expires_at": "2026-11-13T14:57:19Z",
+    "id": 11904314978,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDMxNDk3OA==",
+    "size_in_bytes": 7499,
+    "updated_at": "2026-10-14T14:57:20Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904314978",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904289475/zip",
+    "created_at": "2026-10-14T14:55:25Z",
+    "digest": "sha256:28d6160d97326f65330e02950a3144896dbea290bea36e33a9d9efeff31c0ce2",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:24Z",
+    "id": 11904289475,
+    "name": "g1-v98-comparator-mutations--ubuntu-node22--run-5",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDI4OTQ3NQ==",
+    "size_in_bytes": 7182,
+    "updated_at": "2026-10-14T14:55:25Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904289475",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904264668/zip",
+    "created_at": "2026-10-14T14:55:45Z",
+    "digest": "sha256:e6ff7d84e003518cc95989fe20da46050d08b2b98af213e6ade7d8da0b0a8ec9",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:44Z",
+    "id": 11904264668,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDI2NDY2OA==",
+    "size_in_bytes": 7509,
+    "updated_at": "2026-10-14T14:55:45Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904264668",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904229014/zip",
+    "created_at": "2026-10-14T14:52:22Z",
+    "digest": "sha256:38650ca273319d96acfa229ecf0852c00aa2c872ecfb07c05a1cf516804a23a3",
+    "expired": false,
+    "expires_at": "2026-11-13T14:52:21Z",
+    "id": 11904229014,
+    "name": "g1-v98-oracle-differential--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDIyOTAxNA==",
+    "size_in_bytes": 7161,
+    "updated_at": "2026-10-14T14:52:22Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904229014",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904193903/zip",
+    "created_at": "2026-10-14T14:51:31Z",
+    "digest": "sha256:0d2828ad446124d860bf3061f406d77f4f100d577c264cbfc2d6044ee1f36dbe",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:30Z",
+    "id": 11904193903,
+    "name": "g1-v98-oracle-differential--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDE5MzkwMw==",
+    "size_in_bytes": 7159,
+    "updated_at": "2026-10-14T14:51:31Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904193903",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904189601/zip",
+    "created_at": "2026-10-14T14:55:29Z",
+    "digest": "sha256:ee3731b9539595e1f29a316a6489081e0e2b1753b50377158777670a100c193b",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:28Z",
+    "id": 11904189601,
+    "name": "g1-v98-semantic-special-terminals--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwNDE4OTYwMQ==",
+    "size_in_bytes": 7514,
+    "updated_at": "2026-10-14T14:55:29Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11904189601",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903984436/zip",
+    "created_at": "2026-10-14T14:53:31Z",
+    "digest": "sha256:c72de7769b432abc5f572824d8ef4500ab94ce6a6926b64ff47538f2a3a6c2aa",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:31Z",
+    "id": 11903984436,
+    "name": "g1-v98-comparator-mutations--ubuntu-node20--run-4",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzk4NDQzNg==",
+    "size_in_bytes": 7188,
+    "updated_at": "2026-10-14T14:53:31Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903984436",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903949645/zip",
+    "created_at": "2026-10-14T14:55:16Z",
+    "digest": "sha256:6534158f8f5dfe8f05174f46942e7a9502e0045c5b5fae749c979720be80933b",
+    "expired": false,
+    "expires_at": "2026-11-13T14:55:15Z",
+    "id": 11903949645,
+    "name": "g1-v98-comparator-mutations--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzk0OTY0NQ==",
+    "size_in_bytes": 7184,
+    "updated_at": "2026-10-14T14:55:16Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903949645",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903939371/zip",
+    "created_at": "2026-10-14T14:53:49Z",
+    "digest": "sha256:cfe06cb4c41754da5c16ef20d7112a3796dc63925bec0816025fde48a2b43a84",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:48Z",
+    "id": 11903939371,
+    "name": "g1-v98-comparator-mutations--ubuntu-node20--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzkzOTM3MQ==",
+    "size_in_bytes": 7186,
+    "updated_at": "2026-10-14T14:53:49Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903939371",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903908985/zip",
+    "created_at": "2026-10-14T14:51:35Z",
+    "digest": "sha256:411f4bca97754bb6b873b632682bd95eb8fccfec1054f7e34711b2e7577c0c7d",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:34Z",
+    "id": 11903908985,
+    "name": "g1-v98-oracle-differential--ubuntu-node22--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzkwODk4NQ==",
+    "size_in_bytes": 7159,
+    "updated_at": "2026-10-14T14:51:35Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903908985",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903864207/zip",
+    "created_at": "2026-10-14T14:53:02Z",
+    "digest": "sha256:95995a5af6873a63a88e135a94454430d9542c241564d218d81f8b922c21ecd3",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:02Z",
+    "id": 11903864207,
+    "name": "g1-v98-comparator-mutations--ubuntu-node20--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzg2NDIwNw==",
+    "size_in_bytes": 7187,
+    "updated_at": "2026-10-14T14:53:02Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903864207",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903824046/zip",
+    "created_at": "2026-10-14T14:51:36Z",
+    "digest": "sha256:2bae920c3797ab5eb02956975cc58b66ed66b99372004a60b321f63c83b145d0",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:35Z",
+    "id": 11903824046,
+    "name": "g1-v98-oracle-differential--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzgyNDA0Ng==",
+    "size_in_bytes": 7156,
+    "updated_at": "2026-10-14T14:51:36Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903824046",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903649606/zip",
+    "created_at": "2026-10-14T14:54:10Z",
+    "digest": "sha256:b2edd6206b7686e30ff202c1fbaed329c80cda89e0887bccc82fd28b7bf315d4",
+    "expired": false,
+    "expires_at": "2026-11-13T14:54:10Z",
+    "id": 11903649606,
+    "name": "g1-v98-comparator-mutations--ubuntu-node22--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzY0OTYwNg==",
+    "size_in_bytes": 7183,
+    "updated_at": "2026-10-14T14:54:10Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903649606",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903594101/zip",
+    "created_at": "2026-10-14T14:51:25Z",
+    "digest": "sha256:e109ffb6eb6a316c18085a2bdf1874963b7d52020ea7d9c87a0759a1bf907ed5",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:24Z",
+    "id": 11903594101,
+    "name": "g1-v98-browser-chromium-actual-vite--vite-chromium--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzU5NDEwMQ==",
+    "size_in_bytes": 10185,
+    "updated_at": "2026-10-14T14:51:25Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903594101",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903589766/zip",
+    "created_at": "2026-10-14T14:54:39Z",
+    "digest": "sha256:cbb77ee53e300c07e3aa69afb0cd3f05875561caa686d7ceda1dc9f99e5a4734",
+    "expired": false,
+    "expires_at": "2026-11-13T14:54:38Z",
+    "id": 11903589766,
+    "name": "g1-v98-browser-webkit-actual-vite--vite-webkit--run-1",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzU4OTc2Ng==",
+    "size_in_bytes": 9873,
+    "updated_at": "2026-10-14T14:54:39Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903589766",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903459547/zip",
+    "created_at": "2026-10-14T14:53:23Z",
+    "digest": "sha256:0db644b3dd44041a67c39f7cbb79851ebb9e104f020c658d4c9a1fe9743f0d54",
+    "expired": false,
+    "expires_at": "2026-11-13T14:53:22Z",
+    "id": 11903459547,
+    "name": "g1-v98-comparator-mutations--ubuntu-node20--run-2",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzQ1OTU0Nw==",
+    "size_in_bytes": 7183,
+    "updated_at": "2026-10-14T14:53:23Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903459547",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  },
+  {
+    "archive_download_url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903444173/zip",
+    "created_at": "2026-10-14T14:51:23Z",
+    "digest": "sha256:42d4f71ce59ae6a7f269a9bca9bd998458ba65b72c64c10b946dff0e509d6668",
+    "expired": false,
+    "expires_at": "2026-11-13T14:51:23Z",
+    "id": 11903444173,
+    "name": "g1-v98-oracle-differential--ubuntu-node22--run-3",
+    "node_id": "MDg6QXJ0aWZhY3QxMTkwMzQ0NDE3Mw==",
+    "size_in_bytes": 7160,
+    "updated_at": "2026-10-14T14:51:23Z",
+    "url": "https://api.github.com/repos/themoretheless/open-scad-viewer/actions/artifacts/11903444173",
+    "workflow_run": {
+      "head_branch": "codex/push-integration-2026-10-07",
+      "head_repository_id": 1203268930,
+      "head_sha": "3c19575792ef5002fe9fb85357bd0b36075caab5",
+      "id": 38583819692,
+      "repository_id": 1203268930
+    }
+  }
+]
