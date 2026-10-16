@@ -1,0 +1,153 @@
+{
+  "schema": "interpolated-carrier-initial-frozen-evidence/1",
+  "sourceRevision": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "inputsSha256": "f73a6c77a81ff87b5bb506e472a4fb957d079e1f0005eef0950043335faefe80",
+  "sourceGuardVerified": true,
+  "nativeProtocolTestsPassed": 2,
+  "privateWasmCasesPassed": 19,
+  "independentOcctCasesPassed": 1,
+  "privateWasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "physicalCapContinuity": "C0",
+  "fullNativeQualifier": "running",
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false,
+  "records": [
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/native-step/body.json",
+      "sha256": "31083fd5d90d11b64927275a38fc8b09473e27bba9bc51e9be75a8e7a1997f29",
+      "byteLength": 22765
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/native-step/body.step",
+      "sha256": "f175435c35060bfda91e023cf5f7a616be11ff0708ed48dee40133868cc15abe",
+      "byteLength": 31431
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/native-step/request.json",
+      "sha256": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+      "byteLength": 5898
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/native-step/restored-model.json",
+      "sha256": "67d0223026be5e1404a0fd2940e52aaed49eda07db91188baeb713a12a3df9b8",
+      "byteLength": 21333
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/osv-interpolated-carrier-frozen-independent-occt-20261017.json",
+      "sha256": "8a1c79a905339c66e4fc5823e899e90f6ee268276fc5b0bd49433b729e88d4be",
+      "byteLength": 904
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/osv-interpolated-carrier-frozen-independent-occt-20261017.log",
+      "sha256": "b82aec28076e9c3f4fdf84cadc156f845b24b50b3a58b4317f95a5b065f503bc",
+      "byteLength": 856
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/osv-interpolated-carrier-private-wasm-build-20261017.log",
+      "sha256": "9d3d590fed4735e4e1149ac3724a71fd7fa299c987dfca604718c676b3091060",
+      "byteLength": 19186
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/osv-interpolated-carrier-wasm-build-20261017.json",
+      "sha256": "99f88c92c97399cf1d749570f5152d9a76934dbf03a4d4b2f01db6086d10ab81",
+      "byteLength": 794
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/osv-interpolated-carrier-wasm-runtime-20261017.json",
+      "sha256": "e638c2c3fbc561a1f2b2aa05d1cf493144baada68e6b8c05f5baaeac1e1e32c1",
+      "byteLength": 1148
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/affine.json",
+      "sha256": "46fee937e6de037381437ccbd121900ebf60f8b2ca3d94d8f795fae780a10c19",
+      "byteLength": 657
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/affine.log",
+      "sha256": "4a47cecfce1d6569decac85ae8e35471e66f1ef39a5761d5137153877efd6341",
+      "byteLength": 58
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/bishop.json",
+      "sha256": "fc09283ee74334c7ed0a3c2242f50183069c2665190fd20df6d7842aa8c0dbe8",
+      "byteLength": 587
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/bishop.log",
+      "sha256": "f16f9f04992386a27f6cdbc78f32521d403422fea82651b35e0b641518bdb6f5",
+      "byteLength": 52
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/caps.json",
+      "sha256": "5ae94431cc4a6775d91ce62c123456f775765aa26dc36e710bfeff02213da0aa",
+      "byteLength": 1444
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/caps.log",
+      "sha256": "c1889910b16df2eb35d9c4b022e6fed254fa6c9b099079662dc6714192440fde",
+      "byteLength": 592
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/fibered.json",
+      "sha256": "a03e756e1c011a98d126d7d3110901c966db81cf5355999c7f66b56d2d8e14f4",
+      "byteLength": 1168
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/fibered.log",
+      "sha256": "3e9df0e5889f1d86e465c566033de34d6d7d259c696988e6caabeeeeb2d3d71c",
+      "byteLength": 344
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/general.json",
+      "sha256": "830efeae80894f4c5bc10c06a711723ee54799abd353f432d8838da351c5dfb2",
+      "byteLength": 634
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/general.log",
+      "sha256": "15118e2440c6d60fc5434956aa7660d5158a4da11a02f5af15661091ee2b3098",
+      "byteLength": 51
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/guided.json",
+      "sha256": "623fb4634682248db985ce00a08dc9fdfc266e87fbeba950f392e8d2ff9fc0d1",
+      "byteLength": 592
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/guided.log",
+      "sha256": "be1dc72b156690aeed7e4506c5216e4bb82c0c2926384608f42f36a50e30dcc8",
+      "byteLength": 52
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/interpolated.json",
+      "sha256": "e638c2c3fbc561a1f2b2aa05d1cf493144baada68e6b8c05f5baaeac1e1e32c1",
+      "byteLength": 1148
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/interpolated.log",
+      "sha256": "7f0c2953c8ce5baea47138ec1993163f07164289cb8e0a195f28778a36797813",
+      "byteLength": 50
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/sphere.json",
+      "sha256": "8872a13cf65b396809deabaeb4c07fdf1371e28e3cfe5ea706abb5eb31162463",
+      "byteLength": 1219
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/sphere.log",
+      "sha256": "1d2944b648337d4dc04fc722dcd9de1d6f7a20680165ce82c129906205ab61e2",
+      "byteLength": 336
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix/summary.json",
+      "sha256": "15ea05e5a7bf0c8d122ab844bf43bbb4568741013b3a3c1cb11da97396ed7fd4",
+      "byteLength": 19814
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/initial-frozen-evidence/private-wasm-matrix-runner.py",
+      "sha256": "62caceb6177b6fbe38b335aa780a02ea31c953920745b3ad76c38b161460af83",
+      "byteLength": 3444
+    }
+  ]
+}

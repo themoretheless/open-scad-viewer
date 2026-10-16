@@ -1,0 +1,6 @@
+planar-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed
+nonplanar-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed
+moving-affine-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed
+reflected-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed
+rational-profile-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed
+rational-profile-affine-caps: WASM original/actual G2, cap/volume/STEP audit and short-budget refusal passed

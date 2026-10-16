@@ -1,0 +1,14 @@
+{
+  "schema": "original-guided-geometric-private-wasm-runtime/1",
+  "wasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "wasmBytes": 18272161,
+  "requestSha256": "de1bd41de4e4f7aaf6b70e962dc924125c64fe95b8092c36b405f0ef932af45f",
+  "passed": true,
+  "scope": "One exact original Mobius-clock guided body: construct/audit/STEP re-audit and budget/parameter refusal.",
+  "faces": 256,
+  "boundaryErrorUpper": 0.04465520819783416,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

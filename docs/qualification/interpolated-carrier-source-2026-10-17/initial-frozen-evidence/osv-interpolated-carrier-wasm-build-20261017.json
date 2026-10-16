@@ -1,0 +1,26 @@
+{
+  "schema": "interpolated-carrier-private-wasm-build/1",
+  "sourceRevision": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "inputsSha256": "f73a6c77a81ff87b5bb506e472a4fb957d079e1f0005eef0950043335faefe80",
+  "command": [
+    "cargo",
+    "+nightly-2026-09-16",
+    "build",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--release"
+  ],
+  "wasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "wasmBytes": 18272161,
+  "artifact": "/private/tmp/osv-interpolated-carrier-private-artifact-20261017/geometry_wasm.wasm",
+  "buildExitCode": 0,
+  "sourceGuardVerified": true,
+  "runtimeQualified": true,
+  "publicPackageQualified": false,
+  "fullGoalComplete": false
+}
