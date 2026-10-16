@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fresh frozen native qualification; no delivery or ideal-source Gk credit."""
+"""Fresh frozen native source/retained Gk qualification; no delivery/cap credit."""
 import hashlib
 import json
 import re
