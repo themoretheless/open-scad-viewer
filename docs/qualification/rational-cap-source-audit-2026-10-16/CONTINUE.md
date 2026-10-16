@@ -30,6 +30,6 @@ See `wasm-runtime-report.json` and `logs/wasm-runtime.log`; module SHA-256
 
 Current full qualifier session: 36645; log:
 `/private/tmp/osv-rational-cap-audit-full-qualifier-20261016.log`.
-The preceding frozen raw-cap checkpoint's qualifier is still session 21376 at
-`/private/tmp/osv-rational-filled-caps-full-qualifier-20261016.log`; its source
-must also remain unchanged until its terminal source guard is saved.
+The preceding raw-cap checkpoint finished: 3200 passing tests, 4 ignored,
+source guard verified, preserved in `37ff95ec0`. This does not qualify the
+changed supplied-model/JSON/STEP successor; session 36645 remains live.
