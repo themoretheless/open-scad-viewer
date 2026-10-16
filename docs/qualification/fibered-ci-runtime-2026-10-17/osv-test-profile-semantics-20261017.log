@@ -1,0 +1,16 @@
+   Compiling osv-test-profile-semantics v0.0.0 (/private/tmp/osv-test-profile-semantics-20261017)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.20s
+     Running unittests src/lib.rs (/private/tmp/osv-test-profile-semantics-20261017/target/debug/build/osv-test-profile-semantics/c8f34da7cb606e6c/out/osv_test_profile_semantics-c8f34da7cb606e6c)
+
+running 2 tests
+test tests::optimization_keeps_debug_assertions ... ok
+test tests::optimization_keeps_overflow_checks ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests osv_test_profile_semantics
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

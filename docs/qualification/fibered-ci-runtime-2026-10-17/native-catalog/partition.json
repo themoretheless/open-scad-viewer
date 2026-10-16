@@ -1,0 +1,36 @@
+{
+  "schema": "native-test-partition/1",
+  "complete": true,
+  "disjoint": true,
+  "full": {
+    "cases": 5979,
+    "sha256": "1b70e9e6914d979086a7486ee5fe4974759fe4f6b291fcaf7a56e398011cab53"
+  },
+  "serial": {
+    "cases": 44,
+    "sha256": "15c2cdd3985afe10c1bec059e05b9c6fbe510bff12fe92a30df22afc9bf097f8"
+  },
+  "parallel": {
+    "cases": 5935,
+    "sha256": "46cf717a0f793a97efd94a7ba586d11344865d7b2aac69c379cd8100b45c33ca"
+  },
+  "selector": "aag",
+  "qualificationClaim": "none",
+  "logs": [
+    {
+      "path": "/private/tmp/osv-fibered-ci-opt1-native-catalog-20261017/full.log",
+      "sha256": "ce1e98f4b09a48f2dd16a1de0eb77e69d39f0167bcee7e0d3519ac44e81d4834",
+      "byteLength": 567832
+    },
+    {
+      "path": "/private/tmp/osv-fibered-ci-opt1-native-catalog-20261017/serial.log",
+      "sha256": "563296e9d9e25fce141f3ab9aa6579643005211f141d8b898385cae11aeebd0c",
+      "byteLength": 71094
+    },
+    {
+      "path": "/private/tmp/osv-fibered-ci-opt1-native-catalog-20261017/parallel.log",
+      "sha256": "150bcf8e9f1a981a7baa14e6412f28343d7061a127ff8410cba5f72b8a52cbb8",
+      "byteLength": 565152
+    }
+  ]
+}
