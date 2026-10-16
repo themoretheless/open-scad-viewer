@@ -794,3 +794,6 @@ pub use rational_loft_legacy::{capped_loft_with_caps, capped_loft_with_caps_chec
 pub use rational_loft::section_loft_source_matches;
 
 pub use rational_loft::{PolygonStationWalls, smooth_polygon_station_walls};
+
+mod fibered_body;
+pub use fibered_body::{FiberedBodyLimits,FiberedBodyReport,FiberedBody,FiberedBodyAttempt,construct_fibered_body,verify_fibered_body};

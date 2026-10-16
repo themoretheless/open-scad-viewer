@@ -190,6 +190,7 @@ pub mod parameterization {
 /// Existing modules for validation.
 pub mod validation {
     pub use crate::affine_volume;
+    pub use crate::fibered_volume;
     pub use crate::implicit_quadric;
     pub use crate::curve_self_intersection;
     pub use crate::surface_self_intersection;

@@ -33,7 +33,7 @@ pub struct RationalPiece {
     pub weights: Vec<f64>,
 }
 impl RationalPiece {
-    pub(super) fn valid(&self) -> bool {
+    pub(crate) fn valid(&self) -> bool {
         (2..=9).contains(&self.controls.len())
             && self.weights.len() == self.controls.len()
             && self

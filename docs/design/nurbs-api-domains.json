@@ -168,6 +168,7 @@
   ],
   "validation": [
     "affine_volume",
+    "fibered_volume",
     "implicit_quadric",
     "curve_self_intersection",
     "surface_self_intersection",

@@ -13,6 +13,8 @@ const OPS: &[&str] = &[
     "brep_nurbs_revolve",
     "brep_nurbs_sphere",
     "brep_nurbs_sphere_exact",
+    "brep_fibered_source_construct",
+    "brep_fibered_source_audit",
     "brep_implicit_sphere_source_construct",
     "brep_implicit_sphere_source_audit",
     "brep_nurbs_gear",
@@ -148,6 +150,8 @@ fn handle(v: Value) -> Result<Value> {
                 .unwrap_or(360.),
         )?),
         "brep_nurbs_sphere" | "brep_nurbs_sphere_exact" => cad_face_contacts::sphere(v),
+        "brep_fibered_source_construct" => cad_fibered_body::run(v, false),
+        "brep_fibered_source_audit" => cad_fibered_body::run(v, true),
         "brep_implicit_sphere_source_construct" => cad_implicit_body::sphere(v, false),
         "brep_implicit_sphere_source_audit" => cad_implicit_body::sphere(v, true),
         "brep_nurbs_gear" => {

@@ -201,7 +201,15 @@ pub fn certify_contraction(s: &Surface, max_spans: usize) -> Result<Report> {
 /// At a knot, include both one-sided derivatives. A point rectangle uses a
 /// non-collapsed knot span for derivative bounds, never a zero column.
 /// None means the span budget did not cover the entire rectangle.
+#[derive(Clone,Debug)]
+pub struct NormalDirectionReport {pub bounds:Option<[f64;2]>,pub spans:usize}
+mod boundary_normals;
+pub use boundary_normals::boundary_normal_direction_bounds;
 pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64;3], max_spans: usize) -> Result<Option<[f64;2]>> {
+    Ok(normal_direction_bounds_detailed(s,domain,direction,max_spans)?.bounds)
+}
+/// Same conservative rectangle query, retaining all charged span work.
+pub fn normal_direction_bounds_detailed(s: &Surface, domain: [[f64;2];2], direction: [f64;3], max_spans: usize) -> Result<NormalDirectionReport> {
     s.validate()?;
     let knots = [&s.knots_u,&s.knots_v];
     let degrees = [s.degree_u,s.degree_v];
@@ -224,7 +232,7 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
             if section[axis][0]==section[axis][1] {section[axis]=[lo,hi];}
         }
         if outside {continue;}
-        if spans==max_spans {return Ok(None);}
+        if spans==max_spans {return Ok(NormalDirectionReport{bounds:None,spans});}
         spans+=1;
         let j=section_jacobian(s,indices,section)?;
         let mut dot=I::point(0.);
@@ -235,7 +243,7 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
         }
         bounds[0]=bounds[0].min(dot.lo);bounds[1]=bounds[1].max(dot.hi);
     }}
-    Ok(Some(bounds))
+    Ok(NormalDirectionReport{bounds:Some(bounds),spans})
 }
 #[cfg(test)]
 mod tests {

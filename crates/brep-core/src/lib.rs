@@ -10,6 +10,7 @@
 )]
 #![allow(unused_features)]
 mod rational_identity;
+mod exact_affine_source;
 #[cfg(feature = "codec")]
 mod serialization;
 use nurbs_core::{
@@ -1642,3 +1643,5 @@ pub mod source_inverse_shear;
 pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
 
 pub mod wall_search;
+
+pub use analytic::{FiberedBodyLimits,FiberedBodyReport,FiberedBody,FiberedBodyAttempt,construct_fibered_body,verify_fibered_body};

@@ -471,3 +471,6 @@ fn orientation_motion(
 
 #[cfg(test)]
 mod tests;
+
+/// Original-value enclosure shared by native volume owners. No refitted pose.
+pub(crate) fn original_rational_pose(p:&RationalPiece,t:I)->Result<EnclosedPose> { rational::pose_on(p,t,1) }
