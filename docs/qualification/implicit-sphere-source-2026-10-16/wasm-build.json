@@ -1,0 +1,24 @@
+{
+  "schema": "implicit-sphere-private-release-build/1",
+  "sourceRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d",
+  "nativeInputsSha256": "cee4257be5c7064cfc84dba9c7233038618d21faba9c8d05f6d47a711b9b2aa3",
+  "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a",
+  "wasmBytes": 18073723,
+  "preservedArtifact": "/private/tmp/osv-implicit-sphere-artifact-20261016/geometry_wasm.wasm",
+  "byteIdenticalToRuntimeTestedArtifact": true,
+  "buildCommand": [
+    "cargo",
+    "build",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--release"
+  ],
+  "buildExitCode": 0,
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "publicPackageQualified": false
+}

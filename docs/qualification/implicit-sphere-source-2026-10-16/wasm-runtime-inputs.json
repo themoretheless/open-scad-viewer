@@ -1,0 +1,63 @@
+{
+  "schema": "implicit-sphere-private-wasm-runtime-inputs/1",
+  "node": "v26.11.1",
+  "tsx": "4.23.13",
+  "wasmPath": "/private/tmp/osv-implicit-sphere-artifact-20261016/geometry_wasm.wasm",
+  "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a",
+  "inputs": [
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime.mts",
+      "sha256": "ae7011446fa1bfd6c1118151f0f85d79a2350a215f366f2343a143f6956dfce2"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/moving-affine-caps.source.json",
+      "sha256": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/nonplanar-caps.source.json",
+      "sha256": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/planar-caps.source.json",
+      "sha256": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/rational-profile-affine-caps.source.json",
+      "sha256": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/rational-profile-caps.source.json",
+      "sha256": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step/reflected-caps.source.json",
+      "sha256": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/wasm-runtime.mts",
+      "sha256": "71ae6cb19ba9b8bec12922bb789752837ff086a1b07aec79c70f45b51a93e6a8"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-pole-g2-20261016/src/services/valueBinaryCodec.ts",
+      "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-sphere-step-20261016/sphere-nonbinary-radius.source.json",
+      "sha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-sphere-step-20261016/sphere-regular.source.json",
+      "sha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-sphere-step-20261016/sphere-translated-poles.source.json",
+      "sha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256"
+    },
+    {
+      "path": "/private/tmp/osv-implicit-sphere-step-20261016/sphere-two-poles.source.json",
+      "sha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb"
+    }
+  ],
+  "inputsSha256": "0f499481480b40ea7932f13bf788ed07c32e798bd30ad4f87c88a6578a5f3380",
+  "publicPackageQualified": false
+}
