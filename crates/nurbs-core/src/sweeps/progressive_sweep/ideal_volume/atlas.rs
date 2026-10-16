@@ -22,7 +22,41 @@ fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
 fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
     let c = projected(columns, projection)?;
     let det = iv::dot_tight(c[0], iv::cross(c[1], c[2])?)?;
-    Ok(det.lo > 0. || det.hi < 0.)
+    if det.lo>0. || det.hi<0. {return Ok(true);}
+    uniformly_invertible(c)
+}
+fn frobenius_upper(m:[[I;3];3])->Result<f64>{
+    let values=m.iter().flatten().copied().collect::<Vec<_>>();
+    Ok(crate::distance_bounds::box_distance(&values,&[I::point(0.);9])?.1)
+}
+/// ALL matrices A in the original whole-hull interval box satisfy
+/// ||I-R A S||2 <= ||I-R Ac||F + ||R||2 ||A S-Ac||F < 1.
+/// Neumann's theorem makes EVERY such matrix invertible, including any
+/// averaged Jacobian. R/Ac/S are only rounded proposals; all residuals, Gram
+/// bounds and perturbations are independently enclosed with outward arithmetic.
+fn uniformly_invertible(columns:[V3;3])->Result<bool>{
+    let Some(scale)=coordinate_scale(columns) else{return Ok(false);};
+    let a=scaled(columns,scale)?;
+    let Some(r)=inverse_proposal(a) else{return Ok(false);};
+    let center=a.map(|col|col.map(|x|crate::distance_bounds::midpoint(x.lo,x.hi)));
+    let mut perturb=[[I::point(0.);3];3];let mut residual=perturb;let mut gram=perturb;
+    for i in 0..3 {for j in 0..3 {
+        perturb[i][j]=a[j][i].sub(I::point(center[j][i]))?;
+        let mut product=I::point(0.);let mut dot=I::point(0.);
+        for k in 0..3 {
+            product=product.add(I::point(r[i][k]).mul(I::point(center[j][k]))?)?;
+            dot=dot.add(I::point(r[k][i]).mul(I::point(r[k][j]))?)?;
+        }
+        let identity=I::point(if i==j {1.}else{0.});
+        residual[i][j]=identity.sub(product)?;
+        gram[i][j]=dot.sub(identity)?;
+    }}
+    // ||R||2²=||RᵀR||2 <= 1+||RᵀR-I||F, valid for any finite R.
+    let gram_upper=I::point(1.).add(I::point(frobenius_upper(gram)?))?;
+    // Same outward square-root convention as distance_bounds::box_distance.
+    let norm_r=I::point(gram_upper.hi.sqrt().next_up());
+    let error=I::point(frobenius_upper(residual)?).add(norm_r.mul(I::point(frobenius_upper(perturb)?))?)?;
+    Ok(error.hi<1.)
 }
 pub(crate) fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
     let mid = columns.map(|c| c.map(|x| crate::distance_bounds::midpoint(x.lo, x.hi)));
@@ -76,6 +110,23 @@ fn scaled(columns: [V3; 3], scale: [f64; 3]) -> Result<[V3; 3]> {
         iv::scale(columns[2], I::point(scale[2]))?,
     ])
 }
+/// A sufficient enclosure test for ALL symmetric matrices in sym(R DF S).
+/// Leading principal minors establish SPD without requiring diagonal
+/// dominance. Every entry is an outward ORIGINAL whole-piece enclosure; R
+/// and S remain fixed over the complete joint hull, including a closed seam.
+fn symmetric_positive(columns:[V3;3],metric:[[f64;3];3])->Result<bool>{
+    if margin(columns,metric).is_ok_and(|x|x>0.) {return Ok(true);}
+    let a=projected(columns,metric)?;
+    let mut s=[[I::point(0.);3];3];
+    for i in 0..3 {for j in 0..3 {s[i][j]=a[j][i].add(a[i][j])?.div(I::point(2.))?;}}
+    if s[0][0].lo<=0. {return Ok(false);}
+    let d2=s[0][0].mul(s[1][1])?.sub(s[0][1].mul(s[0][1])?)?;
+    if d2.lo<=0. {return Ok(false);}
+    let d3=s[0][0].mul(s[1][1].mul(s[2][2])?.sub(s[1][2].mul(s[1][2])?)?)?
+        .sub(s[0][1].mul(s[0][1].mul(s[2][2])?.sub(s[1][2].mul(s[0][2])?)?)?)?
+        .add(s[0][2].mul(s[0][1].mul(s[1][2])?.sub(s[1][1].mul(s[0][2])?)?)?)?;
+    Ok(d3.lo>0.)
+}
 /// One constant metric on the ENTIRE joint convex chart. Smaller original
 /// enclosures may prove its SPD condition when their entrywise matrix union
 /// loses correlations. Different metrics in separate pieces are never used.
@@ -99,8 +150,15 @@ fn monotone_hull(
     };
     let mut pending = pieces.to_vec();
     let mut visits = 0;
+    // A fixed metric on a wide turning interval may be a poor proposal even
+    // when smaller joint charts are regular. Spend a short probe first and
+    // let the exhaustive PAIR cover refine, rather than exhausting the ledger
+    // on spatial splits that cannot repair the temporal metric. Small joint
+    // charts retain the deeper bounded proposal. Neither limit admits geometry.
+    let temporal_width=pieces.iter().map(|b|b[2][1]-b[2][0]).sum::<f64>();
+    let visit_limit=if temporal_width>1./64. {16}else{256};
     while let Some(b) = pending.pop() {
-        if visits == 256 || out.cells == max {
+        if visits == visit_limit || out.cells == max {
             return Ok(false);
         }
         visits += 1;
@@ -113,7 +171,7 @@ fn monotone_hull(
             // DF*S is the derivative in xi coordinates. BOTH S and the left
             // metric are fixed across every subcell/seam piece of this hull.
             if let Ok(normalized) = scaled(projected(e.columns, projection)?, scale) {
-                if margin(normalized, inverse).is_ok_and(|x| x > 0.) {
+                if symmetric_positive(normalized, inverse).unwrap_or(false) {
                     continue;
                 }
             }
@@ -310,6 +368,11 @@ pub(crate) fn certify_map(
         if out.cells == max_cells {
             return Ok(());
         }
+        #[cfg(test)]
+        if std::env::var_os("OSV_ARC_ATLAS_DIAG").is_some() && (a[2][1]-a[2][0]<1e-6 || b[2][1]-b[2][0]<1e-6) {
+            static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+            if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<4 {eprintln!("SOURCE_UNRESOLVED_PAIR a={a:?} b={b:?} h={h:?} ea={ea:?} eb={eb:?} eh={eh:?}");}
+        }
         let choice=match (widest(a),if a!=b {widest(b)} else {None}) {
             (Some(x),Some(y)) if y.1>x.1 =>Some((y.0,true)),
             (Some(x),_)=>Some((x.0,false)),
@@ -407,4 +470,30 @@ mod tests {
         assert!(!regular(columns, singular).unwrap());
         assert!(coordinate_scale(projected(columns, singular).unwrap()).is_none());
     }
+    #[test]
+    fn one_metric_spd_uses_all_interval_principal_minors_without_diagonal_dominance(){
+        let identity=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let c=[[1.,2.,0.],[2.,5.,0.],[0.,0.,1.]].map(|v|v.map(I::point));
+        assert!(margin(c,identity).unwrap()<0.);assert!(symmetric_positive(c,identity).unwrap());
+        let narrow=c.map(|v|v.map(|x|I::new(x.lo-1e-6,x.hi+1e-6).unwrap()));
+        assert!(symmetric_positive(narrow,identity).unwrap());
+        let mut wide=c;wide[0][1]=I::new(1.,3.).unwrap();wide[1][0]=wide[0][1];
+        assert!(!symmetric_positive(wide,identity).unwrap());
+        for bad in [[[1.,2.,0.],[2.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,0.]]] {
+            assert!(!symmetric_positive(bad.map(|v|v.map(I::point)),identity).unwrap());
+        }
+    }
+
+    #[test]
+    fn whole_interval_neumann_bound_proves_invertibility_without_pointwise_or_determinant_credit(){
+        let rotation=[[-1./3.,2./3.,2./3.],[2./3.,-1./3.,2./3.],[2./3.,2./3.,-1./3.]];
+        let c=rotation.map(|col|col.map(|v|I::new(v-0.3,v+0.3).unwrap()));
+        let det=iv::dot_tight(c[0],iv::cross(c[1],c[2]).unwrap()).unwrap();
+        assert!(det.lo<=0. && det.hi>=0.,"{det:?}");
+        assert!(uniformly_invertible(c).unwrap());
+        let wide=rotation.map(|col|col.map(|v|I::new(v-0.6,v+0.6).unwrap()));
+        assert!(!uniformly_invertible(wide).unwrap());
+        let singular=[[I::point(1.);3];3];assert!(!uniformly_invertible(singular).unwrap());
+    }
+
 }

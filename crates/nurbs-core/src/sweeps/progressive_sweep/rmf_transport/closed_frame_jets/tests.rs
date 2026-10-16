@@ -238,3 +238,95 @@ fn max_refuse(r: &OriginalRmfTransportReport, path: &Curve, twist: &Curve) {
     assert_eq!(p.status, Status::Unresolved);
     assert!(p.longitudinal.is_none() && p.transverse.is_none() && p.binormal.is_none());
 }
+
+use crate as nurbs;
+#[allow(dead_code)]
+#[path = "../../../../../tests/support/arc_bishop_source.rs"]
+mod geometric_clock_case;
+#[test]
+fn geometric_arc_closure_matches_independent_ode_and_station_derivatives_through_second_order() {
+    let path = geometric_clock_case::path(true);
+    let base = geometric_clock_case::path(false);
+    let (normals, lengths, angle) = oracle(&path);
+    let (_, base_lengths, base_angle) = oracle(&base);
+    let total = *lengths.last().unwrap();
+    assert!((total - base_lengths.last().unwrap()).abs() < 1e-8);
+    assert!((angle - base_angle).abs() < 1e-8 && angle.abs() > 0.05);
+    for i in 0..=16 {
+        let t = i as f64 / 16.;
+        let a = jets(&path, t)[0];
+        let b = jets(&base, 2. * t / (1. + t))[0];
+        for k in 0..3 {
+            assert!((a[k] - b[k]).abs() < 1e-12);
+        }
+    }
+    let transport =
+        certify_original_arc_rmf_transport(&path, [0., 0., 1.], 1024, 100000, 1000000, true)
+            .unwrap();
+    assert_eq!(transport.status, Status::Certified);
+    contains(transport.original_arc_length.unwrap(), total);
+    contains(transport.closing_angle.unwrap(), angle);
+    let twist = crate::progressive_sweep::constant_vector_law([0.; 3]).unwrap();
+    let mut ends = Vec::new();
+    for i in 0..=8 {
+        let t = i as f64 / 8.;
+        let range = [(t - 0.0001).max(0.), (t + 0.0001).min(1.)];
+        let proof = closed_frame_jets(&transport, &path, &twist, range, 10000).unwrap();
+        assert_eq!(proof.status, Status::Certified, "{proof:?}");
+        let (w, wd, tangent, speed, speed_d) = fields(&path, t);
+        let phase = angle * lengths[i * 1024] / total;
+        let raw = normals[i * 1024];
+        let n = add(mul(raw, phase.cos()), mul(cross(tangent, raw), phase.sin()));
+        let td = cross(w, tangent);
+        let tdd = add(cross(wd, tangent), cross(w, td));
+        let rate = angle * speed / total;
+        let rate_d = angle * speed_d / total;
+        let spin = add(w, mul(tangent, rate));
+        let spin_d = add(add(wd, mul(tangent, rate_d)), mul(td, rate));
+        let nd = cross(spin, n);
+        let ndd = add(cross(spin_d, n), cross(spin, nd));
+        let b = cross(tangent, n);
+        let b1 = add(cross(td, n), cross(tangent, nd));
+        let b2 = add(
+            add(cross(tdd, n), mul(cross(td, nd), 2.)),
+            cross(tangent, ndd),
+        );
+        let values = [[tangent, td, tdd], [n, nd, ndd], [b, b1, b2]];
+        for (report, v) in [
+            proof.longitudinal.as_ref().unwrap(),
+            proof.transverse.as_ref().unwrap(),
+            proof.binormal.as_ref().unwrap(),
+        ]
+        .into_iter()
+        .zip(values)
+        {
+            for k in 0..3 {
+                contains(report.value[k], v[0][k]);
+                contains(report.first[k], v[1][k]);
+                contains(report.second[k], v[2][k]);
+            }
+        }
+        if i == 0 || i == 8 {
+            let first = total / speed;
+            let second = -total * total * speed_d / (speed * speed * speed);
+            ends.push(values.map(|v| {
+                [
+                    v[0],
+                    mul(v[1], first),
+                    add(mul(v[2], first * first), mul(v[1], second)),
+                ]
+            }));
+        }
+    }
+    for axis in 0..3 {
+        for order in 0..3 {
+            for k in 0..3 {
+                assert!(
+                    (ends[0][axis][order][k] - ends[1][axis][order][k]).abs() < 1e-6,
+                    "axis={axis} derivative={order} coordinate={k}"
+                );
+            }
+        }
+    }
+    assert!(!transport.continuous_bound && !transport.solid_certified);
+}

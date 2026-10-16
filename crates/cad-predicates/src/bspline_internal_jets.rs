@@ -1,9 +1,9 @@
-//! Exact Cartesian one-sided C1..C4 jets at original B-spline knots.
+//! Exact Cartesian one-sided C0..C4 jets at original B-spline knots.
 //! Formal de Boor series use rational expansions of original source leaves.
 //! No floating-point knot insertion, derivative evaluation or sampling.
 use crate::{
-    exact_inputs, Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
-    InputError, LeafRef, PredicateContext, Reason, Sign,
+    Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion, InputError,
+    LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
 #[derive(Clone)]
 struct Rational {
@@ -11,6 +11,23 @@ struct Rational {
     d: Expansion,
 }
 impl Rational {
+    fn reduced(n: Expansion, d: Expansion, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+        if d.sign() != Sign::Positive {
+            return Err(Reason::MissingProof);
+        }
+        if n.sign() == Sign::Zero {
+            ctx.charge(1)?;
+            return Ok(Self::zero());
+        }
+        // The numerator and denominator are homogeneous scalar data. Exact
+        // common integer reduction and a common binary power preserve n/d;
+        // they prevent artificial overflow/underflow from unreduced fractions.
+        let mut pair = [n, d];
+        Expansion::reduce_projective(&mut pair, ctx)?;
+        Expansion::normalize_common(&mut pair, ctx)?;
+        let [n, d] = pair;
+        Ok(Self { n, d })
+    }
     fn scalar(n: Expansion) -> Self {
         Self {
             n,
@@ -22,15 +39,13 @@ impl Rational {
     }
     fn add(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if self.d.sub(&b.d, ctx)?.sign() == Sign::Zero {
-            return Ok(Self {
-                n: self.n.add(&b.n, ctx)?,
-                d: self.d.clone(),
-            });
+            return Self::reduced(self.n.add(&b.n, ctx)?, self.d.clone(), ctx);
         }
-        Ok(Self {
-            n: self.n.mul(&b.d, ctx)?.add(&b.n.mul(&self.d, ctx)?, ctx)?,
-            d: self.d.mul(&b.d, ctx)?,
-        })
+        Self::reduced(
+            self.n.mul(&b.d, ctx)?.add(&b.n.mul(&self.d, ctx)?, ctx)?,
+            self.d.mul(&b.d, ctx)?,
+            ctx,
+        )
     }
     fn sub(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         self.add(
@@ -46,10 +61,7 @@ impl Rational {
             ctx.charge(1)?;
             return Ok(Self::zero());
         }
-        Ok(Self {
-            n: self.n.mul(&b.n, ctx)?,
-            d: self.d.mul(&b.d, ctx)?,
-        })
+        Self::reduced(self.n.mul(&b.n, ctx)?, self.d.mul(&b.d, ctx)?, ctx)
     }
     fn div_positive(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if b.n.sign() != Sign::Positive || b.d.sign() != Sign::Positive {
@@ -60,15 +72,9 @@ impl Rational {
             return Ok(Self::zero());
         }
         if self.d.sub(&b.d, ctx)?.sign() == Sign::Zero {
-            return Ok(Self {
-                n: self.n.clone(),
-                d: b.n.clone(),
-            });
+            return Self::reduced(self.n.clone(), b.n.clone(), ctx);
         }
-        Ok(Self {
-            n: self.n.mul(&b.d, ctx)?,
-            d: self.d.mul(&b.n, ctx)?,
-        })
+        Self::reduced(self.n.mul(&b.d, ctx)?, self.d.mul(&b.n, ctx)?, ctx)
     }
     fn equal(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
         Ok(self
@@ -89,6 +95,54 @@ fn series(
     order: usize,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Series, Reason> {
+    let n = (x.len() - u.len()) / 4;
+    if n == p + 1 {
+        let at_start = t.sub(&u[p], ctx)?.sign() == Sign::Zero;
+        let at_end = t.sub(&u[n], ctx)?.sign() == Sign::Zero;
+        let mut clamped = true;
+        for k in 0..=p {
+            clamped &= u[k].sub(&u[p], ctx)?.sign() == Sign::Zero;
+        }
+        for k in n..u.len() {
+            clamped &= u[k].sub(&u[n], ctx)?.sign() == Sign::Zero;
+        }
+        if clamped && (at_start || at_end) {
+            let width = Rational::scalar(u[n].sub(&u[p], ctx)?);
+            let mut rows = (0..n)
+                .map(|i| -> Result<[Rational; 4], Reason> {
+                    Ok([
+                        Rational::scalar(x[4 * i].mul(&x[4 * i + 3], ctx)?),
+                        Rational::scalar(x[4 * i + 1].mul(&x[4 * i + 3], ctx)?),
+                        Rational::scalar(x[4 * i + 2].mul(&x[4 * i + 3], ctx)?),
+                        Rational::scalar(x[4 * i + 3].clone()),
+                    ])
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let mut output = (0..=order)
+                .map(|_| std::array::from_fn(|_| Rational::zero()))
+                .collect::<Series>();
+            let mut factor = Rational::scalar(Expansion::scalar(1.));
+            for q in 0..=order.min(p) {
+                let index = if at_start { 0 } else { rows.len() - 1 };
+                for k in 0..4 {
+                    output[q][k] = rows[index][k].mul(&factor, ctx)?;
+                }
+                if q < order.min(p) {
+                    for i in 0..rows.len() - 1 {
+                        for k in 0..4 {
+                            rows[i][k] = rows[i + 1][k].sub(&rows[i][k], ctx)?;
+                        }
+                    }
+                    rows.pop();
+                    factor = factor
+                        .mul(&Rational::scalar(Expansion::scalar((p - q) as f64)), ctx)?
+                        .div_positive(&Rational::scalar(Expansion::scalar((q + 1) as f64)), ctx)?
+                        .div_positive(&width, ctx)?;
+                }
+            }
+            return Ok(output);
+        }
+    }
     let mut rows = Vec::with_capacity(p + 1);
     for j in 0..=p {
         let i = span - p + j;
@@ -160,7 +214,7 @@ fn bspline_jet_identity(
     endpoints: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(1..=4).contains(&order)
+        || order > 4
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {
@@ -236,7 +290,7 @@ fn bspline_jet_identity(
             // the Cartesian quotient inherits those jets for every authored
             // control net; no endpoint expansion or rounded proxy is needed.
             // Knot comparisons and source validation remain charged to ctx.
-            if degree.saturating_sub(right - span) >= order {
+            if right - span <= degree && degree - (right - span) >= order {
                 span = right;
                 continue;
             }
@@ -261,7 +315,7 @@ fn bspline_jet_identity(
     })
 }
 
-/// Exact Cartesian C1..C4 at every original internal knot.
+/// Exact Cartesian C0..C4 at every original internal knot.
 pub fn rational_bspline_internal_jet_identity(
     ctx: &mut PredicateContext<'_>,
     controls: &[[LeafRef; 4]],
@@ -305,6 +359,22 @@ fn direction_equal(
         Sign::Negative => -1.,
         _ => return Err(Reason::MissingProof),
     };
+    if order == 0 {
+        // Positive common velocity ratio proves the SAME unit tangent value.
+        // Position continuity and speed on entire spans remain owner duties.
+        let c = Rational::scalar(Expansion::scalar(sign));
+        let lv = l[1][axis].mul(&c, ctx)?;
+        let rv = r[1][axis].mul(&c, ctx)?;
+        if rv.n.sign() != Sign::Positive || rv.d.sign() != Sign::Positive {
+            return Err(Reason::MissingProof);
+        }
+        for k in 0..3 {
+            if !l[1][k].mul(&rv, ctx)?.equal(&r[1][k].mul(&lv, ctx)?, ctx)? {
+                return Ok(false);
+            }
+        }
+        return Ok(true);
+    }
     let chart = |x: &[[Rational; 3]],
                  ctx: &mut PredicateContext<'_>|
      -> Result<(Vec<(Rational, Rational, Rational)>, Rational), Reason> {
@@ -373,7 +443,7 @@ fn direction_equal(
     Ok(true)
 }
 
-/// Exact C1/C2 of a nonzero unit-direction field at original internal knots
+/// Exact C0/C1/C2 of a nonzero unit-direction field at original internal knots
 /// or the active endpoints. Arc-length chart jets use positive speed ratios.
 /// This does not prove whole-domain regularity, position continuity, surface
 /// smoothness or closed transport holonomy; those remain caller premises.
@@ -387,7 +457,7 @@ pub fn rational_bspline_direction_jet_identity(
     arc_length: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(1..=2).contains(&order)
+        || order > 2
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {
@@ -578,5 +648,31 @@ mod direction_tests {
                 BezierIdentity::Different
             );
         }
+    }
+    #[test]
+    fn zero_direction_order_checks_positive_orientation_but_supplies_no_position_credit() {
+        let u = [0., 0., 0., 0.5, 0.5, 0.5, 1., 1., 1.];
+        let mut p = [
+            [0., 0., 0., 1.],
+            [0.5, 0., 0., 2.],
+            [1., 0., 0., 4.],
+            [1_f64.next_up(), 0., 0., 0.3],
+            [1.5, 0., 0., 0.7],
+            [2., 0., 0., 1.],
+        ];
+        let full = audit(&p, &u, 2, 0, false, true, 1000000);
+        assert_eq!(full.outcome, BezierIdentity::Equal);
+        for budget in [0, full.work_used - 1] {
+            assert_ne!(
+                audit(&p, &u, 2, 0, false, true, budget).outcome,
+                BezierIdentity::Equal
+            );
+        }
+        p[4][0] = 0.5;
+        p[5][0] = 0.;
+        assert_ne!(
+            audit(&p, &u, 2, 0, false, true, 1000000).outcome,
+            BezierIdentity::Equal
+        );
     }
 }

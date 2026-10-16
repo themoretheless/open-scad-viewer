@@ -115,9 +115,24 @@ impl MultiSweep<'_> {
             out.reason = Some("original-boundary-closed-motion-mode-unproved");
             return Ok(out);
         }
-        // Full translation/law Ck is stronger than merely closing frame
-        // directions. Every attempted exact proof shares this one ledger.
-        for law in [s.path, s.scale, s.twist]
+        // Translation is evaluated in the selected station coordinate.
+        // In arc units, position closure and C^(k-1) forward unit tangent
+        // prove Ck translation; raw speed derivatives need not be periodic.
+        // Scalar/affine station laws still require their original Cartesian Ck.
+        let mut translation=periodic_law(s.path,limits.order,&mut out.exact_work,limits.exact_work)?;
+        if !translation && s.options.spacing!=Spacing::Parameter {
+            translation=true;
+            for endpoints in [false,true] {
+                let position=super::endpoint_jets::certify_position(s.path,endpoints,limits.exact_work-out.exact_work)?;
+                out.exact_work+=position.exact_work;
+                if !position.certified {translation=false;break;}
+                let tangent=super::endpoint_jets::certify_direction(s.path,limits.order-1,endpoints,true,limits.exact_work-out.exact_work)?;
+                out.exact_work+=tangent.exact_work;
+                if !tangent.certified {translation=false;break;}
+            }
+        }
+        if !translation {out.reason=Some("original-boundary-periodic-law-jets-unproved");return Ok(out);}
+        for law in [s.scale, s.twist]
             .into_iter()
             .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c]))
         {

@@ -84,6 +84,19 @@ impl ArcMap {
                     .add(I::new(-error.hi, error.hi)?)?
                     .intersect(length.lo.max(0.), length.hi)?;
             }
+            // Fixed coarse length boxes leave an inverse-clock uncertainty
+            // floor: shrinking station/UV boxes then cannot tighten DF.
+            // Refine the ORIGINAL integral enclosure under the same ledger.
+            // These thresholds only propose subdivision, never supply proof.
+            // A tiny cell crossing an original speed jump keeps its honest
+            // hull integral; relative accuracy there need not be attainable.
+            if length.hi-length.lo > length.lo*2_f64.powi(-16)
+                && domain[1]-domain[0] > 2_f64.powi(-24) {
+                let mid=crate::distance_bounds::midpoint(domain[0],domain[1]);
+                if !(domain[0]<mid && mid<domain[1]) {return Ok(None);}
+                pending.push([mid,domain[1]]);pending.push([domain[0],mid]);
+                continue;
+            }
             let tangent = iv::div(v, speed)?;
             let tangent_rate = iv::div(iv::sub(acc, iv::scale(tangent, speed_rate)?)?, speed)?;
             cells.push(Cell {

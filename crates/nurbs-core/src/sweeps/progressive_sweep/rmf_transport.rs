@@ -105,6 +105,7 @@ pub fn certify_original_rmf_transport(
         max_exact_work,
         closed,
         None,
+        false,
     )
 }
 
@@ -125,7 +126,23 @@ pub(crate) fn certify_original_rmf_transport_shared(
         max_work as u64,
         closed,
         Some(max_work),
+        false,
     )
+}
+
+/// Original piecewise positive-speed path with exact C0 position and common
+/// forward tangent values. Parameter speeds may jump. The Bishop ODE is
+/// integrated in the original traversal on each span; bounded measurable
+/// angular fields and continuous tangent values preserve the normal globally.
+/// Arc phase jets and all source/retained Gk remain separate obligations.
+pub fn certify_original_arc_rmf_transport(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,true)
+}
+pub(super) fn certify_original_rmf_transport_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,spacing!=super::Spacing::Parameter)
+}
+pub(crate) fn certify_original_rmf_transport_shared_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_work:usize,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_work,max_work as u64,closed,Some(max_work),spacing!=super::Spacing::Parameter)
 }
 
 fn certify_original_rmf_transport_impl(
@@ -136,6 +153,7 @@ fn certify_original_rmf_transport_impl(
     max_exact_work: u64,
     closed: bool,
     shared_work: Option<usize>,
+    geometric_arc: bool,
 ) -> Result<OriginalRmfTransportReport> {
     path.validate()?;
     check(
@@ -160,17 +178,25 @@ fn certify_original_rmf_transport_impl(
         continuous_bound: false,
         solid_certified: false,
     };
-    let knots = endpoint_jets::certify_knots(path, 1, max_exact_work)?;
-    out.exact_work = knots.exact_work;
-    if !knots.certified {
-        return Ok(out);
+    // Keep the existing cheaper sufficient C1 route and retain all failed
+    // work before geometric fallback under the SAME exact ledger.
+    let knots = endpoint_jets::certify_knots(path,1,max_exact_work)?;
+    out.exact_work=knots.exact_work;
+    let mut cartesian=knots.certified;
+    if cartesian && closed {
+        let seam=endpoint_jets::certify(path,1,max_exact_work-out.exact_work)?;
+        out.exact_work+=seam.exact_work;cartesian=seam.certified;
+        if !cartesian {out.reason=Some("rmf-original-closed-C1-unproved");}
     }
-    if closed {
-        let seam = endpoint_jets::certify(path, 1, max_exact_work - out.exact_work)?;
-        out.exact_work += seam.exact_work;
-        if !seam.certified {
-            out.reason = Some("rmf-original-closed-C1-unproved");
-            return Ok(out);
+    if !cartesian {
+        if !geometric_arc {return Ok(out);}
+        for endpoints in [false,true].into_iter().filter(|e|!*e||closed) {
+            let position=endpoint_jets::certify_position(path,endpoints,max_exact_work-out.exact_work)?;
+            out.exact_work+=position.exact_work;
+            if !position.certified {out.reason=Some("rmf-original-position-continuity-unproved");return Ok(out);}
+            let tangent=endpoint_jets::certify_direction(path,0,endpoints,true,max_exact_work-out.exact_work)?;
+            out.exact_work+=tangent.exact_work;
+            if !tangent.certified {out.reason=Some("rmf-original-forward-tangent-unproved");return Ok(out);}
         }
     }
     let max_cells = match shared_work {
@@ -282,7 +308,7 @@ fn certify_original_rmf_transport_impl(
         let angle =
             trigonometric_certificate::certify_atan2([sine.lo, sine.hi], [cosine.lo, cosine.hi])?
                 .unwrap_or_else(|| {
-                    // The proved original C1 closure identifies the endpoint
+                    // The proved original common tangent identifies the endpoint
                     // tangents. Bishop transport preserves the unit normal
                     // perpendicular to that tangent, so the true sine/cosine
                     // pair lies on the unit circle and atan2 is defined.
@@ -538,3 +564,6 @@ pub(super) fn relative_values(
 #[cfg(test)]
 #[path="tests/rmf_transport.rs"]
 pub(super) mod tests;
+
+#[cfg(test)]
+mod arc_clock_tests;

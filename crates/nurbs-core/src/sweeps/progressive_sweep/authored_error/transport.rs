@@ -409,8 +409,8 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let report=if let Some(shared)=shared_rmf {shared} else {
         let remaining=max_cells-out.cells;
         // Exact coefficient work and interval cells share this owner.
-        owned_transport=rmf_transport::certify_original_rmf_transport_shared(sweep.path,sweep.options.normal,
-            rmf_steps,remaining,closed)?;
+        owned_transport=rmf_transport::certify_original_rmf_transport_shared_for_spacing(sweep.path,sweep.options.normal,
+            rmf_steps,remaining,closed,sweep.options.spacing)?;
         out.cells+=owned_transport.cells+owned_transport.exact_work as usize;
         &owned_transport
         };

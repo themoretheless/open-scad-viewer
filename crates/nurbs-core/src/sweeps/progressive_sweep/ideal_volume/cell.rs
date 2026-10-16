@@ -8,12 +8,12 @@ pub(super) enum Bound {
     Unavailable,
     Unsupported(&'static str),
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct Enclosure {
     pub(crate) value: V3,
     pub(crate) columns: [V3; 3],
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum Enclosed {
     Value(Enclosure),
     Unavailable(Option<usize>),
@@ -101,7 +101,13 @@ impl Context<'_, '_> {
         };
         if let Some(cache) = &self.poses {
             if let Some(pose) = cache.borrow().get(&b[2].map(f64::to_bits)) {
-                return Ok(Enclosed::Value(pose.enclose(q, qt)?));
+                let e=pose.enclose(q,qt)?;
+            #[cfg(test)]
+            if std::env::var_os("OSV_ARC_ATLAS_DIAG").is_some() && b[2][1]-b[2][0]<1e-5 {
+                static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+                if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<12 {eprintln!("SOURCE_ATLAS_DIAG box={b:?} e={e:?}");}
+            }
+            return Ok(Enclosed::Value(e));
             }
         }
         let phase = if let Some(map) = &self.arc {
@@ -216,6 +222,11 @@ impl Context<'_, '_> {
             ));
         };
         if f.status != Status::Certified {
+            #[cfg(test)]
+            if std::env::var_os("OSV_ARC_ATLAS_DIAG").is_some() && b[2][1]-b[2][0]<1e-6 {
+                static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+                if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<4 {eprintln!("SOURCE_FRAME_UNAVAILABLE box={b:?} traversal={:?} reason={:?}",phase.traversal,f.reason);}
+            }
             out.cells += f.cells;
             return Ok(Enclosed::Unavailable(Some(2)));
         }

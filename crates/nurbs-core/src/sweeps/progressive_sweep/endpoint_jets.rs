@@ -291,7 +291,7 @@ mod tests {
 
 /// Original direction chart jets; speed/nonparallel premises are separate.
 pub(super) fn certify_direction(curve:&Curve,order:usize,endpoints:bool,arc_length:bool,max_work:u64)->Result<Report>{
- check(matches!(order,1|2)&&max_work<=1000000,"Invalid direction jet limits")?;
+ check(order<=2&&max_work<=1000000,"Invalid direction jet limits")?;
  curve.validate()?;
  if curve.periodic{return Ok(Report{certified:false,exact_work:0});}
  check(curve.control_points.iter().all(|p|p.len()==3),"Direction jets require XYZ source")?;
@@ -304,4 +304,19 @@ pub(super) fn certify_direction(curve:&Curve,order:usize,endpoints:bool,arc_leng
  let tol=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tol,Limits{max_work,..Limits::default()},None);
  let proof=rational_bspline_direction_jet_identity(&mut ctx,&controls,&knots,curve.degree,order,endpoints,arc_length).map_err(|e|crate::input(e.to_string()))?;
  Ok(Report{certified:proof.outcome==BezierIdentity::Equal,exact_work:proof.work_used})
+}
+
+/// Exact C0 of the ORIGINAL active basis, including nonclamped endpoints. Direction identity alone does not supply this.
+pub(super) fn certify_position(curve:&Curve,endpoints:bool,max_work:u64)->Result<Report>{
+    curve.validate()?;
+    check(max_work<=1000000 && curve.control_points.iter().all(|p|p.len()==3),"Invalid original position identity")?;
+    use cad_predicates::{AuthoredScalar,BezierIdentity,Limits,PredicateContext,SourceArena,ToleranceContext,rational_bspline_internal_jet_identity,rational_bspline_cartesian_endpoint_jet_identity};
+    let mut values=curve.control_points.iter().zip(&curve.weights).flat_map(|(p,w)|[p[0],p[1],p[2],*w]).collect::<Vec<_>>();
+    let start=values.len();values.extend_from_slice(&curve.knots);
+    let source=SourceArena::authored("original-bishop-position-identity",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).map_err(|e|crate::input(e.to_string()))?;
+    let controls=(0..curve.control_points.len()).map(|i|std::array::from_fn(|j|source.leaf(i*4+j).unwrap())).collect::<Vec<_>>();
+    let knots=(0..curve.knots.len()).map(|i|source.leaf(start+i).unwrap()).collect::<Vec<_>>();
+    let tol=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tol,Limits{max_work,..Limits::default()},None);
+    let proof=if endpoints {rational_bspline_cartesian_endpoint_jet_identity(&mut ctx,&controls,&knots,curve.degree,0)}else{rational_bspline_internal_jet_identity(&mut ctx,&controls,&knots,curve.degree,0)}.map_err(|e|crate::input(e.to_string()))?;
+    Ok(Report{certified:proof.outcome==BezierIdentity::Equal,exact_work:proof.work_used})
 }

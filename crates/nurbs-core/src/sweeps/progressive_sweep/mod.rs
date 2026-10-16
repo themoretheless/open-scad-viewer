@@ -24,7 +24,7 @@ mod original_boundary_smoothness;
 pub use original_boundary_smoothness::{OriginalBoundarySmoothnessLimits,OriginalBoundarySmoothnessReport};
 mod endpoint_jets;
 mod rmf_transport;
-pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesReport,RmfNormalCell,certify_original_rmf_transport,certify_original_rmf_section_images};
+pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesReport,RmfNormalCell,certify_original_arc_rmf_transport,certify_original_rmf_transport,certify_original_rmf_section_images};
 pub use original_smoothness::{OriginalFrameSmoothnessReport,ClosedAuthoredFrameSmoothnessReport,ClosedPathFrameSmoothnessReport};
 pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,RetainedDecompositionReport,RetainedDecompositionSmoothnessReport};
 mod endpoint_surface;

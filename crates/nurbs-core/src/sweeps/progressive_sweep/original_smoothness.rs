@@ -315,9 +315,10 @@ impl Sweep<'_> {
             // jets and periodic correction rates give a periodic Ck solution.
             // In parameter mode the speed jets must also match: direction-only
             // identities do not prove periodic derivatives of alpha(t).
-            // Keep the same original Cartesian smoothness owner for both
-            // policies here; geometric-only clock/seam joins remain unproved.
-            if !path_ok {
+            // In original arc units the exact Ck unit-tangent joins already
+            // prove the periodic angular field. Raw speed factors cancel in
+            // arc composition; parameter-mode correction still needs them.
+            if !path_ok && self.options.spacing==Spacing::Parameter {
                 out.reason=Some("closed-bishop-source-cartesian-jets-unproved");return Ok(out);
             }
             let regular=crate::curve_regularity::inspect(self.path,max_cells-out.cells)?;

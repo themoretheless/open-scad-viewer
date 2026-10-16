@@ -203,8 +203,8 @@ impl MultiSweep<'_> {
                     &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
                     "Shared RMF certificate requires identical original source and policy")?;
                 let remaining=cell_limit-cells;
-                let proof=rmf_transport::certify_original_rmf_transport_shared(first.path,first.options.normal,
-                    steps,remaining,path_is_closed(first.path)?)?;
+                let proof=rmf_transport::certify_original_rmf_transport_shared_for_spacing(first.path,first.options.normal,
+                    steps,remaining,path_is_closed(first.path)?,first.options.spacing)?;
                 cells+=proof.cells+proof.exact_work as usize;Some(proof)
         }else{None};
         let mut products=0;

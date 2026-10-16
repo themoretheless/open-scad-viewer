@@ -196,13 +196,14 @@ impl MultiSweep<'_> {
             && s.options.orientation == Orientation::RotationMinimizing
         {
             if let Some([steps, _, _]) = s.spatial_rmf_error_limits {
-                let report = super::rmf_transport::certify_original_rmf_transport(
+                let report = super::rmf_transport::certify_original_rmf_transport_for_spacing(
                     s.path,
                     s.options.normal,
                     steps,
                     (max_cells - out.cells).min(100000),
                     max_exact_work - out.exact_work,
                     closed,
+                    s.options.spacing,
                 )?;
                 out.cells += report.cells;
                 out.exact_work += report.exact_work;

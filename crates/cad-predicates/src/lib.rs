@@ -40,7 +40,7 @@ pub use construction::*;
 pub use construction3::*;
 pub use context::*;
 
-pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-13";
+pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-14";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sign {
