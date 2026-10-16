@@ -14,55 +14,49 @@ qualification code, the private WASM runtime harness and its transport codec.
 `validate.py` runs 15 fresh gates; no preceding lower-source gate is reused.
 Do not infer qualification completion until summary and logs are terminal.
 
-Live jobs at handoff (poll the same sessions; never restart on observation timeout):
+## Completed checkpoint
 
-- Full native qualifier session **95348**; external status log
-  `/private/tmp/osv-source-fibered-full-native-20261016.log`.
-  Internal logs and incremental `summary.json` are in this directory.
-  At latest observation, domain/owner audits, predicates **64**, and NURBS
-  **1608** passed; original-volume matrices are active. New BRep body tests
-  **6** observed passed in the active full suite. Full BRep is still active.
-- Private release WASM build session **9607**; log
-  `/private/tmp/osv-source-fibered-private-wasm-build-20261016.log`.
-  Target `/private/tmp/osv-affine-caps-target-20261016` (new cache in this run).
-  Command: pinned nightly locked geometry-wasm release wasm32 build.
-  Build completed exit0. Preserved binary:
-  `/private/tmp/osv-fibered-source-artifact-20261016/geometry_wasm.wasm`,
-  **18,190,172 bytes**, SHA256
-  `614ae302e233bdb23004c7b0bfc2efde43db0ff5dc40b451b017dd4e4f74c0bb`.
-  Runtime session **57007** terminal0: all four new original source/physical-cap
-  G2 fixtures passed construct/audit/STEP/refusal; real G1-only seam and explicit
-  C0 passed. The same new binary also passed four original sphere and six
-  rational annular-cap runtime cases, including true sharp C0: **14 total**. `wasm-build.json` and `wasm-runtime-report.json` are written.
-  Run `finish.py` ONLY after all native gates finish: it checks source/log hashes
-  and byte-for-byte final fresh fixture correspondence before final runtime credit.
-- Earlier exploratory closed-owner regression session **85034**, terminal0: **32 passed**; log
-  `/private/tmp/osv-source-fibered-closed-regression-20261016.log`.
-  All shared exact-affine arithmetic was already final when this binary built;
-  the later edits affected only the new fibered source owner/binder/transport.
-  This exploratory run is not substituted for the final full BRep gate.
+All jobs are terminal; **do not restart the completed qualifier**.
+`summary.json`: **3361 passed, 4 ignored, 0 failed**, all **15** fresh gates.
+Native source/log guards passed. No lower-source gate was reused.
+Full BRep: 1120 passed/3 ignored; separate AAG:44; NURBS:1608;
+predicates:64; original-volume matrices:21; regularity/G2:11; CAD STEP:106;
+bridge:340/1 ignored; native JSON/STEP:47.
 
-Completed exploratory checks: native JSON **3**, STEP tests **4** (four positive
-fixtures plus adversarial re-audit/budget cases). Independent OCCT **4/4**:
-valid positive-volume bodies, exact expected topology, every edge incident to
-two faces, 130/130/130/370 original boundary samples. Maximum numerical volume
-error **7.105427357601002e-14** mm3. Artifacts:
-`/private/tmp/osv-source-fibered-step-inspect-20261016/` and
-`/private/tmp/osv-source-fibered-occt-report-20261016.json`.
-The final qualifier regenerates the same four fixtures and reruns OCCT freshly.
-Keep earlier failed STEP attempts visible as development evidence, not passed gates.
+Independent OCCT: **14** specified cases: four new original-fibered disk bodies,
+four original implicit spheres and six original rational annular-cap bodies.
+The new disk bodies are valid, have positive volume and exactly expected
+incidence/topology. Original boundary-point counts:130/130/130/370; maximum
+numerical volume discrepancy: **7.105427357601002e-14** mm3. This is supplementary
+numerical evidence, not the native continuous theorem.
 
-## Runtime and preservation
+Private release WASM was freshly built and separately preserved:
+`/private/tmp/osv-fibered-source-artifact-20261016/geometry_wasm.wasm`,
+**18,190,172 bytes**, SHA256
+`614ae302e233bdb23004c7b0bfc2efde43db0ff5dc40b451b017dd4e4f74c0bb`.
+The same binary passed **14** runtime cases (new fibers:4, spheres:4, rational
+annular caps:6), including construct, unchanged supplied-model audit, STEP
+re-audit, short-budget refusal and wrong-model/source refusal. Real G1-only
+seam, explicit C0 and true sharp cap C0 remain distinct. Node26 private ABI
+qualification is not public package, Node20-floor, browser or UI qualification.
 
-The private harness tests construction, supplied-model audit, STEP re-audit,
-short smoothness-budget refusal, wrong retained weights, true G1-only seam and
-explicit C0. It consumes `<fixtures>/<case>/source.json`.
-Initially it may use the completed exploratory fixture directory, but the final
-fresh native inputs must match byte-for-byte before qualification is reported.
-Do not overwrite previously preserved sphere or cap WASM artifacts.
-No public WASM, fingerprint, browser/Rush/UI, semantic G1 or CI credit follows.
-Force-add ignored evidence JSON/logs/STEP after terminal checks and guards pass,
-commit receipts, then preserve the local ref in primary using local-only fetch.
+`finish.py` checked final native source/log hashes, original independent OCCT
+reports, binary/build/runtime hashes and exact fresh-native/runtime fixture
+byte correspondence. `wasm-build.json`, `wasm-runtime-inputs.json` and runtime
+reports bind these results. The frozen production source remains `a24cc8934`;
+subsequent commits only preserve receipts. Earlier failed STEP development
+attempts remain under `exploratory/` with zero qualification credit.
+
+External completed session/log references (historical, not active):
+- Native qualifier95348: `/private/tmp/osv-source-fibered-full-native-20261016.log`.
+- Private release build9607: `/private/tmp/osv-source-fibered-private-wasm-build-20261016.log`.
+- New runtime57007; sphere runtime42590; rational-cap runtime64581: all terminal0.
+- Exploratory closed-owner regression85034:32 passed,1119.64seconds; retained
+  for development evidence, not substituted for the fresh full BRep gate.
+
+No public WASM/fingerprint/browser/Rush/UI/semantic-G1/main/CI credit follows.
+Preserve final receipts in the branch and the primary local ref. Do not change
+the user's dirty primary checkout or archive any of the frozen worktrees.
 
 ## Remaining full goal
 

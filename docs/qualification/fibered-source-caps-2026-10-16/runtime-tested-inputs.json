@@ -79,8 +79,10 @@
       "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176"
     }
   ],
-  "frozenFullNativeQualificationPending": true,
-  "finalNativeFixtureCorrespondencePending": true,
+  "frozenFullNativeQualificationPending": false,
+  "finalNativeFixtureCorrespondencePending": false,
   "publicPackageQualified": false,
-  "fullGoalComplete": false
+  "fullGoalComplete": false,
+  "finalNativeFixtureCorrespondenceVerified": true,
+  "finalReceipt": "wasm-runtime-inputs.json"
 }
