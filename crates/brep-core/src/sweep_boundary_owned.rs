@@ -437,3 +437,6 @@ fn construct_with_ideal_impl(
         Attempt::Refused(Box::new(body.report))
     })
 }
+
+mod closed;
+pub use closed::{ClosedAttempt, ClosedBody, ClosedLimits, ClosedReport, MaterialLimits, MaterialReport, construct_closed_with_ideal_atlas};

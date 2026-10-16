@@ -27,7 +27,14 @@ fn caps(v: &Value) -> Result<Vec<LoftCap>> {
         })
         .collect()
 }
+mod closed;
 pub fn construct(v: Value) -> Result<Value> {
+    construct_impl(v, false)
+}
+pub fn construct_closed(v: Value) -> Result<Value> {
+    construct_impl(v, true)
+}
+fn construct_impl(v: Value, closed: bool) -> Result<Value> {
     let s = field::<Value>(&v, "source")?;
     let profiles: Vec<Curve> = field(&s, "profiles")?;
     let path = field(&s, "path")?;
@@ -111,8 +118,6 @@ pub fn construct(v: Value) -> Result<Value> {
             field(&s, "error_max_products")?,
         )?;
     }
-    let source_caps = caps(&v["sourceCaps"])?;
-    let retained_caps = caps(&v["retainedCaps"])?;
     let limits = field::<Value>(&v, "limits")?;
     let ideal = optional::<Value>(&v, "idealBody")?;
     let ideal_method = ideal
@@ -120,7 +125,7 @@ pub fn construct(v: Value) -> Result<Value> {
         .map(|i| optional::<String>(i, "method"))
         .transpose()?
         .flatten()
-        .unwrap_or_else(|| "monotone".to_owned());
+        .unwrap_or_else(|| if closed { "atlas" } else { "monotone" }.to_owned());
     if !matches!(ideal_method.as_str(), "monotone" | "atlas") {
         return Err(input("Unknown original ideal-body proof method"));
     }
@@ -146,6 +151,25 @@ pub fn construct(v: Value) -> Result<Value> {
         linear_cells: field(&limits, "linearCells")?,
         volume: crate::cad_boundary_certificate::volume_limits(&limits["volume"])?,
     };
+    if closed {
+        if ideal_method != "atlas" {
+            return Err(input(
+                "Closed original material requires the quotient atlas",
+            ));
+        }
+        return self::closed::construct(
+            &sweep,
+            &loop_sizes,
+            sections,
+            tolerance_uv,
+            error_budget,
+            limits,
+            ideal_limits.ok_or_else(|| input("Closed original ideal-body limits required"))?,
+            &v,
+        );
+    }
+    let source_caps = caps(&v["sourceCaps"])?;
+    let retained_caps = caps(&v["retainedCaps"])?;
     let source_caps = [&source_caps[0], &source_caps[1]];
     let retained_caps = [&retained_caps[0], &retained_caps[1]];
     let attempt = if let Some(ideal) = ideal_limits {
