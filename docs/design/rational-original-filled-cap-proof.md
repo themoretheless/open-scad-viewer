@@ -57,3 +57,35 @@ transcendental source laws, the older axial MultiSweep physical-cap construction
 or mixed sharp/smooth classification. Those need their own original-source
 boundary charts and proofs. New typed native capability also does not imply
 JSON/WASM runtime, independent STEP, semantic G1, browser or fresh CI qualification.
+
+
+## Supplied-model audit and transport successor
+
+`verify_rational_closed_material` shares the same native source owner and all
+actual-boundary checks with construction. It accepts no success report. It
+proves the supplied model's exact source face bijection, domains, shell roles
+and orientation, every edge/vertex link, regularity and complete Gk. Orientation
+mismatches refuse; audits do not repair or reorient input. Construction work is
+zero during audit. A certified body owns an unchanged clone of the audited model.
+
+The Rust JSON operations `brep_rational_closed_material_construct` and
+`brep_rational_closed_material_audit` accept literal source profiles/origin/motion,
+material surface/trims, cap profile IDs, toleranceUV and explicit stage limits.
+Rust emits every certificate flag. Caller success fields are ignored; failed
+owners return no model. Construction ignores caller models; audit requires one.
+
+The six native STEP cases cover planar and nonplanar physical annular caps,
+moving inclined affine axes, translations, reflected world orientation, rational
+profile weights and combined rational-profile/affine modes. Export/import is
+followed by fresh original/actual proof with zero reconstruction work. The same
+Rust fixture catalog supplies numerical 16/32-point source flux references and
+128 original surface points per case for independent OCCT checks. Those numeric
+references supplement the analytic native certificate and are not continuous
+error proofs. `verify-rational-filled-cap-step.py` only adapts the independent
+OCCT engine and compares its results with Rust references.
+
+Independent OCCT 7.7.2 checks passed all six files: one valid Solid, 32 faces,
+64 edges with two adjacent faces, 32 vertices, no degenerate edges, positive
+orientation, volume difference at most 9.25e-9 mm3 and source-point distance at
+most 2.08e-15 mm. These statements cover the six specified fixtures. Broader cap
+laws, poles, mixed sharp/smooth policy and public/UI delivery remain unqualified.

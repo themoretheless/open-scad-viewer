@@ -98,6 +98,54 @@ pub fn construct_rational_closed_material(
     tolerance_uv: f64,
     l: RationalClosedLimits,
 ) -> Result<RationalClosedAttempt> {
+    rational_closed_impl(
+        profiles,
+        material,
+        origin,
+        motion,
+        cap_profiles,
+        tolerance_uv,
+        l,
+        None,
+    )
+}
+
+/// Reprove every original source, exact actual face, orientation and complete
+/// boundary obligation for supplied geometry. The input model is never repaired
+/// or reoriented. No constructor, source report or caller proof supplies credit.
+pub fn verify_rational_closed_material(
+    profiles: &[Vec<Curve>],
+    material: &LoftCap,
+    origin: [f64; 3],
+    motion: &[RationalPiece],
+    cap_profiles: &[[usize; 2]],
+    tolerance_uv: f64,
+    l: RationalClosedLimits,
+    model: &Model,
+) -> Result<RationalClosedAttempt> {
+    model.validate()?;
+    rational_closed_impl(
+        profiles,
+        material,
+        origin,
+        motion,
+        cap_profiles,
+        tolerance_uv,
+        l,
+        Some(model),
+    )
+}
+
+fn rational_closed_impl(
+    profiles: &[Vec<Curve>],
+    material: &LoftCap,
+    origin: [f64; 3],
+    motion: &[RationalPiece],
+    cap_profiles: &[[usize; 2]],
+    tolerance_uv: f64,
+    l: RationalClosedLimits,
+    supplied: Option<&Model>,
+) -> Result<RationalClosedAttempt> {
     material.surface.validate()?;
     for c in profiles
         .iter()
@@ -296,83 +344,88 @@ pub fn construct_rational_closed_material(
     if !proven {
         return Ok(refuse(r, "original-rational-filled-volume-unproved"));
     }
-    let rows = profiles
-        .iter()
-        .flatten()
-        .map(|c| c.control_points.len())
-        .sum::<usize>();
-    let required =
-        rows * (motion.iter().map(|p| p.controls.len()).sum::<usize>() + motion.len() + 1);
-    if required > l.construction_rows {
-        return Ok(refuse(r, "rational-tensor-construction-work-limit"));
-    }
-    let map_curve = |c: &Curve, p: nurbs_core::affine_volume::Pose| -> Option<Curve> {
-        let mut c = c.clone();
-        for q in &mut c.control_points {
-            *q = smooth::image(p, q, origin)?.to_vec();
+    let mut model = if let Some(model) = supplied {
+        model.clone()
+    } else {
+        let rows = profiles
+            .iter()
+            .flatten()
+            .map(|c| c.control_points.len())
+            .sum::<usize>();
+        let required =
+            rows * (motion.iter().map(|p| p.controls.len()).sum::<usize>() + motion.len() + 1);
+        if required > l.construction_rows {
+            return Ok(refuse(r, "rational-tensor-construction-work-limit"));
         }
-        Some(c)
-    };
-    let mut sections = Vec::new();
-    let mut sides = vec![Vec::new(); profiles.len()];
-    for piece in motion {
-        let mut section = Vec::new();
-        for (ring_index, wire) in profiles.iter().enumerate() {
-            let mut ring = Vec::new();
-            for c in wire {
-                let Some(curve) = map_curve(c, piece.controls[0]) else {
-                    return Ok(refuse(r, "rational-section-exact-arithmetic-unproved"));
-                };
-                ring.push(curve);
-                let mut cp = Vec::new();
-                let mut weights = Vec::new();
-                for (i, p) in c.control_points.iter().enumerate() {
-                    let mut row = Vec::new();
-                    let mut wr = Vec::new();
-                    for (j, pose) in piece.controls.iter().enumerate() {
-                        let (Some(q), Some(w)) = (
-                            smooth::image(*pose, p, origin),
-                            smooth::exact_mul(c.weights[i], piece.weights[j]),
-                        ) else {
-                            return Ok(refuse(r, "rational-tensor-exact-arithmetic-unproved"));
-                        };
-                        row.push(q.to_vec());
-                        wr.push(w);
-                        r.construction_rows += 1;
-                    }
-                    cp.push(row);
-                    weights.push(wr);
-                }
-                sides[ring_index].push(Surface {
-                    degree_u: c.degree,
-                    degree_v: piece.controls.len() - 1,
-                    knots_u: c.knots.clone(),
-                    knots_v: [
-                        vec![0.; piece.controls.len()],
-                        vec![1.; piece.controls.len()],
-                    ]
-                    .concat(),
-                    control_points: cp,
-                    weights,
-                    periodic_u: false,
-                    periodic_v: false,
-                });
+        let map_curve = |c: &Curve, p: nurbs_core::affine_volume::Pose| -> Option<Curve> {
+            let mut c = c.clone();
+            for q in &mut c.control_points {
+                *q = smooth::image(p, q, origin)?.to_vec();
             }
-            section.push(ring);
+            Some(c)
+        };
+        let mut sections = Vec::new();
+        let mut sides = vec![Vec::new(); profiles.len()];
+        for piece in motion {
+            let mut section = Vec::new();
+            for (ring_index, wire) in profiles.iter().enumerate() {
+                let mut ring = Vec::new();
+                for c in wire {
+                    let Some(curve) = map_curve(c, piece.controls[0]) else {
+                        return Ok(refuse(r, "rational-section-exact-arithmetic-unproved"));
+                    };
+                    ring.push(curve);
+                    let mut cp = Vec::new();
+                    let mut weights = Vec::new();
+                    for (i, p) in c.control_points.iter().enumerate() {
+                        let mut row = Vec::new();
+                        let mut wr = Vec::new();
+                        for (j, pose) in piece.controls.iter().enumerate() {
+                            let (Some(q), Some(w)) = (
+                                smooth::image(*pose, p, origin),
+                                smooth::exact_mul(c.weights[i], piece.weights[j]),
+                            ) else {
+                                return Ok(refuse(r, "rational-tensor-exact-arithmetic-unproved"));
+                            };
+                            row.push(q.to_vec());
+                            wr.push(w);
+                            r.construction_rows += 1;
+                        }
+                        cp.push(row);
+                        weights.push(wr);
+                    }
+                    sides[ring_index].push(Surface {
+                        degree_u: c.degree,
+                        degree_v: piece.controls.len() - 1,
+                        knots_u: c.knots.clone(),
+                        knots_v: [
+                            vec![0.; piece.controls.len()],
+                            vec![1.; piece.controls.len()],
+                        ]
+                        .concat(),
+                        control_points: cp,
+                        weights,
+                        periodic_u: false,
+                        periodic_v: false,
+                    });
+                }
+                section.push(ring);
+            }
+            sections.push(section);
+            r.construction_rows += rows;
         }
-        sections.push(section);
+        // Closure was independently proved on ORIGINAL full poses. The final row
+        // is now the literal common station, not a near-closure approximation.
+        sections.push(sections[0].clone());
         r.construction_rows += rows;
-    }
-    // Closure was independently proved on ORIGINAL full poses. The final row
-    // is now the literal common station, not a near-closure approximation.
-    sections.push(sections[0].clone());
-    r.construction_rows += rows;
-    let mut model = match crate::analytic::periodic_material_loft_surfaces(&sections, &sides) {
-        Ok(m) => m,
-        Err(e) if e.code == "BREP_RATIONAL_SWEEP_REFUSED" => {
-            return Ok(refuse(r, "rational-boundary-topology-unproved"));
-        }
-        Err(e) => return Err(e),
+        let model = match crate::analytic::periodic_material_loft_surfaces(&sections, &sides) {
+            Ok(m) => m,
+            Err(e) if e.code == "BREP_RATIONAL_SWEEP_REFUSED" => {
+                return Ok(refuse(r, "rational-boundary-topology-unproved"));
+            }
+            Err(e) => return Err(e),
+        };
+        model
     };
     let binding = smooth::binding_rational(&model, profiles, motion, origin, l.binding_work)?;
     let proven = binding.certified;
@@ -411,7 +464,13 @@ pub fn construct_rational_closed_material(
             let Some(parity) = r.binding.as_ref().unwrap().orientation_reversed(u.face) else {
                 return Ok(refuse(r, "rational-face-chart-orientation-unproved"));
             };
-            u.reversed = reversed ^ parity;
+            let expected = reversed ^ parity;
+            if supplied.is_some() && u.reversed != expected {
+                return Ok(refuse(r, "rational-supplied-face-orientation-unproved"));
+            }
+            if supplied.is_none() {
+                u.reversed = expected;
+            }
         }
     }
     model.validate()?;

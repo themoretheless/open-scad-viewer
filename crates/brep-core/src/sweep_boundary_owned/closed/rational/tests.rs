@@ -463,3 +463,121 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
         .is_err()
     );
 }
+
+#[test]
+fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientation() {
+    let (profiles, material, motion) = fixture(true);
+    let built = body(
+        construct_rational_closed_material(
+            &profiles,
+            &material,
+            [0.; 3],
+            &motion,
+            &[[0, 2], [0, 6]],
+            1e-8,
+            limits(),
+        )
+        .unwrap(),
+    );
+    let mut model = built.model().clone();
+    model.faces.swap(0, 7);
+    for shell in &mut model.shells {
+        for u in &mut shell.faces {
+            u.face = match u.face {
+                0 => 7,
+                7 => 0,
+                x => x,
+            };
+        }
+    }
+    let saved = model.clone();
+    let mut l = limits();
+    l.construction_rows = 0;
+    let audited = body(
+        verify_rational_closed_material(
+            &profiles,
+            &material,
+            [0.; 3],
+            &motion,
+            &[[0, 2], [0, 6]],
+            1e-8,
+            l,
+            &model,
+        )
+        .unwrap(),
+    );
+    assert_eq!(model, saved);
+    assert_eq!(audited.model(), &saved);
+    let r = audited.report();
+    assert!(r.certified && r.source_boundary_exact && r.source_g2 && r.topology_preserved);
+    assert_eq!(r.construction_rows, 0);
+    assert_eq!(r.boundary_error_upper, Some(0.));
+    assert_eq!(r.caps[0].faces.len(), motion.len());
+    for i in 0..8 {
+        let mut changed = saved.clone();
+        match i {
+            0 => {
+                changed.faces[0].surface.control_points[1][1][0] =
+                    changed.faces[0].surface.control_points[1][1][0].next_up()
+            }
+            1 => {
+                changed.faces[0].surface.weights[1][1] =
+                    changed.faces[0].surface.weights[1][1].next_up()
+            }
+            2 => changed.shells[0].faces[0].reversed ^= true,
+            3 => changed.shells[0].closed = false,
+            4 => {
+                changed.shells[0].faces.pop();
+            }
+            5 => changed.loops[0].coedges[0].pcurve.control_points[1][0] = 1e-12,
+            6 => changed.bodies[0].inner_shells.push(0),
+            7 => changed.faces[0].surface.knots_u[0] = 1e-12,
+            _ => unreachable!(),
+        }
+        let before = changed.clone();
+        let result = verify_rational_closed_material(
+            &profiles,
+            &material,
+            [0.; 3],
+            &motion,
+            &[[0, 2], [0, 6]],
+            1e-8,
+            l,
+            &changed,
+        );
+        assert!(
+            !matches!(result, Ok(RationalClosedAttempt::Certified(_))),
+            "mutation {i} returned certified Solid"
+        );
+        assert_eq!(changed, before, "audit mutation {i} repaired input");
+    }
+    for stage in 0..6 {
+        let mut short = l;
+        match stage {
+            0 => short.binding_work = 0,
+            1 => short.binding_work = r.binding.as_ref().unwrap().exact_work - 1,
+            2 => short.orientation_cells = r.orientation_cells - 1,
+            3 => short.volume.cells = r.volume.as_ref().unwrap().cells - 1,
+            4 => short.smoothness.exact_work = r.smoothness.as_ref().unwrap().exact_work - 1,
+            5 => short.smoothness.agreement_work = 0,
+            _ => unreachable!(),
+        }
+        assert!(
+            matches!(
+                verify_rational_closed_material(
+                    &profiles,
+                    &material,
+                    [0.; 3],
+                    &motion,
+                    &[[0, 2], [0, 6]],
+                    1e-8,
+                    short,
+                    &saved
+                )
+                .unwrap(),
+                RationalClosedAttempt::Refused(_)
+            ),
+            "short audit stage {stage} returned certified Solid"
+        );
+    }
+}

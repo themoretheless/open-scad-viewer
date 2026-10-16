@@ -1,6 +1,7 @@
 //! Closed constructor-owned material volume. The carrier is a reference filled
 //! cross-section, not a physical end cap. Every original/retained gate is owned
-//! here; callers cannot supply a model, a successful report or an allowed pair.
+//! here. Explicit model audits reprove every obligation; caller success reports
+//! and allowed-pair lists never supply proof credit.
 use super::*;
 use nurbs_core::{curve_regularity, trim_region_audit};
 
@@ -534,7 +535,7 @@ mod tests;
 mod smooth;
 mod rational;
 pub use rational::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
-    construct_rational_closed_material};
+    construct_rational_closed_material,verify_rational_closed_material};
 pub use smooth::{
     BindingReport as AffineWallBindingReport, OriginalReport as OriginalClosedReport,
     SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,

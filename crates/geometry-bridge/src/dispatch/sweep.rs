@@ -3,6 +3,8 @@ use crate::*;
 
 const OPS: &[&str] = &[
     "brep_sweep_viewport_evidence",
+    "brep_rational_closed_material_construct",
+    "brep_rational_closed_material_audit",
     "brep_sweep_boundary_construct",
     "brep_sweep_closed_material_construct",
     "brep_sweep_smooth_closed_material_construct",
@@ -56,9 +58,13 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_complete_boundary_smoothness_audit" => cad_sweep_smoothness::diagnose_complete(v),
+        "brep_rational_closed_material_construct" => cad_sweep_boundary::rational_closed(v, false),
+        "brep_rational_closed_material_audit" => cad_sweep_boundary::rational_closed(v, true),
         "brep_sweep_boundary_construct" => cad_sweep_boundary::construct(v),
         "brep_sweep_closed_material_construct" => cad_sweep_boundary::construct_closed(v),
-        "brep_sweep_smooth_closed_material_construct" => cad_sweep_boundary::construct_smooth_closed(v),
+        "brep_sweep_smooth_closed_material_construct" => {
+            cad_sweep_boundary::construct_smooth_closed(v)
+        }
         "brep_sweep_smooth_closed_material_audit" => cad_sweep_boundary::verify_smooth_closed(v),
         "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
         "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),

@@ -28,7 +28,11 @@ fn caps(v: &Value) -> Result<Vec<LoftCap>> {
         .collect()
 }
 mod closed;
+mod rational_closed;
 mod smooth_closed;
+pub fn rational_closed(v: Value, audit: bool) -> Result<Value> {
+    rational_closed::run(v, audit)
+}
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
     Open,
