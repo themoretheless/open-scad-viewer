@@ -1,0 +1,83 @@
+{
+  "schema": "original-guided-geometric-development-checkpoint/1",
+  "frozenCodeRevision": "f244f74eeb3f7367f96bf000362b7a7c32057d25",
+  "inputsSha256": "a576cd863c044bbc6f45a61d1e0de6eb8ea05fb06cfa9d2269f0be2fde19de9e",
+  "inputCount": 3809,
+  "sourceGuardCurrentlyVerified": true,
+  "developmentIdealOriginalEmbeddingRegularityTopologyPassed": true,
+  "developmentOriginalAndActualG2SolidPassed": true,
+  "faces": 256,
+  "wallErrorUpperMm": 0.03815871833964367,
+  "boundaryErrorUpperMm": 0.04465520819783416,
+  "unchangedBudgetMm": 0.05,
+  "originalGlobalCells": 280675,
+  "originalGlobalExactWork": 20697,
+  "actualGlobalCells": 913,
+  "actualGlobalExactWork": 768,
+  "fullFrozenSourceQualificationPending": true,
+  "completeNativeQualifierSession": 88948,
+  "completeNativeQualifierLog": "/private/tmp/osv-guided-geometric-complete-kernel-20261016.log",
+  "privateWasmBuildRuntimeSession": 14700,
+  "privateWasmRuntimeQualified": false,
+  "independentOcctStarted": false,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "freshCiQualified": false,
+  "fullGoalComplete": false,
+  "scope": "Development evidence for one exact rational Mobius-clock guided source. Fresh frozen complete native/JSON/STEP/WASM qualification is running; development cases are not substituted for it.",
+  "developmentLogs": [
+    {
+      "log": "osv-guided-geometric-seam-v2-20261016.log",
+      "sha256": "e8ddb77aa34026f6f0193281540825eafdaa4316908cb8663d1874505b6fb688"
+    },
+    {
+      "log": "osv-guided-geometric-existing-seams-v2-20261016.log",
+      "sha256": "dbf094909232c5b17b7ee4261f03a886ee444472666651c8fd07567ce7de51a2"
+    },
+    {
+      "log": "osv-guided-geometric-seam-three-cases-20261016.log",
+      "sha256": "66254e06c709b1921e731bdb7087f3753cd5791a2ae464f6d21423ab31e049f9"
+    },
+    {
+      "log": "osv-guided-geometric-cartesian-fallback-20261016.log",
+      "sha256": "d644ff34e3300eb0e1b37a28148e71cbdf1a6d46ef8b9ef708c2979d7abb154a"
+    },
+    {
+      "log": "osv-guided-geometric-frame-json-20261016.log",
+      "sha256": "73b8150e016d91b2c2d99946c8d1abae2dc73dd45bd154e961157b7c65a7e2a6"
+    },
+    {
+      "log": "osv-guided-geometric-existing-seams-final-20261016.log",
+      "sha256": "5fbb0cad462ffd2522a5468049b16082f62aa4abae75368a67481c365bd6f32b"
+    },
+    {
+      "log": "osv-guided-geometric-g2-body-first-20261016.log",
+      "sha256": "1f2ec7c18617118b4507c5329776493c65ca71793d6144a97d2c0e65f5f3cf3e"
+    },
+    {
+      "log": "osv-guided-geometric-wall-error-first-20261016.log",
+      "sha256": "1260500e83d609b8b834296babc877f8d5d210f14a7ba4ade1022b886f2a95af"
+    },
+    {
+      "log": "osv-guided-geometric-wall-error-norm-20261016.log",
+      "sha256": "0f0a6557c002529f3f59ddfe8d755c1a06cef8d09cbff1ac23b6b898d1563652"
+    },
+    {
+      "log": "osv-guided-geometric-arc-error-regressions-20261016.log",
+      "sha256": "20493ca77a3387ed9f243eb12b7a6c0d8fcac61399b735e3ada6344bb5ec72c5"
+    },
+    {
+      "log": "osv-guided-geometric-pose-norm-20261016.log",
+      "sha256": "a5f1d1b3b98030248c21a944b899bf3c19f4989beb96a813ce66af909181e465"
+    },
+    {
+      "log": "osv-guided-geometric-positive-homothety-clock-20261016.log",
+      "sha256": "89de8686a0f903442f0242de4939ae3b1b81c3bc7c92f2aec70c0c68e857f974"
+    },
+    {
+      "log": "osv-guided-geometric-g2-body-norm-20261016.log",
+      "sha256": "286e2ad94df5d69d8f2a5b41247436c29dbdf451f3adcb60af0483eb333c6787"
+    }
+  ]
+}
