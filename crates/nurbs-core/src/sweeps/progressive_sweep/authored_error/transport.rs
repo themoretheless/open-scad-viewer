@@ -363,7 +363,7 @@ pub(super) fn original_frame_arc_length_section_interpolation(sweep:&Sweep<'_>,c
 pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mut mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>,rmf_steps:usize,shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>)->Result<SectionInterpolationReport>{
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
-    let phase=if mode==OriginalTransport::Contact {
+    let phase=if matches!(mode,OriginalTransport::Contact|OriginalTransport::Guided) {
         let Spacing::ArcLength {max_cells:constructor_budget,..}=sweep.options.spacing else{return Ok(out);};
         let phase=super::arc_guide::certify(sweep.path,sweep.orientation_guide.unwrap(),max_cells.min(constructor_budget))?;
         out.cells+=phase.cells;Some(phase)
@@ -424,7 +424,12 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let Some(phase)=phase else{out.reason=Some("corrected-affine-frame-phase-unproved");return Ok(out);};
         Some(phase)
     }else{None};
-    let tolerance=phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down());
+    // Contact construction tightens its own path clock for the scaled rail.
+    // A guided constructor retains its declared clock; phase identity concerns
+    // the IDEAL source, while actual guide-clock displacement is charged below.
+    let tolerance=if mode==OriginalTransport::Contact {
+        phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down())
+    }else {tolerance};
     let owned;
     let division=if let Some(shared)=shared_length{shared}else{
         owned=crate::curve_measure::divide_by_length(sweep.path,count-1,tolerance,(max_cells-out.cells).min(constructor_budget))?;
@@ -533,7 +538,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         // New geometric arc joins use an original arc-station chord cover.
         // The policy depends on the fresh source proof, never on the requested
         // tolerance: tightening admission cannot change the geometric bound.
-        if spatial_transport.is_some_and(|r|r.used_geometric_arc_join_premises) {
+        if spatial_transport.is_some_and(|r|r.used_geometric_arc_join_premises) || mode==OriginalTransport::Guided&&same_phase {
             if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
             let (cells,chord)=arc_chord::upper(sweep.path,path_interval,station,division.total.bounds,residual,spatial_transport.is_some(),max_cells-out.cells)?;
             out.cells+=cells;

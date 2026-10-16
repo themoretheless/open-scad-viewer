@@ -48,3 +48,13 @@ embedding, actual G2, boundary error, STEP and WASM remain separate gates.
 Arbitrary physical end-cap joins, general affine/projective frame invariance,
 pole fans and all general frame/cap source combinations are not completed by
 this theorem. Sharp joins remain explicit C0. fullGoalComplete stays false.
+
+The wall-error owner also uses fresh positive-homothety phase identity for
+ordinary guidance, retaining the constructor's declared arc tolerance. Contact
+fitting keeps its separate scale-sensitive clock policy. Complete original
+arc-chord bounds cover translation, and exact orthonormality bounds the norm
+of the local affine/scale/center/fit vector before adding world translation.
+The norm ball intersects the existing directional interval enclosure; it does
+not replace the frame nondegeneracy proof or accept rounded orthogonality.
+Original shared length evidence now includes closed guide fields, while every
+profile still charges its own actual/source displacement and decomposition.

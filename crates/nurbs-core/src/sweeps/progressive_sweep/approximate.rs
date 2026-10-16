@@ -166,12 +166,14 @@ impl MultiSweep<'_> {
         // work still consume the remaining aggregate budget.
         let first=&self.sweeps[0];
 
+        // Original inverse-length correspondence is shared for closed guided
+        // fields too. Their copied endpoint/phase displacement is still proved
+        // independently by each profile owner; no seam flag is cached here.
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
-            &&first.orientation_guide.is_some_and(|g|!g.periodic)
-            &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
+            &&first.orientation_guide.is_some_and(|g|!g.periodic);
         let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
             && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
-            && !first.path.periodic&&(first.frame_laws.is_some()||!path_is_closed(first.path)?))) {
+            && !first.path.periodic&&(first.frame_laws.is_some()||shared_guided||!path_is_closed(first.path)?))) {
             if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
                 check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
                     "Shared length certificate requires identical original source and spacing")?;

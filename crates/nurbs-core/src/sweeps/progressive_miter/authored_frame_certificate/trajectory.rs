@@ -315,14 +315,23 @@ pub(super) fn control_values_with_prepared_path(
     ];
     let mut values=Vec::with_capacity(coordinates.len());
     for q in coordinates {
-        let mut value = decode(path_value)?;
+        let mut coefficients=[I::point(0.);3];
+        let mut relative=[I::point(0.);3];
         for j in 0..3 {
             let mut coefficient = uniform.mul(axes[j])?.mul(q[j])?.add(center[j])?;
             if j == 0 {
                 if let Some(fit) = transverse_fit { coefficient = coefficient.mul(fit)?; }
             }
-            value = add(value,mul(directions[j], coefficient)?)?;
+            coefficients[j]=coefficient;
+            relative=add(relative,mul(directions[j], coefficient)?)?;
         }
+        // Every freshly certified frame is exactly orthonormal; independent
+        // interval columns may have much larger norms. Preserve ||R*q||=||q||
+        // on the complete original law box without assuming rounded columns
+        // are orthogonal or replacing their directional enclosures.
+        let radius=crate::numerics::interval_vec3::norm(coefficients)?.hi;
+        for value in &mut relative {*value=value.intersect(-radius,radius)?;}
+        let value=add(decode(path_value)?,relative)?;
         values.push(value.map(|x|[x.lo,x.hi]));
     }
     out.status = Status::Certified;
@@ -518,6 +527,40 @@ pub(crate) fn control_trajectories_with_phase(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn orthonormal_pose_norm_keeps_affine_center_fit_and_translation_separate() {
+        let law=crate::sweeps::progressive_sweep::constant_vector_law;
+        let path=law([10.,20.,30.]).unwrap();let scale=law([2.,0.,0.]).unwrap();
+        let axes=law([0.5,1.,0.25]).unwrap();let center=law([1.,-2.,4.]).unwrap();
+        let q=[[[3.,3.],[4.,4.],[12.,12.]]];
+        // Deliberately loose enclosures contain every Z rotation. Their
+        // independent norms say nothing useful about the exact frame norm.
+        let frame=ValuesReport {status:Status::Certified,cells:7,
+            longitudinal:Some([[-100.,100.];3]),transverse:Some([[-100.,100.];3]),
+            binormal:Some([[-100.,100.];3])};
+        let report=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
+            [0.,1.],100,frame.clone(),Some(I::point(1.5))).unwrap();
+        assert_eq!(report.status,Status::Certified);
+        let value=report.values.unwrap()[0];let radius=172_f64.sqrt();
+        // Original coefficients after axis/center/fit are exactly [6,6,10].
+        for theta in [-std::f64::consts::PI,-1.,0.,0.7,std::f64::consts::PI] {
+            let expected=[10.+6.*theta.cos()-6.*theta.sin(),
+                20.+6.*theta.sin()+6.*theta.cos(),40.];
+            for k in 0..3 {
+                assert!(value[k][0]<=expected[k]&&expected[k]<=value[k][1]);
+                assert!(value[k][1]-value[k][0]<2.*radius+1e-10);
+            }
+        }
+        for max in [7,report.cells-1] {
+            let short=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
+                [0.,1.],max,frame.clone(),Some(I::point(1.5))).unwrap();
+            assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
+            assert!(short.cells<=max);
+        }
+        let unresolved=ValuesReport {status:Status::Unresolved,..frame};
+        let short=control_values_with_fit(&path,&scale,None,&q,[0.,1.],100,unresolved,None).unwrap();
+        assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
+    }
     fn line(a: [f64; 3], b: [f64; 3], domain: [f64; 2]) -> Curve {
         Curve {
             degree: 1,
