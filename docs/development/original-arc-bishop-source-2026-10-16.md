@@ -52,14 +52,65 @@ speeds differ by factor four. Native/JSON/WASM/STEP must reuse this Rust source.
 - Existing complete original-boundary smoothness regressions:3 passed.
 - Whole-metric interval SPD regression:1 passed.
 
-Full new original-volume and BRep examples still require a successful proof.
-Earlier runs refused honestly at the explicit original atlas budget (300000,
-then1000000), with no model. Raising Bishop resolution1024->4096 changed proof
-accuracy, not geometry or the0.05mm tolerance. Diagnostics exposed inverse-clock
-precision and expensive unsuitable fixed-metric probes. The latest whole-box
-Neumann test and global example are being verified; inspect current logs/sessions.
-Temporary `OSV_ARC_ATLAS_DIAG` instrumentation is test-only and must be removed
-before freezing qualification source.
+## Latest intrinsic original-body proof
+
+A fresh native original-volume example now passes for the SAME exact Mobius
+re-clocked spatial source and unchanged material, geometry and tolerance.
+`osv-arc-bishop-intrinsic-pair-cover-v2-tests-20261016.log`:1 passed,43.65s.
+The earlier whole-world-Jacobian attempts remain honest work-limit refusals.
+The final tiny charging/diagnostic-cleanup edits still require a fresh run.
+
+The new sufficient class is an original arc-clock Bishop frame, constant unit
+scale, a literal fixed carrier in the exact initial transverse plane, no guide,
+authored affine/frame laws or contact shift. A fresh whole-carrier contraction
+proves Q injective and rank two; original coefficient predicates prove the plane.
+With source length L, carrier radius rho, tangent rate K and full angular rate
+Omega, every local physical chart uses ONE exact orthonormal endpoint frame.
+The outward inequality `2*(Omega*d)^2 + (K*d+rho*Omega/L)^2 < 1` makes all
+averaged Jacobians nonsingular on a convex disk x temporal lift. The same frame
+covers both pieces of a wrapped periodic chart. Distant original sections lie
+within rho of their original source-path point and are strictly separated by
+outward world boxes. An exhaustive time-pair cover, including every diagonal,
+then proves original embedding, regularity and relative trim topology.
+The carrier premise covers both complete UV factors, not just sampled profiles.
+
+Direction-sensitive skew-ODE Duhamel bounds improve the original Bishop normal
+and tube enclosures. Closed endpoint strips also use the exact return of the
+corrected terminal normal to the initial one and a charged angular-speed bound.
+The independent first/second-jet oracle and adversarial complete-cover tests
+pass3 cases in `osv-arc-bishop-closure-anchor-tests-20261016.log`.
+
+The first actual BRep/G2 run refused later in the wall error owner after its
+100000-cell allowance; its original volume proof passed with101246cells,
+34154exact work and111 original path boxes. It returned no model.
+A new original arc-station chord remainder uses complete original velocity and
+acceleration jets, original length bounds and inverse-length residuals. It
+requires a single original span OR a freshly proved positional/forward-tangent
+join theorem, so a sharp corner cannot receive quadratic error credit.
+Two focused remainder tests and one exact nonaxial carrier-plane test pass.
+The latter checks one binary64 step off the source plane and zero/one-short
+exact-work budgets. The complete global example now also tests zero/one-short
+cell and exact-work budgets, and an exact twice-traversed regular source loop.
+
+The next body run (session63082) uses4096 Bishop integration steps; changing
+proof resolution does not change the original/retained construction, geometry,
+65 stations or0.05mm tolerance. Its log is
+`osv-arc-bishop-intrinsic-chord-g2-body-tests-20261016.log`.
+Full NURBS development tests also run separately (session84595,
+`osv-arc-bishop-full-nurbs-development-tests-20261016.log`).
+Those development runs are terminal: the body reached a complete wall bound
+but refused its unchanged0.05mm error budget (upper0.09336208554842408mm,
+58924source cells). Full NURBS reported1602passed/18failed; most failures exposed
+one-short-budget fallback handling, with extra refinement work also exhausting
+an existing spatial case. They are not successful qualification evidence.
+The subsequent focused76 error-owner regressions passed. Current source fixes
+budget-stopped refinement/pair queries and only proposes extra chord work when
+the coarse position term alone exceeds the requested tolerance. Adaptive
+original derivative subdivision tightens that chord estimate without changing
+geometry or tolerance. Current body run78937:
+`osv-arc-bishop-refined-chord-g2-body-tests-20261016.log`.
+No current full qualification/WASM/STEP claim.
+Temporary `OSV_ARC_ATLAS_DIAG` instrumentation has been removed.
 
 Logs use `/private/tmp/osv-arc-bishop-*20261016.log`.
 Build target: `/private/tmp/osv-arc-bishop-source-target-20261016`.

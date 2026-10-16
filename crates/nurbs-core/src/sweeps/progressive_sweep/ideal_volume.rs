@@ -35,6 +35,7 @@ pub(crate) mod atlas;
 pub(crate) mod cell;
 pub(crate) mod charts;
 mod closed;
+mod intrinsic;
 pub(crate) mod pose;
 use charts::*;
 impl MultiSweep<'_> {
@@ -57,6 +58,9 @@ impl MultiSweep<'_> {
     /// entire interval Jacobian matrix is regular, or whose full subdivision
     /// shares ONE proved strong-monotonicity metric. This is a sufficient global
     /// embedding theorem even when no single strong-monotonicity metric exists.
+    /// Arc-clock Bishop tubes may instead use a fresh complete transverse
+    /// carrier proof and intrinsic orthonormal local charts, with original-path
+    /// section-ball separation. No sampled frame or boundary-only proof enters.
     /// All pair visits, failed trials and source restrictions share the ledger.
     /// `monotonicity_lower` stays None; this method does not prove monotonicity.
     /// Closed traversals require exact native endpoint ownership and ONE
@@ -264,7 +268,7 @@ impl MultiSweep<'_> {
             poses: atlas.then(Default::default),
         };
         if atlas {
-            atlas::certify(&context, projection, &mut out, max_cells, closed)?;
+            atlas::certify(&context, projection, &mut out, max_cells, max_exact_work, closed)?;
             return Ok(out);
         }
         let mut pending = vec![([[0., 1.]; 3], None)];

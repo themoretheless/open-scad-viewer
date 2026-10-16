@@ -986,7 +986,7 @@ fn geometric_arc_source_clock_has_complete_original_and_actual_g2_solid_with_glo
     l.source.ideal.cells=1000000;
     l.original_smoothness=Some(nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits{order:2,cells:100000,exact_work:1000000,products:1000000});
     let attempt=construct_smooth_closed_with_ideal_atlas(&sweep,&[4],65,&material,1e-8,0.05,&[],l).unwrap();
-    if let SmoothClosedAttempt::Refused(r)=&attempt {eprintln!("original diagnostic {:?}, cells={} work={} smooth={:?}",r.original.volume,r.original.cells,r.original.exact_work,r.original.smoothness);}
+    if let SmoothClosedAttempt::Refused(r)=&attempt {eprintln!("original diagnostic {:?}, cells={} work={} smooth={:?}",r.original.volume,r.original.cells,r.original.exact_work,r.original.smoothness); eprintln!("wall diagnostic {:?}",r.original.wall.as_ref().map(|w|(w.error_certificate_reason,w.error_certificate_cells,w.continuous_error_upper)));}
     let b=body(attempt);
     let r=b.report();assert!(r.certified && r.original.certified && r.topology_preserved && r.shell_roles_certified && r.continuous_bound);
     assert!(r.original.g2_certified());

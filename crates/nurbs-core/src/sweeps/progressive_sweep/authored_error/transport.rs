@@ -1,6 +1,7 @@
 //! Original parameter and arc-length transport enclosures.
 use super::*;
 use super::super::rmf_transport;
+mod arc_chord;
 
 pub(super) fn guided_section_interpolation_mode(
     sweep: &Sweep<'_>, count: usize, max_cells: usize, mode:OriginalTransport,
@@ -528,7 +529,20 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         out.cells+=values.cells;
         let Some(values)=values.values.filter(|_|values.status==Status::Certified)else{out.reason=values.reason.or(Some("arc-length-frame-value-unproved"));return Ok(out);};
         let residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
-        let position=I::point(division.total.bounds[1]).mul(I::point(station[1]).sub(I::point(station[0]))?)?.div(I::point(2.))?.add(I::point(residual))?;
+        let mut position=I::point(division.total.bounds[1]).mul(I::point(station[1]).sub(I::point(station[0]))?)?.div(I::point(2.))?.add(I::point(residual))?;
+        // Spend the additional original-jet query when the coarse position
+        // term alone exceeds the requested error. This is only a work
+        // proposal; admission still uses a proved complete geometric bound.
+        if position.hi>sweep.options.max_deviation {
+            if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+            let (cells,chord)=arc_chord::upper(sweep.path,path_interval,station,division.total.bounds,residual,spatial_transport.is_some(),max_cells-out.cells)?;
+            out.cells+=cells;
+            // A budget-stopped refinement supplies no partial credit, even
+            // when an earlier coarse estimate exists. Failed non-budget
+            // proposals may still retain that independently valid estimate.
+            if chord.is_none() && out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+            if let Some(chord)=chord {position=I::new(0.,position.hi.min(chord))?;}
+        }
         for (j,value) in values.into_iter().enumerate(){
             let mut delta=[I::point(0.);3];let mut ends=[[I::point(0.);3];2];
             for k in 0..3{

@@ -26,6 +26,7 @@ fn spatial_original_arc_clock_has_geometric_g2_without_periodic_raw_speed_jets()
         "geometric arc source transport cells={} exact={}",
         r.cells, r.exact_work
     );
+    eprintln!("geometric arc angle={:?} radius={:?}",r.closing_angle,r.cover.as_ref().and_then(|c|c.last()).map(|c|c.endpoint_radius_upper));
     assert!(r.closing_angle.is_some() && r.original_arc_length.is_some());
     assert_eq!(r.arc_corrected_normals.as_ref().unwrap().len(), 1024);
     let profile = crate::primitives::line([0.1, 0., 0.], [0.2, 0., 0.]).unwrap();
@@ -174,4 +175,32 @@ fn geometric_arc_original_global_filled_volume_atlas() {
     let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,spacing:Spacing::ArcLength{tolerance:0.001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.05}).unwrap().with_spatial_rmf_error_limits(4096,100000,1000000).unwrap();
     let r=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],1000000,1000000).unwrap();
     assert!(r.embedding_certified && r.regularity_certified && r.parameter_topology_preserved,"{r:?}");
+    eprintln!("original geometric-clock tube atlas: {r:?}");
+    for (cells,exact) in [(0,1000000),(r.cells-1,1000000),(1000000,0),(1000000,r.exact_work-1)] {
+        let short=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],cells,exact).unwrap();
+        assert!(!short.embedding_certified && !short.regularity_certified && !short.parameter_topology_preserved,"{short:?}");
+        assert!(short.cells<=cells && short.exact_work<=exact);
+    }
+
+}
+
+#[test]
+fn geometric_arc_repeated_original_loop_has_no_global_embedding_credit() {
+    use crate::progressive_sweep::MultiSweep;
+    let (profiles,material,_)=source_case::material();let mut path=spatial(true);
+    let poles=path.control_points.clone();let weights=path.weights.clone();
+    path.control_points.extend_from_slice(&poles[1..]);
+    path.weights.extend(weights[1..].iter().map(|w|w*weights[9]));
+    path.knots=[vec![-3.;10],vec![1.;9],vec![5.;10]].concat();
+    path.validate().unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,spacing:Spacing::ArcLength{tolerance:0.001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.05}).unwrap().with_spatial_rmf_error_limits(1024,100000,1000000).unwrap();
+    let frame=sweep.sweeps[0].certify_closed_path_frame_smoothness(1,100000,1000000).unwrap();
+    assert!(frame.closed_source_frame_smoothness_certified,"{frame:?}");
+    // Two exact traversals share all original center-line points. Even valid
+    // connected regular frame charts cannot supply global material embedding.
+    let r=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],200000,1000000).unwrap();
+    assert!(!r.embedding_certified && !r.regularity_certified && !r.parameter_topology_preserved,"{r:?}");
+    assert!(r.cells<=200000 && r.exact_work<=1000000);
+    eprintln!("repeated original loop refused: {r:?}");
 }

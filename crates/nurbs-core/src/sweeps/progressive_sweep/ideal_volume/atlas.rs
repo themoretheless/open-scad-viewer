@@ -138,7 +138,15 @@ fn monotone_hull(
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<bool> {
-    let root = projected(columns, projection)?;
+    // The midpoint of a wide interval matrix need not represent any source
+    // frame. Propose ONE metric from a fresh enclosed source-center query;
+    // its rounded inverse still supplies zero admission credit. Every piece
+    // must pass the same subsequent whole-field SPD proof with that metric.
+    if out.cells==max {return Ok(false);}
+    out.cells+=1;
+    let center=pieces[0].map(|d|[crate::distance_bounds::midpoint(d[0],d[1]);2]);
+    let reference=match query(center,out) {Ok(Enclosed::Value(e))=>e.columns,_=>columns};
+    let root = projected(reference, projection)?;
     let Some(scale) = coordinate_scale(root) else {
         return Ok(false);
     };
@@ -232,8 +240,14 @@ pub(super) fn certify(
     projection: [[f64; 3]; 3],
     out: &mut IdealVolumeReport,
     max_cells: usize,
+    max_exact_work: u64,
     closed: bool,
 ) -> Result<()> {
+    let identity=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]].map(|v|v.map(I::point));
+    let tube=if regular(identity,projection)? {
+        intrinsic::Tube::prepare(context,out,max_cells,max_exact_work)?
+    }else {None};
+    if let Some(tube)=tube {return tube.certify(context,out,max_cells,closed);}
     certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)
 }
 /// Internal query engine shared by original transport and coefficient-owned
@@ -264,6 +278,7 @@ pub(crate) fn certify_map(
             return Ok(());
         }
         out.cells += 1;
+        let h = hull(a, b);
         let ea = query(a, out)?;
         let eb = if a == b { ea } else { query(b, out)? };
         // Strict separation completes this pair without an expensive joint
@@ -275,7 +290,6 @@ pub(crate) fn certify_map(
                 continue;
             }
         }
-        let h = hull(a, b);
         let eh = if h == a {
             ea
         } else if h == b {
@@ -367,11 +381,6 @@ pub(crate) fn certify_map(
         }
         if out.cells == max_cells {
             return Ok(());
-        }
-        #[cfg(test)]
-        if std::env::var_os("OSV_ARC_ATLAS_DIAG").is_some() && (a[2][1]-a[2][0]<1e-6 || b[2][1]-b[2][0]<1e-6) {
-            static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
-            if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<4 {eprintln!("SOURCE_UNRESOLVED_PAIR a={a:?} b={b:?} h={h:?} ea={ea:?} eb={eb:?} eh={eh:?}");}
         }
         let choice=match (widest(a),if a!=b {widest(b)} else {None}) {
             (Some(x),Some(y)) if y.1>x.1 =>Some((y.0,true)),

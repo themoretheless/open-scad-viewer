@@ -21,6 +21,7 @@ pub(super) struct ArcMap {
     prefixes: Vec<I>,
 }
 impl ArcMap {
+    pub(super) fn length(&self) -> I { self.total }
     pub(super) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
         let max = max.min(spent.saturating_add(100000));
         let [a, b] = path.domain();

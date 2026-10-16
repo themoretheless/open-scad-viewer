@@ -245,22 +245,24 @@ fn certify_original_rmf_transport_impl(
             let reference = point(midpoint(omega));
             let c = point(center);
             let c_length = norm(c)?;
-            // Duhamel: ||U_variable c-U_reference c|| <= h*delta_omega*||c||.
-            let variation = h.mul(norm(sub(omega, reference)?)?)?.mul(c_length)?;
-            // Constant skew flow: retain the quadratic Taylor term.
-            // Every derivative of exp(t A)c has norm <= |omega0|^k |c|
-            // because A is skew and exp(t A) is an isometry. The integral
-            // third-order remainder needs no exponential inflation.
-            let w = norm(reference)?;
-            let h2 = h.mul(h)?;
-            let w2 = w.mul(w)?;
-            let remainder = h2
-                .mul(h)?
-                .mul(w2.mul(w)?)?
-                .mul(c_length)?
-                .div(I::point(6.))?;
-            let first = cross(reference, c)?;
-            let second = cross(reference, first)?;
+            let delta=sub(omega,reference)?;
+            let delta_norm=norm(delta)?;
+            let first=cross(reference,c)?;
+            let first_norm=norm(first)?;
+            let second=cross(reference,first)?;
+            let h2=h.mul(h)?;
+            // Duhamel with the SAME constant skew reference flow. Since
+            // |U0(s)c-c| <= s |omega0 x c|, retain its direction:
+            // error <= h |delta_omega x c| + h²/2 |delta_omega| |omega0 x c|.
+            // Both this and h |delta_omega| |c| bound the entire cell.
+            let coarse=h.mul(delta_norm)?.mul(c_length)?;
+            let directed=h.mul(norm(cross(delta,c)?)?)?
+                .add(h2.mul(I::point(0.5))?.mul(delta_norm)?.mul(first_norm)?)?;
+            let variation=I::new(0.,coarse.hi.min(directed.hi))?;
+            // A0 commutes with its isometric flow, so |A0³ U0 c| is bounded
+            // by |omega0|² |omega0 x c|, including a zero axial motion.
+            let w=norm(reference)?;
+            let remainder=h2.mul(h)?.mul(w.mul(w)?)?.mul(first_norm)?.div(I::point(6.))?;
             let exact_quadratic = add(
                 add(c, scale(first, h)?)?,
                 scale(second, h2.mul(I::point(0.5))?)?,
@@ -272,10 +274,9 @@ fn certify_original_rmf_transport_impl(
                 .add(remainder)?
                 .add(rounding)?
                 .hi;
-            // Whole-cell motion from c: ||U(t)c-c|| <= h*sup|omega|*||c||.
-            let tube_radius = I::point(radius)
-                .add(h.mul(norm(omega)?)?.mul(c_length)?)?
-                .hi;
+            let coarse_motion=h.mul(norm(omega)?)?.mul(c_length)?;
+            let directed_motion=h.mul(first_norm)?.add(variation)?;
+            let tube_radius=I::point(radius).add(I::new(0.,coarse_motion.hi.min(directed_motion.hi))?)?.hi;
             Ok((
                 RmfNormalCell {
                     traversal,
