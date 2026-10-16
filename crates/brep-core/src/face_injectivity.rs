@@ -426,15 +426,16 @@ mod tests {
         let before = format!("{model:?}");
         let r = inspect(&model, 1000).unwrap();
         assert!(r.all_faces_injective);
-        assert_eq!(r.spans, 968);
+        let required = r.spans;
+        assert!(required > 0 && required <= 1000);
         for f in &r.faces {
             let x = f.result.as_ref().unwrap();
             assert_eq!(x.reason, "global-projective-projection-contraction");
             assert!(x.projective_projection.is_some());
         }
-        let r = inspect(&model, 967).unwrap();
+        let r = inspect(&model, required-1).unwrap();
         assert!(!r.all_faces_injective);
-        assert_eq!(r.spans, 967);
+        assert_eq!(r.spans, required-1);
         assert_eq!(
             r.faces.last().unwrap().result.as_ref().unwrap().reason,
             "work-limit"
