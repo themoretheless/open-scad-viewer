@@ -1,3 +1,4 @@
+import {FIBERED_SOURCE_ARCHIVES} from './qualificationFiberedSourceArchives.mjs'
 import {FRAME_CAP_ARCHIVES} from './qualificationFrameCapArchives.mjs'
 import {GENERAL_CERTIFICATE_MAIN_ARCHIVES} from './qualificationGeneralCertificateMainArchives.mjs'
 import {INCOMING_MAIN_ARCHIVES} from './qualificationIncomingMainArchives.mjs'
@@ -38,6 +39,7 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  ...FIBERED_SOURCE_ARCHIVES,
   ...FRAME_CAP_ARCHIVES,
   ...GENERAL_CERTIFICATE_MAIN_ARCHIVES,
   'scripts/refresh-qualification-fingerprints-v85-v102.mjs': 'e6cdb5f61af0e2f6f20d89e8555400871290a6da2af2208536b8586626fefada',

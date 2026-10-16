@@ -109,7 +109,12 @@ const limits = new Map([
 // Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
 // Native lattice printability/strength screens and weak-spot markers: measured 4,113,186 bytes.
 // Resolved main plus general frame/cap proofs: measured 4,138,000 bytes.
-const geometryChunkBudget = 4_145_000
+// Original source-fibered/implicit-sphere/rational-cap guarantees: CI PR58
+// measured 4,315,924 bytes; local unchanged-speed profile measured 4,315,061.
+// Size-only compiler candidates saved up to178956 bytes but regressed three
+// native proof requests by32-52% in eight alternating pairs, so retain the
+// existing runtime recipe. Evidence: docs/qualification/fibered-ci-size-2026-10-17/.
+const geometryChunkBudget = 4_340_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 103_000],
@@ -387,7 +392,10 @@ for (const [name, artifact, compression] of [
 // ownRust50 source-cell proofs: measured 8,379,122 local asset bytes.
 // Keep a bounded margin for the existing Node 20/22 build variation.
 // Resolved main with the rebuilt general frame/cap kernel: measured 8,404,489 bytes.
-const totalBudget = 8_420_000
+// Rebuilt original source-fibered/implicit sphere/rational cap proofs measured
+// 8,581,543 asset bytes locally. Keep28500bytes for measured cross-host packing
+// variation; other named chunk limits and all geometric proof budgets stay fixed.
+const totalBudget = 8_610_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 
