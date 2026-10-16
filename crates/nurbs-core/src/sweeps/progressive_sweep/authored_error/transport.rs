@@ -530,10 +530,10 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let Some(values)=values.values.filter(|_|values.status==Status::Certified)else{out.reason=values.reason.or(Some("arc-length-frame-value-unproved"));return Ok(out);};
         let residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
         let mut position=I::point(division.total.bounds[1]).mul(I::point(station[1]).sub(I::point(station[0]))?)?.div(I::point(2.))?.add(I::point(residual))?;
-        // Spend the additional original-jet query when the coarse position
-        // term alone exceeds the requested error. This is only a work
-        // proposal; admission still uses a proved complete geometric bound.
-        if position.hi>sweep.options.max_deviation {
+        // New geometric arc joins use an original arc-station chord cover.
+        // The policy depends on the fresh source proof, never on the requested
+        // tolerance: tightening admission cannot change the geometric bound.
+        if spatial_transport.is_some_and(|r|r.used_geometric_arc_join_premises) {
             if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
             let (cells,chord)=arc_chord::upper(sweep.path,path_interval,station,division.total.bounds,residual,spatial_transport.is_some(),max_cells-out.cells)?;
             out.cells+=cells;

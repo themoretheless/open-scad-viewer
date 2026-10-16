@@ -31,6 +31,10 @@ pub struct OriginalRmfTransportReport {
     pub status: Status,
     pub cells: usize,
     pub exact_work: u64,
+    /// Complete connected-position/forward-tangent arc premises were needed
+    /// instead of original Cartesian C1. This is clock-policy metadata only;
+    /// frame Gk, boundary error, global embedding and Solid remain separate.
+    pub used_geometric_arc_join_premises: bool,
     pub cover: Option<Vec<RmfNormalCell>>,
     /// Original closing-to-initial Bishop rotation, before correction.
     pub closing_angle: Option<[f64; 2]>,
@@ -169,6 +173,7 @@ fn certify_original_rmf_transport_impl(
         status: Status::Unresolved,
         cells: 0,
         exact_work: 0,
+        used_geometric_arc_join_premises: false,
         cover: None,
         closing_angle: None,
         original_arc_length: None,
@@ -198,6 +203,7 @@ fn certify_original_rmf_transport_impl(
             out.exact_work+=tangent.exact_work;
             if !tangent.certified {out.reason=Some("rmf-original-forward-tangent-unproved");return Ok(out);}
         }
+        out.used_geometric_arc_join_premises=true;
     }
     let max_cells = match shared_work {
         Some(total) => {

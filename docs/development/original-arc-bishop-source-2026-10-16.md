@@ -104,12 +104,26 @@ but refused its unchanged0.05mm error budget (upper0.09336208554842408mm,
 one-short-budget fallback handling, with extra refinement work also exhausting
 an existing spatial case. They are not successful qualification evidence.
 The subsequent focused76 error-owner regressions passed. Current source fixes
-budget-stopped refinement/pair queries and only proposes extra chord work when
-the coarse position term alone exceeds the requested tolerance. Adaptive
+budget-stopped refinement/pair queries. Extra chord work follows the freshly
+proved geometric arc join policy and is independent of admission tolerance. Adaptive
 original derivative subdivision tightens that chord estimate without changing
 geometry or tolerance. Current body run78937:
 `osv-arc-bishop-refined-chord-g2-body-tests-20261016.log`.
-No current full qualification/WASM/STEP claim.
+The refined body run is terminal and passed1case in202.83seconds:256faces,
+original and actual global volume flags all true, original and actual G2 true,
+complete topology/shell roles and error0.02637521968151867mm <=0.05mm.
+Fresh full NURBS at `a7eabd1f1` passed1618/1620tests. The two remaining regressions
+were corrected by keeping error refinement independent of admission tolerance
+and by exact literal Bezier-span endpoint differences, including multispan
+source nets; no rounded knot insertion or proxy derivatives are used. Only the
+required endpoint poles are expanded. Five existing RMF regressions now pass,
+with rational shared-contour work51950cells and original transport24598cells.
+Exact predicates67pass. Candidate implementation version is15.
+
+The Rust JSON/STEP regression uses the SAME shared native source, checks fresh
+construct/import-audit and zero-budget/parameter-mode refusal despite supplied
+success flags. It is not yet runtime-qualified. No current full
+qualification/WASM/STEP claim.
 Temporary `OSV_ARC_ATLAS_DIAG` instrumentation has been removed.
 
 Logs use `/private/tmp/osv-arc-bishop-*20261016.log`.

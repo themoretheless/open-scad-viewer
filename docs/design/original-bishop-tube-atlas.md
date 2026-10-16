@@ -66,7 +66,9 @@ The wall error owner also has an optional original arc-station chord remainder:
 acceleration, original length bounds, and complete adaptive source intervals.
 A single original span or a fresh complete forward-tangent join proof is
 mandatory. Finite one-sided second derivatives through a corner do not suffice.
-The coarse original error bound is independently valid; refinement proposals
+The refinement policy follows fresh geometric arc join premises and never
+depends on admission tolerance. The coarse original error bound is independently
+valid; refinement proposals
 only tighten it. Budget-stopped refinement never supplies partial credit.
 
 ## Work and limits

@@ -28,6 +28,7 @@ fn spatial_original_arc_clock_has_geometric_g2_without_periodic_raw_speed_jets()
     );
     eprintln!("geometric arc angle={:?} radius={:?}",r.closing_angle,r.cover.as_ref().and_then(|c|c.last()).map(|c|c.endpoint_radius_upper));
     assert!(r.closing_angle.is_some() && r.original_arc_length.is_some());
+    assert!(r.used_geometric_arc_join_premises);
     assert_eq!(r.arc_corrected_normals.as_ref().unwrap().len(), 1024);
     let profile = crate::primitives::line([0.1, 0., 0.], [0.2, 0., 0.]).unwrap();
     let scale = constant_vector_law([1., 0., 0.]).unwrap();

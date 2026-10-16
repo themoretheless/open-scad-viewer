@@ -95,53 +95,59 @@ fn series(
     order: usize,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Series, Reason> {
-    let n = (x.len() - u.len()) / 4;
-    if n == p + 1 {
-        let at_start = t.sub(&u[p], ctx)?.sign() == Sign::Zero;
-        let at_end = t.sub(&u[n], ctx)?.sign() == Sign::Zero;
-        let mut clamped = true;
-        for k in 0..=p {
-            clamped &= u[k].sub(&u[p], ctx)?.sign() == Sign::Zero;
-        }
-        for k in n..u.len() {
-            clamped &= u[k].sub(&u[n], ctx)?.sign() == Sign::Zero;
-        }
-        if clamped && (at_start || at_end) {
-            let width = Rational::scalar(u[n].sub(&u[p], ctx)?);
-            let mut rows = (0..n)
-                .map(|i| -> Result<[Rational; 4], Reason> {
-                    Ok([
-                        Rational::scalar(x[4 * i].mul(&x[4 * i + 3], ctx)?),
-                        Rational::scalar(x[4 * i + 1].mul(&x[4 * i + 3], ctx)?),
-                        Rational::scalar(x[4 * i + 2].mul(&x[4 * i + 3], ctx)?),
-                        Rational::scalar(x[4 * i + 3].clone()),
-                    ])
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            let mut output = (0..=order)
-                .map(|_| std::array::from_fn(|_| Rational::zero()))
-                .collect::<Series>();
-            let mut factor = Rational::scalar(Expansion::scalar(1.));
-            for q in 0..=order.min(p) {
-                let index = if at_start { 0 } else { rows.len() - 1 };
-                for k in 0..4 {
-                    output[q][k] = rows[index][k].mul(&factor, ctx)?;
-                }
-                if q < order.min(p) {
-                    for i in 0..rows.len() - 1 {
-                        for k in 0..4 {
-                            rows[i][k] = rows[i + 1][k].sub(&rows[i][k], ctx)?;
-                        }
-                    }
-                    rows.pop();
-                    factor = factor
-                        .mul(&Rational::scalar(Expansion::scalar((p - q) as f64)), ctx)?
-                        .div_positive(&Rational::scalar(Expansion::scalar((q + 1) as f64)), ctx)?
-                        .div_positive(&width, ctx)?;
-                }
+    let at_start = t.sub(&u[span], ctx)?.sign() == Sign::Zero;
+    let at_end = t.sub(&u[span + 1], ctx)?.sign() == Sign::Zero;
+    let mut bezier = true;
+    // Literal original C0 Bezier spans have at least p copies of BOTH
+    // endpoint knots. Their p+1 original poles are exactly the local Bernstein
+    // net, even inside a multispan/nonclamped curve. No knot insertion occurs.
+    for k in span - p + 1..=span {
+        bezier &= u[k].sub(&u[span], ctx)?.sign() == Sign::Zero;
+    }
+    for k in span + 1..=span + p {
+        bezier &= u[k].sub(&u[span + 1], ctx)?.sign() == Sign::Zero;
+    }
+    if bezier && (at_start || at_end) {
+        let width = Rational::scalar(u[span + 1].sub(&u[span], ctx)?);
+        let first = if at_start {
+            span - p
+        } else {
+            span - order.min(p)
+        };
+        let end = if at_start { first + order.min(p) } else { span };
+        let mut rows = (first..=end)
+            .map(|i| -> Result<[Rational; 4], Reason> {
+                Ok([
+                    Rational::scalar(x[4 * i].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 1].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 2].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 3].clone()),
+                ])
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut output = (0..=order)
+            .map(|_| std::array::from_fn(|_| Rational::zero()))
+            .collect::<Series>();
+        let mut factor = Rational::scalar(Expansion::scalar(1.));
+        for q in 0..=order.min(p) {
+            let index = if at_start { 0 } else { rows.len() - 1 };
+            for k in 0..4 {
+                output[q][k] = rows[index][k].mul(&factor, ctx)?;
             }
-            return Ok(output);
+            if q < order.min(p) {
+                for i in 0..rows.len() - 1 {
+                    for k in 0..4 {
+                        rows[i][k] = rows[i + 1][k].sub(&rows[i][k], ctx)?;
+                    }
+                }
+                rows.pop();
+                factor = factor
+                    .mul(&Rational::scalar(Expansion::scalar((p - q) as f64)), ctx)?
+                    .div_positive(&Rational::scalar(Expansion::scalar((q + 1) as f64)), ctx)?
+                    .div_positive(&width, ctx)?;
+            }
         }
+        return Ok(output);
     }
     let mut rows = Vec::with_capacity(p + 1);
     for j in 0..=p {
