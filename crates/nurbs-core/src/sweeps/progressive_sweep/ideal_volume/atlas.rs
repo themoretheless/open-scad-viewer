@@ -250,6 +250,26 @@ pub(super) fn certify(
     if let Some(tube)=tube {return tube.certify(context,out,max_cells,closed);}
     certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)
 }
+/// One complete original UV/time chart, also usable as a fallback when a
+/// physical-disk extension is too conservative. Its single metric, complete
+/// UV refinement and source ledger are the same as the general atlas owner.
+pub(super) fn local_source(
+    context:&cell::Context<'_, '_>,pieces:&[Box3],out:&mut IdealVolumeReport,max:usize,
+)->Result<bool>{
+    let mut columns:Option<[V3;3]>=None;
+    for &b in pieces {
+        if out.cells==max {return Ok(false);}
+        let Enclosed::Value(e)=context.enclose(b,out,max)? else {return Ok(false);};
+        if let Some(old)=&mut columns {
+            for a in 0..3 {for k in 0..3 {
+                old[a][k]=I::new(old[a][k].lo.min(e.columns[a][k].lo),old[a][k].hi.max(e.columns[a][k].hi))?;
+            }}
+        }else {columns=Some(e.columns);}
+    }
+    let Some(columns)=columns else {return Ok(false);};
+    let mut query=|b,out:&mut IdealVolumeReport|context.enclose(b,out,max);
+    monotone_hull(pieces,columns,out.projection,&mut query,out,max)
+}
 /// Internal query engine shared by original transport and coefficient-owned
 /// affine volumes. No public callback can fabricate geometry enclosures.
 pub(crate) fn certify_map(

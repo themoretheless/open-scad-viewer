@@ -879,7 +879,21 @@ fn closed_guided_and_contact_retained_bounds_include_copied_seam() {
         let tight_options=Options {max_deviation:2.,..opts};
         let tight=Sweep::new(&profile,&path,&scale,&twist,tight_options).unwrap();
         let tight=if contact {tight.with_contact_guide(&guide,0.).unwrap()} else {tight.with_orientation_guide(&guide).unwrap()};
-        assert!(!tight.level(33).unwrap().report.accepted);
+        let coarse=tight.level(33).unwrap();
+        assert!(coarse.report.continuous_bound);
+        let coarse_upper=coarse.report.continuous_error_upper.unwrap();
+        assert_eq!(coarse.report.accepted,coarse_upper<=2.);
+        assert_eq!(coarse_upper,bound.error_upper.unwrap());
+        // Admission follows the freshly proved bound, including when a
+        // sharper enclosure admits the coarse level. A smaller budget must
+        // still refuse without changing the geometric estimate.
+        let below_options=Options {max_deviation:coarse_upper.next_down(),..opts};
+        let below=Sweep::new(&profile,&path,&scale,&twist,below_options).unwrap();
+        let below=if contact {below.with_contact_guide(&guide,0.).unwrap()} else {below.with_orientation_guide(&guide).unwrap()};
+        let below=below.level(33).unwrap();
+        assert!(below.report.continuous_bound);
+        assert!(!below.report.accepted);
+        assert_eq!(below.report.continuous_error_upper,Some(coarse_upper));
         let intermediate=tight.level(65).unwrap();
         assert!(intermediate.report.continuous_bound);
         let intermediate_upper=intermediate.report.continuous_error_upper.unwrap();
@@ -938,17 +952,41 @@ fn closed_guided_contact_transport_preserves_tight_budget_and_refinement() {
                 "normal":[0.,0.,1.],"orientation":"rmf","spacing":"parameter",
                 "initial_sections":33,"max_sections":129,"max_deviation":2.,"preview_sections":count});
             if contact {request["contact_parameter"]=json!(0.);request["contact_profile"]=json!(0);}
-            let result=crate::transport::dispatch(request).unwrap();
+            let result=crate::transport::dispatch(request.clone()).unwrap();
             let report=&result["report"];
             assert_eq!(report["continuousBound"],true,"contact={contact}, count={count}: {report:?}");
             let upper=report["continuousErrorUpper"].as_f64().unwrap();
             assert_eq!(report["accepted"],upper<=2.);
-            if count==33 {assert!(upper>2.);}
+            if count==33 {
+                request["max_deviation"]=json!(upper.next_down());
+                let below=crate::transport::dispatch(request).unwrap();
+                assert_eq!(below["report"]["continuousBound"],true);
+                assert_eq!(below["report"]["accepted"],false);
+                assert_eq!(below["report"]["continuousErrorUpper"],upper);
+                assert_eq!(below["report"]["budget"],upper.next_down());
+            }
             if count==129 {assert!(upper<=2.);}
             assert_eq!(report["budget"],2.);
             assert!(report["errorCertificateCells"].as_u64().unwrap()<=10000);
             assert_eq!(report["continuousErrorScope"],"retained-patches-relative-to-original-profile-transport");
-
+            // Check the decoded transport bound against the original circle,
+            // including the interval ending at the copied closed seam.
+            let opts=Options {normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,
+                spacing:Spacing::Parameter,initial_sections:33,max_sections:129,max_deviation:2.};
+            let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+            let sweep=if contact {sweep.with_contact_guide(&guide,0.).unwrap()} else {sweep.with_orientation_guide(&guide).unwrap()};
+            let sections=sweep.sections(count).unwrap().0;
+            for i in 0..count-1 {for fraction in [0.125,0.5,0.875] {
+                let t=(i as f64+fraction)/(count-1) as f64;
+                let original=path.evaluate(t).unwrap().point;
+                for control in 0..2 {
+                    let expected=[original[0],original[1],1.+control as f64];
+                    let delta=std::array::from_fn(|k|
+                        (1.-fraction)*sections[i].control_points[control][k]
+                        +fraction*sections[i+1].control_points[control][k]-expected[k]);
+                    assert!(norm(delta)<=upper,"contact={contact}, count={count}, t={t}");
+                }
+            }}
         }
     }
 }

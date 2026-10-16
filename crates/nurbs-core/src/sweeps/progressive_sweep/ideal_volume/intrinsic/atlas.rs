@@ -61,7 +61,14 @@ pub(super) fn certify(
         if let Some(proved) = charts.get(&key) {
             return Ok(*proved);
         }
-        let proved = tube.local(c, pieces, out, max)?;
+        let mut proved = tube.local(c, pieces, out, max)?;
+        if !proved && tube.extended_laws && out.cells<max {
+            // A containing physical disk can include a focal point outside
+            // the actual carrier. Its failure must not suppress a successful
+            // original UV-chart proof. Both cover exactly the same source
+            // pairs, including the diagonal and the closed seam.
+            proved=super::super::atlas::local_source(c,pieces,out,max)?;
+        }
         if proved || out.cells < max {
             charts.insert(key, proved);
         }
