@@ -26,3 +26,11 @@ WASM target compilation passed separately (compile-only log retained).
 Full qualifier session: 21376; driver log:
 `/private/tmp/osv-rational-filled-caps-full-qualifier-20261016.log`.
 Do not change native source while this qualifier is running.
+
+
+Terminal qualification: all eleven gates passed, 3200 tests, 4 ignored, no
+failures; source guard verified. Qualified code `a2781e06b825c4da99934d0962fd2959df40bc55`.
+3759 guarded inputs, SHA-256
+`75d2f3372eaeb9862462d0b480a9507896942e34d8cea20d3b7753c444e31b7b`.
+This supersedes pending status above for this raw typed-cap checkpoint only.
+The separate supplied-model/JSON/STEP successor requires its own fresh qualifier.
