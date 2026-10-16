@@ -1,0 +1,354 @@
+{
+  "schema": "rational-cap-source-audit-native-qualification-v1",
+  "qualifiedCodeRevision": "d6e686519f0d7489e8a30c5259beb9679525ce75",
+  "lowerCheckpointRevision": "fd41f397f",
+  "nativeCheckpointPassed": true,
+  "sourceGuardVerified": true,
+  "inputsSha256": "ecc84fa44db7b13945b20efe20567f694ad92bea06defce0056f14bad2289262",
+  "checks": [
+    {
+      "name": "nurbs-domain-map",
+      "command": [
+        "node",
+        "scripts/map-nurbs-api.mjs",
+        "--check"
+      ],
+      "log": "logs/nurbs-domain-map-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 0.152,
+      "testResults": []
+    },
+    {
+      "name": "algorithm-owner-audit",
+      "command": [
+        "node",
+        "scripts/audit-algorithm-owners.mjs",
+        "--check"
+      ],
+      "log": "logs/algorithm-owner-audit-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 0.929,
+      "testResults": []
+    },
+    {
+      "name": "exact-predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib"
+      ],
+      "log": "logs/exact-predicates-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 2.425,
+      "testResults": [
+        {
+          "passed": 58,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 132.733,
+      "testResults": [
+        {
+          "passed": 1594,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 190.914,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "regularity-and-g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_regularity",
+        "--test",
+        "surface_g2",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/regularity-and-g2-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 2.052,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 1120.502,
+      "testResults": [
+        {
+          "passed": 1109,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 23.073,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 188.377,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--test",
+        "smooth_closed_material_certificate",
+        "--test",
+        "smooth_closed_step_matrix",
+        "--test",
+        "rational_closed_material_certificate",
+        "--test",
+        "rational_closed_step_matrix",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 205.857,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "independent-rational-cap-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-rational-filled-cap-step.py",
+        "/private/tmp/osv-rational-cap-audit-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/step",
+        "/private/tmp/osv-rational-cap-audit-20261016/docs/qualification/rational-cap-source-audit-2026-10-16/occt-report.json"
+      ],
+      "log": "logs/independent-rational-cap-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 7.244,
+      "testResults": []
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 10.627,
+      "testResults": []
+    }
+  ],
+  "reusedLowerChecks": 0,
+  "publicWasmRebuilt": false,
+  "freshCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "independentStepQualified": false,
+  "browserQualified": false,
+  "idealSourceSmoothnessQualified": true,
+  "physicalCapSmoothnessQualified": true,
+  "nativeSignedStepMatrixQualified": true,
+  "fullGoalComplete": false,
+  "physicalCapSmoothnessScope": "typed-native-original-rational-frame-planar-nonplanar-and-moving-affine-annular-cap-fixtures",
+  "newCapJsonWasmRuntimeQualified": false,
+  "newCapStepQualified": true,
+  "newCapStepScope": "six-original-rational-annular-cap-native-and-independent-OCCT-cases",
+  "newCapJsonQualified": true,
+  "newCapWasmCompilePassed": true,
+  "idealSourceSmoothnessScope": "qualified-original-closed-material-and-rational-annular-cap-fixtures",
+  "totalPassed": 3211,
+  "totalIgnored": 4,
+  "privateReleaseWasmRuntimeQualified": true,
+  "privateReleaseWasmRuntimeScope": "six-raw-original-rational-annular-cap-ABI-construct-audit-STEP-refusal-and-sharp-C0-cases",
+  "privateReleaseWasmSha256": "66e74ad3a2d0741134ddf2c99ee033e42e74fe596fa7d732ea4f8fbb18aade1e",
+  "privateReleaseWasmBytes": 17768915,
+  "newCapJsonWasmRuntimeQualifiedScope": "public-packaged-client-integration-remains-unqualified"
+}

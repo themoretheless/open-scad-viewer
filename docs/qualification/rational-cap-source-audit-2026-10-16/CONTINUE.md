@@ -33,3 +33,13 @@ Current full qualifier session: 36645; log:
 The preceding raw-cap checkpoint finished: 3200 passing tests, 4 ignored,
 source guard verified, preserved in `37ff95ec0`. This does not qualify the
 changed supplied-model/JSON/STEP successor; session 36645 remains live.
+
+
+Terminal successor qualification: all twelve gates passed, 3211 tests, 4 ignored,
+no failures. Code `d6e686519f0d7489e8a30c5259beb9679525ce75`, 3768 guarded inputs;
+SHA-256 `ecc84fa44db7b13945b20efe20567f694ad92bea06defce0056f14bad2289262`.
+Source guard verified at terminal completion and again before preserving.
+Fresh STEP outputs and independent OCCT report are under `step/` and
+`occt-report.json`. Private release ABI runtime passed separately for the exact
+same source; the public packaged client, browser and UI remain unqualified.
+This terminal result supersedes pending text above for this successor only.
