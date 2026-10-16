@@ -28,13 +28,28 @@ fn caps(v: &Value) -> Result<Vec<LoftCap>> {
         .collect()
 }
 mod closed;
+mod smooth_closed;
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Open,
+    Closed,
+    SmoothClosed,
+    SmoothClosedAudit,
+}
 pub fn construct(v: Value) -> Result<Value> {
-    construct_impl(v, false)
+    construct_impl(v, Kind::Open)
 }
 pub fn construct_closed(v: Value) -> Result<Value> {
-    construct_impl(v, true)
+    construct_impl(v, Kind::Closed)
 }
-fn construct_impl(v: Value, closed: bool) -> Result<Value> {
+pub fn construct_smooth_closed(v: Value) -> Result<Value> {
+    construct_impl(v, Kind::SmoothClosed)
+}
+pub fn verify_smooth_closed(v: Value) -> Result<Value> {
+    construct_impl(v, Kind::SmoothClosedAudit)
+}
+fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
+    let closed = kind != Kind::Open;
     let s = field::<Value>(&v, "source")?;
     let profiles: Vec<Curve> = field(&s, "profiles")?;
     let path = field(&s, "path")?;
@@ -143,6 +158,23 @@ fn construct_impl(v: Value, closed: bool) -> Result<Value> {
     let sections = field(&v, "sections")?;
     let tolerance_uv = field(&v, "toleranceUv")?;
     let error_budget = field(&v, "maxDeviation")?;
+    if matches!(kind, Kind::SmoothClosed | Kind::SmoothClosedAudit) {
+        if ideal_method != "atlas" {
+            return Err(input(
+                "Smooth closed original material requires the quotient atlas",
+            ));
+        }
+        return smooth_closed::construct(
+            &sweep,
+            &loop_sizes,
+            sections,
+            tolerance_uv,
+            error_budget,
+            ideal_limits.ok_or_else(|| input("Smooth closed ideal-body limits required"))?,
+            &v,
+            kind == Kind::SmoothClosedAudit,
+        );
+    }
     let limits = owned::Limits {
         source_cells: field(&limits, "sourceCells")?,
         source_products: field(&limits, "sourceProducts")?,

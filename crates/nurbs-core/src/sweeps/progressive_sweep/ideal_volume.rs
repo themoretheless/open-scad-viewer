@@ -31,11 +31,11 @@ pub struct IdealVolumeReport {
 }
 mod arc;
 mod arc_frames;
-mod atlas;
-mod cell;
-mod charts;
+pub(crate) mod atlas;
+pub(crate) mod cell;
+pub(crate) mod charts;
 mod closed;
-mod pose;
+pub(crate) mod pose;
 use charts::*;
 impl MultiSweep<'_> {
     /// Certify the ORIGINAL filled volume F(u,v,t)=pose(t)[(1-t) C0+t C1].

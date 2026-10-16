@@ -9,12 +9,12 @@ pub(super) enum Bound {
     Unsupported(&'static str),
 }
 #[derive(Clone, Copy)]
-pub(super) struct Enclosure {
-    pub(super) value: V3,
-    pub(super) columns: [V3; 3],
+pub(crate) struct Enclosure {
+    pub(crate) value: V3,
+    pub(crate) columns: [V3; 3],
 }
 #[derive(Clone, Copy)]
-pub(super) enum Enclosed {
+pub(crate) enum Enclosed {
     Value(Enclosure),
     Unavailable(Option<usize>),
     Unsupported(&'static str),

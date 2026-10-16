@@ -19,7 +19,7 @@ fn c0(degree: usize, knots: &[f64], end: usize) -> bool {
 pub(super) fn curve_c0(c: &Curve) -> bool {
     !c.periodic && c0(c.degree, &c.knots, c.control_points.len())
 }
-pub(super) fn surface_c0(s: &Surface) -> bool {
+pub(crate) fn surface_c0(s: &Surface) -> bool {
     !s.periodic_u
         && !s.periodic_v
         && c0(s.degree_u, &s.knots_u, s.control_points.len())
@@ -28,7 +28,7 @@ pub(super) fn surface_c0(s: &Surface) -> bool {
 /// Original rational surface value and first jets in NORMALIZED UV coordinates.
 /// Every intersected ORIGINAL knot cell is enclosed and charged, including
 /// one-sided derivatives at knots. No extracted floating net becomes a source.
-pub(super) fn cap_jets(
+pub(crate) fn cap_jets(
     s: &Surface,
     uv: [[f64; 2]; 2],
     spent: &mut usize,
@@ -68,18 +68,17 @@ pub(super) fn cap_jets(
                 [query[0][0].max(du[0]), query[0][1].min(du[1])],
                 [query[1][0].max(dv[0]), query[1][1].min(dv[1])],
             ];
-            let j = crate::surface_measure::jets::calculate_partial_stable(
+            let j = crate::surface_measure::first_jets::calculate(
                 s,
                 [u, v],
                 region,
-                [None; 2],
             )?;
             // The stable jet owner subtracts this exact stored origin. Its
             // derivatives are with respect to the local ORIGINAL knot cell.
             let origin = &s.control_points[u - s.degree_u][v - s.degree_v];
             let part = [
                 iv::add(
-                    j[0][0],
+                    j[0],
                     [
                         I::point(origin[0]),
                         I::point(origin[1]),
@@ -87,11 +86,11 @@ pub(super) fn cap_jets(
                     ],
                 )?,
                 iv::scale(
-                    j[1][0],
+                    j[1],
                     widths[0].div(I::point(du[1]).sub(I::point(du[0]))?)?,
                 )?,
                 iv::scale(
-                    j[0][1],
+                    j[2],
                     widths[1].div(I::point(dv[1]).sub(I::point(dv[0]))?)?,
                 )?,
             ];

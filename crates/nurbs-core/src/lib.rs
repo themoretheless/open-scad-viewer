@@ -24,6 +24,7 @@ pub mod trim;
 pub mod tessellation;
 pub mod certificates;
 pub use crate::core::affine;
+pub use crate::analysis::affine_volume;
 pub use crate::tessellation::shared_tessellation;
 pub use crate::intersection::self_curve as curve_self_intersection;
 pub use crate::intersection::self_surface as surface_self_intersection;

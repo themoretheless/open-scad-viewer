@@ -3,7 +3,7 @@ use nurbs_core::{
     progressive_sweep::{Options, Orientation, Spacing, constant_vector_law},
     surface::{Axis, Surface},
 };
-fn path(rational: bool, spatial: bool) -> Curve {
+pub(super) fn path(rational: bool, spatial: bool) -> Curve {
     let mut points = vec![
         vec![0., 0., 0.],
         vec![1., 0., 0.],
@@ -75,7 +75,7 @@ fn material(rational: bool, nonplanar: bool) -> (LoftCap, Vec<Curve>) {
     ];
     (LoftCap { surface: s, trims }, profiles)
 }
-fn limits() -> ClosedLimits {
+pub(super) fn limits() -> ClosedLimits {
     ClosedLimits {
         material: MaterialLimits {
             pairs: 10000,
@@ -119,7 +119,7 @@ fn limits() -> ClosedLimits {
         },
     }
 }
-fn options(spatial: bool, spacing: Spacing) -> Options {
+pub(super) fn options(spatial: bool, spacing: Spacing) -> Options {
     Options {
         normal: [0., 0., 1.],
         orientation: if spatial {

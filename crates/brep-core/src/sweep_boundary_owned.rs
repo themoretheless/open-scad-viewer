@@ -440,3 +440,7 @@ fn construct_with_ideal_impl(
 
 mod closed;
 pub use closed::{ClosedAttempt, ClosedBody, ClosedLimits, ClosedReport, MaterialLimits, MaterialReport, construct_closed_with_ideal_atlas};
+pub use closed::{SmoothClosedAttempt,SmoothClosedBody,SmoothClosedLimits,SmoothClosedReport,construct_smooth_closed_with_ideal_atlas};
+pub use closed::OriginalClosedLimits;
+pub use closed::{OriginalClosedReport,AffineWallBindingReport};
+pub use closed::verify_smooth_closed_with_ideal_atlas;

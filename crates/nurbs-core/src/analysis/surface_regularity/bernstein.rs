@@ -3,62 +3,8 @@
 //! where Su x Sv does. Derivatives here use normalized positive span axes.
 use super::*;
 use crate::distance_bounds::Interval as I;
-type Net = Vec<Vec<I>>;
+use crate::numerics::bernstein_tensor::{Net, derivative, minus, product};
 type Normals = Vec<Vec<[I; 3]>>;
-fn choose(n: usize, k: usize) -> u64 {
-    let mut c = 1u64;
-    for j in 0..k.min(n - k) {
-        c = c * (n - j) as u64 / (j + 1) as u64;
-    }
-    c
-}
-fn derivative(a: &Net, axis: usize) -> Result<Net> {
-    let p = if axis == 0 {
-        a.len() - 1
-    } else {
-        a[0].len() - 1
-    };
-    let mut out = vec![
-        vec![I::point(0.); a[0].len() - usize::from(axis == 1)];
-        a.len() - usize::from(axis == 0)
-    ];
-    for u in 0..out.len() {
-        for v in 0..out[0].len() {
-            out[u][v] = a[u + usize::from(axis == 0)][v + usize::from(axis == 1)]
-                .sub(a[u][v])?
-                .mul(I::point(p as f64))?;
-        }
-    }
-    Ok(out)
-}
-fn product(a: &Net, b: &Net) -> Result<Net> {
-    let [m, n] = [a.len() - 1, a[0].len() - 1];
-    let [p, q] = [b.len() - 1, b[0].len() - 1];
-    let mut out = vec![vec![I::point(0.); n + q + 1]; m + p + 1];
-    for k in 0..=m + p {
-        for l in 0..=n + q {
-            for i in k.saturating_sub(p)..=k.min(m) {
-                for j in l.saturating_sub(q)..=l.min(n) {
-                    let u = I::point(choose(m, i) as f64)
-                        .mul(I::point(choose(p, k - i) as f64))?
-                        .div(I::point(choose(m + p, k) as f64))?;
-                    let v = I::point(choose(n, j) as f64)
-                        .mul(I::point(choose(q, l - j) as f64))?
-                        .div(I::point(choose(n + q, l) as f64))?;
-                    out[k][l] = out[k][l].add(a[i][j].mul(b[k - i][l - j])?.mul(u)?.mul(v)?)?;
-                }
-            }
-        }
-    }
-    Ok(out)
-}
-fn minus(a: Net, b: Net) -> Result<Net> {
-    debug_assert_eq!((a.len(), a[0].len()), (b.len(), b[0].len()));
-    a.into_iter()
-        .zip(b)
-        .map(|(a, b)| a.into_iter().zip(b).map(|(a, b)| a.sub(b)).collect())
-        .collect()
-}
 fn cross(a: &[Net; 3], b: &[Net; 3], k: usize) -> Result<Net> {
     let i = (k + 1) % 3;
     let j = (k + 2) % 3;

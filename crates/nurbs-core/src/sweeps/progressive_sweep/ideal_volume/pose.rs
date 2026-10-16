@@ -5,12 +5,12 @@
 //! subtracting independently enclosed translated images would lose correlation.
 use super::*;
 #[derive(Clone, Copy)]
-pub(super) struct Pose {
-    pub(super) origin: [V3; 2],
-    pub(super) linear: [[V3; 2]; 3],
+pub(crate) struct Pose {
+    pub(crate) origin: [V3; 2],
+    pub(crate) linear: [[V3; 2]; 3],
 }
 impl Pose {
-    pub(super) fn enclose(self, q: [V3; 3], qt: V3) -> Result<cell::Enclosure> {
+    pub(crate) fn enclose(self, q: [V3; 3], qt: V3) -> Result<cell::Enclosure> {
         let apply = |v: V3, order: usize| -> Result<V3> {
             let mut r = [I::point(0.); 3];
             for j in 0..3 {

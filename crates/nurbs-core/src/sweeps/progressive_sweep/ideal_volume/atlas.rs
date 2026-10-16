@@ -119,8 +119,8 @@ fn monotone_hull(
             }
         }
         let axis = match e {
-            Enclosed::Unavailable(Some(i)) => i,
-            _ => widest(b).0,
+            Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>i,
+            _ => match widest(b) {Some((axis,_))=>axis,None=>return Ok(false)},
         };
         let Some(children) = split_axis(b, axis) else {
             return Ok(false);
@@ -161,13 +161,13 @@ fn separated(a: V3, b: V3) -> bool {
 fn key(b: Box3) -> [[u64; 2]; 3] {
     b.map(|x| x.map(f64::to_bits))
 }
-fn widest(b: Box3) -> (usize, f64) {
+fn widest(b: Box3) -> Option<(usize, f64)> {
     // Temporal jet ambiguity is usually the first obstruction for a turning
     // source. This is only a refinement heuristic, never admission evidence.
     (0..3)
+        .filter(|&i|split_axis(b,i).is_some())
         .map(|i| (i, (b[i][1] - b[i][0]) * if i == 2 { 32. } else { 1. }))
         .max_by(|a, b| a.1.total_cmp(&b.1))
-        .unwrap()
 }
 pub(super) fn certify(
     context: &cell::Context<'_, '_>,
@@ -176,6 +176,17 @@ pub(super) fn certify(
     max_cells: usize,
     closed: bool,
 ) -> Result<()> {
+    certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)
+}
+/// Internal query engine shared by original transport and coefficient-owned
+/// affine volumes. No public callback can fabricate geometry enclosures.
+pub(crate) fn certify_map(
+    mut enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
+    projection:[[f64;3];3],
+    out:&mut IdealVolumeReport,
+    max_cells:usize,
+    closed:bool,
+)->Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
     let mut metrics = BTreeMap::new();
@@ -183,7 +194,7 @@ pub(super) fn certify(
         if let Some(e) = cache.get(&key(b)) {
             return Ok(*e);
         }
-        let e = context.enclose(b, out, max_cells)?;
+        let e = enclose(b, out, max_cells)?;
         cache.insert(key(b), e);
         Ok(e)
     };
@@ -299,13 +310,16 @@ pub(super) fn certify(
         if out.cells == max_cells {
             return Ok(());
         }
-        let (mut axis, wa) = widest(a);
-        let (ib, wb) = widest(b);
-        let mut split_b = a != b && wb > wa;
+        let choice=match (widest(a),if a!=b {widest(b)} else {None}) {
+            (Some(x),Some(y)) if y.1>x.1 =>Some((y.0,true)),
+            (Some(x),_)=>Some((x.0,false)),
+            (None,Some(y))=>Some((y.0,true)),
+            (None,None)=>None,
+        };
+        let Some((mut axis,mut split_b))=choice else {
+            out.reason=Some("ideal-volume-atlas-precision-limit");return Ok(());
+        };
         let e = if split_b { eb } else { ea };
-        if split_b {
-            axis = ib;
-        }
         let preferred = match e {
             Enclosed::Unavailable(Some(axis)) => Some(axis),
             _ => match eh {
@@ -313,9 +327,14 @@ pub(super) fn certify(
                 _ => None,
             },
         };
-        if let Some(preferred) = preferred {
+        // A wide JOINT hull may suggest an axis that neither narrow endpoint
+        // box can split. Keep a splittable axis instead of prematurely refusing
+        // an otherwise resolvable pair. This changes only subdivision proposals.
+        if let Some(preferred) = preferred.filter(|&k|split_axis(a,k).is_some()
+            || a!=b && split_axis(b,k).is_some()) {
             axis = preferred;
-            split_b = a != b && b[axis][1] - b[axis][0] > a[axis][1] - a[axis][0];
+            split_b = a != b && split_axis(b,axis).is_some()
+                && (split_axis(a,axis).is_none() || b[axis][1]-b[axis][0]>a[axis][1]-a[axis][0]);
         }
         let Some(children) = split_axis(if split_b { b } else { a }, axis) else {
             out.reason = Some("ideal-volume-atlas-precision-limit");

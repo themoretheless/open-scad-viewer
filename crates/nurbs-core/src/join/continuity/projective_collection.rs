@@ -5,7 +5,7 @@ use super::{ExactStripJetReport, inspect_surface_projective_strip_jets, inspect_
 
 /// Aggregate collection ceiling; each seam still receives at most 1M work.
 /// A complete closed cubic profile atlas can have 256 owned seams.
-pub const MAX_PROJECTIVE_SEAM_COLLECTION_WORK:u64=4_000_000;
+pub const MAX_PROJECTIVE_SEAM_COLLECTION_WORK:u64=16_000_000;
 
 pub struct ProjectiveSeam {
     pub patches: [usize; 2],

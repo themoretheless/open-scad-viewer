@@ -384,7 +384,7 @@ fn a_nonplanar_cubic_original_profile_keeps_all_g2_joins_under_spatial_motion() 
         crate::sweep_smoothness::complete::inspect(
             &model,
             crate::sweep_smoothness::complete::Limits {
-                exact_work: 4_000_001,
+                exact_work: nurbs_core::continuity::MAX_PROJECTIVE_SEAM_COLLECTION_WORK + 1,
                 ..l
             }
         )
@@ -474,4 +474,64 @@ fn authored_spatial_frame_scale_twist_and_affine_laws_keep_every_owned_g2_seam()
 #[test]
 fn guided_spatial_frame_scale_twist_and_affine_laws_keep_every_owned_g2_seam() {
     qualify_frame(2);
+}
+
+#[test]
+fn actual_closed_quintic_filled_carrier_has_a_global_parameter_volume_atlas() {
+    let source = profiles(false);
+    let rows = sections(&source);
+    let candidate = affine_station_walls(&source, &rows, &[], true, limits()).unwrap();
+    assert!(candidate.sides.is_some(), "{}", candidate.reason);
+    let r = 1. / 128.;
+    let carrier = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![-1., -1., 3., 3.],
+        knots_v: vec![2., 2., 6., 6.],
+        control_points: vec![
+            vec![vec![0., -r, -r], vec![0., -r, r]],
+            vec![vec![0., r, -r], vec![0., r, r]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let before = carrier.clone();
+    let atlas = nurbs_core::affine_volume::certify(
+        &carrier,
+        candidate.source_origin.unwrap(),
+        candidate.poses.as_ref().unwrap(),
+        true,
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        1000000,
+        1000000,
+    )
+    .unwrap();
+    eprintln!("actual closed quintic carrier atlas: {atlas:?}");
+    assert!(
+        atlas.embedding_certified
+            && atlas.regularity_certified
+            && atlas.parameter_topology_preserved,
+        "{atlas:?}"
+    );
+    assert_eq!(carrier, before);
+    let pieces = candidate.poses.as_ref().unwrap();
+    let twice = [pieces.clone(), pieces.clone()].concat();
+    let doubled = nurbs_core::affine_volume::certify(
+        &carrier,
+        candidate.source_origin.unwrap(),
+        &twice,
+        true,
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        100000,
+        1000000,
+    )
+    .unwrap();
+    assert!(
+        !doubled.embedding_certified
+            && !doubled.regularity_certified
+            && !doubled.parameter_topology_preserved,
+        "{doubled:?}"
+    );
+    eprintln!("literal double-cover affine volume refused: {doubled:?}");
 }
