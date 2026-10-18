@@ -156,7 +156,7 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
     if (elements > OPENSCAD_IMPORT_MAX_XML_ELEMENTS) {
       return dataError(
         'E_IMPORT_LIMIT',
-        `${format.toUpperCase()} XML exceeds ${OPENSCAD_IMPORT_MAX_XML_ELEMENTS.toLocaleString()} elements.`,
+        `${format.toUpperCase()} XML exceeds ${OPENSCAD_IMPORT_MAX_XML_ELEMENTS.toLocaleString('en-US')} elements.`,
         format,
         OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
         elements,

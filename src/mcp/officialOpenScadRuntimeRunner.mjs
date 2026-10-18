@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
+import Module, { createRequire } from 'node:module'
+import { posix as posixPath, resolve as resolvePath } from 'node:path'
 
 // This executable is intentionally dependency-free: the parent grants the
 // one-shot process read access only to this file and the verified runtime.
@@ -199,6 +200,23 @@ function buildArguments(request, outputPath) {
   return args
 }
 
+/**
+ * The Emscripten runtime implements its MEMFS path utilities with Node's
+ * require("path"), which is path.win32 on Windows: "/project/main.scad"
+ * normalizes to "\project\main.scad" and every MEMFS lookup fails. Serve the
+ * POSIX implementation to that one module while it loads; returns the restorer.
+ */
+function posixPathForRuntime(runtimePath) {
+  if (process.platform !== 'win32') return () => undefined
+  const runtimeFile = resolvePath(runtimePath)
+  const originalLoad = Module._load
+  Module._load = function load(request, parent, isMain) {
+    if ((request === 'path' || request === 'node:path') && parent?.filename === runtimeFile) return posixPath
+    return originalLoad.call(this, request, parent, isMain)
+  }
+  return () => { Module._load = originalLoad }
+}
+
 async function loadRuntime(runtimePath, logs) {
   let initialized = false
   let resolveInitialized
@@ -221,6 +239,7 @@ async function loadRuntime(runtimePath, logs) {
   }
   globalThis.__OPENSCAD_MODULE__ = injected
   let runtime
+  const restoreLoad = posixPathForRuntime(runtimePath)
   try {
     runtime = createRequire(import.meta.url)(runtimePath)
     if (runtime?.calledRun || runtime?.runtimeInitialized) {
@@ -229,6 +248,7 @@ async function loadRuntime(runtimePath, logs) {
     }
     if (!initialized) await initializedPromise
   } finally {
+    restoreLoad()
     delete globalThis.__OPENSCAD_MODULE__
   }
   if (!runtime || typeof runtime.callMain !== 'function' || !runtime.FS) {

@@ -165,6 +165,53 @@ jobs:
             crates/target
           key: ${{ steps.native-rust-cache.outputs.cache-primary-key }}
 
+  # The Node/TypeScript suite of the Linux `check` job on the other hosted
+  # platforms: path separators, timer granularity, locales, symlink privileges,
+  # child processes and the official runtime differ there. The Linux-only
+  # allocator memory probe stays in `check`.
+  node-check:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      # Generated artifacts and frozen source digests compare repository bytes.
+      - name: Preserve repository line endings on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20.19'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: npm ci
+      - run: npm run test:architecture
+      - run: npm run audit:architecture
+      - run: npm run test:qualification-drift
+      - run: npm run build:geometry
+      - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
+      - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
+      - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2
+        env:
+          VITEST_MAX_WORKERS: '2'
+      - run: node node_modules/vite/bin/vite.js build
+      - run: node scripts/verify-dist.mjs
+      - run: npm run setup:openscad
+      - run: npm run test:official
+
   official-openscad-mcp:
     runs-on: ubuntu-latest
     timeout-minutes: 30

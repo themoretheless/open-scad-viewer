@@ -263,7 +263,7 @@ export async function assembleLegacyV5Result(
     if (triangleCount > MAX_TRIANGLES) {
       throw new LegacyV5AssemblyError(
         'E_LEGACY_V5_TRIANGLE_LIMIT',
-        `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`,
+        `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString('en-US')} triangles`,
       )
     }
     if (kernelMesh.numProp < 6) {

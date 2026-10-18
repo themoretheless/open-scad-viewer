@@ -37,7 +37,7 @@ export function renderOpenScadText(
   if (points > OPENSCAD_TEXT_MAX_CODE_POINTS) {
     return textError(
       'E_TEXT_PARAMETER_LIMIT',
-      `text() exceeds ${OPENSCAD_TEXT_MAX_CODE_POINTS.toLocaleString()} Unicode code points.`,
+      `text() exceeds ${OPENSCAD_TEXT_MAX_CODE_POINTS.toLocaleString('en-US')} Unicode code points.`,
       { limit: OPENSCAD_TEXT_MAX_CODE_POINTS, actual: points },
     )
   }
@@ -86,7 +86,7 @@ export function renderOpenScadText(
     if (shaped.length > OPENSCAD_TEXT_MAX_GLYPHS) {
       return textError(
         'E_TEXT_GLYPH_LIMIT',
-        `text() shaping exceeds ${OPENSCAD_TEXT_MAX_GLYPHS.toLocaleString()} glyphs.`,
+        `text() shaping exceeds ${OPENSCAD_TEXT_MAX_GLYPHS.toLocaleString('en-US')} glyphs.`,
         { limit: OPENSCAD_TEXT_MAX_GLYPHS, actual: shaped.length },
       )
     }
@@ -159,7 +159,7 @@ export function renderOpenScadText(
           if (vertexCount > OPENSCAD_TEXT_MAX_VERTICES) {
             return textError(
               'E_TEXT_VERTEX_LIMIT',
-              `text() exceeds ${OPENSCAD_TEXT_MAX_VERTICES.toLocaleString()} outline vertices.`,
+              `text() exceeds ${OPENSCAD_TEXT_MAX_VERTICES.toLocaleString('en-US')} outline vertices.`,
               { limit: OPENSCAD_TEXT_MAX_VERTICES, actual: vertexCount },
             )
           }

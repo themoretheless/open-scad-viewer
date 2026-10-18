@@ -1,6 +1,7 @@
 import {performance} from 'node:perf_hooks'
 import {mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
+import {tmpdir} from 'node:os'
 import assert from 'node:assert/strict'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
@@ -8,7 +9,7 @@ import type {DirectDocument} from '../src/services/directModeling'
 import {serializeDirectDocument,parseDirectDocument} from '../src/services/directModeling'
 import {applySolidSceneEdit} from '../src/services/solidSceneEdit'
 import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
-const directory=path.resolve(process.argv[2]??'/tmp/cad-absolute-placement-benchmark')
+const directory=path.resolve(process.argv[2]??path.join(tmpdir(),'cad-absolute-placement-benchmark'))
 await mkdir(directory,{recursive:true});await warmGeometryKernel()
 const rows=[]
 for(const count of [100,1000]){

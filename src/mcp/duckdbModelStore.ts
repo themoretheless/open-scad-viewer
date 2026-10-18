@@ -180,7 +180,7 @@ export class DuckDbModelStore implements ModelStore {
         const [{ model_count }] = await this.rows('SELECT count(*) AS model_count FROM mcp_models')
         if (safeInteger({ model_count }, 'model_count') >= MAX_STORED_MODEL_COUNT) {
           throw new CatalogQuotaError(
-            `Model catalog is limited to ${MAX_STORED_MODEL_COUNT.toLocaleString()} models`,
+            `Model catalog is limited to ${MAX_STORED_MODEL_COUNT.toLocaleString('en-US')} models`,
             'models',
             MAX_STORED_MODEL_COUNT,
           )
@@ -478,7 +478,7 @@ export class DuckDbModelStore implements ModelStore {
     if (!/^[a-f0-9]{64}$/i.test(input.sha256)) throw new TypeError('sha256 must be a SHA-256 hex digest')
     if (!(input.data instanceof Uint8Array)) throw new TypeError('Artifact data must be a Uint8Array')
     if (input.data.byteLength > MAX_STORED_ARTIFACT_BYTES) {
-      throw new RangeError(`Artifact exceeds the ${MAX_STORED_ARTIFACT_BYTES.toLocaleString()}-byte storage limit`)
+      throw new RangeError(`Artifact exceeds the ${MAX_STORED_ARTIFACT_BYTES.toLocaleString('en-US')}-byte storage limit`)
     }
     if (sha256(input.data).toLowerCase() !== input.sha256.toLowerCase()) {
       throw new TypeError('sha256 must match artifact data')
@@ -1122,7 +1122,7 @@ export class DuckDbModelStore implements ModelStore {
     const additionalBytes = Buffer.byteLength(source, 'utf8')
     if (storedBytes + additionalBytes > MAX_STORED_MODEL_SOURCE_BYTES) {
       throw new CatalogQuotaError(
-        `Stored immutable source snapshots are limited to ${MAX_STORED_MODEL_SOURCE_BYTES.toLocaleString()} UTF-8 bytes`,
+        `Stored immutable source snapshots are limited to ${MAX_STORED_MODEL_SOURCE_BYTES.toLocaleString('en-US')} UTF-8 bytes`,
         'source_bytes',
         MAX_STORED_MODEL_SOURCE_BYTES,
       )
@@ -1137,14 +1137,14 @@ export class DuckDbModelStore implements ModelStore {
     `, { model_id: modelId })
     if (safeInteger(rows[0], 'total_count') >= MAX_STORED_MODEL_REVISION_COUNT) {
       throw new CatalogQuotaError(
-        `Model catalog is limited to ${MAX_STORED_MODEL_REVISION_COUNT.toLocaleString()} source revisions`,
+        `Model catalog is limited to ${MAX_STORED_MODEL_REVISION_COUNT.toLocaleString('en-US')} source revisions`,
         'revisions',
         MAX_STORED_MODEL_REVISION_COUNT,
       )
     }
     if (safeInteger(rows[0], 'model_count') >= MAX_STORED_REVISIONS_PER_MODEL) {
       throw new CatalogQuotaError(
-        `Model ${modelId} is limited to ${MAX_STORED_REVISIONS_PER_MODEL.toLocaleString()} source revisions`,
+        `Model ${modelId} is limited to ${MAX_STORED_REVISIONS_PER_MODEL.toLocaleString('en-US')} source revisions`,
         'revisions_per_model',
         MAX_STORED_REVISIONS_PER_MODEL,
       )

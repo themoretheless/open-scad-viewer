@@ -251,7 +251,7 @@ export function reservePreparedGeometry(
     if (!Number.isSafeInteger(points) || points > OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS) {
       return dataError(
         'E_IMPORT_LIMIT',
-        `Prepared project 2D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS.toLocaleString()} points.`,
+        `Prepared project 2D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS.toLocaleString('en-US')} points.`,
         geometry.format,
         OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS,
         points,
@@ -265,7 +265,7 @@ export function reservePreparedGeometry(
   if (!Number.isSafeInteger(vertices) || vertices > OPENSCAD_IMPORT_MAX_PROJECT_VERTICES) {
     return dataError(
       'E_IMPORT_LIMIT',
-      `Prepared project 3D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_VERTICES.toLocaleString()} vertices.`,
+      `Prepared project 3D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_VERTICES.toLocaleString('en-US')} vertices.`,
       geometry.format,
       OPENSCAD_IMPORT_MAX_PROJECT_VERTICES,
       vertices,
@@ -274,7 +274,7 @@ export function reservePreparedGeometry(
   if (!Number.isSafeInteger(triangles) || triangles > OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES) {
     return dataError(
       'E_IMPORT_LIMIT',
-      `Prepared project 3D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES.toLocaleString()} triangles.`,
+      `Prepared project 3D geometry exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES.toLocaleString('en-US')} triangles.`,
       geometry.format,
       OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES,
       triangles,
@@ -292,7 +292,7 @@ export function reservePreparedDxfQueryMetadata(
   if (!Number.isSafeInteger(records) || records > OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS) {
     return dataError(
       'E_IMPORT_LIMIT',
-      `Prepared project DXF query metadata exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS.toLocaleString()} records.`,
+      `Prepared project DXF query metadata exceeds ${OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS.toLocaleString('en-US')} records.`,
       'dxf',
       OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS,
       records,
