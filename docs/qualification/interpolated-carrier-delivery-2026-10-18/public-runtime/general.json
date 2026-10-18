@@ -1,0 +1,15 @@
+{
+  "schema": "original-general-frame-private-wasm-runtime/1",
+  "wasmSha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
+  "wasmBytes": 12833089,
+  "requestSha256": "17aa0d630e99a33781e28407b9ef9a83826056652ac60e92d314dc4a5b3a3b75",
+  "passed": true,
+  "scope": "One exact tilted authored-frame Mobius-clock body: construct/audit/STEP re-audit and budget/parameter refusal.",
+  "negativeLongitudinalPassed": true,
+  "faces": 256,
+  "boundaryErrorUpper": 0.018183575531498828,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

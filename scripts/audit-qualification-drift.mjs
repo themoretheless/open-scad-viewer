@@ -39,6 +39,11 @@ export function auditQualificationDrift(root, {
     ['package-lock.json', 'npmLockfileSha256'],
     ['crates/Cargo.lock', 'rustLockfileSha256'],
   ]) compare('dependency', path, evidence.dependencyFingerprints[field])
+  // Finite receipts may include binary STEP/screenshot data outside the text bundle.
+  // Check the actual bytes; a matching JSON manifest alone is not evidence integrity.
+  for (const artifact of evidence.evidenceRecords ?? []) {
+    compare('finite-evidence', artifact.path, artifact.sha256, artifact.byteLength)
+  }
   const sourceParts = []
   const missingSources = []
   for (const path of evidence.sourceBundle.paths) {

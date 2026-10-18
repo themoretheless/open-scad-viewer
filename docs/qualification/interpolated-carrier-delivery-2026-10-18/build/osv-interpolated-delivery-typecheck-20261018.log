@@ -1,0 +1,4 @@
+src/services/languages/kernel.ts(13,30): error TS2307: Cannot find module '../../generated/language-kernel/identity' or its corresponding type declarations.
+src/services/languages/kernel.ts(14,24): error TS2307: Cannot find module '../../generated/language-kernel/bytes' or its corresponding type declarations.
+src/services/openScadTextRuntime.ts(3,24): error TS2307: Cannot find module '../generated/harfbuzz/bytes' or its corresponding type declarations.
+src/services/vrKernel.ts(1,19): error TS2307: Cannot find module '../generated/vr-core/bytes' or its corresponding type declarations.

@@ -1,0 +1,321 @@
+{
+  "schema": "combined-original-carrier-public-delivery/1",
+  "recordedAt": "2026-10-18",
+  "passed": true,
+  "qualificationClaim": "none",
+  "sourceRevision": "a54e3facc341d17ecd58953161b8cfa18e5e21bb",
+  "productionRustEquivalentTo": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "nativeWorkspace": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/summary.json",
+    "sha256": "ce20cfdd8f07a058beacc15d6338e643b3c42ffe305bfbf3bf57c8b14cbc7946"
+  },
+  "nativeExecutionCover": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-execution-cover.json",
+    "sha256": "a2a2ace2059e05b07a55b26ee33470135f407c28aa8263c5db631ac316ea9386"
+  },
+  "nativeCatalogCases": 6026,
+  "nativeTotals": {
+    "passed": 6021,
+    "failed": 0,
+    "ignored": 5
+  },
+  "nativeExamplesUnchanged": true,
+  "publicWasmRuntime": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/summary.json",
+    "sha256": "b79f89d43af222dd0e0d9745e5e4096a7849bef8107ef1022dd49f8b967d7715"
+  },
+  "publicWasmSha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
+  "publicWasmBytes": 12833089,
+  "publicWasmCasesPassed": 19,
+  "browserCarrier": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-carrier-20261018.json",
+    "sha256": "ae13e2a7f655d2219278ee1ae23f3263fe9662818c56cef912ae1890e204103c"
+  },
+  "browserGeneral": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-general-20261018.json",
+    "sha256": "50a565963de13c738c906e60893cf0f3f2c720e383a0513f6bcb3f5647617668"
+  },
+  "browserSolid": {
+    "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/report.json",
+    "sha256": "b53ed85df3057215083abaa9f2c804e47e6652be07fd8fb919c0851d05b7e8da"
+  },
+  "solidUiLifecycleCasesPassed": 4,
+  "solidUiLifecycleChecksPassed": 36,
+  "distributionVerified": true,
+  "distribution": {
+    "assets": 165,
+    "assetBytes": 8605015,
+    "rawWasmBytes": 16076528
+  },
+  "binaryEvidenceAuditRegressionTestsPassed": 2,
+  "newHostedCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false,
+  "records": [
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/REVIEW.md",
+      "sha256": "efc44923fc769bbded7b71d464696470387f3d5d1453925e23154ba2ed9d944c",
+      "byteLength": 2166
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-carrier-20261018.json",
+      "sha256": "ae13e2a7f655d2219278ee1ae23f3263fe9662818c56cef912ae1890e204103c",
+      "byteLength": 1332
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-carrier-20261018.log",
+      "sha256": "c89cf267a55db9a08d2a9d98af193cd51b753541783b05a24fd8fd4c8849975c",
+      "byteLength": 45
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-general-20261018.json",
+      "sha256": "50a565963de13c738c906e60893cf0f3f2c720e383a0513f6bcb3f5647617668",
+      "byteLength": 2367
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-chromium-general-20261018.log",
+      "sha256": "7c18b14d6082f85a06353ac4bc59d2e1735552cd8b47475c6d2d460ccf519bb1",
+      "byteLength": 43
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/osv-interpolated-delivery-solid-browser-20261018.log",
+      "sha256": "10c1aefe57bb34248820753d15b0022ba565a53e0702e980208cfafcb5bb326c",
+      "byteLength": 37
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/1440-closed-profile-planar-10.r.png",
+      "sha256": "476ec26bc303d6a43e55226053134287c8c4fded098e32b7a516aa5d2ec2f185",
+      "byteLength": 115967
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/1440-closed-profile-spatial-6.r.png",
+      "sha256": "c1d11e4c036203a04743d9073d17c1571d8afa000358699e0977ad8d6622de1c",
+      "byteLength": 114063
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/600-closed-profile-planar-10.r.png",
+      "sha256": "1f6844247b9fca545fce8e54e517b0cbf91b7c9c49d3cbdbb3626d24df3b8199",
+      "byteLength": 95853
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/600-closed-profile-spatial-6.r.png",
+      "sha256": "d053a37e133d2ac6c10d3f9c66cc2d9130928efc778a14ec3cb038d273b4613d",
+      "byteLength": 94243
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/browser/solid/report.json",
+      "sha256": "b53ed85df3057215083abaa9f2c804e47e6652be07fd8fb919c0851d05b7e8da",
+      "byteLength": 2480
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-all-kernels-build-20261018.log",
+      "sha256": "1b69099294fe3ae4d2f2505f7957dc8d67ff6910f6dde23a41678bc2c9d3bbfa",
+      "byteLength": 21455
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-binary-evidence-audit-tests-20261018.log",
+      "sha256": "76c95b3079af811fac8b532dbfbeb9b8e060aebb54e23be69dd7cfc0bb74014b",
+      "byteLength": 287
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-dist-build-20261018.log",
+      "sha256": "5a13e5a0b411cce8142d40a6dbce4022830a848f7ad187ef6aff66335e543414",
+      "byteLength": 7111
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-dist-complete-build-20261018.log",
+      "sha256": "3f894258cb9127f70b7d566d413bebf2ffb6b295ab619024c9b0b0427b0fe9b6",
+      "byteLength": 13897
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-dist-complete-verify-20261018.log",
+      "sha256": "addfa7ea65b1df0192e32fd2b6e1e4a0d37976cda2897c30b040156f2b3eef1c",
+      "byteLength": 99
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-dist-verify-20261018.log",
+      "sha256": "4cea6165912f64b57738bc198e0d43b9c4887455da6ad9f4fb928a67a2f64c10",
+      "byteLength": 1053
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-mcp-typecheck-20261018.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "byteLength": 0
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-node-tools-tests-20261018.log",
+      "sha256": "4b2ed1929a7fd272e75adbfc617c965c8ea4c8f7592e881249a6c7d13dff75d0",
+      "byteLength": 1174
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-public-wasm-build-20261018.log",
+      "sha256": "f5df8c4fe1fa58f755e6e88fb9c809a848e1bbb22094800e47df5079ea0ec56d",
+      "byteLength": 20000
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-typecheck-20261018.log",
+      "sha256": "44e2df211429ac87c257a1fe720fd126c41eeb26969e7e66cdf5db57c4ef439c",
+      "byteLength": 591
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/build/osv-interpolated-delivery-typecheck-complete-20261018.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "byteLength": 0
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/execution-cover.mjs",
+      "sha256": "0a576834a5642f428a6b262f5bbd9e2e4fbb5c17ee4e68fe4b28359745f605c7",
+      "byteLength": 2423
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-example-inputs.json",
+      "sha256": "20d146c0cee89845af9ac3bd3c587378b9756907f70d53ae20607eaec7d0a2b4",
+      "byteLength": 61717
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-execution-cover.json",
+      "sha256": "a2a2ace2059e05b07a55b26ee33470135f407c28aa8263c5db631ac316ea9386",
+      "byteLength": 1233
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-inputs.json",
+      "sha256": "3707947e6925d92c3efabed275f7fbb3fbf18e1c4b7d03cdda0fe8573ac3fd54",
+      "byteLength": 652330
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace.py",
+      "sha256": "c685bb1529bb2f6ab8c1946aa2c820fbc1418e28a9b7df73ced03fc7650cd7c1",
+      "byteLength": 2288
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/catalog.log",
+      "sha256": "0dccdcea7ee9e02128e0fd1a603d929c701e52e277326f8b32e1d8cd63619bc2",
+      "byteLength": 74
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/catalog/full.log",
+      "sha256": "a7fb127b1e4688e539193b495f52a7ee7eb717aa1c7b3024ce5bea7f230ab811",
+      "byteLength": 583146
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/catalog/parallel.log",
+      "sha256": "76ce5ff658348a68133bf0949bca4db36d01f1c20ff6eac5096fc15831f6d443",
+      "byteLength": 574508
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/catalog/partition.json",
+      "sha256": "8fc07642cd3d15b307e56d2c7502dbd66bcea5c7500ce493d1d4f6e6962cecc2",
+      "byteLength": 1180
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/catalog/serial.log",
+      "sha256": "fa7ae1022fcf2161b79098ae915cd7ad33f32ef42d768697cc7e62ea9c2805e3",
+      "byteLength": 74135
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/recognition.log",
+      "sha256": "060bd4e41eb81e600546c7cc9592c399eeae2a0884ca078cb8440ac2407861b6",
+      "byteLength": 104499
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/remaining.log",
+      "sha256": "84044ebea09c94abf579718194dfeeeecdf77ac24248a7c8d06258df62555dc7",
+      "byteLength": 645084
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/native-workspace/summary.json",
+      "sha256": "ce20cfdd8f07a058beacc15d6338e643b3c42ffe305bfbf3bf57c8b14cbc7946",
+      "byteLength": 65621
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime.py",
+      "sha256": "a9af6e92d1068c39ab16e98de48b32e82127f8f0268fc1a3d8caaa40b0e62710",
+      "byteLength": 2922
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/affine.json",
+      "sha256": "66403043a9374c27c8c8a2768ed8fdcd498c92416d55aec22b1885b2a290e8b3",
+      "byteLength": 657
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/affine.log",
+      "sha256": "4a47cecfce1d6569decac85ae8e35471e66f1ef39a5761d5137153877efd6341",
+      "byteLength": 58
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/bishop.json",
+      "sha256": "8ceaa75f74caf38328d2764c3728e8c7e9f4e516fc9d31b131072aaa4314c27e",
+      "byteLength": 587
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/bishop.log",
+      "sha256": "f16f9f04992386a27f6cdbc78f32521d403422fea82651b35e0b641518bdb6f5",
+      "byteLength": 52
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/caps.json",
+      "sha256": "3f4127525ff1ea31d188e73c83f7b65e12b1af32d1797df97d93ea8456b0b885",
+      "byteLength": 1444
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/caps.log",
+      "sha256": "c1889910b16df2eb35d9c4b022e6fed254fa6c9b099079662dc6714192440fde",
+      "byteLength": 592
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/fibered.json",
+      "sha256": "0a5ad4857f14c23fa2bd11295023e01e2bd5132c732c7a9320d4df7b3e3bd0f9",
+      "byteLength": 1168
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/fibered.log",
+      "sha256": "3e9df0e5889f1d86e465c566033de34d6d7d259c696988e6caabeeeeb2d3d71c",
+      "byteLength": 344
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/general.json",
+      "sha256": "627f4f1d2f4174824fbcc0f711038f18371b6d8a8fdf5674988e8830bc279701",
+      "byteLength": 634
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/general.log",
+      "sha256": "15118e2440c6d60fc5434956aa7660d5158a4da11a02f5af15661091ee2b3098",
+      "byteLength": 51
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/guided.json",
+      "sha256": "e3ada22d9493e93878b11edb3febce687586294b64a815c133fdf037b0f7f462",
+      "byteLength": 592
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/guided.log",
+      "sha256": "be1dc72b156690aeed7e4506c5216e4bb82c0c2926384608f42f36a50e30dcc8",
+      "byteLength": 52
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/interpolated.json",
+      "sha256": "b3ecaf79299561b73dfa665da13d5d3cdbfc35fcada7bf7fb1a599d5dd299dda",
+      "byteLength": 1148
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/interpolated.log",
+      "sha256": "7f0c2953c8ce5baea47138ec1993163f07164289cb8e0a195f28778a36797813",
+      "byteLength": 50
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/sphere.json",
+      "sha256": "4c1c6580907c85c7267c4673441a1392184a6c9a12ca2ca2a6946f88e881b692",
+      "byteLength": 1219
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/sphere.log",
+      "sha256": "1d2944b648337d4dc04fc722dcd9de1d6f7a20680165ce82c129906205ab61e2",
+      "byteLength": 336
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-delivery-2026-10-18/public-runtime/summary.json",
+      "sha256": "b79f89d43af222dd0e0d9745e5e4096a7849bef8107ef1022dd49f8b967d7715",
+      "byteLength": 25782
+    }
+  ]
+}

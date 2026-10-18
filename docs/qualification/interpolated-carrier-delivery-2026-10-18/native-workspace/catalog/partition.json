@@ -1,0 +1,36 @@
+{
+  "schema": "native-test-partition/1",
+  "complete": true,
+  "disjoint": true,
+  "full": {
+    "cases": 6026,
+    "sha256": "3c7399c80ab0cf1602988c2b61f587abaa4bfda89de5f765d0af69947a915447"
+  },
+  "serial": {
+    "cases": 44,
+    "sha256": "15c2cdd3985afe10c1bec059e05b9c6fbe510bff12fe92a30df22afc9bf097f8"
+  },
+  "parallel": {
+    "cases": 5982,
+    "sha256": "842ae6a6a948a7e67ab8da05f8737443e031435bc6dcd47996fca3e5ca83464e"
+  },
+  "selector": "aag",
+  "qualificationClaim": "none",
+  "logs": [
+    {
+      "path": "/private/tmp/osv-interpolated-delivery-native-workspace-20261018/catalog/full.log",
+      "sha256": "a7fb127b1e4688e539193b495f52a7ee7eb717aa1c7b3024ce5bea7f230ab811",
+      "byteLength": 583146
+    },
+    {
+      "path": "/private/tmp/osv-interpolated-delivery-native-workspace-20261018/catalog/serial.log",
+      "sha256": "fa7ae1022fcf2161b79098ae915cd7ad33f32ef42d768697cc7e62ea9c2805e3",
+      "byteLength": 74135
+    },
+    {
+      "path": "/private/tmp/osv-interpolated-delivery-native-workspace-20261018/catalog/parallel.log",
+      "sha256": "76ce5ff658348a68133bf0949bca4db36d01f1c20ff6eac5096fc15831f6d443",
+      "byteLength": 574508
+    }
+  ]
+}
