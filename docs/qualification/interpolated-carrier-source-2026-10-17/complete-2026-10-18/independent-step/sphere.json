@@ -1,0 +1,220 @@
+{
+  "schema": "original-implicit-sphere-occt/1",
+  "ocpVersion": "7.7.2.0",
+  "passed": true,
+  "scope": "Four specified original implicit sphere STEP fixtures: independent OCCT validity, pole-quotient topology, positive volume, center, sampled radius and curvature; exact global/G2 proof remains native.",
+  "cases": [
+    {
+      "name": "sphere-nonbinary-radius",
+      "passed": true,
+      "stepSha256": "5c9872557d9932cd1a8ee063708863e3cfa823a5c34bcbd213250e11086e8600",
+      "sourceSha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93",
+      "rustAuditSha256": "a541c13f535439308c9bd574bee629fc2ef58bc4a8d1681ce0c223f2f1a88324",
+      "radiusMm": 3.0000000000000004,
+      "centerMm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occtValid": true,
+      "solids": 1,
+      "faces": 8,
+      "edges": 20,
+      "vertices": 6,
+      "degenerateEdges": 8,
+      "originalPoleEdges": 2,
+      "observedOriginalPoles": 2,
+      "poleOwnershipErrorMm": 0.0,
+      "volumeIntegration": [
+        {
+          "eps": 1e-10,
+          "volume": 113.0973355292326,
+          "estimatedError": 1.1643464307352222e-10,
+          "centroid": [
+            0.0,
+            6.282577148569908e-17,
+            1.570644287142477e-16
+          ]
+        },
+        {
+          "eps": 1e-12,
+          "volume": 113.0973355292326,
+          "estimatedError": 1.0557281541822358e-10,
+          "centroid": [
+            0.0,
+            -1.570644287142477e-17,
+            1.7277087158567245e-16
+          ]
+        }
+      ],
+      "volumeConverged": true,
+      "quotientEuler": 2,
+      "volumeMm3": 113.0973355292326,
+      "expectedVolumeMm3": 113.09733552923261,
+      "volumeErrorMm3": 1.4210854715202004e-14,
+      "centerErrorMm": 1.7277087158567245e-16,
+      "sourceRadialErrorMm": 4.440892098500626e-16,
+      "curvatureErrorPerMm": 1.4988010832439613e-15,
+      "sampledPoints": 72
+    },
+    {
+      "name": "sphere-regular",
+      "passed": true,
+      "stepSha256": "8f8ca720f8fb8f93440134e8292d48fe6041b74a81e0f0b05c21fe22fefe4416",
+      "sourceSha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788",
+      "rustAuditSha256": "090a4868ce07d4843462482b25f1a07f9bb205e40fe5458c4e80af5a76de6b82",
+      "radiusMm": 3.0,
+      "centerMm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occtValid": true,
+      "solids": 1,
+      "faces": 8,
+      "edges": 12,
+      "vertices": 6,
+      "degenerateEdges": 0,
+      "originalPoleEdges": 0,
+      "observedOriginalPoles": 0,
+      "poleOwnershipErrorMm": 0.0,
+      "volumeIntegration": [
+        {
+          "eps": 1e-10,
+          "volume": 113.0973355292326,
+          "estimatedError": 1.76581694688995e-10,
+          "centroid": [
+            -1.570644287142477e-17,
+            0.0,
+            6.596706005998403e-16
+          ]
+        },
+        {
+          "eps": 1e-12,
+          "volume": 113.0973355292326,
+          "estimatedError": 1.2082957084922315e-10,
+          "centroid": [
+            0.0,
+            0.0,
+            7.382028149569641e-16
+          ]
+        }
+      ],
+      "volumeConverged": true,
+      "quotientEuler": 2,
+      "volumeMm3": 113.0973355292326,
+      "expectedVolumeMm3": 113.09733552923255,
+      "volumeErrorMm3": 4.263256414560601e-14,
+      "centerErrorMm": 7.382028149569641e-16,
+      "sourceRadialErrorMm": 4.440892098500626e-16,
+      "curvatureErrorPerMm": 1.1102230246251565e-16,
+      "sampledPoints": 72
+    },
+    {
+      "name": "sphere-translated-poles",
+      "passed": true,
+      "stepSha256": "750c7c62d069e2d67244094d42d30226706ee1a46648e7fbfd7b2a73c2815102",
+      "sourceSha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256",
+      "rustAuditSha256": "c6e30d37d191f82cb2242db75d2861a240eabe0b8ca279568d6fe1f5057776b9",
+      "radiusMm": 2.0,
+      "centerMm": [
+        8.0,
+        -4.0,
+        6.0
+      ],
+      "occtValid": true,
+      "solids": 1,
+      "faces": 8,
+      "edges": 20,
+      "vertices": 6,
+      "degenerateEdges": 8,
+      "originalPoleEdges": 2,
+      "observedOriginalPoles": 2,
+      "poleOwnershipErrorMm": 0.0,
+      "volumeIntegration": [
+        {
+          "eps": 1e-10,
+          "volume": 33.51032163829112,
+          "estimatedError": 1.1643465021149942e-10,
+          "centroid": [
+            8.0,
+            -4.0,
+            6.000000000000001
+          ]
+        },
+        {
+          "eps": 1e-12,
+          "volume": 33.51032163829112,
+          "estimatedError": 1.0557282123342694e-10,
+          "centroid": [
+            8.0,
+            -4.0,
+            5.999999999999999
+          ]
+        }
+      ],
+      "volumeConverged": true,
+      "quotientEuler": 2,
+      "volumeMm3": 33.51032163829112,
+      "expectedVolumeMm3": 33.510321638291124,
+      "volumeErrorMm3": 7.105427357601002e-15,
+      "centerErrorMm": 8.881784197001252e-16,
+      "sourceRadialErrorMm": 6.661338147750939e-16,
+      "curvatureErrorPerMm": 5.2735593669694936e-15,
+      "sampledPoints": 72
+    },
+    {
+      "name": "sphere-two-poles",
+      "passed": true,
+      "stepSha256": "c8b863641addfcebcf787f9b96653025d883cf357bf7d1f5864a3405fed2d18b",
+      "sourceSha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb",
+      "rustAuditSha256": "e5dc3924ab6bfceb662f81be8da743cc72cfc7d31e2ca3c666b17c8accd7cfa9",
+      "radiusMm": 2.0,
+      "centerMm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occtValid": true,
+      "solids": 1,
+      "faces": 8,
+      "edges": 20,
+      "vertices": 6,
+      "degenerateEdges": 8,
+      "originalPoleEdges": 2,
+      "observedOriginalPoles": 2,
+      "poleOwnershipErrorMm": 0.0,
+      "volumeIntegration": [
+        {
+          "eps": 1e-10,
+          "volume": 33.51032163829112,
+          "estimatedError": 1.164346355082553e-10,
+          "centroid": [
+            0.0,
+            2.6504622345529315e-17,
+            0.0
+          ]
+        },
+        {
+          "eps": 1e-12,
+          "volume": 33.51032163829112,
+          "estimatedError": 1.0557281387551988e-10,
+          "centroid": [
+            0.0,
+            -1.3252311172764657e-17,
+            0.0
+          ]
+        }
+      ],
+      "volumeConverged": true,
+      "quotientEuler": 2,
+      "volumeMm3": 33.51032163829112,
+      "expectedVolumeMm3": 33.510321638291124,
+      "volumeErrorMm3": 7.105427357601002e-15,
+      "centerErrorMm": 1.3252311172764657e-17,
+      "sourceRadialErrorMm": 0.0,
+      "curvatureErrorPerMm": 4.996003610813204e-16,
+      "sampledPoints": 72
+    }
+  ]
+}

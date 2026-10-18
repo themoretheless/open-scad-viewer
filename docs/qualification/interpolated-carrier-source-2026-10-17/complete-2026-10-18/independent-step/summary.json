@@ -1,0 +1,343 @@
+{
+  "schema": "interpolated-source-fresh-independent-step-matrix/1",
+  "sourceRevision": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "inputsSha256": "f73a6c77a81ff87b5bb506e472a4fb957d079e1f0005eef0950043335faefe80",
+  "sourceGuardVerified": true,
+  "nativeQualifierPassed": true,
+  "nativeTestsPassed": 3408,
+  "wasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "privateWasmCasesPassed": 19,
+  "freshNativeProposalCorrespondence": [
+    {
+      "case": "fibered",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/source.json",
+      "sha256": "0572d4eb77a7c86cdb805d33d9379bfaffa718bcd641786dcb88cbe2cc3c7b0e",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/fibered-step/basic/source.json"
+    },
+    {
+      "case": "fibered",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/source.json",
+      "sha256": "16cd8f6c8bf4e1ce2ef0159615ed0e7863e819a403ad85675bc62ec1f3b814a8",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/fibered-step/oblique-ascending/source.json"
+    },
+    {
+      "case": "fibered",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/source.json",
+      "sha256": "aab117d951317be85e7a90393560cc6f90e8b35fe01c2f556be8bc7602bba8d8",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/fibered-step/oblique-descending/source.json"
+    },
+    {
+      "case": "fibered",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/source.json",
+      "sha256": "403ff22b3c588c19cb134306435c3e200c090a945154137f4261182e45a4db96",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/fibered-step/three-pieces/source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/moving-affine-caps.source.json",
+      "sha256": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/moving-affine-caps.source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/nonplanar-caps.source.json",
+      "sha256": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/nonplanar-caps.source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/planar-caps.source.json",
+      "sha256": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/planar-caps.source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-affine-caps.source.json",
+      "sha256": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/rational-profile-affine-caps.source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-caps.source.json",
+      "sha256": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/rational-profile-caps.source.json"
+    },
+    {
+      "case": "caps",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/reflected-caps.source.json",
+      "sha256": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/rational-cap-step/reflected-caps.source.json"
+    },
+    {
+      "case": "sphere",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-nonbinary-radius.source.json",
+      "sha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/sphere-step/sphere-nonbinary-radius.source.json"
+    },
+    {
+      "case": "sphere",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-regular.source.json",
+      "sha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/sphere-step/sphere-regular.source.json"
+    },
+    {
+      "case": "sphere",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-translated-poles.source.json",
+      "sha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/sphere-step/sphere-translated-poles.source.json"
+    },
+    {
+      "case": "sphere",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-two-poles.source.json",
+      "sha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/sphere-step/sphere-two-poles.source.json"
+    },
+    {
+      "case": "bishop",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step/request.json",
+      "sha256": "c0bcfb86785762ea7bf998a16c56a746d6fc0208e714a92c15ee164a694e5117",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/arc-bishop-step/request.json"
+    },
+    {
+      "case": "general",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step/request.json",
+      "sha256": "17aa0d630e99a33781e28407b9ef9a83826056652ac60e92d314dc4a5b3a3b75",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-general-frame-remaining-kernel-20261016/general-frame-step/request.json"
+    },
+    {
+      "case": "affine",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step/request.json",
+      "sha256": "168ffb84213a5501fb4d839b2fbc7b2c21c33a40afec630fbf86ba501a63802d",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-affine-physical-remaining-kernel-20261016/affine-frame-step/request.json"
+    },
+    {
+      "case": "guided",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step/request.json",
+      "sha256": "de1bd41de4e4f7aaf6b70e962dc924125c64fe95b8092c36b405f0ef932af45f",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-affine-physical-remaining-kernel-20261016/guided-frame-step/request.json"
+    },
+    {
+      "case": "interpolated",
+      "freshNativeInput": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/request.json",
+      "sha256": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+      "identicalToExecutedPrivateWasmProposal": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/request.json"
+    }
+  ],
+  "checks": [
+    {
+      "name": "fibered",
+      "cases": 4,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/scripts/verify-fibered-source-step.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/fibered.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "92edcc5f8fd8843853f76bc6f78d38f349713f2a005334d232467a392aa5ed35",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/audited.json": "c96ec515fee4c02e78a1edba3bbb4f1267969f6e128749deec54ac32bac76cb2",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/body.step": "1c133115a7473cde30f7559469c615771fab1b72f6fe2a3fff4494cb667dd150",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/built.json": "60ca08fc3c1749b6d03e928a9dce78360c54e00d008bdb30b089cf89104ec2de",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/imported.json": "6a44d5b7df7cfd3590ce0b6d707d161e36430a085fb3ae60bedf5622a5faee39",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/reference.json": "a52619eb16741a09c17b6d9a4db83a467c64f75b4f1895581906e15e78809b33",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/basic/source.json": "0572d4eb77a7c86cdb805d33d9379bfaffa718bcd641786dcb88cbe2cc3c7b0e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/audited.json": "2887804c8c1a24c852d2cd3a597f7e38bb44fd14c01196f204950ea27f23087e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/body.step": "7705f467929b0c38aca720b44a76562c1533fcf63e9d71e493e6d661502cbc8c",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/built.json": "47fb0063b293ac2ee154cebb4005428462d6aa0d0aa3b7dc4dfeb0e322008c15",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/imported.json": "b2a1a015cfe142a765a84cd963ed7b4ee0013b4521efee5adc243c03b02a4884",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/reference.json": "23e8553c025c7149ede5641f26e21d0489db077d3b5c463a9e3b95a3c9507491",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-ascending/source.json": "16cd8f6c8bf4e1ce2ef0159615ed0e7863e819a403ad85675bc62ec1f3b814a8",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/audited.json": "ab631d26e9f3ecd8d0ad171215eef2d44cf12954f1fddd31483a24a9041c441a",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/body.step": "c06d9b356f3a20f0846666554f53ac980e3290a56bae0bd88ea282073a2b9c1e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/built.json": "9a523a3cd8e54a5caf9140edc48b994fe35761f768a3519ce6a4a270995730f6",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/imported.json": "28f38cf9cdfa553cdcdd73cd00ebfb4341d71e6fa02b47a64034e0827da48c76",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/reference.json": "eb3f332870147f1bd28464ff741cd514c543fd066ff3e44864564c3ca1c63c38",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/oblique-descending/source.json": "aab117d951317be85e7a90393560cc6f90e8b35fe01c2f556be8bc7602bba8d8",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/audited.json": "a7eaeb4b3631aa125390996b50b32ae3db8997dcae1f6f125a35e41162bd4f95",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/body.step": "c7ea83e2476a174e7bf106e6d0fb8871bae0c1e14808f0345725c0c5bd8644d3",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/built.json": "34df67acc22f65c5edd2d49bbe7141cd244e81364ebc56cfec4b3ca9b65f9af4",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/imported.json": "a7340829bb5e82d4c4d9dede4d37879adb99069a9f149e2d491bc0d450c40123",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/reference.json": "032ca908d50b3b16b398ab795046709f34622cd272d23d4a336dcc3a70a762da",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/fibered-step/three-pieces/source.json": "403ff22b3c588c19cb134306435c3e200c090a945154137f4261182e45a4db96"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "06a80d4df3e27c39acf223b94ec327bee4e863015d2480f235609ad9bc3c61c8"
+    },
+    {
+      "name": "caps",
+      "cases": 6,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/scripts/verify-rational-filled-cap-step.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/caps.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "b1c56cccfeeb44fd6119132ebe5f1981c86177b17273eaebbc6524b4c7944c94",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/moving-affine-caps.audit.json": "529a968844042dc47ca1056a3a0167d9f66954e94510f0c8c77b3aca0c37bf5b",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/moving-affine-caps.reference.json": "914e72e07430b93b969276356182221461bee0245009c27a58f81ee6985b0d18",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/moving-affine-caps.source.json": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/moving-affine-caps.step": "9b3e31a7bc12bf206b5f7637f6ebeaf85a1539b7f80d1f7f06b87a3f75a5288e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/nonplanar-caps.audit.json": "66a03050568d6e566a4cdfe0838881b110da4419249cee2cc1232534d88ee4ec",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/nonplanar-caps.reference.json": "bcdd4c8665e560a473e25473e16ee9fe01ad67c88514ae7f584975fb4a59f973",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/nonplanar-caps.source.json": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/nonplanar-caps.step": "c87e38f9c5c78ffa6da49569013399cc86638671dcb007591fde65a861a47d3c",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/planar-caps.audit.json": "19a5232d352aeee76ab4abdbbd0fff16907e1dade9d878dadd413497c9883b27",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/planar-caps.reference.json": "51f814712d2b4edbe094b24a9f6be7c8df84f2891ffdb1e62bfe79686c907b66",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/planar-caps.source.json": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/planar-caps.step": "d2aa36c316fb47fe6054d5b7ab5cc1acde1c1679e0fd261c132e57ddc176f684",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-affine-caps.audit.json": "f47b9d54c07f61ad236da79fb0c59b6371dac7c170f4ece84871ff47b5428742",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-affine-caps.reference.json": "cbd313be5ecbc7b0fcf07f49d219b892b0f69e24d393e60ca9aa38c1c467f0bc",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-affine-caps.source.json": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-affine-caps.step": "580ab612cdeb7804e0f7b0f946c604258624c96c9da549288d1db84b5771252a",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-caps.audit.json": "1eeb745a63dcc713a6b51ee004ec44c9c5ef9bd0e5e4061083a93a554cda159e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-caps.reference.json": "c64f74227d1d886b1008dc2d723fac43b1ac584167ae515f3a54168c25d07b2c",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-caps.source.json": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/rational-profile-caps.step": "61facc6449b5bdafa76aac7e0ca5a7de79481ee369091185215afefc5b7cc3d8",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/reflected-caps.audit.json": "001f5c2a0fdd94f8a551a0af7578cb4bdf4641ef35de48ab78079fdd47ddeafe",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/reflected-caps.reference.json": "5e7c028a05a085c9bf24f9ee62ce127720b01a7c6ae579b66c23a78caa970eb9",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/reflected-caps.source.json": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/rational-cap-step/reflected-caps.step": "86ae43ff355b111d4ddd4eca6b491913671b0bfd218221cb829ef612e6105c81"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "10f0309ceea01a7d23a75bd4aadc2c0081de5716e2d46c0edb7dc094fa3126f9"
+    },
+    {
+      "name": "sphere",
+      "cases": 4,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/scripts/verify-implicit-sphere-step.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/sphere.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "3df786cd6094c9ffb6e74df90f91b2c85ed0c63b5ab32d246ef9b188ee7f7f51",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-nonbinary-radius.audit.json": "a541c13f535439308c9bd574bee629fc2ef58bc4a8d1681ce0c223f2f1a88324",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-nonbinary-radius.source.json": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-nonbinary-radius.step": "5c9872557d9932cd1a8ee063708863e3cfa823a5c34bcbd213250e11086e8600",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-regular.audit.json": "090a4868ce07d4843462482b25f1a07f9bb205e40fe5458c4e80af5a76de6b82",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-regular.source.json": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-regular.step": "8f8ca720f8fb8f93440134e8292d48fe6041b74a81e0f0b05c21fe22fefe4416",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-translated-poles.audit.json": "c6e30d37d191f82cb2242db75d2861a240eabe0b8ca279568d6fe1f5057776b9",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-translated-poles.source.json": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-translated-poles.step": "750c7c62d069e2d67244094d42d30226706ee1a46648e7fbfd7b2a73c2815102",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-two-poles.audit.json": "e5dc3924ab6bfceb662f81be8da743cc72cfc7d31e2ca3c666b17c8accd7cfa9",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-two-poles.source.json": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/sphere-step/sphere-two-poles.step": "c8b863641addfcebcf787f9b96653025d883cf357bf7d1f5864a3405fed2d18b"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "f35e4a3f384153d05154ce184ba37b1a86cd2ca4f005821d5ea2010ec57061a1"
+    },
+    {
+      "name": "bishop",
+      "cases": 1,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/docs/qualification/arc-bishop-source-2026-10-16/occt.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/bishop.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "e3aa16b830e5d518431c999f7383a1051cfe21619aafd67f3c3f2287bf6f06bb",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step/body.json": "c5223ccdf89e7364e01a790b78ab66bb1d40da899b190939591a0ce3dfc66175",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step/body.step": "514484d4c6c551a28a4d29915dde2e47c0d9b61697920e65b397f0c3e93abcba",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step/request.json": "c0bcfb86785762ea7bf998a16c56a746d6fc0208e714a92c15ee164a694e5117",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/arc-bishop-step/step-audit.json": "fc2991eea95f232ae4df37a79b714ca3823bed6a47537478416e8ad0ea9404c0"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "ae49bb7a83ad2e791ca82d916185ea20c9dbe152b6adb1606ca77c0108d9477c"
+    },
+    {
+      "name": "general",
+      "cases": 1,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/docs/qualification/arc-bishop-source-2026-10-16/occt.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/general.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "e3aa16b830e5d518431c999f7383a1051cfe21619aafd67f3c3f2287bf6f06bb",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step/body.json": "7adb5be4785b8181495a7b67d2da42cc7c1b09e4c5ce24786d7f0515f3d6e4bc",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step/body.step": "ec35b4e882e121525ed29def50c9690f1d55ee950d0c1e1f642fcf10f8449def",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step/request.json": "17aa0d630e99a33781e28407b9ef9a83826056652ac60e92d314dc4a5b3a3b75",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/general-frame-step/step-audit.json": "58e8daa27f1fa45ebb83c34c2cb988aeac18b7b3ecb4afd9d14725413f03ef68"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "79e30e86135686578557bf6cd0a69785487c6d71982ac71bd13e14f530ff6f54"
+    },
+    {
+      "name": "affine",
+      "cases": 1,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/docs/qualification/arc-bishop-source-2026-10-16/occt.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/affine.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "e3aa16b830e5d518431c999f7383a1051cfe21619aafd67f3c3f2287bf6f06bb",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step/body.json": "718a7ee07f21d641931f13c17b9b408f08a9a6fd8dfe01083329b419f45c5ccc",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step/body.step": "ba7e295f60938c70e4d0c905ff8635f799fa72344bbd82fb374d666347e07308",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step/request.json": "168ffb84213a5501fb4d839b2fbc7b2c21c33a40afec630fbf86ba501a63802d",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-frame-step/step-audit.json": "323a18e13dc2bf46953ed0747302520a4976686595dc64b3be561e7271ccb11e"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "fb47be8b85fa24eb58b8d0c6c86db40dd8eb81d00907fda7cdbc6cba9ea11cf2"
+    },
+    {
+      "name": "guided",
+      "cases": 1,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/docs/qualification/arc-bishop-source-2026-10-16/occt.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/guided.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "e3aa16b830e5d518431c999f7383a1051cfe21619aafd67f3c3f2287bf6f06bb",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step/body.json": "0dc3779c29ea85a8cb3bccfaadc43e2ead09480958a0f00048c93c29d37e5b89",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step/body.step": "fdb7979ccbed0f18da7d59b74a5ec6d4788b4f61b2c37da4d61047bae7a4fa4e",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step/request.json": "de1bd41de4e4f7aaf6b70e962dc924125c64fe95b8092c36b405f0ef932af45f",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-frame-step/step-audit.json": "0dab3b2364323a27a155f6b1fd8fba1c9eb2cd53466ee951b77cde1764ac0fd1"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "b981743044d60a86e26583f3fdf323ff19b6f75114768c004a07ff7bdc1c8350"
+    },
+    {
+      "name": "interpolated",
+      "cases": 1,
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "/private/tmp/osv-interpolated-physical-carriers-20261017/scripts/verify-interpolated-carrier-step.py",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step",
+        "/private/tmp/osv-interpolated-full-independent-matrix-20261018/interpolated.json"
+      ],
+      "exitCode": 0,
+      "verifierSha256": "e13573e58729e265f2cc99e766f31f854cc8277245ae2b4dca5e321ef20312e9",
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/body.json": "31083fd5d90d11b64927275a38fc8b09473e27bba9bc51e9be75a8e7a1997f29",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/body.step": "f175435c35060bfda91e023cf5f7a616be11ff0708ed48dee40133868cc15abe",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/request.json": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+        "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-carrier-step/restored-model.json": "67d0223026be5e1404a0fd2940e52aaed49eda07db91188baeb713a12a3df9b8"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "b82aec28076e9c3f4fdf84cadc156f845b24b50b3a58b4317f95a5b065f503bc"
+    }
+  ],
+  "independentOcctCasesPassed": 19,
+  "runnerSha256": "1f5847913967de17e26db506f6a06732bc660050d1d68870aa4f4bbb17a3d2ac",
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false,
+  "passed": true
+}

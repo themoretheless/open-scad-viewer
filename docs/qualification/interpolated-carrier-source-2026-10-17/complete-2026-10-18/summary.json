@@ -1,0 +1,587 @@
+{
+  "schema": "interpolated-carrier-complete-checkpoint/1",
+  "recordedAt": "2026-10-18",
+  "productionRustRevision": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "inputsSha256": "f73a6c77a81ff87b5bb506e472a4fb957d079e1f0005eef0950043335faefe80",
+  "sourceGuardVerified": true,
+  "native": {
+    "passed": 3408,
+    "failed": 0,
+    "ignored": 4
+  },
+  "privateWasmCasesPassed": 19,
+  "independentOcctCasesPassed": 19,
+  "privateWasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "newHostedCiQualified": false,
+  "fullGoalComplete": false,
+  "records": [
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/REVIEW.md",
+      "sha256": "873124c84a3403b5d1109d36772421423d9eed43925389fd86d84cefe5cb6f0a",
+      "byteLength": 1636
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-matrix-runner.py",
+      "sha256": "1f5847913967de17e26db506f6a06732bc660050d1d68870aa4f4bbb17a3d2ac",
+      "byteLength": 4363
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/affine.json",
+      "sha256": "abf0c05a3ae83379f5e43d24880a7136fb400c7ff77e46ae202bd545fe716f10",
+      "byteLength": 886
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/affine.log",
+      "sha256": "fb47be8b85fa24eb58b8d0c6c86db40dd8eb81d00907fda7cdbc6cba9ea11cf2",
+      "byteLength": 838
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/bishop.json",
+      "sha256": "18cf3a230a25b05c55a3eacff7304d9890b8420268ae0bc67a701800676e1d7b",
+      "byteLength": 884
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/bishop.log",
+      "sha256": "ae49bb7a83ad2e791ca82d916185ea20c9dbe152b6adb1606ca77c0108d9477c",
+      "byteLength": 836
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/caps.json",
+      "sha256": "d78036133a9359cff84714306d916327611b1f2fdc4f1921797c4a40b9f48a06",
+      "byteLength": 4725
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/caps.log",
+      "sha256": "10f0309ceea01a7d23a75bd4aadc2c0081de5716e2d46c0edb7dc094fa3126f9",
+      "byteLength": 4037
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/fibered.json",
+      "sha256": "8e16234a5f0dde3b700da3b3ad421f4ad2ad0f4bc62dd900edec1cbec0d8bbd9",
+      "byteLength": 3244
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/fibered.log",
+      "sha256": "06a80d4df3e27c39acf223b94ec327bee4e863015d2480f235609ad9bc3c61c8",
+      "byteLength": 2780
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/general.json",
+      "sha256": "ba04531df9bc81d45c47fd94c5efc99aa036ab8e147e52a55fcf43710524d01e",
+      "byteLength": 888
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/general.log",
+      "sha256": "79e30e86135686578557bf6cd0a69785487c6d71982ac71bd13e14f530ff6f54",
+      "byteLength": 840
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/guided.json",
+      "sha256": "873abb86264cdffe950902e0797c0fff31375ef23c7defb508150a65f6316a8f",
+      "byteLength": 883
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/guided.log",
+      "sha256": "b981743044d60a86e26583f3fdf323ff19b6f75114768c004a07ff7bdc1c8350",
+      "byteLength": 835
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/interpolated.json",
+      "sha256": "8a1c79a905339c66e4fc5823e899e90f6ee268276fc5b0bd49433b729e88d4be",
+      "byteLength": 904
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/interpolated.log",
+      "sha256": "b82aec28076e9c3f4fdf84cadc156f845b24b50b3a58b4317f95a5b065f503bc",
+      "byteLength": 856
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/sphere.json",
+      "sha256": "f270197fb84666f850cfd6c809c0d771099ea54df9f239e88cbfcaa029b1da96",
+      "byteLength": 6556
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/sphere.log",
+      "sha256": "f35e4a3f384153d05154ce184ba37b1a86cd2ca4f005821d5ea2010ec57061a1",
+      "byteLength": 4868
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/independent-step/summary.json",
+      "sha256": "f09d9865ca83bba719370cf2ccd60637f76338715a41da0d57c32061100a6bbf",
+      "byteLength": 28675
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/body.json",
+      "sha256": "718a7ee07f21d641931f13c17b9b408f08a9a6fd8dfe01083329b419f45c5ccc",
+      "byteLength": 1269378
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/body.step",
+      "sha256": "ba7e295f60938c70e4d0c905ff8635f799fa72344bbd82fb374d666347e07308",
+      "byteLength": 1713065
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/request.json",
+      "sha256": "168ffb84213a5501fb4d839b2fbc7b2c21c33a40afec630fbf86ba501a63802d",
+      "byteLength": 4830
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/step-audit.json",
+      "sha256": "323a18e13dc2bf46953ed0747302520a4976686595dc64b3be561e7271ccb11e",
+      "byteLength": 1269378
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-native-json-step.log",
+      "sha256": "daf24c53d811de5abdc164423838ff298de60d300bfc07cb701b8abaf625fc59",
+      "byteLength": 13938
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/body.json",
+      "sha256": "c5223ccdf89e7364e01a790b78ab66bb1d40da899b190939591a0ce3dfc66175",
+      "byteLength": 1268658
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/body.step",
+      "sha256": "514484d4c6c551a28a4d29915dde2e47c0d9b61697920e65b397f0c3e93abcba",
+      "byteLength": 1713039
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/request.json",
+      "sha256": "c0bcfb86785762ea7bf998a16c56a746d6fc0208e714a92c15ee164a694e5117",
+      "byteLength": 3378
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/step-audit.json",
+      "sha256": "fc2991eea95f232ae4df37a79b714ca3823bed6a47537478416e8ad0ea9404c0",
+      "byteLength": 1268658
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/brep-aag-serial.log",
+      "sha256": "1aa9edb5d8e1c0bfdbc239bb624a6a89653e3d2f79abf1f17fdaedde6e9b7175",
+      "byteLength": 14878
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/brep-full.log",
+      "sha256": "8cca199c753ed6af3081d0929a29155fa3132af09b8b62ea5504700382eeda4c",
+      "byteLength": 122386
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/bridge-full.log",
+      "sha256": "5819d3beca8d38c8582c06dd02a5d59fe093978965b40ab6d5edfa0e4350bccc",
+      "byteLength": 43450
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/cad-step-full.log",
+      "sha256": "da935734d501a31f01062b7fd62feab93a2610149a38827e0e65893da01059db",
+      "byteLength": 23180
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/exact-predicates.log",
+      "sha256": "96c2fc2443773f17c409559270b801c3fc50805f8efa094a65643037c65a16c3",
+      "byteLength": 7720
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/audited.json",
+      "sha256": "c96ec515fee4c02e78a1edba3bbb4f1267969f6e128749deec54ac32bac76cb2",
+      "byteLength": 22914
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/body.step",
+      "sha256": "1c133115a7473cde30f7559469c615771fab1b72f6fe2a3fff4494cb667dd150",
+      "byteLength": 38372
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/built.json",
+      "sha256": "60ca08fc3c1749b6d03e928a9dce78360c54e00d008bdb30b089cf89104ec2de",
+      "byteLength": 22918
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/imported.json",
+      "sha256": "6a44d5b7df7cfd3590ce0b6d707d161e36430a085fb3ae60bedf5622a5faee39",
+      "byteLength": 23155
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/reference.json",
+      "sha256": "a52619eb16741a09c17b6d9a4db83a467c64f75b4f1895581906e15e78809b33",
+      "byteLength": 5170
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/source.json",
+      "sha256": "0572d4eb77a7c86cdb805d33d9379bfaffa718bcd641786dcb88cbe2cc3c7b0e",
+      "byteLength": 2355
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/audited.json",
+      "sha256": "2887804c8c1a24c852d2cd3a597f7e38bb44fd14c01196f204950ea27f23087e",
+      "byteLength": 23022
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/body.step",
+      "sha256": "7705f467929b0c38aca720b44a76562c1533fcf63e9d71e493e6d661502cbc8c",
+      "byteLength": 39472
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/built.json",
+      "sha256": "47fb0063b293ac2ee154cebb4005428462d6aa0d0aa3b7dc4dfeb0e322008c15",
+      "byteLength": 23026
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/imported.json",
+      "sha256": "b2a1a015cfe142a765a84cd963ed7b4ee0013b4521efee5adc243c03b02a4884",
+      "byteLength": 23263
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/reference.json",
+      "sha256": "23e8553c025c7149ede5641f26e21d0489db077d3b5c463a9e3b95a3c9507491",
+      "byteLength": 6048
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/source.json",
+      "sha256": "16cd8f6c8bf4e1ce2ef0159615ed0e7863e819a403ad85675bc62ec1f3b814a8",
+      "byteLength": 2362
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/audited.json",
+      "sha256": "ab631d26e9f3ecd8d0ad171215eef2d44cf12954f1fddd31483a24a9041c441a",
+      "byteLength": 23083
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/body.step",
+      "sha256": "c06d9b356f3a20f0846666554f53ac980e3290a56bae0bd88ea282073a2b9c1e",
+      "byteLength": 39532
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/built.json",
+      "sha256": "9a523a3cd8e54a5caf9140edc48b994fe35761f768a3519ce6a4a270995730f6",
+      "byteLength": 23083
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/imported.json",
+      "sha256": "28f38cf9cdfa553cdcdd73cd00ebfb4341d71e6fa02b47a64034e0827da48c76",
+      "byteLength": 23323
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/reference.json",
+      "sha256": "eb3f332870147f1bd28464ff741cd514c543fd066ff3e44864564c3ca1c63c38",
+      "byteLength": 6098
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/source.json",
+      "sha256": "aab117d951317be85e7a90393560cc6f90e8b35fe01c2f556be8bc7602bba8d8",
+      "byteLength": 2374
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/audited.json",
+      "sha256": "a7eaeb4b3631aa125390996b50b32ae3db8997dcae1f6f125a35e41162bd4f95",
+      "byteLength": 50061
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/body.step",
+      "sha256": "c7ea83e2476a174e7bf106e6d0fb8871bae0c1e14808f0345725c0c5bd8644d3",
+      "byteLength": 89992
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/built.json",
+      "sha256": "34df67acc22f65c5edd2d49bbe7141cd244e81364ebc56cfec4b3ca9b65f9af4",
+      "byteLength": 50066
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/imported.json",
+      "sha256": "a7340829bb5e82d4c4d9dede4d37879adb99069a9f149e2d491bc0d450c40123",
+      "byteLength": 50155
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/reference.json",
+      "sha256": "032ca908d50b3b16b398ab795046709f34622cd272d23d4a336dcc3a70a762da",
+      "byteLength": 15829
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/source.json",
+      "sha256": "403ff22b3c588c19cb134306435c3e200c090a945154137f4261182e45a4db96",
+      "byteLength": 3157
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/body.json",
+      "sha256": "7adb5be4785b8181495a7b67d2da42cc7c1b09e4c5ce24786d7f0515f3d6e4bc",
+      "byteLength": 1268877
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/body.step",
+      "sha256": "ec35b4e882e121525ed29def50c9690f1d55ee950d0c1e1f642fcf10f8449def",
+      "byteLength": 1713060
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/request.json",
+      "sha256": "17aa0d630e99a33781e28407b9ef9a83826056652ac60e92d314dc4a5b3a3b75",
+      "byteLength": 4094
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/step-audit.json",
+      "sha256": "58e8daa27f1fa45ebb83c34c2cb988aeac18b7b3ecb4afd9d14725413f03ef68",
+      "byteLength": 1268877
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/body.json",
+      "sha256": "0dc3779c29ea85a8cb3bccfaadc43e2ead09480958a0f00048c93c29d37e5b89",
+      "byteLength": 1268359
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/body.step",
+      "sha256": "fdb7979ccbed0f18da7d59b74a5ec6d4788b4f61b2c37da4d61047bae7a4fa4e",
+      "byteLength": 1713054
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/request.json",
+      "sha256": "de1bd41de4e4f7aaf6b70e962dc924125c64fe95b8092c36b405f0ef932af45f",
+      "byteLength": 3682
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/step-audit.json",
+      "sha256": "0dab3b2364323a27a155f6b1fd8fba1c9eb2cd53466ee951b77cde1764ac0fd1",
+      "byteLength": 1268359
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-native-json-step.log",
+      "sha256": "ca25986590ffc00f8e00abfd7ff5f485f28a2c3b928e7bfa5b77acee921866fc",
+      "byteLength": 13537
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/body.json",
+      "sha256": "31083fd5d90d11b64927275a38fc8b09473e27bba9bc51e9be75a8e7a1997f29",
+      "byteLength": 22765
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/body.step",
+      "sha256": "f175435c35060bfda91e023cf5f7a616be11ff0708ed48dee40133868cc15abe",
+      "byteLength": 31431
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/request.json",
+      "sha256": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+      "byteLength": 5898
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/restored-model.json",
+      "sha256": "67d0223026be5e1404a0fd2940e52aaed49eda07db91188baeb713a12a3df9b8",
+      "byteLength": 21333
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-native-json-step.log",
+      "sha256": "52932198d6012d0c2b8c21c3c7094760f7be6235d22ec56a8d1844fcfe2496ec",
+      "byteLength": 13410
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/legacy-native-json-step.log",
+      "sha256": "3084a5b1c49a8d0e4fdf352505c4d0e5912c262e041ca14bc280c9d3707185b7",
+      "byteLength": 20706
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/no-codec-libraries.log",
+      "sha256": "9e3d596aaf3a9ad9e0c6b56c3eb10296f8ea62b703314deeb27a513808d10700",
+      "byteLength": 16781
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/nurbs-full.log",
+      "sha256": "a1fdce5899d4ca2d7266065ff75f8b32e8e7054462063f1a8ff620a180ad0b49",
+      "byteLength": 184636
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.audit.json",
+      "sha256": "529a968844042dc47ca1056a3a0167d9f66954e94510f0c8c77b3aca0c37bf5b",
+      "byteLength": 124066
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.reference.json",
+      "sha256": "914e72e07430b93b969276356182221461bee0245009c27a58f81ee6985b0d18",
+      "byteLength": 7745
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.source.json",
+      "sha256": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6",
+      "byteLength": 5841
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.step",
+      "sha256": "9b3e31a7bc12bf206b5f7637f6ebeaf85a1539b7f80d1f7f06b87a3f75a5288e",
+      "byteLength": 225886
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.audit.json",
+      "sha256": "66a03050568d6e566a4cdfe0838881b110da4419249cee2cc1232534d88ee4ec",
+      "byteLength": 115553
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.reference.json",
+      "sha256": "bcdd4c8665e560a473e25473e16ee9fe01ad67c88514ae7f584975fb4a59f973",
+      "byteLength": 7255
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.source.json",
+      "sha256": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba",
+      "byteLength": 5675
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.step",
+      "sha256": "c87e38f9c5c78ffa6da49569013399cc86638671dcb007591fde65a861a47d3c",
+      "byteLength": 226280
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.audit.json",
+      "sha256": "19a5232d352aeee76ab4abdbbd0fff16907e1dade9d878dadd413497c9883b27",
+      "byteLength": 115502
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.reference.json",
+      "sha256": "51f814712d2b4edbe094b24a9f6be7c8df84f2891ffdb1e62bfe79686c907b66",
+      "byteLength": 7047
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.source.json",
+      "sha256": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650",
+      "byteLength": 5669
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.step",
+      "sha256": "d2aa36c316fb47fe6054d5b7ab5cc1acde1c1679e0fd261c132e57ddc176f684",
+      "byteLength": 226280
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.audit.json",
+      "sha256": "f47b9d54c07f61ad236da79fb0c59b6371dac7c170f4ece84871ff47b5428742",
+      "byteLength": 124068
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.reference.json",
+      "sha256": "cbd313be5ecbc7b0fcf07f49d219b892b0f69e24d393e60ca9aa38c1c467f0bc",
+      "byteLength": 7742
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.source.json",
+      "sha256": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3",
+      "byteLength": 5841
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.step",
+      "sha256": "580ab612cdeb7804e0f7b0f946c604258624c96c9da549288d1db84b5771252a",
+      "byteLength": 228040
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.audit.json",
+      "sha256": "1eeb745a63dcc713a6b51ee004ec44c9c5ef9bd0e5e4061083a93a554cda159e",
+      "byteLength": 115555
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.reference.json",
+      "sha256": "c64f74227d1d886b1008dc2d723fac43b1ac584167ae515f3a54168c25d07b2c",
+      "byteLength": 7271
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.source.json",
+      "sha256": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75",
+      "byteLength": 5675
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.step",
+      "sha256": "61facc6449b5bdafa76aac7e0ca5a7de79481ee369091185215afefc5b7cc3d8",
+      "byteLength": 228432
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.audit.json",
+      "sha256": "001f5c2a0fdd94f8a551a0af7578cb4bdf4641ef35de48ab78079fdd47ddeafe",
+      "byteLength": 124524
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.reference.json",
+      "sha256": "5e7c028a05a085c9bf24f9ee62ce127720b01a7c6ae579b66c23a78caa970eb9",
+      "byteLength": 7797
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.source.json",
+      "sha256": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4",
+      "byteLength": 5881
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.step",
+      "sha256": "86ae43ff355b111d4ddd4eca6b491913671b0bfd218221cb829ef612e6105c81",
+      "byteLength": 226345
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/regularity-and-g2.log",
+      "sha256": "607dc2810221ac5db7a572aaff3713299634236b06eb8db97175fe04e5e989bc",
+      "byteLength": 10213
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/source-volume-matrices.log",
+      "sha256": "a5405290e16f8f8cbb76ef17425052211bd7537348e083980f654b42061ea659",
+      "byteLength": 11990
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.audit.json",
+      "sha256": "a541c13f535439308c9bd574bee629fc2ef58bc4a8d1681ce0c223f2f1a88324",
+      "byteLength": 30125
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.source.json",
+      "sha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93",
+      "byteLength": 614
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.step",
+      "sha256": "5c9872557d9932cd1a8ee063708863e3cfa823a5c34bcbd213250e11086e8600",
+      "byteLength": 40429
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.audit.json",
+      "sha256": "090a4868ce07d4843462482b25f1a07f9bb205e40fe5458c4e80af5a76de6b82",
+      "byteLength": 24629
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.source.json",
+      "sha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788",
+      "byteLength": 599
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.step",
+      "sha256": "8f8ca720f8fb8f93440134e8292d48fe6041b74a81e0f0b05c21fe22fefe4416",
+      "byteLength": 38211
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.audit.json",
+      "sha256": "c6e30d37d191f82cb2242db75d2861a240eabe0b8ca279568d6fe1f5057776b9",
+      "byteLength": 27628
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.source.json",
+      "sha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256",
+      "byteLength": 600
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.step",
+      "sha256": "750c7c62d069e2d67244094d42d30226706ee1a46648e7fbfd7b2a73c2815102",
+      "byteLength": 40434
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.audit.json",
+      "sha256": "e5dc3924ab6bfceb662f81be8da743cc72cfc7d31e2ca3c666b17c8accd7cfa9",
+      "byteLength": 27560
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.source.json",
+      "sha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb",
+      "byteLength": 599
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.step",
+      "sha256": "c8b863641addfcebcf787f9b96653025d883cf357bf7d1f5864a3405fed2d18b",
+      "byteLength": 40429
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/summary.json",
+      "sha256": "bc9a7884f1c6bc5494fe5ca2cd4dea9ae8ec64a126ca90eb0de78d9b315ad9ef",
+      "byteLength": 12155
+    }
+  ]
+}
