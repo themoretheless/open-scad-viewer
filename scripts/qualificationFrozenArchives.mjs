@@ -1,3 +1,4 @@
+import {PR58_ARCHIVES} from './qualificationPr58Archives.mjs'
 import {FIBERED_SOURCE_ARCHIVES} from './qualificationFiberedSourceArchives.mjs'
 import {FRAME_CAP_ARCHIVES} from './qualificationFrameCapArchives.mjs'
 import {GENERAL_CERTIFICATE_MAIN_ARCHIVES} from './qualificationGeneralCertificateMainArchives.mjs'
@@ -39,12 +40,7 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
-  'scripts/refresh-qualification-fingerprints-v90-v107.mjs': '7816ab2d8d9de3a210ca1f73daa3b2c6e2dfeddbeef9b70475dc28138f2a6d81',
-  'docs/qualification/own-rust-cad-v76.json': 'd3e0a4b48590e601e06ec801a4fb229ec517c590d97f85500423ca0925dc7857',
-  'docs/qualification/g0-toolchain-fingerprints-v90.json': '41cf7899a6a946c551d72ba3ff73019c3caef962265750647519b1b5b8bbf0a2',
-  'docs/qualification/semantic-manifold-g1-plan-v107.json': 'b82ea9a8459c39745697359804c49959cede80efa9c535656b0aa5a2584a5ff5',
-  'docs/qualification/g0-v90-g1-v107-refreeze-status-v1.json': 'e410f01fe742dc1ae85fe77d0a4f6427eb36cb972412e9da1d07c3c3f8402cc7',
-  'docs/qualification/g0-v90-g1-v107-refreeze-review.md': '3f5ca63aa61e0604b87746afdd5fd007d8f08a947a4bf64043f394ac03ed011f',
+  ...PR58_ARCHIVES,
   ...FIBERED_SOURCE_ARCHIVES,
   ...FRAME_CAP_ARCHIVES,
   ...GENERAL_CERTIFICATE_MAIN_ARCHIVES,
