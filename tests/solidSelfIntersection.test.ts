@@ -190,11 +190,20 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
  const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
  const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
  const before=JSON.stringify(model)
- for(const budget of [maxSpans,967,1]){
+ const complete=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
+ expect(complete.spans).toBe(136)
+ for(const budget of [maxSpans,complete.spans-1,1]){
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
   expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
   expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)
-  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:null,result:{...f.result,polarProjection:null}})));expect(r.spans).toBe(968)}
+  if(budget===maxSpans){
+   expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:null,result:{...f.result,spans:17,polarProjection:null}})))
+   expect(r.spans).toBe(136)
+   for(const patch of [{spans:18},{contractionUpper:0},{projectiveProjection:[[1,0,0,0],[0,1,0,0],[0,0,1,4]]}]){
+    const forged=structuredClone(r);Object.assign(forged.faces[0].result!,patch)
+    expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),forged)).toBe(false)
+   }
+  }
   else expect(r.spans).toBe(budget)
  }
  expect(JSON.stringify(model)).toBe(before)
@@ -213,7 +222,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
   if(budget===maxSpans){
    expect(r.faces.filter(f=>f.result?.proven)).toHaveLength(25)
    expect(r.faces.filter(f=>f.quotientProof?.proven)).toHaveLength(2)
-   expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:f.quotientProof?{...f.quotientProof,polar:null}:null})))
+   expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:f.quotientProof?{...f.quotientProof,collapsedAxis:0,polar:null}:null})))
   }else if(budget===256){
    expect(r.faces[0].quotientProof?.proven).toBe(true)
    expect(r.spans).toBe(256)

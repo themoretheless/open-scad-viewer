@@ -39,7 +39,15 @@ it.each(['parameter','arc_length'])('certifies closed rational nonuniform RMF th
  expect(proof.patches!.length).toBeGreaterThan(0)
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,maxCells:0})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  const broken=structuredClone(path);broken.weights[1]=1.2500000000000002
- expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
+ const perturbed=callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})
+ // The weight changes parameter speed, while preserving the exact forward
+ // tangent direction. Arc-length transport owns that geometric join.
+ if(spacing==='arc_length'){
+  expect(perturbed).toMatchObject({continuousBound:true,withinBudget:true,solidCertified:false})
+  expect(perturbed.errorUpper).toBeGreaterThan(0)
+  expect(perturbed.errorUpper).toBeLessThan(2)
+  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken,maxCells:perturbed.cells-1})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
+ }else expect(perturbed).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  expect(JSON.stringify(args)).toBe(before)
 })
 

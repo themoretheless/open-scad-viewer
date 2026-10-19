@@ -205,6 +205,22 @@
                 .unwrap();
         assert_eq!(refused.status, Status::Unresolved);
         assert!(refused.cover.is_none() && refused.closing_angle.is_none());
+        // The same source retains exact forward tangent directions. Its
+        // geometric arc clock is regular even though its raw first jets differ.
+        let geometric = certify_original_arc_rmf_transport(
+            &broken, [1., 0., 0.], 4096, 100000, 1000000, true,
+        ).unwrap();
+        assert_eq!(geometric.status, Status::Certified, "{geometric:?}");
+        assert!(geometric.used_geometric_arc_join_premises);
+        let limited = certify_original_arc_rmf_transport(
+            &broken, [1., 0., 0.], 4096, geometric.cells - 1, 1000000, true,
+        ).unwrap();
+        assert_eq!(limited.status, Status::Unresolved);
+        broken.control_points[1][1] = -0.125;
+        let reversed = certify_original_arc_rmf_transport(
+            &broken, [1., 0., 0.], 4096, 100000, 1000000, true,
+        ).unwrap();
+        assert_eq!(reversed.status, Status::Unresolved);
         eprintln!(
             "rational nonuniform closed RMF cells={} angle={angle:?}",
             report.cells
