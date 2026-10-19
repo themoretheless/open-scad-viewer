@@ -300,10 +300,20 @@ function invalidateSolidPreview() {
  solidPreviewResult.value=null;previewPending.value=false
  previewBody.value=null;previewEmpty.value=false;previewError.value=''
 }
+// A parameter edit of the same operation (height, base, segments...) keeps the last
+// preview on screen until its replacement arrives; clearing it on every pointer move
+// made the body blink and, in union/difference mode, swap back to the original target.
+function supersedeSolidPreview() {
+ clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel();previewPending.value=false
+}
+let previewIdentity=''
 onUnmounted(() => { invalidateSolidPreview();previewWorker.dispose() })
 let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: number; svg: SVGSVGElement } | null = null
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
+// The extrusion preview keeps its working mesh while its height is dragged: each new
+// preview body would otherwise show faceted, then swap to the refined mesh.
+const heightDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
@@ -1160,8 +1170,13 @@ function duplicate() { run(() => {
  commit(d);pickObject(ids[0],mode.value);extraSelection.value=ids.slice(1)
 }) }
 watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, () => JSON.stringify(invalidQuantities.value)], () => {
-  invalidateSolidPreview()
-  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) return
+  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) {
+    invalidateSolidPreview();previewIdentity='';return
+  }
+  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,revolveGeometry.value].join('\n')
+  if(identity===previewIdentity&&previewBody.value)supersedeSolidPreview()
+  else invalidateSolidPreview()
+  previewIdentity=identity
   const generation=previewGeneration
   previewPending.value=true
   previewTimer = setTimeout(async () => {
@@ -1177,7 +1192,7 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
       previewEmpty.value=!previewBody.value
       if(fitNextPreview){fit('3d');fitNextPreview=false}
     }
-    catch (e) { if(generation===previewGeneration){previewError.value=bodyCalculationFailure(e);solidPreviewRetryVisible.value=true} }
+    catch (e) { if(generation===previewGeneration){solidPreviewResult.value=null;previewBody.value=null;previewError.value=bodyCalculationFailure(e);solidPreviewRetryVisible.value=true} }
     finally {if(generation===previewGeneration)previewPending.value=false}
   }, 60)
 }, {flush:'sync'})
@@ -1589,7 +1604,8 @@ onUnmounted(() => { cancelDisplayPreparation(); displayWorker.dispose() })
 function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
   void displayVersion.value
   const transforming = previewingTransform.value && (selectedIds.value.includes(b.id) || !!b.instance && selectedIds.value.includes(b.instance.sourceId))
-  if (!transforming && smoothDisplay.value && b.brep && kernelReady.value) {
+  const draggedPreview = heightDragging.value && b === previewBody.value
+  if (!transforming && !draggedPreview && smoothDisplay.value && b.brep && kernelReady.value) {
     const cached = displayQueue.get(b)
     if (cached) return cached
   }
@@ -1949,7 +1965,7 @@ const extrusionHandle = computed(() => {
 })
 function dragHeight(e: PointerEvent) {
   e.preventDefault(); const svg = (e.target as SVGElement).ownerSVGElement!
-  heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; svg.setPointerCapture(e.pointerId)
+  heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; heightDragging.value = true; svg.setPointerCapture(e.pointerId)
 }
 function snapProjection(svg: SVGSVGElement, pane: Pane): (p: Vec3) => Point2 {
   const matrix = svg.getScreenCTM()
@@ -2071,7 +2087,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
+function cancelGesture() { cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; heightDragging.value = false; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
  cancelNativeNurbs();cancelGizmoWorker()
  if(directTransformPending.value)cancelDirectTransform()
@@ -2259,7 +2275,7 @@ function up(e: PointerEvent) {
     if(g.kind==='move'){if(g.delta)void commitDirectTransform(g.before,selectedIds.value,g.delta);return}
     if(g.kind!=='split')gizmoApplyRevision=gizmoRevision;return}
 
-  if (heightDrag) { heightDrag = null; return }
+  if (heightDrag) { heightDrag = null; heightDragging.value = false; return }
   if (orbitDrag) { orbitDrag = null; return }
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
