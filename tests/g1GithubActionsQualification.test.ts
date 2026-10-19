@@ -163,8 +163,8 @@ function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha
   // These cases exercise evidence integrity, so they must not depend on the
   // image of whichever GitHub runner happens to execute the test suite.
   const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_SHA: githubSha }
-  delete env.ImageOS
-  delete env.ImageVersion
+  // Windows environment names are case-insensitive and may be stored in any case.
+  for (const name of Object.keys(env)) if (/^image(?:os|version)$/iu.test(name)) delete env[name]
   const child = spawnSync(process.execPath, [
     harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
   ], { cwd: root, encoding: 'utf8', env })

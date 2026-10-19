@@ -204,7 +204,9 @@ jobs:
       - run: npm run build:geometry
       - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
       - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
-      - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2
+      # Hosted Windows runs the heaviest native sweep/NURBS cases in 31-36 s,
+      # past the 30 s config default; explicit per-test timeouts still apply.
+      - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2 --testTimeout 90000
         env:
           VITEST_MAX_WORKERS: '2'
       # verify-dist stays in `check`: its byte budgets are calibrated on the
