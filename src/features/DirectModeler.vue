@@ -293,27 +293,17 @@ const movingBody = ref(false), showHelp = ref(false), floorVisible = ref(true)
 let fitNextPreview = false
 let previewTimer: ReturnType<typeof setTimeout> | undefined
 const previewWorker=createSolidPreviewWorker()
-let previewGeneration=0
+let previewGeneration=0,previewIdentity=''
 const solidPreviewResult=shallowRef<DirectDocument|null>(null), previewPending=ref(false)
-function invalidateSolidPreview() {
- clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel()
- solidPreviewResult.value=null;previewPending.value=false
- previewBody.value=null;previewEmpty.value=false;previewError.value=''
-}
-// A parameter edit of the same operation (height, base, segments...) keeps the last
-// preview on screen until its replacement arrives; clearing it on every pointer move
-// made the body blink and, in union/difference mode, swap back to the original target.
-function supersedeSolidPreview() {
+// keepPreview: a parameter edit of the same operation leaves the last preview on screen until its replacement arrives (no blinking).
+function invalidateSolidPreview(keepPreview=false) {
  clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel();previewPending.value=false
+ if(!keepPreview){solidPreviewResult.value=null;previewBody.value=null;previewEmpty.value=false;previewError.value=''}
 }
-let previewIdentity=''
 onUnmounted(() => { invalidateSolidPreview();previewWorker.dispose() })
 let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: number; svg: SVGSVGElement } | null = null
-// While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
-const cameraDragging = ref(false)
-// The extrusion preview keeps its working mesh while its height is dragged: each new
-// preview body would otherwise show faceted, then swap to the refined mesh.
-const heightDragging = ref(false)
+// While the camera (or an extrusion height, for its preview) is dragged the view keeps the working mesh: responsive, no faceted/refined swaps.
+const cameraDragging = ref(false), heightDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
@@ -1170,13 +1160,8 @@ function duplicate() { run(() => {
  commit(d);pickObject(ids[0],mode.value);extraSelection.value=ids.slice(1)
 }) }
 watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, () => JSON.stringify(invalidQuantities.value)], () => {
-  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) {
-    invalidateSolidPreview();previewIdentity='';return
-  }
-  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,revolveGeometry.value].join('\n')
-  if(identity===previewIdentity&&previewBody.value)supersedeSolidPreview()
-  else invalidateSolidPreview()
-  previewIdentity=identity
+  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) {invalidateSolidPreview();previewIdentity='';return}
+  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,revolveGeometry.value].join('\n');invalidateSolidPreview(identity===previewIdentity&&!!previewBody.value);previewIdentity=identity
   const generation=previewGeneration
   previewPending.value=true
   previewTimer = setTimeout(async () => {
@@ -1604,8 +1589,7 @@ onUnmounted(() => { cancelDisplayPreparation(); displayWorker.dispose() })
 function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
   void displayVersion.value
   const transforming = previewingTransform.value && (selectedIds.value.includes(b.id) || !!b.instance && selectedIds.value.includes(b.instance.sourceId))
-  const draggedPreview = heightDragging.value && b === previewBody.value
-  if (!transforming && !draggedPreview && smoothDisplay.value && b.brep && kernelReady.value) {
+  if (!transforming && !(heightDragging.value && b === previewBody.value) && smoothDisplay.value && b.brep && kernelReady.value) {
     const cached = displayQueue.get(b)
     if (cached) return cached
   }
