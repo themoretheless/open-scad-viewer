@@ -1,6 +1,10 @@
 // Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
 import packagedArtifact from '../generated/geometry-kernels/identity'
 export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
+{
+  "sha256": "2e0e21416b1266384f3b33c18b5de381220c89ee10449b7c4f847361eda120a9",
+  "byteLength": 12834623
+},
   {
     "sha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
     "byteLength": 12833089

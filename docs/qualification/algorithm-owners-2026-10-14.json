@@ -3128,18 +3128,18 @@
     },
     {
       "file": "src/core/ownRustCadEvidence.ts",
-      "sha256": "e897a9accc84feb388640efef7a1b4ce2f5dcc02cbef8847c06124491f51fd4a",
+      "sha256": "9e2b967677d95d8840f323b868a5fd2720ebfdf644d57ab5b97beb88ab9d0d26",
       "generated": false,
       "owner": "rush-runtime + application-runtime",
       "decision": "runtime",
       "functions": [
         {
           "name": "recordedOwnRustCadFingerprint",
-          "line": 9
+          "line": 13
         },
         {
           "name": "<callback>",
-          "line": 11
+          "line": 15
         }
       ],
       "loops": 0,
