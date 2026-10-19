@@ -207,8 +207,9 @@ jobs:
       - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2
         env:
           VITEST_MAX_WORKERS: '2'
+      # verify-dist stays in `check`: its byte budgets are calibrated on the
+      # linux-x86_64 reference kernels, and host rustc builds differ slightly.
       - run: node node_modules/vite/bin/vite.js build
-      - run: node scripts/verify-dist.mjs
       - run: npm run setup:openscad
       - run: npm run test:official
 
