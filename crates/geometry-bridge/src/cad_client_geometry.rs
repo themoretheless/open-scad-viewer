@@ -12,6 +12,14 @@ fn plane(v: &Value) -> Result<Plane> {
 fn plane_json(p: Plane) -> Value {
     json!({"origin":p.origin,"u":p.u,"v":p.v})
 }
+fn same_witness(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(_), Value::Number(_)) => a.as_f64() == b.as_f64(),
+        (Value::Array(a), Value::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(a,b)| same_witness(a,b)),
+        (Value::Object(a), Value::Object(b)) => a.len() == b.len() && a.iter().all(|(k,a)| b.get(k).is_some_and(|b| same_witness(a,b))),
+        _ => a == b,
+    }
+}
 pub fn run(v: Value) -> Result<Value> {
     let operation: String = field(&v, "operation")?;
     match operation.as_str() {
@@ -50,7 +58,7 @@ pub fn run(v: Value) -> Result<Value> {
             // Re-run the complete source proof under the original remaining
             // budget. A new proposal order cannot be validated by old client
             // formulas, and caller counters alone never establish coverage.
-            Ok(json!(v.get("report") == Some(&expected)))
+            Ok(json!(v.get("report").is_some_and(|r| same_witness(r, &expected))))
         }
         "quotientWitness" => {
             let bounds: [f64; 4] = field(&v, "bounds")?;
@@ -212,6 +220,9 @@ mod tests {
             "linearProjection":proof.linear_projection,"projectiveProjection":proof.projective_projection,
             "polarProjection":proof.polar_projection,"contractionUpper":proof.contraction_upper,
             "spans":proof.spans,"reason":proof.reason}});
+        assert_eq!(run(request.clone()).unwrap(), true);
+        // JSON.stringify emits integral binary64 coefficients as integers.
+        request["report"]["projectiveProjection"] = json!([[1,0,0,0],[0,1,0,0],[0,0,1,3]]);
         assert_eq!(run(request.clone()).unwrap(), true);
         let original = request.clone();
         request["report"]["spans"] = json!(18);
