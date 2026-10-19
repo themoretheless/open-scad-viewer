@@ -1,0 +1,1657 @@
+{
+  "schema": "native-external-example-inputs/1",
+  "revision": "a54e3facc341d17ecd58953161b8cfa18e5e21bb",
+  "scope": "Tracked external example files used by include_str and runtime frontend tests; independently checked unchanged against the compiled checkout commit. The crate/toolchain guard is separate.",
+  "files": [
+    {
+      "path": "examples/brep/curved-boolean.r",
+      "sha256": "b496e6c0bef5ffa288c333efee09bb89562be334d44f8cae682adab65b645a3b",
+      "byteLength": 311
+    },
+    {
+      "path": "examples/brep/semantic-enclosure.brep.scad",
+      "sha256": "8752bb4a40ea7d31ca4df41f6a981f835359d5446fd96593ce1fd272f42cf48a",
+      "byteLength": 366
+    },
+    {
+      "path": "examples/brep/stepped-enclosure.r",
+      "sha256": "981bbc507109d28be2d525d29536320f39b41427f1fd980631e70524777db699",
+      "byteLength": 831
+    },
+    {
+      "path": "examples/rush-frontend/fluent-checks.r",
+      "sha256": "8fe582b915039984c70d87b76312fe319bd97b9f4421e7fba94ca54141132ad2",
+      "byteLength": 475
+    },
+    {
+      "path": "examples/rush-frontend/foreach-linq.r",
+      "sha256": "366cc553e573d4374b60963a81b8e3e421cf8e85570909f31b874db76b8cc6ee",
+      "byteLength": 334
+    },
+    {
+      "path": "examples/rush-frontend/generic-functions.r",
+      "sha256": "29c67a0cebfaf98b581355e9515e821542271c277a2864c07d3768529c1533b3",
+      "byteLength": 467
+    },
+    {
+      "path": "examples/rush-frontend/indented-functions.r",
+      "sha256": "0d1a451afea62ac9454c5334593599c8a20222730118f3d1f4e092b07e8f77ba",
+      "byteLength": 340
+    },
+    {
+      "path": "examples/rush-frontend/mesh-reconstruction.r",
+      "sha256": "3d30d7f9ad4f123194efdd2bda48f1bd590aaaeb9c7a0f25d2e6568ccf4106be",
+      "byteLength": 249
+    },
+    {
+      "path": "examples/rush-frontend/native-surface.r",
+      "sha256": "77e89a0b0ece105052eee2677f984b773d5f5eaaf3a0d5566561a63c98e2514e",
+      "byteLength": 525
+    },
+    {
+      "path": "examples/rush-frontend/nurbs-boolean.r",
+      "sha256": "3825bd60ea09ec9b9f859a88f5c65245d93a2ef6fc05e35c7627bf2c2d2e4ed8",
+      "byteLength": 485
+    },
+    {
+      "path": "examples/rush-frontend/pattern-matching.r",
+      "sha256": "ceb0a28fb7a73f32228d75e5dd3ad6fae053aaaa3ec29e814f48c0b93ff85061",
+      "byteLength": 639
+    },
+    {
+      "path": "examples/rush-frontend/planetary-spinner.r",
+      "sha256": "b9bbebe095493b1207390adac70ac309ecee3ab89973d933e750c5bd05ea059f",
+      "byteLength": 2482
+    },
+    {
+      "path": "examples/rush-frontend/range-pattern.r",
+      "sha256": "4d99e449e9de76c3c978bfdd8ac5a84cc885b5e33408ee2bc58f2726887ad59d",
+      "byteLength": 387
+    },
+    {
+      "path": "examples/rush-frontend/ring-pattern.r",
+      "sha256": "87b697b6c2b0fb178110eeb807b3e0c047dab91b6453032ecb35cdcc1f146c80",
+      "byteLength": 417
+    },
+    {
+      "path": "examples/rush-frontend/sdf.r",
+      "sha256": "41aa16235d855c37a66b4b1dc8858db3294b212b5582d0031eef2bc4800867fc",
+      "byteLength": 259
+    },
+    {
+      "path": "examples/rush-frontend/skadis-box-linq.r",
+      "sha256": "594d13282372c8043e1693ffd5b764edfde7cf92797d282c4603f20310ab3874",
+      "byteLength": 3668
+    },
+    {
+      "path": "examples/rush-frontend/subdivision.r",
+      "sha256": "05c88b01efa5ab241536c34c0f933cafb2572a6b7602c12ba246f2c6cf8a3618",
+      "byteLength": 297
+    },
+    {
+      "path": "examples/rush/affine-hollow-body.r",
+      "sha256": "ce4c7cf03dc6fdfbeb0416a3e265963a54b8d28b88cec100f26999d8c4f34a84",
+      "byteLength": 655
+    },
+    {
+      "path": "examples/rush/affine-progressive-sweep.r",
+      "sha256": "c3cdb545ec65fb0e038a5bbcdbb3b8b4d493b3e8f1cd317ee335e6630ea1c17a",
+      "byteLength": 590
+    },
+    {
+      "path": "examples/rush/arc-length-affine-progressive-sweep.r",
+      "sha256": "3df0dcb145eb311053d1f0fe1b3ff41b5ab12aa45ccf4bddf3af930083eb1965",
+      "byteLength": 787
+    },
+    {
+      "path": "examples/rush/arc-length-authored-progressive-sweep.r",
+      "sha256": "edf3f78c428434d52e22fdeea232be6f9875dba1bf21ef75862ebb3d4129b493",
+      "byteLength": 872
+    },
+    {
+      "path": "examples/rush/arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "sha256": "e77979e34c4a69124d724e82279625f9fd89fe8c3c09af68f961d97d7221510c",
+      "byteLength": 1723
+    },
+    {
+      "path": "examples/rush/arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "sha256": "a5b82bdc40b4069f1e6d3fe1014a9d37a85b87d9b56f8d522ef4db47502154b5",
+      "byteLength": 1621
+    },
+    {
+      "path": "examples/rush/arc-length-corrected-frenet-inflection-hollow-body-boundary.r",
+      "sha256": "df6b225dafe5afae442b407f97369c4937e8e7ff4c766f939fbb13048a6c726a",
+      "byteLength": 1501
+    },
+    {
+      "path": "examples/rush/arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "sha256": "cca4a21d95aafc76345b1d7777db7d32c0a6d4896abda63aeca89cbe1272f72e",
+      "byteLength": 1258
+    },
+    {
+      "path": "examples/rush/arc-length-curved-authored-body-boundary.r",
+      "sha256": "64021e6142746383db773d1e61218f241e9f55ea8e4a43436069bf06c7b85456",
+      "byteLength": 1314
+    },
+    {
+      "path": "examples/rush/arc-length-curved-authored-progressive-sweep.r",
+      "sha256": "1666e64f7dfc7521ab368e86bdad51fea4e0359ba415bd59ecb0dd8dc6987b05",
+      "byteLength": 884
+    },
+    {
+      "path": "examples/rush/arc-length-curved-contact-body-boundary.r",
+      "sha256": "1507b7efef429fd53f7d090dbfbcc2da9bc5f34c5f9d220ce1f58f300d574c21",
+      "byteLength": 1481
+    },
+    {
+      "path": "examples/rush/arc-length-curved-contact-progressive-sweep.r",
+      "sha256": "c2dfc2bd272a606e437c20c6b37cf200276a356480049bcbf43cf8866c95cd8a",
+      "byteLength": 823
+    },
+    {
+      "path": "examples/rush/arc-length-curved-fixed-body-boundary.r",
+      "sha256": "2c94d879362385e6a9e7826cb7c00f01674af7999662df48818dc803173b0d9d",
+      "byteLength": 1147
+    },
+    {
+      "path": "examples/rush/arc-length-curved-fixed-normal-body-boundary.r",
+      "sha256": "8da3cb0a4ecb0fedf0259147283b5d19016dc9774377f979150a5793a927ae5e",
+      "byteLength": 1339
+    },
+    {
+      "path": "examples/rush/arc-length-curved-fixed-normal-folded-body-boundary.r",
+      "sha256": "7340f4fac17396eb1e243c66b073978bfc07b49971d4977f8ccaf957e851048e",
+      "byteLength": 1294
+    },
+    {
+      "path": "examples/rush/arc-length-curved-fixed-normal-progressive-sweep.r",
+      "sha256": "d2170f8c8cac37a9e811de5eab8aa11ce88ccd57fd8302ce2a442ee33873e551",
+      "byteLength": 717
+    },
+    {
+      "path": "examples/rush/arc-length-curved-fixed-progressive-sweep.r",
+      "sha256": "80cf86e926a92e3ab763d89f6e8cd463ea962ae9f1ec95ec18a4813519dbb540",
+      "byteLength": 711
+    },
+    {
+      "path": "examples/rush/arc-length-curved-frenet-body-boundary.r",
+      "sha256": "53a68d445b61ee9776617505f2aa848165ed4f0a247485b31b356319a7baf1ac",
+      "byteLength": 1328
+    },
+    {
+      "path": "examples/rush/arc-length-curved-frenet-progressive-sweep.r",
+      "sha256": "3e38b9b1ff0de0010fd605ffb7ef1d2bbad05241b23b1888f23adea4329bb1b1",
+      "byteLength": 711
+    },
+    {
+      "path": "examples/rush/arc-length-curved-guided-body-boundary.r",
+      "sha256": "83fe985573f778daa458e4caa4a2198ae3d0c6be4d02a41f5eba00faaf47edbe",
+      "byteLength": 1420
+    },
+    {
+      "path": "examples/rush/arc-length-curved-guided-progressive-sweep.r",
+      "sha256": "48839fbf82cd5204ca64f04202d06cbbc5e6f6a57becb4d3c92b788d47e86187",
+      "byteLength": 803
+    },
+    {
+      "path": "examples/rush/arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "sha256": "171d5efcc4a7c076a24182f7a03127299e6a57e0f81b018a1b97a81f0ee8a41f",
+      "byteLength": 1401
+    },
+    {
+      "path": "examples/rush/arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r",
+      "sha256": "2e380d84c195fd801c7e95f9921c76f71e66da956e6e1d237123ed78076e24a9",
+      "byteLength": 720
+    },
+    {
+      "path": "examples/rush/arc-length-curved-planar-rmf-body-boundary.r",
+      "sha256": "2e6c4c9abb0459792eec12cceb23947f87c00f1a2fd9ff0434e5b4e713740734",
+      "byteLength": 1329
+    },
+    {
+      "path": "examples/rush/arc-length-curved-planar-rmf-folded-body-boundary.r",
+      "sha256": "df625337267795d44f6dec5e8bdf9c630e31900ed5518cc5a452a3c6d8e261b1",
+      "byteLength": 1285
+    },
+    {
+      "path": "examples/rush/arc-length-curved-planar-rmf-progressive-sweep.r",
+      "sha256": "9783b5d87367813f6b5f701a4f64ab616ae6373dda35f5262875b1b17f30c2e8",
+      "byteLength": 708
+    },
+    {
+      "path": "examples/rush/arc-length-guided-progressive-sweep.r",
+      "sha256": "f71596d497ec7b06d0041b1fb94c774121d522f007a8fd5d2f539e68c6940dc1",
+      "byteLength": 660
+    },
+    {
+      "path": "examples/rush/arc-length-progressive-sweep.r",
+      "sha256": "0f67210add9053a3165e47efc001b3a83115eefadfa86c1883a3e964a4003cff",
+      "byteLength": 482
+    },
+    {
+      "path": "examples/rush/arc-length-rmf-rational-straight-affine-hollow-body-boundary.r",
+      "sha256": "8d5334830a623905f5fbef31d5341f4b02d489f9834f20f69fd23f7ec542e7a7",
+      "byteLength": 1245
+    },
+    {
+      "path": "examples/rush/archimedean-spiral-extrusion.r",
+      "sha256": "9aeb6e21f02f1e303f3c21aa95d65ecdad7376401ab8412a525dee40732af2f8",
+      "byteLength": 251
+    },
+    {
+      "path": "examples/rush/authored-closed-c2-progressive-sweep.r",
+      "sha256": "c7f762354c3cc6649d07d2f223f8d29a2df6d7d57dc760fb72c29e83de276398",
+      "byteLength": 785
+    },
+    {
+      "path": "examples/rush/authored-closed-cartesian-c2-progressive-sweep.r",
+      "sha256": "025c023213547ce4e0818f3d5f82eab9400f70cf7f64ac5a5e5e034685d506fd",
+      "byteLength": 796
+    },
+    {
+      "path": "examples/rush/authored-closed-multispan-c2-progressive-sweep.r",
+      "sha256": "3156db8af60d2d8b9598f6371564823ad470903b80c8669f465b588350d67f82",
+      "byteLength": 806
+    },
+    {
+      "path": "examples/rush/authored-closed-nonclamped-c2-progressive-sweep.r",
+      "sha256": "f3000d32a39d65390d06d483a10e0125671ea7b0a0987f536f5652eb53b553e8",
+      "byteLength": 733
+    },
+    {
+      "path": "examples/rush/authored-closed-piecewise-c2-progressive-sweep.r",
+      "sha256": "ddcab2321d008d636ad93b62e2d6bc5834d0893e987aef5c003a733ce42a949c",
+      "byteLength": 926
+    },
+    {
+      "path": "examples/rush/authored-closed-projective-c2-progressive-sweep.r",
+      "sha256": "4f7f71dd745e44c1782cc8d20680c7b53b571ced57c482893a029cf0b8200cbe",
+      "byteLength": 808
+    },
+    {
+      "path": "examples/rush/authored-multispan-body-boundary.r",
+      "sha256": "319952ef75e3fce763413577fba8f5046091e4608dd2fcbfe0636d5a0fa25877",
+      "byteLength": 797
+    },
+    {
+      "path": "examples/rush/authored-nonplanar-cap-loft.r",
+      "sha256": "d876dc8e7a81a42c419e150b1c53520909e1df74c33f2835f7d11bb80cd101bb",
+      "byteLength": 2627
+    },
+    {
+      "path": "examples/rush/authored-progressive-hollow-body.r",
+      "sha256": "85e8a530e633eb42f16494c18594797fcb18c550142aef2918d277ae23938bd9",
+      "byteLength": 679
+    },
+    {
+      "path": "examples/rush/authored-progressive-sweep.r",
+      "sha256": "3c805007b0b06ba8afc471b0afe81f815ccbd121cf747cd63077d0b8c35658f7",
+      "byteLength": 615
+    },
+    {
+      "path": "examples/rush/auto-guided-loft.r",
+      "sha256": "1c2c451128ca2b5e46d942127f38a839bc1c48c0226e2e25a59c8e4b6b716433",
+      "byteLength": 441
+    },
+    {
+      "path": "examples/rush/bezier-extrusion.r",
+      "sha256": "513ca2611e5655439291eed08d5d4d37798088dbd0bafc7837fde8edc824f7b7",
+      "byteLength": 179
+    },
+    {
+      "path": "examples/rush/bezier-surface.r",
+      "sha256": "37b823052c333cfbea1eb1b13f2f30faa99df1464561fb84682aa08864030569",
+      "byteLength": 266
+    },
+    {
+      "path": "examples/rush/bilinear-patch.r",
+      "sha256": "6698c0e5827642357caef7105922ee38f879f0536d173913850fe6d5b4a617e3",
+      "byteLength": 155
+    },
+    {
+      "path": "examples/rush/boundary-fill.r",
+      "sha256": "b16ff54828444796eef1849baeb77ffc6a036c8ae1b934de6a4f273ee7b40b1d",
+      "byteLength": 414
+    },
+    {
+      "path": "examples/rush/cartesian-auto-control-tangent-loft.r",
+      "sha256": "b86eb8a4ed5063e8a631a9d7f26519364a3d4895fb157c232ea1c92af6c4e317",
+      "byteLength": 609
+    },
+    {
+      "path": "examples/rush/cartesian-control-tangent-loft.r",
+      "sha256": "733bbcf94566bb931c0b9046d4766c0269ea396d63b3d113f136c078ba47f67c",
+      "byteLength": 630
+    },
+    {
+      "path": "examples/rush/cartesian-mapped-loft.r",
+      "sha256": "9454cd72472ec288c81e7afe7373bc0594a08f7c3ce2eff7058a10bc0f786cc4",
+      "byteLength": 723
+    },
+    {
+      "path": "examples/rush/catenary-extrusion.r",
+      "sha256": "1acd6c9c0f65a00fbbfa983147d46bbdc8db977c7d05c1ed8cf4b472c7bbdd69",
+      "byteLength": 204
+    },
+    {
+      "path": "examples/rush/catenoid-patches.r",
+      "sha256": "1cabcbb4d124216d44ba66994b04b80ada7735bcb31c438983637c224063c8d7",
+      "byteLength": 169
+    },
+    {
+      "path": "examples/rush/catenoid-surface.r",
+      "sha256": "ba576720614119a055ae0ffe7d58bc58e44e9d8ae91e660df5808b26a302bc2a",
+      "byteLength": 172
+    },
+    {
+      "path": "examples/rush/circle-arc-extrusion.r",
+      "sha256": "2afe9bc6e6866ba5b671c890937bf6e5276edd37ad87a4a7d857e458c0946567",
+      "byteLength": 274
+    },
+    {
+      "path": "examples/rush/circle-extrusion.r",
+      "sha256": "a5e604a5622cee7aa6e60118d20a636733b60ba0f081bed43f174ad7202ccc35",
+      "byteLength": 158
+    },
+    {
+      "path": "examples/rush/circle-rectangle-transition.r",
+      "sha256": "3037cd923285a108552405ef21a278908d2988316953eda3371169a3a355f440",
+      "byteLength": 286
+    },
+    {
+      "path": "examples/rush/circle-transition-surface.r",
+      "sha256": "bcbfb3678f21321bc377f9ac8625c902507f46b33d40a22fb4e56c52151c5bbd",
+      "byteLength": 267
+    },
+    {
+      "path": "examples/rush/clamped-loft-surface.r",
+      "sha256": "6753abcfef901caffe883223442c9c9b4d65f8c19990b532cff3961cfdfe8348",
+      "byteLength": 487
+    },
+    {
+      "path": "examples/rush/clamped-spline-extrusion.r",
+      "sha256": "a325ef0ba014f094e4bf1b610f8a165e190f68748ecd9b38da5ecc5507902ca3",
+      "byteLength": 263
+    },
+    {
+      "path": "examples/rush/closed-antipodal-spatial-rmf-affine-hollow-body.r",
+      "sha256": "118310e75d473f610f9704c87e41b308a435b9438cf2625be9fee0839182eccf",
+      "byteLength": 1529
+    },
+    {
+      "path": "examples/rush/closed-antipodal-spatial-rmf-progressive-sweep.r",
+      "sha256": "313870b7eae2e11a41c2c114b398570c66e5826ac127bef3790771e031bac2b5",
+      "byteLength": 1190
+    },
+    {
+      "path": "examples/rush/closed-arc-length-authored-tube-body-boundary.r",
+      "sha256": "ab11bbc01c47cfabc9256b6912d509c73f5ce54befdd96b8bfa50d8467bdf9ff",
+      "byteLength": 972
+    },
+    {
+      "path": "examples/rush/closed-arc-length-contact-hollow-body-boundary.r",
+      "sha256": "8c26f384eb511d849425f8ebe6e39186e789cba98b8cb4bb410094d4724ae6a5",
+      "byteLength": 835
+    },
+    {
+      "path": "examples/rush/closed-arc-length-corrected-planar-tube-body-boundary.r",
+      "sha256": "1bfe69c3c525791f43e552831aab988bab2564deedffe2ba3587becb7f157f4a",
+      "byteLength": 636
+    },
+    {
+      "path": "examples/rush/closed-arc-length-fixed-normal-tube-body-boundary.r",
+      "sha256": "6ffcc71e305bd4ba279d71fe3c20cfab42a158fcf2fbd21aa2dab8dfc46cc754",
+      "byteLength": 628
+    },
+    {
+      "path": "examples/rush/closed-arc-length-guided-frame-c2-progressive-sweep.r",
+      "sha256": "db7cd7e1127fc9017d4a9b915b5cfec389f7148d4493206e93efbe4f14872552",
+      "byteLength": 1034
+    },
+    {
+      "path": "examples/rush/closed-arc-length-guided-source-bound-progressive-sweep.r",
+      "sha256": "59670649a0c8cf5eadad0eaacdb9cb9da0d490f87b48cd3e8c40c3b7517542b4",
+      "byteLength": 822
+    },
+    {
+      "path": "examples/rush/closed-arc-length-guided-tube-body-boundary.r",
+      "sha256": "2d97609fd5744a1aba18ba3bb6bdb4a7bfb51a8ea689a50b451292cb3a32ecc9",
+      "byteLength": 704
+    },
+    {
+      "path": "examples/rush/closed-arc-length-rational-phase-contact-hollow-body-boundary.r",
+      "sha256": "26934923558ceb618d3adda2340b1babfc3f74e99ec0433f0504bc4896f7defc",
+      "byteLength": 835
+    },
+    {
+      "path": "examples/rush/closed-arc-length-rmf-tube-body-boundary.r",
+      "sha256": "9b351b1fa661b38e5c9171112c9146f02b88f62aa393a074cb3e51b605772aaa",
+      "byteLength": 617
+    },
+    {
+      "path": "examples/rush/closed-authored-arc-length-progressive-sweep.r",
+      "sha256": "db57ce64f7f1b7f8393d270ac9d8495de7a90dddc2d237bef89119e2f527bf11",
+      "byteLength": 778
+    },
+    {
+      "path": "examples/rush/closed-authored-source-bound-progressive-sweep.r",
+      "sha256": "65aa8dcd65d860485b7dce9d86d7432ced73684ea48c7a9d6e00d2b96ae9b195",
+      "byteLength": 806
+    },
+    {
+      "path": "examples/rush/closed-authored-tube-body-boundary.r",
+      "sha256": "0e0867b5be317f340f087970224d7d2b24dc610876b826991aa91d30fad7de99",
+      "byteLength": 897
+    },
+    {
+      "path": "examples/rush/closed-conic-direction-frame-c1-progressive-sweep.r",
+      "sha256": "79c23e7aa7d00572d707af671046f7a360d16736fca0151af3031e70b215fc97",
+      "byteLength": 783
+    },
+    {
+      "path": "examples/rush/closed-contact-hollow-body-boundary.r",
+      "sha256": "fb47a0ff9134358c8a391bb16306ad66455d3433774fee04e924866baeb211f3",
+      "byteLength": 760
+    },
+    {
+      "path": "examples/rush/closed-contact-progressive-sweep.r",
+      "sha256": "ee6b4d88bbdcb056038639d086815576960d37ca932a9ad88ef92fa1c54ecbef",
+      "byteLength": 786
+    },
+    {
+      "path": "examples/rush/closed-corner-progressive-hollow-body.r",
+      "sha256": "ace67df915d133ff6c64f64316f34f76b3183ee5532fd4e5606554ff4dc13e5a",
+      "byteLength": 549
+    },
+    {
+      "path": "examples/rush/closed-fixed-normal-full-turn-progressive-sweep.r",
+      "sha256": "bd4c8d97c9fc78e3a2561b2c356530a8e7f049238bef3c99fc414af8175ed168",
+      "byteLength": 539
+    },
+    {
+      "path": "examples/rush/closed-fixed-normal-progressive-sweep.r",
+      "sha256": "4316f905f826a296d764c9e511c44cfb8440100dab141617bc6381b7adf53b8f",
+      "byteLength": 610
+    },
+    {
+      "path": "examples/rush/closed-fixed-progressive-sweep.r",
+      "sha256": "33bcf4bc96b03457389445f7dc0a158f95f86abcf528e1267814965e5fb28eaa",
+      "byteLength": 673
+    },
+    {
+      "path": "examples/rush/closed-framed-sweep.r",
+      "sha256": "3add344c8b7babb6195ea1e94687cf07bfe8da33f6a92c016e2b30e17f6a5b1c",
+      "byteLength": 366
+    },
+    {
+      "path": "examples/rush/closed-frenet-progressive-sweep.r",
+      "sha256": "47737ee1c42e1e179402a03c6c5eb667d9e21f160d5d4f92383a65f9aeed7464",
+      "byteLength": 619
+    },
+    {
+      "path": "examples/rush/closed-guided-progressive-sweep.r",
+      "sha256": "167e63d80f199cdc86ab80f50b2931a7a0e28be4c0ea8adfa76c266b39c0e933",
+      "byteLength": 746
+    },
+    {
+      "path": "examples/rush/closed-loft-surface.r",
+      "sha256": "097fb0068b5239c690123a54cc0af219abdba754d7e3070a254f53a736175b8f",
+      "byteLength": 428
+    },
+    {
+      "path": "examples/rush/closed-miter-frame-guide-affine-hollow-corrected.r",
+      "sha256": "957d76eb67e60ee9fad35d742eec530f7755f49fdd756ede6ad4c9255f5ebdeb",
+      "byteLength": 1337
+    },
+    {
+      "path": "examples/rush/closed-miter-frame-guide-affine-hollow.r",
+      "sha256": "1417d3a1e1666f5fe91d6fed1c9f9cfeca4635329a565118bae27d1e056de4db",
+      "byteLength": 1247
+    },
+    {
+      "path": "examples/rush/closed-miter-hollow-body.r",
+      "sha256": "19ff349480d6c967bd523a5b5f4d94b425c3e6db1baa6755ac08b36eb49b7756",
+      "byteLength": 309
+    },
+    {
+      "path": "examples/rush/closed-nonaxial-arc-length-corrected-tube-body-boundary.r",
+      "sha256": "13b3ac2a8bee50c33d57c8b864e870adcd308be7c55db9f28b0011ce97868328",
+      "byteLength": 879
+    },
+    {
+      "path": "examples/rush/closed-nonaxial-arc-length-rmf-tube-body-boundary.r",
+      "sha256": "937705394ca3f7cc50f598c47b29af8fb8930d4711980b7e27faef914bf03b34",
+      "byteLength": 866
+    },
+    {
+      "path": "examples/rush/closed-periodic-frame-guide-affine-hollow-placed.r",
+      "sha256": "23b385bbb08d0e50b5ec02abcd68521e2105b254c26a5a8265b69bd6828ae34a",
+      "byteLength": 1577
+    },
+    {
+      "path": "examples/rush/closed-periodic-frame-guide-affine-hollow.r",
+      "sha256": "183c9760d8426b0134246cff35739fd54fc08f1484604bf6bd901f6d3185ca72",
+      "byteLength": 1454
+    },
+    {
+      "path": "examples/rush/closed-periodic-spatial-rmf-affine-body-certified.r",
+      "sha256": "557549fd830974b319be023c2fea1193a681bc4ce869f9b93aaa674f8ec83588",
+      "byteLength": 1208
+    },
+    {
+      "path": "examples/rush/closed-periodic-spatial-rmf-multiple-holes-body.r",
+      "sha256": "80642cd1030f5b340a6284e6b3b5bbe3a2219cfdf91bd39caca51a15693a18c6",
+      "byteLength": 1752
+    },
+    {
+      "path": "examples/rush/closed-periodic-spatial-rmf-parameter-multiple-holes-body.r",
+      "sha256": "6691027bc767545ad8c1a29cb9f465faf18a8305b177dbae8a9668ec7ccb6412",
+      "byteLength": 1751
+    },
+    {
+      "path": "examples/rush/closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "sha256": "e0c67db91b5639eb7aa1172ee2b9a241b06b523aa76c1b485ba5fcc50cb68ad8",
+      "byteLength": 1420
+    },
+    {
+      "path": "examples/rush/closed-periodic-spatial-rmf-varying-affine-hollow-body.r",
+      "sha256": "c4490cde708a9ef8995c64345249e44d32705d9fdb3c34b67d7c9e28c8ec77d4",
+      "byteLength": 1421
+    },
+    {
+      "path": "examples/rush/closed-pipe-surface.r",
+      "sha256": "939c8c3c222b10327d51ee3d2b3ad72d3014e740229a0b8fd4d21b8852270350",
+      "byteLength": 210
+    },
+    {
+      "path": "examples/rush/closed-planar-guided-frame-c2-progressive-sweep.r",
+      "sha256": "d21e5b22f6874504d59b1a98d057be80a0dd45f6685dc45a41317297073215f5",
+      "byteLength": 960
+    },
+    {
+      "path": "examples/rush/closed-planar-path-frame-c2-progressive-sweep.r",
+      "sha256": "982e6a60513dfb7e849cbb6d60fe5820ccc9bf35abfa240e629d198a913c9bd2",
+      "byteLength": 707
+    },
+    {
+      "path": "examples/rush/closed-planar-rmf-body-boundary.r",
+      "sha256": "8f8a7867d5f6a505646a5ffd85aabc8304450f2bc5f23d5297cd4be2caf7da02",
+      "byteLength": 783
+    },
+    {
+      "path": "examples/rush/closed-planar-rmf-full-turn-progressive-sweep.r",
+      "sha256": "e6c9550a61e2d84668fb5c543494e86b7aa2162acdbe9ee5bea2194b0f5ba838",
+      "byteLength": 527
+    },
+    {
+      "path": "examples/rush/closed-profile-planar-10.r",
+      "sha256": "18dd669c792a3af2eadfa5013a1bd5207579be41e6d70b7e818226a322b64088",
+      "byteLength": 1062
+    },
+    {
+      "path": "examples/rush/closed-profile-spatial-6.r",
+      "sha256": "f7a0b27c8ecf2ca506e54be84a3d308fd558697c221fdc78ea230dd8cc2f4801",
+      "byteLength": 1142
+    },
+    {
+      "path": "examples/rush/closed-profile-sweep.r",
+      "sha256": "e88dcaed32dd464b107657ebec92de18c944d478a69febeba77e20a4b0e7261e",
+      "byteLength": 355
+    },
+    {
+      "path": "examples/rush/closed-progressive-hollow-body.r",
+      "sha256": "5aaeddf39a1f24d8e6f13f427b7074947a6fd747e31fdba188ddb7cd05f8c338",
+      "byteLength": 505
+    },
+    {
+      "path": "examples/rush/closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r",
+      "sha256": "d73fe38a77bc3e54dd16ddd55decfbd67bede87229b6ef62cd1b032eed929996",
+      "byteLength": 1461
+    },
+    {
+      "path": "examples/rush/closed-progressive-sweep.r",
+      "sha256": "c8b9a528e54c71004f32d291c590857bf88e4282c0526ce0a91b86c7039b1f61",
+      "byteLength": 442
+    },
+    {
+      "path": "examples/rush/closed-rational-frame-guide-affine-hollow-placed.r",
+      "sha256": "8c89365a68ba51edbd2a09e393aedf22597261bca3c4391fbf0376667591e8b1",
+      "byteLength": 1585
+    },
+    {
+      "path": "examples/rush/closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r",
+      "sha256": "12b831a2330b24e87c705e84c72220f32515b443540b267ecbc8379abfbe6e3e",
+      "byteLength": 1377
+    },
+    {
+      "path": "examples/rush/closed-ribbon-surface.r",
+      "sha256": "52e1f38e855926abbb5759488c54eb3e895d3be2663d33e193a610eee90c8e70",
+      "byteLength": 308
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-affine-body-certified.r",
+      "sha256": "0d168b169ad2e45dfa81ab244f7a1ac8e691c6c0c6052abfc84e63815c8cdd71",
+      "byteLength": 1263
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-affine-certified.r",
+      "sha256": "6da174ee0dcd04c3763fe8bda6abdb4c972caea8ef8058088df85766e92062f6",
+      "byteLength": 1248
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-affine-hollow-body-certified.r",
+      "sha256": "4e884f2dd04707315482977aef2c9dffd11ac4b34065171fb007b379e30a19aa",
+      "byteLength": 1342
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-affine-progressive-sweep.r",
+      "sha256": "aab0376e0f3b8099a30aee2a7cd718fd751e0d6f24d6d183ddce371c67ebf30d",
+      "byteLength": 1162
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "sha256": "bbb5656db4c8abf28ff9976beae4275da4cbccff8dda9c0084c0bf9f9be2545e",
+      "byteLength": 1425
+    },
+    {
+      "path": "examples/rush/closed-spatial-rmf-varying-affine-hollow-body.r",
+      "sha256": "71da175924fad576ca0eb703015e4da61102808b8459d69e7116c385d161891b",
+      "byteLength": 1426
+    },
+    {
+      "path": "examples/rush/closed-spline-extrusion.r",
+      "sha256": "505b8f54fd901857224c2425a2e5ae8f753bd876544e27430bf6ace81b1f705c",
+      "byteLength": 240
+    },
+    {
+      "path": "examples/rush/closed-variable-pipe-surface.r",
+      "sha256": "6643bc5af15e8cc94138e3e295e65201e836d6b5148ef9a1fd051328fe3d3597",
+      "byteLength": 318
+    },
+    {
+      "path": "examples/rush/clothoid-extrusion.r",
+      "sha256": "35ee67bb01c7ca519fa98d0a2d7f63825145b059257563fe67833a4a510f3f94",
+      "byteLength": 255
+    },
+    {
+      "path": "examples/rush/composite-curve-extrusion.r",
+      "sha256": "8f02ba07c18a0f0e877b9c5b1291a4c39a6232b3eadf2e3e1cc9b58554811d11",
+      "byteLength": 367
+    },
+    {
+      "path": "examples/rush/cone-frustum.r",
+      "sha256": "a4c3c61653d3cacf8c7fbccba7a7b2770d8c6c1a9ae205969ce60b874ca6ea02",
+      "byteLength": 229
+    },
+    {
+      "path": "examples/rush/cone-surface.r",
+      "sha256": "9a1a7d5e50ee2051137327cc3c779732a74a30a47523ab32033a9f9e6c841138",
+      "byteLength": 194
+    },
+    {
+      "path": "examples/rush/conical-helix-extrusion.r",
+      "sha256": "a929b8ea7adb06bfd5bc2be2fdbe2b4c1830623bac48fb73b8a27150bea1e095",
+      "byteLength": 252
+    },
+    {
+      "path": "examples/rush/contact-progressive-hollow-body.r",
+      "sha256": "d7387644067cb8f94ca9990bb4a62dbe854e5bce0704000d797370298cf84114",
+      "byteLength": 601
+    },
+    {
+      "path": "examples/rush/contact-progressive-sweep.r",
+      "sha256": "7cd625de97a70a45f90f31299d76a29a062c8dac3290d9727bdf1e35ade33d8b",
+      "byteLength": 605
+    },
+    {
+      "path": "examples/rush/coons-patch.r",
+      "sha256": "e0708f6f434588e2a3de6d30bb87895cafbba64490e64629010a9e44af3134df",
+      "byteLength": 554
+    },
+    {
+      "path": "examples/rush/corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "sha256": "9708bd690d8d88bd0194ac04cfabbaaa1e303c87b12cc9eb0894d03c5a5392b0",
+      "byteLength": 1722
+    },
+    {
+      "path": "examples/rush/corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "sha256": "e95d24a242410a3bac25f73ad21cf481c18d1ffdb771d24ab2c15546adaea5a2",
+      "byteLength": 1620
+    },
+    {
+      "path": "examples/rush/corrected-frenet-antiparallel-progressive-sweep.r",
+      "sha256": "8fe1692eff5a787708236109e9dec313d6f4bb9289d3acd73bb347c5101917ac",
+      "byteLength": 644
+    },
+    {
+      "path": "examples/rush/corrected-frenet-inflection-hollow-body-boundary.r",
+      "sha256": "6f53540f3033b30e4091c8147121bc0b863da33b24803e1048c06958af13a107",
+      "byteLength": 1500
+    },
+    {
+      "path": "examples/rush/corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "sha256": "b2e3958c96b7fa9bce05cf39d9b62a0cc63f9ca3e951969f72d3b8fff9bc8443",
+      "byteLength": 1185
+    },
+    {
+      "path": "examples/rush/corrected-frenet-straight-affine-hollow-body-boundary.r",
+      "sha256": "939849d28a59bdd0b58f37343ce8b041a9ab7295f28b37664785726ed5c396fd",
+      "byteLength": 1102
+    },
+    {
+      "path": "examples/rush/corrected-frenet-sweep.r",
+      "sha256": "f2d51b8305bced2f1c801b09c878b732aba0a52d4b1608d8984617f527110b41",
+      "byteLength": 456
+    },
+    {
+      "path": "examples/rush/cycloid-extrusion.r",
+      "sha256": "27aa4f293a48cb340f57c4edca3393471fad71edde091fd87a56ed0ea4fe75f7",
+      "byteLength": 218
+    },
+    {
+      "path": "examples/rush/cylinder-surface.r",
+      "sha256": "4a65288a22fdd6f151a55458a070efeabf7dfe82c14c56460b0b14dec81e4000",
+      "byteLength": 198
+    },
+    {
+      "path": "examples/rush/declarative-identity.r",
+      "sha256": "1e4e1cc1ce468952c583cf18a77ddb0cef9b5a3a15feec72f6bdb5959fecbc0c",
+      "byteLength": 434
+    },
+    {
+      "path": "examples/rush/decomposed-profile-g1-progressive-sweep.r",
+      "sha256": "82093ccb24a08180af6a72cc07dd39c9b1dae6fc0c706b04b5e3d819bcc21bdf",
+      "byteLength": 1949
+    },
+    {
+      "path": "examples/rush/decomposed-profile-g2-progressive-sweep.r",
+      "sha256": "15f4cc51787d2c1d2edc3c4aa10b881ed89b263be633f1ac8d020635f75d6e86",
+      "byteLength": 1137
+    },
+    {
+      "path": "examples/rush/ellipse-extrusion.r",
+      "sha256": "30509a3253520bdcfddbdb84e55e2f9b10777ca681c826d5cc4ca7fef96577e1",
+      "byteLength": 278
+    },
+    {
+      "path": "examples/rush/ellipse-transition-surface.r",
+      "sha256": "06c70ea4168350c0d3e10f9570e7b792e8dfd05a7eb5152d9214be711b811b02",
+      "byteLength": 262
+    },
+    {
+      "path": "examples/rush/ellipsoid.r",
+      "sha256": "f6bc5a77097c8c45519f8d9a557e92b224e6e4dbc212364873ba998327371460",
+      "byteLength": 185
+    },
+    {
+      "path": "examples/rush/elliptic-cylinder.r",
+      "sha256": "30d9c7dba0374b3e44457814369206a7078dc516b9b0af933a608feb6a7695ca",
+      "byteLength": 227
+    },
+    {
+      "path": "examples/rush/elliptic-helix-extrusion.r",
+      "sha256": "f139a9cd7b12d6541c29a1836bb8b73bcfd866a7b6619cfad9a647d84512ea50",
+      "byteLength": 247
+    },
+    {
+      "path": "examples/rush/elliptic-torus.r",
+      "sha256": "71fc05b6534571ae8335dce45cb1bc35d4a223f3143a7ef46cd9bdfe7cf3b3c7",
+      "byteLength": 216
+    },
+    {
+      "path": "examples/rush/epicycloid-extrusion.r",
+      "sha256": "28557d458d738d50eec6a52702c508961972d6e1dd7d6294a40b7e5a311e9478",
+      "byteLength": 247
+    },
+    {
+      "path": "examples/rush/fixed-normal-progressive-sweep.r",
+      "sha256": "23ab04273595a2dd24a626538c8b33dbe5204048afddb466231d45e57115b976",
+      "byteLength": 591
+    },
+    {
+      "path": "examples/rush/fixed-progressive-sweep.r",
+      "sha256": "f9ba04b66d9477fd3d17486158fbfd5d8802dd2a3018bd69a026f7107312b9f9",
+      "byteLength": 579
+    },
+    {
+      "path": "examples/rush/formula-curve-extrusion.r",
+      "sha256": "9e2c26c286d4115eca69061dc1ce7b3563c9281712f89d5bc40465484951f593",
+      "byteLength": 369
+    },
+    {
+      "path": "examples/rush/formula-curve-text.r",
+      "sha256": "6612fab3cd06895dd00714226a0084cc3eadaacc8a0315ca072f85ede2093c4c",
+      "byteLength": 233
+    },
+    {
+      "path": "examples/rush/formula-surface-text.r",
+      "sha256": "1cfbe6722c2a0c79eebf6a22110a3efb06378535ea15e4c73eff937c60c68129",
+      "byteLength": 223
+    },
+    {
+      "path": "examples/rush/formula-surface.r",
+      "sha256": "32d208b56b5f2218dc2e6778d13f9f1c37af2a27ae599931fc9eb83cbde3d74d",
+      "byteLength": 273
+    },
+    {
+      "path": "examples/rush/framed-sweep.r",
+      "sha256": "1c631a5fbabce50d475f39ffe6cc46ec908db31b6911b5220e6ef7366c9ad16e",
+      "byteLength": 433
+    },
+    {
+      "path": "examples/rush/frenet-progressive-sweep.r",
+      "sha256": "a903764f05accaff7f91242381e21eeeb4808ab6fb5abb1a87c8392fcd76c4da",
+      "byteLength": 624
+    },
+    {
+      "path": "examples/rush/g2-loft-surface.r",
+      "sha256": "a19d3d7d082df0b7c88ee09c068c621c20547b2e8f35c8a3353c6df4e6d2f2b7",
+      "byteLength": 667
+    },
+    {
+      "path": "examples/rush/gordon-surface.r",
+      "sha256": "e04838de5f1c0f2cc30ba395522dad6f837aca91fe9cfc108c9a29a364190227",
+      "byteLength": 628
+    },
+    {
+      "path": "examples/rush/grid-spline-surface.r",
+      "sha256": "aca313cd237d62560e9f0ca71f09d01b403d6b56e38fad8011cd6086ced87ec2",
+      "byteLength": 291
+    },
+    {
+      "path": "examples/rush/guided-loft-surface.r",
+      "sha256": "f256983df1b44996df54dba1816cb42f6a3b1660d9c47cd44950466ca09ac316",
+      "byteLength": 429
+    },
+    {
+      "path": "examples/rush/guided-progressive-sweep.r",
+      "sha256": "0e6bb93a55878fbdce7adbf5f48fac8d26a82d806380cd7616086156e8502765",
+      "byteLength": 531
+    },
+    {
+      "path": "examples/rush/helicoid-patches.r",
+      "sha256": "f679805f8c05add3e0935926b963652536380ae16da12d6fa24c9b7860940e25",
+      "byteLength": 210
+    },
+    {
+      "path": "examples/rush/helicoid-surface.r",
+      "sha256": "62be579faf625306a1d39991940811c3b44f40e784ba17dca1277ff0b9b5018b",
+      "byteLength": 217
+    },
+    {
+      "path": "examples/rush/helix-extrusion.r",
+      "sha256": "ca370eede2f0e5a68193ba11db7ce681bb535df1e3bfea742f0f02e9454753d9",
+      "byteLength": 222
+    },
+    {
+      "path": "examples/rush/hermite-extrusion.r",
+      "sha256": "05d699d2a6adfc9c64b3e3213149c5b3202b1f63e8d452f0ca9b5fcb68d475e9",
+      "byteLength": 338
+    },
+    {
+      "path": "examples/rush/hermite-patch.r",
+      "sha256": "6f504c0c8be3b8c33e68d51efb096bc2c4bc294191c061c59bb4c3b90e1e38a8",
+      "byteLength": 388
+    },
+    {
+      "path": "examples/rush/hyperbola-extrusion.r",
+      "sha256": "a32d8fa249b032e1ebca371c228fed38739a9a434df16367d1de39042bb51643",
+      "byteLength": 269
+    },
+    {
+      "path": "examples/rush/hyperboloid-one-sheet.r",
+      "sha256": "17fadf972f4d2e33ebd03d9f9f5e8221b717470557dc1c851ac57af45638cbbf",
+      "byteLength": 188
+    },
+    {
+      "path": "examples/rush/hyperboloid-two-sheet.r",
+      "sha256": "298a2952ceac3485039601f3c2daf5c5d96361e4f5a1662fca81c148bd6dd39a",
+      "byteLength": 221
+    },
+    {
+      "path": "examples/rush/hypocycloid-extrusion.r",
+      "sha256": "ee1b23371abf2a812bec7864629b875c7ec4723228054eebd6e1bdb3ced5063b",
+      "byteLength": 248
+    },
+    {
+      "path": "examples/rush/involute-extrusion.r",
+      "sha256": "bdc0eabd1952ed7022343044f361361da146f5ef415f760fe58007e110ef717e",
+      "byteLength": 219
+    },
+    {
+      "path": "examples/rush/line-extrusion.r",
+      "sha256": "57b35ea24f4dedc70e07cbe0dea51c337c7fd4e15d4851e9e773e9073f64d409",
+      "byteLength": 147
+    },
+    {
+      "path": "examples/rush/lissajous-extrusion.r",
+      "sha256": "453258fa38d322b22c2611037235532e590ba6f1dd2cd1a1ee812296c1b32b1a",
+      "byteLength": 262
+    },
+    {
+      "path": "examples/rush/logarithmic-spiral-extrusion.r",
+      "sha256": "3add564a0009a820ef06da86eb3212770bea756ee3b177c75018ea97755b8162",
+      "byteLength": 241
+    },
+    {
+      "path": "examples/rush/mapped-natural-loft.r",
+      "sha256": "c390d27d533579d0343710acfe813a02fd38409e68a7797006fa7fd2c85d7e61",
+      "byteLength": 650
+    },
+    {
+      "path": "examples/rush/miter-affine-hollow.r",
+      "sha256": "407693185451f1106cc2152e3dc94b7c3e8fd21fd5dd2ecd7780ad2c6f231369",
+      "byteLength": 665
+    },
+    {
+      "path": "examples/rush/miter-authored-frame-hollow-corrected.r",
+      "sha256": "6dbf6a657592b1172453e580fd0926028f434da5a8d3107adf16b5de7d954a45",
+      "byteLength": 783
+    },
+    {
+      "path": "examples/rush/miter-authored-frame-hollow.r",
+      "sha256": "f325d1a94570c9c22dfeeb880efe986d65573b7736f2ed947179a47c042baf00",
+      "byteLength": 650
+    },
+    {
+      "path": "examples/rush/miter-combined-frame-affine-hollow-corrected.r",
+      "sha256": "fe33467bf0e70e6f5cbd4a757dfb4aeb1750fe0d0929951944a1bd3c1094c795",
+      "byteLength": 983
+    },
+    {
+      "path": "examples/rush/miter-combined-frame-affine-hollow.r",
+      "sha256": "67cf8c9937ec945557d115b0d17dacecacc276d144ee0ccc45410004f978223a",
+      "byteLength": 858
+    },
+    {
+      "path": "examples/rush/miter-combined-frame-guide-affine-hollow-corrected.r",
+      "sha256": "19eaa0cd14573f5afc25951cfe5d4b0d9afcf21489e39766ddd4b3ad1139e364",
+      "byteLength": 1177
+    },
+    {
+      "path": "examples/rush/miter-combined-frame-guide-affine-hollow.r",
+      "sha256": "48f1297150370a6d908b0fe07e288148c21e00dc7b7966cb899f6618058681db",
+      "byteLength": 1052
+    },
+    {
+      "path": "examples/rush/miter-g1-profile-frame-guide-affine.r",
+      "sha256": "0323d2e94bdd7e260a79a0bf1a33e2019ef0a5023e2e23b675c0b4479c32307c",
+      "byteLength": 1110
+    },
+    {
+      "path": "examples/rush/miter-guide-affine-hollow-corrected.r",
+      "sha256": "4d86b959975d98130320eb6a0f725ed2780e72f50f2248d8aaea1cb3e7d6cc53",
+      "byteLength": 893
+    },
+    {
+      "path": "examples/rush/miter-guide-affine-hollow.r",
+      "sha256": "f82fcb0101984ba3c22d7c28fe5b7fbceaa1aa9ba07ce23d1f009e8eee0b149e",
+      "byteLength": 768
+    },
+    {
+      "path": "examples/rush/miter-guide-hollow-corrected.r",
+      "sha256": "9ce4315377a8b2c1eea2586df2917ce98e30f24201feeb40577506af2410095b",
+      "byteLength": 693
+    },
+    {
+      "path": "examples/rush/miter-guide-hollow.r",
+      "sha256": "e4471804d6045cdaaf8668174fbde21379c9ff855a787d91ff676bc9859734ef",
+      "byteLength": 560
+    },
+    {
+      "path": "examples/rush/miter-hollow-body.r",
+      "sha256": "c7081a61eafebad6a9de2c9648ef1c4ac2063c29c1e5238e4f00629be75ad68c",
+      "byteLength": 302
+    },
+    {
+      "path": "examples/rush/miter-hollow-corrected.r",
+      "sha256": "91d05e9fdc866bcba98ede7824bb9e0cc6ca015bdb7f64aea770c79fb158a80e",
+      "byteLength": 432
+    },
+    {
+      "path": "examples/rush/miter-moving-affine-full-boundary-refined.r",
+      "sha256": "1c1694c6d59976f01e67f7e4090a98c5f312d74f8226cb8acbc072eead02aa12",
+      "byteLength": 1108
+    },
+    {
+      "path": "examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r",
+      "sha256": "7ddb742da258ce8a208ea199c150a111cf8c12e0489b7931a32773a2d89e14d3",
+      "byteLength": 1208
+    },
+    {
+      "path": "examples/rush/miter-periodic-frame-guide-affine-hollow.r",
+      "sha256": "ee9afab28d2598830311dc78adba3ec7b73fdbb7fcb1f6cdc96eb3bc5093149e",
+      "byteLength": 1370
+    },
+    {
+      "path": "examples/rush/miter-periodic-hollow.r",
+      "sha256": "01ead3bb6a54a1ea5875086c953e4e95522b431468d13dd2851b10993211aa79",
+      "byteLength": 849
+    },
+    {
+      "path": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps-placed.r",
+      "sha256": "fb3cbab5e6d0d053e65e624dfcb52825541f9fbb23570de4cd66825bcb6aa1db",
+      "byteLength": 1717
+    },
+    {
+      "path": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r",
+      "sha256": "d7e87b9534324f0145d721bbecdf3a817a93f10280a0893280d38c452df421d5",
+      "byteLength": 1594
+    },
+    {
+      "path": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow-corrected.r",
+      "sha256": "69a039538009473689c9bfde5524385e5faf78b74d7d00abeafb9b58df193965",
+      "byteLength": 1500
+    },
+    {
+      "path": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow-placed.r",
+      "sha256": "b2c6bacf1189ec335a073e7a780b46007ea04debbcd70cd1fd64327873e4f4bf",
+      "byteLength": 1501
+    },
+    {
+      "path": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r",
+      "sha256": "b8609a14060a3d1c7c1f2ce546644c3a45c362a8d19b91675dec18c16ab8d091",
+      "byteLength": 1378
+    },
+    {
+      "path": "examples/rush/miter-rational-curved-guide-frame-affine-hollow.r",
+      "sha256": "8c52759614500340eb97dd6641c1cc181c85ac699f9f6564946813ea4e2572f7",
+      "byteLength": 1255
+    },
+    {
+      "path": "examples/rush/miter-unclamped-hollow.r",
+      "sha256": "c514d0a774552575e5ba3ca0be6679fd0e7499cefc91d70c79d1d8feee50f70a",
+      "byteLength": 803
+    },
+    {
+      "path": "examples/rush/miter-unsegmented-affine-hollow.r",
+      "sha256": "25d5085ae585cab58bdb0db8b19e09b21c0f70e99bb98e36a6f61691a80817c8",
+      "byteLength": 1034
+    },
+    {
+      "path": "examples/rush/miter-unsegmented-frame-affine-hollow.r",
+      "sha256": "92f0d4128291ea6b874c726dda7eaf7656eb1572a8f0968cd509e40b7beae76f",
+      "byteLength": 1210
+    },
+    {
+      "path": "examples/rush/miter-unsegmented-frame-guide-affine-hollow.r",
+      "sha256": "b9cb3326c64c7aa7fb6b9cf56b438d959ad00591e8d6e751e7ce77d8ff1d3c1f",
+      "byteLength": 1336
+    },
+    {
+      "path": "examples/rush/miter-unsegmented-guide-affine-hollow.r",
+      "sha256": "f19e3ad0a1e7ea0788236c8d1c406a193e2c6d264dc9ef3438237e9110457125",
+      "byteLength": 1121
+    },
+    {
+      "path": "examples/rush/miter-unsegmented-plain-hollow.r",
+      "sha256": "a3cf195b982fc0c10f245a913298289ce07fd8b69f9ff79225b1b0de25bc612e",
+      "byteLength": 840
+    },
+    {
+      "path": "examples/rush/mixed-knots-curved-frenet-progressive-sweep.r",
+      "sha256": "9c346d094ac5ef259024b171f33b4d9d64764bce0d9318ecb569619cc3ad369c",
+      "byteLength": 843
+    },
+    {
+      "path": "examples/rush/multi-profile-progressive-sweep.r",
+      "sha256": "79f8fb09f599b7113f005e94d9853efd76ecdbede9ed96a7890697f64efde371",
+      "byteLength": 475
+    },
+    {
+      "path": "examples/rush/natural-loft-solid.r",
+      "sha256": "8bd6cf8e28cb7994cf535c0ed43a03b4ad48d256c84ba7aedd11de105092514d",
+      "byteLength": 326
+    },
+    {
+      "path": "examples/rush/natural-loft-surface.r",
+      "sha256": "0473b7e4cca10cf4afc6a2043ebad42eaec79bf51e66559d55ef05f8fb78ffb9",
+      "byteLength": 430
+    },
+    {
+      "path": "examples/rush/natural-spline-extrusion.r",
+      "sha256": "a42418881065ea187af4c925ac3350c4253f23c1d5374dc685ed1f4a16eea873",
+      "byteLength": 296
+    },
+    {
+      "path": "examples/rush/nonaxial-planar-rmf-progressive-sweep.r",
+      "sha256": "f8be9d21d4cd533cb2d94f81fc04dfd3c57c7d3a6e1f0662483dda6eeed7aa64",
+      "byteLength": 722
+    },
+    {
+      "path": "examples/rush/nonuniform-station-g2-hollow-miter.r",
+      "sha256": "931982f7e0e328a803c1d6c442e41a645a0689581b5431c164ea856ad9609511",
+      "byteLength": 700
+    },
+    {
+      "path": "examples/rush/oblique-rmf-progressive-sweep.r",
+      "sha256": "955af6276cc5ae0f69edfa3d8ab96b21ff6b5febf17d3262d1179c51d026c602",
+      "byteLength": 561
+    },
+    {
+      "path": "examples/rush/open-spatial-rmf-affine-corrected-body-certified.r",
+      "sha256": "4e0387337e05415f37a4a66ccc5c14b4f68c55fce022a2c2e4b5cf1139b1939c",
+      "byteLength": 1101
+    },
+    {
+      "path": "examples/rush/open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r",
+      "sha256": "1e43ca8a8a5c54aec89485fba23f1404a0f51c2f5c72bd7f10779544c46beb75",
+      "byteLength": 1257
+    },
+    {
+      "path": "examples/rush/open-spatial-rmf-varying-affine-hollow-corrected-body.r",
+      "sha256": "eaa4c926407a0ef34a48f631164a57fbdc77746a10f41c41cf07d4bb854d9081",
+      "byteLength": 1258
+    },
+    {
+      "path": "examples/rush/parabola-extrusion.r",
+      "sha256": "27b110fb0b62a8d6c5c8b67e367977edd923bf997952e4a2b5dff22c4a3acb43",
+      "byteLength": 268
+    },
+    {
+      "path": "examples/rush/pipe-surface.r",
+      "sha256": "fb706b0856b99a322621249dc14f2505a5bc33a23044d0f880a2cd87512c9064",
+      "byteLength": 251
+    },
+    {
+      "path": "examples/rush/planar-rmf-body-boundary.r",
+      "sha256": "68e26ffa3bd632b080ce746b6169f9d3cea6379f500175bc1a1d0b47c6e8d634",
+      "byteLength": 708
+    },
+    {
+      "path": "examples/rush/planar-rmf-progressive-sweep.r",
+      "sha256": "2dd2f564a7100377124f300fa88ffc2e1c421e3ffcf1408098e9f9e678f34edb",
+      "byteLength": 589
+    },
+    {
+      "path": "examples/rush/plane-patch.r",
+      "sha256": "07f71fb4a3f85b8382ddee2be22fb16d38dac8b1f7dd5ea1627e52b8b0bf188c",
+      "byteLength": 145
+    },
+    {
+      "path": "examples/rush/planetary-spinner.r",
+      "sha256": "b9bbebe095493b1207390adac70ac309ecee3ab89973d933e750c5bd05ea059f",
+      "byteLength": 2482
+    },
+    {
+      "path": "examples/rush/polyline-extrusion.r",
+      "sha256": "ffa3a0ff2ba4719d195e38bfc6754e68a3049c63aa3634e7b3bcb7ecf30a177e",
+      "byteLength": 254
+    },
+    {
+      "path": "examples/rush/polynomial-curve.r",
+      "sha256": "704007a854800ac495df458dc465f7ba74fe5698b4324cf7929998bd56291a50",
+      "byteLength": 253
+    },
+    {
+      "path": "examples/rush/polynomial-graph.r",
+      "sha256": "e37b462161fbb52ac551971e7caa6ba235674e4d169f13806b538f090b017397",
+      "byteLength": 214
+    },
+    {
+      "path": "examples/rush/polynomial-surface.r",
+      "sha256": "0cf1279ee5ca9fc7c6e1d11e9ceece62972427c11a1b1f399d4ca7b687e87399",
+      "byteLength": 214
+    },
+    {
+      "path": "examples/rush/profile-revolution.r",
+      "sha256": "eeaf7bbb085aa722a3e08aaccb87066d087e8c7e3a4307d41e721a63ea27d419",
+      "byteLength": 280
+    },
+    {
+      "path": "examples/rush/profile-sweep-scaled.r",
+      "sha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "byteLength": 368
+    },
+    {
+      "path": "examples/rush/profile-sweep.r",
+      "sha256": "1d0930b89facc1836354b689835f5589e385754f3be6a708ffa3786a72c1a997",
+      "byteLength": 406
+    },
+    {
+      "path": "examples/rush/progressive-hollow-body.r",
+      "sha256": "fb3f223f635a4a551c53e113a4d829c68fe7b0df49e258d9dbd1f8485e2bf96c",
+      "byteLength": 483
+    },
+    {
+      "path": "examples/rush/progressive-hollow-boundary.r",
+      "sha256": "3b1dafa530d07e8f4cac0c58620001f578e406378f0c3366e68e949b7de4d092",
+      "byteLength": 897
+    },
+    {
+      "path": "examples/rush/progressive-miter-affine-circle-corrected-hollow.r",
+      "sha256": "c60625ec0c64cf6bbe59eab4564086865854bf085a3d7bb8467950d3f6de95b2",
+      "byteLength": 789
+    },
+    {
+      "path": "examples/rush/progressive-miter-certified-hollow.r",
+      "sha256": "9ce1a5be2e92e9578a7f93fcb8a179f481ffae09ff027d064c3beb49cf04ea9a",
+      "byteLength": 478
+    },
+    {
+      "path": "examples/rush/progressive-miter-circle-corrected-hollow.r",
+      "sha256": "f39f13d42081c4a5b0e310ab21790c9687bb980d7cee6e80637415d961f78616",
+      "byteLength": 605
+    },
+    {
+      "path": "examples/rush/progressive-miter-hollow-body.r",
+      "sha256": "3a928b636a53479a5bc14f82e7e9494392629ef9bdf9b153b9605bbd249bbe8c",
+      "byteLength": 546
+    },
+    {
+      "path": "examples/rush/progressive-miter-oblique-circle-corrected-hollow.r",
+      "sha256": "d17529e2ef13f88bdf7aa9cb30455186a830e67d8c554885d8326ae58b99ea12",
+      "byteLength": 662
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-conic-half.r",
+      "sha256": "00f1fbc3cef4c313ca83a3eb45ae8f82e63a4c3a9b2b993e067f0fa2b1b62f8e",
+      "byteLength": 931
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-conic-one.r",
+      "sha256": "87629594d7b60a77aa9b5be85cbadbb40a7aeec6ce708ff0f12075cb05370dbe",
+      "byteLength": 921
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-conic-two.r",
+      "sha256": "9ef6d8c782475b6e98eb8bff083a518adf987b5197e8f4aab7439d29cfdc00e5",
+      "byteLength": 921
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-guide-frame-affine-hollow.r",
+      "sha256": "68d037044902e91d75ae3fee6823b42cd25f6616752f7e01f34ee9f612f9037d",
+      "byteLength": 1378
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r",
+      "sha256": "08d0ca8c9066437475812f509e321f614bec33c3940a6a0f59a2497e71ea2d97",
+      "byteLength": 1400
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-periodic-profile.r",
+      "sha256": "4024d86f0bfcd58e15894ecfdb2eebb26967957c9af98cf48e5480029134ef57",
+      "byteLength": 894
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-rational-profile.r",
+      "sha256": "f6a58d08dfb4231e2e4cb3152d5168371b385ee2fc33676c25078256ddd071fd",
+      "byteLength": 885
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-sharp.r",
+      "sha256": "bb821ddde177ca5e4889f77c04f203b79655d2773e3f00c11cc1154e7653dd37",
+      "byteLength": 756
+    },
+    {
+      "path": "examples/rush/progressive-miter-reconstructed-stations.r",
+      "sha256": "26d6d4d624d676d6183c859cdf308903553580790a175cde9548967db333f43d",
+      "byteLength": 856
+    },
+    {
+      "path": "examples/rush/progressive-miter-spatial-circle-corrected-hollow.r",
+      "sha256": "34ace5806967f828a0b1acf4ea4beb07deef316c7da14231b7af7367d44a6ab1",
+      "byteLength": 778
+    },
+    {
+      "path": "examples/rush/progressive-miter-station-g2-hollow.r",
+      "sha256": "fc264bb42dfcacbfda047e4c6c4e68ab523e474de7b2ccde570dd3cd78865c53",
+      "byteLength": 789
+    },
+    {
+      "path": "examples/rush/progressive-sweep.r",
+      "sha256": "4c0494443e4607c4fcbb260c01f29dae99187ce5328eadbeb6d7cea0dc19a3c5",
+      "byteLength": 438
+    },
+    {
+      "path": "examples/rush/progressive-unsegmented-hollow-boundary.r",
+      "sha256": "6e95c9c49001252ac9d8485de470555e5cbf57c37cc52653505409ac649024e7",
+      "byteLength": 996
+    },
+    {
+      "path": "examples/rush/quadratic-paraboloid.r",
+      "sha256": "f772032fd5abad823a4b1505e7353564c62a8c734952b72f0233503bd802dc83",
+      "byteLength": 209
+    },
+    {
+      "path": "examples/rush/quadratic-saddle.r",
+      "sha256": "bb7dedb4b323e4ed5087b0338a2e27edaeb6179f5d27e7318d7f25ef0c9b18ed",
+      "byteLength": 216
+    },
+    {
+      "path": "examples/rush/rational-formula-curve.r",
+      "sha256": "6164d002ebe4dde15cfd2f784b12a058c8af08ee20ecc053a2476b95397f6e48",
+      "byteLength": 311
+    },
+    {
+      "path": "examples/rush/rational-formula-surface.r",
+      "sha256": "083984f565b25081a7a64ea9ce128fa8a9d37160b8dbb5203cd725afb03da732",
+      "byteLength": 289
+    },
+    {
+      "path": "examples/rush/rational-polynomial-curve.r",
+      "sha256": "93f56926ed12b04e8ee89fea00a905e90ba531bbf0add89a22bffbd4c4336428",
+      "byteLength": 236
+    },
+    {
+      "path": "examples/rush/rational-polynomial-surface.r",
+      "sha256": "4194cee4e3cad1d2faaf1f0922e856df467d97a437f7332ebc594a03ce2ca338",
+      "byteLength": 236
+    },
+    {
+      "path": "examples/rush/ribbon-surface.r",
+      "sha256": "d0921549a08a16c581cfcd44364e86f73ce60ec296f686184f15d868784fc917",
+      "byteLength": 317
+    },
+    {
+      "path": "examples/rush/rmf-rational-straight-affine-hollow-body-boundary.r",
+      "sha256": "9b3320e180316becf0956c5505c5ba38803abf6f5ede576883e460ec88d2aaf2",
+      "byteLength": 1172
+    },
+    {
+      "path": "examples/rush/round-path-progressive-sweep.r",
+      "sha256": "6803c6a37abb87abb3e10410ca107f6862efbcb79d8e4cc01edfc54da7154151",
+      "byteLength": 473
+    },
+    {
+      "path": "examples/rush/ruled-surface.r",
+      "sha256": "789ffa4df9374e16fabde99be54b204812ba70ba92c4a56affe428dd030825f4",
+      "byteLength": 337
+    },
+    {
+      "path": "examples/rush/scaled-sweep-weighted.r",
+      "sha256": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+      "byteLength": 368
+    },
+    {
+      "path": "examples/rush/scaled-sweep.r",
+      "sha256": "0492308748fdd0091dd6165aa359ed42c420190401f27c60bb01f76e67a573d9",
+      "byteLength": 321
+    },
+    {
+      "path": "examples/rush/screw-surface.r",
+      "sha256": "75d2845c8b2d4a9847736c88f914bcd15f4028b8e807fe616bab2cad7fbd52c6",
+      "byteLength": 256
+    },
+    {
+      "path": "examples/rush/section-loft.r",
+      "sha256": "ca2ad7f0c4d84393880b50ce5d375a3ad540c6e8c6e49555c037a35a2ed746a7",
+      "byteLength": 363
+    },
+    {
+      "path": "examples/rush/sharp-profile-nonuniform-station-g2-miter.r",
+      "sha256": "0c34de1813d4d9afa8a009db5523fd41e009bf82b7319f8a46a869ff2f0cbacf",
+      "byteLength": 1108
+    },
+    {
+      "path": "examples/rush/spatial-bishop-g2-surface-6.r",
+      "sha256": "65f1ef34aef7d0d10375b92acd152db8648d26ef6f749ffea6fe67ec79acf695",
+      "byteLength": 761
+    },
+    {
+      "path": "examples/rush/spatial-frenet-affine-progressive-sweep.r",
+      "sha256": "3d8fadca173d4d378882876bbbed3642414905530f9b57649dd1614a1fe681ce",
+      "byteLength": 904
+    },
+    {
+      "path": "examples/rush/spatial-frenet-progressive-sweep.r",
+      "sha256": "4dbf3be56c2eafba39c33ee5e2823ec0632b3e5da57ed686b92f439749f77611",
+      "byteLength": 691
+    },
+    {
+      "path": "examples/rush/sphere-surface.r",
+      "sha256": "af34b9a3ad7027cc53120f8d87fe40882827b6f31c08e7cc1b5f7ae022d9e0e9",
+      "byteLength": 183
+    },
+    {
+      "path": "examples/rush/spherical-spiral-extrusion.r",
+      "sha256": "ca0c47dcdd63ee2551ea26ec532799a2950da9403cd7cd8610a0c0a430daaff3",
+      "byteLength": 296
+    },
+    {
+      "path": "examples/rush/toroidal-spiral-extrusion.r",
+      "sha256": "3aed5118406864d22e3603e18919102390a9f0fc003798fbe930aae76d723798",
+      "byteLength": 303
+    },
+    {
+      "path": "examples/rush/torus-knot-extrusion.r",
+      "sha256": "cb2d04028aa150ae1c78ed40047f22f18e82dc48db92ed4dfecee3784d09e476",
+      "byteLength": 273
+    },
+    {
+      "path": "examples/rush/transition-path-progressive-sweep.r",
+      "sha256": "2798cf7e0748b9968f6f9e97ac6502ca3f37117c54e88c451073f8c62f00bcbc",
+      "byteLength": 479
+    },
+    {
+      "path": "examples/rush/transition-translation-sweep.r",
+      "sha256": "541018487a0ba03f0b5a89c0d5b01b84bcfeafc53f5fb16916b1a05764b4487a",
+      "byteLength": 301
+    },
+    {
+      "path": "examples/rush/translation-sweep.r",
+      "sha256": "03e849af3f756e97f9bc4a73d22fa124abf6e95ed2396c0a51eaf6a68e6504c6",
+      "byteLength": 352
+    },
+    {
+      "path": "examples/rush/triangular-patch.r",
+      "sha256": "8260894ed15514e658ddcc13f048aee2ef22e15e6b54b0ef289260025e97458a",
+      "byteLength": 323
+    },
+    {
+      "path": "examples/rush/trochoid-extrusion.r",
+      "sha256": "7ef7e8e4c3667397366bcdeb68193d95c874417f798a3ef133e74cfa122a6916",
+      "byteLength": 247
+    },
+    {
+      "path": "examples/rush/twist-sweep.r",
+      "sha256": "38715fade47933d6be4a0eb2d2129b35d993d9517c2a639d69fdd01185efe475",
+      "byteLength": 313
+    },
+    {
+      "path": "examples/rush/two-guide-closed-sweep.r",
+      "sha256": "72e9812d103617d13e23cc0367a28c6aaafb1c9bca8ec10eb7ce919e4f25dfc8",
+      "byteLength": 342
+    },
+    {
+      "path": "examples/rush/two-guide-sweep.r",
+      "sha256": "d60ebcea1ed36a3226f8e7797af3ab414b1c65c545cb81998a5b1bd02c0d2b46",
+      "byteLength": 357
+    },
+    {
+      "path": "examples/rush/variable-pipe-surface.r",
+      "sha256": "79fc0b0960034b0f84060331dfe0170c17e3e6a5bb77e59106be2e45ab8ee85d",
+      "byteLength": 327
+    },
+    {
+      "path": "examples/rush/variable-pitch-helix-extrusion.r",
+      "sha256": "1e0c9b449b470cf5dcab9e501804dbc0f85cfd34f1765490303ac2a263e5ab46",
+      "byteLength": 271
+    },
+    {
+      "path": "examples/skadis-box/DOVETAIL-PRINT.md",
+      "sha256": "7ab7fafb4ca23ce272d8d3aa2ba75048977cbe3c8595de780631e1c8354286b7",
+      "byteLength": 3741
+    },
+    {
+      "path": "examples/skadis-box/HOOKS-PRINT.md",
+      "sha256": "e321d3cc6bdb4bbf7a3f970b676697bd9e0ee895cad74b699f839b97df7d642d",
+      "byteLength": 2047
+    },
+    {
+      "path": "examples/skadis-box/INTEGRAL-PRINT.md",
+      "sha256": "5e890bca956d0baef0d5d097ec8d429a91cf8099744f1f84253392d24f4f4285",
+      "byteLength": 2059
+    },
+    {
+      "path": "examples/skadis-box/README.md",
+      "sha256": "6bad1e8cc84132e4272b3250d6fefd9f69994ae6a7d24a7a1a81467de0cbbf46",
+      "byteLength": 2754
+    },
+    {
+      "path": "examples/skadis-box/backing-rail.stl",
+      "sha256": "dc04916a9119955c9ee241b30e33bbfaa1daa4db165ffe22402c4eb27240ddb6",
+      "byteLength": 32284
+    },
+    {
+      "path": "examples/skadis-box/box.stl",
+      "sha256": "c307f65137065de0bbfc7f9c4b0e4d9150f207e29882c3c65398b696cb5265c4",
+      "byteLength": 59884
+    },
+    {
+      "path": "examples/skadis-box/check-parameters.mts",
+      "sha256": "a941ad22eec6077b655dc3e8816898098bae5a85e2834b92ff0e8bcbb363f2c9",
+      "byteLength": 1001
+    },
+    {
+      "path": "examples/skadis-box/dovetail-box.stl",
+      "sha256": "6788d9d7dd369ea430081257b71f1c3e4664fa4d72f0e1409577fdeb8147d60c",
+      "byteLength": 85884
+    },
+    {
+      "path": "examples/skadis-box/dovetail-hook.stl",
+      "sha256": "3746b6ae94d25c1d960202f53d598eb5e54e932149b07d0752aa0659e0a51b1f",
+      "byteLength": 12284
+    },
+    {
+      "path": "examples/skadis-box/dovetail-preview.scad",
+      "sha256": "cc1ed3cb5a1c965bf8d89c82dc2d782aa1df28cecce0fde68e91e14964d74f2f",
+      "byteLength": 80034
+    },
+    {
+      "path": "examples/skadis-box/export-dovetail.mts",
+      "sha256": "ef6c142c3db4263cc7bab6edb17b52c13cc205dba96a0aa3d5c6ba10c47ec437",
+      "byteLength": 839
+    },
+    {
+      "path": "examples/skadis-box/export-hooks.mts",
+      "sha256": "2bcba059ddf1e4857ee9734a5306497d9545da92106e5257b68c8f2c1772c773",
+      "byteLength": 823
+    },
+    {
+      "path": "examples/skadis-box/export-integral.mts",
+      "sha256": "cf1192b616b5a8a26008d5e533fa0e295c6c51baa4549b28759270b49a2f0b88",
+      "byteLength": 822
+    },
+    {
+      "path": "examples/skadis-box/export.mts",
+      "sha256": "6f03e199fd1076d050f5e0319bc7687aaca903a054737a702a054e91df70c4a0",
+      "byteLength": 824
+    },
+    {
+      "path": "examples/skadis-box/hook-box.stl",
+      "sha256": "ab2ade586677cc755c1255d4c2b4a9ba15ce2d5a17be754202bebe34d033cbd1",
+      "byteLength": 32484
+    },
+    {
+      "path": "examples/skadis-box/hook.stl",
+      "sha256": "7e67999996efc9e6f2e6b5c098c8cfe07fdb29a5dc21b3eaa9e92e65476ea925",
+      "byteLength": 4084
+    },
+    {
+      "path": "examples/skadis-box/hooks-preview.scad",
+      "sha256": "dd02fd07084fd11daa4f8d18fd1b9ee29f827b4067f928eba43c119f60379bbf",
+      "byteLength": 27028
+    },
+    {
+      "path": "examples/skadis-box/integral-preview.scad",
+      "sha256": "f772acf6e21a337c9f3cb72a50ba6bbfa1558b804d49252ebbd33aa1918faae6",
+      "byteLength": 23177
+    },
+    {
+      "path": "examples/skadis-box/preview-dovetail.mts",
+      "sha256": "4ef69c50951be9178184d1b0cb8c4780b32fea2f8d9cb646c65b9990ed58080d",
+      "byteLength": 1845
+    },
+    {
+      "path": "examples/skadis-box/preview-hooks.mts",
+      "sha256": "35f7b5a6ec64014ada4f0a52bafc55344dcbb5c13c91e4f1f47bb0e35e95a98a",
+      "byteLength": 1681
+    },
+    {
+      "path": "examples/skadis-box/preview-integral.mts",
+      "sha256": "b05e067963320234fcb034c45a1ccb77f0ad02fafced0ac07bd6a6d96351099b",
+      "byteLength": 1693
+    },
+    {
+      "path": "examples/skadis-box/preview.scad",
+      "sha256": "19e84ed07cc366e88831a37dd6698732fa923cd9f8a58af310e9b309a422410f",
+      "byteLength": 86032
+    },
+    {
+      "path": "examples/skadis-box/publish-dovetail.mts",
+      "sha256": "b66cd3cd35b9e2835b14a21f42c450b761e7bd98630f8e819fc7b184fb810894",
+      "byteLength": 637
+    },
+    {
+      "path": "examples/skadis-box/repair-preview.py",
+      "sha256": "e0586ecda97ec4b9842557e6210a724020143714fd99f57f3b364e0ebc758f0a",
+      "byteLength": 1544
+    },
+    {
+      "path": "examples/skadis-box/skadis-box.scad",
+      "sha256": "3589c42ecd4d3e63fe36134834976648c717c8d4b3654ec560c5f529719bc9eb",
+      "byteLength": 1452
+    },
+    {
+      "path": "examples/skadis-box/skadis-dovetail.r",
+      "sha256": "ae74dea7dfb956f9de14d8aa05ace1562a893ca7c64272effa194a08b391bfaa",
+      "byteLength": 2773
+    },
+    {
+      "path": "examples/skadis-box/skadis-dovetail.scad",
+      "sha256": "ae4672f3667954ea23102bf2b85c82291a3724574a61ea41651c2b8e586a7602",
+      "byteLength": 4092
+    },
+    {
+      "path": "examples/skadis-box/skadis-hooks.scad",
+      "sha256": "277afec18a630ccbe77abd9b8785fc9c8b2927f9cb7fb6992b5313cfcaf6c349",
+      "byteLength": 1670
+    },
+    {
+      "path": "examples/skadis-box/skadis-integral.scad",
+      "sha256": "32441ed8991a61c9d7a5deb79daf04aef7ff08b7fa729b32e959adeb7aefe1ec",
+      "byteLength": 1705
+    },
+    {
+      "path": "examples/skadis-box/skadis-integral.stl",
+      "sha256": "7c8e8fd79b39ce24b1b6147cab1208d6fdbd776f5a74738c6bd28b7f219e1e94",
+      "byteLength": 35884
+    },
+    {
+      "path": "examples/skadis-box/view-dovetail.ts",
+      "sha256": "d362f54675d2d165c8e3c1874e96bfc3f144226012d0be30c06e94d4381e3428",
+      "byteLength": 1478
+    },
+    {
+      "path": "examples/skadis-box/viewer-url.txt",
+      "sha256": "236e6eee43d242dd329cbd93d9a876ba182903ee692507c26add0a0a0d8939dd",
+      "byteLength": 2990
+    },
+    {
+      "path": "examples/skadis-box/viewer.html",
+      "sha256": "b8a77543c619f033f84d8503318e2e4cab6d1d4cd81c0d636252a3c02d3723a7",
+      "byteLength": 2063
+    },
+    {
+      "path": "examples/solid/bridge-dimensions.json",
+      "sha256": "4e462ae9ab12595d91425b8a45165ae012904de1b1b3a8d592078cbf19fe011b",
+      "byteLength": 743
+    },
+    {
+      "path": "examples/svg/print-profile.svg",
+      "sha256": "545bea0723d9f1cce736e40a5bca424361ea37b0c9586ac33591de5477c1a6b0",
+      "byteLength": 417
+    },
+    {
+      "path": "examples/svg/rendered-silhouette.svg",
+      "sha256": "2b0379c1846346b47a73e160d91fef64d32ced575294c8e807ccecbd9e1fd52e",
+      "byteLength": 867
+    },
+    {
+      "path": "examples/svg/static-artwork.svg",
+      "sha256": "8206aacbd192ebd2757c49db680bd1700b087876bb31dfecf42625134c0cf62c",
+      "byteLength": 1146
+    }
+  ]
+}

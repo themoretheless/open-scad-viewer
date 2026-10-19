@@ -12,3 +12,4 @@ export async function* streamNativeSweep<P,R>(request:Record<string,unknown>,con
   checkAbort();if(next.done)return next.value;yield next.value
  }}finally{callNurbsRust('brep_sweep_stream_release',{stream})}
 }
+

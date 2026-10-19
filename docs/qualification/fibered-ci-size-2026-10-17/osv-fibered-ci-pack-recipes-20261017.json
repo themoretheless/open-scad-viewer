@@ -1,0 +1,44 @@
+[
+  {
+    "mode": 2,
+    "block": 16,
+    "packedBytes": 3694381,
+    "embeddedBytes": 4315061,
+    "elapsedMs": 21908.276708
+  },
+  {
+    "mode": 0,
+    "block": 18,
+    "packedBytes": 3697667,
+    "embeddedBytes": 4318747,
+    "elapsedMs": 19761.628208
+  },
+  {
+    "mode": 2,
+    "block": 18,
+    "packedBytes": 3695057,
+    "embeddedBytes": 4315421,
+    "elapsedMs": 19246.889041000002
+  },
+  {
+    "mode": 0,
+    "block": 20,
+    "packedBytes": 3700008,
+    "embeddedBytes": 4321747,
+    "elapsedMs": 18278.167708000008
+  },
+  {
+    "mode": 2,
+    "block": 20,
+    "packedBytes": 3699128,
+    "embeddedBytes": 4320523,
+    "elapsedMs": 18647.728791999994
+  },
+  {
+    "mode": 0,
+    "block": 22,
+    "packedBytes": 3702953,
+    "embeddedBytes": 4325109,
+    "elapsedMs": 18970.37199999999
+  }
+]

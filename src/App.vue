@@ -3094,6 +3094,6 @@ function showNotice(message: string) {
   </div>
 </template>
 
-<style src="./App.global.css"></style>
+<style src="./styles/app-shell-global.css"></style>
 
-<style scoped src="./App.scoped.css"></style>
+<style scoped src="./styles/app-shell.css"></style>

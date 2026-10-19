@@ -1,56 +1,26 @@
 #!/usr/bin/env node
-import {execFileSync} from 'node:child_process'
+// Dependency-only successor; retain the observed v59 binary and its provenance.
 import {createHash} from 'node:crypto'
-import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {readFileSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
-const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,p)),sha=v=>createHash('sha256').update(v).digest('hex')
-if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v60.json')))throw new Error('Historical own-rust-cad-v60 evidence already exists; publish a new version instead of overwriting it')
-const previousPath='docs/qualification/own-rust-cad-v59.json',previous=JSON.parse(bytes(previousPath))
-const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
-const additions=changed.filter(path=>['vite.config.ts','vite.qualification.config.ts','scripts/qualificationKernelModuleDelivery.mjs','src/workers/manifoldPlanQualification.worker.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
-const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
-const paths=[...new Set([...previous.sourceBundle.paths.filter(p=>existsSync(resolve(root,p))),...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src','crates/bridge-cam/src','crates/bridge-analysis/src','crates/bridge-svg/src','crates/cad-step/src','crates/nurbs-intersect/src','crates/brep-intersect/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].sort()
-
-const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)
-const wasmPath=`docs/qualification/artifacts/geometry-${wasmSha256}.wasm`
-mkdirSync(resolve(root,'docs/qualification/artifacts'),{recursive:true})
-if(existsSync(resolve(root,wasmPath))) {
-  if(sha(bytes(wasmPath))!==wasmSha256)throw new Error('Archived release binary changed')
-} else writeFileSync(resolve(root,wasmPath),wasm,{flag:'wx'})
-const dependencyFingerprints={
-  noticesSha256:sha(bytes('THIRD_PARTY_NOTICES.md')),
-  npmLockfileSha256:sha(bytes('package-lock.json')),
-  rustLockfileSha256:sha(bytes('crates/Cargo.lock')),
-}
-const variants=[{sha256:wasmSha256,byteLength:wasm.byteLength,builder:'linux-x86_64',evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}]
-
-
-writeFileSync(resolve(root,'src/core/ownRustCadEvidence.ts'),`// Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
-import packagedArtifact from '../generated/geometry-kernels/identity'
-export const OWN_RUST_CAD_ARTIFACTS = Object.freeze(${JSON.stringify(variants.map(({sha256,byteLength})=>({sha256,byteLength})),null,2)})
-export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {
-  if (!Number.isSafeInteger(artifact.byteLength) || artifact.byteLength <= 0 || artifact.byteLength > 16 * 1024 * 1024) return null
-  return OWN_RUST_CAD_ARTIFACTS.find(item => item.sha256 === artifact.sha256 && (item.byteLength === null || item.byteLength === artifact.byteLength))?.sha256 ?? null
-}
-export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
-  // Runtime identity follows packaged bytes; qualification freezing separately rejects unrecorded artifacts.
-  "wasmSha256": packagedArtifact.sha256,
-  "noticesSha256": "${dependencyFingerprints.noticesSha256}",
-  "lockfileSha256": "${dependencyFingerprints.npmLockfileSha256}",
-  "rustLockfileSha256": "${dependencyFingerprints.rustLockfileSha256}"
-})
-`)
-const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
-writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v60.json'),JSON.stringify({
-  id:'own-rust-cad-v60',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-13',
-  purpose:'Append-only re-freeze after a test-only timeout change in tests/manifoldPlanBackend.test.ts; no kernel or capability change; preserve ownRust59.',qualificationClaim:'none',
-  wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
-  sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
-  dependencyFingerprints,
-  claimBoundary:[
-    'This enumerates exact observed build artifacts; compiler hosts are not assumed to produce identical bytes. It is not an external clean qualification run.',
-    'It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.',
-    'It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology.',
-  ],
-},null,2)+'\n')
-console.log('Recorded docs/qualification/own-rust-cad-v60.json and refreshed src/core/ownRustCadEvidence.ts')
+const root=resolve(import.meta.dirname,'..'),read=p=>readFileSync(resolve(root,p))
+const sha=b=>createHash('sha256').update(b).digest('hex')
+const previousPath='docs/qualification/own-rust-cad-v59.json'
+const output='docs/qualification/own-rust-cad-v60.json'
+if(existsSync(resolve(root,output)))throw new Error('Historical OwnRust60 already exists; publish a new version')
+const previous=JSON.parse(read(previousPath)),next=structuredClone(previous)
+if(sha(read(previous.wasm.path))!==previous.wasm.sha256||sha(read(previous.wasm.publishedPath))!==previous.wasm.sha256)throw new Error('Retained binary differs from observed OwnRust59 artifact')
+next.id='own-rust-cad-v60'
+next.successorOf=previousPath
+next.previousSha256=sha(read(previousPath))
+next.recordedAt='2026-10-10'
+next.purpose='Dependency-only refresh: remove unused GPU backend dependencies from CPU-only osv-math; retain backends in osv-math-compute. Bind the changed Cargo.lock without claiming a new WASM build, browser/STEP run or clean semantic qualification.'
+next.dependencyFingerprints.rustLockfileSha256=sha(read('crates/Cargo.lock'))
+const runtimePath='src/core/ownRustCadEvidence.ts'
+const oldRuntime=read(runtimePath).toString()
+if(!oldRuntime.includes(previous.dependencyFingerprints.rustLockfileSha256))throw new Error('Runtime predecessor identity differs')
+writeFileSync(resolve(root,runtimePath),oldRuntime.replace(previous.dependencyFingerprints.rustLockfileSha256,next.dependencyFingerprints.rustLockfileSha256))
+next.sourceBundle.paths=[...new Set([...previous.sourceBundle.paths,'crates/math-core/Cargo.toml','crates/Cargo.lock',runtimePath,'scripts/release-own-rust-v60.mjs'])].sort()
+next.sourceBundle.sha256=sha(Buffer.concat(next.sourceBundle.paths.flatMap(p=>[Buffer.from(p+'\0'),read(p),Buffer.from('\n')])))
+writeFileSync(resolve(root,output),JSON.stringify(next,null,2)+'\n',{flag:'wx'})
+console.log('Published dependency-only OwnRust60; observed OwnRust59 WASM retained')

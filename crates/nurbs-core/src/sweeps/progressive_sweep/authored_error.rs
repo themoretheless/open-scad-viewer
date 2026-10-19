@@ -8,8 +8,9 @@ use crate::sweeps::progressive_miter::{
 mod spatial_parameter;
 
 mod coordinates;
+pub(super) use transport::arc_chord::{GlobalChord,global as shared_global_chord};
 pub use coordinates::InitialCoordinatesReport;
-pub(super) use coordinates::{initial_coordinates, fixed_initial_coordinates, fixed_normal_initial_coordinates, guided_initial_coordinates, control_trajectory};
+pub(super) use coordinates::{coordinates_in_basis, initial_coordinates, fixed_initial_coordinates, fixed_normal_initial_coordinates, guided_initial_coordinates, control_trajectory};
 use coordinates::*;
 
 #[derive(Clone, Debug)]
@@ -28,10 +29,10 @@ pub(super) fn section_interpolation(
     count: usize,
     max_cells: usize,
 ) -> Result<SectionInterpolationReport> {
-    section_interpolation_with_length(sweep,count,max_cells,None)
+    section_interpolation_with_length(sweep,count,max_cells,None,None)
 }
 fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,
-    shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
+    shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<SectionInterpolationReport>{
     check(
         count >= sweep.options.initial_sections && count <= sweep.options.max_sections,
         "Section count outside configured sweep",
@@ -52,7 +53,7 @@ fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usiz
         return Ok(out);
     };
     if sweep.options.spacing != Spacing::Parameter && !original_line(sweep.path) {
-        return original_arc_length_section_interpolation(sweep,count,max_cells,shared_length);
+        return original_arc_length_section_interpolation_with_chord(sweep,count,max_cells,shared_length,shared_chord);
     }
     // Authored frame laws use normalized station fraction. For a rational
     // line, normalized arc-length position is exactly this uniform line;
@@ -153,8 +154,12 @@ fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usiz
 // Its chord defect is <= L*h/2, including continuous C0 path corners. Authored
 // relative pose is certified independently in the original station fraction.
 fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
+    original_arc_length_section_interpolation_with_chord(sweep,count,max_cells,shared_length,None)
+}
+fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<SectionInterpolationReport>{
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
+    if shared_chord.is_some_and(|c|c.budget_stopped) {out.reason=Some("arc-chord-work-limit");return Ok(out);}
     let path=sweep.path;
     let domain=path.domain();
     // Interior multiplicity > degree permits a jump, invalidating Lipschitz
@@ -213,11 +218,23 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
             endpoints[station][control]=upper;endpoint_upper=endpoint_upper.max(upper);
         }
     }
+    // ONE complete original-path chord cover is shared by every uniform
+    // station interval in this profile. The endpoint trajectory errors below
+    // already own inverse-length residuals. This geometric proposal never
+    // depends on the admission tolerance or a rounded inverse path.
+    let global_chord=if let Some(shared)=shared_chord {shared.bound}
+    else if path.control_points.len()==path.degree+1 {
+        let global=shared_global_chord(path,count,division.total.bounds,max_cells-out.cells)?;
+        out.cells+=global.cells;
+        if global.budget_stopped {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+        global.bound
+    }else {None};
     let mut error=0_f64;
     for station in 0..count-1{
         let interval=[station as f64/(count-1) as f64,(station+1) as f64/(count-1) as f64];
         let width=I::point(interval[1]).sub(I::point(interval[0]))?;
-        let position=I::point(division.total.bounds[1]).mul(width)?.div(I::point(2.))?;
+        let coarse=I::point(division.total.bounds[1]).mul(width)?.div(I::point(2.))?;
+        let position=I::new(0.,global_chord.map_or(coarse.hi,|c|c.min(coarse.hi)))?;
         let batch=if let Some((axis,normal))=frame_laws {
             let batch=authored_frame_certificate::certify_control_trajectories(&zero,sweep.scale,sweep.twist,
                 axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
@@ -299,8 +316,12 @@ pub(super) fn patch_error(
 }
 pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
     shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
+    patch_error_with_path_evidence(sweep,count,max_cells,max_products,shared_length,None)
+}
+pub(super) fn patch_error_with_path_evidence(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
+    shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<PatchErrorReport>{
     check(max_products<=1000000,"Patch decomposition work exceeds1000000 products")?;
-    let section=section_interpolation_with_length(sweep,count,max_cells,shared_length)?;
+    let section=section_interpolation_with_length(sweep,count,max_cells,shared_length,shared_chord)?;
     patch_error_from_section(sweep,count,max_products,section)
 }
 pub(super) fn guided_patch_error(
@@ -351,13 +372,16 @@ pub(super) fn fixed_patch_error(sweep:&Sweep<'_>,count:usize,max_cells:usize,max
     fixed_patch_error_with_length(sweep,count,max_cells,max_products,None)
 }
 pub(super) fn fixed_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
+    fixed_patch_error_with_path_evidence(sweep,count,max_cells,max_products,shared_length,None)
+}
+pub(super) fn fixed_patch_error_with_path_evidence(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<PatchErrorReport>{
     check(max_products<=1000000,"Patch decomposition work exceeds1000000 products")?;
     if shared_length.is_some() && sweep.options.orientation==Orientation::Fixed && sweep.frame_laws.is_none()
         && sweep.orientation_guide.is_none() && sweep.contact_point.is_none() && !original_line(sweep.path)
         && sweep.options.spacing!=Spacing::Parameter {
         check(count>=sweep.options.initial_sections&&count<=sweep.options.max_sections,"Section count outside configured sweep")?;
         check(max_cells<=100000,"Fixed section work exceeds100000 cells")?;
-        return patch_error_from_section(sweep,count,max_products,original_arc_length_section_interpolation(sweep,count,max_cells,shared_length)?);
+        return patch_error_from_section(sweep,count,max_products,original_arc_length_section_interpolation_with_chord(sweep,count,max_cells,shared_length,shared_chord)?);
     }
     patch_error_from_section(sweep,count,max_products,fixed_section_interpolation(sweep,count,max_cells)?)
 }

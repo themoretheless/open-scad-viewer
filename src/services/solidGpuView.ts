@@ -406,4 +406,3 @@ export function smoothTriangleList(positions: ArrayLike<number>, indices: ArrayL
   const idxArray = indices instanceof Uint32Array ? indices : Uint32Array.from(indices)
   return smoothTriangleListInKernel(posArray, idxArray, Math.cos(creaseDegrees * Math.PI / 180))
 }
-

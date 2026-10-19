@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-03",
+  "date": "2026-10-15",
   "decisions": [
     {
       "id": "sketch-relations",
@@ -49,7 +49,11 @@
       "owner": "mesh-io + planar-geometry + openscad-core",
       "action": "split",
       "files": [
-        "src/services/openScadImport.ts"
+        "src/services/openScadImport.ts",
+        "src/services/openScadImport/parseOpenScad3mf.ts",
+        "src/services/openScadImport/parseOpenScadDxfQueryMetadata.ts",
+        "src/services/openScadImport/parseXml.ts",
+        "src/services/openScadImport/queryPreparedOpenScadDxfDimension.ts"
       ],
       "reason": "mesh-io owns decoding/mesh validation; planar-geometry owns face triangulation and DXF curve geometry; openscad-core owns dxf_dim/dxf_cross semantics. Host retains asset access and browser ZIP/XML integration until native bounded formats exist."
     },
@@ -68,7 +72,8 @@
       "action": "migrate",
       "files": [
         "src/services/openScadBuiltinFunctions.ts",
-        "src/services/openscadSemanticLowerer.ts"
+        "src/services/openscadSemanticLowerer.ts",
+        "src/services/openscadSemanticLowerer/evalPreparedNodes.ts"
       ],
       "reason": "Remaining norm, round, value operations and transform lowering duplicate native language semantics. Preserve profile differences, warning order and nonfinite/signed-zero behavior."
     },
@@ -106,7 +111,8 @@
       "files": [
         "src/services/nurbsErrorComposition.ts",
         "src/services/solidNurbs.ts",
-        "src/services/rushGraphNurbsKernel.ts"
+        "src/services/rushGraphNurbsKernel.ts",
+        "src/services/rushGraphNurbsKernel/createOwnNurbsResolver.ts"
       ],
       "reason": "Certified bound composition and geometric closure tests belong to native NURBS owner. Keep orchestration and decoding; preserve outward rounding, refusals and retained-profile contracts."
     },
@@ -160,7 +166,8 @@
         "src/features/MainModelingOverlay.vue",
         "src/features/MainSketchTools.vue",
         "src/features/MeshModeler.vue",
-        "src/features/MainModelingTools.vue"
+        "src/features/MainModelingTools.vue",
+        "src/features/directModeler/helpers.ts"
       ],
       "reason": "Keep interaction/projection/draft display in Vue. Extract committed curve construction, arc snap tessellation, trim candidate geometry and face normals to domain adapters. Avoid persistent model calculations inside components."
     },
@@ -224,6 +231,20 @@
         "src/services/sourceBodyDisplay.ts"
       ],
       "reason": "Native profile_plane and witness_bounds own common-plane geometry and numerical report consistency. Native sketch_shapes owns rectangle and capsule definitions, surface_injectivity owns polar proposals, brep-core wall_search owns bounded samples and wall proposals. geometry-bridge adapts source display budgets and these native calls. TS keeps document transactions, structural response checks, worker cancellation and the explicit caller-supplied evaluator hook; samples never certify coverage."
+    },
+    {
+      "id": "incoming-gpu-preview-and-reference",
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "action": "migrate",
+      "files": [
+        "src/services/gpuCsgPrimitives.ts",
+        "src/services/gpuMarchingCubes.ts",
+        "src/services/gpuNurbsReference.ts",
+        "src/services/gpuSemanticEdges.ts",
+        "src/services/gpuSubdivision.ts",
+        "src/services/gpuTrussSolver.ts"
+      ],
+      "reason": "Imported main preview meshes, GPU readback processing, CPU tessellation reference and PCG fallback remain TypeScript/WGSL code. This is an explicit remaining migration, not Rust ownership credit. They do not compute loft/sweep/frame/cap error, regularity, contact, shell or Solid certificates; those are recomputed by nurbs-core/brep-core. Native replacement of these unrelated GPU fallbacks is outside the common boundary certificate and has not been qualified."
     }
   ],
   "families": [

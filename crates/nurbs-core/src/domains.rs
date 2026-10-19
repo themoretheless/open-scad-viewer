@@ -189,6 +189,9 @@ pub mod parameterization {
 
 /// Existing modules for validation.
 pub mod validation {
+    pub use crate::affine_volume;
+    pub use crate::fibered_volume;
+    pub use crate::implicit_quadric;
     pub use crate::curve_self_intersection;
     pub use crate::surface_self_intersection;
     pub use crate::curve_decomposition_certificate;
@@ -197,6 +200,7 @@ pub mod validation {
     pub use crate::sweep_pair_audit;
     pub use crate::surface_injectivity;
     pub use crate::surface_regularity;
+    pub use crate::surface_correspondence;
     pub use crate::surface_monotonicity;
     pub use crate::surface_linear_monotonicity;
     pub use crate::sweep_wall_audit;

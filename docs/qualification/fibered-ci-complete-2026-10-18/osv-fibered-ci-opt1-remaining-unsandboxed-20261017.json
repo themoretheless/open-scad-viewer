@@ -1,0 +1,37 @@
+{
+  "schema": "native-test-profile-one-complete-remaining/1",
+  "revision": "83bea19afb62fcc0d114acb35886a87bd8132394",
+  "productionRustRevision": "cec378bb23e029fe8498b6c89fe1e1d3e8aa86c7",
+  "sourceBundleSha256": "8909f34576dd44096552a8c477a65ee1a34d1ecbb1585deb0f94fc321b09466d",
+  "sourceGuardVerified": true,
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "--workspace",
+    "--",
+    "--skip",
+    "aag"
+  ],
+  "environment": {
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1"
+  },
+  "sandbox": "host-access: native Metal device is required by existing MLX cases",
+  "exitCode": 0,
+  "elapsedSeconds": 569.874,
+  "totals": {
+    "passed": 5930,
+    "failed": 0,
+    "ignored": 5
+  },
+  "testSummaryCount": 374,
+  "logSha256": "a6da91a94bc68b0729d32e74385f954ba69323202da76fa07304abb87d845b92",
+  "precedingAttempt": "Sandbox denied Metal: 2049 passed, 2 failed, 3 ignored before abort. No success or complete-workspace credit for that attempt.",
+  "qualificationClaim": "none",
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

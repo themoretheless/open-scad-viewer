@@ -36,14 +36,14 @@
   },
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
-    "previousPlanId": "semantic-manifold-g1-plan-v84",
-    "previousPlanSha256": "f7912ac1b9560af74c226942866fb56d5ddb60d2a6f22dfe4e98037676b85036",
-    "reason": "Append-only structural release: the curve/surface intersection engine, predicate evidence, coverage certificates and the surface-only NURBS SS half leave brep-core for nurbs-intersect, the analytic pair intersections leave for brep-intersect; bind the moved sources and the rebuilt ownRust51 kernel. Preserve ownRust50, G0v67, G1v84 and all earlier records; all 4740 clean work units remain incomplete.",
+    "previousPlanId": "semantic-manifold-g1-plan-v83",
+    "previousPlanSha256": "1c89ddec3d8ad340887a1add39a091e00f3a1b8ec05473344199d68cf6416f96",
+    "reason": "Merged native source-law and whole-shell proofs, exact rebuilt WASM and finite STEP/UI evidence; restore original historical records; no imported clean qualification or production approval.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
       "Start semantic-manifold-g1-candidate-run-v85 with zero completed clean runs and zero completed work units; no prior result is imported.",
-      "Retain G0 v1-v67 and G1 v1 through v84 byte-for-byte; G0 toolchain fingerprints advance separately to v68."
+      "Retain G0 v1-v66 and G1 v1 through v83 byte-for-byte; G0 toolchain fingerprints advance separately to v68."
     ],
     "preserved": [
       "All 65 oracle cases, 18 comparator mutations, boundary cases, matrix rows, environment IDs, seeds, budgets, required clean runs and all 4740 work units.",
@@ -248,8 +248,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "ba426e478db071b825d2fb96d69881131e1017b68bc34fd20b079d3b4b1a62ad",
-          "byteLength": 8419,
+          "value": "46edfa1d46e15645ce210e34cf8faec8a249cdcf4973afe7a60ee4f6e01d9474",
+          "byteLength": 8652,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -284,8 +284,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "8e5792a0c9195f2d92033ff8357a77b655b011415cd01bc20c2bb76f4ba517d0",
-          "byteLength": 1027,
+          "value": "0ae46e510054f2640373da19ae7a53644e6de80451f6c9bef1caf1b6fd7aad06",
+          "byteLength": 1089,
           "verifiedBy": "qualification artifact validator recomputes exact file bytes"
         }
       },
@@ -467,7 +467,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6a469fcfe7138633b2c69a64a6a49a419e2b377bd80ce17ccecc82081862769c",
+          "value": "d5215a559375f3ca152dc067bcb65055db82072fde3a72c779bd29d464ca4b94",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -508,8 +508,10 @@
           "scripts/build-vr.mjs",
           "scripts/build-wasm-brotli.mjs",
           "scripts/check-profile-solid-browser.mjs",
+          "scripts/check-sweep-miter-matrix-browser.mjs",
           "scripts/diagnose-g1-webkit-memory.mjs",
           "scripts/export-profile-solid-step.mts",
+          "scripts/export-sweep-step-oracle.mts",
           "scripts/g1-github-actions.mjs",
           "scripts/g1RuntimeIdentity.mjs",
           "scripts/materialize-qualification-kernels.mjs",
@@ -525,6 +527,10 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
+          "scripts/sweep-browser-surface-evidence.mjs",
+          "scripts/sweep-browser-worker-probe.mjs",
+          "scripts/sweep-step-miter-fixtures.mts",
+          "scripts/sweep-step-profile-fixtures.mts",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -558,8 +564,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "58ad675ba93b62eab8ad5f168d8b48323159ae91eb4c6e50b8d2c500a9dcf986",
-          "byteLength": 5786,
+          "value": "997229b5d3be5b476050b8f8c75733beca54590410f4cb047e10cccf9def5307",
+          "byteLength": 6418,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },
@@ -601,7 +607,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6110b72f6e76eb045100f32a14ecb31f0f5105ea0017564d656dac6c9149c1f6",
+          "value": "d45c6483e2ad6a5e25cf272a4a1b7c08884898f9e536992a1d88e45e9ae79d75",
           "byteLength": 858,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }

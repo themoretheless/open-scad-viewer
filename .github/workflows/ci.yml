@@ -16,10 +16,15 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     # A cold workspace build plus whole-shell proofs exceeded 40 minutes on hosted Linux.
-    # Match native-smoke execution time; proof work budgets and test coverage stay fixed.
+    # Optimize test proof loops while retaining debug assertions and overflow checks.
     timeout-minutes: 90
+    env:
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-09-16
@@ -30,7 +35,16 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - name: Check typed geometry without wire codecs
+        run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
+      - name: Verify complete native test partition
+        run: node scripts/verify-native-test-partition.mjs
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
@@ -38,7 +52,9 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # The merged kernel rebuild measured 14m40 and the complete Node suite 28m49.
+    # Allow cold builds and packaging; individual test deadlines/proof budgets stay fixed.
+    timeout-minutes: 60
     # Bound glibc's retained allocator arenas across disposable Node workers.
     # The memory probe keeps its original 4+24 jobs and byte/slope limits.
     env:
@@ -79,6 +95,8 @@ jobs:
             src/generated/geometry-kernels/kernel_bg.wasm
             src/generated/geometry-kernels/identity.ts
           if-no-files-found: error
+      - name: Qualify current WASM graph caps and pole queries
+        run: node --import tsx scripts/qualify-global-geometry.mts docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz global-geometry-wasm.json
       - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json
@@ -111,9 +129,13 @@ jobs:
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    # Hosted Windows exceeded 90 minutes during the full proof workspace.
-    # Keep every test and numerical/work limit; allow the job to complete.
-    timeout-minutes: 120
+    # Windows previously exhausted 90 minutes before the last workspace packages.
+    # Fresh native geometry matrices alone took 733 + 717 seconds on the audit host.
+    # Preserve every test, individual deadline and mathematical work budget.
+    timeout-minutes: 150
+    env:
+      # Test-only optimization; release/WASM profiles and all cases stay fixed.
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -147,7 +169,14 @@ jobs:
       # Hosted Windows smoke does not qualify the software DX12 adapter. An
       # unavailable Vulkan adapter exercises the existing optional-GPU skip;
       # COMPUTE_REQUIRE_GPU keeps required GPU runs fail-closed.
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - name: Verify complete native test partition
+        run: node scripts/verify-native-test-partition.mjs
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
         env:
           WGPU_BACKEND: ${{ runner.os == 'Windows' && 'vulkan' || 'metal' }}
       - run: node node_modules/vitest/vitest.mjs run tests/duckdbModelStore.test.ts tests/mcpCli.test.ts

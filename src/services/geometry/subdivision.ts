@@ -14,4 +14,3 @@ export const extrudeSubdivision=(profile:number[][],vector:number[]):Subdivision
 export const loftSubdivision=(sections:number[][][],caps=true):SubdivisionCage=>callGeometryRust('subdivision_loft',{sections,caps})
 export const sweepSubdivision=(profile:number[][],path:number[][],up=[1,0,0],caps=true):SubdivisionCage=>callGeometryRust('subdivision_sweep',{profile,path,up,caps})
 export const revolveSubdivision=(profile:number[][],segments=32):SubdivisionCage=>callGeometryRust('subdivision_revolve',{profile,segments})
-

@@ -2,14 +2,18 @@
 import {execFileSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
-import {resolve} from 'node:path'
+import {resolve,sep} from 'node:path'
 const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,p)),sha=v=>createHash('sha256').update(v).digest('hex')
 if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v58.json')))throw new Error('Historical own-rust-cad-v58 evidence already exists; publish a new version instead of overwriting it')
+const prepareArgument=process.argv.find(value=>value.startsWith('--prepare='))
+const preparedPath=prepareArgument?.slice('--prepare='.length)
+if(prepareArgument&&!preparedPath)throw new Error('A prepared metadata path is required')
+if(preparedPath&&(resolve(preparedPath)===root||resolve(preparedPath).startsWith(root+sep)))throw new Error('Prepared metadata must stay outside the checkout and its historical archives')
 const previousPath='docs/qualification/own-rust-cad-v57.json',previous=JSON.parse(bytes(previousPath))
 const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
-const additions=changed.filter(path=>['vite.config.ts','vite.qualification.config.ts','scripts/qualificationKernelModuleDelivery.mjs','src/workers/manifoldPlanQualification.worker.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
-const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
-const paths=[...new Set([...previous.sourceBundle.paths.filter(p=>existsSync(resolve(root,p))),...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src','crates/bridge-cam/src','crates/bridge-analysis/src','crates/bridge-svg/src','crates/cad-step/src','crates/nurbs-intersect/src','crates/brep-intersect/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].sort()
+const additions=changed.filter(path=>path==='docs/design/sweep-qualification-catalog.json'||path==='docs/qualification/historical-record-restoration-20261009.json'||path.startsWith('docs/qualification/native-integration-20261009/')||/^(crates\/.*\.(rs|toml|json)|src\/.*\.(ts|vue|css)|tests\/.*\.(ts|mjs)|scripts\/.*\.(mjs|mts)|vite.*\.ts|docs\/languages\/.*\.json)$/.test(path))
+const deliveryPaths=[...['summary','step-primary','step-smooth','step-profile','step-scalar','ui-laws','ui-native-cancel'].map(name=>'docs/qualification/native-integration-20261009/capacity/'+name+'.json'),'scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
+const paths=[...new Set([...previous.sourceBundle.paths.filter(p=>existsSync(resolve(root,p))),...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src','crates/bridge-cam/src','crates/bridge-analysis/src','crates/bridge-svg/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].filter(p=>existsSync(resolve(root,p))).sort()
 
 const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)
 const wasmPath=`docs/qualification/artifacts/geometry-${wasmSha256}.wasm`
@@ -22,7 +26,7 @@ const dependencyFingerprints={
   npmLockfileSha256:sha(bytes('package-lock.json')),
   rustLockfileSha256:sha(bytes('crates/Cargo.lock')),
 }
-const variants=[{sha256:wasmSha256,byteLength:wasm.byteLength,builder:'linux-x86_64',evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}]
+const variants=[{sha256:wasmSha256,byteLength:wasm.byteLength,builder:'macos-aarch64',evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}]
 
 
 writeFileSync(resolve(root,'src/core/ownRustCadEvidence.ts'),`// Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
@@ -41,16 +45,17 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
 })
 `)
 const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
-writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v58.json'),JSON.stringify({
-  id:'own-rust-cad-v58',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-13',
-  purpose:'Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57.',qualificationClaim:'none',
+writeFileSync(preparedPath?resolve(preparedPath):resolve(root,'docs/qualification/own-rust-cad-v58.json'),JSON.stringify({
+  id:'own-rust-cad-v58',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-09',
+  purpose:'Restores the compiled natural and closed loft constructors to the native 86-section capacity with 87-section refusal, and binds source-preserving native and WASM regressions. Native integration tests exercise current 256-control budgets, independently checked ray-root containment, strict-budget unresolved coverage, monotone rational UV boundaries and folded-edge refusal. Math guards retain rejection of non-finite and non-positive pivots. Fresh finite STEP and Metal UI evidence binds the rebuilt artifact; arbitrary global geometry and full clean G1 qualification remain unproved.',qualificationClaim:'none',
   wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
   sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
   dependencyFingerprints,
+  finiteEvidenceSummary:{path:'docs/qualification/native-integration-20261009/capacity/summary.json',sha256:sha(bytes('docs/qualification/native-integration-20261009/capacity/summary.json'))},
   claimBoundary:[
     'This enumerates exact observed build artifacts; compiler hosts are not assumed to produce identical bytes. It is not an external clean qualification run.',
     'It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.',
     'It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology.',
   ],
-},null,2)+'\n')
-console.log('Recorded docs/qualification/own-rust-cad-v58.json and refreshed src/core/ownRustCadEvidence.ts')
+},null,2)+'\n',preparedPath?{}:{flag:'wx'})
+console.log(preparedPath?'Prepared exact artifact metadata without publishing qualification evidence: '+resolve(preparedPath):'Recorded docs/qualification/own-rust-cad-v58.json and refreshed src/core/ownRustCadEvidence.ts')

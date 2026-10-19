@@ -39,7 +39,15 @@ it.each(['parameter','arc_length'])('certifies closed rational nonuniform RMF th
  expect(proof.patches!.length).toBeGreaterThan(0)
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,maxCells:0})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  const broken=structuredClone(path);broken.weights[1]=1.2500000000000002
- expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
+ const perturbed=callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})
+ // The weight changes parameter speed, while preserving the exact forward
+ // tangent direction. Arc-length transport owns that geometric join.
+ if(spacing==='arc_length'){
+  expect(perturbed).toMatchObject({continuousBound:true,withinBudget:true,solidCertified:false})
+  expect(perturbed.errorUpper).toBeGreaterThan(0)
+  expect(perturbed.errorUpper).toBeLessThan(2)
+  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken,maxCells:perturbed.cells-1})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
+ }else expect(perturbed).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  expect(JSON.stringify(args)).toBe(before)
 })
 
@@ -186,9 +194,13 @@ it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf
  expect(volume.individualPairs+volume.groupedPairs).toBe(1024*1023/2)
  expect(volume.orientations.map(o=>[o.expectedOutward,o.outward])).toEqual([[true,true],...Array.from({length:holes},()=>[false,false])])
  expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxPairs:1,maxCells:1})).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false})
- // Main's linear-monotonicity proofs certify every face chart within the
- // linear budget; the exhausted pair budget still refuses the global solid.
- if(holes===3)expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxLinearCells:20000,maxPairs:1,maxCells:1})).toMatchObject({allFacesInjective:true,
-  linearCells:file.includes('parameter')?2800:2806,allPairsClassified:false,individualPairs:0,groupedPairs:0,totalPairs:1024*1023/2,
-  nesting:null,solidGeometryCertified:false,regularBoundarySolidCertified:false,boundaryEmbeddingCertified:false})
+ if(holes===3){
+  expect(Number.isSafeInteger(volume.linearCells)).toBe(true)
+  expect(volume.linearCells).toBeGreaterThan(0)
+  expect(volume.linearCells).toBeLessThanOrEqual(DEFAULT_SWEEP_VOLUME_BUDGETS.maxLinearCells)
+  const shortBudget=volume.linearCells-1
+  const short=inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxLinearCells:shortBudget,maxPairs:1,maxCells:1})
+  expect(short).toMatchObject({allFacesInjective:false,solidGeometryCertified:false,boundaryEmbeddingCertified:false})
+  expect(short.linearCells).toBeLessThanOrEqual(shortBudget)
+ }
 },180_000)

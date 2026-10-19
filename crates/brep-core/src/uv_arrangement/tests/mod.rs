@@ -356,7 +356,7 @@ fn ss_plane() -> nurbs_core::surface::Surface {
 #[test]
 fn multispan_branch_graph_builds_global_tensor_cells() {
     let context = ToleranceContext::default_valid();
-    let graph = nurbs_intersect::nurbs_ss::certify_multispan_ss(
+    let graph = crate::nurbs_ss_g6::certify_multispan_ss(
         &ss_wave(false),
         &ss_plane(),
         [1, 2],
@@ -387,7 +387,7 @@ fn multispan_branch_graph_builds_global_tensor_cells() {
 #[test]
 fn multispan_uv_rejects_missed_crossing_resource_and_certificate_mutations() {
     let context = ToleranceContext::default_valid();
-    let graph = nurbs_intersect::nurbs_ss::certify_multispan_ss(
+    let graph = crate::nurbs_ss_g6::certify_multispan_ss(
         &ss_wave(false),
         &ss_plane(),
         [1, 2],
@@ -420,7 +420,7 @@ fn multispan_uv_rejects_missed_crossing_resource_and_certificate_mutations() {
         .is_err()
     );
 
-    let vertical = nurbs_intersect::nurbs_ss::certify_multispan_ss(
+    let vertical = crate::nurbs_ss_g6::certify_multispan_ss(
         &ss_wave(true),
         &ss_plane(),
         [3, 4],
@@ -434,7 +434,7 @@ fn multispan_uv_rejects_missed_crossing_resource_and_certificate_mutations() {
         .chain(&vertical.components)
         .flat_map(|component| component.fragments.clone())
         .collect();
-    let crossing = nurbs_intersect::nurbs_ss::join_certified_multispan_fragments(
+    let crossing = crate::nurbs_ss_g6::join_certified_multispan_fragments(
         fragments,
         &context,
         [8, 2],

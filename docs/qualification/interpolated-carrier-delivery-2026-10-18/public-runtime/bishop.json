@@ -1,0 +1,14 @@
+{
+  "schema": "original-arc-bishop-private-wasm-runtime/1",
+  "wasmSha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
+  "wasmBytes": 12833089,
+  "requestSha256": "c0bcfb86785762ea7bf998a16c56a746d6fc0208e714a92c15ee164a694e5117",
+  "passed": true,
+  "scope": "One exact original Mobius-clock Bishop body: construct/audit/STEP re-audit and budget/parameter refusal.",
+  "faces": 256,
+  "boundaryErrorUpper": 0.026094078384809302,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

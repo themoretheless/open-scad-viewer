@@ -209,6 +209,7 @@ pub fn to_capped_region(spans: &[Span], tolerance_mm: f64) -> Result<Model> {
 /// Recompute qualified original UV regions, ordinary edge ownership and pole
 /// contractions for the authored capped supports. No body or embedding claim.
 /// Region limits apply per face; exact shell work is shared across all uses.
+#[cfg(feature = "codec")]
 pub fn to_capped_source_shell(
     spans: &[Span],
     tolerance_mm: f64,

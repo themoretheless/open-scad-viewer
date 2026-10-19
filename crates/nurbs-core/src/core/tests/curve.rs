@@ -351,6 +351,57 @@ fn reference_weighted_point(c: &Curve, u: f64) -> Vec<f64> {
 }
 
 #[test]
+fn compensation_beats_naive_on_adversarial_weights() {
+    // Absorption case: t1 ≈ +2e8, t2 ≈ 1e-8 (below half an ulp of t1, so
+    // naive summation drops it entirely), t3 ≈ -2e8. The true numerator is
+    // dominated by the tiny middle term; weights span 1..1e-12 (the
+    // validation ceiling ratio 1e12).
+    let c = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: vec![
+            vec![0.5, 0.25],
+            vec![0.5 + 2e8 / 0.288, 1.],
+            vec![0.5 + 1e-8 / (0.432e-12), 2.],
+            vec![0.5 - 2e8 / 0.216, 3.],
+        ],
+        weights: vec![1., 1., 1e-12, 1.],
+        periodic: false,
+    };
+    c.validate().unwrap();
+    let u = 0.6;
+    let reference = reference_weighted_point(&c, u);
+    let naive = naive_weighted_point(&c, u);
+    let e = c.evaluate(u).unwrap();
+    let compensated: Vec<f64> = e
+        .point
+        .iter()
+        .zip(&c.control_points[0])
+        .map(|(x, o)| x - o)
+        .collect();
+    let naive_err = (naive[0] - reference[0]).abs();
+    let compensated_err = (compensated[0] - reference[0]).abs();
+    assert!(
+        naive_err > 1e-10,
+        "case not adversarial: naive error {naive_err:e}"
+    );
+    assert!(
+        compensated_err <= naive_err,
+        "compensated {compensated_err:e} must not exceed naive {naive_err:e}"
+    );
+    assert!(
+        compensated_err < naive_err * 0.01,
+        "expected real improvement: compensated {compensated_err:e} vs naive {naive_err:e}"
+    );
+    assert!(e.rounding_bound.is_finite() && e.rounding_bound >= 0.);
+    // CurveEvaluator agrees with evaluate and carries the same evidence.
+    let mut evaluator = CurveEvaluator::new(&c).unwrap();
+    let fast = evaluator.evaluate(u).unwrap();
+    assert!(fast.rounding_bound.is_finite() && fast.rounding_bound >= 0.);
+    assert!(close(&fast.point, &e.point, 1e-15));
+}
+
+#[test]
 fn repeated_evaluation_is_stable_and_finite() {
     let mut rng = Rng(101);
     let c = random_curve(&mut rng);

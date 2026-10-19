@@ -45,10 +45,7 @@ fn handle(v: Value) -> Result<Value> {
         "mesh_export_file" => mesh_export_file::dispatch(v),
         "mesh_to_nurbs_brep" => encode(reconstruction::nurbs_brep_from_mesh(&field(&v, "mesh")?)?),
         "mesh_to_sdf" => encode(sdf_core::Field::from_triangles(
-            triangles_from_mesh(&polygon_core::solid::proximity::valid_source(
-                &field(&v, "mesh")?,
-                4096,
-            )?),
+            triangles_from_mesh(&reconstruction::valid_source(&field(&v, "mesh")?, 4096)?),
             field(&v, "signed")?,
         )?),
         "mesh_to_subdivision" => encode(reconstruction::mesh_to_subdivision(
@@ -101,8 +98,10 @@ fn handle(v: Value) -> Result<Value> {
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
-            let section =
-                polygon_core::solid::section::MeshSectionIndex::new(&mesh)?.section(z_mm)?;
+            let section = mesh_section::MeshSectionIndex::new(&mesh.view())
+                .map_err(legacy_mesh_error)?
+                .section(z_mm)
+                .map_err(legacy_mesh_error)?;
             Ok(json!({
                 "z_mm": section.z_mm,
                 "candidateTriangles": section.candidate_triangles,

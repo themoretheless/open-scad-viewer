@@ -1,0 +1,142 @@
+{
+  "schema": "fibered-current-local-browser-native-scheduling/1",
+  "sourceRevision": "fc5c0b40d0a7789e9e6116750d19a697c66f9755",
+  "productionRustRevision": "cec378bb23e029fe8498b6c89fe1e1d3e8aa86c7",
+  "wasmSha256": "a9acf6ee3df82642be029e3d9951ec06840e56a24d901eda83e6134ff0c2771f",
+  "chromiumProtocolChecksPassed": 11,
+  "solidBrowserCasesPassed": 4,
+  "solidLifecycleChecksPassed": 36,
+  "nativeCatalog": {
+    "cases": 5979,
+    "serial": 44,
+    "remaining": 5935,
+    "complete": true,
+    "disjoint": true
+  },
+  "recognitionPassed": 44,
+  "testProfileInvariantChecksPassed": 2,
+  "mlxHostAccessTestsPassed": 12,
+  "failedSandboxAttempt": {
+    "passed": 2049,
+    "failed": 2,
+    "ignored": 3,
+    "complete": false
+  },
+  "fullRemainingRetry": "running",
+  "newHostedCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "qualificationClaim": "none",
+  "fullGoalComplete": false,
+  "records": [
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/REVIEW.md",
+      "sha256": "f229cea45c30270fe0a4388f98b84c841f85b825ae4c97872d2f3e2417e79ef3",
+      "byteLength": 1524
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/native-catalog/full.log",
+      "sha256": "ce1e98f4b09a48f2dd16a1de0eb77e69d39f0167bcee7e0d3519ac44e81d4834",
+      "byteLength": 567832
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/native-catalog/parallel.log",
+      "sha256": "150bcf8e9f1a981a7baa14e6412f28343d7061a127ff8410cba5f72b8a52cbb8",
+      "byteLength": 565152
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/native-catalog/partition.json",
+      "sha256": "cf9e1119d3034ade4da4de05bfaa92c14d38e058589f223088e121e3aa22576e",
+      "byteLength": 1132
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/native-catalog/serial.log",
+      "sha256": "563296e9d9e25fce141f3ab9aa6579643005211f141d8b898385cae11aeebd0c",
+      "byteLength": 71094
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-chromium-general-boundary-20261017.json",
+      "sha256": "ca46f175e694113c2adbefb8a7a304a4b3ff98660b04a5d93bc309c3ae6427df",
+      "byteLength": 2367
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-chromium-general-boundary-second-20261017.log",
+      "sha256": "7c18b14d6082f85a06353ac4bc59d2e1735552cd8b47475c6d2d460ccf519bb1",
+      "byteLength": 43
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-final-dist-build-20261017.log",
+      "sha256": "942b0a0a0f32a4eaf96c87f6772a8a9f49bb0437dc5d3ae6c1261e61051195e6",
+      "byteLength": 13897
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-final-dist-verify-20261017.log",
+      "sha256": "e208e1933cc858234a80a3a4481880916430caa5ab3d183b3e699122b11c00c9",
+      "byteLength": 99
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-opt1-mlx-unsandboxed-20261017.log",
+      "sha256": "4da60258c4ce09270739cdb99c3f23e68f0642b1686ad9fb71c456a390da176a",
+      "byteLength": 2222
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-opt1-native-catalog-20261017.log",
+      "sha256": "c7c4a3fae5c7e1e8de0ec31374aed28f6663868d9406fd37f42bef5815347e12",
+      "byteLength": 74
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-optimized-recognition-20261017.log",
+      "sha256": "12feb585cbc287ee34d3558000a233006ec5e0426a35c70340776352fa7bdac4",
+      "byteLength": 114570
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-optimized-workspace-20261017.log",
+      "sha256": "093b3f047f0b0a40a5e94c7eadfce683989cc42d69ee6c5162cf3f1afbe24d8f",
+      "byteLength": 229147
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-fibered-ci-profile-solid-browser-20261017.log",
+      "sha256": "10c1aefe57bb34248820753d15b0022ba565a53e0702e980208cfafcb5bb326c",
+      "byteLength": 37
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/osv-test-profile-semantics-20261017.log",
+      "sha256": "227f90076f28b02c5fed5cfcbfcd4e690a527ae736044d4f31fe7f6ee2728228",
+      "byteLength": 740
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/solid-browser/1440-closed-profile-planar-10.r.png",
+      "sha256": "4b4123dc51bea16caf6da232ed46191a6bc682826158816aba0d47106b8dfed7",
+      "byteLength": 115963
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/solid-browser/1440-closed-profile-spatial-6.r.png",
+      "sha256": "7c93cc42a433e4332d65efa0a204e53e8592600675e4ecd073905e19cc335579",
+      "byteLength": 114059
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/solid-browser/600-closed-profile-planar-10.r.png",
+      "sha256": "95a96d246c4625d65945440538107ca54d1a91d7754f422792549e6af492bc6e",
+      "byteLength": 98437
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/solid-browser/600-closed-profile-spatial-6.r.png",
+      "sha256": "d053a37e133d2ac6c10d3f9c66cc2d9130928efc778a14ec3cb038d273b4613d",
+      "byteLength": 94243
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/solid-browser/report.json",
+      "sha256": "09864fe45740f354ac12901d0d900a6b86b58c3c4d0bf396c2f5c5212e563d53",
+      "byteLength": 2480
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/test-profile-probe/Cargo.toml",
+      "sha256": "ba020d6a569639299f3c5875073daf9ba6e6be863018c9c3f4274aa11489a8b5",
+      "byteLength": 81
+    },
+    {
+      "path": "docs/qualification/fibered-ci-runtime-2026-10-17/test-profile-probe/probe.rs",
+      "sha256": "f1257c08ccb4a42c7be0a432f7f2f57a5cc737f8d802ebc29035e8f9f4d94263",
+      "byteLength": 379
+    }
+  ]
+}

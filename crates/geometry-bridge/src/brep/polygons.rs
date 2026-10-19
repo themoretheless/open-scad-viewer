@@ -1,5 +1,89 @@
 use super::*;
 
+/// Split only interior UV edges; all boundary positions retain their registry ownership.
+pub(super) fn refine_trimmed_face(
+    face: &brep_core::Face,
+    mesh: FaceMesh,
+    segments: usize,
+) -> Result<FaceMesh> {
+    let surface = &face.surface;
+    let mut uv = mesh.uv;
+    let mut shared = mesh.shared;
+    let mut triangles = mesh.triangles;
+    let width = surface.knots_u[surface.control_points.len()] - surface.knots_u[surface.degree_u];
+    let height =
+        surface.knots_v[surface.control_points[0].len()] - surface.knots_v[surface.degree_v];
+    let key = |a: usize, b: usize| if a < b { [a, b] } else { [b, a] };
+    for _ in 0..24 {
+        let mut incidence = BTreeMap::<[usize; 2], usize>::new();
+        for t in &triangles {
+            for i in 0..3 {
+                *incidence.entry(key(t[i], t[(i + 1) % 3])).or_default() += 1;
+            }
+        }
+        let mut splits = BTreeMap::<[usize; 2], usize>::new();
+        for (edge, count) in incidence {
+            let [a, b] = edge;
+            let length =
+                ((uv[a][0] - uv[b][0]) / width).powi(2) + ((uv[a][1] - uv[b][1]) / height).powi(2);
+            if count == 2 && length > 2. / (segments * segments) as f64 {
+                splits.insert(edge, uv.len());
+                uv.push([(uv[a][0] + uv[b][0]) / 2., (uv[a][1] + uv[b][1]) / 2.]);
+                shared.push(None);
+            }
+        }
+        if splits.is_empty() {
+            return Ok(FaceMesh {
+                uv,
+                shared,
+                triangles,
+            });
+        }
+        let mut refined = Vec::new();
+        for mut t in triangles {
+            let count = (0..3)
+                .filter(|&i| splits.contains_key(&key(t[i], t[(i + 1) % 3])))
+                .count();
+            if count == 0 {
+                refined.push(t);
+                continue;
+            }
+            if count == 3 {
+                let [a, b, c] = t;
+                let ab = splits[&key(a, b)];
+                let bc = splits[&key(b, c)];
+                let ca = splits[&key(c, a)];
+                refined.extend([[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]);
+            } else {
+                // Rotate so the one marked edge is AB, or the two are AB and BC.
+                while !(splits.contains_key(&key(t[0], t[1]))
+                    && (count == 1 || splits.contains_key(&key(t[1], t[2]))))
+                {
+                    t.rotate_left(1);
+                }
+                let [a, b, c] = t;
+                let ab = splits[&key(a, b)];
+                if count == 1 {
+                    refined.extend([[a, ab, c], [ab, b, c]]);
+                } else {
+                    let bc = splits[&key(b, c)];
+                    refined.extend([[ab, b, bc], [a, ab, c], [ab, bc, c]]);
+                }
+            }
+        }
+        if refined.len() > 20000 {
+            return Err(input(format!(
+                "B-rep tessellation exceeds 20000 triangles during interior refinement: {} triangles at segments {}",
+                refined.len(),
+                segments
+            )));
+        }
+        triangles = refined;
+    }
+    Err(input(
+        "B-rep interior tessellation exceeded its refinement budget",
+    ))
+}
 /// Interior refinement points are midpoints of the boundary triangulation,
 /// so on the concave side of a curved trim they can fall into the sliver
 /// between the chord and the exact pcurve, and evaluate off the face. Test

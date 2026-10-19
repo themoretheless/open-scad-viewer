@@ -1,0 +1,22 @@
+✔ counts equal names in separate targets and doc tests independently (1.301375ms)
+✔ refuses an omitted test (0.448458ms)
+✔ refuses overlapping or injected cases (0.125125ms)
+✔ refuses duplicate, contextless and empty catalogs (0.522083ms)
+✔ reports all drift without rewriting archives or evidence (4.010167ms)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt cache hit: 3c998a1eb7143d04b426cd16c8b6f20c466e890d7d250d90f120c088fb4bb42a
+[parse exception: expected list (at 1:0)]
+Fatal: error parsing wasm (try --debug for more info)
+✔ repeated optimization preserves Cargo input and produces identical runnable bytes (329.112167ms)
+✔ optimizer failure is catchable and does not alter the input (121.675792ms)
+✔ explicit native optimizer rejects missing or unrecognized tools before changing Cargo input (38.557834ms)
+﹣ native and bundled optimizers agree on executable fixture bytes (0.064791ms) # SKIP
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 652.223792

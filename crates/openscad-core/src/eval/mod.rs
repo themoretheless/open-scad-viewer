@@ -1,10 +1,11 @@
-//! OpenSCAD value evaluator (migration stage 2): a faithful port of the
-//! evaluator half of `src/services/openscadParser.ts` for both language
-//! profiles. Geometry modules contribute accounted shape descriptors (name +
-//! dimension) through the same shape-list algebra as the TS evaluator
-//! (boolean/extrude/hull combine to one, transforms pass through or union per
-//! profile); the real geometry kernels arrive with stage 3 via the shared
-//! `geometry-bridge` handle store.
+//! OpenSCAD value evaluation for both repository language profiles.
+//! Default evaluation accounts shape names and dimensions for diagnostics.
+//! Opt-in recording emits a typed solid program for supported operations;
+//! independent geometry kernels execute that program through the host adapter.
+mod expressions;
+mod comprehensions;
+mod function_calls;
+mod recording;
 use crate::ast::*;
 use crate::builtins::{self, BuiltinContext, BuiltinError};
 use crate::lexer::TT;
@@ -32,13 +33,32 @@ pub const MAX_FN: f64 = 256.0;
 
 use crate::{MAX_EXPRESSION_DEPTH, MAX_SOURCE_LENGTH};
 
+
+#[cfg(test)]
+mod profile_recording_tests;
+
+#[cfg(test)]
+mod profile_matrix_tests;
+
+#[cfg(test)]
+mod extrusion_recording_tests;
+
+#[cfg(test)]
+mod polygon_recording_tests;
+
 mod quality;
-mod evaluator;
+mod evaluator_2;
 mod evaluate_program;
 pub use quality::*;
+use evaluator_2::*;
 pub use evaluate_program::*;
 
-mod expressions;
-mod comprehensions;
-mod function_calls;
-mod recording;
+mod evaluator_2_impl_1;
+mod evaluator_2_impl_2;
+mod evaluator_2_impl_3;
+mod evaluator_2_impl_4;
+
+mod eval_node_cases_1;
+mod eval_node_cases_2;
+mod eval_node_cases_3;
+mod eval_node_cases_4;

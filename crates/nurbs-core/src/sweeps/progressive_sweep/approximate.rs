@@ -147,6 +147,13 @@ impl<'a> MultiSweep<'a> {
 impl MultiSweep<'_> {
     /// One aggregate preview; does not consume or alter iterator progression.
     pub fn preview_at(&self, count: usize) -> Result<MultiLevel> {
+        let [_,cells,products]=self.sweeps[0].spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+        self.preview_at_with_error_limits(count,cells,products)
+    }
+    /// One caller-owned allowance for the complete wall union. Filled-cap
+    /// owners can pass the remaining source allowance without resetting work.
+    pub fn preview_at_with_error_limits(&self,count:usize,cell_limit:usize,product_limit:usize)->Result<MultiLevel> {
+        check(cell_limit<=100000&&product_limit<=1000000,"Source error work exceeds limits")?;
         check(
             count >= self.options.initial_sections && count <= self.options.max_sections,
             "Preview section count outside configured sweep budget",
@@ -158,13 +165,15 @@ impl MultiSweep<'_> {
         // Measure that shared source once; per-profile pose and decomposition
         // work still consume the remaining aggregate budget.
         let first=&self.sweeps[0];
-        let [_,cell_limit,product_limit]=first.spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+
+        // Original inverse-length correspondence is shared for closed guided
+        // fields too. Their copied endpoint/phase displacement is still proved
+        // independently by each profile owner; no seam flag is cached here.
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
-            &&first.orientation_guide.is_some_and(|g|!g.periodic)
-            &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
+            &&first.orientation_guide.is_some_and(|g|!g.periodic);
         let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
             && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
-            && !first.path.periodic&&!path_is_closed(first.path)?)) {
+            && !first.path.periodic&&(first.frame_laws.is_some()||shared_guided||!path_is_closed(first.path)?))) {
             if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
                 check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
                     "Shared length certificate requires identical original source and spacing")?;
@@ -179,6 +188,15 @@ impl MultiSweep<'_> {
             }else{None}
         }else{None};
         let mut cells=shared_length.as_ref().map_or(0,|report|report.cells);
+        let shared_chord=if let Some(length)=shared_length.as_ref().filter(|l|l.within_tolerance) {
+            if first.path.control_points.len()==first.path.degree+1
+                && !authored_error::original_line(first.path)
+                && (first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed
+                    && first.orientation_guide.is_none() && first.contact_point.is_none())) {
+                let global=authored_error::shared_global_chord(first.path,count,length.total.bounds,cell_limit-cells)?;
+                cells+=global.cells;Some(global)
+            }else {None}
+        }else {None};
         let shared_guide=if shared_guided&&shared_length.is_some()&&cells<cell_limit {
             let guide=first.orientation_guide.unwrap();
             check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
@@ -196,13 +214,13 @@ impl MultiSweep<'_> {
                     &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
                     "Shared RMF certificate requires identical original source and policy")?;
                 let remaining=cell_limit-cells;
-                let proof=rmf_transport::certify_original_rmf_transport_shared(first.path,first.options.normal,
-                    steps,remaining,path_is_closed(first.path)?)?;
+                let proof=rmf_transport::certify_original_rmf_transport_shared_for_spacing(first.path,first.options.normal,
+                    steps,remaining,path_is_closed(first.path)?,first.options.spacing)?;
                 cells+=proof.cells+proof.exact_work as usize;Some(proof)
         }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_chord.as_ref())?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(

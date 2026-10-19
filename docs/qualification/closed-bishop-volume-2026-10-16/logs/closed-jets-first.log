@@ -1,0 +1,117 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/nurbs-core)
+warning: unnecessary parentheses around function argument
+   --> nurbs-core/src/numerics/robust_solvers/rrqr.rs:334:38
+    |
+334 |         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+    |                                      ^                 ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+334 -         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+334 +         assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
+    |
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `closed_frame_jets::closed_frame_jets`
+ --> nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs:9:46
+  |
+9 | pub(in crate::sweeps::progressive_sweep) use closed_frame_jets::closed_frame_jets;
+  |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no method named `sqrt` found for struct `distance_bounds::Interval` in the current scope
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/bishop_jets.rs:100:28
+    |
+100 |         let speed = speed2.sqrt()?;
+    |                            ^^^^ method not found in `distance_bounds::Interval`
+    |
+   ::: nurbs-core/src/numerics/distance_bounds.rs:15:1
+    |
+ 15 | pub struct Interval {
+    | ------------------- method `sqrt` not found for this struct
+    |
+help: some of the expressions' fields have a method of the same name
+    |
+100 |         let speed = speed2.hi.sqrt()?;
+    |                            +++
+100 |         let speed = speed2.lo.sqrt()?;
+    |                            +++
+
+warning: unused variable: `i`
+   --> nurbs-core/src/numerics/simd_kernels.rs:271:13
+    |
+271 |         for i in 0..interior {
+    |             ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cell`
+   --> nurbs-core/src/distance/subdivision.rs:244:29
+    |
+244 |         fn split(&mut self, cell: ()) -> Result<Split<()>> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_cell`
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `du`
+   --> nurbs-core/src/offset/tests/fillet_surfaces.rs:228:10
+    |
+228 |     let (du, dv) = domain(surface);
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_du`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+For more information about this error, try `rustc --explain E0599`.
+warning: `nurbs-core` (lib test) generated 11 warnings
+error: could not compile `nurbs-core` (lib test) due to 1 previous error; 11 warnings emitted

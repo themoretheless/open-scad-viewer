@@ -1,0 +1,303 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-affine-physical-tubes-target-20261016/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unnecessary parentheses around function argument
+   --> nurbs-core/src/numerics/robust_solvers/rrqr.rs:334:38
+    |
+334 |         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+    |                                      ^                 ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+334 -         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+334 +         assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
+    |
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `i`
+   --> nurbs-core/src/numerics/simd_kernels.rs:271:13
+    |
+271 |         for i in 0..interior {
+    |             ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cell`
+   --> nurbs-core/src/distance/subdivision.rs:244:29
+    |
+244 |         fn split(&mut self, cell: ()) -> Result<Split<()>> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_cell`
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `du`
+   --> nurbs-core/src/offset/tests/fillet_surfaces.rs:228:10
+    |
+228 |     let (du, dv) = domain(surface);
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_du`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `patch_error_with_length` is never used
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:317:15
+    |
+317 | pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `material` is never used
+  --> nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/../../../../../tests/support/arc_bishop_source.rs:33:8
+   |
+33 | pub fn material() -> (Vec<Curve>, nurbs::surface::Surface, Vec<Vec<Curve>>) {
+   |        ^^^^^^^^
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+  --> nurbs-core/src/join/continuity/preparation/tests.rs:29:4
+   |
+29 | fn aligns_degrees_domains_and_knots_without_introducing_C0_seams() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+   |
+   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 26 warnings (1 duplicate) (run `cargo fix --lib -p nurbs-core --tests` to apply 10 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (/private/tmp/osv-affine-physical-tubes-target-20261016/debug/build/nurbs-core/731c12dedd15e6be/out/nurbs_core-731c12dedd15e6be)
+
+running 76 tests
+test sweeps::progressive_sweep::authored_error::regression_tests::authored_arc_length_c0_path_uses_original_length_and_relative_pose_bounds ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::authored_arc_length_preserves_original_moving_frame_and_affine_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::authored_arc_length_curved_path_and_joint_pose_match_independent_length_inverse ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::circular_closed_guided_arc_length_bound_charges_copied_seam_and_shared_budget ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_contact_arc_length_requires_owned_original_homothety_and_copied_seam_bound ... ok
+closed RMF axis=0, offset=0, sign=-1, delta=0
+closed RMF axis=0, offset=0, sign=1, delta=0
+closed RMF axis=0, offset=17, sign=-1, delta=0
+closed RMF axis=0, offset=17, sign=1, delta=0
+closed RMF axis=1, offset=0, sign=-1, delta=0
+closed RMF axis=1, offset=0, sign=1, delta=0
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_contact_65_sections_share_original_value_work_for_outer_and_hole ... ok
+closed RMF axis=1, offset=17, sign=-1, delta=0
+closed RMF axis=1, offset=17, sign=1, delta=0
+closed RMF axis=2, offset=0, sign=-1, delta=0
+closed RMF axis=2, offset=0, sign=1, delta=0
+closed RMF axis=2, offset=17, sign=-1, delta=0
+closed RMF axis=2, offset=17, sign=1, delta=0
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_coordinate_planar_rmf_matches_fixed_normal_full_turn_sections ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_authored_arc_length_charges_the_copied_endpoint ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_authored_original_bound_includes_copied_end_section ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_corrected_planar_arc_error_charges_original_phase_and_budget ... ok
+closed FixedNormal count=33, upper=0.13655419116219145, cells=992
+closed FixedNormal count=65, upper=0.015075944907816226, cells=1888
+closed FixedNormal count=129, upper=0.002856971064261344, cells=3680
+closed FixedNormal count=257, upper=0.0006280154389398939, cells=7264
+station=0, single=true, first=Some(0.001443759560166557), second=Some(0.00033519743194508427)
+station=1, single=true, first=Some(0.0014887537877685143), second=Some(0.0003386013819268232)
+station=63, single=false, first=Some(0.011950395242826378), second=Some(0.00042051920077927743)
+station=64, single=false, first=Some(0.010711295617869019), second=Some(0.00038743969279826375)
+station=65, single=true, first=Some(0.0022689516722847747), second=Some(0.00024542969566082915)
+station=127, single=false, first=Some(0.0027440535313997495), second=Some(0.0005299456429012781)
+station=128, single=false, first=Some(0.0016064571361349537), second=Some(0.0005269565570883476)
+station=191, single=false, first=Some(0.011946362759517918), second=Some(0.000628015438922415)
+station=192, single=false, first=Some(0.010718656340029878), second=Some(0.0005974587398952046)
+station=254, single=true, first=Some(0.0026249787462576087), second=Some(0.0004621414111829382)
+station=255, single=true, first=Some(0.0025985832174596764), second=Some(0.000454654995355218)
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_normal_full_turn_first_defect_refines_without_endpoint_smoothness_claim ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_normal_rational_path_bound_covers_radial_transport_and_copied_seam ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_rational_path_bound_includes_copied_endpoint ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_frenet_rational_path_bound_covers_radial_transport_and_copied_seam ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_and_contact_retained_bounds_include_copied_seam ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_fixed_normal_arc_error_charges_original_images_and_budget ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_contact_transport_preserves_tight_budget_and_refinement ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_nonaxial_corrected_arc_owns_exact_original_plane ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_nonaxial_rmf_arc_charges_actual_holonomy_and_original_plane ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_planar_rmf_arc_length_error_owns_actual_identity_and_copied_seam ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_planar_rmf_joint_laws_cover_original_transport_and_partial_refusal ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_rotating_authored_axis_uses_shared_original_source_work ... ok
+closed spatial retained upper=0.887751633019021 work=7109
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_arc_length_bound_charges_copied_seam_and_shared_budget ... ok
+dense spatial upper=0.16906504763891272 cells=37984
+test sweeps::progressive_sweep::authored_error::regression_tests::collinear_rational_source_bound_covers_independent_parameter_and_length_reference ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::contact_curved_arc_lengths_bound_retained_geometry_and_original_anchor ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::contact_retained_section_bound_includes_station_rounding_and_joint_fit_remainder ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::corrected_original_arc_and_straight_reference_charge_actual_sections_and_shared_work ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::corrected_planar_affine_phase_matches_independent_rational_reference ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::corrected_planar_retained_bound_covers_inflection_phase_scale_twist_and_limits ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::corrected_zero_curvature_leading_phase_covers_rational_original_reference ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::first_defect_gate_preserves_original_scale_kink_error ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_affine_piece_proof_cannot_hide_rational_speed_or_interior_corner ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_arc_length_c0_path_uses_original_length_and_initial_tangent_frame ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_curved_arc_length_encloses_independent_inverse_with_joint_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_joint_affine_dense_profile_composes_decomposition_and_original_transport ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_normal_arc_length_encloses_independent_curved_frame_and_joint_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_normal_arc_line::fixed_normal_arc_line_uses_exact_length_image_but_charges_retained_endpoints ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_normal_joint_affine_dense_profile_composes_decomposition_and_original_transport ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_normal_rational_path_joint_affine_twist_has_original_transport_bound ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_normal_retained_bound_encloses_original_curved_transport ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_patch_certificate_proves_line_arc_length_but_refuses_closed_paths_and_other_modes ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::fixed_retained_bound_owns_coordinates_rounding_and_original_twist ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::frenet_arc_length_encloses_independent_curved_frame_and_joint_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::frenet_retained_bound_covers_original_curvature_scale_and_twist ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_arc_length_two_original_curved_images_enclose_independent_joint_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_arc_length_uses_two_independent_original_line_images ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_control_does_not_promote_contact_or_arc_length_correspondence ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_control_owns_initial_coordinates_and_whole_request_budget ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_dense_profile_patch_bound_composes_original_decomposition ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_distinct_curvature_arc_lengths_enclose_independent_frame_oracle ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_initial_coordinates_own_translated_profile_before_twist_and_affine ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_original_rational_stations_have_point_safe_control_enclosures ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_section_value_bound_owns_retained_segments_and_refines ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::guided_tight_joint_law_patch_error_refines_to_small_tolerance ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::knot_fallback_covers_every_authored_transport_law ... ok
+nonaxial original-plane RMF upper=0.885475651137852, cells=1044
+test sweeps::progressive_sweep::authored_error::regression_tests::nonaxial_planar_rmf_arc_length_encloses_independent_original_image ... ok
+nonaxial original-plane RMF upper=0.021250638471807828, cells=1194
+test sweeps::progressive_sweep::authored_error::regression_tests::nonaxial_planar_rmf_parameter_encloses_independent_original_image ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::oblique_corrected_binormal_reference_preserves_constant_world_offset ... ok
+spatial closed-profile patches=5 regularity cells=1910 error=Some(0.10718482287708406)
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::original_knot_transition_uses_owned_value_bound_and_shared_work ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::original_oblique_rational_rmf_encloses_independent_transport ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::original_rational_straight_rmf_bound_includes_affine_twist_and_station_rounding ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::original_straight_rmf_accepts_all_axis_directions_with_translated_rational_sources ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::planar_rmf_arc_length_encloses_independent_curved_frame_and_joint_laws ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::planar_rmf_premise_uses_original_coefficients_and_regular_tangent ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::planar_rmf_retained_bound_encloses_original_curved_transport ... ok
+open spatial RMF error=Some(0.02411436157189021) cells=23852
+test sweeps::progressive_sweep::authored_error::regression_tests::open_spatial_rmf_original_transport_full_retained_error ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::rational_line_arc_length_error_uses_original_sections_and_length_reference ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_arc_length_proof_keeps_multi_profile_partial_work_unproved ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_fixed_normal_arc_length_proof_keeps_multi_profile_partial_work_unproved ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_contact_curved_arc_lengths_accept_two_profiles_and_refuse_partial_64 ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_frenet_arc_length_proof_keeps_multi_profile_partial_work_unproved ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_planar_rmf_arc_length_keeps_multi_profile_partial_work_unproved ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::spatial_frenet_joint_affine_center_scale_twist_bound_is_original ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::spatial_frenet_retained_bound_encloses_original_cubic_scale_twist ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::shared_guided_curved_arc_length_accepts_two_profiles_and_refuses_partial_64 ... ok
+
+test result: ok. 76 passed; 0 failed; 0 ignored; 0 measured; 1562 filtered out; finished in 128.40s
+

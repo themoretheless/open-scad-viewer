@@ -1,0 +1,36 @@
+✔ new oversized file fails, pinned file may shrink but not grow (0.6315ms)
+✔ upward crate dependency is a layering violation (0.1285ms)
+✔ update only lowers pins and drops fixed violations (5.981666ms)
+✔ historical executor exemption requires exact archived bytes, including short edits (2.034208ms)
+✔ counts equal names in separate targets and doc tests independently (1.2125ms)
+✔ refuses an omitted test (0.412875ms)
+✔ refuses overlapping or injected cases (0.120333ms)
+✔ refuses duplicate, contextless and empty catalogs (0.505125ms)
+✔ reports all drift without rewriting archives or evidence (5.01075ms)
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+wasm-opt cache write skipped: EEXIST: file already exists, mkdir '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/wasm-cache-test-2AXZCU/file'
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+✔ reuses validated bytes and invalidates input, tool and flags independently (2.867ms)
+✔ damaged or mismatched entries are replaced without trusting their bytes (2.056083ms)
+✔ does not cache optimizer failure or invalid output (0.426667ms)
+✔ unwritable cache location does not discard a valid optimization (0.503292ms)
+✔ oversized cache entry is a miss and is repaired (0.984417ms)
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+✔ concurrent misses publish one complete entry without scratch leftovers (12.443042ms)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt cache hit: 3c998a1eb7143d04b426cd16c8b6f20c466e890d7d250d90f120c088fb4bb42a
+[parse exception: expected list (at 1:0)]
+Fatal: error parsing wasm (try --debug for more info)
+✔ repeated optimization preserves Cargo input and produces identical runnable bytes (319.731ms)
+✔ optimizer failure is catchable and does not alter the input (119.820333ms)
+✔ explicit native optimizer rejects missing or unrecognized tools before changing Cargo input (36.151958ms)
+﹣ native and bundled optimizers agree on executable fixture bytes (0.05275ms) # SKIP
+ℹ tests 19
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 634.354709

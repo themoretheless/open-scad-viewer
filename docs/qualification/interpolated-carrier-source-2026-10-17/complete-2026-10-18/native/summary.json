@@ -1,0 +1,506 @@
+{
+  "schema": "interpolated-carrier-complete-kernel-gates/1",
+  "frozenCodeRevision": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "inputsSha256": "f73a6c77a81ff87b5bb506e472a4fb957d079e1f0005eef0950043335faefe80",
+  "runnerSha256": "432ca9ec40b7b60981f0e7a065b61844c0714b84f3fc375117fad44991537631",
+  "checks": [
+    {
+      "name": "interpolated-native-json-step",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "interpolated_carrier_source_certificate"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 5.078,
+      "testResults": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/interpolated-native-json-step.log",
+      "logSha256": "52932198d6012d0c2b8c21c3c7094760f7be6235d22ec56a8d1844fcfe2496ec"
+    },
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 918.364,
+      "testResults": [
+        {
+          "passed": 1641,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/nurbs-full.log",
+      "logSha256": "a1fdce5899d4ca2d7266065ff75f8b32e8e7054462063f1a8ff620a180ad0b49"
+    },
+    {
+      "name": "affine-native-json-step",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "affine_frame_source_certificate"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 403.476,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/affine-native-json-step.log",
+      "logSha256": "daf24c53d811de5abdc164423838ff298de60d300bfc07cb701b8abaf625fc59"
+    },
+    {
+      "name": "guided-native-json-step",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "guided_frame_source_certificate"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 801.056,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/guided-native-json-step.log",
+      "logSha256": "ca25986590ffc00f8e00abfd7ff5f485f28a2c3b928e7bfa5b77acee921866fc"
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 2787.447,
+      "testResults": [
+        {
+          "passed": 1125,
+          "failed": 0,
+          "ignored": 3
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/brep-full.log",
+      "logSha256": "8cca199c753ed6af3081d0929a29155fa3132af09b8b62ea5504700382eeda4c"
+    },
+    {
+      "name": "exact-predicates",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 2.281,
+      "testResults": [
+        {
+          "passed": 67,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/exact-predicates.log",
+      "logSha256": "96c2fc2443773f17c409559270b801c3fc50805f8efa094a65643037c65a16c3"
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 199.839,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/source-volume-matrices.log",
+      "logSha256": "a5405290e16f8f8cbb76ef17425052211bd7537348e083980f654b42061ea659"
+    },
+    {
+      "name": "regularity-and-g2",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_regularity",
+        "--test",
+        "surface_g2"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 1.754,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/regularity-and-g2.log",
+      "logSha256": "607dc2810221ac5db7a572aaff3713299634236b06eb8db97175fe04e5e989bc"
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 21.888,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/brep-aag-serial.log",
+      "logSha256": "1aa9edb5d8e1c0bfdbc239bb624a6a89653e3d2f79abf1f17fdaedde6e9b7175"
+    },
+    {
+      "name": "cad-step-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-step"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 76.199,
+      "testResults": [
+        {
+          "passed": 71,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/cad-step-full.log",
+      "logSha256": "da935734d501a31f01062b7fd62feab93a2610149a38827e0e65893da01059db"
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 308.336,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/bridge-full.log",
+      "logSha256": "5819d3beca8d38c8582c06dd02a5d59fe093978965b40ab6d5edfa0e4350bccc"
+    },
+    {
+      "name": "legacy-native-json-step",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--test",
+        "smooth_closed_material_certificate",
+        "--test",
+        "smooth_closed_step_matrix",
+        "--test",
+        "rational_closed_material_certificate",
+        "--test",
+        "rational_closed_step_matrix",
+        "--test",
+        "implicit_sphere_source_certificate",
+        "--test",
+        "implicit_sphere_step_matrix",
+        "--test",
+        "fibered_source_certificate",
+        "--test",
+        "fibered_step_matrix",
+        "--test",
+        "arc_bishop_source_certificate",
+        "--test",
+        "general_frame_source_certificate"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 984.178,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/legacy-native-json-step.log",
+      "logSha256": "3084a5b1c49a8d0e4fdf352505c4d0e5912c262e041ca14bc280c9d3707185b7"
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 11.27,
+      "testResults": [],
+      "log": "/private/tmp/osv-interpolated-carrier-remaining-kernel-20261017/no-codec-libraries.log",
+      "logSha256": "9e3d596aaf3a9ad9e0c6b56c3eb10296f8ea62b703314deeb27a513808d10700"
+    }
+  ],
+  "complete": true,
+  "passed": true,
+  "fullGoalComplete": false,
+  "sourceGuardVerified": true,
+  "totals": {
+    "passed": 3408,
+    "failed": 0,
+    "ignored": 4
+  }
+}

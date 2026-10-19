@@ -12,11 +12,14 @@ const MAX_SPANS: usize = 256;
 const MAX_FRAGMENTS: usize = 2048;
 type Point = [f64; 2];
 
+
+#[cfg(test)]
+#[path = "../tests/planar_trim.rs"]
+mod tests;
+
 mod point_location;
 mod validate;
 mod locate_point;
-#[cfg(test)]
-mod tests;
 pub use point_location::*;
 pub use validate::*;
 pub use locate_point::*;

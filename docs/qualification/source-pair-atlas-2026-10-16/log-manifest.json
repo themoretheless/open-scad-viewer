@@ -1,0 +1,528 @@
+{
+  "schema": "source-pair-atlas-log-manifest-v1",
+  "codeRevision": "ee5ac5e9d7df593f3b04bf283e5669246366aa66",
+  "logs": [
+    {
+      "file": "attempts/01/logs/brep-full-final.log",
+      "sha256": "ad1d8d452e5a3dabe2586fe06023112620486f83642fde5be6a14aca479ab397",
+      "bytes": 114582,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1066,
+          "failed": 1,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "file": "attempts/01/logs/nurbs-full-final.log",
+      "sha256": "dc4dcf9f2af23f883e6bb1b83c67efd0c8ea988e4715dfc6855adf0bdeae79bf",
+      "bytes": 173561,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1568,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "attempts/01/logs/source-volume-matrices-final.log",
+      "sha256": "82b987e33437ded1b5b94ba4bf53d7def809cffe5dc9ac4f8e5271d9395e86c7",
+      "bytes": 12657,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "attempts/02/logs/brep-aag-serial-final.log",
+      "sha256": "3c615354e4ce115415e2bbd200f01ff96b9126f01adc25e6abadb336b63ff9ac",
+      "bytes": 13528,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "attempts/02/logs/brep-full-final.log",
+      "sha256": "d0e3a08007d85e84a78daffc67acd523cf2681d4ebe3343163d6f9446cb29a9e",
+      "bytes": 113574,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 1067,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "file": "attempts/02/logs/bridge-full-final.log",
+      "sha256": "dbdbc91035d17bb2d3fe19f1fb6d4204f24b621c203168095704837660dab319",
+      "bytes": 43773,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 339,
+          "failed": 1,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "file": "attempts/02/logs/nurbs-full-final.log",
+      "sha256": "954138e806b60f1680a6c0979f0df6246dcbeed1fa81879c0faa9c0f21dc0325",
+      "bytes": 173561,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 1568,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "attempts/02/logs/source-volume-matrices-final.log",
+      "sha256": "137a672d5d04c7a5c4c6aa2050ea2d35ea6e1d5649796e1371389a6934fe953d",
+      "bytes": 12566,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/atlas-closed-bishop-first.log",
+      "sha256": "8576455a7d0a9b8fcd860c560d1f6fb362f8d096a43098397afb8b92679882a7",
+      "bytes": 11267,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/atlas-expanded-first.log",
+      "sha256": "42e5894adc8ce4496529ad7268d09eafb7dc35a71327141cab67c1968d1986aa",
+      "bytes": 11180,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/axis-plane-first.log",
+      "sha256": "49d01a09487dc511e9dff6413f24c878f86f330f1c0ccb0f640293b752c1b5d7",
+      "bytes": 7422,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/bishop-damaged-seed-final.log",
+      "sha256": "2258fd0f54de5dc2be68e1cb32a2098bb6aea0db257d9023c6bd8e685843a7cd",
+      "bytes": 8187,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/bishop-json-first.log",
+      "sha256": "6631d7c8995068fdadbe9310a4b8585fabdb31096a37afaee5f78dbafa4b3e07",
+      "bytes": 12795,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/brep-aag-serial-final.log",
+      "sha256": "3c615354e4ce115415e2bbd200f01ff96b9126f01adc25e6abadb336b63ff9ac",
+      "bytes": 13528,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/brep-full-final.log",
+      "sha256": "d0e3a08007d85e84a78daffc67acd523cf2681d4ebe3343163d6f9446cb29a9e",
+      "bytes": 113574,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1067,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "file": "logs/bridge-atlas-first.log",
+      "sha256": "008afd4a65001fec547ebfa5ac3a27bc1f15094fb4040a38ed66bb008f83df3f",
+      "bytes": 14787,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/bridge-full-final.log",
+      "sha256": "5e79fe2bb31a7d5bf73819eff6305db476361eaa92704c9c596a657c8fdf2b42",
+      "bytes": 42543,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-cached-matrix.log",
+      "sha256": "7c5680eb990cf29a56fb8c45d889f6e886a67e01d9fe2e927a19775081e90667",
+      "bytes": 9914,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-common-metric-matrix.log",
+      "sha256": "22610335aa5e2186fce2b4a019261789c9977543f73d586fba94121dbbf198b1",
+      "bytes": 10202,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-debug-matrix.log",
+      "sha256": "fee87f891b0e6d0dacd1f9a9bc949482a7a8a106fa141282e0c7eb7c3f7665d1",
+      "bytes": 41749,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 0,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-first-closed-test.log",
+      "sha256": "dfac225d8a9ebc25a5672d6f8361669071aa677895e6fae4c44aeb2e3d58b1ae",
+      "bytes": 9021,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-first-matrix-test.log",
+      "sha256": "b676b45eaba86a109e733ce816e56ae9861f982644256c7f8cda39d2c51a3aed",
+      "bytes": 9914,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-guided-axis-matrix.log",
+      "sha256": "f88989d894de0887e050d520c84017d94189607236d58169997e70d4f98119c0",
+      "bytes": 10449,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-hull-refinement-matrix.log",
+      "sha256": "432bd810a3957d4b5aede549d4af54cbd6d8cc6a0d943fa90c327ca6e06da800",
+      "bytes": 10203,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-original-axis-matrix.log",
+      "sha256": "b971518e2232e04498f7283323dbfe58579366bdfe6b487ba2bc0657adc7969c",
+      "bytes": 10820,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-pose-matrix.log",
+      "sha256": "0515906ab897edb8bd26a4ba12fa66c23299efebe736617db786829ae20c000c",
+      "bytes": 10203,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-preconditioned-matrix.log",
+      "sha256": "0aea4b601a5a7f06d6ff7a58f2bf95c52f26b54b68b7ada9ec41f6175af0ea9d",
+      "bytes": 9915,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/diagnostic-temporal-matrix.log",
+      "sha256": "d323554b1e901dfe0ae938baa09271cabcec66b2124e20201b3ca7ac2bfce7a9",
+      "bytes": 10202,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 4,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/json-miter-refinement-repaired.log",
+      "sha256": "d3858f79585b4f4ffef6285ec407aa09b66182f2c4c14f15191d86a42af6f717",
+      "bytes": 12110,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/miter-refinement-diagnostic.log",
+      "sha256": "74c077787dd986f1f3a13cb7233334229bc8ae2f84033b986880f31fa125d1c4",
+      "bytes": 9594,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": []
+    },
+    {
+      "file": "logs/miter-refinement-repaired.log",
+      "sha256": "d2e6883b4db903f2463d96b3e282a4a1f48c716ca15a60a1f8d4a0e7f8065124",
+      "bytes": 10938,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/miter-refinement-values.log",
+      "sha256": "0770745e116d24350b7b694f724f389805bd20650e79485896a700d529e8a42b",
+      "bytes": 12168,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 0,
+          "failed": 1,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/native-json-step-final.log",
+      "sha256": "51e4e0093e042933f0aa6a6774651d592feb47d51e92e2062bf915ea9777009a",
+      "bytes": 12992,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": [
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/no-codec-libraries-final.log",
+      "sha256": "9897f3a78734613aa61378255332bf0a87e03ba3cc4364c1c2691515ad280b13",
+      "bytes": 15278,
+      "role": "qualified-check",
+      "terminalExitCode": 0,
+      "testResults": []
+    },
+    {
+      "file": "logs/nurbs-full-final.log",
+      "sha256": "954138e806b60f1680a6c0979f0df6246dcbeed1fa81879c0faa9c0f21dc0325",
+      "bytes": 173561,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 1568,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "file": "logs/source-volume-matrices-final.log",
+      "sha256": "137a672d5d04c7a5c4c6aa2050ea2d35ea6e1d5649796e1371389a6934fe953d",
+      "bytes": 12566,
+      "role": "historical-diagnostic",
+      "terminalExitCode": null,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    }
+  ]
+}

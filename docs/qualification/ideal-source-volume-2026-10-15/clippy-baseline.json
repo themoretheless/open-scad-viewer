@@ -1,0 +1,195 @@
+{
+  "baseline": "1447375db27b676002a057cef39df2958cc6faac",
+  "status": "baseline-lints-unresolved",
+  "diagnostics": [
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 35,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "the loop variable `k` is used to index `out`"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 113,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 114,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 116,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 303,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 304,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 382,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "line": 405,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_identity.rs",
+      "line": 46,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/projective_strip_jets.rs",
+      "line": 48,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/projective_strip_jets.rs",
+      "line": 264,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_strip_jets.rs",
+      "line": 44,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bspline_internal_jets.rs",
+      "line": 182,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bspline_internal_jets.rs",
+      "line": 310,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "very complex type used. Consider factoring parts into `type` definitions"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bspline_internal_jets.rs",
+      "line": 409,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bspline_knot_jets.rs",
+      "line": 37,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bspline_endpoint_jets.rs",
+      "line": 44,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_point_identity.rs",
+      "line": 16,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/bezier_point_identity.rs",
+      "line": 21,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/projected_surface_jacobian.rs",
+      "line": 138,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/projected_surface_jacobian.rs",
+      "line": 164,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "the loop variable `axis` is used to index `h`"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/planar_bezier_roots.rs",
+      "line": 77,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "the loop variable `k` is used to index `out`"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/planar_bezier_roots.rs",
+      "line": 444,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-predicate-clippy.log",
+      "file": "crates/cad-predicates/src/planar_bezier_roots.rs",
+      "line": 729,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "using `chunks_exact` with a constant chunk size"
+    },
+    {
+      "log": "osv-ideal-native-clippy.log",
+      "file": "crates/nurbs-core/src/numerics/error_upper.rs",
+      "line": 22,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "approximate value of `f{32, 64}::consts::SQRT_2` found"
+    },
+    {
+      "log": "osv-ideal-native-clippy.log",
+      "file": "crates/nurbs-core/src/sweeps/profile_geometry.rs",
+      "line": 299,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "approximate value of `f{32, 64}::consts::PI` found"
+    },
+    {
+      "log": "osv-ideal-native-clippy.log",
+      "file": "crates/nurbs-core/src/sweep_support/error_upper.rs",
+      "line": 22,
+      "lineUnchangedFromBaseline": true,
+      "diagnostic": "approximate value of `f{32, 64}::consts::SQRT_2` found"
+    }
+  ]
+}

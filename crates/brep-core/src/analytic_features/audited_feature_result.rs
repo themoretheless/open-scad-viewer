@@ -10,37 +10,9 @@ pub struct AuditedFeatureResult {
     pub change_set: ChangeSet,
     pub naming_complete: bool,
 }
-impl value_codec::Serialize for AuditedFeatureResult {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({
-            "model":self.model,
-            "certificate":{
-                "capability":self.feature.capability,
-                "complete":self.feature.complete,
-                "notes":self.feature.notes
-            },
-            "context":{
-                "version":self.context.version,
-                "canonical":self.context.canonical
-            },
-            "evidenceClaimCount":self.evidence.claims.len(),
-            "audit":{
-                "ok":self.audit.ok,
-                "bodyCount":self.audit.body_count,
-                "shellCount":self.audit.shell_count,
-                "selfIntersectionPairsCandidate": self.audit.self_intersection_pairs_candidate,
-                "selfIntersectionComplete": self.audit.self_intersection_complete,
-                "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked,
-                "notes":self.audit.notes
-            },
-            "changeSet":self.change_set,
-            "namingComplete":self.naming_complete
-        })
-    }
-}
 
 #[allow(dead_code)]
-fn unavailable(capability: &str) -> Error {
+pub(super) fn unavailable(capability: &str) -> Error {
     Error::new(
         "BREP_CAPABILITY_UNAVAILABLE",
         format!("{capability} is Unavailable until its QualificationPlan release"),
@@ -236,99 +208,203 @@ pub fn exact_convex_chamfer(
 /// edges may be any subset of its longitudinal straight edges; mixed rounded
 /// and sharp profile vertices and the all-selected closed profile are admitted.
 /// Cap-edge chains and valence-3 rolling-ball corners remain typed-refused.
-pub(super) fn ordered_prism_cap_profile(model: &Model, vertices: &[[f64; 3]], z: f64, tol: f64) -> Result<Vec<[f64; 2]>> {
+pub(super) fn ordered_prism_cap_profile(
+    model: &Model,
+    vertices: &[[f64; 3]],
+    z: f64,
+    tol: f64,
+) -> Result<Vec<[f64; 2]>> {
     // Consolidate coplanar cap faces by removing their shared internal edges.
     let mut counts = std::collections::BTreeMap::<usize, usize>::new();
     for face in &model.faces {
-        let loops: Vec<_> = std::iter::once(face.outer).chain(face.holes.iter().copied()).collect();
-        if !loops.iter().flat_map(|&l| &model.loops[l].coedges).all(|coedge| model.edges[coedge.edge].vertices.iter().all(|&vertex| (vertices[vertex][2] - z).abs() <= tol)) { continue; }
-        for coedge in loops.iter().flat_map(|&l| &model.loops[l].coedges) { *counts.entry(coedge.edge).or_default() += 1; }
+        let loops: Vec<_> = std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .collect();
+        if !loops
+            .iter()
+            .flat_map(|&l| &model.loops[l].coedges)
+            .all(|coedge| {
+                model.edges[coedge.edge]
+                    .vertices
+                    .iter()
+                    .all(|&vertex| (vertices[vertex][2] - z).abs() <= tol)
+            })
+        {
+            continue;
+        }
+        for coedge in loops.iter().flat_map(|&l| &model.loops[l].coedges) {
+            *counts.entry(coedge.edge).or_default() += 1;
+        }
     }
     let mut neighbors = std::collections::BTreeMap::<usize, Vec<usize>>::new();
     for (edge, count) in counts {
-        if count == 2 { continue; }
-        if count != 1 { return Err(refuse("BREP_EXACT_FILLET_REFUSED", "Cap partition has nonmanifold edge incidence")); }
-        let [a,b] = model.edges[edge].vertices;
+        if count == 2 {
+            continue;
+        }
+        if count != 1 {
+            return Err(refuse(
+                "BREP_EXACT_FILLET_REFUSED",
+                "Cap partition has nonmanifold edge incidence",
+            ));
+        }
+        let [a, b] = model.edges[edge].vertices;
         neighbors.entry(a).or_default().push(b);
         neighbors.entry(b).or_default().push(a);
     }
     if neighbors.len() < 3 || neighbors.values().any(|n| n.len() != 2) {
-        return Err(refuse("BREP_EXACT_FILLET_REFUSED", "Prism cap requires a closed simple boundary"));
+        return Err(refuse(
+            "BREP_EXACT_FILLET_REFUSED",
+            "Prism cap requires a closed simple boundary",
+        ));
     }
     let start = *neighbors.keys().next().unwrap();
     let mut current = start;
     let mut previous = usize::MAX;
     let mut profile = Vec::with_capacity(neighbors.len());
     for step in 0..neighbors.len() {
-        if step > 0 && current == start { return Err(refuse("BREP_EXACT_FILLET_REFUSED", "Prism cap holes or disconnected boundaries are unsupported")); }
-        let p = vertices[current]; profile.push([p[0],p[1]]);
-        let next = *neighbors[&current].iter().find(|&&v| v != previous).unwrap();
-        previous = current; current = next;
+        if step > 0 && current == start {
+            return Err(refuse(
+                "BREP_EXACT_FILLET_REFUSED",
+                "Prism cap holes or disconnected boundaries are unsupported",
+            ));
+        }
+        let p = vertices[current];
+        profile.push([p[0], p[1]]);
+        let next = *neighbors[&current]
+            .iter()
+            .find(|&&v| v != previous)
+            .unwrap();
+        previous = current;
+        current = next;
     }
-    if current != start { return Err(refuse("BREP_EXACT_FILLET_REFUSED", "Prism cap boundary does not close")); }
-    let area: f64 = profile.iter().enumerate().map(|(i,a)| {let b=profile[(i+1)%profile.len()];a[0]*b[1]-a[1]*b[0]}).sum();
-    if area < 0. { profile.reverse(); }
+    if current != start {
+        return Err(refuse(
+            "BREP_EXACT_FILLET_REFUSED",
+            "Prism cap boundary does not close",
+        ));
+    }
+    let area: f64 = profile
+        .iter()
+        .enumerate()
+        .map(|(i, a)| {
+            let b = profile[(i + 1) % profile.len()];
+            a[0] * b[1] - a[1] * b[0]
+        })
+        .sum();
+    if area < 0. {
+        profile.reverse();
+    }
     Ok(profile)
 }
 
-pub fn exact_convex_prism_fillet(model: &Model, edges: &[usize], radius: f64) -> Result<AuditedFeatureResult> {
+pub fn exact_convex_prism_fillet(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
     exact_prism_fillet(model, edges, radius, true)
 }
 
 /// Constant-radius convex longitudinal rounds; holes, concave selected corners,
 /// curved input spans and unresolved boundary separation are refused.
-pub fn exact_simple_prism_fillet(model: &Model, edges: &[usize], radius: f64) -> Result<AuditedFeatureResult> {
+pub fn exact_simple_prism_fillet(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
     exact_prism_fillet(model, edges, radius, false)
 }
 
 /// Constant outer rounds of complete longitudinal chains in a layered prism.
 /// Cavity intersections and unproven layer arrangements are refused.
-pub fn exact_layered_prism_fillet(model: &Model, edges: &[usize], radius: f64) -> Result<AuditedFeatureResult> {
+pub fn exact_layered_prism_fillet(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
     let denied = |message: &str| refuse("BREP_LAYERED_FILLET_REFUSED", message);
     model.validate()?;
-    if edges.is_empty() || edges.iter().any(|i| *i >= model.edges.len()) || !radius.is_finite() || radius <= 0. {
+    if edges.is_empty()
+        || edges.iter().any(|i| *i >= model.edges.len())
+        || !radius.is_finite()
+        || radius <= 0.
+    {
         return Err(denied("Select source edges and a positive finite radius"));
     }
     let first = &model.edges[edges[0]];
-    let direction = sub3(model.vertices[first.vertices[1]].point, model.vertices[first.vertices[0]].point);
+    let direction = sub3(
+        model.vertices[first.vertices[1]].point,
+        model.vertices[first.vertices[0]].point,
+    );
     let (local, _, frame) = crate::prism_frame::localize_along(model, model, Some(direction))?
         .ok_or_else(|| denied("Source has no proven common prism frame"))?;
     if local.edges.iter().any(|e| e.curve.degree != 1) {
-        return Err(denied("Layered envelope requires straight source boundaries"));
+        return Err(denied(
+            "Layered envelope requires straight source boundaries",
+        ));
     }
     let layers = crate::stepped_prism::recognize(&local)?
         .ok_or_else(|| denied("Source layers are unresolved"))?;
     let low = layers.iter().map(|l| l.low).fold(f64::INFINITY, f64::min);
-    let high = layers.iter().map(|l| l.high).fold(f64::NEG_INFINITY, f64::max);
+    let high = layers
+        .iter()
+        .map(|l| l.high)
+        .fold(f64::NEG_INFINITY, f64::max);
     // Monotone hull supplies a cutting envelope, never substitute source material.
     // The construction below proves containment independently for every layer.
-    let mut points: Vec<[f64;2]> = local.vertices.iter().map(|v| [v.point[0],v.point[1]]).collect();
-    points.sort_by(|a,b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    let mut points: Vec<[f64; 2]> = local
+        .vertices
+        .iter()
+        .map(|v| [v.point[0], v.point[1]])
+        .collect();
+    points.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
     points.dedup();
-    let turn = |a:[f64;2],b:[f64;2],c:[f64;2]| (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
-    let hull_scale = points.iter().flatten().fold(1_f64, |a,b| a.max(b.abs()));
+    let turn = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| {
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    };
+    let hull_scale = points.iter().flatten().fold(1_f64, |a, b| a.max(b.abs()));
     let hull_roundoff = 128. * f64::EPSILON * hull_scale * hull_scale;
     let mut hull = Vec::new();
-    let mut lower: Vec<[f64;2]> = Vec::new();
-    let mut upper: Vec<[f64;2]> = Vec::new();
-    for (chain, sequence) in [(&mut lower, points.clone()), (&mut upper, points.iter().rev().copied().collect())] {
+    let mut lower: Vec<[f64; 2]> = Vec::new();
+    let mut upper: Vec<[f64; 2]> = Vec::new();
+    for (chain, sequence) in [
+        (&mut lower, points.clone()),
+        (&mut upper, points.iter().rev().copied().collect()),
+    ] {
         for p in sequence {
-            while chain.len() >= 2 && turn(chain[chain.len()-2],chain[chain.len()-1],p) <= hull_roundoff { chain.pop(); }
+            while chain.len() >= 2
+                && turn(chain[chain.len() - 2], chain[chain.len() - 1], p) <= hull_roundoff
+            {
+                chain.pop();
+            }
             chain.push(p);
         }
         chain.pop();
     }
-    hull.extend(lower); hull.extend(upper);
-    if hull.len()<3 { return Err(denied("Source envelope is degenerate")); }
-    let ring: Vec<_> = (0..hull.len()).map(|i| crate::line(hull[i].to_vec(), hull[(i+1)%hull.len()].to_vec())).collect();
+    hull.extend(lower);
+    hull.extend(upper);
+    if hull.len() < 3 {
+        return Err(denied("Source envelope is degenerate"));
+    }
+    let ring: Vec<_> = (0..hull.len())
+        .map(|i| crate::line(hull[i].to_vec(), hull[(i + 1) % hull.len()].to_vec()))
+        .collect();
     let envelope = crate::prism::extrude(&[ring], low, high)?;
     let result = round_layered_prism_in_envelope(&local, &envelope, edges, radius)?;
     let mut result = frame.restore(&result)?;
     result.inherit_topology_ids(&[model]);
-    certify_blend_result(result, "exact-layered-prism-edge-fillet/1", vec![
-        "complete_longitudinal_chains", "removed_region_inside_every_layer",
-        "source_preserving_envelope_intersection", "bounded_rigid_frame_normalization",
-    ], radius, "BREP_LAYERED_FILLET_REFUSED")
+    certify_blend_result(
+        result,
+        "exact-layered-prism-edge-fillet/1",
+        vec![
+            "complete_longitudinal_chains",
+            "removed_region_inside_every_layer",
+            "source_preserving_envelope_intersection",
+            "bounded_rigid_frame_normalization",
+        ],
+        radius,
+        "BREP_LAYERED_FILLET_REFUSED",
+    )
 }
 
 /// Internal construction in a common extrusion frame. The envelope is only a
@@ -343,8 +419,14 @@ pub(super) fn round_layered_prism_in_envelope(
     let denied = |message: &str| refuse("BREP_LAYERED_FILLET_REFUSED", message);
     source.validate()?;
     audit_solid(source)?;
-    if edges.is_empty() || edges.iter().any(|i| *i >= source.edges.len())
-        || edges.iter().copied().collect::<std::collections::BTreeSet<_>>().len() != edges.len()
+    if edges.is_empty()
+        || edges.iter().any(|i| *i >= source.edges.len())
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != edges.len()
     {
         return Err(denied("Select unique source edges"));
     }
@@ -353,227 +435,80 @@ pub(super) fn round_layered_prism_in_envelope(
     let profile = crate::prism::recognize(envelope)?
         .ok_or_else(|| denied("Fillet envelope must be a proven prism"))?;
     let tol = source.tolerance_mm;
-    if layers.is_empty() || layers.iter().any(|l| l.low < profile.z_min || l.high > profile.z_max) {
+    if layers.is_empty()
+        || layers
+            .iter()
+            .any(|l| l.low < profile.z_min || l.high > profile.z_max)
+    {
         return Err(denied("Envelope must span every source layer"));
     }
-    let same = |a: [f64; 3], b: [f64; 3]| (0..3).all(|i| (a[i]-b[i]).abs() <= tol);
-    let mut coverage = std::collections::BTreeMap::<usize, Vec<(f64,f64)>>::new();
+    let same = |a: [f64; 3], b: [f64; 3]| (0..3).all(|i| (a[i] - b[i]).abs() <= tol);
+    let mut coverage = std::collections::BTreeMap::<usize, Vec<(f64, f64)>>::new();
     for index in edges {
         let edge = &source.edges[*index];
         if edge.curve.degree != 1 {
             return Err(denied("Selected source edges must be straight"));
         }
-        let [a,b] = edge.vertices.map(|i| source.vertices[i].point);
-        let matches: Vec<_> = envelope.edges.iter().enumerate().filter_map(|(i,e)| {
-            let [c,d] = e.vertices.map(|j| envelope.vertices[j].point);
-            let vertical = same([a[0],a[1],0.],[c[0],c[1],0.])
-                && same([b[0],b[1],0.],[d[0],d[1],0.])
-                && same([c[0],c[1],0.],[d[0],d[1],0.]);
-            (vertical && a[2].min(b[2]) >= c[2].min(d[2])-tol
-                && a[2].max(b[2]) <= c[2].max(d[2])+tol
-                && (a[2]-b[2]).abs()>tol).then_some(i)
-        }).collect();
+        let [a, b] = edge.vertices.map(|i| source.vertices[i].point);
+        let matches: Vec<_> = envelope
+            .edges
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| {
+                let [c, d] = e.vertices.map(|j| envelope.vertices[j].point);
+                let vertical = same([a[0], a[1], 0.], [c[0], c[1], 0.])
+                    && same([b[0], b[1], 0.], [d[0], d[1], 0.])
+                    && same([c[0], c[1], 0.], [d[0], d[1], 0.]);
+                (vertical
+                    && a[2].min(b[2]) >= c[2].min(d[2]) - tol
+                    && a[2].max(b[2]) <= c[2].max(d[2]) + tol
+                    && (a[2] - b[2]).abs() > tol)
+                    .then_some(i)
+            })
+            .collect();
         if matches.len() != 1 {
             return Err(denied("Selected edge must span a complete envelope corner"));
         }
-        coverage.entry(matches[0]).or_default().push((a[2].min(b[2]),a[2].max(b[2])));
+        coverage
+            .entry(matches[0])
+            .or_default()
+            .push((a[2].min(b[2]), a[2].max(b[2])));
     }
     for spans in coverage.values_mut() {
-        spans.sort_by(|a,b| a.0.total_cmp(&b.0));
+        spans.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut end = profile.z_min;
-        for &(low,high) in spans.iter() {
-            if (low-end).abs()>tol { return Err(denied("Select the complete corner chain without gaps or overlaps")); }
-            end=high;
+        for &(low, high) in spans.iter() {
+            if (low - end).abs() > tol {
+                return Err(denied(
+                    "Select the complete corner chain without gaps or overlaps",
+                ));
+            }
+            end = high;
         }
-        if (end-profile.z_max).abs()>tol { return Err(denied("Select the complete corner chain")); }
+        if (end - profile.z_max).abs() > tol {
+            return Err(denied("Select the complete corner chain"));
+        }
     }
     let envelope_edges: Vec<_> = coverage.keys().copied().collect();
     let rounded = exact_convex_prism_fillet(envelope, &envelope_edges, radius)?.model;
     let rounded_profile = crate::prism::recognize(&rounded)?
         .ok_or_else(|| denied("Rounded envelope lost its prismatic proof"))?;
-    let removed = crate::planar_trim::boolean(&profile.loops, &rounded_profile.loops, "difference", tol)?;
+    let removed =
+        crate::planar_trim::boolean(&profile.loops, &rounded_profile.loops, "difference", tol)?;
     for layer in &layers {
-        if !crate::planar_trim::boolean(&layer.profile, &profile.loops, "difference", tol)?.is_empty() {
+        if !crate::planar_trim::boolean(&layer.profile, &profile.loops, "difference", tol)?
+            .is_empty()
+        {
             return Err(denied("Envelope does not contain the complete source"));
         }
         if !crate::planar_trim::boolean(&removed, &layer.profile, "difference", tol)?.is_empty() {
-            return Err(denied("Fillet would intersect a cavity or missing material"));
+            return Err(denied(
+                "Fillet would intersect a cavity or missing material",
+            ));
         }
     }
     let mut result = boolean(source, &rounded, "intersection")?;
     result.inherit_topology_ids(&[source]);
     audit_solid(&result)?;
     Ok(result)
-}
-
-fn exact_prism_fillet(
-    model: &Model,
-    edges: &[usize],
-    radius: f64,
-    require_convex: bool,
-) -> Result<AuditedFeatureResult> {
-    audit_solid(model).map_err(|_| {
-        refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Fillet source must pass the global solid audit",
-        )
-    })?;
-    if edges.is_empty()
-        || !(radius.is_finite() && radius > 0.)
-        || model.edges.iter().any(|edge| edge.curve.degree != 1)
-        || model
-            .faces
-            .iter()
-            .any(|face| face.surface.degree_u != 1 || face.surface.degree_v != 1)
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Exact prism fillet requires selected straight edges, planar faces, and positive constant radius",
-        ));
-    }
-    let selected: std::collections::BTreeSet<_> = edges.iter().copied().collect();
-    if selected.len() != edges.len() || selected.iter().any(|edge| *edge >= model.edges.len()) {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Selected fillet edges must be unique authored edges",
-        ));
-    }
-    let first = &model.edges[edges[0]];
-    let p0 = model.vertices[first.vertices[0]].point;
-    let p1 = model.vertices[first.vertices[1]].point;
-    let w = unit3(sub3(p1, p0)).ok_or_else(|| {
-        refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Selected fillet edge is collapsed",
-        )
-    })?;
-    let helper = if w[0].abs() < 0.8 {
-        [1., 0., 0.]
-    } else {
-        [0., 1., 0.]
-    };
-    let u = unit3(cross3(helper, w)).unwrap();
-    let v = cross3(w, u);
-    let local = |p: [f64; 3]| [dot3(p, u), dot3(p, v), dot3(p, w)];
-    let local_vertices: Vec<_> = model
-        .vertices
-        .iter()
-        .map(|vertex| local(vertex.point))
-        .collect();
-    let z0 = local_vertices
-        .iter()
-        .map(|point| point[2])
-        .fold(f64::INFINITY, f64::min);
-    let z1 = local_vertices
-        .iter()
-        .map(|point| point[2])
-        .fold(f64::NEG_INFINITY, f64::max);
-    let tol = model.tolerance_mm * 16.;
-    if z1 - z0 <= tol
-        || local_vertices
-            .iter()
-            .any(|point| (point[2] - z0).abs() > tol && (point[2] - z1).abs() > tol)
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Selected edges do not define a two-cap planar prism",
-        ));
-    }
-    let profile = ordered_prism_cap_profile(model, &local_vertices, z0, tol)?;
-    let top = ordered_prism_cap_profile(model, &local_vertices, z1, tol)?;
-    if top.len() != profile.len() || top.iter().any(|a| !profile.iter().any(|b| (a[0]-b[0]).hypot(a[1]-b[1]) <= tol)) {
-        return Err(refuse("BREP_EXACT_FILLET_REFUSED", "Prism caps must have matching projected boundaries"));
-    }
-    if profile.len() < 3
-        || require_convex && profile.iter().enumerate().any(|(i, a)| {
-            let b = profile[(i + 1) % profile.len()];
-            let c = profile[(i + 2) % profile.len()];
-            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <= tol
-        })
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Prism profile must be strictly convex",
-        ));
-    }
-    let mut longitudinal = vec![None; profile.len()];
-    for (edge_id, edge) in model.edges.iter().enumerate() {
-        let [a, b] = edge.vertices.map(|vertex| local_vertices[vertex]);
-        let spans_caps = ((a[2] - z0).abs() <= tol && (b[2] - z1).abs() <= tol)
-            || ((b[2] - z0).abs() <= tol && (a[2] - z1).abs() <= tol);
-        if (a[0] - b[0]).hypot(a[1] - b[1]) > tol || !spans_caps {
-            continue;
-        }
-        let index = profile
-            .iter()
-            .position(|p| (p[0] - a[0]).hypot(p[1] - a[1]) <= tol)
-            .ok_or_else(|| {
-                refuse(
-                    "BREP_EXACT_FILLET_REFUSED",
-                    "Longitudinal edge does not correspond to the convex cap profile",
-                )
-            })?;
-        longitudinal[index] = Some(edge_id);
-    }
-    if longitudinal.iter().any(Option::is_none)
-        || selected.iter().any(|edge| {
-            !longitudinal
-                .iter()
-                .any(|candidate| candidate == &Some(*edge))
-        })
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Cap edges and valence-3 corner chains require an unavailable exact transition proof",
-        ));
-    }
-    let rounded: Vec<_> = longitudinal
-        .iter()
-        .map(|edge| selected.contains(&edge.unwrap()))
-        .collect();
-    let local_source = crate::transform::affine(
-        model,
-        [
-            [u[0], u[1], u[2], 0.],
-            [v[0], v[1], v[2], 0.],
-            [w[0], w[1], w[2], 0.],
-            [0., 0., 0., 1.],
-        ],
-    )?;
-    let local_result = crate::imprint_pipeline::rounded_convex_prism_edges(
-        &local_source,
-        &profile,
-        &rounded,
-        radius,
-        z0,
-        z1,
-    )
-    .map_err(|error| {
-        refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            &format!("Exact prism fillet feasibility refused: {}", error.message),
-        )
-    })?;
-    let result = crate::transform::affine(
-        &local_result,
-        [
-            [u[0], v[0], w[0], 0.],
-            [u[1], v[1], w[1], 0.],
-            [u[2], v[2], w[2], 0.],
-            [0., 0., 0., 1.],
-        ],
-    )?;
-    certify_blend_result(
-        result,
-        if require_convex { EXACT_CONVEX_PRISM_FILLET_CAPABILITY } else { EXACT_SIMPLE_PRISM_FILLET_CAPABILITY },
-        vec![
-            "exact_positive_weight_circular_profile",
-            "exact_cylindrical_longitudinal_patch",
-            "mixed_selected_unselected_profile_vertices",
-            "open_or_closed_profile_selection",
-            "no_mesh_fallback",
-        ],
-        radius,
-        "BREP_EXACT_FILLET_REFUSED",
-    )
 }

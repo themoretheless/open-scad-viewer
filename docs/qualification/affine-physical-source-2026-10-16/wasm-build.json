@@ -1,0 +1,26 @@
+{
+  "schema": "affine-physical-private-wasm-build/1",
+  "sourceRevision": "49bafb25557018ffe8e09dd24f784f699287470d",
+  "inputsSha256": "9d944c894bc839993b2aff2410d226532b2b1820cc40e4661276b54e3fa82303",
+  "command": [
+    "cargo",
+    "+nightly-2026-09-16",
+    "build",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--release"
+  ],
+  "wasmSha256": "1c87182e8750580463714c37ea57e37680de37acb60b5a556ad950104178d130",
+  "wasmBytes": 18265041,
+  "artifact": "/private/tmp/osv-affine-physical-private-artifact-20261016/geometry_wasm.wasm",
+  "buildExitCode": 0,
+  "sourceGuardVerified": true,
+  "runtimeQualified": false,
+  "publicPackageQualified": false,
+  "fullGoalComplete": false
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "pr58-ci-and-mesh/1",
+  "baseCommit": "f7d85f4e20987ffac702d7b2654e3eec0e133228",
+  "sourceCommit": "03cb6f94b5c649417970411dfba65233b226da60",
+  "geometryBuildSourceCommit": "302de6706fe8230969963788fe92c3860c57a0dc",
+  "frozenSourceInputs": 3825,
+  "sourceUnchanged": true,
+  "artifacts": [
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "bytes": 12834623,
+      "sha256": "2e0e21416b1266384f3b33c18b5de381220c89ee10449b7c4f847361eda120a9"
+    },
+    {
+      "path": "public/wasm/language-kernel.wasm",
+      "bytes": 2523510,
+      "sha256": "8e69ecfb63734cb5e9c432ab1c50ae2922069694239b785705faece78ed3894d"
+    },
+    {
+      "path": "src/generated/geometry-kernels/bytes.ts",
+      "bytes": 4338491,
+      "sha256": "3c97cc56e7ea59558f53ecebe60b2ec6ca457948942c5b0e710039946df5d520"
+    },
+    {
+      "path": "src/generated/geometry-kernels/identity.ts",
+      "bytes": 195,
+      "sha256": "b5d85c7d867e601774da28977a4f61647d87bb428a768ca16cdade0d5e3092d7"
+    },
+    {
+      "path": "src/generated/language-kernel/bytes.ts",
+      "bytes": 438702,
+      "sha256": "9a2803a855ab8cc1af069ef1a1782697009a26721035e0b5d60c1c5d1bae1162"
+    },
+    {
+      "path": "src/generated/language-kernel/identity.ts",
+      "bytes": 194,
+      "sha256": "68f0c244a915388204ae5c8a15ee629671910e908d9f2681c48d371e9e8435a3"
+    }
+  ],
+  "checks": {
+    "nativeTestsPassed": 13,
+    "nativeSourceCases": 9,
+    "nativeMeshLevels": 27,
+    "node20": {
+      "version": "v20.19.0",
+      "passed": 5,
+      "scope": "the five previous CI failures"
+    },
+    "node22": {
+      "version": "v22.23.3",
+      "passed": 86,
+      "scope": "all four affected test files"
+    },
+    "chromiumSourceCasesPassed": 9,
+    "chromiumMeshLevelsPassed": 27,
+    "chromiumPostStepMeshesPassed": 9,
+    "globalGeometryCasesPassed": 72,
+    "globalGeometryTypedRefusals": 24,
+    "sourceGuardTestsPassed": 10,
+    "vueTypes": true,
+    "mcpTypes": true,
+    "architectureAudit": true,
+    "ownershipAudit": true,
+    "distVerified": true,
+    "deliveryLimitsChanged": false,
+    "proofBudgetsChanged": false
+  },
+  "partitionInventory": "Standalone local cargo --workspace -- --list was cancelled after it began a redundant full workspace compilation; deferred to fresh CI. Its log is not passing evidence. Partition unit tests passed.",
+  "fullNativeWorkspaceQualified": false,
+  "fullSemanticG1Qualified": false,
+  "completeUiLifecycleQualified": false,
+  "scope": "Two scoped PR58 corrections; no claim that the overall ideal-source geometry goal is complete."
+}

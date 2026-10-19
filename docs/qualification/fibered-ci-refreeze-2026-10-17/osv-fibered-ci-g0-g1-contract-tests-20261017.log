@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /private/tmp/osv-fibered-ci-architecture-20261016
+
+
+ Test Files  2 passed (2)
+      Tests  33 passed (33)
+   Start at  01:48:50
+   Duration  25.03s (transform 65ms, setup 0ms, import 101ms, tests 27.21s, environment 1ms)
+

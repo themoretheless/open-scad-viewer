@@ -241,7 +241,7 @@ pub enum PlaneSphereComponent {
 }
 
 /// Worst |.|p|-r|. and |n.(p-o)| over `count` samples of the curve domain.
-fn circle_residuals(
+pub(super) fn circle_residuals(
     curve: &Curve,
     sphere: &CanonicalSphere,
     plane: &CanonicalPlane,
@@ -409,30 +409,6 @@ pub fn intersect_plane_sphere(
     Ok(report)
 }
 
-impl value_codec::Serialize for PlanePatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for PlaneSphereComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                full,
-                plane_uv,
-                sphere_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"full":full,"planeUv":plane_uv,"sphereUv":sphere_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
-}
-
 /// Builds the canonical planar patch operand: a one-face open model with an
 /// exact bilinear affine surface over the unit square, unit-square boundary
 /// trims and four corner vertices (the cuboid face construction, freestanding).
@@ -454,12 +430,12 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
         edges.push(Edge {
             degenerate: false,
             vertices: [i, j],
-            curve: super::test_utils::line(corners[i].to_vec(), corners[j].to_vec()),
+            curve: super::super::test_utils::line(corners[i].to_vec(), corners[j].to_vec()),
         });
         coedges.push(Coedge {
             edge: i,
             reversed: false,
-            pcurve: super::test_utils::line(uv[i].to_vec(), uv[j].to_vec()),
+            pcurve: super::super::test_utils::line(uv[i].to_vec(), uv[j].to_vec()),
         });
     }
     let mut model = Model(

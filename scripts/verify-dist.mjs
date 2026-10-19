@@ -108,7 +108,13 @@ const limits = new Map([
 // Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
 // Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
 // Native lattice printability/strength screens and weak-spot markers: measured 4,113,186 bytes.
-const geometryChunkBudget = 4_120_000
+// Resolved main plus general frame/cap proofs: measured 4,138,000 bytes.
+// Original source-fibered/implicit-sphere/rational-cap guarantees: CI PR58
+// measured 4,315,924 bytes; local unchanged-speed profile measured 4,315,061.
+// Size-only compiler candidates saved up to178956 bytes but regressed three
+// native proof requests by32-52% in eight alternating pairs, so retain the
+// existing runtime recipe. Evidence: docs/qualification/fibered-ci-size-2026-10-17/.
+const geometryChunkBudget = 4_340_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 103_000],
@@ -130,9 +136,8 @@ const jsChunkBudgets = [
   [/^assets\/renderer-[^/]+\.js$/, 138_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
-  // Splitting the ModelGraph emitter match into per-kind methods adds 4 kB of
-  // raw WASM; measured: 470,803 bytes.
-  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 474_000],
+  // Rational-surface and transform-plan language kernels: measured 516,458 bytes.
+  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 517_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
   // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.
@@ -386,7 +391,11 @@ for (const [name, artifact, compression] of [
 // Keep a 9,759-byte delivery margin for the measured cross-host packaging variation.
 // ownRust50 source-cell proofs: measured 8,379,122 local asset bytes.
 // Keep a bounded margin for the existing Node 20/22 build variation.
-const totalBudget = 8_390_000
+// Resolved main with the rebuilt general frame/cap kernel: measured 8,404,489 bytes.
+// Rebuilt original source-fibered/implicit sphere/rational cap proofs measured
+// 8,581,543 asset bytes locally. Keep28500bytes for measured cross-host packing
+// variation; other named chunk limits and all geometric proof budgets stay fixed.
+const totalBudget = 8_610_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 

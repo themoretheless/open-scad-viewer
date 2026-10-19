@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "scope": "Rust native exact-sphere entry, owned pole quotient proofs and finite frame/cap matrix",
+  "sourceBase": "a4e7fdb7c2535fdf4cc331b7ec0a29d23edd231f",
+  "sourceBundle": {
+    "sha256": "182e2e6264f666720e16d6831e37b7cc56da1fcfcf69856b7149e9926c0638bc",
+    "paths": [
+      "architecture-baseline.json",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/sphere_poles.rs",
+      "crates/brep-core/src/analytic/sphere_regular.rs",
+      "crates/brep-core/src/boundary_embedding/regularity.rs",
+      "crates/brep-core/src/face_injectivity.rs",
+      "crates/brep-core/src/shared_boundary.rs",
+      "crates/brep-core/src/shared_boundary/pole_support.rs",
+      "crates/brep-core/src/volume_validity.rs",
+      "crates/geometry-bridge/src/cad_face_contacts.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/sweep_pipeline.rs",
+      "crates/geometry-bridge/src/tests/frame_cap_qualification.rs",
+      "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs",
+      "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/transport.rs",
+      "crates/nurbs-core/src/sweeps/progressive_sweep/tests/authored_error_regressions.rs",
+      "crates/nurbs-core/src/sweeps/progressive_sweep/tests/fixed_normal_arc_line.rs"
+    ]
+  },
+  "exactSphereApi": [
+    "brep_core::analytic::sphere_exact",
+    "brep_nurbs_sphere_exact"
+  ],
+  "legacySphereUvLayoutPreserved": true,
+  "arbitraryIntersectionUvLiftsForPoleLayoutQualified": false,
+  "frameCapMatrix": {
+    "cells": 192,
+    "certified": 144,
+    "typedRefusals": 48,
+    "missing": 0,
+    "source": "crates/geometry-bridge/src/tests/frame_cap_qualification.rs",
+    "catalogSha256": "c87e4f5380758a8a10254f6b6bdc0b7ee79462df2323ca1bf7a4d20c4160e13d"
+  },
+  "architecture": {
+    "layerViolations": 0,
+    "pinnedOversizedFiles": 147,
+    "sizeLimitsIncreased": false
+  },
+  "productionWasmRebuilt": false,
+  "g1v96ResultsImported": false,
+  "logArchive": {
+    "path": "native-logs.tar.gz",
+    "sha256": "098af26f34eb5e41fcfe1d6ded9c1620c2bd04a19466e064bd6c326279c68800",
+    "byteLength": 48841
+  },
+  "validation": [
+    {
+      "id": "brep-full",
+      "path": "osv-global-brep-final.log",
+      "sha256": "f0f5a5c4c886f7fa4aca2046b298993a87379b999ccd463c859e62a165aab90f",
+      "byteLength": 116882,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 1089,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "id": "bridge-full",
+      "path": "osv-global-bridge-final.log",
+      "sha256": "4e4056dc67ed26c0d5346b051d2b9eadb3e878c4a4995b3b172374a312472090",
+      "byteLength": 45426,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 324,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "id": "progressive-sweep",
+      "path": "osv-global-nurbs-final-v2.log",
+      "sha256": "3d7dc24b5aed3db0df8e206c995840251fafe0adcf63d409e7e5d96bed0fd9f0",
+      "byteLength": 35294,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 187,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "id": "pole-injectivity",
+      "path": "osv-global-pole-final-v2.log",
+      "sha256": "1bf2ef048cb0c1e61b0c97bd14d57fd792524ba1a374d768e145027bb17593b0",
+      "byteLength": 9141,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "id": "frame-cap-final",
+      "path": "osv-frame-cap-qualified-source-final.log",
+      "sha256": "632be37007ee0dad3aff1504d2499357c40ad2174dfbfe612675d0dc47036ef3",
+      "byteLength": 15281,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "id": "sphere-poles-final",
+      "path": "osv-sphere-poles-final.log",
+      "sha256": "8172fbb53af335432029c72a394dd66cfa0094c6af0954e044f3a6b2fc9877c1",
+      "byteLength": 12570,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "id": "face-injectivity-final",
+      "path": "osv-face-injectivity-final.log",
+      "sha256": "4df6994bc779a018b721e547040e9efd741ef355d307b713f3f5d7e2142a3cac",
+      "byteLength": 12918,
+      "status": "passed",
+      "results": [
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "id": "wasm-target-check",
+      "path": "osv-global-final-wasm-check-v2.log",
+      "sha256": "f11b9030e9f8da16034aeca9362a4919d4105b67c178217fa9a5eb8eba36fbd3",
+      "byteLength": 15684,
+      "status": "passed",
+      "results": []
+    }
+  ]
+}

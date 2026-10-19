@@ -89,5 +89,3 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
   context.save(); context.translate(20, size - padding); context.rotate(-Math.PI / 2)
   context.fillText(`Y ${bounds.min[1].toFixed(2)} … ${bounds.max[1].toFixed(2)} mm`, 0, 0); context.restore()
 }
-
-

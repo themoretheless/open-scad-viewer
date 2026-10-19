@@ -1,0 +1,1170 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /tmp/osv-general-merged-target/.../wgsl_export
+  |                                    ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:306:9
+    |
+306 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 30 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+warning: type `CanonicalPolygon` is more private than the item `canonical_polygons`
+   --> brep-core/src/direct_edit/movement.rs:337:1
+    |
+337 | / pub(super) fn canonical_polygons(
+338 | |     model: &Model,
+339 | |     substitute: &BTreeMap<usize, [f64; 3]>,
+340 | |     guard: &mut BudgetGuard,
+341 | | ) -> Result<Vec<CanonicalPolygon>> {
+    | |__________________________________^ function `canonical_polygons` is reachable at visibility `pub(in crate::direct_edit)`
+    |
+note: but type `CanonicalPolygon` is only usable at visibility `pub(self)`
+   --> brep-core/src/direct_edit/movement.rs:318:1
+    |
+318 | struct CanonicalPolygon {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:174:8
+    |
+174 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:180:8
+    |
+180 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:191:8
+    |
+191 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:230:8
+    |
+230 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `brep-core` (lib) generated 5 warnings
+warning: unused import: `super::*`
+ --> rush-frontend/src/lower/compiler.rs:1:5
+  |
+1 | use super::*;
+  |     ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `compiler::*`
+  --> rush-frontend/src/lower/mod.rs:24:5
+   |
+24 | use compiler::*;
+   |     ^^^^^^^^^^^
+
+warning: unused import: `super::*`
+ --> rush-frontend/src/parser/parser.rs:1:5
+  |
+1 | use super::*;
+  |     ^^^^^^^^
+
+warning: unused import: `parser::*`
+  --> rush-frontend/src/parser/mod.rs:14:5
+   |
+14 | use parser::*;
+   |     ^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> rush-frontend/src/value.rs:55:31
+   |
+55 |  ({$($fields:tt)*}) => {{ let mut object=value_codec::Map::new();json!(@fields object; $($fields)*);value_codec::Value::Object(objec...
+   |                               ----^^^^^^
+   |                               |
+   |                               help: remove this `mut`
+   |
+  ::: rush-frontend/src/lower/compiler_impl_3.rs:79:28
+   |
+79 |             let mut fields=json!({});
+   |                            --------- in this macro invocation
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+   = note: this warning originates in the macro `json` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: `rush-frontend` (lib) generated 5 warnings (run `cargo fix --lib -p rush-frontend` to apply 5 suggestions)
+warning: unused import: `spectral::*`
+   --> mechanics-core/src/frame.rs:305:5
+    |
+305 | use spectral::*;
+    |     ^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `plasticity::*`
+   --> mechanics-core/src/frame.rs:313:5
+    |
+313 | use plasticity::*;
+    |     ^^^^^^^^^^^^^
+
+warning: unused import: `influence::*`
+   --> mechanics-core/src/frame.rs:321:5
+    |
+321 | use influence::*;
+    |     ^^^^^^^^^^^^
+
+warning: unused import: `nonlinear::*`
+   --> mechanics-core/src/truss.rs:396:5
+    |
+396 | use nonlinear::*;
+    |     ^^^^^^^^^^^^
+
+warning: `mechanics-core` (lib) generated 4 warnings (run `cargo fix --lib -p mechanics-core` to apply 4 suggestions)
+warning: unused import: `RECOGNITION`
+  --> brep-intersect/src/plane_sphere/mod.rs:32:51
+   |
+32 | use super::sphere_sphere::{self, CanonicalSphere, RECOGNITION, SpherePatchCircle};
+   |                                                   ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ARC_WEIGHT`
+  --> brep-intersect/src/sphere_cylinder/mod.rs:28:11
+   |
+28 |     self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+   |           ^^^^^^^^^^
+
+warning: `brep-intersect` (lib) generated 2 warnings (run `cargo fix --lib -p brep-intersect` to apply 2 suggestions)
+warning: unused import: `BTreeSet`
+ --> geometry-bridge/src/cad_lattice.rs:5:34
+  |
+5 | use std::collections::{BTreeMap, BTreeSet};
+  |                                  ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `profile` is never used
+  --> geometry-bridge/src/miter_smoothness.rs:18:8
+   |
+18 | pub fn profile(r: &ProfileReport, max_work: u64, has_caps: bool) -> Value {
+   |        ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `diagnose_cap_decomposition` is never used
+   --> geometry-bridge/src/cad_sweep_smoothness.rs:184:8
+    |
+184 | pub fn diagnose_cap_decomposition(v: Value) -> Result<Value> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `geometry-bridge` (lib) generated 3 warnings (run `cargo fix --lib -p geometry-bridge` to apply 1 suggestion)
+warning: unused import: `super::*`
+ --> rush-runtime/src/emit/emitter.rs:1:5
+  |
+1 | use super::*;
+  |     ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `emitter::*`
+  --> rush-runtime/src/emit/mod.rs:23:5
+   |
+23 | use emitter::*;
+   |     ^^^^^^^^^^
+
+warning: unused import: `super::*`
+ --> rush-runtime/src/eval/evaluator.rs:1:5
+  |
+1 | use super::*;
+  |     ^^^^^^^^
+
+warning: unused import: `evaluator::*`
+  --> rush-runtime/src/eval/mod.rs:28:5
+   |
+28 | use evaluator::*;
+   |     ^^^^^^^^^^^^
+
+warning: unused variable: `parent`
+ --> rush-runtime/src/emit/emit_cases_2.rs:4:84
+  |
+4 |         let NativeEmitCtx { item, key, op, nodes, scope, current, depth, expected, parent, allow_assembly, source_start } = cx;
+  |                                                                                    ^^^^^^ help: try ignoring the field: `parent: _`
+  |
+  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `allow_assembly`
+ --> rush-runtime/src/emit/emit_cases_2.rs:4:92
+  |
+4 |         let NativeEmitCtx { item, key, op, nodes, scope, current, depth, expected, parent, allow_assembly, source_start } = cx;
+  |                                                                                            ^^^^^^^^^^^^^^ help: try ignoring the field: `allow_assembly: _`
+
+warning: `rush-runtime` (lib) generated 6 warnings (run `cargo fix --lib -p rush-runtime` to apply 6 suggestions)
+warning: unused import: `super::*`
+ --> openscad-core/src/eval/evaluator_2.rs:1:5
+  |
+1 | use super::*;
+  |     ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `evaluator_2::*`
+  --> openscad-core/src/eval/mod.rs:53:5
+   |
+53 | use evaluator_2::*;
+   |     ^^^^^^^^^^^^^^
+
+warning: `openscad-core` (lib) generated 2 warnings (run `cargo fix --lib -p openscad-core` to apply 2 suggestions)
+warning: `geometry-bridge` (lib test) generated 2 warnings (2 duplicates)
+warning: `mechanics-core` (lib test) generated 4 warnings (4 duplicates)
+warning: `rush-runtime` (lib test) generated 6 warnings (6 duplicates)
+warning: `rush-frontend` (lib test) generated 5 warnings (5 duplicates)
+warning: function `point_of` is never used
+ --> brep-intersect/src/plane_cone/tests/mod.rs:5:4
+  |
+5 | fn point_of(jet: &[f64]) -> [f64; 3] {
+  |    ^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `point_of` is never used
+ --> brep-intersect/src/plane_cylinder/tests/mod.rs:5:4
+  |
+5 | fn point_of(jet: &[f64]) -> [f64; 3] {
+  |    ^^^^^^^^
+
+warning: `brep-intersect` (lib test) generated 4 warnings (2 duplicates)
+warning: `brep-core` (lib test) generated 5 warnings (5 duplicates)
+warning: unnecessary parentheses around function argument
+   --> nurbs-core/src/numerics/robust_solvers/rrqr.rs:334:38
+    |
+334 |         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+    |                                      ^                 ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+334 -         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+334 +         assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
+    |
+
+warning: unused variable: `i`
+   --> nurbs-core/src/numerics/simd_kernels.rs:271:13
+    |
+271 |         for i in 0..interior {
+    |             ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cell`
+   --> nurbs-core/src/distance/subdivision.rs:244:29
+    |
+244 |         fn split(&mut self, cell: ()) -> Result<Split<()>> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_cell`
+
+warning: unused variable: `du`
+   --> nurbs-core/src/offset/tests/fillet_surfaces.rs:228:10
+    |
+228 |     let (du, dv) = domain(surface);
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_du`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+  --> nurbs-core/src/join/continuity/preparation/tests.rs:29:4
+   |
+29 | fn aligns_degrees_domains_and_knots_without_introducing_C0_seams() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+   |
+   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 23 warnings (16 duplicates) (run `cargo fix --lib -p nurbs-core --tests` to apply 5 suggestions)
+warning: `openscad-core` (lib test) generated 2 warnings (2 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.80s
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/brep-core/bd6aaeb8263ff3d5/out/brep_core-bd6aaeb8263ff3d5)
+aag::tests::budget_exhaustion_is_a_typed_error: test
+aag::tests::collapsed_edge_is_flagged_degenerate_not_classified: test
+aag::tests::coplanar_split_sheet_reads_smooth_and_boundary: test
+aag::tests::cuboid_edges_are_all_convex: test
+aag::tests::cuboid_faces_are_planes_with_unit_area: test
+aag::tests::cylinder_model_faces_classify_exactly: test
+aag::tests::face_attrs_invalidate_on_geometry_mutation: test
+aag::tests::face_attrs_respect_budget: test
+aag::tests::fillet_face_is_marked_fillet_like: test
+aag::tests::frustum_side_faces_classify_as_cone: test
+aag::tests::invalid_sample_count_is_rejected: test
+aag::tests::l_prism_has_one_concave_vertical_edge: test
+aag::tests::large_model_builds_within_a_second: test
+aag::tests::mixed_sign_aggregation_is_flagged: test
+aag::tests::noisy_cylinder_model_classifies_via_best_fit: test
+aag::tests::revolve_wire_tangent_joints_classify_smooth: test
+aag::tests::seam_edge_on_one_face_is_flagged_not_classified: test
+aag::tests::sphere_patches_classify_as_sphere: test
+aag::tests::torus_patches_classify_as_torus: test
+aag_features::tests::blind_hole_in_revolved_cup: test
+aag_features::tests::boss_and_primitives_have_no_pockets: test
+aag_features::tests::budget_exhaustion_is_a_typed_error: test
+aag_features::tests::closed_pocket_straight_walls: test
+aag_features::tests::corpus_precision_recall_and_through_blind: test
+aag_features::tests::counterbore_blind_hole: test
+aag_features::tests::countersink_blind_hole: test
+aag_features::tests::drafted_pocket_reports_draft_angle: test
+aag_features::tests::half_hole_on_body_boundary_matches_by_angle_range: test
+aag_features::tests::missing_attrs_are_a_typed_error: test
+aag_features::tests::nested_pockets_form_a_hierarchy: test
+aag_features::tests::open_pocket_at_body_boundary: test
+aag_features::tests::pocket_corpus_recall_and_hierarchy: test
+aag_features::tests::pocket_with_floor_fillet_collapses_chain: test
+aag_features::tests::pockets_require_fresh_attrs_and_budget: test
+aag_features::tests::revolved_round_pocket_matches_through_fixed_aag: test
+aag_features::tests::solid_primitives_have_no_holes: test
+aag_features::tests::through_hole_in_tube: test
+aag_fillets::tests::budget_exhaustion_is_a_typed_error: test
+aag_fillets::tests::fillet_chain_constructor_yields_one_chain_per_corner: test
+aag_fillets::tests::mismatched_graph_is_rejected: test
+aag_fillets::tests::missing_face_attrs_are_computed_on_demand: test
+aag_fillets::tests::plain_cuboid_has_no_fillet_chains: test
+aag_fillets::tests::single_constant_radius_fillet_is_one_chain: test
+aag_fillets::tests::valence3_corner_splits_into_three_disjoint_chains: test
+
+44 tests, 0 benchmarks
+     Running tests/arbitrary_axis_boolean.rs (/tmp/osv-general-merged-target/debug/build/brep-core/010334ea0e5afafa/out/arbitrary_axis_boolean-010334ea0e5afafa)
+0 tests, 0 benchmarks
+     Running tests/curved_boolean_audit.rs (/tmp/osv-general-merged-target/debug/build/brep-core/9fbac6186f49f9e2/out/curved_boolean_audit-9fbac6186f49f9e2)
+0 tests, 0 benchmarks
+     Running tests/dbg_fillet.rs (/tmp/osv-general-merged-target/debug/build/brep-core/673f12cc05df1ae4/out/dbg_fillet-673f12cc05df1ae4)
+0 tests, 0 benchmarks
+     Running tests/identity_decode.rs (/tmp/osv-general-merged-target/debug/build/brep-core/45dfc33f9a118a7d/out/identity_decode-45dfc33f9a118a7d)
+0 tests, 0 benchmarks
+     Running tests/intersection_engine_on_models.rs (/tmp/osv-general-merged-target/debug/build/brep-core/e991b846e76cacca/out/intersection_engine_on_models-e991b846e76cacca)
+0 tests, 0 benchmarks
+     Running tests/mass_properties_audit.rs (/tmp/osv-general-merged-target/debug/build/brep-core/7644eb10e260e143/out/mass_properties_audit-7644eb10e260e143)
+0 tests, 0 benchmarks
+     Running tests/mass_serialized_boolean.rs (/tmp/osv-general-merged-target/debug/build/brep-core/e3ecca2ed06bf23c/out/mass_serialized_boolean-e3ecca2ed06bf23c)
+0 tests, 0 benchmarks
+     Running tests/planar_cap.rs (/tmp/osv-general-merged-target/debug/build/brep-core/8ac0379aa4d7428f/out/planar_cap-8ac0379aa4d7428f)
+0 tests, 0 benchmarks
+     Running tests/planar_edit_review.rs (/tmp/osv-general-merged-target/debug/build/brep-core/061b6323e27b4bb2/out/planar_edit_review-061b6323e27b4bb2)
+0 tests, 0 benchmarks
+     Running tests/prism.rs (/tmp/osv-general-merged-target/debug/build/brep-core/6397bb96134d16d3/out/prism-6397bb96134d16d3)
+0 tests, 0 benchmarks
+     Running tests/prism_frame.rs (/tmp/osv-general-merged-target/debug/build/brep-core/4a8e4b38eb179cc3/out/prism_frame-4a8e4b38eb179cc3)
+0 tests, 0 benchmarks
+     Running tests/prism_intervals.rs (/tmp/osv-general-merged-target/debug/build/brep-core/3a0b7a36e4efe83b/out/prism_intervals-3a0b7a36e4efe83b)
+0 tests, 0 benchmarks
+     Running tests/rack.rs (/tmp/osv-general-merged-target/debug/build/brep-core/3d1098172a76f53b/out/rack-3d1098172a76f53b)
+0 tests, 0 benchmarks
+     Running tests/regularized_boolean.rs (/tmp/osv-general-merged-target/debug/build/brep-core/41ef52a5254529bc/out/regularized_boolean-41ef52a5254529bc)
+0 tests, 0 benchmarks
+     Running tests/stepped_prism.rs (/tmp/osv-general-merged-target/debug/build/brep-core/87630fad8a382552/out/stepped_prism-87630fad8a382552)
+0 tests, 0 benchmarks
+     Running tests/stepped_prism_frame.rs (/tmp/osv-general-merged-target/debug/build/brep-core/030f6aaf4be4ea7a/out/stepped_prism_frame-030f6aaf4be4ea7a)
+0 tests, 0 benchmarks
+     Running tests/sweep_cap_contacts.rs (/tmp/osv-general-merged-target/debug/build/brep-core/43597df25303d1e1/out/sweep_cap_contacts-43597df25303d1e1)
+0 tests, 0 benchmarks
+     Running tests/sweep_retained_caps.rs (/tmp/osv-general-merged-target/debug/build/brep-core/78031fda3324ca09/out/sweep_retained_caps-78031fda3324ca09)
+0 tests, 0 benchmarks
+     Running tests/sweep_retained_walls.rs (/tmp/osv-general-merged-target/debug/build/brep-core/5c7f5b422aa47de3/out/sweep_retained_walls-5c7f5b422aa47de3)
+0 tests, 0 benchmarks
+     Running tests/thread.rs (/tmp/osv-general-merged-target/debug/build/brep-core/5caa17540b121b20/out/thread-5caa17540b121b20)
+0 tests, 0 benchmarks
+     Running tests/tolerant_ssi.rs (/tmp/osv-general-merged-target/debug/build/brep-core/65ffa7dd97d975ea/out/tolerant_ssi-65ffa7dd97d975ea)
+0 tests, 0 benchmarks
+     Running tests/topology_identity.rs (/tmp/osv-general-merged-target/debug/build/brep-core/c233aafa5f991e64/out/topology_identity-c233aafa5f991e64)
+0 tests, 0 benchmarks
+     Running tests/topology_transactions.rs (/tmp/osv-general-merged-target/debug/build/brep-core/ba302505688756d1/out/topology_transactions-ba302505688756d1)
+0 tests, 0 benchmarks
+     Running tests/validation_sampler.rs (/tmp/osv-general-merged-target/debug/build/brep-core/80b0e497136abb0b/out/validation_sampler-80b0e497136abb0b)
+0 tests, 0 benchmarks
+     Running tests/watertight.rs (/tmp/osv-general-merged-target/debug/build/brep-core/3cc6e0df28e378e4/out/watertight-3cc6e0df28e378e4)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/brep-intersect/215c1a73946c9d8e/out/brep_intersect-215c1a73946c9d8e)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/brep-topology/a9c47b51fdb169cf/out/brep_topology-a9c47b51fdb169cf)
+0 tests, 0 benchmarks
+     Running tests/exact_vertices.rs (/tmp/osv-general-merged-target/debug/build/brep-topology/9d68f21333be187d/out/exact_vertices-9d68f21333be187d)
+0 tests, 0 benchmarks
+     Running tests/incremental_revalidation.rs (/tmp/osv-general-merged-target/debug/build/brep-topology/b9bc283545bbe41c/out/incremental_revalidation-b9bc283545bbe41c)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/bridge-analysis/7e88c76558b1a4a2/out/bridge_analysis-7e88c76558b1a4a2)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/bridge-cam/7b0e80a2b6e3cc7c/out/bridge_cam-7b0e80a2b6e3cc7c)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/bridge-codec/fa192c55034b0d85/out/bridge_codec-fa192c55034b0d85)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/bridge-svg/1a905eab5afd6aa1/out/bridge_svg-1a905eab5afd6aa1)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/cad-predicates/88b4a62cf077612b/out/cad_predicates-88b4a62cf077612b)
+0 tests, 0 benchmarks
+     Running tests/construction3_recipes.rs (/tmp/osv-general-merged-target/debug/build/cad-predicates/d6d5968426a917df/out/construction3_recipes-d6d5968426a917df)
+0 tests, 0 benchmarks
+     Running tests/construction_recipes.rs (/tmp/osv-general-merged-target/debug/build/cad-predicates/f396efd69dca5c01/out/construction_recipes-f396efd69dca5c01)
+0 tests, 0 benchmarks
+     Running tests/independent_oracle.rs (/tmp/osv-general-merged-target/debug/build/cad-predicates/2adc54bd69ca2a2c/out/independent_oracle-2adc54bd69ca2a2c)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/cad-step/4360d5ad35438f0f/out/cad_step-4360d5ad35438f0f)
+0 tests, 0 benchmarks
+     Running tests/analysis_freeform.rs (/tmp/osv-general-merged-target/debug/build/cad-step/acb3ef216cfa169a/out/analysis_freeform-acb3ef216cfa169a)
+0 tests, 0 benchmarks
+     Running tests/close_topology_interchange.rs (/tmp/osv-general-merged-target/debug/build/cad-step/65621430f926fc56/out/close_topology_interchange-65621430f926fc56)
+0 tests, 0 benchmarks
+     Running tests/guided_loft_step.rs (/tmp/osv-general-merged-target/debug/build/cad-step/b620cb7fe4f3a735/out/guided_loft_step-b620cb7fe4f3a735)
+0 tests, 0 benchmarks
+     Running tests/nonplanar_loft_caps.rs (/tmp/osv-general-merged-target/debug/build/cad-step/924c9fda965a93cd/out/nonplanar_loft_caps-924c9fda965a93cd)
+0 tests, 0 benchmarks
+     Running tests/prism_step.rs (/tmp/osv-general-merged-target/debug/build/cad-step/86181fd9a4af8182/out/prism_step-86181fd9a4af8182)
+0 tests, 0 benchmarks
+     Running tests/rational_section_loft.rs (/tmp/osv-general-merged-target/debug/build/cad-step/6352c206afa9fda1/out/rational_section_loft-6352c206afa9fda1)
+0 tests, 0 benchmarks
+     Running tests/source_body_step.rs (/tmp/osv-general-merged-target/debug/build/cad-step/e3675ba5f0edde17/out/source_body_step-e3675ba5f0edde17)
+0 tests, 0 benchmarks
+     Running tests/source_exchange_step.rs (/tmp/osv-general-merged-target/debug/build/cad-step/163536e493206e71/out/source_exchange_step-163536e493206e71)
+0 tests, 0 benchmarks
+     Running tests/step_v1.rs (/tmp/osv-general-merged-target/debug/build/cad-step/be177e6a6f3bad1b/out/step_v1-be177e6a6f3bad1b)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/compute-core/d75940adf144f535/out/compute_core-d75940adf144f535)
+0 tests, 0 benchmarks
+     Running tests/batch.rs (/tmp/osv-general-merged-target/debug/build/compute-core/c6ba16e1cf539a51/out/batch-c6ba16e1cf539a51)
+0 tests, 0 benchmarks
+     Running tests/binary64.rs (/tmp/osv-general-merged-target/debug/build/compute-core/35ec8bdb422870da/out/binary64-35ec8bdb422870da)
+0 tests, 0 benchmarks
+     Running tests/contracts.rs (/tmp/osv-general-merged-target/debug/build/compute-core/2eb284bc1fbdc5c3/out/contracts-2eb284bc1fbdc5c3)
+0 tests, 0 benchmarks
+     Running tests/dot.rs (/tmp/osv-general-merged-target/debug/build/compute-core/82cf47f4b22cc001/out/dot-82cf47f4b22cc001)
+0 tests, 0 benchmarks
+     Running tests/evaluation.rs (/tmp/osv-general-merged-target/debug/build/compute-core/88e5a982a2e9528b/out/evaluation-88e5a982a2e9528b)
+0 tests, 0 benchmarks
+     Running tests/fused_sum.rs (/tmp/osv-general-merged-target/debug/build/compute-core/5116654d67209cd6/out/fused_sum-5116654d67209cd6)
+0 tests, 0 benchmarks
+     Running tests/fusion.rs (/tmp/osv-general-merged-target/debug/build/compute-core/615699750714435d/out/fusion-615699750714435d)
+0 tests, 0 benchmarks
+     Running tests/fusion_contract.rs (/tmp/osv-general-merged-target/debug/build/compute-core/c94226a0a151bfcb/out/fusion_contract-c94226a0a151bfcb)
+0 tests, 0 benchmarks
+     Running tests/kernels.rs (/tmp/osv-general-merged-target/debug/build/compute-core/a46b505a8e67075e/out/kernels-a46b505a8e67075e)
+0 tests, 0 benchmarks
+     Running tests/matrix.rs (/tmp/osv-general-merged-target/debug/build/compute-core/1925ef04d9bd8985/out/matrix-1925ef04d9bd8985)
+0 tests, 0 benchmarks
+     Running tests/reduction.rs (/tmp/osv-general-merged-target/debug/build/compute-core/20de8dc158fa2b60/out/reduction-20de8dc158fa2b60)
+0 tests, 0 benchmarks
+     Running tests/runtime.rs (/tmp/osv-general-merged-target/debug/build/compute-core/7a7aeb0f6e617853/out/runtime-7a7aeb0f6e617853)
+0 tests, 0 benchmarks
+     Running tests/selection.rs (/tmp/osv-general-merged-target/debug/build/compute-core/ad2da17e6fc277a2/out/selection-ad2da17e6fc277a2)
+0 tests, 0 benchmarks
+     Running tests/tensor.rs (/tmp/osv-general-merged-target/debug/build/compute-core/fe0c4bf7bf56189c/out/tensor-fe0c4bf7bf56189c)
+0 tests, 0 benchmarks
+     Running tests/tensor_attention.rs (/tmp/osv-general-merged-target/debug/build/compute-core/485c03c057d09a94/out/tensor_attention-485c03c057d09a94)
+0 tests, 0 benchmarks
+     Running tests/tensor_backend.rs (/tmp/osv-general-merged-target/debug/build/compute-core/50b335dc5146dbb0/out/tensor_backend-50b335dc5146dbb0)
+0 tests, 0 benchmarks
+     Running tests/tensor_convolution.rs (/tmp/osv-general-merged-target/debug/build/compute-core/d021e19a687ee402/out/tensor_convolution-d021e19a687ee402)
+0 tests, 0 benchmarks
+     Running tests/tensor_index.rs (/tmp/osv-general-merged-target/debug/build/compute-core/1105c623df93ed2a/out/tensor_index-1105c623df93ed2a)
+0 tests, 0 benchmarks
+     Running tests/tensor_low.rs (/tmp/osv-general-merged-target/debug/build/compute-core/e1f8cf8f01c1d1c8/out/tensor_low-e1f8cf8f01c1d1c8)
+0 tests, 0 benchmarks
+     Running tests/tensor_low_attention.rs (/tmp/osv-general-merged-target/debug/build/compute-core/501d5cead9b19fbb/out/tensor_low_attention-501d5cead9b19fbb)
+0 tests, 0 benchmarks
+     Running tests/tensor_low_index.rs (/tmp/osv-general-merged-target/debug/build/compute-core/e387f1f96ccac8a0/out/tensor_low_index-e387f1f96ccac8a0)
+0 tests, 0 benchmarks
+     Running tests/tensor_low_normalization.rs (/tmp/osv-general-merged-target/debug/build/compute-core/32700ca73cbabdbd/out/tensor_low_normalization-32700ca73cbabdbd)
+0 tests, 0 benchmarks
+     Running tests/tensor_low_ops.rs (/tmp/osv-general-merged-target/debug/build/compute-core/91cb52b93ff7d618/out/tensor_low_ops-91cb52b93ff7d618)
+0 tests, 0 benchmarks
+     Running tests/tensor_low_scatter.rs (/tmp/osv-general-merged-target/debug/build/compute-core/cc4fe5197057887a/out/tensor_low_scatter-cc4fe5197057887a)
+0 tests, 0 benchmarks
+     Running tests/tensor_normalization.rs (/tmp/osv-general-merged-target/debug/build/compute-core/e595dbbc34a9b65b/out/tensor_normalization-e595dbbc34a9b65b)
+0 tests, 0 benchmarks
+     Running tests/tensor_reduce.rs (/tmp/osv-general-merged-target/debug/build/compute-core/ac99c605f7750a86/out/tensor_reduce-ac99c605f7750a86)
+0 tests, 0 benchmarks
+     Running tests/tensor_scatter.rs (/tmp/osv-general-merged-target/debug/build/compute-core/e4e85abb8610e694/out/tensor_scatter-e4e85abb8610e694)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/055f8c6336f8c47a/out/compute_cuda-055f8c6336f8c47a)
+0 tests, 0 benchmarks
+     Running tests/convolution.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/24e6af71c5c90af4/out/convolution-24e6af71c5c90af4)
+0 tests, 0 benchmarks
+     Running tests/cuda_tensor.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/51fdc015c155fdbf/out/cuda_tensor-51fdc015c155fdbf)
+0 tests, 0 benchmarks
+     Running tests/evaluation.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/575d8cad9c4aa8c0/out/evaluation-575d8cad9c4aa8c0)
+0 tests, 0 benchmarks
+     Running tests/float64.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/59a6756723be4f3b/out/float64-59a6756723be4f3b)
+0 tests, 0 benchmarks
+     Running tests/float64_indexing.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/0153a2a932e48dab/out/float64_indexing-0153a2a932e48dab)
+0 tests, 0 benchmarks
+     Running tests/graph.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/512ee391d83d7bef/out/graph-512ee391d83d7bef)
+0 tests, 0 benchmarks
+     Running tests/prepared.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/a9d9e72308506c01/out/prepared-a9d9e72308506c01)
+0 tests, 0 benchmarks
+     Running tests/prepared_indexing.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/ebce16fa19c72d1c/out/prepared_indexing-ebce16fa19c72d1c)
+0 tests, 0 benchmarks
+     Running tests/prepared_statistics.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/e47dabbffb226ef6/out/prepared_statistics-e47dabbffb226ef6)
+0 tests, 0 benchmarks
+     Running tests/prepared_typed.rs (/tmp/osv-general-merged-target/debug/build/compute-cuda/c92dbecf679b7bde/out/prepared_typed-c92dbecf679b7bde)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/dc232e2b7be18733/out/compute_mlx-dc232e2b7be18733)
+0 tests, 0 benchmarks
+     Running tests/attention.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/b95179921296c8fd/out/attention-b95179921296c8fd)
+0 tests, 0 benchmarks
+     Running tests/compiled.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/19107be387887664/out/compiled-19107be387887664)
+0 tests, 0 benchmarks
+     Running tests/compiled_attention.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/af0e34d4b42eeba3/out/compiled_attention-af0e34d4b42eeba3)
+0 tests, 0 benchmarks
+     Running tests/compiled_indexing.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/4e53d0a4a9454ab8/out/compiled_indexing-4e53d0a4a9454ab8)
+0 tests, 0 benchmarks
+     Running tests/compiled_scan_compaction.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/60f7d7ed40b218f6/out/compiled_scan_compaction-60f7d7ed40b218f6)
+0 tests, 0 benchmarks
+     Running tests/compiled_scatter.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/ae3e411deb242ace/out/compiled_scatter-ae3e411deb242ace)
+0 tests, 0 benchmarks
+     Running tests/compiled_statistics.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/b426a53f47f69d87/out/compiled_statistics-b426a53f47f69d87)
+0 tests, 0 benchmarks
+     Running tests/compiled_typed.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/90e59b9f2d0e0297/out/compiled_typed-90e59b9f2d0e0297)
+0 tests, 0 benchmarks
+     Running tests/convolution.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/623d878d137edf82/out/convolution-623d878d137edf82)
+0 tests, 0 benchmarks
+     Running tests/evaluation.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/ddf0fc9fe7352492/out/evaluation-ddf0fc9fe7352492)
+0 tests, 0 benchmarks
+     Running tests/index.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/c357348df8369919/out/index-c357348df8369919)
+0 tests, 0 benchmarks
+     Running tests/low_attention.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/a22f7261a45e995d/out/low_attention-a22f7261a45e995d)
+0 tests, 0 benchmarks
+     Running tests/low_index.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/b5fb81e45342eee6/out/low_index-b5fb81e45342eee6)
+0 tests, 0 benchmarks
+     Running tests/low_matmul.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/2c34afe782b9f7cc/out/low_matmul-2c34afe782b9f7cc)
+0 tests, 0 benchmarks
+     Running tests/low_ops.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/fd98ffe8626c1398/out/low_ops-fd98ffe8626c1398)
+0 tests, 0 benchmarks
+     Running tests/low_precision.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/d71399f2213da577/out/low_precision-d71399f2213da577)
+0 tests, 0 benchmarks
+     Running tests/low_scatter.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/cbde958ff2ff0650/out/low_scatter-cbde958ff2ff0650)
+0 tests, 0 benchmarks
+     Running tests/low_statistics.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/145a495b19a503e4/out/low_statistics-145a495b19a503e4)
+0 tests, 0 benchmarks
+     Running tests/native.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/a89e299f03dcd638/out/native-a89e299f03dcd638)
+0 tests, 0 benchmarks
+     Running tests/reduction.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/95a9af871926cc78/out/reduction-95a9af871926cc78)
+0 tests, 0 benchmarks
+     Running tests/scatter.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/0bbfac0cd0728f85/out/scatter-0bbfac0cd0728f85)
+0 tests, 0 benchmarks
+     Running tests/statistics.rs (/tmp/osv-general-merged-target/debug/build/compute-mlx/2b8d78050bf90db1/out/statistics-2b8d78050bf90db1)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/81e1ac598b7ea55a/out/gcode_core-81e1ac598b7ea55a)
+0 tests, 0 benchmarks
+     Running tests/configured_job.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/e455a36d1807516e/out/configured_job-e455a36d1807516e)
+0 tests, 0 benchmarks
+     Running tests/feedrate_override.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/956da4370eb60daa/out/feedrate_override-956da4370eb60daa)
+0 tests, 0 benchmarks
+     Running tests/firmware_state.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/daf6ba37fca624e3/out/firmware_state-daf6ba37fca624e3)
+0 tests, 0 benchmarks
+     Running tests/foreign_extrusion.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/ebe7e2bf67473e2e/out/foreign_extrusion-ebe7e2bf67473e2e)
+0 tests, 0 benchmarks
+     Running tests/foreign_regressions.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/acb9c623c78d26bb/out/foreign_regressions-acb9c623c78d26bb)
+0 tests, 0 benchmarks
+     Running tests/foreign_retraction_contract.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/54695a6db8e7d396/out/foreign_retraction_contract-54695a6db8e7d396)
+0 tests, 0 benchmarks
+     Running tests/job.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/df8af254ee93942b/out/job-df8af254ee93942b)
+0 tests, 0 benchmarks
+     Running tests/preview.rs (/tmp/osv-general-merged-target/debug/build/gcode-core/9a3f39e4adf3a425/out/preview-9a3f39e4adf3a425)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/gcode-optimize/cc336a643a08403c/out/gcode_optimize-cc336a643a08403c)
+0 tests, 0 benchmarks
+     Running tests/optimize.rs (/tmp/osv-general-merged-target/debug/build/gcode-optimize/4166b4fc9819c278/out/optimize-4166b4fc9819c278)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/458d1507021ae071/out/geometry_bridge-458d1507021ae071)
+0 tests, 0 benchmarks
+     Running tests/analytic_brep_tessellation.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/cf40fb0d9f78ccb5/out/analytic_brep_tessellation-cf40fb0d9f78ccb5)
+0 tests, 0 benchmarks
+     Running tests/box_sphere_tessellation.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/6d2cdf38f16addf0/out/box_sphere_tessellation-6d2cdf38f16addf0)
+0 tests, 0 benchmarks
+     Running tests/build_surfaces.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/1aeeb228464edf23/out/build_surfaces-1aeeb228464edf23)
+0 tests, 0 benchmarks
+     Running tests/gcode.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/6b5e2f098e6158a8/out/gcode-6b5e2f098e6158a8)
+0 tests, 0 benchmarks
+     Running tests/gear_tessellation.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/5ad3c36235b92c88/out/gear_tessellation-5ad3c36235b92c88)
+0 tests, 0 benchmarks
+     Running tests/general_boundary_certificate.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/bab6e200f36797ae/out/general_boundary_certificate-bab6e200f36797ae)
+0 tests, 0 benchmarks
+     Running tests/golden_numeric.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/a53ef3b636ff0295/out/golden_numeric-a53ef3b636ff0295)
+0 tests, 0 benchmarks
+     Running tests/loft_generalization.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/7e341cccdb00be84/out/loft_generalization-7e341cccdb00be84)
+0 tests, 0 benchmarks
+     Running tests/owned_brep_dispatch.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/1c6812e8155064d0/out/owned_brep_dispatch-1c6812e8155064d0)
+0 tests, 0 benchmarks
+     Running tests/sweep_pipeline.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/268e6cdf23d19126/out/sweep_pipeline-268e6cdf23d19126)
+0 tests, 0 benchmarks
+     Running tests/sweep_retained_caps.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/aa6f1e69112a9744/out/sweep_retained_caps-aa6f1e69112a9744)
+0 tests, 0 benchmarks
+     Running tests/tolerant_sweep_tessellation.rs (/tmp/osv-general-merged-target/debug/build/geometry-bridge/4c245df999aba620/out/tolerant_sweep_tessellation-4c245df999aba620)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/geometry-ops/2746ea94d91f46e6/out/geometry_ops-2746ea94d91f46e6)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/geometry-wasm/abe032a09457f091/out/geometry_wasm-abe032a09457f091)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/gpu-compute/ea71c90cab7aa39e/out/gpu_compute-ea71c90cab7aa39e)
+0 tests, 0 benchmarks
+     Running tests/features.rs (/tmp/osv-general-merged-target/debug/build/gpu-compute/864e2ca76563c83a/out/features-864e2ca76563c83a)
+0 tests, 0 benchmarks
+     Running tests/memory.rs (/tmp/osv-general-merged-target/debug/build/gpu-compute/90745d76a0409d0c/out/memory-90745d76a0409d0c)
+0 tests, 0 benchmarks
+     Running tests/profiling.rs (/tmp/osv-general-merged-target/debug/build/gpu-compute/ad3049b6ba4e271e/out/profiling-ad3049b6ba4e271e)
+0 tests, 0 benchmarks
+     Running tests/readback.rs (/tmp/osv-general-merged-target/debug/build/gpu-compute/eff990a2c6bed064/out/readback-eff990a2c6bed064)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/languages-bridge/ff6175c0ad339df5/out/languages_bridge-ff6175c0ad339df5)
+0 tests, 0 benchmarks
+     Running tests/rush_declarative.rs (/tmp/osv-general-merged-target/debug/build/languages-bridge/f338543d8c8a2849/out/rush_declarative-f338543d8c8a2849)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/languages-wasm/1e3b426db8e40c53/out/languages_wasm-1e3b426db8e40c53)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/laser-core/cf00930711c2cd50/out/laser_core-cf00930711c2cd50)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/manifold-core/dcc2c1e2e1d3792a/out/manifold_core-dcc2c1e2e1d3792a)
+0 tests, 0 benchmarks
+     Running tests/property.rs (/tmp/osv-general-merged-target/debug/build/manifold-core/5c3d82827a9c6677/out/property-5c3d82827a9c6677)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/manifold-ops/ff9c7158c5bb7e07/out/manifold_ops-ff9c7158c5bb7e07)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mechanical-core/c22c17351baa5658/out/mechanical_core-c22c17351baa5658)
+0 tests, 0 benchmarks
+     Running tests/native_geometry.rs (/tmp/osv-general-merged-target/debug/build/mechanical-core/d6e52670eb243364/out/native_geometry-d6e52670eb243364)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mechanics-core/5fc447f479b199d7/out/mechanics_core-5fc447f479b199d7)
+0 tests, 0 benchmarks
+     Running tests/section.rs (/tmp/osv-general-merged-target/debug/build/mechanics-core/804df683135616dc/out/section-804df683135616dc)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mesh-io/ed20e5f29b77f2c0/out/mesh_io-ed20e5f29b77f2c0)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mesh-query/0d97c64a22074fa7/out/mesh_query-0d97c64a22074fa7)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mesh-section/ec2fbefb47e65c18/out/mesh_section-ec2fbefb47e65c18)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/mesh-topology/b11f7c8de60371be/out/mesh_topology-b11f7c8de60371be)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/904423777ba9337c/out/nurbs_core-904423777ba9337c)
+0 tests, 0 benchmarks
+     Running tests/affine_bounds.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/601b2df9e7207a6e/out/affine_bounds-601b2df9e7207a6e)
+0 tests, 0 benchmarks
+     Running tests/chord_region.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/48273107ce69b243/out/chord_region-48273107ce69b243)
+0 tests, 0 benchmarks
+     Running tests/conditioning.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/b4a34032380ac860/out/conditioning-b4a34032380ac860)
+0 tests, 0 benchmarks
+     Running tests/coordinate_frame.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/f35c6cada0c10eea/out/coordinate_frame-f35c6cada0c10eea)
+0 tests, 0 benchmarks
+     Running tests/curve_chain.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/4537272222005ab1/out/curve_chain-4537272222005ab1)
+0 tests, 0 benchmarks
+     Running tests/curve_deviation.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/eb77cb10269fe91e/out/curve_deviation-eb77cb10269fe91e)
+0 tests, 0 benchmarks
+     Running tests/curve_differential.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/4be648232b169c3b/out/curve_differential-4be648232b169c3b)
+0 tests, 0 benchmarks
+     Running tests/curve_join.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/03711dd7064b5cb2/out/curve_join-03711dd7064b5cb2)
+0 tests, 0 benchmarks
+     Running tests/curve_measure.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/447ab17da60967ca/out/curve_measure-447ab17da60967ca)
+0 tests, 0 benchmarks
+     Running tests/curve_offset.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/d973f631debb562b/out/curve_offset-d973f631debb562b)
+0 tests, 0 benchmarks
+     Running tests/curve_pair_distance.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/91685cf740928024/out/curve_pair_distance-91685cf740928024)
+0 tests, 0 benchmarks
+     Running tests/curve_plane.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/06b52d0e44bf3359/out/curve_plane-06b52d0e44bf3359)
+0 tests, 0 benchmarks
+     Running tests/curve_pullback.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/e1cc17a10280d15b/out/curve_pullback-e1cc17a10280d15b)
+0 tests, 0 benchmarks
+     Running tests/curve_rebuild.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/911b89e3ddb4679b/out/curve_rebuild-911b89e3ddb4679b)
+0 tests, 0 benchmarks
+     Running tests/curve_self_intersection.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/61f8cd0c8cb9893b/out/curve_self_intersection-61f8cd0c8cb9893b)
+0 tests, 0 benchmarks
+     Running tests/curve_surface_distance.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/7e6d94fade9e3be4/out/curve_surface_distance-7e6d94fade9e3be4)
+0 tests, 0 benchmarks
+     Running tests/curve_surface_overlap_regressions.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/f2a9080da9473c06/out/curve_surface_overlap_regressions-f2a9080da9473c06)
+0 tests, 0 benchmarks
+     Running tests/curve_tessellation.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/f9e41ed52e269a60/out/curve_tessellation-f9e41ed52e269a60)
+0 tests, 0 benchmarks
+     Running tests/degree_reduction.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/a21d155576059956/out/degree_reduction-a21d155576059956)
+0 tests, 0 benchmarks
+     Running tests/function_surface.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/cd691fd600e77a23/out/function_surface-cd691fd600e77a23)
+0 tests, 0 benchmarks
+     Running tests/helical_sweep.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/9354a1848efbdcdb/out/helical_sweep-9354a1848efbdcdb)
+0 tests, 0 benchmarks
+     Running tests/involute_quintic.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/af2f2d096a25ee13/out/involute_quintic-af2f2d096a25ee13)
+0 tests, 0 benchmarks
+     Running tests/knot_removal.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/5c122d3cd67e03f5/out/knot_removal-5c122d3cd67e03f5)
+0 tests, 0 benchmarks
+     Running tests/loft_capacity.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/4532c8d716fcdf71/out/loft_capacity-4532c8d716fcdf71)
+0 tests, 0 benchmarks
+     Running tests/machining_profiles.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/2e4ce367da6a4d14/out/machining_profiles-2e4ce367da6a4d14)
+0 tests, 0 benchmarks
+     Running tests/native_edits.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/8485f63692daf4cd/out/native_edits-8485f63692daf4cd)
+0 tests, 0 benchmarks
+     Running tests/nearest_point.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/dde83732d07adb19/out/nearest_point-dde83732d07adb19)
+0 tests, 0 benchmarks
+     Running tests/offset_join.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/ea80e05b1e8fe906/out/offset_join-ea80e05b1e8fe906)
+0 tests, 0 benchmarks
+     Running tests/periodic_seam.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/7df57af1facf87d5/out/periodic_seam-7df57af1facf87d5)
+0 tests, 0 benchmarks
+     Running tests/periodic_seam_candidates.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/a90d93caa4bae52e/out/periodic_seam_candidates-a90d93caa4bae52e)
+0 tests, 0 benchmarks
+     Running tests/periodic_surface_verification.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/c128954622812924/out/periodic_surface_verification-c128954622812924)
+0 tests, 0 benchmarks
+     Running tests/profile_offset.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/753df0ad3a259a9d/out/profile_offset-753df0ad3a259a9d)
+0 tests, 0 benchmarks
+     Running tests/rack.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/33672de0bf720247/out/rack-33672de0bf720247)
+0 tests, 0 benchmarks
+     Running tests/ray_surface.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/18ab7eb56571af19/out/ray_surface-18ab7eb56571af19)
+0 tests, 0 benchmarks
+     Running tests/section_phase.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/90c15fb72597a75a/out/section_phase-90c15fb72597a75a)
+0 tests, 0 benchmarks
+     Running tests/sections.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/ddfe62b4d3345de2/out/sections-ddfe62b4d3345de2)
+0 tests, 0 benchmarks
+     Running tests/shared_tessellation.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/5196ae7ce2e767ea/out/shared_tessellation-5196ae7ce2e767ea)
+0 tests, 0 benchmarks
+     Running tests/surface_correspondence.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/0eac69ed9a21556f/out/surface_correspondence-0eac69ed9a21556f)
+0 tests, 0 benchmarks
+     Running tests/surface_deviation.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/3e6c7974bdb6ff0e/out/surface_deviation-3e6c7974bdb6ff0e)
+0 tests, 0 benchmarks
+     Running tests/surface_differential.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/1090d92c6f62bb9e/out/surface_differential-1090d92c6f62bb9e)
+0 tests, 0 benchmarks
+     Running tests/surface_distance_queries.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/0da39f383d477b42/out/surface_distance_queries-0da39f383d477b42)
+0 tests, 0 benchmarks
+     Running tests/surface_g1.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/85b7c3f243328151/out/surface_g1-85b7c3f243328151)
+0 tests, 0 benchmarks
+     Running tests/surface_g2.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/87ed76f7866b4044/out/surface_g2-87ed76f7866b4044)
+0 tests, 0 benchmarks
+     Running tests/surface_jet_inspection.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/a78b899f811273a8/out/surface_jet_inspection-a78b899f811273a8)
+0 tests, 0 benchmarks
+     Running tests/surface_join.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/f708496813d96e2c/out/surface_join-f708496813d96e2c)
+0 tests, 0 benchmarks
+     Running tests/surface_measure.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/68a39ec00d928435/out/surface_measure-68a39ec00d928435)
+0 tests, 0 benchmarks
+     Running tests/surface_parameter_bounds.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/9e1ca5993f8e6932/out/surface_parameter_bounds-9e1ca5993f8e6932)
+0 tests, 0 benchmarks
+     Running tests/surface_rebuild.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/52a27740e43f7bca/out/surface_rebuild-52a27740e43f7bca)
+0 tests, 0 benchmarks
+     Running tests/surface_regularity.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/3f1f1616b1f8a3bc/out/surface_regularity-3f1f1616b1f8a3bc)
+0 tests, 0 benchmarks
+     Running tests/surface_self_intersection.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/2d6b754d6108c1b1/out/surface_self_intersection-2d6b754d6108c1b1)
+0 tests, 0 benchmarks
+     Running tests/surface_shape_operator.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/9a14e20a2d786c8d/out/surface_shape_operator-9a14e20a2d786c8d)
+0 tests, 0 benchmarks
+     Running tests/surface_simplification.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/5d3068c5b3293dac/out/surface_simplification-5d3068c5b3293dac)
+0 tests, 0 benchmarks
+     Running tests/surface_tessellation.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/881d77c570e4ef0e/out/surface_tessellation-881d77c570e4ef0e)
+0 tests, 0 benchmarks
+     Running tests/thread.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/625d5d27aaa42aa9/out/thread-625d5d27aaa42aa9)
+0 tests, 0 benchmarks
+     Running tests/thread_natural_edges.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/91296c3fbaefb0e7/out/thread_natural_edges-91296c3fbaefb0e7)
+0 tests, 0 benchmarks
+     Running tests/uv_closure.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/27da71477d355a1f/out/uv_closure-27da71477d355a1f)
+0 tests, 0 benchmarks
+     Running tests/uv_point.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/617e726a18b7fd60/out/uv_point-617e726a18b7fd60)
+0 tests, 0 benchmarks
+     Running tests/uv_simplicity.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/67ce4ebc844b571d/out/uv_simplicity-67ce4ebc844b571d)
+0 tests, 0 benchmarks
+     Running tests/weight_edit.rs (/tmp/osv-general-merged-target/debug/build/nurbs-core/6340015ad4e9fe09/out/weight_edit-6340015ad4e9fe09)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/nurbs-intersect/07978908bfea43e1/out/nurbs_intersect-07978908bfea43e1)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/openscad-core/3ac6dd27fd8d107f/out/openscad_core-3ac6dd27fd8d107f)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/osv-math/75f52321da53f478/out/math_core-75f52321da53f478)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/e2ea97ec1e297aea/out/math_compute-e2ea97ec1e297aea)
+0 tests, 0 benchmarks
+     Running tests/device_bounds.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/76b32ff6f8ac89c4/out/device_bounds-76b32ff6f8ac89c4)
+0 tests, 0 benchmarks
+     Running tests/device_chamfer.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/6ac2cdabb4808441/out/device_chamfer-6ac2cdabb4808441)
+0 tests, 0 benchmarks
+     Running tests/device_distance_pairs.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/ad1af831f81c7485/out/device_distance_pairs-ad1af831f81c7485)
+0 tests, 0 benchmarks
+     Running tests/device_local_plane.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/590c7917c6eabf37/out/device_local_plane-590c7917c6eabf37)
+0 tests, 0 benchmarks
+     Running tests/device_moments.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/14b64491ae2fb19b/out/device_moments-14b64491ae2fb19b)
+0 tests, 0 benchmarks
+     Running tests/device_nearest_four.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/61a3244d35bb899c/out/device_nearest_four-61a3244d35bb899c)
+0 tests, 0 benchmarks
+     Running tests/device_nearest_neighbor.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/a132c9ab21758d61/out/device_nearest_neighbor-a132c9ab21758d61)
+0 tests, 0 benchmarks
+     Running tests/device_nearest_two.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/c8e2644ed7ffb32a/out/device_nearest_two-c8e2644ed7ffb32a)
+0 tests, 0 benchmarks
+     Running tests/device_stats.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/f41dad157f6134c3/out/device_stats-f41dad157f6134c3)
+0 tests, 0 benchmarks
+     Running tests/device_transform_error.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/4c6f85f56a6f78bf/out/device_transform_error-4c6f85f56a6f78bf)
+0 tests, 0 benchmarks
+     Running tests/gpu_nearest_cooperative.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/bb78fee434ea89a7/out/gpu_nearest_cooperative-bb78fee434ea89a7)
+0 tests, 0 benchmarks
+     Running tests/gpu_plans.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/dcffaa9059bacef4/out/gpu_plans-dcffaa9059bacef4)
+0 tests, 0 benchmarks
+     Running tests/gpu_recorded_domains.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/d11c5e1bafd68328/out/gpu_recorded_domains-d11c5e1bafd68328)
+0 tests, 0 benchmarks
+     Running tests/gpu_stable_stats.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/11f119575e800a3f/out/gpu_stable_stats-11f119575e800a3f)
+0 tests, 0 benchmarks
+     Running tests/tensor_f64.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/5f56bfb997c1aa21/out/tensor_f64-5f56bfb997c1aa21)
+0 tests, 0 benchmarks
+     Running tests/tensor_math.rs (/tmp/osv-general-merged-target/debug/build/osv-math-compute/b44f63d7ce0ac461/out/tensor_math-b44f63d7ce0ac461)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/photogrammetry-core/4ad4c091a2501189/out/photogrammetry_core-4ad4c091a2501189)
+0 tests, 0 benchmarks
+     Running tests/dense_accuracy.rs (/tmp/osv-general-merged-target/debug/build/photogrammetry-core/1abcbb0c08d3175a/out/dense_accuracy-1abcbb0c08d3175a)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/photogrammetry-ffi/7e532834870afdf1/out/photogrammetry_ffi-7e532834870afdf1)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/photogrammetry-wasm/7357874852cee21d/out/photogrammetry_wasm-7357874852cee21d)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/planar-geometry/a08efe05f9af2a11/out/planar_geometry-a08efe05f9af2a11)
+0 tests, 0 benchmarks
+     Running tests/curvex_parity.rs (/tmp/osv-general-merged-target/debug/build/planar-geometry/12bbc55cd3c075c6/out/curvex_parity-12bbc55cd3c075c6)
+0 tests, 0 benchmarks
+     Running tests/profile_triangulation.rs (/tmp/osv-general-merged-target/debug/build/planar-geometry/ec83e5872e59cfbd/out/profile_triangulation-ec83e5872e59cfbd)
+0 tests, 0 benchmarks
+     Running tests/stroke_robustness.rs (/tmp/osv-general-merged-target/debug/build/planar-geometry/ac2e2e312c4c82bb/out/stroke_robustness-ac2e2e312c4c82bb)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/polygon-core/9a0971d96653a6dc/out/polygon_core-9a0971d96653a6dc)
+0 tests, 0 benchmarks
+     Running tests/sections.rs (/tmp/osv-general-merged-target/debug/build/polygon-core/c3a566bfbed97315/out/sections-c3a566bfbed97315)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/printer-cli/59049eef45dc3607/out/printer_cli-59049eef45dc3607)
+0 tests, 0 benchmarks
+     Running unittests src/main.rs (/tmp/osv-general-merged-target/debug/build/printer-cli/0cd58d794d38e547/out/printer_cli-0cd58d794d38e547)
+0 tests, 0 benchmarks
+     Running tests/cli.rs (/tmp/osv-general-merged-target/debug/build/printer-cli/6b1606458db39876/out/cli-6b1606458db39876)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/printer-core/e8ad357b857e2dc3/out/printer_core-e8ad357b857e2dc3)
+0 tests, 0 benchmarks
+     Running tests/bambu_lan.rs (/tmp/osv-general-merged-target/debug/build/printer-core/d27496b1438e5395/out/bambu_lan-d27496b1438e5395)
+0 tests, 0 benchmarks
+     Running tests/http_hosts.rs (/tmp/osv-general-merged-target/debug/build/printer-core/3be62f120bb62bee/out/http_hosts-3be62f120bb62bee)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/raster-core/0d3470068cd298e0/out/raster_core-0d3470068cd298e0)
+0 tests, 0 benchmarks
+     Running unittests src/bin/wgsl_export.rs (/tmp/osv-general-merged-target/debug/build/raster-core/d6ffd79e4269fcf8/out/wgsl_export-d6ffd79e4269fcf8)
+0 tests, 0 benchmarks
+     Running tests/frame.rs (/tmp/osv-general-merged-target/debug/build/raster-core/dff778896c42f257/out/frame-dff778896c42f257)
+0 tests, 0 benchmarks
+     Running tests/render.rs (/tmp/osv-general-merged-target/debug/build/raster-core/e2682e7092998279/out/render-e2682e7092998279)
+0 tests, 0 benchmarks
+     Running tests/shaders.rs (/tmp/osv-general-merged-target/debug/build/raster-core/0ebead830a6ebfd4/out/shaders-0ebead830a6ebfd4)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/28ca22a849ef9e16/out/rush_frontend-28ca22a849ef9e16)
+0 tests, 0 benchmarks
+     Running tests/archimedean_spiral.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/6c9350905b751ed7/out/archimedean_spiral-6c9350905b751ed7)
+0 tests, 0 benchmarks
+     Running tests/catenary.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/9923aa287ea908b0/out/catenary-9923aa287ea908b0)
+0 tests, 0 benchmarks
+     Running tests/catenoid.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/3f8546049e44c5da/out/catenoid-3f8546049e44c5da)
+0 tests, 0 benchmarks
+     Running tests/catenoid_patches.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/3bb7f505adda87ae/out/catenoid_patches-3bb7f505adda87ae)
+0 tests, 0 benchmarks
+     Running tests/circle_rectangle_transition.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/90baae4162364b5e/out/circle_rectangle_transition-90baae4162364b5e)
+0 tests, 0 benchmarks
+     Running tests/circle_transition.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/6fe7e34f4d7c5c74/out/circle_transition-6fe7e34f4d7c5c74)
+0 tests, 0 benchmarks
+     Running tests/circular_rolling.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/9f4a99ca8f494e52/out/circular_rolling-9f4a99ca8f494e52)
+0 tests, 0 benchmarks
+     Running tests/clothoid.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/eb1ec1583d9f8590/out/clothoid-eb1ec1583d9f8590)
+0 tests, 0 benchmarks
+     Running tests/ellipse_transition.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/475fe9e8d20fe516/out/ellipse_transition-475fe9e8d20fe516)
+0 tests, 0 benchmarks
+     Running tests/frontend.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/42bb12589667196e/out/frontend-42bb12589667196e)
+0 tests, 0 benchmarks
+     Running tests/helicoid.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/9f250a72207ef029/out/helicoid-9f250a72207ef029)
+0 tests, 0 benchmarks
+     Running tests/helicoid_patches.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/b8c7e82751edce12/out/helicoid_patches-b8c7e82751edce12)
+0 tests, 0 benchmarks
+     Running tests/helix.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/c5f0b5bd93fc8223/out/helix-c5f0b5bd93fc8223)
+0 tests, 0 benchmarks
+     Running tests/helix_variants.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/94d70b1bc8459866/out/helix_variants-94d70b1bc8459866)
+0 tests, 0 benchmarks
+     Running tests/involute.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/413fbf4bbe685e47/out/involute-413fbf4bbe685e47)
+0 tests, 0 benchmarks
+     Running tests/lissajous.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/2c5c97c1b9d4a293/out/lissajous-2c5c97c1b9d4a293)
+0 tests, 0 benchmarks
+     Running tests/loft.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/55f01a127a581a77/out/loft-55f01a127a581a77)
+0 tests, 0 benchmarks
+     Running tests/logarithmic_spiral.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/785e50aab5885aaa/out/logarithmic_spiral-785e50aab5885aaa)
+0 tests, 0 benchmarks
+     Running tests/pipe.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/b9d1f60853a35a17/out/pipe-b9d1f60853a35a17)
+0 tests, 0 benchmarks
+     Running tests/profile_sweep.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/32449c53d036af60/out/profile_sweep-32449c53d036af60)
+0 tests, 0 benchmarks
+     Running tests/progressive_sweep.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/0f7bf4bb99b5b795/out/progressive_sweep-0f7bf4bb99b5b795)
+0 tests, 0 benchmarks
+     Running tests/ribbon.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/4e32dc419d1bf854/out/ribbon-4e32dc419d1bf854)
+0 tests, 0 benchmarks
+     Running tests/rush_declarative_parity.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/dceb768f4439e8dc/out/rush_declarative_parity-dceb768f4439e8dc)
+0 tests, 0 benchmarks
+     Running tests/scaled_sweep.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/0f937fbacdbcd563/out/scaled_sweep-0f937fbacdbcd563)
+0 tests, 0 benchmarks
+     Running tests/screw_surface.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/73b17a85f53d894c/out/screw_surface-73b17a85f53d894c)
+0 tests, 0 benchmarks
+     Running tests/spherical_spiral.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/62ad7551585d3eaf/out/spherical_spiral-62ad7551585d3eaf)
+0 tests, 0 benchmarks
+     Running tests/toroidal.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/0953e526183ffb8b/out/toroidal-0953e526183ffb8b)
+0 tests, 0 benchmarks
+     Running tests/trochoid.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/22d0404ca0eb2837/out/trochoid-22d0404ca0eb2837)
+0 tests, 0 benchmarks
+     Running tests/twist_sweep.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/a4fceba1a82a6eb7/out/twist_sweep-a4fceba1a82a6eb7)
+0 tests, 0 benchmarks
+     Running tests/two_guide_sweep.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/4c40a2a09f7212f6/out/two_guide_sweep-4c40a2a09f7212f6)
+0 tests, 0 benchmarks
+     Running tests/variable_pipe.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/da918bc18d6b69a9/out/variable_pipe-da918bc18d6b69a9)
+0 tests, 0 benchmarks
+     Running tests/variable_pitch_helix.rs (/tmp/osv-general-merged-target/debug/build/rush-frontend/0e7a4dd169ce9be9/out/variable_pitch_helix-0e7a4dd169ce9be9)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/rush-runtime/a84ca00aad6107ba/out/rush_runtime-a84ca00aad6107ba)
+0 tests, 0 benchmarks
+     Running tests/emitter_parity.rs (/tmp/osv-general-merged-target/debug/build/rush-runtime/f40d4954b5b90b43/out/emitter_parity-f40d4954b5b90b43)
+0 tests, 0 benchmarks
+     Running tests/emitter_snapshot.rs (/tmp/osv-general-merged-target/debug/build/rush-runtime/4a72cc8fe8745075/out/emitter_snapshot-4a72cc8fe8745075)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/sdf-core/c5105aa1521efd6c/out/sdf_core-c5105aa1521efd6c)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/sketch-core/c4dd950f6eee7598/out/sketch_core-c4dd950f6eee7598)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/slicer-core/4a5cc132d7fcecce/out/slicer_core-4a5cc132d7fcecce)
+0 tests, 0 benchmarks
+     Running tests/toolpath.rs (/tmp/osv-general-merged-target/debug/build/slicer-core/c164c2b549d2ba95/out/toolpath-c164c2b549d2ba95)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/subdivision-core/cf4a4d88ab7d3511/out/subdivision_core-cf4a4d88ab7d3511)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/0cb4a2ecef31e15c/out/tensor_core-0cb4a2ecef31e15c)
+0 tests, 0 benchmarks
+     Running tests/attention.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/54c4cf9ace9f1cc6/out/attention-54c4cf9ace9f1cc6)
+0 tests, 0 benchmarks
+     Running tests/indexing.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/53954974b3cc9c87/out/indexing-53954974b3cc9c87)
+0 tests, 0 benchmarks
+     Running tests/layout.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/09fa65d924979f93/out/layout-09fa65d924979f93)
+0 tests, 0 benchmarks
+     Running tests/low_attention.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/14f3086de4cadd1e/out/low_attention-14f3086de4cadd1e)
+0 tests, 0 benchmarks
+     Running tests/low_ops.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/3b2fd612271496c9/out/low_ops-3b2fd612271496c9)
+0 tests, 0 benchmarks
+     Running tests/low_scatter.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/6edcc81540834a55/out/low_scatter-6edcc81540834a55)
+0 tests, 0 benchmarks
+     Running tests/reduction.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/dc514954b769a260/out/reduction-dc514954b769a260)
+0 tests, 0 benchmarks
+     Running tests/scatter.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/76cbdd1dafdfa26f/out/scatter-76cbdd1dafdfa26f)
+0 tests, 0 benchmarks
+     Running tests/statistics.rs (/tmp/osv-general-merged-target/debug/build/tensor-core/2fe2c0cb690ff2fa/out/statistics-2fe2c0cb690ff2fa)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/value-codec/34d15a03018d4a82/out/value_codec-34d15a03018d4a82)
+0 tests, 0 benchmarks
+     Running tests/strict_json.rs (/tmp/osv-general-merged-target/debug/build/value-codec/4ec457901bad986c/out/strict_json-4ec457901bad986c)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/vr-core/91496af5a034299b/out/vr_core-91496af5a034299b)
+0 tests, 0 benchmarks
+     Running unittests src/lib.rs (/tmp/osv-general-merged-target/debug/build/wasm-brotli/8a04e5e81a1d2e95/out/wasm_brotli-8a04e5e81a1d2e95)
+0 tests, 0 benchmarks

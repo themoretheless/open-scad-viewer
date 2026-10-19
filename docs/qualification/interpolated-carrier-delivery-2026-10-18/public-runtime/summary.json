@@ -1,0 +1,235 @@
+{
+  "schema": "interpolated-source-public-wasm-runtime-matrix/1",
+  "sourceRevision": "a54e3facc341d17ecd58953161b8cfa18e5e21bb",
+  "productionRustEquivalentTo": "312bb2613fe034a9cd3d7ffcebf4f46a1eac15f4",
+  "nativeInputsSha256": "a035528292cb322525e202bdfbf0eac68943c50772a0bbcf1936625053fd85e7",
+  "sourceGuardVerified": true,
+  "wasmSha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
+  "wasmBytes": 12833089,
+  "artifactUnchanged": true,
+  "checks": [
+    {
+      "name": "fibered",
+      "cases": 4,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/fibered-source-caps-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/fibered.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/audited.json": "c96ec515fee4c02e78a1edba3bbb4f1267969f6e128749deec54ac32bac76cb2",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/body.step": "1c133115a7473cde30f7559469c615771fab1b72f6fe2a3fff4494cb667dd150",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/built.json": "60ca08fc3c1749b6d03e928a9dce78360c54e00d008bdb30b089cf89104ec2de",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/imported.json": "6a44d5b7df7cfd3590ce0b6d707d161e36430a085fb3ae60bedf5622a5faee39",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/reference.json": "a52619eb16741a09c17b6d9a4db83a467c64f75b4f1895581906e15e78809b33",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/basic/source.json": "0572d4eb77a7c86cdb805d33d9379bfaffa718bcd641786dcb88cbe2cc3c7b0e",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/audited.json": "2887804c8c1a24c852d2cd3a597f7e38bb44fd14c01196f204950ea27f23087e",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/body.step": "7705f467929b0c38aca720b44a76562c1533fcf63e9d71e493e6d661502cbc8c",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/built.json": "47fb0063b293ac2ee154cebb4005428462d6aa0d0aa3b7dc4dfeb0e322008c15",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/imported.json": "b2a1a015cfe142a765a84cd963ed7b4ee0013b4521efee5adc243c03b02a4884",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/reference.json": "23e8553c025c7149ede5641f26e21d0489db077d3b5c463a9e3b95a3c9507491",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-ascending/source.json": "16cd8f6c8bf4e1ce2ef0159615ed0e7863e819a403ad85675bc62ec1f3b814a8",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/audited.json": "ab631d26e9f3ecd8d0ad171215eef2d44cf12954f1fddd31483a24a9041c441a",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/body.step": "c06d9b356f3a20f0846666554f53ac980e3290a56bae0bd88ea282073a2b9c1e",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/built.json": "9a523a3cd8e54a5caf9140edc48b994fe35761f768a3519ce6a4a270995730f6",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/imported.json": "28f38cf9cdfa553cdcdd73cd00ebfb4341d71e6fa02b47a64034e0827da48c76",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/reference.json": "eb3f332870147f1bd28464ff741cd514c543fd066ff3e44864564c3ca1c63c38",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/oblique-descending/source.json": "aab117d951317be85e7a90393560cc6f90e8b35fe01c2f556be8bc7602bba8d8",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/audited.json": "a7eaeb4b3631aa125390996b50b32ae3db8997dcae1f6f125a35e41162bd4f95",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/body.step": "c7ea83e2476a174e7bf106e6d0fb8871bae0c1e14808f0345725c0c5bd8644d3",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/built.json": "34df67acc22f65c5edd2d49bbe7141cd244e81364ebc56cfec4b3ca9b65f9af4",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/imported.json": "a7340829bb5e82d4c4d9dede4d37879adb99069a9f149e2d491bc0d450c40123",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/reference.json": "032ca908d50b3b16b398ab795046709f34622cd272d23d4a336dcc3a70a762da",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/fibered-step/three-pieces/source.json": "403ff22b3c588c19cb134306435c3e200c090a945154137f4261182e45a4db96",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/fibered-source-caps-2026-10-16/wasm-runtime.mts": "bcaf5fae3791ee5543b5374610d6468f482dad8a6c18c4981a230df891554fbf"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "3e9df0e5889f1d86e465c566033de34d6d7d259c696988e6caabeeeeb2d3d71c"
+    },
+    {
+      "name": "caps",
+      "cases": 6,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/rational-cap-source-audit-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/caps.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.audit.json": "529a968844042dc47ca1056a3a0167d9f66954e94510f0c8c77b3aca0c37bf5b",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.reference.json": "914e72e07430b93b969276356182221461bee0245009c27a58f81ee6985b0d18",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.source.json": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/moving-affine-caps.step": "9b3e31a7bc12bf206b5f7637f6ebeaf85a1539b7f80d1f7f06b87a3f75a5288e",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.audit.json": "66a03050568d6e566a4cdfe0838881b110da4419249cee2cc1232534d88ee4ec",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.reference.json": "bcdd4c8665e560a473e25473e16ee9fe01ad67c88514ae7f584975fb4a59f973",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.source.json": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/nonplanar-caps.step": "c87e38f9c5c78ffa6da49569013399cc86638671dcb007591fde65a861a47d3c",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.audit.json": "19a5232d352aeee76ab4abdbbd0fff16907e1dade9d878dadd413497c9883b27",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.reference.json": "51f814712d2b4edbe094b24a9f6be7c8df84f2891ffdb1e62bfe79686c907b66",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.source.json": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/planar-caps.step": "d2aa36c316fb47fe6054d5b7ab5cc1acde1c1679e0fd261c132e57ddc176f684",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.audit.json": "f47b9d54c07f61ad236da79fb0c59b6371dac7c170f4ece84871ff47b5428742",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.reference.json": "cbd313be5ecbc7b0fcf07f49d219b892b0f69e24d393e60ca9aa38c1c467f0bc",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.source.json": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-affine-caps.step": "580ab612cdeb7804e0f7b0f946c604258624c96c9da549288d1db84b5771252a",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.audit.json": "1eeb745a63dcc713a6b51ee004ec44c9c5ef9bd0e5e4061083a93a554cda159e",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.reference.json": "c64f74227d1d886b1008dc2d723fac43b1ac584167ae515f3a54168c25d07b2c",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.source.json": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/rational-profile-caps.step": "61facc6449b5bdafa76aac7e0ca5a7de79481ee369091185215afefc5b7cc3d8",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.audit.json": "001f5c2a0fdd94f8a551a0af7578cb4bdf4641ef35de48ab78079fdd47ddeafe",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.reference.json": "5e7c028a05a085c9bf24f9ee62ce127720b01a7c6ae579b66c23a78caa970eb9",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.source.json": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/rational-cap-step/reflected-caps.step": "86ae43ff355b111d4ddd4eca6b491913671b0bfd218221cb829ef612e6105c81",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/rational-cap-source-audit-2026-10-16/wasm-runtime.mts": "71ae6cb19ba9b8bec12922bb789752837ff086a1b07aec79c70f45b51a93e6a8"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "c1889910b16df2eb35d9c4b022e6fed254fa6c9b099079662dc6714192440fde"
+    },
+    {
+      "name": "sphere",
+      "cases": 4,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/sphere.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.audit.json": "a541c13f535439308c9bd574bee629fc2ef58bc4a8d1681ce0c223f2f1a88324",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.source.json": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-nonbinary-radius.step": "5c9872557d9932cd1a8ee063708863e3cfa823a5c34bcbd213250e11086e8600",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.audit.json": "090a4868ce07d4843462482b25f1a07f9bb205e40fe5458c4e80af5a76de6b82",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.source.json": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-regular.step": "8f8ca720f8fb8f93440134e8292d48fe6041b74a81e0f0b05c21fe22fefe4416",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.audit.json": "c6e30d37d191f82cb2242db75d2861a240eabe0b8ca279568d6fe1f5057776b9",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.source.json": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-translated-poles.step": "750c7c62d069e2d67244094d42d30226706ee1a46648e7fbfd7b2a73c2815102",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.audit.json": "e5dc3924ab6bfceb662f81be8da743cc72cfc7d31e2ca3c666b17c8accd7cfa9",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.source.json": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/sphere-step/sphere-two-poles.step": "c8b863641addfcebcf787f9b96653025d883cf357bf7d1f5864a3405fed2d18b",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime.mts": "ae7011446fa1bfd6c1118151f0f85d79a2350a215f366f2343a143f6956dfce2"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "1d2944b648337d4dc04fc722dcd9de1d6f7a20680165ce82c129906205ab61e2"
+    },
+    {
+      "name": "bishop",
+      "cases": 1,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/arc-bishop-source-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/request.json",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/bishop.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/arc-bishop-step/request.json": "c0bcfb86785762ea7bf998a16c56a746d6fc0208e714a92c15ee164a694e5117",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/arc-bishop-source-2026-10-16/wasm-runtime.mts": "c09df1a98ac35d7d35de966dae75e40e0075856e63ec6b72d8dfff54d435f513"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "f16f9f04992386a27f6cdbc78f32521d403422fea82651b35e0b641518bdb6f5"
+    },
+    {
+      "name": "general",
+      "cases": 1,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/general-frame-source-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/request.json",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/general.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/general-frame-step/request.json": "17aa0d630e99a33781e28407b9ef9a83826056652ac60e92d314dc4a5b3a3b75",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/general-frame-source-2026-10-16/wasm-runtime.mts": "d57095b93a5aa8d0fd4601d5087342083f40946ff713d7d376a4c94b039e5092"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "15118e2440c6d60fc5434956aa7660d5158a4da11a02f5af15661091ee2b3098"
+    },
+    {
+      "name": "affine",
+      "cases": 1,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/affine-physical-source-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/request.json",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/affine.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/affine-frame-step/request.json": "168ffb84213a5501fb4d839b2fbc7b2c21c33a40afec630fbf86ba501a63802d",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/affine-physical-source-2026-10-16/wasm-runtime.mts": "d1d821bd0766a08f4976dca6f2b6489336a6870c086f900e15172ad3aa15aa62"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "4a47cecfce1d6569decac85ae8e35471e66f1ef39a5761d5137153877efd6341"
+    },
+    {
+      "name": "guided",
+      "cases": 1,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/guided-geometric-source-2026-10-16/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/request.json",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/guided.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/guided-frame-step/request.json": "de1bd41de4e4f7aaf6b70e962dc924125c64fe95b8092c36b405f0ef932af45f",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/guided-geometric-source-2026-10-16/wasm-runtime.mts": "244b355bbbc56e67b517938488860ad6f9e7d5de7c6ae1704eea503e024f1786"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "be1dc72b156690aeed7e4506c5216e4bb82c0c2926384608f42f36a50e30dcc8"
+    },
+    {
+      "name": "interpolated",
+      "cases": 1,
+      "exitCode": 0,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/wasm-runtime.mts",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/public/wasm/geometry-kernel.wasm",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/request.json",
+        "/private/tmp/osv-interpolated-delivery-public-runtime-20261018/interpolated.json"
+      ],
+      "inputs": {
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/complete-2026-10-18/native/interpolated-carrier-step/request.json": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+        "/private/tmp/osv-interpolated-carrier-delivery-20261018/docs/qualification/interpolated-carrier-source-2026-10-17/wasm-runtime.mts": "9cc79141e560dc320a056a75891826875500a94bb2d2b2fd9047a4673728b770"
+      },
+      "inputsUnchanged": true,
+      "logSha256": "7f0c2953c8ce5baea47138ec1993163f07164289cb8e0a195f28778a36797813"
+    }
+  ],
+  "casesPassed": 19,
+  "runnerSha256": "a9af6e92d1068c39ab16e98de48b32e82127f8f0268fc1a3d8caaa40b0e62710",
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false,
+  "passed": true
+}

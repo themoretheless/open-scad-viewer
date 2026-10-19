@@ -2,7 +2,6 @@
 use crate::*;
 
 const OPS: &[&str] = &[
-    "sketch_solve_diagnostics",
     "frame_solve",
     "frame_envelope",
     "frame_diagnose",
@@ -10,7 +9,6 @@ const OPS: &[&str] = &[
     "frame_modal",
     "frame_collapse",
     "frame_influence",
-
     "scene_picking",
     "viewport",
     "camera_gesture",
@@ -21,6 +19,7 @@ const OPS: &[&str] = &[
     "subdivision_loft",
     "subdivision_sweep",
     "subdivision_revolve",
+    "sketch_solve_diagnostics",
     "sketch_solve",
     "polygon_deform",
     "polygon_sculpt",
@@ -53,12 +52,12 @@ const OPS: &[&str] = &[
     "affine_matrix",
     "planar_rectangle_corners",
     "nurbs_circle_quadrants",
+    "scene_flatten",
+    "body_bounds",
     "solid_program_execute_report",
     "solid_program_execute",
     "transparent_bsp_build",
     "transparent_triangle_split",
-    "scene_flatten",
-    "body_bounds",
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
@@ -77,7 +76,6 @@ fn handle(v: Value) -> Result<Value> {
         "frame_modal" => frame::modal(v),
         "frame_collapse" => frame::collapse(v),
         "frame_influence" => frame::influence(v),
-
         "scene_picking" => scene_picking::dispatch(v),
         "viewport" => viewport::dispatch(v),
         "camera_gesture" => camera_gestures::dispatch(v),

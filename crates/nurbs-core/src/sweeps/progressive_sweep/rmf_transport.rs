@@ -4,6 +4,10 @@
 //! spurious exp(total curvature) multiplier. Each cell encloses the original
 //! omega, then charges variation and a constant-skew quadratic remainder.
 //! This is an uncorrected source-normal cover, not a sweep/Solid certificate.
+mod frame_jets;
+mod closed_frame_jets;
+pub(in crate::sweeps::progressive_sweep) use closed_frame_jets::{closed_frame_jets,closed_phase_jets};
+pub(in crate::sweeps::progressive_sweep) use frame_jets::{frame_jets,phase_jets};
 use super::endpoint_jets;
 use crate::numerics::interval_vec3::{Vec3, add, cross, div, dot_tight, norm, scale, sub};
 use crate::sweeps::progressive_miter::{
@@ -27,9 +31,16 @@ pub struct OriginalRmfTransportReport {
     pub status: Status,
     pub cells: usize,
     pub exact_work: u64,
+    /// Complete connected-position/forward-tangent arc premises were needed
+    /// instead of original Cartesian C1. This is clock-policy metadata only;
+    /// frame Gk, boundary error, global embedding and Solid remain separate.
+    pub used_geometric_arc_join_premises: bool,
     pub cover: Option<Vec<RmfNormalCell>>,
     /// Original closing-to-initial Bishop rotation, before correction.
     pub closing_angle: Option<[f64; 2]>,
+    /// SAME original total arc length paid for by the corrected cover owner.
+    /// Present only with a complete closed arc-holonomy correction.
+    pub original_arc_length: Option<[f64; 2]>,
     /// Source Bishop normals corrected by original arc-length fraction.
     /// This does not certify the constructor's sampled-chord correction.
     pub arc_corrected_normals: Option<Vec<[[f64; 2]; 3]>>,
@@ -98,6 +109,7 @@ pub fn certify_original_rmf_transport(
         max_exact_work,
         closed,
         None,
+        false,
     )
 }
 
@@ -118,7 +130,23 @@ pub(crate) fn certify_original_rmf_transport_shared(
         max_work as u64,
         closed,
         Some(max_work),
+        false,
     )
+}
+
+/// Original piecewise positive-speed path with exact C0 position and common
+/// forward tangent values. Parameter speeds may jump. The Bishop ODE is
+/// integrated in the original traversal on each span; bounded measurable
+/// angular fields and continuous tangent values preserve the normal globally.
+/// Arc phase jets and all source/retained Gk remain separate obligations.
+pub fn certify_original_arc_rmf_transport(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,true)
+}
+pub(super) fn certify_original_rmf_transport_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,spacing!=super::Spacing::Parameter)
+}
+pub(crate) fn certify_original_rmf_transport_shared_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_work:usize,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+    certify_original_rmf_transport_impl(path,normal,steps,max_work,max_work as u64,closed,Some(max_work),spacing!=super::Spacing::Parameter)
 }
 
 fn certify_original_rmf_transport_impl(
@@ -129,6 +157,7 @@ fn certify_original_rmf_transport_impl(
     max_exact_work: u64,
     closed: bool,
     shared_work: Option<usize>,
+    geometric_arc: bool,
 ) -> Result<OriginalRmfTransportReport> {
     path.validate()?;
     check(
@@ -144,26 +173,37 @@ fn certify_original_rmf_transport_impl(
         status: Status::Unresolved,
         cells: 0,
         exact_work: 0,
+        used_geometric_arc_join_premises: false,
         cover: None,
         closing_angle: None,
+        original_arc_length: None,
         arc_corrected_normals: None,
         arc_corrected_binormals: None,
         reason: Some("rmf-original-C1-unproved"),
         continuous_bound: false,
         solid_certified: false,
     };
-    let knots = endpoint_jets::certify_knots(path, 1, max_exact_work)?;
-    out.exact_work = knots.exact_work;
-    if !knots.certified {
-        return Ok(out);
+    // Keep the existing cheaper sufficient C1 route and retain all failed
+    // work before geometric fallback under the SAME exact ledger.
+    let knots = endpoint_jets::certify_knots(path,1,max_exact_work)?;
+    out.exact_work=knots.exact_work;
+    let mut cartesian=knots.certified;
+    if cartesian && closed {
+        let seam=endpoint_jets::certify(path,1,max_exact_work-out.exact_work)?;
+        out.exact_work+=seam.exact_work;cartesian=seam.certified;
+        if !cartesian {out.reason=Some("rmf-original-closed-C1-unproved");}
     }
-    if closed {
-        let seam = endpoint_jets::certify(path, 1, max_exact_work - out.exact_work)?;
-        out.exact_work += seam.exact_work;
-        if !seam.certified {
-            out.reason = Some("rmf-original-closed-C1-unproved");
-            return Ok(out);
+    if !cartesian {
+        if !geometric_arc {return Ok(out);}
+        for endpoints in [false,true].into_iter().filter(|e|!*e||closed) {
+            let position=endpoint_jets::certify_position(path,endpoints,max_exact_work-out.exact_work)?;
+            out.exact_work+=position.exact_work;
+            if !position.certified {out.reason=Some("rmf-original-position-continuity-unproved");return Ok(out);}
+            let tangent=endpoint_jets::certify_direction(path,0,endpoints,true,max_exact_work-out.exact_work)?;
+            out.exact_work+=tangent.exact_work;
+            if !tangent.certified {out.reason=Some("rmf-original-forward-tangent-unproved");return Ok(out);}
         }
+        out.used_geometric_arc_join_premises=true;
     }
     let max_cells = match shared_work {
         Some(total) => {
@@ -211,22 +251,24 @@ fn certify_original_rmf_transport_impl(
             let reference = point(midpoint(omega));
             let c = point(center);
             let c_length = norm(c)?;
-            // Duhamel: ||U_variable c-U_reference c|| <= h*delta_omega*||c||.
-            let variation = h.mul(norm(sub(omega, reference)?)?)?.mul(c_length)?;
-            // Constant skew flow: retain the quadratic Taylor term.
-            // Every derivative of exp(t A)c has norm <= |omega0|^k |c|
-            // because A is skew and exp(t A) is an isometry. The integral
-            // third-order remainder needs no exponential inflation.
-            let w = norm(reference)?;
-            let h2 = h.mul(h)?;
-            let w2 = w.mul(w)?;
-            let remainder = h2
-                .mul(h)?
-                .mul(w2.mul(w)?)?
-                .mul(c_length)?
-                .div(I::point(6.))?;
-            let first = cross(reference, c)?;
-            let second = cross(reference, first)?;
+            let delta=sub(omega,reference)?;
+            let delta_norm=norm(delta)?;
+            let first=cross(reference,c)?;
+            let first_norm=norm(first)?;
+            let second=cross(reference,first)?;
+            let h2=h.mul(h)?;
+            // Duhamel with the SAME constant skew reference flow. Since
+            // |U0(s)c-c| <= s |omega0 x c|, retain its direction:
+            // error <= h |delta_omega x c| + h²/2 |delta_omega| |omega0 x c|.
+            // Both this and h |delta_omega| |c| bound the entire cell.
+            let coarse=h.mul(delta_norm)?.mul(c_length)?;
+            let directed=h.mul(norm(cross(delta,c)?)?)?
+                .add(h2.mul(I::point(0.5))?.mul(delta_norm)?.mul(first_norm)?)?;
+            let variation=I::new(0.,coarse.hi.min(directed.hi))?;
+            // A0 commutes with its isometric flow, so |A0³ U0 c| is bounded
+            // by |omega0|² |omega0 x c|, including a zero axial motion.
+            let w=norm(reference)?;
+            let remainder=h2.mul(h)?.mul(w.mul(w)?)?.mul(first_norm)?.div(I::point(6.))?;
             let exact_quadratic = add(
                 add(c, scale(first, h)?)?,
                 scale(second, h2.mul(I::point(0.5))?)?,
@@ -238,10 +280,9 @@ fn certify_original_rmf_transport_impl(
                 .add(remainder)?
                 .add(rounding)?
                 .hi;
-            // Whole-cell motion from c: ||U(t)c-c|| <= h*sup|omega|*||c||.
-            let tube_radius = I::point(radius)
-                .add(h.mul(norm(omega)?)?.mul(c_length)?)?
-                .hi;
+            let coarse_motion=h.mul(norm(omega)?)?.mul(c_length)?;
+            let directed_motion=h.mul(first_norm)?.add(variation)?;
+            let tube_radius=I::point(radius).add(I::new(0.,coarse_motion.hi.min(directed_motion.hi))?)?.hi;
             Ok((
                 RmfNormalCell {
                     traversal,
@@ -274,7 +315,7 @@ fn certify_original_rmf_transport_impl(
         let angle =
             trigonometric_certificate::certify_atan2([sine.lo, sine.hi], [cosine.lo, cosine.hi])?
                 .unwrap_or_else(|| {
-                    // The proved original C1 closure identifies the endpoint
+                    // The proved original common tangent identifies the endpoint
                     // tangents. Bishop transport preserves the unit normal
                     // perpendicular to that tangent, so the true sine/cosine
                     // pair lies on the unit circle and atan2 is defined.
@@ -328,6 +369,7 @@ fn certify_original_rmf_transport_impl(
             prefix = next_prefix;
         }
         out.closing_angle = Some(angle);
+        out.original_arc_length = Some([total.lo,total.hi]);
         out.arc_corrected_normals = Some(corrected);
         out.arc_corrected_binormals = Some(binormals);
     }
@@ -390,6 +432,7 @@ pub fn certify_original_rmf_section_images(
                 transport.reason = Some("rmf-source-section-image-work-unproved");
                 transport.cover = None;
                 transport.closing_angle = None;
+                transport.original_arc_length = None;
                 transport.arc_corrected_normals = None;
                 transport.arc_corrected_binormals = None;
                 return Ok(OriginalRmfSectionImagesReport {
@@ -528,3 +571,6 @@ pub(super) fn relative_values(
 #[cfg(test)]
 #[path="tests/rmf_transport.rs"]
 pub(super) mod tests;
+
+#[cfg(test)]
+mod arc_clock_tests;

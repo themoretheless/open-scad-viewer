@@ -5,7 +5,7 @@ use crate::sweeps::progressive_miter::{authored_frame_certificate as frame,
     profile_domain_certificate::{Report, certify_original_profile_projection_domain},
     scalar_certificate::Status};
 
-fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
+pub(super) fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
     if let Some((axis,normal))=sweep.frame_laws {return Ok(Some(frame::certify_twisted_values(axis,normal,twist,t,budget)?));}
     if let Some(guide)=sweep.orientation_guide {return Ok(Some(frame::certify_path_guide_values(sweep.path,guide,twist,t,budget)?));}
     // Explicit spatial RMF endpoint material uses the original Bishop cover,
@@ -14,8 +14,8 @@ fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:b
     if !initial && sweep.options.orientation==Orientation::RotationMinimizing {
         if let Some([steps,_,_])=sweep.spatial_rmf_error_limits {
             let exact=budget/2;
-            let transport=super::rmf_transport::certify_original_rmf_transport(
-                sweep.path,sweep.options.normal,steps,budget-exact,exact as u64,false)?;
+            let transport=super::rmf_transport::certify_original_rmf_transport_for_spacing(
+                sweep.path,sweep.options.normal,steps,budget-exact,exact as u64,false,sweep.options.spacing)?;
             let work=transport.cells+transport.exact_work as usize;
             if transport.status!=Status::Certified {
                 return Ok(Some(frame::ValuesReport {status:Status::Unresolved,cells:work,

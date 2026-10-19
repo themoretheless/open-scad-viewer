@@ -43,3 +43,30 @@ test('reports all drift without rewriting archives or evidence', () => {
     assert.throws(()=>auditQualificationDrift(root,{...options,evidencePath:'missing.json'}),/Missing required evidence document/)
   } finally { rmSync(root,{recursive:true,force:true}) }
 })
+
+test('checks binary finite evidence and reports changed or missing bytes without repair', () => {
+  const root=mkdtempSync(join(tmpdir(),'qualification-binary-evidence-'))
+  try {
+    mkdirSync(join(root,'crates'))
+    for(const name of ['THIRD_PARTY_NOTICES.md','package-lock.json','crates/Cargo.lock']) writeFileSync(join(root,name),'dependency')
+    const binary=Buffer.from([0,13,255,0,127]),changed=Buffer.from([0,13,254,0,127])
+    writeFileSync(join(root,'retained-body.step'),binary)
+    writeFileSync(join(root,'kernel.wasm'),'wasm');writeFileSync(join(root,'source.rs'),'source')
+    writeFileSync(join(root,'fingerprint.json'),JSON.stringify({artifacts:[]}))
+    const evidence={wasm:{path:'kernel.wasm',sha256:hash('wasm'),byteLength:4},
+      dependencyFingerprints:{noticesSha256:hash('dependency'),npmLockfileSha256:hash('dependency'),rustLockfileSha256:hash('dependency')},
+      sourceBundle:{paths:['source.rs'],sha256:hash('source.rs\0source\n')},
+      evidenceRecords:[{path:'retained-body.step',sha256:hash(binary),byteLength:binary.length}]}
+    writeFileSync(join(root,'evidence.json'),JSON.stringify(evidence))
+    const options={fingerprintPath:'fingerprint.json',evidencePath:'evidence.json',archives:{}}
+    assert.equal(auditQualificationDrift(root,options).matches,true)
+    writeFileSync(join(root,'retained-body.step'),changed)
+    const drift=auditQualificationDrift(root,options)
+    assert.equal(drift.matches,false);assert.equal(drift.qualificationClaim,'none')
+    assert.deepEqual(drift.records.filter(r=>r.status==='mismatch').map(r=>r.kind),['finite-evidence'])
+    assert.deepEqual(readFileSync(join(root,'retained-body.step')),changed)
+    assert.deepEqual(JSON.parse(readFileSync(join(root,'evidence.json'))),evidence)
+    rmSync(join(root,'retained-body.step'))
+    assert.equal(auditQualificationDrift(root,options).records.find(r=>r.kind==='finite-evidence').status,'missing')
+  } finally {rmSync(root,{recursive:true,force:true})}
+})

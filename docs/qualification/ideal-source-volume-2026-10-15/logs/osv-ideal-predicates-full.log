@@ -1,0 +1,76 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling cad-predicates v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/cad-predicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.13s
+     Running unittests src/lib.rs (crates/target/debug/build/cad-predicates/88b4a62cf077612b/out/cad_predicates-88b4a62cf077612b)
+
+running 56 tests
+test bezier_identity::tests::exhausted_budget_and_nonpositive_weights_never_certify ... ok
+test bezier_identity::tests::degree_elevation_and_weight_scaling_are_exact ... ok
+test bspline_endpoint_jets::tests::unequal_end_spans_use_original_parameter_derivative_scaling ... ok
+test bezier_composition_identity::tests::missing_weights_and_work_do_not_establish_identity ... ok
+test bezier_identity::tests::rational_quadratic_and_cubic_identity_uses_all_coordinates ... ok
+test bezier_identity::tests::identical_authored_controls_keep_cancellation_deadline_and_positive_weight_obligations ... ok
+test bilinear_graph_side::tests::crossing_wall_has_mixed_signs_instead_of_boundary_permission ... ok
+test bezier_strip_jets::tests::exact_linear_second_jets_and_one_ulp_difference ... ok
+test bezier_composition_identity::tests::rational_surface_weights_participate_in_the_exact_composition ... ok
+test bspline_endpoint_jets::tests::multispan_original_jets_detect_one_bit_and_knot_parameterization ... ok
+test bezier_composition_identity::tests::reduced_power_degrees_compare_missing_coefficients_as_zero ... ok
+test bilinear_graph_side::tests::exact_weighted_graph_and_strict_wall_are_distinct_from_fit_and_samples ... ok
+test bspline_endpoint_jets::tests::projective_scale_must_match_all_original_endpoint_jets ... ok
+test bezier_strip_jets::tests::rational_seam_weights_scale_and_second_order_mismatch ... ok
+test line_chart_identity::tests::exact_chart_identity_needs_controls_orientation_and_work ... ok
+test bspline_internal_jets::tests::cartesian_identity_does_not_require_constant_homogeneous_scale ... ok
+test line_crossing_parameter::tests::reflected_parameters_are_compared_without_rounding_the_sum ... ok
+test line_crossing_parameter::normalized_tests::domains_orientation_and_false_rounded_ratios ... ok
+test line_chart_identity::tests::nonlinear_rational_main_requires_all_original_controls ... ok
+test line_crossing_parameter::tests::root_identity_is_exact_and_tracks_rational_parameter_not_chord_fraction ... ok
+test bspline_knot_jets::tests::repeated_knot_positive_projective_scale_needs_exact_jets_and_shared_work ... ok
+test planar_bezier_roots::tests::exhausted_predicate_work_never_becomes_a_disjoint_or_coincident_report ... ok
+test planar_bezier_roots::stationary_tests::stationary_cusp_preserves_distinct_derivative_multiplicities_and_uncertainty ... ok
+test bspline_internal_jets::tests::mixed_multiplicities_cover_all_original_joins ... ok
+test bspline_internal_jets::direction_tests::rational_conic_direction_curvature_does_not_infer_second_arc_jet ... ok
+test planar_bezier_roots::tests::fraction_free_sturm_preserves_multiplicity_and_endpoint_ownership ... ok
+test bezier_composition_identity::tests::diagonal_graph_composition_is_exact_for_polynomial_and_rational_pcurves ... ok
+test bspline_internal_jets::direction_tests::direction_jets_keep_speed_changes_separate_and_refuse_reversal_and_partial_work ... ok
+test bspline_internal_jets::tests::original_simple_knot_rational_c4_requires_every_exact_cartesian_jet ... ok
+test projected_surface_jacobian::tests::collapsed_boundary_and_flat_endpoint_preserve_interior_sign ... ok
+test planar_bezier_roots::tests::isolates_non_dyadic_multiple_root_and_distinguishes_both_nearby_perturbations ... ok
+test projected_surface_jacobian::tests::interior_fold_has_both_signs ... ok
+test projected_surface_jacobian::tests::rank_deficient_projection_has_no_strict_sign ... ok
+test projected_surface_jacobian::tests::plane_orientation_and_axis_reversal ... ok
+test projected_surface_jacobian::tests::rational_weights_and_work_refusal ... ok
+test planar_bezier_roots::tests::projected_coordinate_retains_multiple_contacts_and_nearby_bifurcations ... ok
+test quadratic_shear_identity::tests::rounded_inverse_corner_is_not_an_exact_source_coordinate ... ok
+test tests::admission_preserves_source_and_context_identity ... ok
+test tests::cancelling_products_keep_the_roundoff_component ... ok
+test quadratic_shear_identity::tests::inverse_shear_identity_checks_every_coefficient_and_work ... ok
+test tests::direction_dot_retains_cancellation_and_refuses_work_exhaustion ... ok
+test tests::identical_expansion_subtraction_is_exact_and_still_charged ... ok
+test tests::ordinary_sign_zero_and_handedness_use_authored_bits ... ok
+test tests::rational_denominators_do_not_become_rounded_input_leaves ... ok
+test tests::residual_classification_requires_matching_enclosure_and_respects_gray_band ... ok
+test tests::portable_tolerance_identity_round_trips_and_detects_policy_changes ... ok
+test tests::serialized_tolerance_identity_cannot_be_substituted ... ok
+test tests::work_cancellation_deadline_and_expansion_capacity_fail_explicitly ... ok
+test tests::uniform_extreme_exponents_can_normalize_but_unsafe_products_refuse ... ok
+test bspline_internal_jets::tests::fourth_jet_is_not_inferred_from_third_jet ... ok
+test bspline_internal_jets::tests::cartesian_endpoints_accept_varying_homogeneous_scale_and_nonclamped_domains ... ok
+test projective_strip_jets::conic_tests::canonical_relation_agrees_with_the_general_projective_predicate ... ok
+test projective_strip_jets::conic_tests::tiny_second_jet_damage_and_varying_weights_are_not_promoted ... ok
+test planar_bezier_roots::tests::common_coordinate_uses_actual_monotonicity_and_original_weights ... ok
+test projective_strip_jets::conic_tests::exact_tensor_along_weights_agree_with_the_general_rational_predicate ... ok
+test projected_surface_jacobian::tests::independently_bounded_rows_match_whole_original_chart ... ok
+
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

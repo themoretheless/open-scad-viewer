@@ -1,0 +1,57 @@
+{
+  "schema": "append-only-fibered-binding-validation/1",
+  "recordedAt": "2026-10-17",
+  "ownRustVersion": 75,
+  "g0Version": 89,
+  "g1Version": 106,
+  "g1EnvironmentVersion": 39,
+  "actualDriftAudit": {
+    "matches": true,
+    "records": 5227,
+    "missingSources": [],
+    "rawReportSha256": "d72d2d4104414e2b250544c584f4527dfdc08d499ad0bed311328b396e2a8253"
+  },
+  "contractTests": {
+    "g0AndG1": 33,
+    "artifact": 11,
+    "node": 8,
+    "nodeSkipped": 1,
+    "failed": 0
+  },
+  "sourceOwnershipAudit": {
+    "sourceFiles": 637,
+    "callables": 8904,
+    "unreviewed": 0,
+    "stale": 0
+  },
+  "architecture": {
+    "pinnedOversized": 57,
+    "layerViolations": 0
+  },
+  "semanticG1CompletedWorkUnits": 0,
+  "semanticG1PlannedWorkUnits": 4740,
+  "qualificationClaim": "none",
+  "fullGoalComplete": false,
+  "logs": [
+    {
+      "path": "docs/qualification/fibered-ci-refreeze-2026-10-17/osv-fibered-ci-artifact-contract-tests-20261017.log",
+      "sha256": "d8875ea28943d188732234b3f36a3fd704b8fcd8ebd37f3a1316680e27ce110d",
+      "byteLength": 235
+    },
+    {
+      "path": "docs/qualification/fibered-ci-refreeze-2026-10-17/osv-fibered-ci-dist-refreeze-verify-20261017.log",
+      "sha256": "e208e1933cc858234a80a3a4481880916430caa5ab3d183b3e699122b11c00c9",
+      "byteLength": 99
+    },
+    {
+      "path": "docs/qualification/fibered-ci-refreeze-2026-10-17/osv-fibered-ci-g0-g1-contract-tests-20261017.log",
+      "sha256": "74371629511884486423389aa71efdca615c689146261fd3cc9073fb1f9269d4",
+      "byteLength": 237
+    },
+    {
+      "path": "docs/qualification/fibered-ci-refreeze-2026-10-17/osv-fibered-ci-refreeze-node-gates-20261017.log",
+      "sha256": "08171f00ef54efa4df07d3a658e997588737abf4d5305e7c024fa7b1e6ab03d9",
+      "byteLength": 1075
+    }
+  ]
+}

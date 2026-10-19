@@ -2,6 +2,8 @@
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
 mod smooth_stations;
+mod affine_stations;
+pub use affine_stations::{AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls};
 pub use smooth_stations::{SmoothStationWalls,smooth_station_walls};
 mod polygon_stations;
 pub use polygon_stations::{PolygonStationWalls, smooth_polygon_station_walls};
@@ -104,11 +106,33 @@ pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
     section_loft(sections, None, None, true)
 }
 
+/// Native candidate for an independently owned closed material chart. No
+/// physical cap or planar section premise is introduced. Orientation is a
+/// proposal only; this operation supplies no Solid/embedding certificate.
+pub(crate) fn periodic_material_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    if sections.len() < 4 {
+        return Err(err("Periodic material loft needs a repeated seam and four sections"));
+    }
+    section_loft_impl(sections, None, None, true, true)
+}
+pub(crate) fn periodic_material_loft_surfaces(sections: &[Vec<Vec<Curve>>], sides: &[Vec<Surface>]) -> Result<Model> {
+    if sections.len() < 4 { return Err(err("Periodic material loft needs a repeated seam and four sections")); }
+    section_loft_impl(sections, None, Some(sides), true, true)
+}
 fn section_loft(
     sections: &[Vec<Vec<Curve>>],
     parameters: Option<&[f64]>,
     sides: Option<&[Vec<Surface>]>,
     periodic: bool,
+) -> Result<Model> {
+    section_loft_impl(sections, parameters, sides, periodic, false)
+}
+fn section_loft_impl(
+    sections: &[Vec<Vec<Curve>>],
+    parameters: Option<&[f64]>,
+    sides: Option<&[Vec<Surface>]>,
+    periodic: bool,
+    material_chart: bool,
 ) -> Result<Model> {
     if !(2..=1025).contains(&sections.len()) {
         return Err(err("Need 2..1025 rational sections"));
@@ -200,20 +224,34 @@ fn section_loft(
             }
         }
     }
-    let lower = cap(&prepared[0])?;
-    let upper = if periodic {
-        None
+    let (caps, direction) = if material_chart {
+        // A control-polygon area vector only PROPOSES orientation. It need not
+        // be a cap normal or certify the nonplanar material region. The caller
+        // must independently verify every retained shell orientation.
+        let points = prepared[0][0].iter().flat_map(|c| &c.control_points)
+            .map(|p| [p[0], p[1], p[2]]).collect::<Vec<_>>();
+        let origin = points[0];
+        let mut area = [0.; 3];
+        for i in 0..points.len() {
+            let c = cross(minus(points[i], origin), minus(points[(i + 1) % points.len()], origin));
+            for k in 0..3 { area[k] += c[k]; }
+        }
+        let travel = minus(point(&prepared[1][0][0], true), point(&prepared[0][0][0], true));
+        let proposed = dot(travel, area);
+        (Vec::new(), if proposed < 0. { -1. } else { 1. })
     } else {
-        Some(cap(prepared.last().unwrap())?)
+        let lower = cap(&prepared[0])?;
+        let upper = if periodic { None } else { Some(cap(prepared.last().unwrap())?) };
+        let travel = minus(point(&prepared[1][0][0], true), point(&prepared[0][0][0], true));
+        let direction = dot(travel, lower.normal);
+        if !direction.is_finite() || direction.abs() <= 1e-10 {
+            return Err(err("Initial loft ruling must cross the cap plane"));
+        }
+        let caps = if let Some(upper) = upper {
+            vec![(0, lower), (prepared.len() - 1, upper)]
+        } else { Vec::new() };
+        (caps, direction)
     };
-    let travel = minus(
-        point(&prepared[1][0][0], true),
-        point(&prepared[0][0][0], true),
-    );
-    let direction = dot(travel, lower.normal);
-    if !direction.is_finite() || direction.abs() <= 1e-10 {
-        return Err(err("Initial loft ruling must cross the cap plane"));
-    }
 
     let mut build = Builder::new();
     let mut ids = prepared
@@ -293,11 +331,6 @@ fn section_loft(
             }
         }
     }
-    let caps = if let Some(upper) = upper {
-        vec![(0, lower), (prepared.len() - 1, upper)]
-    } else {
-        Vec::new()
-    };
     for (layer, cap) in caps {
         let mut wires = Vec::new();
         for (ring, uv) in cap.loops.iter().enumerate() {
@@ -468,7 +501,7 @@ pub struct ProgressiveBodyEvidence {
 /// Reproduce the constructor's retained sections and certify their complete
 /// correspondence to each original transported section. The error can be
 /// interpolated along a wall only when rational bases agree at every station.
-fn retained_section_partition(sections:&[Vec<Vec<Curve>>],max_products:usize)
+pub(crate) fn retained_section_partition(sections:&[Vec<Vec<Curve>>],max_products:usize)
     ->Result<(Vec<Vec<Vec<Curve>>>,Option<f64>,usize)>{
     if max_products>1000000 {return Err(err("Body decomposition product budget exceeds1000000"));}
     let mut retained=Vec::new();let mut upper=Some(0f64);let mut products=0;

@@ -72,9 +72,12 @@
 //! parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one
 //! degree-1 line per revolution quadrant patch of the profile row. Nothing
 //! here authorizes a topology change.
-use brep_core::intersections::{CanonicalCone, recognize_cone};
-use brep_core::intersections::{CanonicalTorus, recognize_torus};
-use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
+#[cfg(feature = "codec")]
+mod serialization;
+use super::plane_cone::{CanonicalCone, recognize_cone};
+use super::plane_torus::{
+    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
+};
 use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;

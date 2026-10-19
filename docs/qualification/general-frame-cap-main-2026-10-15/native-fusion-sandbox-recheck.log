@@ -1,0 +1,79 @@
+warning: unused workspace dependency `compute-cuda`
+   --> Cargo.toml:114:1
+    |
+114 | compute-cuda = { version = "0.1.0", path = "compute-cuda" }
+    | ^^^^^^^^^^^^
+    |
+    = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `compute-cuda`
+warning: unused workspace dependency `compute-mlx`
+   --> Cargo.toml:115:1
+    |
+115 | compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+    | ^^^^^^^^^^^
+    |
+help: consider removing the workspace dependency `compute-mlx`
+warning: unused workspace dependency `math-compute`
+  --> Cargo.toml:77:1
+   |
+77 | math-compute = { package = "osv-math-compute", version = "0.1.0", path = "math-compute" }
+   | ^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `math-compute`
+warning: workspace (manifest) generated 3 warnings
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /tmp/osv-general-merged-target/.../wgsl_export
+  |                                    ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling syn v3.0.5
+   Compiling thiserror v2.0.20
+   Compiling num-traits v0.2.19
+   Compiling syn v2.0.119
+   Compiling thiserror-impl v2.0.20
+   Compiling naga-types v30.0.1
+   Compiling zerocopy-derive v0.8.57
+   Compiling bytemuck_derive v1.12.0
+   Compiling zerocopy v0.8.57
+   Compiling log v0.4.34
+   Compiling bytemuck v1.25.2
+   Compiling once_cell v1.21.4
+   Compiling smallvec v1.16.0
+   Compiling parking_lot_core v0.9.12
+   Compiling wgpu-types v30.0.1
+   Compiling half v2.7.1
+   Compiling parking_lot v0.12.5
+   Compiling naga v30.0.1
+   Compiling wgpu-naga-bridge v30.0.1
+   Compiling wgpu-hal v30.0.1
+   Compiling wgpu-core-deps-apple v30.0.1
+   Compiling wgpu-core v30.0.1
+   Compiling wgpu v30.0.1
+   Compiling gpu-compute v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/gpu-compute)
+   Compiling compute-core v0.1.0 (/private/tmp/osv-general-main-resolution-20261015/crates/compute-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5m 24s
+     Running tests/fusion.rs (/tmp/osv-general-merged-target/debug/build/compute-core/3c4f70206595d252/out/fusion-3c4f70206595d252)
+
+running 6 tests
+fusion tests skipped: no adapter
+fusion tests skipped: no adapter
+test grid_stride_writes_tail_above_the_workgroup_dispatch_limit ... ok
+test generated_operations_and_broadcast_order_match_cpu ... ok
+fusion tests skipped: no adapter
+fusion tests skipped: no adapter
+test constant_only_empty_and_scalar_expressions_have_defined_results ... ok
+test branches_share_expressions_and_prune_dead_nodes_before_caching ... ok
+fusion tests skipped: no adapter
+test compilation_and_execution_reject_wrong_graph_or_device_and_binding_overflow ... fusion tests skipped: no adapter
+ok
+test invalid_binding_calls_leave_the_prepared_program_usable ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+

@@ -1,0 +1,243 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Checking value-codec v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/value-codec)
+    Checking cad-predicates v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/cad-predicates)
+error: the loop variable `k` is used to index `out`
+  --> cad-predicates/src/bezier_composition_identity.rs:35:57
+   |
+35 |     for (i,value) in values.iter().enumerate(){for k in i..=n {
+   |                                                         ^^^^^
+   |
+note: for this index operation
+  --> cad-predicates/src/bezier_composition_identity.rs:38:59
+   |
+38 |         out[k]=if (k-i)%2==0 {out[k].add(&term,ctx)?}else{out[k].sub(&term,ctx)?};
+   |                                                           ^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and `.enumerate()`
+   |
+35 -     for (i,value) in values.iter().enumerate(){for k in i..=n {
+35 +     for (i,value) in values.iter().enumerate(){for (k, <item>) in out.iter_mut().enumerate().take(n + 1).skip(i) {
+   |
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:113:49
+    |
+113 |         let c:Vec<[Expansion;4]>=values[..4*nc].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+    |                                                 ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+    = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:114:58
+    |
+114 |         let p:Vec<[Expansion;3]>=values[4*nc..4*nc+3*np].chunks_exact(3).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+    |                                                          ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:116:63
+    |
+116 |         let s:Vec<[Expansion;4]>=values[start..start+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+    |                                                               ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:303:49
+    |
+303 |         let p:Vec<[Expansion;3]>=values[..3*np].chunks_exact(3).map(|v|std::array::from_fn(|k|v[k].clone())).collect();
+    |                                                 ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:304:61
+    |
+304 |         let s:Vec<[Expansion;4]>=values[3*np..3*np+4*nu*nv].chunks_exact(4).map(|v|std::array::from_fn(|k|v[k].clone())).collect();
+    |                                                             ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:382:19
+    |
+382 |         if points.chunks_exact(4).any(|p|p[3].sign()!=Sign::Positive) {
+    |                   ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bezier_composition_identity.rs:405:29
+    |
+405 |         for (i,p) in points.chunks_exact(4).enumerate() {
+    |                             ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bezier_identity.rs:46:14
+   |
+46 |             .chunks_exact(4)
+   |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/projective_strip_jets.rs:48:18
+   |
+48 |                 .chunks_exact(4)
+   |                  ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/projective_strip_jets.rs:264:14
+    |
+264 |             .chunks_exact(4)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bezier_strip_jets.rs:44:18
+   |
+44 |                 .chunks_exact(4)
+   |                  ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bspline_internal_jets.rs:182:14
+    |
+182 |             .chunks_exact(4)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> cad-predicates/src/bspline_internal_jets.rs:310:9
+    |
+310 |      -> Result<(Vec<(Rational, Rational, Rational)>, Rational), Reason> {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#type_complexity
+    = note: `-D clippy::type-complexity` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::type_complexity)]`
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/bspline_internal_jets.rs:409:14
+    |
+409 |             .chunks_exact(4)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bspline_knot_jets.rs:37:14
+   |
+37 |             .chunks_exact(4)
+   |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bspline_endpoint_jets.rs:44:18
+   |
+44 |                 .chunks_exact(4)
+   |                  ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bezier_point_identity.rs:16:18
+   |
+16 |         || poles.chunks_exact(3).any(|p| p[2].sign() != Sign::Positive)
+   |                  ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+  --> cad-predicates/src/bezier_point_identity.rs:21:10
+   |
+21 |         .chunks_exact(3)
+   |          ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/projected_surface_jacobian.rs:138:14
+    |
+138 |             .chunks_exact(4)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: the loop variable `axis` is used to index `h`
+   --> cad-predicates/src/projected_surface_jacobian.rs:164:21
+    |
+164 |         for axis in 0..3 {
+    |                     ^^^^
+    |
+note: for this index operation
+   --> cad-predicates/src/projected_surface_jacobian.rs:172:29
+    |
+172 |             let term = mul(&h[axis], &minors, [row, column], ctx)?;
+    |                             ^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#needless_range_loop
+help: consider using an iterator and `.enumerate()`
+    |
+164 -         for axis in 0..3 {
+164 +         for (axis, <item>) in h.iter().enumerate().take(3) {
+    |
+
+error: the loop variable `k` is used to index `out`
+  --> cad-predicates/src/planar_bezier_roots.rs:77:18
+   |
+77 |         for k in i..=n {
+   |                  ^^^^^
+   |
+note: for this index operation
+  --> cad-predicates/src/planar_bezier_roots.rs:83:17
+   |
+83 |                 out[k].sub(&term, ctx)?
+   |                 ^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#needless_range_loop
+help: consider using an iterator and `.enumerate()`
+   |
+77 -         for k in i..=n {
+77 +         for (k, <item>) in out.iter_mut().enumerate().take(n + 1).skip(i) {
+   |
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/planar_bezier_roots.rs:444:14
+    |
+444 |             .chunks_exact(3)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: using `chunks_exact` with a constant chunk size
+   --> cad-predicates/src/planar_bezier_roots.rs:729:14
+    |
+729 |             .chunks_exact(3)
+    |              ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<3>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#chunks_exact_to_as_chunks
+
+error: could not compile `cad-predicates` (lib) due to 24 previous errors
