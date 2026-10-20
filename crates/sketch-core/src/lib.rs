@@ -109,6 +109,38 @@ pub enum Constraint {
         b: usize,
         internal: bool,
     },
+    /// Incident point on the infinite line through `a` and `b`.
+    PointOnLine {
+        point: usize,
+        a: usize,
+        b: usize,
+    },
+    /// Line segment `a -> b` at fixed angle `radians` to the +X axis.
+    FixAngle {
+        a: usize,
+        b: usize,
+        radians: f64,
+    },
+    /// Equal cosine of angle between two pairs of lines `(a->b, c->d)` and `(e->f, g->h)`
+    /// or equal directed angle between `(a->b, c->d)` (4 points: angle(a->b, c->d) == angle(c->d, a->b) is trivial,
+    /// so we store two line pairs or 4 points where `(a->b)` and `(c->d)` have equal angle to +X or two pairs `(a->b, c->d)` and `(e->f, g->h)`).
+    EqualAngle {
+        a: usize,
+        b: usize,
+        c: usize,
+        d: usize,
+        e: usize,
+        f: usize,
+        g: usize,
+        h: usize,
+    },
+    /// Incident point on circular arc (defined by circle `circle` and start/end angles `start_angle`, `end_angle`).
+    PointOnArc {
+        point: usize,
+        circle: usize,
+        start_angle: f64,
+        end_angle: f64,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -213,6 +245,45 @@ impl Sketch {
                     point(a) && point(b) && a != b && circle(c)
                 }
                 Constraint::TangentCircles { a, b, .. } => circle(a) && circle(b) && a != b,
+                Constraint::PointOnLine { point: p, a, b } => {
+                    point(p) && point(a) && point(b) && a != b
+                }
+                Constraint::FixAngle { a, b, radians } => {
+                    point(a)
+                        && point(b)
+                        && a != b
+                        && radians.is_finite()
+                        && radians.abs() <= std::f64::consts::TAU
+                }
+                Constraint::EqualAngle {
+                    a,
+                    b,
+                    c,
+                    d,
+                    e,
+                    f,
+                    g,
+                    h,
+                } => {
+                    [a, b, c, d, e, f, g, h].iter().all(|&p| point(p))
+                        && a != b
+                        && c != d
+                        && e != f
+                        && g != h
+                }
+                Constraint::PointOnArc {
+                    point: p,
+                    circle: c,
+                    start_angle,
+                    end_angle,
+                } => {
+                    point(p)
+                        && circle(c)
+                        && start_angle.is_finite()
+                        && end_angle.is_finite()
+                        && start_angle.abs() <= std::f64::consts::TAU
+                        && end_angle.abs() <= std::f64::consts::TAU
+                }
             };
             if !valid {
                 return Err(error("Invalid sketch constraint reference/value"));
@@ -361,6 +432,61 @@ impl Sketch {
                 ],
                 1,
             ),
+            Constraint::PointOnLine { point, a, b } => {
+                let u = subtract(p(b), p(a));
+                let v = subtract(p(point), p(a));
+                ([(u[0] * v[1] - u[1] * v[0]) / length(u).max(1e-12), 0.0], 1)
+            }
+            Constraint::FixAngle { a, b, radians } => {
+                let u = subtract(p(b), p(a));
+                let (sin_t, cos_t) = radians.sin_cos();
+                ([u[0] * sin_t - u[1] * cos_t, 0.0], 1)
+            }
+            Constraint::EqualAngle {
+                a,
+                b,
+                c,
+                d,
+                e,
+                f,
+                g,
+                h,
+            } => {
+                let u1 = subtract(p(b), p(a));
+                let v1 = subtract(p(d), p(c));
+                let u2 = subtract(p(f), p(e));
+                let v2 = subtract(p(h), p(g));
+                let l1 = (length(u1) * length(v1)).max(1e-12);
+                let l2 = (length(u2) * length(v2)).max(1e-12);
+                let cos1 = (u1[0] * v1[0] + u1[1] * v1[1]) / l1;
+                let cos2 = (u2[0] * v2[0] + u2[1] * v2[1]) / l2;
+                let scale = l1.sqrt().max(l2.sqrt());
+                ([(cos1 - cos2) * scale, 0.0], 1)
+            }
+            Constraint::PointOnArc {
+                point,
+                circle,
+                start_angle,
+                end_angle,
+            } => {
+                let d = subtract(p(point), center(circle));
+                let rad_res = length(d) - r(circle);
+                let theta = d[1].atan2(d[0]);
+                let span = (end_angle - start_angle).rem_euclid(std::f64::consts::TAU);
+                let rel = (theta - start_angle).rem_euclid(std::f64::consts::TAU);
+                let ang_res = if span <= 1e-12 || rel <= span {
+                    0.0
+                } else {
+                    let over_end = rel - span;
+                    let under_start = std::f64::consts::TAU - rel;
+                    if over_end <= under_start {
+                        over_end * r(circle)
+                    } else {
+                        -under_start * r(circle)
+                    }
+                };
+                ([rad_res.hypot(ang_res), 0.0], 1)
+            }
         }
     }
 
@@ -381,6 +507,108 @@ impl Sketch {
                 vals[..len].to_vec()
             })
             .collect()
+    }
+
+    /// Axis-aligned 2D bounding box `(min_xy, max_xy)` enclosing all points and circles in the sketch.
+    /// Returns `None` if the sketch has no finite points or circles.
+    pub fn bounding_box(&self) -> Option<([f64; 2], [f64; 2])> {
+        let mut min = [f64::INFINITY; 2];
+        let mut max = [f64::NEG_INFINITY; 2];
+        let mut any = false;
+        for &p in &self.points {
+            if p[0].is_finite() && p[1].is_finite() {
+                min[0] = min[0].min(p[0]);
+                min[1] = min[1].min(p[1]);
+                max[0] = max[0].max(p[0]);
+                max[1] = max[1].max(p[1]);
+                any = true;
+            }
+        }
+        for c in &self.circles {
+            if let Some(&center) = self.points.get(c.center)
+                && center[0].is_finite()
+                && center[1].is_finite()
+                && c.radius.is_finite()
+                && c.radius >= 0.0
+            {
+                min[0] = min[0].min(center[0] - c.radius);
+                min[1] = min[1].min(center[1] - c.radius);
+                max[0] = max[0].max(center[0] + c.radius);
+                max[1] = max[1].max(center[1] + c.radius);
+                any = true;
+            }
+        }
+        any.then_some((min, max))
+    }
+
+    /// Identifies overconstrained or conflicting constraint indices at tolerance `tol`
+    /// via residual magnitude and row-by-row Jacobian linear dependency analysis.
+    pub fn overconstrained_constraints(&self, tol: f64) -> Vec<usize> {
+        let tol = tol.clamp(1e-8, 0.1);
+        let Ok(solution) = solve(self, tol) else {
+            return Vec::new();
+        };
+        let solved = &solution.sketch;
+        let mut x: Vec<_> = solved
+            .points
+            .iter()
+            .flatten()
+            .copied()
+            .chain(solved.circles.iter().map(|c| c.radius))
+            .collect();
+        let n = x.len();
+        let mut row_offsets = Vec::with_capacity(solved.constraints.len());
+        let mut m = 0;
+        for c in &solved.constraints {
+            row_offsets.push(m);
+            m += Self::constraint_residual_len(c);
+        }
+        if m == 0 || n == 0 {
+            return Vec::new();
+        }
+        let mut j_flat = vec![0.0; m * n];
+        jacobian_into(solved, &row_offsets, &mut x, &mut j_flat, n);
+
+        let mut basis: Vec<(usize, Vec<f64>)> = Vec::with_capacity(n);
+        let mut out = Vec::new();
+        for (ci, c) in solved.constraints.iter().enumerate() {
+            let r0 = row_offsets[ci];
+            let len = Self::constraint_residual_len(c);
+            let max_res = solution.residuals[ci]
+                .iter()
+                .map(|v| v.abs())
+                .fold(0.0, f64::max);
+            let mut dependent = false;
+            for k in 0..len {
+                let mut row = j_flat[(r0 + k) * n..(r0 + k + 1) * n].to_vec();
+                for &(pivot_col, ref b_row) in &basis {
+                    let factor = row[pivot_col];
+                    if factor != 0.0 {
+                        for col in pivot_col..n {
+                            row[col] -= factor * b_row[col];
+                        }
+                    }
+                }
+                if let Some((pivot_col, &pivot_val)) = row
+                    .iter()
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
+                    && pivot_val.abs() >= 1e-7
+                {
+                    let inv = 1.0 / pivot_val;
+                    for v in &mut row[pivot_col..] {
+                        *v *= inv;
+                    }
+                    basis.push((pivot_col, row));
+                } else {
+                    dependent = true;
+                }
+            }
+            if dependent || max_res > tol {
+                out.push(ci);
+            }
+        }
+        out
     }
 }
 fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) -> bool {
@@ -421,16 +649,16 @@ fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) 
     }
     true
 }
-fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 8], usize) {
-    let mut vars = [0usize; 8];
+fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 16], usize) {
+    let mut vars = [0usize; 16];
     let mut len = 0usize;
-    let add_pt = |vars: &mut [usize; 8], len: &mut usize, p: usize| {
+    let add_pt = |vars: &mut [usize; 16], len: &mut usize, p: usize| {
         vars[*len] = 2 * p;
         vars[*len + 1] = 2 * p + 1;
         *len += 2;
     };
     let n_pts = sketch.points.len();
-    let add_cir = |vars: &mut [usize; 8], len: &mut usize, c: usize| {
+    let add_cir = |vars: &mut [usize; 16], len: &mut usize, c: usize| {
         let center = sketch.circles[c].center;
         vars[*len] = 2 * center;
         vars[*len + 1] = 2 * center + 1;
@@ -442,7 +670,8 @@ fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 
         Constraint::Horizontal { a, b }
         | Constraint::Vertical { a, b }
         | Constraint::Coincident { a, b }
-        | Constraint::Distance { a, b, .. } => {
+        | Constraint::Distance { a, b, .. }
+        | Constraint::FixAngle { a, b, .. } => {
             add_pt(&mut vars, &mut len, a);
             add_pt(&mut vars, &mut len, b);
         }
@@ -455,8 +684,23 @@ fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 
             add_pt(&mut vars, &mut len, c);
             add_pt(&mut vars, &mut len, d);
         }
+        Constraint::EqualAngle {
+            a,
+            b,
+            c,
+            d,
+            e,
+            f,
+            g,
+            h,
+        } => {
+            for p in [a, b, c, d, e, f, g, h] {
+                add_pt(&mut vars, &mut len, p);
+            }
+        }
         Constraint::PointToLineDistance { point, a, b, .. }
-        | Constraint::Midpoint { point, a, b } => {
+        | Constraint::Midpoint { point, a, b }
+        | Constraint::PointOnLine { point, a, b } => {
             add_pt(&mut vars, &mut len, point);
             add_pt(&mut vars, &mut len, a);
             add_pt(&mut vars, &mut len, b);
@@ -490,7 +734,8 @@ fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 
             vars[len + 1] = 2 * n_pts + b;
             len += 2;
         }
-        Constraint::PointOnCircle { point, circle } => {
+        Constraint::PointOnCircle { point, circle }
+        | Constraint::PointOnArc { point, circle, .. } => {
             add_pt(&mut vars, &mut len, point);
             add_cir(&mut vars, &mut len, circle);
         }
@@ -540,6 +785,38 @@ fn jacobian_into(
             Constraint::Vertical { a, b } => {
                 matrix[r0_idx + 2 * a] -= 1.0;
                 matrix[r0_idx + 2 * b] += 1.0;
+            }
+            Constraint::FixAngle { a, b, radians } => {
+                let (sin_t, cos_t) = radians.sin_cos();
+                matrix[r0_idx + 2 * a] -= sin_t;
+                matrix[r0_idx + 2 * a + 1] += cos_t;
+                matrix[r0_idx + 2 * b] += sin_t;
+                matrix[r0_idx + 2 * b + 1] -= cos_t;
+            }
+            Constraint::PointOnLine { point, a, b } => {
+                let pa = [scratch[2 * a], scratch[2 * a + 1]];
+                let pb = [scratch[2 * b], scratch[2 * b + 1]];
+                let pp = [scratch[2 * point], scratch[2 * point + 1]];
+                let ux = pb[0] - pa[0];
+                let uy = pb[1] - pa[1];
+                let vx = pp[0] - pa[0];
+                let vy = pp[1] - pa[1];
+                let lu = ux.hypot(uy);
+                if lu > 1e-12 {
+                    let cross = ux * vy - uy * vx;
+                    let inv_lu = 1.0 / lu;
+                    let inv_lu3 = inv_lu * inv_lu * inv_lu;
+                    let d_pbx = vy * inv_lu - cross * ux * inv_lu3;
+                    let d_pby = -vx * inv_lu - cross * uy * inv_lu3;
+                    let d_ppx = -uy * inv_lu;
+                    let d_ppy = ux * inv_lu;
+                    matrix[r0_idx + 2 * b] += d_pbx;
+                    matrix[r0_idx + 2 * b + 1] += d_pby;
+                    matrix[r0_idx + 2 * point] += d_ppx;
+                    matrix[r0_idx + 2 * point + 1] += d_ppy;
+                    matrix[r0_idx + 2 * a] -= d_pbx + d_ppx;
+                    matrix[r0_idx + 2 * a + 1] -= d_pby + d_ppy;
+                }
             }
             Constraint::Coincident { a, b } => {
                 matrix[r0_idx + 2 * a] += 1.0;
@@ -860,8 +1137,25 @@ fn is_constraint_degenerate(sketch: &Sketch, c: &Constraint, tolerance: f64) -> 
         }
         Constraint::PointToLineDistance { a, b, .. }
         | Constraint::Collinear { a, b, .. }
-        | Constraint::TangentLineCircle { a, b, .. } => {
+        | Constraint::TangentLineCircle { a, b, .. }
+        | Constraint::PointOnLine { a, b, .. }
+        | Constraint::FixAngle { a, b, .. } => {
             length(subtract(sketch.points[a], sketch.points[b])) <= tolerance
+        }
+        Constraint::EqualAngle {
+            a,
+            b,
+            c,
+            d,
+            e,
+            f,
+            g,
+            h,
+        } => {
+            length(subtract(sketch.points[a], sketch.points[b])) <= tolerance
+                || length(subtract(sketch.points[c], sketch.points[d])) <= tolerance
+                || length(subtract(sketch.points[e], sketch.points[f])) <= tolerance
+                || length(subtract(sketch.points[g], sketch.points[h])) <= tolerance
         }
         Constraint::Symmetric { axis_a, axis_b, .. } => {
             length(subtract(sketch.points[axis_a], sketch.points[axis_b])) <= tolerance
@@ -944,6 +1238,7 @@ pub fn solve_with_diagnostics_options(
                 | Constraint::Midpoint { .. }
                 | Constraint::Concentric { .. }
                 | Constraint::EqualRadius { .. }
+                | Constraint::FixAngle { .. }
         )
     });
     let inconsistent = if solution.max_residual > tolerance && linear {
@@ -1362,5 +1657,109 @@ mod tests {
         };
         let conflict_dof = analyze_dof(&conflict, 1e-6).unwrap();
         assert!(!conflict_dof.conflicting_constraints.is_empty());
+    }
+
+    #[test]
+    fn point_on_line_fix_angle_equal_angle_and_point_on_arc() {
+        let s = Sketch {
+            points: vec![
+                [0., 0.],
+                [4., 3.],
+                [2., 1.],
+                [0., 5.],
+                [4., 6.],
+                [2., 3.],
+            ],
+            circles: vec![Circle {
+                center: 0,
+                radius: 5.,
+            }],
+            constraints: vec![
+                Constraint::Fix {
+                    point: 0,
+                    at: [0., 0.],
+                },
+                Constraint::FixAngle {
+                    a: 0,
+                    b: 1,
+                    radians: std::f64::consts::FRAC_PI_4,
+                },
+                Constraint::Distance {
+                    a: 0,
+                    b: 1,
+                    value: 10.0 * std::f64::consts::SQRT_2,
+                },
+                Constraint::PointOnLine {
+                    point: 2,
+                    a: 0,
+                    b: 1,
+                },
+                Constraint::Vertical { a: 0, b: 3 },
+                Constraint::Fix {
+                    point: 3,
+                    at: [0., 5.],
+                },
+                Constraint::EqualAngle {
+                    a: 0,
+                    b: 1,
+                    c: 0,
+                    d: 3,
+                    e: 3,
+                    f: 4,
+                    g: 0,
+                    h: 3,
+                },
+                Constraint::Distance {
+                    a: 3,
+                    b: 4,
+                    value: 5.0 * std::f64::consts::SQRT_2,
+                },
+                Constraint::Radius {
+                    circle: 0,
+                    value: 5.,
+                },
+                Constraint::PointOnArc {
+                    point: 5,
+                    circle: 0,
+                    start_angle: 0.0,
+                    end_angle: std::f64::consts::FRAC_PI_2,
+                },
+            ],
+        };
+        let r = solve(&s, 1e-6).unwrap();
+        assert!(r.max_residual <= 1e-6);
+        assert!((r.sketch.points[1][0] - 10.0).abs() < 1e-5);
+        assert!((r.sketch.points[1][1] - 10.0).abs() < 1e-5);
+        assert!((r.sketch.points[2][0] - r.sketch.points[2][1]).abs() < 1e-5);
+        let p5 = r.sketch.points[5];
+        assert!((p5[0].hypot(p5[1]) - 5.0).abs() < 1e-5);
+        assert!(p5[0] >= -1e-6 && p5[1] >= -1e-6);
+    }
+
+    #[test]
+    fn sketch_bounding_box_and_overconstrained_constraints() {
+        let s = Sketch {
+            points: vec![[0., 0.], [10., 5.]],
+            circles: vec![Circle {
+                center: 0,
+                radius: 3.,
+            }],
+            constraints: vec![
+                Constraint::Fix {
+                    point: 0,
+                    at: [0., 0.],
+                },
+                Constraint::Fix {
+                    point: 1,
+                    at: [10., 5.],
+                },
+                Constraint::Horizontal { a: 0, b: 1 },
+            ],
+        };
+        let (min, max) = s.bounding_box().unwrap();
+        assert_eq!(min, [-3., -3.]);
+        assert_eq!(max, [10., 5.]);
+        let over = s.overconstrained_constraints(1e-6);
+        assert!(over.contains(&2));
     }
 }

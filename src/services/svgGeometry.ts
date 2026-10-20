@@ -34,6 +34,11 @@ export async function svgProfile(svg: string, options: SvgOptions = {}) {
   const parsed = await readSvgDocumentAsync(svg, options, 'profile')
   return { contours: bounded(parsed.contours ?? []), warnings: parsed.warnings, widthMm: parsed.widthMm, heightMm: parsed.heightMm }
 }
+export function formatSvgNumber(value: number, precision = 6): string {
+  if (!Number.isFinite(value)) throw new Error('SVG coordinate must be finite.')
+  const rounded = Number(value.toFixed(precision))
+  return Object.is(rounded, -0) ? '0' : String(rounded)
+}
 export function contoursSvg(contours: SvgContours): string {
   bounded(contours)
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
@@ -42,8 +47,10 @@ export function contoursSvg(contours: SvgContours): string {
   // A cropped fabrication document has a local origin. Rebase before SVG's
   // single-precision path normalization so distant world translations cannot
   // collapse short edges or holes on reimport.
-  const path = contours.map(r => r.map(([x,y], i) => `${i ? 'L' : 'M'}${x-x0} ${y1-y}`).join(' ') + ' Z').join(' ')
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${x1-x0}mm" height="${y1-y0}mm" viewBox="0 0 ${x1-x0} ${y1-y0}"><path fill="black" fill-rule="evenodd" d="${path}"/></svg>`
+  const w = formatSvgNumber(x1 - x0)
+  const h = formatSvgNumber(y1 - y0)
+  const path = contours.map(r => r.map(([x,y], i) => `${i ? 'L' : 'M'}${formatSvgNumber(x-x0)} ${formatSvgNumber(y1-y)}`).join(' ') + ' Z').join(' ')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}"><path fill="black" fill-rule="evenodd" d="${path}"/></svg>`
   if (new TextEncoder().encode(svg).length > 4*1024*1024) throw new Error('SVG export exceeds 4 MiB.')
   return svg
 }

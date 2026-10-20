@@ -245,6 +245,76 @@ impl value_codec::Serialize for Constraint {
                 );
                 value_codec::Value::Object(object)
             }
+            Self::PointOnLine { point, a, b } => {
+                let mut object = value_codec::Map::new();
+                object.insert("point".into(), value_codec::Serialize::to_value(point));
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("point_on_line".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::FixAngle { a, b, radians } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radians".into(), value_codec::Serialize::to_value(radians));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("fix_angle".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::EqualAngle {
+                a,
+                b,
+                c,
+                d,
+                e,
+                f,
+                g,
+                h,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("c".into(), value_codec::Serialize::to_value(c));
+                object.insert("d".into(), value_codec::Serialize::to_value(d));
+                object.insert("e".into(), value_codec::Serialize::to_value(e));
+                object.insert("f".into(), value_codec::Serialize::to_value(f));
+                object.insert("g".into(), value_codec::Serialize::to_value(g));
+                object.insert("h".into(), value_codec::Serialize::to_value(h));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("equal_angle".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::PointOnArc {
+                point,
+                circle,
+                start_angle,
+                end_angle,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("point".into(), value_codec::Serialize::to_value(point));
+                object.insert("circle".into(), value_codec::Serialize::to_value(circle));
+                object.insert(
+                    "start_angle".into(),
+                    value_codec::Serialize::to_value(start_angle),
+                );
+                object.insert(
+                    "end_angle".into(),
+                    value_codec::Serialize::to_value(end_angle),
+                );
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("point_on_arc".into()),
+                );
+                value_codec::Value::Object(object)
+            }
         }
     }
 }
@@ -609,6 +679,122 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                         .ok_or_else(|| value_codec::error("Missing field b"))?,
                 )?;
                 Ok(Self::EqualRadius { a, b })
+            }
+            "point_on_line" => {
+                let point: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("point")
+                        .ok_or_else(|| value_codec::error("Missing field point"))?,
+                )?;
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                Ok(Self::PointOnLine { point, a, b })
+            }
+            "fix_angle" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let radians: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radians")
+                        .ok_or_else(|| value_codec::error("Missing field radians"))?,
+                )?;
+                Ok(Self::FixAngle { a, b, radians })
+            }
+            "equal_angle" => {
+                let a: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let c: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("c")
+                        .ok_or_else(|| value_codec::error("Missing field c"))?,
+                )?;
+                let d: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("d")
+                        .ok_or_else(|| value_codec::error("Missing field d"))?,
+                )?;
+                let e: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("e")
+                        .ok_or_else(|| value_codec::error("Missing field e"))?,
+                )?;
+                let f: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("f")
+                        .ok_or_else(|| value_codec::error("Missing field f"))?,
+                )?;
+                let g: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("g")
+                        .ok_or_else(|| value_codec::error("Missing field g"))?,
+                )?;
+                let h: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("h")
+                        .ok_or_else(|| value_codec::error("Missing field h"))?,
+                )?;
+                Ok(Self::EqualAngle {
+                    a,
+                    b,
+                    c,
+                    d,
+                    e,
+                    f,
+                    g,
+                    h,
+                })
+            }
+            "point_on_arc" => {
+                let point: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("point")
+                        .ok_or_else(|| value_codec::error("Missing field point"))?,
+                )?;
+                let circle: usize = value_codec::Deserialize::from_value(
+                    object
+                        .remove("circle")
+                        .ok_or_else(|| value_codec::error("Missing field circle"))?,
+                )?;
+                let start_angle: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("start_angle")
+                        .ok_or_else(|| value_codec::error("Missing field start_angle"))?,
+                )?;
+                let end_angle: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("end_angle")
+                        .ok_or_else(|| value_codec::error("Missing field end_angle"))?,
+                )?;
+                Ok(Self::PointOnArc {
+                    point,
+                    circle,
+                    start_angle,
+                    end_angle,
+                })
             }
             _ => Err(value_codec::error("Unknown enum variant")),
         }

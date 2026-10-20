@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {createSpecificationSheets,drawingSpecificationRows,parseDrawingParts} from '../src/services/drawingSpecification'
+import {createSpecificationSheets,drawingSpecificationRows,exportDrawingSpecificationCsv,exportDrawingSpecificationMarkdown,parseDrawingParts} from '../src/services/drawingSpecification'
 import type {DirectBody} from '../src/services/directModeling'
 const body=(id:string,name='Деталь '+id):DirectBody=>({id,name,mesh:{positions:new Float64Array(),indices:new Uint32Array()}})
 const options={template:'A4' as const,scale:1,title:'Сборка & детали',author:'Конструктор',perBody:false,specification:true}
@@ -34,5 +34,16 @@ describe('engineering specifications',()=>{
   const bodies=Array.from({length:200},(_,i)=>body('p'+i)),parts=bodies.map(b=>({bodyId:b.id,note:'Н'.repeat(120)}))
   expect(()=>createSpecificationSheets(bodies,{...options,template:'A5',parts},210,148)).toThrow(/40 sheets/)
   expect(createSpecificationSheets(bodies,{...options,specification:false},297,210)).toEqual([])
+ })
+ it('exports BOM specification rows to CSV and Markdown tables',()=>{
+  const bodies=[body('bolt','Болт M4, оцинкованный')]
+  const rows=drawingSpecificationRows(bodies,[{bodyId:'bolt',designation:'ISO 4762',description:'Болт M4, оцинкованный',material:'Сталь "A2"',note:'Основной крепеж'}])
+  const csv=exportDrawingSpecificationCsv(rows,'en')
+  expect(csv).toContain('Position,Designation,Description,Quantity,Material,Note')
+  expect(csv).toContain('"Болт M4, оцинкованный"')
+  expect(csv).toContain('"Сталь ""A2"""')
+  const md=exportDrawingSpecificationMarkdown(rows,'ru')
+  expect(md).toContain('| Поз. | Обозначение | Наименование | Кол. | Материал | Примечание |')
+  expect(md).toContain('| 1 | ISO 4762 | Болт M4, оцинкованный | 1 | Сталь "A2" | Основной крепеж |')
  })
 })

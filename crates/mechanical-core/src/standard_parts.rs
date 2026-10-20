@@ -1179,6 +1179,127 @@ pub fn helical_spring_analysis(o: &HelicalSpringOptions) -> Result<HelicalSpring
     })
 }
 
+/// ISO 3601 full O-ring gland specification including inner/outer gland diameters and fill ratio.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OringGlandSpec {
+    pub cord_diameter_mm: f64,
+    pub inner_diameter_mm: f64,
+    pub gland_inner_diameter_mm: f64,
+    pub gland_outer_diameter_mm: f64,
+    pub groove_depth_mm: f64,
+    pub groove_width_mm: f64,
+    pub compression_ratio: f64,
+    pub gland_fill_ratio: f64,
+    pub corner_radius_mm: f64,
+}
+
+/// Computes ISO 3601 axial/radial O-ring gland dimensions from cord diameter (`cord_diameter_mm`),
+/// O-ring inner diameter (`inner_diameter_mm`), and `static_seal` flag (`true` for static seal, `false` for dynamic).
+pub fn oring_gland_spec(
+    cord_diameter_mm: f64,
+    inner_diameter_mm: f64,
+    static_seal: bool,
+) -> Result<OringGlandSpec> {
+    if !cord_diameter_mm.is_finite() || !(1.0..=10.0).contains(&cord_diameter_mm) {
+        return Err(err(
+            "o_ring",
+            "O-ring cord_diameter_mm must be between 1.0 and 10.0 mm.",
+        ));
+    }
+    if !inner_diameter_mm.is_finite() || !(2.0..=1000.0).contains(&inner_diameter_mm) {
+        return Err(err(
+            "o_ring",
+            "O-ring inner_diameter_mm must be between 2.0 and 1000.0 mm.",
+        ));
+    }
+    let groove = o_ring_groove_spec(cord_diameter_mm, !static_seal)?;
+    let gland_outer = inner_diameter_mm + 2.0 * groove.groove_depth_h_mm;
+    let oring_area = PI * (0.5 * cord_diameter_mm).powi(2);
+    let gland_area = groove.groove_depth_h_mm * groove.groove_width_b_mm;
+    Ok(OringGlandSpec {
+        cord_diameter_mm,
+        inner_diameter_mm,
+        gland_inner_diameter_mm: inner_diameter_mm,
+        gland_outer_diameter_mm: gland_outer,
+        groove_depth_mm: groove.groove_depth_h_mm,
+        groove_width_mm: groove.groove_width_b_mm,
+        compression_ratio: groove.compression_ratio,
+        gland_fill_ratio: oring_area / gland_area.max(1e-9),
+        corner_radius_mm: groove.corner_radius_mm,
+    })
+}
+
+/// Epicyclic planetary gearset kinematic and geometric specification.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlanetaryGearsetSpec {
+    pub sun_teeth: usize,
+    pub planet_teeth: usize,
+    pub ring_teeth: usize,
+    pub num_planets: usize,
+    pub module_mm: f64,
+    pub center_distance_mm: f64,
+    pub sun_pitch_diameter_mm: f64,
+    pub planet_pitch_diameter_mm: f64,
+    pub ring_pitch_diameter_mm: f64,
+    /// Reduction ratio with fixed ring gear, sun input, carrier output: $1 + Z_{\text{ring}} / Z_{\text{sun}}$.
+    pub sun_to_carrier_ratio: f64,
+    /// Clear gap between adjacent planet tip circles in millimeters.
+    pub adjacent_planet_tip_clearance_mm: f64,
+}
+
+/// Computes epicyclic planetary gearset parameters and verifies concentricity ($Z_{\text{ring}} = Z_{\text{sun}} + 2 Z_{\text{planet}}$),
+/// equal-spacing assembly condition ($(Z_{\text{sun}} + Z_{\text{ring}}) \bmod N_{\text{planets}} = 0$),
+/// and adjacent planet tip clearance.
+pub fn planetary_gearset_params(
+    sun_teeth: usize,
+    planet_teeth: usize,
+    num_planets: usize,
+    module_mm: f64,
+) -> std::result::Result<PlanetaryGearsetSpec, String> {
+    if sun_teeth < 6 || planet_teeth < 6 {
+        return Err("Sun and planet tooth counts must be at least 6.".into());
+    }
+    if !(2..=8).contains(&num_planets) {
+        return Err("Number of planets must be between 2 and 8.".into());
+    }
+    if !module_mm.is_finite() || !(0.1..=100.0).contains(&module_mm) {
+        return Err("Module must be finite and between 0.1 and 100 mm.".into());
+    }
+    let ring_teeth = sun_teeth + 2 * planet_teeth;
+    if !(sun_teeth + ring_teeth).is_multiple_of(num_planets) {
+        return Err(format!(
+            "Assembly condition failed: (Z_sun + Z_ring) = {} is not divisible by num_planets = {}.",
+            sun_teeth + ring_teeth,
+            num_planets
+        ));
+    }
+    let zs = sun_teeth as f64;
+    let zp = planet_teeth as f64;
+    let zr = ring_teeth as f64;
+    let center_distance_mm = 0.5 * module_mm * (zs + zp);
+    let planet_tip_diameter_mm = module_mm * (zp + 2.0);
+    let center_to_center = 2.0 * center_distance_mm * (PI / num_planets as f64).sin();
+    let tip_clearance = center_to_center - planet_tip_diameter_mm;
+    if tip_clearance <= 0.0 {
+        return Err(format!(
+            "Adjacent planet tips collide (clearance = {tip_clearance:.3} mm)."
+        ));
+    }
+    Ok(PlanetaryGearsetSpec {
+        sun_teeth,
+        planet_teeth,
+        ring_teeth,
+        num_planets,
+        module_mm,
+        center_distance_mm,
+        sun_pitch_diameter_mm: module_mm * zs,
+        planet_pitch_diameter_mm: module_mm * zp,
+        ring_pitch_diameter_mm: module_mm * zr,
+        sun_to_carrier_ratio: 1.0 + zr / zs,
+        adjacent_planet_tip_clearance_mm: tip_clearance,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1292,6 +1413,17 @@ mod tests {
         assert_eq!(spring.spring_index, 8.0);
         assert!(spring.wahl_factor > 1.15);
         assert!(spring.deflection_mm > 0.0);
+
+        let gland = oring_gland_spec(2.5, 20.0, true).unwrap();
+        assert_eq!(gland.gland_inner_diameter_mm, 20.0);
+        assert!(gland.gland_outer_diameter_mm > 23.0);
+        assert!(gland.gland_fill_ratio > 0.65 && gland.gland_fill_ratio < 0.90);
+
+        let pset = planetary_gearset_params(18, 18, 3, 1.5).unwrap();
+        assert_eq!(pset.ring_teeth, 54);
+        assert!((pset.sun_to_carrier_ratio - 4.0).abs() < 1e-9);
+        assert!((pset.center_distance_mm - 27.0).abs() < 1e-9);
+        assert!(planetary_gearset_params(17, 18, 3, 1.5).is_err()); // 17 + 53 = 70 not divisible by 3
     }
 }
 

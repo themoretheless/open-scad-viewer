@@ -369,7 +369,7 @@ export class DirectHistory {
     next.blenderProjectId ??= this.currentDocument.blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
-    validateChange?.(clone(next))
+    if (validateChange) validateChange(clone(next))
     if(this.current!==base)throw Error('History changed during commit validation.')
     const nextText = serializeDirectDocument(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return

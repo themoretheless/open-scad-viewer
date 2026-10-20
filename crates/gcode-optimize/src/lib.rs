@@ -467,4 +467,218 @@ mod arc_and_zhop_tests {
         assert!(gcode.contains("G3 X0.000 Y10.000 I-10.000 J0.000"));
         assert!(gcode.contains("G0 Z0.400")); // Z-hop lift of 0.2mm above z=0.2mm
     }
+
+    #[test]
+    fn pressure_advance_input_shaper_and_klipper_print_time() {
+        let gcode = "G21\nG90\nG1 X10 Y0 E0.5 F3000\nG1 X10 Y10 E1.0 F3000\n";
+        let klipper_pa = inject_pressure_advance(gcode, Flavor::Klipper, 0.045, 0.04).unwrap();
+        assert!(klipper_pa.contains("SET_PRESSURE_ADVANCE ADVANCE=0.04500 SMOOTH_TIME=0.04000"));
+
+        let marlin_pa = inject_pressure_advance(gcode, Flavor::Marlin, 0.06, 0.04).unwrap();
+        assert!(marlin_pa.contains("M900 K0.06000"));
+
+        let shaper = format_input_shaper_command(Flavor::Klipper, "mzv", 54.2, 48.6).unwrap();
+        assert_eq!(
+            shaper,
+            "SET_INPUT_SHAPER SHAPER_TYPE=MZV SHAPER_FREQ_X=54.20 SHAPER_FREQ_Y=48.60"
+        );
+
+        let moves = vec![
+            GcodeMove {
+                x: 0.0,
+                y: 0.0,
+                z: 0.2,
+                e: 0.0,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: false,
+            },
+            GcodeMove {
+                x: 50.0,
+                y: 0.0,
+                z: 0.2,
+                e: 1.5,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: true,
+            },
+            GcodeMove {
+                x: 50.0,
+                y: 50.0,
+                z: 0.2,
+                e: 3.0,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: true,
+            },
+        ];
+        // Ideal time at 100 mm/s for 100 mm is 1.0 s; with finite acceleration (3000 mm/s^2) and 90 deg corner (scv=5 mm/s), time > 1.0 s
+        let time_s = estimate_klipper_print_time(&moves, 3000.0, 5.0);
+        assert!(time_s > 1.05 && time_s < 1.5, "got {time_s}");
+    }
+}
+
+pub use gcode_core::GcodeMove;
+
+/// Injects firmware-specific Pressure Advance / Linear Advance setup commands into a G-code program
+/// (`SET_PRESSURE_ADVANCE` for Klipper, `M900 K...` for Marlin, `M572 D0 S...` for RepRapFirmware).
+pub fn inject_pressure_advance(
+    gcode: &str,
+    flavor: Flavor,
+    k_factor: f64,
+    smooth_time_s: f64,
+) -> Result<String> {
+    if !k_factor.is_finite()
+        || !(0.0..=2.0).contains(&k_factor)
+        || !smooth_time_s.is_finite()
+        || !(0.001..=0.2).contains(&smooth_time_s)
+    {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Pressure advance k_factor must be in 0..=2.0 and smooth_time_s in 0.001..=0.2",
+        ));
+    }
+    let cmd = match flavor {
+        Flavor::Klipper => format!(
+            "SET_PRESSURE_ADVANCE ADVANCE={k_factor:.5} SMOOTH_TIME={smooth_time_s:.5}"
+        ),
+        Flavor::Marlin => format!("M900 K{k_factor:.5}"),
+        Flavor::RepRapFirmware => format!("M572 D0 S{k_factor:.5}"),
+    };
+    let mut out = String::with_capacity(gcode.len() + cmd.len() + 2);
+    let mut injected = false;
+    for line in gcode.lines() {
+        out.push_str(line);
+        out.push('\n');
+        if !injected && !line.trim_start().starts_with(';') && !line.trim().is_empty() {
+            out.push_str(&cmd);
+            out.push('\n');
+            injected = true;
+        }
+    }
+    if !injected {
+        out.push_str(&cmd);
+        out.push('\n');
+    }
+    Ok(out)
+}
+
+/// Formats an Input Shaper resonance compensation command for Klipper (`SET_INPUT_SHAPER`) or Marlin (`M593`).
+pub fn format_input_shaper_command(
+    flavor: Flavor,
+    shaper_type: &str,
+    freq_x_hz: f64,
+    freq_y_hz: f64,
+) -> Result<String> {
+    if !freq_x_hz.is_finite()
+        || !(10.0..=200.0).contains(&freq_x_hz)
+        || !freq_y_hz.is_finite()
+        || !(10.0..=200.0).contains(&freq_y_hz)
+    {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Input shaper frequencies must be finite and within 10..=200 Hz",
+        ));
+    }
+    let shaper_upper = shaper_type.trim().to_ascii_uppercase();
+    if !["ZV", "MZV", "ZVD", "EI", "2HUMP_EI", "3HUMP_EI"].contains(&shaper_upper.as_str()) {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Unsupported input shaper type",
+        ));
+    }
+    Ok(match flavor {
+        Flavor::Klipper => format!(
+            "SET_INPUT_SHAPER SHAPER_TYPE={shaper_upper} SHAPER_FREQ_X={freq_x_hz:.2} SHAPER_FREQ_Y={freq_y_hz:.2}"
+        ),
+        _ => format!("M593 X F{freq_x_hz:.2}\nM593 Y F{freq_y_hz:.2}"),
+    })
+}
+
+/// Estimates realistic print execution time in seconds using Klipper's trapezoidal velocity profile
+/// and centripetal cornering velocity limit (`square_corner_velocity_mm_s`, typically `5.0` mm/s)
+/// with peak acceleration `accel_mm_s2`.
+pub fn estimate_klipper_print_time(
+    moves: &[GcodeMove],
+    accel_mm_s2: f64,
+    square_corner_velocity_mm_s: f64,
+) -> f64 {
+    if moves.len() < 2 || !accel_mm_s2.is_finite() || accel_mm_s2 <= 0.0 {
+        return 0.0;
+    }
+    let scv = square_corner_velocity_mm_s.max(0.1);
+    let mut total_time_s = 0.0;
+    let mut prev_dir: Option<[f64; 3]> = None;
+    let mut prev_exit_v = 0.0_f64;
+
+    for i in 1..moves.len() {
+        let a = &moves[i - 1];
+        let b = &moves[i];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dz = b.z - a.z;
+        let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+        if dist <= 1e-9 {
+            continue;
+        }
+        let dir = [dx / dist, dy / dist, dz / dist];
+        let v_cruise = b.feedrate_mm_s.max(0.1);
+
+        let v_entry = if let Some(pd) = prev_dir {
+            let cos_theta = (pd[0] * dir[0] + pd[1] * dir[1] + pd[2] * dir[2]).clamp(-1.0, 1.0);
+            let half_angle = (0.5 * (1.0 - cos_theta)).max(0.0).sqrt(); // sin(theta / 2)
+            if half_angle > 1e-4 {
+                let cos_half = (0.5 * (1.0 + cos_theta)).max(0.0).sqrt();
+                let factor = (cos_half / half_angle).sqrt();
+                (scv * factor).min(v_cruise).min(prev_exit_v)
+            } else {
+                v_cruise.min(prev_exit_v)
+            }
+        } else {
+            0.0
+        };
+
+        // Look ahead one segment for exit velocity
+        let v_exit = if i + 1 < moves.len() {
+            let c = &moves[i + 1];
+            let ndx = c.x - b.x;
+            let ndy = c.y - b.y;
+            let ndz = c.z - b.z;
+            let ndist = (ndx * ndx + ndy * ndy + ndz * ndz).sqrt();
+            if ndist > 1e-9 {
+                let ndir = [ndx / ndist, ndy / ndist, ndz / ndist];
+                let cos_theta =
+                    (dir[0] * ndir[0] + dir[1] * ndir[1] + dir[2] * ndir[2]).clamp(-1.0, 1.0);
+                let half_angle = (0.5 * (1.0 - cos_theta)).max(0.0).sqrt();
+                if half_angle > 1e-4 {
+                    let cos_half = (0.5 * (1.0 + cos_theta)).max(0.0).sqrt();
+                    (scv * (cos_half / half_angle).sqrt())
+                        .min(v_cruise)
+                        .min(c.feedrate_mm_s.max(0.1))
+                } else {
+                    v_cruise.min(c.feedrate_mm_s.max(0.1))
+                }
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
+
+        // Reachable peak velocity given segment length and acceleration
+        let v_peak_sq = accel_mm_s2 * dist + 0.5 * (v_entry * v_entry + v_exit * v_exit);
+        let v_peak = v_peak_sq.max(0.0).sqrt().min(v_cruise);
+        let d_accel = ((v_peak * v_peak - v_entry * v_entry).max(0.0)) / (2.0 * accel_mm_s2);
+        let d_decel = ((v_peak * v_peak - v_exit * v_exit).max(0.0)) / (2.0 * accel_mm_s2);
+        let d_cruise = (dist - d_accel - d_decel).max(0.0);
+
+        let t_accel = (v_peak - v_entry).max(0.0) / accel_mm_s2;
+        let t_decel = (v_peak - v_exit).max(0.0) / accel_mm_s2;
+        let t_cruise = d_cruise / v_peak.max(1e-6);
+
+        total_time_s += t_accel + t_cruise + t_decel;
+        prev_dir = Some(dir);
+        prev_exit_v = v_peak;
+    }
+    total_time_s
 }

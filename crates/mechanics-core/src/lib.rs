@@ -726,6 +726,90 @@ mod lib_tests {
         let n_gerber = fatigue_safety_factor(50.0, 150.0, 200.0, 350.0, 500.0, FatigueCriterion::Gerber).unwrap();
         assert!(n_soderberg < n_goodman && n_goodman < n_gerber);
         assert!((n_goodman - 2.2222).abs() < 1e-3);
+
+        // M8 x 1.25 class 8.8 bolt (proof strength 600 MPa) with 12 kN preload and 5 kN external load
+        let bolt = bolted_joint_analysis(8.0, 1.25, 12_000.0, 5_000.0, 600.0).unwrap();
+        assert!((bolt.tensile_stress_area_mm2 - 36.6).abs() < 0.1);
+        assert!(bolt.proof_safety_factor > 1.5);
+        assert!(bolt.joint_separation_safety_factor > 2.5);
+        assert!((bolt.recommended_tightening_torque_nm - 19.2).abs() < 0.5);
     }
+}
+
+/// VDI 2230 / ISO 898-1 bolted joint preload, tensile stress area, and clamping safety report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BoltedJointReport {
+    /// ISO 898-1 tensile stress area $A_s = \frac{\pi}{4}(d - 0.9382 P)^2$ in $\text{mm}^2$.
+    pub tensile_stress_area_mm2: f64,
+    /// Stiffness partition factor $C = k_b / (k_b + k_m)$ (standard steel bolt in steel/alu flange $\approx 0.25$).
+    pub stiffness_factor_c: f64,
+    /// Total bolt axial tension under external load: $F_b = F_i + C F_{\text{ext}}$ in N.
+    pub bolt_axial_force_n: f64,
+    /// Remaining clamping force on the joint interface: $F_m = F_i - (1 - C) F_{\text{ext}}$ in N.
+    pub residual_clamp_force_n: f64,
+    /// Axial tensile stress in the thread root $\sigma_b = F_b / A_s$ in MPa.
+    pub bolt_axial_stress_mpa: f64,
+    /// Safety factor against bolt proof load ($S_p A_s / F_b$).
+    pub proof_safety_factor: f64,
+    /// Load factor $n_0 = F_i / ((1 - C) F_{\text{ext}})$ against joint separation ($> 1.0$ means clamped).
+    pub joint_separation_safety_factor: f64,
+    /// Estimated assembly tightening torque $T = K d F_i$ (with nut factor $K = 0.20$) in $\text{N}\cdot\text{m}$.
+    pub recommended_tightening_torque_nm: f64,
+}
+
+/// Performs a bolted joint preload & clamping analysis for an ISO metric bolt (`bolt_diameter_mm`, `pitch_mm`)
+/// under initial preload `preload_n` and external separating load `external_axial_load_n` against `proof_strength_mpa`.
+pub fn bolted_joint_analysis(
+    bolt_diameter_mm: f64,
+    pitch_mm: f64,
+    preload_n: f64,
+    external_axial_load_n: f64,
+    proof_strength_mpa: f64,
+) -> Result<BoltedJointReport> {
+    if ![
+        bolt_diameter_mm,
+        pitch_mm,
+        preload_n,
+        external_axial_load_n,
+        proof_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || bolt_diameter_mm <= 0.5
+        || pitch_mm <= 0.05
+        || bolt_diameter_mm <= 1.1 * pitch_mm
+        || preload_n <= 0.0
+        || external_axial_load_n < 0.0
+        || proof_strength_mpa <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Bolted joint analysis requires valid bolt diameter, pitch, positive preload, non-negative load, and positive proof strength",
+        ));
+    }
+    let d_eff = bolt_diameter_mm - 0.9382 * pitch_mm;
+    let a_s = 0.25 * std::f64::consts::PI * d_eff * d_eff;
+    let c = 0.25_f64;
+    let f_b = preload_n + c * external_axial_load_n;
+    let f_m = preload_n - (1.0 - c) * external_axial_load_n;
+    let sigma_b = f_b / a_s;
+    let proof_load_n = proof_strength_mpa * a_s;
+    let proof_fos = proof_load_n / f_b.max(1e-12);
+    let sep_fos = if external_axial_load_n > 1e-12 {
+        preload_n / ((1.0 - c) * external_axial_load_n)
+    } else {
+        f64::INFINITY
+    };
+    let torque_nm = 0.20 * (bolt_diameter_mm * 1e-3) * preload_n;
+    Ok(BoltedJointReport {
+        tensile_stress_area_mm2: a_s,
+        stiffness_factor_c: c,
+        bolt_axial_force_n: f_b,
+        residual_clamp_force_n: f_m,
+        bolt_axial_stress_mpa: sigma_b,
+        proof_safety_factor: proof_fos,
+        joint_separation_safety_factor: sep_fos,
+        recommended_tightening_torque_nm: torque_nm,
+    })
 }
 

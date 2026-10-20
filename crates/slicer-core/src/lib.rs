@@ -93,6 +93,9 @@ pub enum InfillPattern {
     Gyroid,
     HilbertCurve,
     ArchimedeanChords,
+    CrossHatch,
+    TriHexagon,
+    CubicSubdivision,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -551,7 +554,85 @@ fn generate_infill(
         InfillPattern::ArchimedeanChords => {
             generate_archimedean_infill(remaining, spacing, role, budget)
         }
+        InfillPattern::CrossHatch => {
+            let mut paths = hatch_angled(
+                remaining,
+                spacing,
+                std::f64::consts::FRAC_PI_4,
+                role,
+                budget,
+            )?;
+            paths.extend(hatch_angled(
+                remaining,
+                spacing,
+                -std::f64::consts::FRAC_PI_4,
+                role,
+                budget,
+            )?);
+            Ok(paths)
+        }
+        InfillPattern::TriHexagon => {
+            let mut paths = hatch_angled(remaining, spacing * 1.25, 0.0, role, budget)?;
+            paths.extend(hatch_angled(
+                remaining,
+                spacing * 1.25,
+                std::f64::consts::FRAC_PI_3,
+                role,
+                budget,
+            )?);
+            paths.extend(hatch_angled(
+                remaining,
+                spacing * 1.25,
+                -std::f64::consts::FRAC_PI_3,
+                role,
+                budget,
+            )?);
+            Ok(paths)
+        }
+        InfillPattern::CubicSubdivision => {
+            generate_cubic_infill(remaining, spacing, 0.0, role, budget)
+        }
     }
+}
+
+fn generate_cubic_infill(
+    remaining: &Rings,
+    spacing: f64,
+    z_mm: f64,
+    role: PathRole,
+    budget: &mut Budget,
+) -> Result<Vec<Toolpath>> {
+    if remaining.is_empty() {
+        return Ok(Vec::new());
+    }
+    let phase = (z_mm / std::f64::consts::SQRT_2).rem_euclid(spacing);
+    let mut paths = Vec::new();
+    for angle in [
+        0.0_f64,
+        std::f64::consts::FRAC_PI_3,
+        -std::f64::consts::FRAC_PI_3,
+    ] {
+        let (s, c) = angle.sin_cos();
+        let shift_x = -phase * s;
+        let shift_y = phase * c;
+        let shifted: Rings = remaining
+            .iter()
+            .map(|ring| {
+                ring.iter()
+                    .map(|&[x, y]| [x - shift_x, y - shift_y])
+                    .collect()
+            })
+            .collect();
+        let mut dir_paths = hatch_angled(&shifted, spacing, angle, role, budget)?;
+        for p in &mut dir_paths {
+            for pt in &mut p.points {
+                pt[0] += shift_x;
+                pt[1] += shift_y;
+            }
+        }
+        paths.extend(dir_paths);
+    }
+    Ok(paths)
 }
 
 fn point_in_rings(rings: &Rings, p: [f64; 2]) -> bool {
@@ -758,6 +839,14 @@ pub fn plan_layer_with_pattern(
             settings.line_width_mm,
             std::f64::consts::FRAC_PI_4,
             PathRole::SolidSkin,
+            &mut budget,
+        )?);
+    } else if pattern == InfillPattern::CubicSubdivision {
+        paths.extend(generate_cubic_infill(
+            &remaining,
+            settings.infill_spacing_mm,
+            section.z_mm,
+            PathRole::Hatch,
             &mut budget,
         )?);
     } else {
@@ -1343,6 +1432,47 @@ mod tests {
         // Layer 1 has an unsupported bridge region [10..20]x[0..10]
         assert!(planned[1].paths.iter().any(|p| p.role == PathRole::Bridge));
     }
+
+    #[test]
+    fn crosshatch_trihexagon_cubic_and_brim_generation_work() {
+        let sec_z0 = LayerSection {
+            z_mm: 0.2,
+            contours: vec![vec![[0., 0.], [20., 0.], [20., 20.], [0., 20.]]],
+        };
+        let sec_z1 = LayerSection {
+            z_mm: 1.4,
+            contours: vec![vec![[0., 0.], [20., 0.], [20., 20.], [0., 20.]]],
+        };
+        let settings = ToolpathSettings::default();
+        let ch =
+            plan_layer_with_pattern(&sec_z0, &settings, InfillPattern::CrossHatch, false).unwrap();
+        let th =
+            plan_layer_with_pattern(&sec_z0, &settings, InfillPattern::TriHexagon, false).unwrap();
+        let cub0 = plan_layer_with_pattern(
+            &sec_z0,
+            &settings,
+            InfillPattern::CubicSubdivision,
+            false,
+        )
+        .unwrap();
+        let cub1 = plan_layer_with_pattern(
+            &sec_z1,
+            &settings,
+            InfillPattern::CubicSubdivision,
+            false,
+        )
+        .unwrap();
+        assert!(!ch.paths.is_empty());
+        assert!(!th.paths.is_empty());
+        assert!(!cub0.paths.is_empty());
+        // CubicSubdivision shifts phase with Z so layer Z=0.2 and Z=1.4 have distinct infill coordinates
+        assert_ne!(cub0.paths, cub1.paths);
+
+        let brim = generate_brim(&sec_z0.contours, 2.0, 0.5).unwrap();
+        assert_eq!(brim.len(), 4);
+        // Outermost brim loop extends outside [-0.2..20.2]
+        assert!(brim.last().unwrap().iter().any(|p| p[0] > 21.0));
+    }
 }
 
 /// Configuration for curvature / surface-normal adaptive layer thickness.
@@ -1571,13 +1701,23 @@ pub fn plan_layers_with_skins_and_supports(
                         )?);
                     }
                     if !sparse_region.is_empty() {
-                        paths.extend(generate_infill(
-                            &sparse_region,
-                            settings.infill_spacing_mm,
-                            pattern,
-                            PathRole::Hatch,
-                            &mut budget,
-                        )?);
+                        if pattern == InfillPattern::CubicSubdivision {
+                            paths.extend(generate_cubic_infill(
+                                &sparse_region,
+                                settings.infill_spacing_mm,
+                                sections[i].z_mm,
+                                PathRole::Hatch,
+                                &mut budget,
+                            )?);
+                        } else {
+                            paths.extend(generate_infill(
+                                &sparse_region,
+                                settings.infill_spacing_mm,
+                                pattern,
+                                PathRole::Hatch,
+                                &mut budget,
+                            )?);
+                        }
                     }
                 }
             }
@@ -1599,4 +1739,90 @@ pub fn plan_layers_with_skins_and_supports(
         });
     }
     Ok(out_layers)
+}
+
+/// Closed 2D contour loop (`Vec<[f64; 2]>`) in millimeter coordinates.
+pub type Contour = Vec<[f64; 2]>;
+
+/// Bed-adhesion brim configuration for the first print layer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BrimConfig {
+    pub width_mm: f64,
+    pub line_spacing_mm: f64,
+}
+
+impl Default for BrimConfig {
+    fn default() -> Self {
+        Self {
+            width_mm: 4.0,
+            line_spacing_mm: 0.4,
+        }
+    }
+}
+
+/// Generates concentric outward-offset bed-adhesion brim loops around `outer_loops`
+/// spanning `width_mm` at pitch `line_spacing_mm`.
+pub fn generate_brim(
+    outer_loops: &[Contour],
+    width_mm: f64,
+    line_spacing_mm: f64,
+) -> Result<Vec<Contour>> {
+    if !width_mm.is_finite()
+        || width_mm <= 0.0
+        || !line_spacing_mm.is_finite()
+        || line_spacing_mm < gcode_core::COORDINATE_RESOLUTION_MM
+    {
+        return Err(invalid(
+            "TOOLPATH_INVALID_SETTINGS",
+            "Brim width_mm and line_spacing_mm must be finite and positive",
+        ));
+    }
+    if outer_loops.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut budget = Budget::default();
+    let norm = rings::nonzero(&outer_loops.to_vec())?;
+    let ring_count = ((width_mm / line_spacing_mm).round() as usize).clamp(1, 64);
+    let mut brim_loops = Vec::new();
+    for step in 1..=ring_count {
+        let distance = (step as f64 - 0.5) * line_spacing_mm;
+        let expanded = outset_rings(&norm, distance, &mut budget)?;
+        for ring in expanded {
+            let mut area2 = 0.0;
+            for i in 0..ring.len() {
+                let a = ring[i];
+                let b = ring[(i + 1) % ring.len()];
+                area2 += a[0] * b[1] - b[0] * a[1];
+            }
+            if area2 > 0.0 {
+                brim_loops.push(ring);
+            }
+        }
+    }
+    Ok(brim_loops)
+}
+
+fn outset_rings(source: &Rings, distance: f64, budget: &mut Budget) -> Result<Rings> {
+    if source.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut bands = Vec::with_capacity(source.len());
+    let tolerance = (distance * 0.01).min(0.01);
+    let options = StrokeOptions {
+        width: 2.0 * distance,
+        ..Default::default()
+    };
+    for ring in source {
+        budget.arrangement(ring.len().saturating_mul(6))?;
+        let path = BezierPath::from_polyline(ring, true)?;
+        for contour in stroke::outline_stroke_tol(&path, &options, tolerance)? {
+            let band = contour.to_ring(tolerance)?;
+            budget.points(band.len())?;
+            bands.push(band);
+        }
+    }
+    budget.arrangement(point_count(source).saturating_add(point_count(&bands)))?;
+    let result = rings::planar(source, &bands, "union")?;
+    budget.points(point_count(&result))?;
+    Ok(result)
 }

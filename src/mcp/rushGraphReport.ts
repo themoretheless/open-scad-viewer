@@ -4,6 +4,42 @@ import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
 import { compileRushGraph, rushGraphSchema } from '../services/rushGraph'
 import { renderRushGraphPreviews } from './rushGraphPreview'
+
+function buildLineStarts(source: string): number[] {
+  const starts = [0]
+  for (let i = 0; i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) starts.push(i + 1)
+  }
+  return starts
+}
+
+function lineNumberAtOffset(lineStarts: number[], offset: number): number {
+  let lo = 0
+  let hi = lineStarts.length - 1
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1
+    if (lineStarts[mid] <= offset) lo = mid + 1
+    else hi = mid - 1
+  }
+  return Math.max(1, lo)
+}
+
+function findSourceMapEntry<T extends { line: number }>(sourceMap: readonly T[], line: number): T | undefined {
+  let lo = 0
+  let hi = sourceMap.length - 1
+  let best: T | undefined
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1
+    if (sourceMap[mid].line <= line) {
+      best = sourceMap[mid]
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+  return best
+}
+
 export function registerRushGraphReport(server: McpServer, geometry: McpGeometryService) {
   server.registerTool('rush_report', {
     description: 'Build actual geometry and return measurements, source-to-node provenance and front/top/isometric PNG images. Preview limits may produce images_status=unavailable while measurements remain available. Does not certify printability.',
@@ -13,24 +49,14 @@ export function registerRushGraphReport(server: McpServer, geometry: McpGeometry
       const compiled = compileRushGraph(input.document)
       const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
       const checks = await evaluateRushGraphGeometry(compiled.geometry_assertions, built.meshes, async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes)
+      const lineStarts = buildLineStarts(compiled.source)
       const references = built.meshes.flatMap((mesh, meshIndex) => mesh.provenance.map(run => {
         let line: number | null = null
         if (run.source) {
-          line = 1
           const end = Math.min(run.source.start, compiled.source.length)
-          for (let i = 0; i < end; i++) {
-            if (compiled.source.charCodeAt(i) === 10) line++
-          }
+          line = lineNumberAtOffset(lineStarts, end)
         }
-        let match: (typeof compiled.source_map)[number] | undefined
-        if (line !== null) {
-          for (let i = compiled.source_map.length - 1; i >= 0; i--) {
-            if (compiled.source_map[i].line <= line) {
-              match = compiled.source_map[i]
-              break
-            }
-          }
-        }
+        const match = line !== null ? findSourceMapEntry(compiled.source_map, line) : undefined
         return { mesh: meshIndex, triangle_start: run.triangleStart, triangle_end: run.triangleEnd, node_id: match?.node_id ?? null, instance_path: match?.instance_path ?? null }
       }))
       let previews: ReturnType<typeof renderRushGraphPreviews> = [], imageError: string | null = null

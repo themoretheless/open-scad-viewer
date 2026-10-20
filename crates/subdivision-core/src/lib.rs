@@ -1220,6 +1220,153 @@ impl Cage {
         }
         Ok(patches)
     }
+
+    /// Feature-adaptive Catmull–Clark subdivision that refines the cage up to `max_levels` (in `0..=5`),
+    /// stopping early as soon as the maximum dihedral angle between adjacent faces falls below
+    /// `angle_tol_rad` ($\ge 0$).
+    pub fn adaptive_subdivide(&self, angle_tol_rad: f64, max_levels: usize) -> Result<Refined> {
+        if max_levels > 5 || !angle_tol_rad.is_finite() || angle_tol_rad < 0.0 {
+            return Err(error("Invalid adaptive subdivision parameters"));
+        }
+        self.validate()?;
+        let mut current = Refined {
+            cage: self.clone(),
+            face_ids: (0..self.faces.len()).collect(),
+        };
+        for _ in 0..max_levels {
+            if current.cage.max_dihedral_angle_rad() <= angle_tol_rad {
+                break;
+            }
+            let step = current.cage.subdivide_validated(1)?;
+            let next_ids: Vec<usize> = step
+                .face_ids
+                .iter()
+                .map(|&parent| current.face_ids[parent])
+                .collect();
+            current = Refined {
+                cage: step.cage,
+                face_ids: next_ids,
+            };
+        }
+        Ok(current)
+    }
+
+    fn max_dihedral_angle_rad(&self) -> f64 {
+        let edges = self.build_edges();
+        let face_normals: Vec<Point> = self
+            .faces
+            .iter()
+            .map(|f| {
+                let mut n = [0.0; 3];
+                for i in 0..f.len() {
+                    let p = self.vertices[f[i]];
+                    let q = self.vertices[f[(i + 1) % f.len()]];
+                    n[0] += (p[1] - q[1]) * (p[2] + q[2]);
+                    n[1] += (p[2] - q[2]) * (p[0] + q[0]);
+                    n[2] += (p[0] - q[0]) * (p[1] + q[1]);
+                }
+                let len = math_core::norm(n);
+                if len > 1e-15 {
+                    [n[0] / len, n[1] / len, n[2] / len]
+                } else {
+                    [0.0, 0.0, 1.0]
+                }
+            })
+            .collect();
+        let mut max_angle = 0.0_f64;
+        for uses in edges.values() {
+            if uses.len() == 2 {
+                let n0 = face_normals[uses[0].0];
+                let n1 = face_normals[uses[1].0];
+                let cos_a = math_core::dot(n0, n1).clamp(-1.0, 1.0);
+                max_angle = max_angle.max(cos_a.acos());
+            }
+        }
+        max_angle
+    }
+
+    /// Computes valence distribution, extraordinary vertex count, face aspect ratios,
+    /// and total surface area for the control or subdivided cage.
+    pub fn mesh_quality_report(&self) -> Result<SubdQualityReport> {
+        let edges = self.topology()?;
+        let mut valence = vec![0usize; self.vertices.len()];
+        let mut boundary_vert = vec![false; self.vertices.len()];
+        for (&(a, b), uses) in &edges {
+            valence[a] += 1;
+            valence[b] += 1;
+            if uses.len() == 1 {
+                boundary_vert[a] = true;
+                boundary_vert[b] = true;
+            }
+        }
+        let mut hist_map: std::collections::BTreeMap<usize, usize> =
+            std::collections::BTreeMap::new();
+        let mut extraordinary_vertex_count = 0usize;
+        for (v, &val) in valence.iter().enumerate() {
+            *hist_map.entry(val).or_insert(0) += 1;
+            let regular = if boundary_vert[v] { val == 3 } else { val == 4 };
+            if !regular {
+                extraordinary_vertex_count += 1;
+            }
+        }
+        let mut min_ar = f64::INFINITY;
+        let mut max_ar = 0.0_f64;
+        let mut sum_ar = 0.0_f64;
+        let mut surface_area = 0.0_f64;
+        for f in &self.faces {
+            let mut min_e = f64::INFINITY;
+            let mut max_e = 0.0_f64;
+            for i in 0..f.len() {
+                let p = self.vertices[f[i]];
+                let q = self.vertices[f[(i + 1) % f.len()]];
+                let len = math_core::norm(math_core::sub(q, p));
+                min_e = min_e.min(len);
+                max_e = max_e.max(len);
+            }
+            let ar = if min_e > 1e-12 { max_e / min_e } else { 1.0 };
+            min_ar = min_ar.min(ar);
+            max_ar = max_ar.max(ar);
+            sum_ar += ar;
+            let p0 = self.vertices[f[0]];
+            for i in 1..f.len() - 1 {
+                let p1 = self.vertices[f[i]];
+                let p2 = self.vertices[f[i + 1]];
+                let n = math_core::cross(math_core::sub(p1, p0), math_core::sub(p2, p0));
+                surface_area += 0.5 * math_core::norm(n);
+            }
+        }
+        let face_count = self.faces.len();
+        Ok(SubdQualityReport {
+            vertex_count: self.vertices.len(),
+            face_count,
+            extraordinary_vertex_count,
+            valence_histogram: hist_map.into_iter().collect(),
+            min_aspect_ratio: if min_ar.is_finite() { min_ar } else { 1.0 },
+            max_aspect_ratio: max_ar,
+            mean_aspect_ratio: if face_count > 0 {
+                sum_ar / face_count as f64
+            } else {
+                1.0
+            },
+            surface_area,
+        })
+    }
+}
+
+/// Type alias for Catmull–Clark control and subdivided meshes.
+pub type CatmullClarkMesh = Cage;
+
+/// Quality and topology statistics for a subdivision cage.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SubdQualityReport {
+    pub vertex_count: usize,
+    pub face_count: usize,
+    pub extraordinary_vertex_count: usize,
+    pub valence_histogram: Vec<(usize, usize)>,
+    pub min_aspect_ratio: f64,
+    pub max_aspect_ratio: f64,
+    pub mean_aspect_ratio: f64,
+    pub surface_area: f64,
 }
 
 #[cfg(test)]
@@ -1301,5 +1448,33 @@ mod limit_and_nurbs_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn adaptive_subdivide_and_quality_report_work() {
+        let cube = CatmullClarkMesh::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let report = cube.mesh_quality_report().unwrap();
+        assert_eq!(report.vertex_count, 8);
+        assert_eq!(report.face_count, 6);
+        assert_eq!(report.extraordinary_vertex_count, 8); // 8 corners of valence 3
+        assert_eq!(report.valence_histogram, vec![(3, 8)]);
+        assert!((report.min_aspect_ratio - 1.0).abs() < 1e-12);
+        assert!((report.surface_area - 24.0).abs() < 1e-12);
+
+        // Flat grid has 0 dihedral angle -> adaptive_subdivide stops at level 0
+        let flat = CatmullClarkMesh {
+            vertices: vec![[0., 0., 0.], [1., 0., 0.], [1., 1., 0.], [0., 1., 0.]],
+            faces: vec![vec![0, 1, 2, 3]],
+        };
+        let flat_ref = flat.adaptive_subdivide(0.1, 4).unwrap();
+        assert_eq!(flat_ref.cage.faces.len(), 1);
+
+        // Cube has 90 deg (1.57 rad) dihedral angles -> refines until angle <= tol
+        let cube_ref = cube.adaptive_subdivide(0.45, 4).unwrap();
+        assert!(cube_ref.cage.faces.len() >= 96);
     }
 }

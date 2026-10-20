@@ -305,6 +305,20 @@ pub enum Field {
         b: Point,
         radius: f64,
     },
+    Octahedron {
+        center: Point,
+        size: f64,
+    },
+    HexPrism {
+        center: Point,
+        radius: f64,
+        half_height: f64,
+    },
+    TriangularPrism {
+        center: Point,
+        radius: f64,
+        half_height: f64,
+    },
     Union {
         a: Box<Field>,
         b: Box<Field>,
@@ -318,6 +332,11 @@ pub enum Field {
         b: Box<Field>,
     },
     SmoothUnion {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
+    SmoothIntersection {
         a: Box<Field>,
         b: Box<Field>,
         radius: f64,
@@ -353,6 +372,15 @@ pub enum Field {
     Elongate {
         input: Box<Field>,
         half_extents: Point,
+    },
+    Mirror {
+        input: Box<Field>,
+        axis: [bool; 3],
+    },
+    Taper {
+        input: Box<Field>,
+        height: f64,
+        factor: f64,
     },
     Translate {
         input: Box<Field>,
@@ -589,7 +617,19 @@ impl Field {
                     walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
                 }
                 Field::Capsule { a, b, radius } => finite(*a) && finite(*b) && positive(*radius),
+                Field::Octahedron { center, size } => finite(*center) && positive(*size),
+                Field::HexPrism {
+                    center,
+                    radius,
+                    half_height,
+                }
+                | Field::TriangularPrism {
+                    center,
+                    radius,
+                    half_height,
+                } => finite(*center) && positive(*radius) && positive(*half_height),
                 Field::SmoothUnion { a, b, radius }
+                | Field::SmoothIntersection { a, b, radius }
                 | Field::SmoothDifference { a, b, radius }
                 | Field::ChamferUnion { a, b, radius }
                 | Field::ChamferIntersection { a, b, radius }
@@ -608,6 +648,17 @@ impl Field {
                 } => {
                     finite(*half_extents)
                         && half_extents.iter().all(|&x| (0.0..=1e6).contains(&x))
+                        && walk(input, depth + 1, budget)
+                }
+                Field::Mirror { input, .. } => walk(input, depth + 1, budget),
+                Field::Taper {
+                    input,
+                    height,
+                    factor,
+                } => {
+                    positive(*height)
+                        && factor.is_finite()
+                        && (0.05..=20.0).contains(factor)
                         && walk(input, depth + 1, budget)
                 }
                 Field::Translate { input, vector } => {
@@ -748,10 +799,64 @@ impl Field {
                 };
                 length(sub(ap, math_core::scale(ab, t))) - radius
             }
+            Self::Octahedron { center, size } => {
+                let p = [
+                    (p[0] - center[0]).abs(),
+                    (p[1] - center[1]).abs(),
+                    (p[2] - center[2]).abs(),
+                ];
+                let m = p[0] + p[1] + p[2] - size;
+                let q = if 3.0 * p[0] < m {
+                    p
+                } else if 3.0 * p[1] < m {
+                    [p[1], p[2], p[0]]
+                } else if 3.0 * p[2] < m {
+                    [p[2], p[0], p[1]]
+                } else {
+                    return m * 0.5773502691896258;
+                };
+                let k = (0.5 * (q[2] - q[1] + size)).clamp(0.0, *size);
+                length([q[0], q[1] - size + k, q[2] - k])
+            }
+            Self::HexPrism {
+                center,
+                radius,
+                half_height,
+            } => {
+                let q = [
+                    (p[0] - center[0]).abs(),
+                    (p[1] - center[1]).abs(),
+                    (p[2] - center[2]).abs(),
+                ];
+                const KX: f64 = -0.8660254037844386;
+                const KY: f64 = 0.5;
+                const KZ: f64 = 0.5773502691896258;
+                let dot_k = (KX * q[0] + KY * q[1]).min(0.0);
+                let qx = q[0] - 2.0 * dot_k * KX;
+                let qy = q[1] - 2.0 * dot_k * KY;
+                let d1 = (qx - qx.clamp(-KZ * radius, KZ * radius)).hypot(qy - radius)
+                    * (qy - radius).signum();
+                let d2 = q[2] - half_height;
+                d1.max(d2).min(0.0) + d1.max(0.0).hypot(d2.max(0.0))
+            }
+            Self::TriangularPrism {
+                center,
+                radius,
+                half_height,
+            } => {
+                let q = sub(p, *center);
+                let qx = q[0].abs();
+                let d1 = (qx * 0.8660254037844386 + q[1] * 0.5).max(-q[1]) - radius * 0.5;
+                let d2 = q[2].abs() - half_height;
+                d1.max(d2).min(0.0) + d1.max(0.0).hypot(d2.max(0.0))
+            }
             Self::Union { a, b } => a.sample(p).min(b.sample(p)),
             Self::Intersection { a, b } => a.sample(p).max(b.sample(p)),
             Self::Difference { a, b } => a.sample(p).max(-b.sample(p)),
             Self::SmoothUnion { a, b, radius: k } => smooth_min(a.sample(p), b.sample(p), *k),
+            Self::SmoothIntersection { a, b, radius: k } => {
+                -smooth_min(-a.sample(p), -b.sample(p), *k)
+            }
             // Smooth max(a, -b): the polynomial smooth-union mirrored through negation.
             Self::SmoothDifference { a, b, radius: k } => {
                 -smooth_min(-a.sample(p), b.sample(p), *k)
@@ -784,6 +889,25 @@ impl Field {
                 ];
                 input.sample(q)
             }
+            Self::Mirror { input, axis } => {
+                let q = [
+                    if axis[0] { p[0].abs() } else { p[0] },
+                    if axis[1] { p[1].abs() } else { p[1] },
+                    if axis[2] { p[2].abs() } else { p[2] },
+                ];
+                input.sample(q)
+            }
+            Self::Taper {
+                input,
+                height,
+                factor,
+            } => {
+                let u = ((p[2] / height) + 0.5).clamp(0.0, 1.0);
+                let s = 1.0 + u * (factor - 1.0);
+                let inv_s = 1.0 / s.max(1e-6);
+                let q = [p[0] * inv_s, p[1] * inv_s, p[2]];
+                input.sample(q) * s.min(1.0)
+            }
             Self::Translate { input, vector } => input.sample(sub(p, *vector)),
         }
     }
@@ -800,6 +924,7 @@ impl Field {
             | Self::Intersection { a, b }
             | Self::Difference { a, b }
             | Self::SmoothUnion { a, b, .. }
+            | Self::SmoothIntersection { a, b, .. }
             | Self::SmoothDifference { a, b, .. }
             | Self::ChamferUnion { a, b, .. }
             | Self::ChamferIntersection { a, b, .. }
@@ -808,6 +933,8 @@ impl Field {
             | Self::Offset { input, .. }
             | Self::Onion { input, .. }
             | Self::Elongate { input, .. }
+            | Self::Mirror { input, .. }
+            | Self::Taper { input, .. }
             | Self::Translate { input, .. } => input.sample_work(),
             _ => 1,
         }
@@ -1903,6 +2030,79 @@ mod tests {
         assert!(triangles_closed(&sn_mesh));
         assert!(triangles_ok(&sn_mesh));
     }
+
+    #[test]
+    fn octahedron_prisms_mirror_taper_raycast_and_volume() {
+        let oct = Field::Octahedron {
+            center: [0.; 3],
+            size: 1.0,
+        };
+        assert!(oct.validate().is_ok());
+        assert!(oct.evaluate([0.; 3]).unwrap() < 0.0);
+        assert!((oct.evaluate([1.0, 0.0, 0.0]).unwrap()).abs() < 1e-12);
+
+        let hex = Field::HexPrism {
+            center: [0.; 3],
+            radius: 1.0,
+            half_height: 0.8,
+        };
+        assert!(hex.validate().is_ok());
+        assert!(hex.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let tri_prism = Field::TriangularPrism {
+            center: [0.; 3],
+            radius: 1.0,
+            half_height: 0.8,
+        };
+        assert!(tri_prism.validate().is_ok());
+        assert!(tri_prism.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let s_inter = Field::SmoothIntersection {
+            a: Box::new(sphere()),
+            b: Box::new(Field::Box {
+                center: [0.; 3],
+                half_size: [0.8; 3],
+            }),
+            radius: 0.2,
+        };
+        assert!(s_inter.validate().is_ok());
+        assert!(s_inter.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let mirrored = Field::Mirror {
+            input: Box::new(Field::Sphere {
+                center: [1.5, 0.0, 0.0],
+                radius: 0.5,
+            }),
+            axis: [true, false, false],
+        };
+        assert!((mirrored.evaluate([-1.5, 0.0, 0.0]).unwrap() + 0.5).abs() < 1e-12);
+
+        let tapered = Field::Taper {
+            input: Box::new(Field::Cylinder {
+                center: [0.; 3],
+                radius: 1.0,
+                half_height: 1.0,
+            }),
+            height: 2.0,
+            factor: 0.5,
+        };
+        assert!(tapered.validate().is_ok());
+        assert!(tapered.evaluate([0.0, 0.0, 0.8]).unwrap() < 0.0);
+        assert!(tapered.evaluate([0.8, 0.0, 0.8]).unwrap() > 0.0);
+
+        // Raycast from (-3, 0, 0) along +X against unit sphere at origin
+        let (hit_p, hit_n, dist) = sphere()
+            .raycast([-3.0, 0.0, 0.0], [1.0, 0.0, 0.0], 10.0, 1e-5)
+            .unwrap();
+        assert!((dist - 2.0).abs() < 1e-4);
+        assert!((hit_p[0] + 1.0).abs() < 1e-4);
+        assert!((hit_n[0] + 1.0).abs() < 1e-3);
+
+        // Volume estimation of unit sphere (~4/3 * pi = 4.18879)
+        let vol = sphere().estimate_volume(32);
+        let exact = 4.0 * std::f64::consts::PI / 3.0;
+        assert!((vol - exact).abs() < 0.15, "estimated {vol} vs exact {exact}");
+    }
 }
 
 impl Field {
@@ -1924,6 +2124,260 @@ impl Field {
             [g[0] / n, g[1] / n, g[2] / n]
         } else {
             [0.0, 0.0, 1.0]
+        }
+    }
+
+    /// Sphere-tracing raymarcher along a ray from `origin` in direction `dir` up to `max_dist`
+    /// with surface hit tolerance `tol`. Returns `Some((hit_position, hit_normal, distance))`
+    /// on convergence to the zero-level surface ($|f(p)| \le \text{tol}$).
+    pub fn raycast(
+        &self,
+        origin: Point,
+        dir: Point,
+        max_dist: f64,
+        tol: f64,
+    ) -> Option<(Point, Point, f64)> {
+        if !finite(origin) || !finite(dir) || !max_dist.is_finite() || max_dist <= 0.0 || !tol.is_finite() || tol <= 0.0 {
+            return None;
+        }
+        let dir_len = length(dir);
+        if dir_len <= 1e-12 {
+            return None;
+        }
+        let d = [dir[0] / dir_len, dir[1] / dir_len, dir[2] / dir_len];
+        let mut t = 0.0;
+        let eps = tol.max(1e-6);
+        for _ in 0..256 {
+            let p = [origin[0] + d[0] * t, origin[1] + d[1] * t, origin[2] + d[2] * t];
+            let dist = self.sample(p);
+            if !dist.is_finite() {
+                return None;
+            }
+            if dist.abs() <= tol {
+                let normal = self.gradient(p, eps);
+                return Some((p, normal, t));
+            }
+            t += dist.max(tol * 0.5);
+            if t > max_dist {
+                break;
+            }
+        }
+        None
+    }
+
+    /// Estimates the enclosed interior volume ($f(p) \le 0$) within `bounds_min..=bounds_max`
+    /// using stratified voxel midpoint integration with `samples_per_axis` subdivisions per axis.
+    pub fn estimate_volume_in_bounds(
+        &self,
+        bounds_min: Point,
+        bounds_max: Point,
+        samples_per_axis: usize,
+    ) -> f64 {
+        let n = samples_per_axis.clamp(1, 128);
+        let dx = (bounds_max[0] - bounds_min[0]) / n as f64;
+        let dy = (bounds_max[1] - bounds_min[1]) / n as f64;
+        let dz = (bounds_max[2] - bounds_min[2]) / n as f64;
+        if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 || !dx.is_finite() || !dy.is_finite() || !dz.is_finite() {
+            return 0.0;
+        }
+        let voxel_vol = dx * dy * dz;
+        let mut inside = 0usize;
+        for iz in 0..n {
+            let z = bounds_min[2] + (iz as f64 + 0.5) * dz;
+            for iy in 0..n {
+                let y = bounds_min[1] + (iy as f64 + 0.5) * dy;
+                for ix in 0..n {
+                    let x = bounds_min[0] + (ix as f64 + 0.5) * dx;
+                    if self.sample([x, y, z]) <= 0.0 {
+                        inside += 1;
+                    }
+                }
+            }
+        }
+        inside as f64 * voxel_vol
+    }
+
+    /// Estimates the enclosed interior volume ($f(p) \le 0$) using an automatically inferred bounding box
+    /// and `samples_per_axis` subdivisions along each axis.
+    pub fn estimate_volume(&self, samples_per_axis: usize) -> f64 {
+        let (bmin, bmax) = self.infer_bounds();
+        self.estimate_volume_in_bounds(bmin, bmax, samples_per_axis)
+    }
+
+    fn infer_bounds(&self) -> (Point, Point) {
+        match self {
+            Self::Sphere { center, radius } => (
+                [center[0] - radius, center[1] - radius, center[2] - radius],
+                [center[0] + radius, center[1] + radius, center[2] + radius],
+            ),
+            Self::Box { center, half_size } => (
+                [
+                    center[0] - half_size[0],
+                    center[1] - half_size[1],
+                    center[2] - half_size[2],
+                ],
+                [
+                    center[0] + half_size[0],
+                    center[1] + half_size[1],
+                    center[2] + half_size[2],
+                ],
+            ),
+            Self::Cylinder {
+                center,
+                radius,
+                half_height,
+            }
+            | Self::HexPrism {
+                center,
+                radius,
+                half_height,
+            }
+            | Self::TriangularPrism {
+                center,
+                radius,
+                half_height,
+            } => (
+                [
+                    center[0] - radius,
+                    center[1] - radius,
+                    center[2] - half_height,
+                ],
+                [
+                    center[0] + radius,
+                    center[1] + radius,
+                    center[2] + half_height,
+                ],
+            ),
+            Self::Octahedron { center, size } => (
+                [center[0] - size, center[1] - size, center[2] - size],
+                [center[0] + size, center[1] + size, center[2] + size],
+            ),
+            Self::Torus {
+                center,
+                major_radius,
+                minor_radius,
+            } => {
+                let r = major_radius + minor_radius;
+                (
+                    [center[0] - r, center[1] - r, center[2] - minor_radius],
+                    [center[0] + r, center[1] + r, center[2] + minor_radius],
+                )
+            }
+            Self::Capsule { a, b, radius } => (
+                [
+                    a[0].min(b[0]) - radius,
+                    a[1].min(b[1]) - radius,
+                    a[2].min(b[2]) - radius,
+                ],
+                [
+                    a[0].max(b[0]) + radius,
+                    a[1].max(b[1]) + radius,
+                    a[2].max(b[2]) + radius,
+                ],
+            ),
+            Self::Union { a, b }
+            | Self::SmoothUnion { a, b, .. }
+            | Self::ChamferUnion { a, b, .. } => {
+                let (min_a, max_a) = a.infer_bounds();
+                let (min_b, max_b) = b.infer_bounds();
+                (
+                    [
+                        min_a[0].min(min_b[0]),
+                        min_a[1].min(min_b[1]),
+                        min_a[2].min(min_b[2]),
+                    ],
+                    [
+                        max_a[0].max(max_b[0]),
+                        max_a[1].max(max_b[1]),
+                        max_a[2].max(max_b[2]),
+                    ],
+                )
+            }
+            Self::Intersection { a, b }
+            | Self::SmoothIntersection { a, b, .. }
+            | Self::ChamferIntersection { a, b, .. } => {
+                let (min_a, max_a) = a.infer_bounds();
+                let (min_b, max_b) = b.infer_bounds();
+                (
+                    [
+                        min_a[0].max(min_b[0]),
+                        min_a[1].max(min_b[1]),
+                        min_a[2].max(min_b[2]),
+                    ],
+                    [
+                        max_a[0].min(max_b[0]),
+                        max_a[1].min(max_b[1]),
+                        max_a[2].min(max_b[2]),
+                    ],
+                )
+            }
+            Self::Difference { a, .. }
+            | Self::SmoothDifference { a, .. }
+            | Self::ChamferDifference { a, .. } => a.infer_bounds(),
+            Self::Translate { input, vector } => {
+                let (bmin, bmax) = input.infer_bounds();
+                (
+                    [bmin[0] + vector[0], bmin[1] + vector[1], bmin[2] + vector[2]],
+                    [bmax[0] + vector[0], bmax[1] + vector[1], bmax[2] + vector[2]],
+                )
+            }
+            Self::Offset { input, distance } => {
+                let (bmin, bmax) = input.infer_bounds();
+                (
+                    [bmin[0] - distance, bmin[1] - distance, bmin[2] - distance],
+                    [bmax[0] + distance, bmax[1] + distance, bmax[2] + distance],
+                )
+            }
+            Self::Onion { input, thickness } => {
+                let (bmin, bmax) = input.infer_bounds();
+                let h = 0.5 * thickness;
+                (
+                    [bmin[0] - h, bmin[1] - h, bmin[2] - h],
+                    [bmax[0] + h, bmax[1] + h, bmax[2] + h],
+                )
+            }
+            Self::Elongate {
+                input,
+                half_extents,
+            } => {
+                let (bmin, bmax) = input.infer_bounds();
+                (
+                    [
+                        bmin[0] - half_extents[0],
+                        bmin[1] - half_extents[1],
+                        bmin[2] - half_extents[2],
+                    ],
+                    [
+                        bmax[0] + half_extents[0],
+                        bmax[1] + half_extents[1],
+                        bmax[2] + half_extents[2],
+                    ],
+                )
+            }
+            Self::Mirror { input, axis } => {
+                let (bmin, bmax) = input.infer_bounds();
+                let bound = |i: usize| {
+                    if axis[i] {
+                        let m = bmin[i].abs().max(bmax[i].abs());
+                        (-m, m)
+                    } else {
+                        (bmin[i], bmax[i])
+                    }
+                };
+                let (x0, x1) = bound(0);
+                let (y0, y1) = bound(1);
+                let (z0, z1) = bound(2);
+                ([x0, y0, z0], [x1, y1, z1])
+            }
+            Self::Taper { input, factor, .. } => {
+                let (bmin, bmax) = input.infer_bounds();
+                let s = factor.max(1.0);
+                (
+                    [bmin[0] * s, bmin[1] * s, bmin[2]],
+                    [bmax[0] * s, bmax[1] * s, bmax[2]],
+                )
+            }
+            _ => ([-2.0, -2.0, -2.0], [2.0, 2.0, 2.0]),
         }
     }
 }

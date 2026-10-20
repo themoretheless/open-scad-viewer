@@ -329,3 +329,66 @@ fn serialized_tolerance_identity_cannot_be_substituted() {
         .unwrap() = value_codec::Value::String("forged".into());
     assert!(<ToleranceContext as value_codec::Deserialize>::from_value(value).is_err());
 }
+
+#[test]
+fn incircle2d_coplanar3d_and_collinear3d_predicates() {
+    // Unit circle through (1,0), (0,1), (-1,0) in CCW order.
+    let a = [1.0, 0.0];
+    let b = [0.0, 1.0];
+    let c = [-1.0, 0.0];
+    assert_eq!(incircle2d(a, b, c, [0.0, 0.0]), Sign::Positive);
+    assert_eq!(incircle2d(a, b, c, [0.0, -1.0]), Sign::Zero);
+    assert_eq!(incircle2d(a, b, c, [0.0, -2.0]), Sign::Negative);
+
+    // Near-cocircular perturbation resolved by exact expansion.
+    assert_eq!(
+        incircle2d(a, b, c, [0.0, -1.0 + f64::EPSILON]),
+        Sign::Positive
+    );
+    assert_eq!(
+        incircle2d(a, b, c, [0.0, -1.0 - f64::EPSILON]),
+        Sign::Negative
+    );
+
+    // Coplanar3d and Collinear3d checks.
+    assert!(coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 0.0],
+        0.0
+    ));
+    assert!(!coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 1e-4],
+        1e-6
+    ));
+    assert!(coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 1e-7],
+        1e-6
+    ));
+
+    assert!(collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0],
+        0.0
+    ));
+    assert!(!collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0 + 1e-3],
+        1e-6
+    ));
+    assert!(collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0 + 1e-7],
+        1e-5
+    ));
+}

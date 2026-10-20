@@ -105,10 +105,10 @@ static PACKAGE: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 pub extern "C" fn decode_encoded() -> u64 {
     let input = INPUT.lock().unwrap();
     let mut package = PACKAGE.lock().unwrap();
-    if !decode_base85_into(&input, &mut package) {
+    if !decode_base85_into(&input, &mut package) || package.len() < 4 {
         return 0;
     }
-    let size = u32::from_le_bytes(package[..4].try_into().unwrap()) as usize;
+    let size = u32::from_le_bytes([package[0], package[1], package[2], package[3]]) as usize;
     if size > OUTPUT_LIMIT {
         return 0;
     }

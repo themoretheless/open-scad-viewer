@@ -147,6 +147,20 @@ impl GpuContext {
             max_size: self.subgroup_max_size,
         }
     }
+
+    /// Maximum single storage buffer allocation size in bytes permitted by this device.
+    #[inline]
+    pub fn max_storage_allocation_bytes(&self) -> u64 {
+        self.limits
+            .max_buffer_size
+            .min(self.limits.max_storage_buffer_binding_size as u64)
+    }
+
+    /// Validates whether a byte size fits within the device's storage buffer allocation limits.
+    #[inline]
+    pub fn can_allocate_storage(&self, bytes: u64) -> bool {
+        bytes > 0 && bytes.is_multiple_of(4) && bytes <= self.max_storage_allocation_bytes()
+    }
 }
 
 /// Restrict the shared upload policy to the unified-memory Metal backend.

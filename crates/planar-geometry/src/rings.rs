@@ -15,6 +15,78 @@ pub fn area(r: &[[f64; 2]]) -> f64 {
         .sum::<f64>()
         / 2.
 }
+
+/// Total Euclidean perimeter of a collection of closed polygon rings.
+pub fn perimeter(rings: &Rings) -> f64 {
+    let mut total = 0.0;
+    for r in rings {
+        if r.len() < 2 {
+            continue;
+        }
+        let n = if r.len() > 2 && r.first() == r.last() {
+            r.len() - 1
+        } else {
+            r.len()
+        };
+        if n < 2 {
+            continue;
+        }
+        for i in 0..n {
+            let a = r[i];
+            let b = r[(i + 1) % n];
+            total += (b[0] - a[0]).hypot(b[1] - a[1]);
+        }
+    }
+    total
+}
+
+/// Area-weighted 2D centroid of a collection of closed polygon rings (including holes
+/// with opposite winding). Falls back to vertex-average centroid if the signed area
+/// vanishes, or returns `None` if `rings` has no finite vertices.
+pub fn centroid(rings: &Rings) -> Option<[f64; 2]> {
+    let mut area2_sum = 0.0;
+    let mut cx_sum = 0.0;
+    let mut cy_sum = 0.0;
+    let mut vx_sum = 0.0;
+    let mut vy_sum = 0.0;
+    let mut v_count = 0usize;
+
+    for r in rings {
+        let n = if r.len() > 1 && r.first() == r.last() {
+            r.len() - 1
+        } else {
+            r.len()
+        };
+        for &p in &r[..n] {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return None;
+            }
+            vx_sum += p[0];
+            vy_sum += p[1];
+            v_count += 1;
+        }
+        if n < 3 {
+            continue;
+        }
+        let origin = r[0];
+        for i in 1..n - 1 {
+            let u = sub2(r[i], origin);
+            let v = sub2(r[i + 1], origin);
+            let cross = cross2(u, v);
+            area2_sum += cross;
+            cx_sum += cross * (origin[0] + r[i][0] + r[i + 1][0]);
+            cy_sum += cross * (origin[1] + r[i][1] + r[i + 1][1]);
+        }
+    }
+    if v_count == 0 {
+        return None;
+    }
+    if area2_sum.abs() > 1e-15 {
+        Some([cx_sum / (3.0 * area2_sum), cy_sum / (3.0 * area2_sum)])
+    } else {
+        Some([vx_sum / v_count as f64, vy_sum / v_count as f64])
+    }
+}
 fn winding(p: [f64; 2], rings: &Rings) -> i32 {
     let mut winding = 0;
     for r in rings {
@@ -62,7 +134,7 @@ pub fn hull2(mut p: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     if p.len() < 3 {
         return p;
     }
-    let mut h = Vec::new();
+    let mut h = Vec::with_capacity(p.len() + 1);
     for &v in &p {
         while h.len() >= 2
             && cross2(
@@ -568,9 +640,9 @@ pub fn offset_join(rings: &Rings, distance: f64, join: &str, segments: usize) ->
     if distance == 0. {
         return Ok(rings.clone());
     }
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(rings.len());
     for r in rings {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(r.len() * 2);
         for i in 0..r.len() {
             let p = r[(i + r.len() - 1) % r.len()];
             let q = r[i];
@@ -959,5 +1031,24 @@ mod tests {
         let r = planar(&a, &b, "xor").unwrap();
         let s: f64 = r.iter().map(|ring| area(ring).abs()).sum();
         assert!((s - 24.).abs() < 1e-6, "xor area={s}");
+    }
+
+    #[test]
+    fn perimeter_and_centroid_handle_holes_and_degeneracy() {
+        let outer = rectangle([0., 0.], [10., 10.]);
+        let hole: Vec<_> = rectangle([2., 2.], [4., 4.]).into_iter().rev().collect();
+        let rings = vec![outer.clone(), hole];
+        assert!((perimeter(&vec![outer]) - 40.).abs() < 1e-12);
+        assert!((perimeter(&rings) - 48.).abs() < 1e-12);
+        let c = centroid(&rings).unwrap();
+        // Area of outer = 100 at (5,5); area of hole = -4 at (3,3).
+        // Combined centroid = (100*5 - 4*3)/96 = 488/96 = 61/12.
+        assert!((c[0] - 61. / 12.).abs() < 1e-12);
+        assert!((c[1] - 61. / 12.).abs() < 1e-12);
+
+        // Degenerate zero-area collinear ring falls back to vertex average.
+        let line_ring = vec![vec![[0., 0.], [2., 0.], [4., 0.]]];
+        assert_eq!(centroid(&line_ring), Some([2., 0.]));
+        assert_eq!(centroid(&vec![]), None);
     }
 }

@@ -454,6 +454,249 @@ pub fn compute_ergonomic_grab_anchor(
     ]
 }
 
+/// Two-controller gesture transform (scale + rotation + translation) for VR CAD manipulation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TwoHandTransform {
+    /// Uniform scale ratio between current and previous inter-controller distances.
+    pub scale: f32,
+    /// Translation of the midpoint from previous to current frame (`[dx, dy, dz]` in meters).
+    pub translation_m: [f32; 3],
+    /// Unit axis of rotation mapping the previous hand-to-hand vector onto the current one.
+    pub rotation_axis: [f32; 3],
+    /// Signed rotation angle in radians around `rotation_axis`.
+    pub rotation_angle_rad: f32,
+    /// Yaw rotation in radians in the horizontal ($XZ$) plane.
+    pub yaw_rad: f32,
+}
+
+impl TwoHandTransform {
+    /// Solves the two-handed scale, rotation, and translation gesture between two consecutive XR frames.
+    pub fn solve(
+        prev_left: [f32; 3],
+        prev_right: [f32; 3],
+        curr_left: [f32; 3],
+        curr_right: [f32; 3],
+    ) -> Option<Self> {
+        if !prev_left
+            .iter()
+            .chain(prev_right.iter())
+            .chain(curr_left.iter())
+            .chain(curr_right.iter())
+            .all(|v| v.is_finite())
+        {
+            return None;
+        }
+        let prev_vec = [
+            prev_right[0] - prev_left[0],
+            prev_right[1] - prev_left[1],
+            prev_right[2] - prev_left[2],
+        ];
+        let curr_vec = [
+            curr_right[0] - curr_left[0],
+            curr_right[1] - curr_left[1],
+            curr_right[2] - curr_left[2],
+        ];
+        let prev_len =
+            (prev_vec[0] * prev_vec[0] + prev_vec[1] * prev_vec[1] + prev_vec[2] * prev_vec[2])
+                .sqrt();
+        let curr_len =
+            (curr_vec[0] * curr_vec[0] + curr_vec[1] * curr_vec[1] + curr_vec[2] * curr_vec[2])
+                .sqrt();
+        if prev_len <= 1e-5 || curr_len <= 1e-5 {
+            return None;
+        }
+        let scale = curr_len / prev_len;
+        let prev_mid = [
+            (prev_left[0] + prev_right[0]) * 0.5,
+            (prev_left[1] + prev_right[1]) * 0.5,
+            (prev_left[2] + prev_right[2]) * 0.5,
+        ];
+        let curr_mid = [
+            (curr_left[0] + curr_right[0]) * 0.5,
+            (curr_left[1] + curr_right[1]) * 0.5,
+            (curr_left[2] + curr_right[2]) * 0.5,
+        ];
+        let translation_m = [
+            curr_mid[0] - prev_mid[0],
+            curr_mid[1] - prev_mid[1],
+            curr_mid[2] - prev_mid[2],
+        ];
+        let u = [
+            prev_vec[0] / prev_len,
+            prev_vec[1] / prev_len,
+            prev_vec[2] / prev_len,
+        ];
+        let v = [
+            curr_vec[0] / curr_len,
+            curr_vec[1] / curr_len,
+            curr_vec[2] / curr_len,
+        ];
+        let dot = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]).clamp(-1.0, 1.0);
+        let rotation_angle_rad = dot.acos();
+        let cx = u[1] * v[2] - u[2] * v[1];
+        let cy = u[2] * v[0] - u[0] * v[2];
+        let cz = u[0] * v[1] - u[1] * v[0];
+        let clen = (cx * cx + cy * cy + cz * cz).sqrt();
+        let rotation_axis = if clen > 1e-6 {
+            [cx / clen, cy / clen, cz / clen]
+        } else {
+            [0.0, 1.0, 0.0]
+        };
+        let prev_yaw = prev_vec[2].atan2(prev_vec[0]);
+        let curr_yaw = curr_vec[2].atan2(curr_vec[0]);
+        let mut yaw_rad = curr_yaw - prev_yaw;
+        while yaw_rad > std::f32::consts::PI {
+            yaw_rad -= 2.0 * std::f32::consts::PI;
+        }
+        while yaw_rad < -std::f32::consts::PI {
+            yaw_rad += 2.0 * std::f32::consts::PI;
+        }
+        Some(Self {
+            scale,
+            translation_m,
+            rotation_axis,
+            rotation_angle_rad,
+            yaw_rad,
+        })
+    }
+
+    /// Applies the gesture transform (anchored at `pivot`) to a 3D point.
+    pub fn apply_to_point(&self, point: [f32; 3], pivot: [f32; 3]) -> [f32; 3] {
+        let p = [
+            (point[0] - pivot[0]) * self.scale,
+            (point[1] - pivot[1]) * self.scale,
+            (point[2] - pivot[2]) * self.scale,
+        ];
+        let [kx, ky, kz] = self.rotation_axis;
+        let (sin_a, cos_a) = self.rotation_angle_rad.sin_cos();
+        let k_dot_p = kx * p[0] + ky * p[1] + kz * p[2];
+        let k_cross_p = [
+            ky * p[2] - kz * p[1],
+            kz * p[0] - kx * p[2],
+            kx * p[1] - ky * p[0],
+        ];
+        [
+            pivot[0]
+                + self.translation_m[0]
+                + p[0] * cos_a
+                + k_cross_p[0] * sin_a
+                + kx * k_dot_p * (1.0 - cos_a),
+            pivot[1]
+                + self.translation_m[1]
+                + p[1] * cos_a
+                + k_cross_p[1] * sin_a
+                + ky * k_dot_p * (1.0 - cos_a),
+            pivot[2]
+                + self.translation_m[2]
+                + p[2] * cos_a
+                + k_cross_p[2] * sin_a
+                + kz * k_dot_p * (1.0 - cos_a),
+        ]
+    }
+}
+
+/// Checks whether a spherical VR controller/hand volume (`hand_pos`, `hand_radius_m`)
+/// collides with any triangle in `scene`.
+pub fn check_hand_collision(
+    hand_pos: [f32; 3],
+    hand_radius_m: f32,
+    scene: &[PreparedMesh],
+) -> bool {
+    if !hand_pos.iter().all(|v| v.is_finite()) || !hand_radius_m.is_finite() || hand_radius_m < 0.0
+    {
+        return false;
+    }
+    let r2 = hand_radius_m * hand_radius_m;
+    for mesh in scene {
+        for tri in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (
+                (tri[0] as usize) * 3,
+                (tri[1] as usize) * 3,
+                (tri[2] as usize) * 3,
+            );
+            if i0 + 2 >= mesh.positions.len()
+                || i1 + 2 >= mesh.positions.len()
+                || i2 + 2 >= mesh.positions.len()
+            {
+                continue;
+            }
+            let a = [
+                mesh.positions[i0],
+                mesh.positions[i0 + 1],
+                mesh.positions[i0 + 2],
+            ];
+            let b = [
+                mesh.positions[i1],
+                mesh.positions[i1 + 1],
+                mesh.positions[i1 + 2],
+            ];
+            let c = [
+                mesh.positions[i2],
+                mesh.positions[i2 + 1],
+                mesh.positions[i2 + 2],
+            ];
+            if point_triangle_dist_sq(hand_pos, a, b, c) <= r2 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn point_triangle_dist_sq(p: [f32; 3], a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> f32 {
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let ap = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
+    let d1 = ab[0] * ap[0] + ab[1] * ap[1] + ab[2] * ap[2];
+    let d2 = ac[0] * ap[0] + ac[1] * ap[1] + ac[2] * ap[2];
+    if d1 <= 0.0 && d2 <= 0.0 {
+        return ap[0] * ap[0] + ap[1] * ap[1] + ap[2] * ap[2];
+    }
+    let bp = [p[0] - b[0], p[1] - b[1], p[2] - b[2]];
+    let d3 = ab[0] * bp[0] + ab[1] * bp[1] + ab[2] * bp[2];
+    let d4 = ac[0] * bp[0] + ac[1] * bp[1] + ac[2] * bp[2];
+    if d3 >= 0.0 && d4 <= d3 {
+        return bp[0] * bp[0] + bp[1] * bp[1] + bp[2] * bp[2];
+    }
+    let vc = d1 * d4 - d3 * d2;
+    if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
+        let v = d1 / (d1 - d3);
+        let q = [a[0] + v * ab[0], a[1] + v * ab[1], a[2] + v * ab[2]];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let cp = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+    let d5 = ab[0] * cp[0] + ab[1] * cp[1] + ab[2] * cp[2];
+    let d6 = ac[0] * cp[0] + ac[1] * cp[1] + ac[2] * cp[2];
+    if d6 >= 0.0 && d5 <= d6 {
+        return cp[0] * cp[0] + cp[1] * cp[1] + cp[2] * cp[2];
+    }
+    let vb = d5 * d2 - d1 * d6;
+    if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
+        let w = d2 / (d2 - d6);
+        let q = [a[0] + w * ac[0], a[1] + w * ac[1], a[2] + w * ac[2]];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let va = d3 * d6 - d5 * d4;
+    if va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0 {
+        let w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        let q = [
+            b[0] + w * (c[0] - b[0]),
+            b[1] + w * (c[1] - b[1]),
+            b[2] + w * (c[2] - b[2]),
+        ];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let denom = 1.0 / (va + vb + vc);
+    let v = vb * denom;
+    let w = vc * denom;
+    let q = [
+        a[0] + ab[0] * v + ac[0] * w,
+        a[1] + ab[1] * v + ac[1] * w,
+        a[2] + ab[2] * v + ac[2] * w,
+    ];
+    (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2)
+}
+
 // Compact little-endian transport, shared by native tests and the WASM host.
 // Input: mesh count; each mesh: vertex-float count, index count, matrix16,
 // color4, interleaved vertices, indices. Output: total byte length, mesh count;
@@ -654,6 +897,25 @@ mod tests {
         let grab = compute_ergonomic_grab_anchor(pose, 0.55, 0.25);
         assert!((grab[1] - 1.35).abs() < 1e-5);
         assert!((grab[2] + 0.55).abs() < 1e-5);
+
+        let gesture = TwoHandTransform::solve(
+            [-0.1, 0.0, 0.0],
+            [0.1, 0.0, 0.0],
+            [0.0, 0.2, -0.2],
+            [0.0, 0.2, 0.2],
+        )
+        .unwrap();
+        assert!((gesture.scale - 2.0).abs() < 1e-5);
+        assert!((gesture.translation_m[1] - 0.2).abs() < 1e-5);
+        assert!((gesture.rotation_angle_rad - std::f32::consts::FRAC_PI_2).abs() < 1e-5);
+
+        let hit_pos = [
+            scene[0].positions[0],
+            scene[0].positions[1],
+            scene[0].positions[2],
+        ];
+        assert!(check_hand_collision(hit_pos, 0.05, &scene));
+        assert!(!check_hand_collision([5.0, 5.0, 5.0], 0.05, &scene));
     }
 }
 

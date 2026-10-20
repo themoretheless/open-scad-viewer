@@ -12,9 +12,10 @@ pub use dxf::{
     DxfArc2D, DxfCircle2D, export_dxf_drawing, export_dxf_mesh, export_dxf_polylines,
     import_dxf_3dfaces, import_dxf_polylines,
 };
+pub use import::{ImportedMesh, RawMesh, Weld, ply as import_ply};
 pub use math_core::{Error, Result};
 use math_core::{cross, norm, sub};
-pub use mesh_export::{export, export_print_mesh};
+pub use mesh_export::{export, export_ply, export_print_mesh};
 pub use mesh_topology::MeshView;
 pub use model_3mf::{
     ThreeMfBeam, ThreeMfMaterial, export_beam_lattice_3mf, import_beam_lattice_3mf,

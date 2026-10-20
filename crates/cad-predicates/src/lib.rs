@@ -107,6 +107,7 @@ pub struct Decision {
 enum Predicate {
     Orient2,
     Orient3,
+    InCircle2,
     DirectionDot3,
     Distance(usize),
 }
@@ -129,6 +130,24 @@ fn expression<T: Algebra>(
             let u = values[4].sub(&values[0], ctx)?;
             let v = values[5].sub(&values[1], ctx)?;
             x.mul(&v, ctx)?.sub(&y.mul(&u, ctx)?, ctx)
+        }
+        Predicate::InCircle2 => {
+            let adx = values[0].sub(&values[6], ctx)?;
+            let ady = values[1].sub(&values[7], ctx)?;
+            let bdx = values[2].sub(&values[6], ctx)?;
+            let bdy = values[3].sub(&values[7], ctx)?;
+            let cdx = values[4].sub(&values[6], ctx)?;
+            let cdy = values[5].sub(&values[7], ctx)?;
+            let alift = adx.mul(&adx, ctx)?.add(&ady.mul(&ady, ctx)?, ctx)?;
+            let blift = bdx.mul(&bdx, ctx)?.add(&bdy.mul(&bdy, ctx)?, ctx)?;
+            let clift = cdx.mul(&cdx, ctx)?.add(&cdy.mul(&cdy, ctx)?, ctx)?;
+            let bc = bdx.mul(&cdy, ctx)?.sub(&bdy.mul(&cdx, ctx)?, ctx)?;
+            let ca = cdx.mul(&ady, ctx)?.sub(&cdy.mul(&adx, ctx)?, ctx)?;
+            let ab = adx.mul(&bdy, ctx)?.sub(&ady.mul(&bdx, ctx)?, ctx)?;
+            alift
+                .mul(&bc, ctx)?
+                .add(&blift.mul(&ca, ctx)?, ctx)?
+                .add(&clift.mul(&ab, ctx)?, ctx)
         }
         Predicate::Orient3 => {
             let mut vectors = Vec::with_capacity(9);
@@ -299,6 +318,151 @@ pub fn orient3d(
             a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
         ],
     )
+}
+
+/// Authored 2D incircle predicate: positive when `d` lies strictly inside the
+/// counter-clockwise circle through `(a, b, c)`, negative when strictly outside,
+/// and zero when cocircular.
+pub fn incircle2d_authored(
+    ctx: &mut PredicateContext<'_>,
+    a: [LeafRef; 2],
+    b: [LeafRef; 2],
+    c: [LeafRef; 2],
+    d: [LeafRef; 2],
+) -> Result<Decision, InputError> {
+    evaluate(
+        ctx,
+        Predicate::InCircle2,
+        &[a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]],
+    )
+}
+
+/// Adaptive exact 2D incircle predicate over finite binary64 coordinates.
+pub fn incircle2d(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Sign {
+    let coords = [a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Zero;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("incircle2d-ephemeral", 0, scalars) else {
+        return Sign::Zero;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    match incircle2d_authored(&mut ctx, pair(0), pair(2), pair(4), pair(6)) {
+        Ok(Decision {
+            outcome: Outcome::Sign(sign),
+            ..
+        }) => sign,
+        _ => Sign::Zero,
+    }
+}
+
+/// Return true when `d` lies within signed distance `tol` of the plane spanned by
+/// `(a, b, c)`, or when `(a, b, c)` are collinear within `tol`. Uses exact
+/// orientation when `tol <= 0.0`.
+pub fn coplanar3d(a: [f64; 3], b: [f64; 3], c: [f64; 3], d: [f64; 3], tol: f64) -> bool {
+    let coords = [
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) || !tol.is_finite() || tol < 0.0 {
+        return false;
+    }
+    if tol == 0.0 {
+        let scalars = coords
+            .iter()
+            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect();
+        let Ok(source) = SourceArena::authored("coplanar3d-ephemeral", 0, scalars) else {
+            return false;
+        };
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        let pt = |offset: usize| {
+            [
+                source.leaf(offset).unwrap(),
+                source.leaf(offset + 1).unwrap(),
+                source.leaf(offset + 2).unwrap(),
+            ]
+        };
+        return matches!(
+            orient3d(&mut ctx, pt(0), pt(3), pt(6), pt(9)),
+            Ok(Decision {
+                outcome: Outcome::Sign(Sign::Zero),
+                ..
+            })
+        );
+    }
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let ad = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
+    let n = [
+        ab[1] * ac[2] - ab[2] * ac[1],
+        ab[2] * ac[0] - ab[0] * ac[2],
+        ab[0] * ac[1] - ab[1] * ac[0],
+    ];
+    let n_len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+    if n_len <= tol * tol {
+        return true;
+    }
+    let det = ad[0] * n[0] + ad[1] * n[1] + ad[2] * n[2];
+    (det.abs() / n_len) <= tol
+}
+
+/// Return true when `(a, b, c)` are collinear within perpendicular distance `tol`
+/// (exact cross-product zero check when `tol <= 0.0`).
+pub fn collinear3d(a: [f64; 3], b: [f64; 3], c: [f64; 3], tol: f64) -> bool {
+    let coords = [a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]];
+    if coords.iter().any(|v| !v.is_finite()) || !tol.is_finite() || tol < 0.0 {
+        return false;
+    }
+    if tol == 0.0 {
+        let scalars = [
+            a[0], a[1], b[0], b[1], c[0], c[1],
+            a[1], a[2], b[1], b[2], c[1], c[2],
+            a[2], a[0], b[2], b[0], c[2], c[0],
+        ]
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+        let Ok(source) = SourceArena::authored("collinear3d-ephemeral", 0, scalars) else {
+            return false;
+        };
+        let tolerance = ToleranceContext::default_valid();
+        for plane in 0..3 {
+            let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+            let base = plane * 6;
+            let p = |k: usize| [source.leaf(base + k).unwrap(), source.leaf(base + k + 1).unwrap()];
+            let Ok(decision) = orient2d(&mut ctx, p(0), p(2), p(4)) else {
+                return false;
+            };
+            if decision.outcome != Outcome::Sign(Sign::Zero) {
+                return false;
+            }
+        }
+        return true;
+    }
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let bc = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
+    let cross = [
+        ab[1] * ac[2] - ab[2] * ac[1],
+        ab[2] * ac[0] - ab[0] * ac[2],
+        ab[0] * ac[1] - ab[1] * ac[0],
+    ];
+    let area2 = (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt();
+    let max_len = (ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2])
+        .max(ac[0] * ac[0] + ac[1] * ac[1] + ac[2] * ac[2])
+        .max(bc[0] * bc[0] + bc[1] * bc[1] + bc[2] * bc[2])
+        .sqrt();
+    if max_len <= tol {
+        return true;
+    }
+    (area2 / max_len) <= tol
 }
 
 fn distance_references(

@@ -308,6 +308,42 @@ function clampDistanceValue(distance: number) {
   return clampGestureDistance(distance)
 }
 
+/**
+ * Conservative 6-plane Gribb-Hartmann frustum-AABB intersection test for a row-major
+ * 4x4 view-projection matrix (`vpMatrix`) using WebGPU clip conventions (`-w..w` XY, `0..w` Z).
+ */
+export function isAabbInFrustum(
+  vpMatrix: ArrayLike<number>,
+  min: readonly [number, number, number],
+  max: readonly [number, number, number],
+): boolean {
+  if (vpMatrix.length < 16) return true
+  for (let plane = 0; plane < 6; plane++) {
+    const row = plane < 4 ? (plane >> 1) * 4 : 8
+    const sign = plane % 2 === 0 ? 1 : -1
+    const nx = plane === 4 ? vpMatrix[8]! : vpMatrix[12]! + sign * vpMatrix[row]!
+    const ny = plane === 4 ? vpMatrix[9]! : vpMatrix[13]! + sign * vpMatrix[row + 1]!
+    const nz = plane === 4 ? vpMatrix[10]! : vpMatrix[14]! + sign * vpMatrix[row + 2]!
+    const nw = plane === 4 ? vpMatrix[11]! : vpMatrix[15]! + sign * vpMatrix[row + 3]!
+    const len = Math.hypot(nx, ny, nz)
+    if (!Number.isFinite(len) || len === 0) continue
+    const px = nx >= 0 ? max[0] : min[0]
+    const py = ny >= 0 ? max[1] : min[1]
+    const pz = nz >= 0 ? max[2] : min[2]
+    const dist = (nx * px + ny * py + nz * pz + nw) / len
+    if (dist < -1e-5) return false
+  }
+  return true
+}
+
+export interface WebGPUFrameDiagnostics {
+  opaqueMeshCount: number
+  transparentMeshCount: number
+  edgeMeshCount: number
+  totalMeshCount: number
+  deviceLost: boolean
+}
+
 
 /* ── Renderer class ───────────────────────────────── */
 
@@ -3219,6 +3255,16 @@ export class WebGPURenderer {
   }
 
   get currentStatus(): RendererLifecycleEvent { return this.status }
+
+  getFrameDiagnostics(): WebGPUFrameDiagnostics {
+    return {
+      opaqueMeshCount: this.opaqueDraws.length,
+      transparentMeshCount: this.transparentDraws.length,
+      edgeMeshCount: this.edgeDraws.length,
+      totalMeshCount: this.meshes.length,
+      deviceLost: this.lost,
+    }
+  }
 
   private rebuildSceneAabbIndex() {
     const entries: { id: number; bounds: Aabb3 }[] = []

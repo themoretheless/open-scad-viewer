@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, useId, watch } from 'vue'
-import { parseCadQuantity, type QuantityKind } from '../services/cadQuantity'
-defineOptions({ inheritAttrs: false })
+import { evaluateSafeMathExpression, parseCadQuantity, type QuantityKind } from '../services/cadQuantity'
+defineOptions({ inheritAttrs: false, evaluateSafeMathExpression })
 const props = withDefaults(defineProps<{modelValue: number; kind?: QuantityKind; locale?: string; min?: number; max?: number}>(), {kind:'length',locale:'en'})
 const emit = defineEmits<{'update:modelValue':[number]; validity:[boolean]}>()
 const raw = ref<string | null>(null), failure = ref('')
@@ -11,15 +11,28 @@ const hint = computed(() => props.kind === 'length' ? 'mm, cm, m, in' : props.ki
 const message = computed(() => !failure.value ? '' : props.locale === 'ru'
   ? failure.value === 'unit' ? `Допустимые единицы: ${hint.value || 'без единиц'}` : failure.value === 'range' ? 'Значение вне допустимого диапазона' : 'Введите конечное число'
   : failure.value === 'unit' ? `Allowed units: ${hint.value || 'unitless'}` : failure.value === 'range' ? 'Value is outside the allowed range' : 'Enter a finite number')
-const text = computed({get:()=>raw.value ?? String(props.modelValue),set:(value:string|number)=>{
+function commitValue(value: string | number, normalizeDisplay = false) {
   raw.value=String(value)
   try {
     const result=parseCadQuantity(raw.value,props.kind,props.min,props.max)
     failure.value=result.valid?'':result.reason
     emit('validity',result.valid)
-    if(result.valid){emittedValue=result.value;emit('update:modelValue',result.value)}
+    if(result.valid){
+      emittedValue=result.value
+      if (normalizeDisplay && /[+\-*/^()]/.test(raw.value.trim().slice(1))) {
+        raw.value=String(Number(result.value.toFixed(6)))
+      }
+      emit('update:modelValue',result.value)
+    }
   } catch { failure.value='number';emit('validity',false) }
-}})
+}
+const text = computed({
+  get:()=>raw.value ?? String(props.modelValue),
+  set:(value:string|number)=>commitValue(value, false),
+})
+function onCommitChange() {
+  if (raw.value !== null) commitValue(raw.value, true)
+}
 watch(()=>props.modelValue,value=>{
   // Keep the user's units and spelling when the parent echoes our own edit.
   if(Object.is(value,emittedValue)){emittedValue=undefined;return}
@@ -29,7 +42,7 @@ onUnmounted(()=>emit('validity',true))
 </script>
 <template>
   <span class="quantity-field">
-    <input v-bind="$attrs" v-model="text" type="text" :aria-invalid="!!failure" :aria-describedby="[$attrs['aria-describedby'], message ? errorId : undefined].filter(Boolean).join(' ') || undefined" :aria-errormessage="message ? errorId : undefined" :title="message || hint" autocomplete="off" spellcheck="false" />
+    <input v-bind="$attrs" v-model="text" type="text" :aria-invalid="!!failure" :aria-describedby="[$attrs['aria-describedby'], message ? errorId : undefined].filter(Boolean).join(' ') || undefined" :aria-errormessage="message ? errorId : undefined" :title="message || hint" autocomplete="off" spellcheck="false" @change="onCommitChange" />
     <small v-if="message" :id="errorId" role="alert">{{ message }}</small>
   </span>
 </template>

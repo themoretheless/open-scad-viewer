@@ -7,6 +7,7 @@ mod error;
 mod evaluation;
 mod float64;
 mod float64_indexing;
+mod host_tensor;
 mod indexing;
 mod layout;
 mod low_attention;
@@ -33,6 +34,7 @@ pub use error::TensorError;
 pub use evaluation::TensorEvalBackend;
 pub use float64::{Float64Support, TensorF64Backend};
 pub use float64_indexing::{TensorF64IndexBackend, TensorF64ScatterBackend};
+pub use host_tensor::{Tensor, TopKResult};
 pub use indexing::{
     Compacted, Gathered, ScanOptions, TensorIndexBackend, compact_shape, gather_shape,
     select_shape, validate_index_count,

@@ -171,6 +171,81 @@ pub fn sample_deviation(a: &MeshView<'_>, b: &MeshView<'_>) -> Result<Deviation>
     })
 }
 
+/// Symmetric surface distance statistics between two triangle meshes evaluated via BVH.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HausdorffReport {
+    pub min_mm: f64,
+    pub max_mm: f64,
+    pub mean_mm: f64,
+    pub rms_mm: f64,
+    pub sample_count: usize,
+}
+
+/// Computes symmetric approximate Hausdorff surface distance statistics (`min_mm`, `max_mm`, `mean_mm`, `rms_mm`)
+/// between `mesh_a` and `mesh_b` using `DistanceBvh` acceleration over vertices, edge midpoints, and triangle centroids.
+pub fn hausdorff_distance_approx(
+    mesh_a: &MeshView<'_>,
+    mesh_b: &MeshView<'_>,
+) -> Result<HausdorffReport> {
+    mesh_a.validate()?;
+    mesh_b.validate()?;
+    if mesh_a.indices.is_empty() || mesh_b.indices.is_empty() {
+        return Err(error("Hausdorff distance requires non-empty meshes"));
+    }
+    let bvh_a = crate::distance_bvh::DistanceBvh::build(crate::distance_bvh::distance_triangles(*mesh_a)?);
+    let bvh_b = crate::distance_bvh::DistanceBvh::build(crate::distance_bvh::distance_triangles(*mesh_b)?);
+
+    let mut min_d = f64::INFINITY;
+    let mut max_d = 0.0_f64;
+    let mut sum_d = 0.0_f64;
+    let mut sum_sq = 0.0_f64;
+    let mut count = 0usize;
+
+    for (source, target_bvh) in [(mesh_a, &bvh_b), (mesh_b, &bvh_a)] {
+        let mut pts = Vec::with_capacity(source.positions.len() / 3 + (source.indices.len() / 3) * 4);
+        for p in source.positions.as_chunks::<3>().0 {
+            pts.push([p[0], p[1], p[2]]);
+        }
+        for t in source.indices.as_chunks::<3>().0 {
+            let p0 = [
+                source.positions[t[0] * 3],
+                source.positions[t[0] * 3 + 1],
+                source.positions[t[0] * 3 + 2],
+            ];
+            let p1 = [
+                source.positions[t[1] * 3],
+                source.positions[t[1] * 3 + 1],
+                source.positions[t[1] * 3 + 2],
+            ];
+            let p2 = [
+                source.positions[t[2] * 3],
+                source.positions[t[2] * 3 + 1],
+                source.positions[t[2] * 3 + 2],
+            ];
+            pts.push([(p0[0] + p1[0] + p2[0]) / 3.0, (p0[1] + p1[1] + p2[1]) / 3.0, (p0[2] + p1[2] + p2[2]) / 3.0]);
+            pts.push([0.5 * (p0[0] + p1[0]), 0.5 * (p0[1] + p1[1]), 0.5 * (p0[2] + p1[2])]);
+            pts.push([0.5 * (p1[0] + p2[0]), 0.5 * (p1[1] + p2[1]), 0.5 * (p1[2] + p2[2])]);
+            pts.push([0.5 * (p2[0] + p0[0]), 0.5 * (p2[1] + p0[1]), 0.5 * (p2[2] + p0[2])]);
+        }
+        for p in pts {
+            let d = target_bvh.distance(p);
+            min_d = min_d.min(d);
+            max_d = max_d.max(d);
+            sum_d += d;
+            sum_sq += d * d;
+            count += 1;
+        }
+    }
+
+    Ok(HausdorffReport {
+        min_mm: if min_d.is_finite() { min_d } else { 0.0 },
+        max_mm: max_d,
+        mean_mm: sum_d / count.max(1) as f64,
+        rms_mm: (sum_sq / count.max(1) as f64).sqrt(),
+        sample_count: count,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,6 +281,20 @@ mod tests {
         assert_eq!(closest_triangle([0.2, 0.3, 4.], a, b, c), [0.2, 0.3, 0.]);
         assert_eq!(closest_triangle([1., 1., 0.], a, b, c), [0.5, 0.5, 0.]);
         assert_eq!(closest_triangle([-2., -3., 0.], a, b, c), a);
+    }
+
+    #[test]
+    fn hausdorff_distance_approx_measures_surface_offset() {
+        let pos_a = [0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0];
+        let pos_b = [0.0, 0.0, 2.5, 10.0, 0.0, 2.5, 0.0, 10.0, 2.5];
+        let idx = [0, 1, 2];
+        let ma = MeshView::new(&pos_a, &idx);
+        let mb = MeshView::new(&pos_b, &idx);
+        let rep = hausdorff_distance_approx(&ma, &mb).unwrap();
+        assert!((rep.min_mm - 2.5).abs() < 1e-12);
+        assert!((rep.max_mm - 2.5).abs() < 1e-12);
+        assert!((rep.mean_mm - 2.5).abs() < 1e-12);
+        assert!((rep.rms_mm - 2.5).abs() < 1e-12);
     }
 }
 

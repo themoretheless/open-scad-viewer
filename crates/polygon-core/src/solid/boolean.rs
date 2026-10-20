@@ -210,11 +210,12 @@ struct Split {
     back: Vec<Polygon>,
 }
 fn split(plane: Plane, polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Split> {
+    let cap = polygons.len();
     let mut out = Split {
-        same: vec![],
-        opposite: vec![],
-        front: vec![],
-        back: vec![],
+        same: Vec::new(),
+        opposite: Vec::new(),
+        front: Vec::with_capacity(cap),
+        back: Vec::with_capacity(cap),
     };
     for p in polygons {
         match classify(plane, &p, eps, budget)? {
@@ -228,8 +229,8 @@ fn split(plane: Plane, polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) ->
             Side::Front => out.front.push(p),
             Side::Back => out.back.push(p),
             Side::Spanning => {
-                let mut f = Vec::new();
-                let mut b = Vec::new();
+                let mut f = Vec::with_capacity(p.vertices.len() + 2);
+                let mut b = Vec::with_capacity(p.vertices.len() + 2);
                 for i in 0..p.vertices.len() {
                     let a = p.vertices[i];
                     let next = p.vertices[(i + 1) % p.vertices.len()];

@@ -299,7 +299,190 @@ impl<C, S, P> Model<C, S, P> {
         })
     }
 }
+/// Topological invariants (Euler-Poincaré characteristic, genus) and fast adjacency queries.
+pub mod explorer {
+    use super::Model;
+    use rustc_hash::FxHashSet;
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of the entire B-rep model,
+    /// where $V$ is the number of non-degenerate vertices, $E$ is the number of
+    /// non-degenerate edges, $F$ is the number of faces, and $H$ is the number of inner
+    /// hole loops across all faces.
+    pub fn euler_characteristic<C, S, P, V>(model: &Model<C, S, P, V>) -> i64 {
+        let mut vertices = FxHashSet::default();
+        let mut edges = FxHashSet::default();
+        let mut hole_loops = 0i64;
+        for f in &model.faces {
+            hole_loops += f.holes.len() as i64;
+            for &loop_id in std::iter::once(&f.outer).chain(&f.holes) {
+                let Some(wire) = model.loops.get(loop_id) else {
+                    continue;
+                };
+                for coedge in &wire.coedges {
+                    let Some(edge) = model.edges.get(coedge.edge) else {
+                        continue;
+                    };
+                    if !edge.degenerate {
+                        edges.insert(coedge.edge);
+                        vertices.insert(edge.vertices[0]);
+                        vertices.insert(edge.vertices[1]);
+                    }
+                }
+            }
+        }
+        let v = vertices.len() as i64;
+        let e = edges.len() as i64;
+        let f = model.faces.len() as i64;
+        v - e + f - hole_loops
+    }
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of a single shell `shell_id`.
+    pub fn shell_euler_characteristic<C, S, P, V>(
+        model: &Model<C, S, P, V>,
+        shell_id: usize,
+    ) -> Option<i64> {
+        let shell = model.shells.get(shell_id)?;
+        let mut vertices = FxHashSet::default();
+        let mut edges = FxHashSet::default();
+        let mut hole_loops = 0i64;
+        for face_use in &shell.faces {
+            let f = model.faces.get(face_use.face)?;
+            hole_loops += f.holes.len() as i64;
+            for &loop_id in std::iter::once(&f.outer).chain(&f.holes) {
+                let wire = model.loops.get(loop_id)?;
+                for coedge in &wire.coedges {
+                    let edge = model.edges.get(coedge.edge)?;
+                    if !edge.degenerate {
+                        edges.insert(coedge.edge);
+                        vertices.insert(edge.vertices[0]);
+                        vertices.insert(edge.vertices[1]);
+                    }
+                }
+            }
+        }
+        let v = vertices.len() as i64;
+        let e = edges.len() as i64;
+        let f = shell.faces.len() as i64;
+        Some(v - e + f - hole_loops)
+    }
+
+    /// Topological genus $g = (2 - \chi) / 2$ of a closed shell `shell_id`
+    /// (returns `None` if the shell is open or `shell_id` is out of bounds).
+    pub fn shell_genus<C, S, P, V>(model: &Model<C, S, P, V>, shell_id: usize) -> Option<i64> {
+        let shell = model.shells.get(shell_id)?;
+        if !shell.closed {
+            return None;
+        }
+        let chi = shell_euler_characteristic(model, shell_id)?;
+        Some((2 - chi) / 2)
+    }
+
+    /// Sum of topological genera across all closed shells in `model`, or `(2S - \chi) / 2`
+    /// where $S$ is the number of closed shells.
+    pub fn genus<C, S, P, V>(model: &Model<C, S, P, V>) -> i64 {
+        let mut total = 0i64;
+        for s in 0..model.shells.len() {
+            if let Some(g) = shell_genus(model, s) {
+                total += g.max(0);
+            }
+        }
+        total
+    }
+
+    /// Sorted deduplicated indices of non-degenerate edges incident to `vertex_id`.
+    pub fn vertex_edges<C, S, P, V>(model: &Model<C, S, P, V>, vertex_id: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        for (ei, edge) in model.edges.iter().enumerate() {
+            if !edge.degenerate && (edge.vertices[0] == vertex_id || edge.vertices[1] == vertex_id)
+            {
+                out.push(ei);
+            }
+        }
+        out
+    }
+
+    /// Sorted deduplicated indices of edges bounding `face_id`.
+    pub fn face_edges<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
+        let Some(face) = model.faces.get(face_id) else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for &loop_id in std::iter::once(&face.outer).chain(&face.holes) {
+            if let Some(wire) = model.loops.get(loop_id) {
+                for coedge in &wire.coedges {
+                    out.push(coedge.edge);
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    /// Sorted deduplicated indices of faces sharing at least one non-degenerate edge with `face_id`.
+    pub fn adjacent_faces<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
+        let edges: FxHashSet<usize> = face_edges(model, face_id)
+            .into_iter()
+            .filter(|&e| model.edges.get(e).is_some_and(|ed| !ed.degenerate))
+            .collect();
+        if edges.is_empty() {
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        for (fi, f) in model.faces.iter().enumerate() {
+            if fi == face_id {
+                continue;
+            }
+            let shares = std::iter::once(&f.outer).chain(&f.holes).any(|&l| {
+                model
+                    .loops
+                    .get(l)
+                    .is_some_and(|w| w.coedges.iter().any(|c| edges.contains(&c.edge)))
+            });
+            if shares {
+                out.push(fi);
+            }
+        }
+        out
+    }
+}
+
 impl<C, S, P, V> Model<C, S, P, V> {
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of the B-rep model.
+    pub fn euler_characteristic(&self) -> i64 {
+        explorer::euler_characteristic(self)
+    }
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of `shell_id`.
+    pub fn shell_euler_characteristic(&self, shell_id: usize) -> Option<i64> {
+        explorer::shell_euler_characteristic(self, shell_id)
+    }
+
+    /// Topological genus $g = (2 - \chi) / 2$ of closed shell `shell_id`.
+    pub fn shell_genus(&self, shell_id: usize) -> Option<i64> {
+        explorer::shell_genus(self, shell_id)
+    }
+
+    /// Topological genus summed over all closed shells in the model.
+    pub fn genus(&self) -> i64 {
+        explorer::genus(self)
+    }
+
+    /// Fast adjacency query: non-degenerate edges incident to `vertex_id`.
+    pub fn vertex_edges(&self, vertex_id: usize) -> Vec<usize> {
+        explorer::vertex_edges(self, vertex_id)
+    }
+
+    /// Fast adjacency query: edges bounding `face_id`.
+    pub fn face_edges(&self, face_id: usize) -> Vec<usize> {
+        explorer::face_edges(self, face_id)
+    }
+
+    /// Fast adjacency query: faces sharing at least one non-degenerate edge with `face_id`.
+    pub fn adjacent_faces(&self, face_id: usize) -> Vec<usize> {
+        explorer::adjacent_faces(self, face_id)
+    }
+
     /// Canonical immutable predicate context derived from this model's legacy
     /// scalar. New serialized models also carry its versioned specification.
     pub fn tolerance_context(&self) -> Result<cad_predicates::ToleranceContext> {
@@ -1046,5 +1229,92 @@ mod tests {
             m.validate_topology().unwrap_err().code,
             "BREP_INVALID_TOPOLOGY"
         );
+    }
+
+    #[test]
+    fn explorer_euler_characteristic_genus_and_adjacency() {
+        let m = sheet();
+        // Triangle sheet: V=3, E=3, F=1 => chi = 3 - 3 + 1 = 1.
+        assert_eq!(m.euler_characteristic(), 1);
+        assert_eq!(m.shell_euler_characteristic(0), Some(1));
+        assert_eq!(m.shell_genus(0), None); // open shell
+        assert_eq!(m.vertex_edges(0), vec![0, 2]);
+        assert_eq!(m.face_edges(0), vec![0, 1, 2]);
+        assert!(m.adjacent_faces(0).is_empty());
+
+        // Closed tetrahedron: V=4, E=6, F=4 => chi = 2, genus = 0.
+        let tet = Model {
+            vertices: vec![
+                Vertex { point: [0., 0., 0.] },
+                Vertex { point: [1., 0., 0.] },
+                Vertex { point: [0., 1., 0.] },
+                Vertex { point: [0., 0., 1.] },
+            ],
+            edges: vec![
+                Edge { degenerate: false, vertices: [0, 1], curve: () },
+                Edge { degenerate: false, vertices: [1, 2], curve: () },
+                Edge { degenerate: false, vertices: [2, 0], curve: () },
+                Edge { degenerate: false, vertices: [0, 3], curve: () },
+                Edge { degenerate: false, vertices: [1, 3], curve: () },
+                Edge { degenerate: false, vertices: [2, 3], curve: () },
+            ],
+            loops: vec![
+                Loop {
+                    coedges: vec![
+                        Coedge { edge: 0, reversed: true, pcurve: () },
+                        Coedge { edge: 2, reversed: true, pcurve: () },
+                        Coedge { edge: 1, reversed: true, pcurve: () },
+                    ],
+                },
+                Loop {
+                    coedges: vec![
+                        Coedge { edge: 0, reversed: false, pcurve: () },
+                        Coedge { edge: 4, reversed: false, pcurve: () },
+                        Coedge { edge: 3, reversed: true, pcurve: () },
+                    ],
+                },
+                Loop {
+                    coedges: vec![
+                        Coedge { edge: 1, reversed: false, pcurve: () },
+                        Coedge { edge: 5, reversed: false, pcurve: () },
+                        Coedge { edge: 4, reversed: true, pcurve: () },
+                    ],
+                },
+                Loop {
+                    coedges: vec![
+                        Coedge { edge: 2, reversed: false, pcurve: () },
+                        Coedge { edge: 3, reversed: false, pcurve: () },
+                        Coedge { edge: 5, reversed: true, pcurve: () },
+                    ],
+                },
+            ],
+            faces: (0..4)
+                .map(|i| Face {
+                    surface: (),
+                    outer: i,
+                    holes: vec![],
+                })
+                .collect(),
+            shells: vec![Shell {
+                faces: (0..4)
+                    .map(|face| FaceUse {
+                        face,
+                        reversed: false,
+                    })
+                    .collect(),
+                closed: true,
+            }],
+            bodies: vec![Body {
+                outer_shell: 0,
+                inner_shells: vec![],
+            }],
+            tolerance_mm: 1e-7,
+        };
+        tet.validate_topology().unwrap();
+        assert_eq!(tet.euler_characteristic(), 2);
+        assert_eq!(tet.shell_euler_characteristic(0), Some(2));
+        assert_eq!(tet.shell_genus(0), Some(0));
+        assert_eq!(tet.genus(), 0);
+        assert_eq!(tet.adjacent_faces(0), vec![1, 2, 3]);
     }
 }

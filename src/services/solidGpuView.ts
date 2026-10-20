@@ -155,7 +155,18 @@ export class SolidGpuLayer {
   private packed: Float32Array | null = null
   /** Wall time of the last completed GPU submission, for the viewport's frame readout. */
   private lastDrawMs = 0
+  private lastDrawCalls = 0
+  private lastTriangleCount = 0
+  private deviceLost = false
   get drawMs(): number { return this.lastDrawMs }
+  getFrameDiagnostics(): { drawMs: number; drawCalls: number; triangles: number; deviceLost: boolean } {
+    return {
+      drawMs: this.lastDrawMs,
+      drawCalls: this.lastDrawCalls,
+      triangles: this.lastTriangleCount,
+      deviceLost: this.deviceLost,
+    }
+  }
   private ranges = new Map<string, { start: number; count: number }>()
   private depth: GPUTexture | null = null
   private depthView: GPUTextureView | null = null
@@ -216,7 +227,8 @@ export class SolidGpuLayer {
         entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
       })
       this.transparentBindGroup=device.createBindGroup({layout:this.transparentPipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniformBuffer}}]})
-      device.lost.then(info => this.fail(info?.message??'WebGPU device lost')).catch(error => this.fail(error))
+      this.deviceLost = false
+      device.lost.then(info => { this.deviceLost = true; this.fail(info?.message??'WebGPU device lost') }).catch(error => { this.deviceLost = true; this.fail(error) })
       device.addEventListener('uncapturederror',event=>this.fail(event.error))
       this.device = device
       this.context = context
@@ -395,7 +407,7 @@ export class SolidGpuLayer {
 
   private render(): void {
     const device = this.device, context = this.context, pipeline = this.pipeline
-    if (!device || !context || !pipeline || !this.uniformBuffer || !this.bindGroup) return
+    if (this.deviceLost || !device || !context || !pipeline || !this.uniformBuffer || !this.bindGroup) return
     const width = this.canvas.width, height = this.canvas.height
     if (!this.depth || !this.depthView) {
       this.depth?.destroy()
@@ -414,11 +426,15 @@ export class SolidGpuLayer {
       colorAttachments: [{ view: context.getCurrentTexture().createView(), clearValue: { r: 0, g: 0, b: 0, a: 0 }, loadOp: 'clear', storeOp: 'store' }],
       depthStencilAttachment: { view: this.depthView, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' },
     })
+    let drawCalls = 0
+    let triangles = 0
     if (this.vertexBuffer && this.vertexCount) {
       pass.setPipeline(pipeline)
       pass.setBindGroup(0, this.bindGroup)
       pass.setVertexBuffer(0, this.vertexBuffer)
       pass.draw(this.opaqueCount)
+      drawCalls++
+      triangles += (this.opaqueCount / 3) | 0
       if(this.transparentVertices&&this.transparentPipeline&&this.transparentBindGroup){
         const direction=[rotation[2]!,rotation[6]!,rotation[10]!] as [number,number,number]
         if(!this.transparentDirection||direction[0]!==this.transparentDirection[0]||direction[1]!==this.transparentDirection[1]||direction[2]!==this.transparentDirection[2]){
@@ -428,9 +444,13 @@ export class SolidGpuLayer {
         }
         pass.setPipeline(this.transparentPipeline);pass.setBindGroup(0,this.transparentBindGroup)
         pass.setVertexBuffer(0,this.transparentVertices);pass.draw(this.transparentTree!.fragmentCount*3)
+        drawCalls++
+        triangles += this.transparentTree!.fragmentCount
       }
     }
     pass.end()
+    this.lastDrawCalls = drawCalls
+    this.lastTriangleCount = triangles
     const drawStarted = performance.now()
     device.queue.submit([encoder.finish()])
     // Resolves once the GPU has finished; measured even when frame callbacks are throttled.

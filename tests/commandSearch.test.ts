@@ -6,6 +6,7 @@ import {
   normalizeCommandText,
   rankPaletteCommands,
   swapKeyboardLayout,
+  transliterateCommandText,
   type PaletteCommand,
 } from '../src/services/commandSearch'
 
@@ -153,5 +154,18 @@ describe('wrong keyboard layout', () => {
   it('prefers the spelling that was actually typed when both match', () => {
     // "fit" typed as-is matches the English alias; its swapped form "аше" matches nothing.
     expect(rankPaletteCommands(commands, 'fit')[0]?.id).toBe('fit')
+  })
+
+  it('supports phonetic transliteration and bilingual CAD synonyms', () => {
+    expect(transliterateCommandText('сфера')).toBe('sfera')
+    expect(transliterateCommandText('faska')).toBe('фаска')
+    const cadCommands = [
+      command('chamfer', 'Chamfer edge'),
+      command('extrude', 'Extrude profile'),
+      command('fillet', 'Скругление ребра'),
+    ]
+    expect(rankPaletteCommands(cadCommands, 'фаска')[0]?.id).toBe('chamfer')
+    expect(rankPaletteCommands(cadCommands, 'выдавить')[0]?.id).toBe('extrude')
+    expect(rankPaletteCommands(cadCommands, 'fillet')[0]?.id).toBe('fillet')
   })
 })

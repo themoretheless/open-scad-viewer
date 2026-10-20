@@ -12,7 +12,19 @@ const props = withDefaults(defineProps<{
   open: boolean
   commands: readonly PaletteCommand[]
   restoreFocus?: boolean
-}>(), { restoreFocus: true })
+  platform?: 'mac' | 'windows-linux' | 'unknown'
+}>(), { restoreFocus: true, platform: 'unknown' })
+
+function formatShortcutDisplay(shortcut: string | undefined): string {
+  if (!shortcut) return ''
+  if (props.platform === 'mac') {
+    return shortcut.replace(/Ctrl\/⌘\+/g, '⌘').replace(/Ctrl\+/g, '⌃').replace(/Alt\+/g, '⌥').replace(/Shift\+/g, '⇧')
+  }
+  if (props.platform === 'windows-linux') {
+    return shortcut.replace(/Ctrl\/⌘\+/g, 'Ctrl+').replace(/\s*\/\s*⌘⌥[A-Za-z0-9]+/g, '')
+  }
+  return shortcut
+}
 
 const emit = defineEmits<{
   execute: [id: string]
@@ -149,7 +161,8 @@ function handleKeydown(event: KeyboardEvent) {
               type="search"
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded="true"
+              aria-haspopup="listbox"
+              :aria-expanded="open"
               :aria-controls="listboxId"
               :aria-activedescendant="activeOptionId"
               aria-label="Search commands / Поиск команд"
@@ -172,6 +185,8 @@ function handleKeydown(event: KeyboardEvent) {
               tabindex="-1"
               :aria-selected="index === activeIndex"
               :aria-disabled="!isPaletteCommandEnabled(command)"
+              :aria-posinset="index + 1"
+              :aria-setsize="filteredCommands.length"
               :aria-describedby="!isPaletteCommandEnabled(command) ? reasonId(index) : undefined"
               :data-palette-index="index"
               @pointerenter="activatePointer(index)"
@@ -188,7 +203,7 @@ function handleKeydown(event: KeyboardEvent) {
                   {{ command.disabledReason || 'Unavailable / Недоступно' }}
                 </span>
               </span>
-              <kbd v-if="command.shortcut" class="shortcut">{{ command.shortcut }}</kbd>
+              <kbd v-if="command.shortcut" class="shortcut">{{ formatShortcutDisplay(command.shortcut) }}</kbd>
             </button>
 
             <p v-if="!filteredCommands.length" class="empty-state" role="status">

@@ -150,6 +150,47 @@ fn binary_stl(mesh: &MeshView<'_>) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// Exports a validated `MeshView` to either ASCII PLY (`binary_little_endian == false`)
+/// or compact binary little-endian PLY (`binary_little_endian == true`).
+pub fn export_ply(mesh: &MeshView<'_>, binary_little_endian: bool) -> Result<Vec<u8>> {
+    if !binary_little_endian {
+        return export(mesh, "ply");
+    }
+    check(
+        mesh.indices.len() / 3 <= 100_000,
+        "Mesh export exceeds 100000 triangles.",
+    )?;
+    let report = mesh.inspect()?;
+    check(
+        report.degenerate_triangles == 0
+            && report.non_manifold_edges == 0
+            && report.orientation_conflicts == 0,
+        "Mesh has invalid or inconsistent topology.",
+    )?;
+    let v_count = mesh.positions.len() / 3;
+    let f_count = mesh.indices.len() / 3;
+    let header = format!(
+        "ply\nformat binary_little_endian 1.0\ncomment units millimeter\nelement vertex {v_count}\nproperty double x\nproperty double y\nproperty double z\nelement face {f_count}\nproperty list uchar int vertex_indices\nend_header\n"
+    );
+    let body_size = v_count * 24 + f_count * 13;
+    check(
+        header.len() + body_size <= MAX_BYTES,
+        "Export exceeds 4 MiB.",
+    )?;
+    let mut out = Vec::with_capacity(header.len() + body_size);
+    out.extend_from_slice(header.as_bytes());
+    for &coord in mesh.positions {
+        out.extend_from_slice(&coord.to_le_bytes());
+    }
+    for tri in mesh.indices.as_chunks::<3>().0 {
+        out.push(3u8);
+        for &idx in tri {
+            out.extend_from_slice(&(idx as i32).to_le_bytes());
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +202,24 @@ mod tests {
         out.write_str("x").unwrap();
         assert!(out.write_str("x").is_err());
         assert_eq!(out.0.len(), MAX_BYTES);
+    }
+
+    #[test]
+    fn export_and_import_ply_binary_and_ascii_roundtrip() {
+        let positions = [
+            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0,
+        ];
+        let indices = [0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3];
+        let view = MeshView::new(&positions, &indices);
+
+        let bin_bytes = export_ply(&view, true).unwrap();
+        let imported_bin = crate::import_ply(&bin_bytes).unwrap();
+        assert_eq!(imported_bin.positions, positions);
+        assert_eq!(imported_bin.indices, indices);
+
+        let ascii_bytes = export_ply(&view, false).unwrap();
+        let imported_ascii = crate::import_ply(&ascii_bytes).unwrap();
+        assert_eq!(imported_ascii.positions, positions);
+        assert_eq!(imported_ascii.indices, indices);
     }
 }

@@ -57,6 +57,7 @@ pub use crate::core::canonical;
 pub use crate::editing::direct_edit;
 pub use crate::editing::morph;
 pub use crate::editing::fairing;
+pub use crate::editing::fairing::{curvature_comb_samples, curve_torsion_at};
 pub use crate::analysis::geodesic;
 pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;

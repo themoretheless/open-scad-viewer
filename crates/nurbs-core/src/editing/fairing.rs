@@ -326,6 +326,112 @@ fn comb_samples(curve: &Curve, samples: usize) -> Result<Vec<CombSample>> {
     Ok(out)
 }
 
+/// Sample curvature comb points `(base_point, comb_tip_point, curvature)` along a
+/// 3D (or 2D embedded in 3D) NURBS curve. The comb teeth extend along the principal
+/// normal direction by `scale * kappa`.
+pub fn curvature_comb_samples(
+    curve: &Curve,
+    count: usize,
+    scale: f64,
+) -> Vec<([f64; 3], [f64; 3], f64)> {
+    if count == 0 || !scale.is_finite() || curve.validate().is_err() {
+        return Vec::new();
+    }
+    let [a, b] = curve.domain();
+    let mut out = Vec::with_capacity(count);
+    for i in 0..count {
+        let t = if count == 1 {
+            0.5 * (a + b)
+        } else {
+            a + (b - a) * (i as f64 / (count - 1) as f64)
+        };
+        let u = nudge_off_knot(curve, t.clamp(a, b));
+        let Ok(eval) = curve.evaluate(u) else {
+            continue;
+        };
+        let base = [
+            eval.point.first().copied().unwrap_or(0.0),
+            eval.point.get(1).copied().unwrap_or(0.0),
+            eval.point.get(2).copied().unwrap_or(0.0),
+        ];
+        let (normal, kappa) = if let (Some(d1_vec), Some(d2_vec)) = (&eval.d1, &eval.d2) {
+            let d1 = [
+                d1_vec.first().copied().unwrap_or(0.0),
+                d1_vec.get(1).copied().unwrap_or(0.0),
+                d1_vec.get(2).copied().unwrap_or(0.0),
+            ];
+            let d2 = [
+                d2_vec.first().copied().unwrap_or(0.0),
+                d2_vec.get(1).copied().unwrap_or(0.0),
+                d2_vec.get(2).copied().unwrap_or(0.0),
+            ];
+            let speed2 = d1[0] * d1[0] + d1[1] * d1[1] + d1[2] * d1[2];
+            if speed2 > 1e-30 {
+                let c = [
+                    d1[1] * d2[2] - d1[2] * d2[1],
+                    d1[2] * d2[0] - d1[0] * d2[2],
+                    d1[0] * d2[1] - d1[1] * d2[0],
+                ];
+                let c_norm = (c[0] * c[0] + c[1] * c[1] + c[2] * c[2]).sqrt();
+                let k = c_norm / speed2.powf(1.5);
+                // Normal N = (B x T) = (d1 x d2) x d1 / |(d1 x d2) x d1|
+                let n_raw = [
+                    c[1] * d1[2] - c[2] * d1[1],
+                    c[2] * d1[0] - c[0] * d1[2],
+                    c[0] * d1[1] - c[1] * d1[0],
+                ];
+                let n_len = (n_raw[0] * n_raw[0] + n_raw[1] * n_raw[1] + n_raw[2] * n_raw[2]).sqrt();
+                if n_len > 1e-30 {
+                    ([n_raw[0] / n_len, n_raw[1] / n_len, n_raw[2] / n_len], k)
+                } else {
+                    ([0.0; 3], 0.0)
+                }
+            } else {
+                ([0.0; 3], 0.0)
+            }
+        } else {
+            ([0.0; 3], 0.0)
+        };
+        let tip = [
+            base[0] + normal[0] * scale * kappa,
+            base[1] + normal[1] * scale * kappa,
+            base[2] + normal[2] * scale * kappa,
+        ];
+        out.push((base, tip, kappa));
+    }
+    out
+}
+
+/// Evaluate the geometric torsion $\tau(u) = \frac{(r' \times r'') \cdot r'''}{\|r' \times r''\|^2}$
+/// of a 3D NURBS curve at parameter `u`.
+pub fn curve_torsion_at(curve: &Curve, u: f64) -> std::result::Result<f64, String> {
+    curve.validate().map_err(|e| e.message)?;
+    let [a, b] = curve.domain();
+    if !u.is_finite() || u < a || u > b {
+        return Err("Parameter is outside the active curve domain".into());
+    }
+    if let Ok(report) = curve_differential::at(curve, u, Side::Automatic)
+        && let Some(torsion) = report.torsion
+    {
+        return Ok(0.5 * (torsion[0] + torsion[1]));
+    }
+    let side = if u == b { Side::Left } else { Side::Right };
+    if let Ok(report) = curve_differential::at(curve, u, side) {
+        if let Some(torsion) = report.torsion {
+            return Ok(0.5 * (torsion[0] + torsion[1]));
+        }
+        if report.curvature_status == curve_differential::Status::CurvatureNotSeparatedFromZero
+            || report.torsion_status == curve_differential::Status::CurvatureNotSeparatedFromZero
+        {
+            return Ok(0.0);
+        }
+    }
+    if curve.degree < 3 {
+        return Ok(0.0);
+    }
+    Err("Curve torsion could not be resolved at the requested parameter".into())
+}
+
 /// Measurement-only fairness report: curvature comb, certified maximum
 /// curvature enclosure, and the (linearized) bending energy reported in both
 /// energy fields since no fairing is performed.
@@ -582,6 +688,25 @@ mod tests {
         assert!(fair_curve_report(&line, FairingEnergy::Bending, false, false).is_err());
         assert!(measure_fairness_report(&line, 8).is_err());
         assert!(measure_fairness_report(&noisy_cubic(), 300).is_err());
+    }
+
+    #[test]
+    fn curvature_comb_samples_and_curve_torsion_at_work() {
+        let circle = unit_circle();
+        let comb = curvature_comb_samples(&circle, 9, 0.5);
+        assert_eq!(comb.len(), 9);
+        for (base, tip, kappa) in comb {
+            assert!((kappa - 1.0).abs() < 1e-6);
+            let tooth_len = ((tip[0] - base[0]).powi(2)
+                + (tip[1] - base[1]).powi(2)
+                + (tip[2] - base[2]).powi(2))
+            .sqrt();
+            assert!((tooth_len - 0.5).abs() < 1e-6);
+        }
+        // Planar circle has zero torsion; 3D noisy cubic has non-zero torsion.
+        assert_eq!(curve_torsion_at(&circle, 0.5).unwrap(), 0.0);
+        let tau = curve_torsion_at(&noisy_cubic(), 0.25).unwrap();
+        assert!(tau.is_finite() && tau.abs() > 1e-3);
     }
 }
 

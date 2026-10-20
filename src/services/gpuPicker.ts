@@ -108,10 +108,19 @@ export interface GpuPickerSceneParams {
   sectionEnabled?: boolean
 }
 
+export interface GpuPickerDiagnostics {
+  pickCalls: number
+  lastCandidateMeshes: number
+  deviceLost: boolean
+}
+
 /* ── GpuPicker Class ──────────────────────────────────── */
 
 export class GpuPicker {
   private dev: GPUDevice | null = null
+  private deviceLost = false
+  private pickCalls = 0
+  private lastCandidateMeshes = 0
   private colorTexture: GPUTexture | null = null
   private colorView: GPUTextureView | null = null
   private depthTexture: GPUTexture | null = null
@@ -129,6 +138,8 @@ export class GpuPicker {
     if (this.dev === dev && this.pipeline && this.colorTexture) return
     this.destroy()
     this.dev = dev
+    this.deviceLost = false
+    dev.lost?.then(() => { this.deviceLost = true }).catch(() => { this.deviceLost = true })
 
     // 1x1 Color attachment for R32Uint ID readback
     this.colorTexture = dev.createTexture({
@@ -245,6 +256,9 @@ export class GpuPicker {
   ): Promise<number | null> {
     if (meshes.length === 0) return null
     this.ensureResources(dev)
+    if (this.deviceLost || !this.pipeline || !this.readbackBuffer) return null
+    this.pickCalls++
+    let drawnMeshes = 0
 
     // Compute 1x1 pick projection: VP_pick = M_pick * VP_camera
     const pickMat = createPickMatrix(sceneParams.viewportWidth, sceneParams.viewportHeight, pixelX, pixelY, 1, this.scratchPickMat)
@@ -290,6 +304,7 @@ export class GpuPicker {
     for (let index = 0; index < meshes.length; index++) {
       const mesh = meshes[index]
       if (!mesh.visible || mesh.ic === 0) continue
+      drawnMeshes++
       const objBG = this.ensureObjectBindGroup(dev, index, mesh)
       pass.setBindGroup(1, objBG)
       pass.setVertexBuffer(0, mesh.vb)
@@ -298,6 +313,7 @@ export class GpuPicker {
     }
 
     pass.end()
+    this.lastCandidateMeshes = drawnMeshes
 
     // Copy 1x1 pixel into readback buffer
     encoder.copyTextureToBuffer(
@@ -308,13 +324,26 @@ export class GpuPicker {
 
     dev.queue.submit([encoder.finish()])
 
-    // Read back 4 bytes from GPU memory
-    await this.readbackBuffer!.mapAsync(GPUMapMode.READ)
-    const array = new Uint32Array(this.readbackBuffer!.getMappedRange())
-    const rawId = array[0]
-    this.readbackBuffer!.unmap()
+    // Read back 4 bytes from GPU memory (guard against device loss during async map)
+    try {
+      await this.readbackBuffer!.mapAsync(GPUMapMode.READ)
+      if (this.deviceLost || !this.readbackBuffer) return null
+      const array = new Uint32Array(this.readbackBuffer.getMappedRange())
+      const rawId = array[0]
+      this.readbackBuffer.unmap()
+      return rawId > 0 ? rawId - 1 : null
+    } catch {
+      this.deviceLost = true
+      return null
+    }
+  }
 
-    return rawId > 0 ? rawId - 1 : null
+  getPickDiagnostics(): GpuPickerDiagnostics {
+    return {
+      pickCalls: this.pickCalls,
+      lastCandidateMeshes: this.lastCandidateMeshes,
+      deviceLost: this.deviceLost,
+    }
   }
 
   destroy() {
