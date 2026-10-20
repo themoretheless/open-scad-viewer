@@ -260,14 +260,16 @@ pub(crate) fn surface_net_on(
         let us = (0..p).map(|k| domain[0][usize::from(k >= p - u)]).collect::<Vec<_>>();
         crate::surface_distance::interpolation_plan(p, &s.knots_u, iu, &us)
     }).collect::<Result<Vec<_>>>()?;
+    let mut rows = Vec::with_capacity(controls.len());
     for v in 0..=q {
         let vs = (0..q).map(|k| domain[1][usize::from(k >= q - v)]).collect::<Vec<_>>();
         let v_plan = crate::surface_distance::interpolation_plan(q, &s.knots_v, iv, &vs)?;
-        let rows = controls.iter().map(|r| {
-            crate::surface_distance::interpolate_planned(r.clone(), q, &v_plan, weights)
-        }).collect::<Result<Vec<_>>>()?;
+        rows.clear();
+        for r in &controls {
+            rows.push(crate::surface_distance::interpolate_planned(r, q, &v_plan, weights)?);
+        }
         for (u, plan) in u_plans.iter().enumerate() {
-            out[u][v] = crate::surface_distance::interpolate_planned(rows.clone(), p, plan, weights)?;
+            out[u][v] = crate::surface_distance::interpolate_planned(&rows, p, plan, weights)?;
         }
     }
     Ok(out)

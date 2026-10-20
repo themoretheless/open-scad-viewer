@@ -63,7 +63,7 @@ impl OwnedPeriodicChartLoopWinding {
                 "Loop winding belongs to another original chart owner",
             ));
         }
-        self.owner.reverify_source()?;
+        super::periodic_replay::verify_arc(&self.owner, |owner| owner.reverify_source())?;
         self.winding.reverify_source()
     }
 }
@@ -72,7 +72,7 @@ pub fn own_periodic_chart_loop_winding(
     limits: PeriodicChartWindingLimits,
 ) -> Result<OwnedPeriodicChartLoopWinding> {
     let _replay = super::periodic_replay::scope();
-    owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&owner, |owner| owner.reverify_source())?;
     let winding = own_periodic_chart_winding(owner.owner().clone(), limits)?;
     Ok(OwnedPeriodicChartLoopWinding {
         owner,
@@ -93,6 +93,7 @@ mod tests {
         })
     }
     fn check(original: OwnedPeriodicChartWinding, queries: Vec<([ExactRatio; 2], Option<bool>)>) {
+        let _replay = super::super::periodic_replay::scope();
         let loops = Arc::new(
             own_periodic_chart_boundary_loops(original.owner().clone(), Default::default())
                 .unwrap(),

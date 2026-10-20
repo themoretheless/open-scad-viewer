@@ -15,6 +15,7 @@ pub struct OwnedPeriodicSupportPath {
 }
 type Data = (usize, [[String; 2]; 2]);
 fn derive(o: &OwnedPeriodicSupportPath) -> Result<Data> {
+    let _replay = super::periodic_replay::scope();
     if !(2..=4096).contains(&o.path.len())
         || !(1..=1000000).contains(&o.max_work)
         || o.limits.max_refinements > 512
@@ -241,6 +242,7 @@ pub(in crate::profile_certificate::span_intersections::translated) mod tests {
     }
     pub(in crate::profile_certificate::span_intersections::translated) fn cylinder_with_hole()
     -> Arc<OwnedPeriodicSupportLifts> {
+        let _replay = super::super::periodic_replay::scope();
         let rim = Curve::from_polyline(vec![
             vec![0., 0., 0.],
             vec![1., 0., 0.],

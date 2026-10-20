@@ -4,6 +4,8 @@
 //! pairs are checked throughout S -> its actual corner triangulation.
 use super::*;
 mod bernstein;
+mod transport;
+mod trim;
 use bernstein::{Net, Scalar};
 #[derive(Clone, Debug, PartialEq)]
 pub struct Report {
@@ -384,6 +386,39 @@ fn star(
     }
     Ok(count)
 }
+fn append_patch(
+    h: Net,
+    reversed: bool,
+    vertices: &mut BTreeMap<P, u32>,
+    patches: &mut Vec<Patch>,
+    work: &mut Work,
+) -> Result<()> {
+    if patches.len() >= 1024 {
+        return Err(fail("rational atlas triangle budget exceeded"));
+    }
+    transport::check(&h)?;
+    let h = if reversed { transport::reverse(&h) } else { h };
+    let c = bernstein::corners(&h);
+    if zero(&cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0]))) {
+        return Err(fail("rational atlas has a collapsed corner simplex"));
+    }
+    let ids = c.map(|p| {
+        let i = vertices.len() as u32;
+        *vertices.entry(p).or_insert(i)
+    });
+    if vertices.len() > 1024 {
+        return Err(fail("rational atlas vertex budget exceeded"));
+    }
+    let derivatives = bernstein::derivatives(&h, work)?;
+    let motion = bernstein::homotopy(&h, work)?;
+    patches.push(Patch {
+        ids,
+        h,
+        motion,
+        derivatives,
+    });
+    Ok(())
+}
 fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> {
     m.validate()?;
     if depth > 3 || m.faces.len() > 64 || m.bodies.is_empty() {
@@ -412,7 +447,6 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
     }
     let mut stations = BTreeSet::from([Q::zero(), Q::one()]);
     for u in &uses {
-        rectangle(m, u.face)?;
         let s = &m.faces[u.face].surface;
         if !(1..=8).contains(&s.degree_u) || !(1..=8).contains(&s.degree_v) {
             return Err(fail("rational atlas degree must be 1..8"));
@@ -443,6 +477,22 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
     let mut patches = Vec::new();
     for u in uses {
         let s = &m.faces[u.face].surface;
+        if rectangle(m, u.face).is_err() {
+            let mut charts = vec![trim::chart(m, u.face, work)?];
+            for _ in 0..depth {
+                charts = charts
+                    .iter()
+                    .map(|h| bernstein::subdivide(h, work))
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .flatten()
+                    .collect();
+            }
+            for h in charts {
+                append_patch(h, u.reversed, &mut vertices, &mut patches, work)?;
+            }
+            continue;
+        }
         let range = |knots: &[f64], degree: usize, count: usize| {
             [
                 Q::from_float(knots[degree]).unwrap(),
@@ -460,36 +510,32 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
                     [&x[0], &x[1]].map(|t| &a[0] + t * (&a[1] - &a[0])),
                     [&y[0], &y[1]].map(|t| &b[0] + t * (&b[1] - &b[0])),
                 )?;
-                let c = sb::corners(&h);
-                let uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
-                let tris = if dot(&sub(&c[0], &c[2]), &sub(&c[0], &c[2]))
-                    >= dot(&sub(&c[1], &c[3]), &sub(&c[1], &c[3]))
-                {
-                    [[0, 1, 2], [0, 2, 3]]
-                } else {
-                    [[0, 1, 3], [1, 2, 3]]
-                };
-                for mut t in tris {
-                    if u.reversed {
-                        t.swap(1, 2);
+                let mut charts = Vec::new();
+                let mut rotated = h.clone();
+                for _ in 0..4 {
+                    if let Some(pole) = transport::pole(&rotated, work)? {
+                        // The blowdown's (x,y) chart has the opposite UV orientation.
+                        charts.push(transport::reverse(&pole));
+                        break;
                     }
-                    let h = bernstein::triangle(&h, t.map(|i| uv[i]), work)?;
-                    let c = bernstein::corners(&h);
-                    if zero(&cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0]))) {
-                        return Err(fail("rational atlas has a collapsed corner simplex"));
+                    rotated = transport::rotate(&rotated);
+                }
+                if charts.is_empty() {
+                    let c = sb::corners(&h);
+                    let uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
+                    let tris = if dot(&sub(&c[0], &c[2]), &sub(&c[0], &c[2]))
+                        >= dot(&sub(&c[1], &c[3]), &sub(&c[1], &c[3]))
+                    {
+                        [[0, 1, 2], [0, 2, 3]]
+                    } else {
+                        [[0, 1, 3], [1, 2, 3]]
+                    };
+                    for t in tris {
+                        charts.push(bernstein::triangle(&h, t.map(|i| uv[i]), work)?);
                     }
-                    let ids = c.map(|p| {
-                        let i = vertices.len() as u32;
-                        *vertices.entry(p).or_insert(i)
-                    });
-                    let derivatives = bernstein::derivatives(&h, work)?;
-                    let motion = bernstein::homotopy(&h, work)?;
-                    patches.push(Patch {
-                        ids,
-                        h,
-                        motion,
-                        derivatives,
-                    });
+                }
+                for h in charts {
+                    append_patch(h, u.reversed, &mut vertices, &mut patches, work)?;
                 }
             }
         }
@@ -502,7 +548,23 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
 }
 pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
     let mut work = Work::default();
-    let (positions, patches) = build(m, depth, &mut work)?;
+    let (positions, mut patches) = build(m, depth, &mut work)?;
+    let mut original = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
+    for p in &patches {
+        for (k, mut e) in bernstein::edges(&p.h).into_iter().enumerate() {
+            let (a, b) = (p.ids[k], p.ids[(k + 1) % 3]);
+            if a > b {
+                e.reverse();
+            }
+            original.entry((a.min(b), a.max(b))).or_default().push(e);
+        }
+    }
+    if original
+        .values()
+        .any(|e| e.len() == 2 && !sb::same(&e[0], &e[1]))
+    {
+        transport::synchronize(&mut patches, &mut work)?;
+    }
     let mut edges = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
     let mut stars = vec![Vec::new(); positions.len()];
     for (i, p) in patches.iter().enumerate() {
@@ -728,6 +790,137 @@ mod tests {
         let mut altered = m.clone();
         altered.faces[0].surface.control_points[1][1][2] += 0.125;
         assert!(verify_source_atlas(&altered, &c).is_err());
+    }
+    #[test]
+    fn closed_tetrahedron_with_collapsed_rectangular_boundaries() {
+        let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let surface = m.faces[0].surface.clone();
+        m.vertices = vec![[1., 1., 1.], [-1., -1., 1.], [-1., 1., -1.], [1., -1., -1.]]
+            .into_iter()
+            .map(|point| crate::Vertex { point })
+            .collect();
+        m.edges.clear();
+        m.loops.clear();
+        m.faces.clear();
+        m.shells[0].faces.clear();
+        let mut edges = BTreeMap::new();
+        for corners in [[0, 2, 1, 1], [0, 1, 3, 3], [1, 2, 3, 3], [2, 0, 3, 3]] {
+            let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+            let mut coedges = Vec::new();
+            for i in 0..4 {
+                let (a, b) = (corners[i], corners[(i + 1) % 4]);
+                let key = (a.min(b), a.max(b));
+                let edge = *edges.entry(key).or_insert_with(|| {
+                    let id = m.edges.len();
+                    let curve = crate::line(
+                        m.vertices[key.0].point.to_vec(),
+                        m.vertices[key.1].point.to_vec(),
+                    );
+                    m.edges.push(crate::Edge {
+                        degenerate: a == b,
+                        vertices: [key.0, key.1],
+                        curve,
+                    });
+                    id
+                });
+                coedges.push(crate::Coedge {
+                    edge,
+                    reversed: a > b,
+                    pcurve: crate::line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
+                });
+            }
+            let outer = m.loops.len();
+            m.loops.push(crate::Loop { coedges });
+            let mut surface = surface.clone();
+            surface.control_points = vec![
+                vec![
+                    m.vertices[corners[0]].point.to_vec(),
+                    m.vertices[corners[3]].point.to_vec(),
+                ],
+                vec![
+                    m.vertices[corners[1]].point.to_vec(),
+                    m.vertices[corners[2]].point.to_vec(),
+                ],
+            ];
+            let face = m.faces.len();
+            m.faces.push(crate::Face {
+                surface,
+                outer,
+                holes: vec![],
+            });
+            m.shells[0].faces.push(crate::FaceUse {
+                face,
+                reversed: false,
+            });
+        }
+        // Reinitialize persistent IDs after changing the entity counts.
+        m.rebuild_topology_ids();
+        let c = derive(&m, 0).unwrap();
+        assert_eq!(c.positions.len(), 4);
+        assert_eq!(c.triangles.len(), 4);
+        verify_source_atlas(&m, &c).unwrap();
+        save_fixture("collapsed-boundary-tetrahedron", &m);
+    }
+    #[test]
+    fn curved_trim_sphere_uses_regular_charts_at_both_poles() {
+        // Radius 3 makes every authored control*weight exact in binary64,
+        // including the controls with weight 3. No epsilon closes seams.
+        let mut m = crate::sphere(3.).unwrap();
+        // Use a rational circle clock with exact weights. The usual sqrt(1/2)
+        // weight is a binary64 approximation and cannot prove this identity.
+        for f in 0..m.faces.len() {
+            let outer = m.faces[f].outer;
+            m.loops[outer].coedges[1].pcurve.weights = vec![1., 1., 2.];
+            let e = m.loops[outer].coedges[1].clone();
+            m.edges[e.edge].curve.weights = if e.reversed {
+                vec![2., 1., 1.]
+            } else {
+                vec![1., 1., 2.]
+            };
+        }
+        m.rebuild_topology_ids();
+        save_fixture("curved-trim-regular-poles-sphere", &m);
+        for depth in 0..=2 {
+            match derive(&m, depth) {
+                Ok(c) => {
+                    eprintln!("trimmed sphere depth {depth}: {:?}", c.report);
+                    verify_source_atlas(&m, &c).unwrap();
+                    return;
+                }
+                Err(e) => eprintln!("trimmed sphere depth {depth}: {}", e.message),
+            }
+        }
+        panic!("curved trimmed sphere unproved");
+    }
+    #[test]
+    fn nonlinear_projective_surface_clocks_keep_the_source_image() {
+        let original = rational_box();
+        let expected = derive(&original, 0).unwrap();
+        let mut changed = original.clone();
+        // A positive fractional-linear clock u -> 4u/(1+3u).
+        // Homogeneous tensor coefficients scale by 4^i, with no fitting.
+        for (i, row) in changed.faces[0].surface.weights.iter_mut().enumerate() {
+            for w in row {
+                *w *= 4f64.powi(i as i32);
+            }
+        }
+        // Face-local pcurves use the inverse clock, retaining agreement
+        // with the independently stored three-dimensional edge traversal.
+        let outer = changed.faces[0].outer;
+        for e in &mut changed.loops[outer].coedges {
+            if e.pcurve.control_points[0][0] != e.pcurve.control_points[1][0] {
+                for (p, w) in e.pcurve.control_points.iter().zip(&mut e.pcurve.weights) {
+                    *w = if p[0] == 0. { 4. } else { 1. };
+                }
+            }
+        }
+        let actual = derive(&changed, 0).unwrap();
+        assert_eq!(actual.positions, expected.positions);
+        assert_eq!(actual.triangles, expected.triangles);
+        assert_ne!(actual.source, expected.source);
+        verify_source_atlas(&changed, &actual).unwrap();
+        assert!(verify_source_atlas(&original, &actual).is_err());
+        save_fixture("nonlinear-projective-clock-box", &changed);
     }
     #[test]
     fn rejects_folded_charts_unmatched_clocks_and_forged_schemas() {

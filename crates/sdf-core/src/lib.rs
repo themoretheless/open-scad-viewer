@@ -1976,7 +1976,8 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
 
     let cell_idx = |cx: usize, cy: usize, cz: usize| (cz * ny + cy) * nx + cx;
     let mut cell_vert = vec![usize::MAX; nx * ny * nz];
-    let mut positions = Vec::new();
+    let cell_estimate = (nx * ny + ny * nz + nz * nx) * 2;
+    let mut positions = Vec::with_capacity(cell_estimate * 3);
     let step = [
         (grid.max[0] - grid.min[0]) / nx as f64,
         (grid.max[1] - grid.min[1]) / ny as f64,
@@ -2012,7 +2013,8 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
                     index(cx + 1, cy + 1, cz + 1),
                     index(cx, cy + 1, cz + 1),
                 ];
-                let mut crossings = Vec::with_capacity(12);
+                let mut crossings_buf = [[0.0; 3]; 12];
+                let mut cross_len = 0usize;
                 for &[ea, eb] in &CUBE_EDGES {
                     let va = values[c[ea]];
                     let vb = values[c[eb]];
@@ -2020,20 +2022,23 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
                         let t = (va / (va - vb)).clamp(0.0, 1.0);
                         let pa = points[c[ea]];
                         let pb = points[c[eb]];
-                        crossings.push([
+                        crossings_buf[cross_len] = [
                             pa[0] + t * (pb[0] - pa[0]),
                             pa[1] + t * (pb[1] - pa[1]),
                             pa[2] + t * (pb[2] - pa[2]),
-                        ]);
+                        ];
+                        cross_len += 1;
                     }
                 }
-                if crossings.is_empty() {
+                if cross_len == 0 {
                     continue;
                 }
+                let crossings = &crossings_buf[..cross_len];
+                let inv_len = 1.0 / cross_len as f64;
                 let mut v_pos = [0.0; 3];
-                for p in &crossings {
+                for p in crossings {
                     for k in 0..3 {
-                        v_pos[k] += p[k] / crossings.len() as f64;
+                        v_pos[k] += p[k] * inv_len;
                     }
                 }
                 // Gradient-descent / QEF tangent-plane projection clamped strictly inside cell bounds
@@ -2041,11 +2046,11 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
                 let c_max = points[c[6]];
                 for _ in 0..2 {
                     let mut disp = [0.0; 3];
-                    for p in &crossings {
+                    for p in crossings {
                         let n = field.gradient(*p, grad_eps);
                         let d = dot(sub(*p, v_pos), n);
                         for k in 0..3 {
-                            disp[k] += d * n[k] / crossings.len() as f64;
+                            disp[k] += d * n[k] * inv_len;
                         }
                     }
                     for k in 0..3 {
@@ -2061,7 +2066,7 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
         }
     }
 
-    let mut indices = Vec::new();
+    let mut indices = Vec::with_capacity(positions.len() * 2);
     let mut emit_quad = |v0: usize, v1: usize, v2: usize, v3: usize, flip: bool| {
         if flip {
             indices.extend_from_slice(&[v0, v2, v1, v0, v3, v2]);

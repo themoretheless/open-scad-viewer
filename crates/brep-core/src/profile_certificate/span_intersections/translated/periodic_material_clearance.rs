@@ -26,7 +26,8 @@ impl<'a> ClearanceView<'a> {
         if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
             return Err(refused("Invalid original clearance view allowance"));
         }
-        owner.reverify_source()?;
+        let _replay = super::periodic_replay::scope();
+        super::periodic_replay::verify_arc(owner, |owner| owner.reverify_source())?;
         let selection = owner.owner().owner();
         let graph = selection.rule().material().base().owner().owner().owner();
         let cover = graph.owner().owner().pieces();

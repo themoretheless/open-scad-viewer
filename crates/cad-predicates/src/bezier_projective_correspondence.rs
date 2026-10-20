@@ -96,8 +96,7 @@ fn correspondence(
                 .mul(&bp[p - i], ctx)?,
         );
     }
-    let choose =
-        |n: usize, k: usize| -> u64 { (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64) };
+    let choose = crate::binomial_u64;
     // Each Bernstein coefficient of Na*Wb-Nb*Wa must be exactly zero.
     // The omitted common denominator C(p+q,k) is strictly positive.
     for k in 0..=p + q {

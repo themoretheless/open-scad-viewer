@@ -44,7 +44,7 @@ fn derive(o: &OwnedPeriodicSupportTraces) -> Result<Vec<OriginalPeriodicSurfaceT
     {
         return Err(refused("Invalid original surface trace allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let lifts = o.owner.owner().owner();
     if lifts.parts_count() > o.max_traces {
         return Err(refused("Original surface trace count exceeds allowance"));

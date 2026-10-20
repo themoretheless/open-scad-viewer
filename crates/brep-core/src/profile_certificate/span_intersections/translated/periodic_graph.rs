@@ -104,7 +104,7 @@ fn derive(o: &OwnedPeriodicChartGraph) -> Result<Data> {
             "Invalid exact periodic chart graph comparison allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let mut ids = BTreeMap::new();
     let mut refs = Vec::new();
     let mut raw_edges = Vec::new();
@@ -272,6 +272,7 @@ impl OwnedPeriodicChartGraph {
         &self.relations
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (v, e, r) = derive(self)?;
         if v != self.vertices || e != self.edges || r != self.relations {
             return Err(refused(
@@ -288,6 +289,7 @@ pub fn own_periodic_chart_graph(
     owner: Arc<OwnedPeriodicAlignedIntervals>,
     limits: ParameterOrderLimits,
 ) -> Result<OwnedPeriodicChartGraph> {
+    let _replay = super::periodic_replay::scope();
     if owner.owner().seam_contacts().is_some() {
         return Err(refused(
             "Chart-only graph cannot silently include physical seam identifications",
@@ -299,6 +301,7 @@ fn build_graph(
     owner: Arc<OwnedPeriodicAlignedIntervals>,
     limits: ParameterOrderLimits,
 ) -> Result<OwnedPeriodicChartGraph> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicChartGraph {
         owner,
         limits,
@@ -337,6 +340,7 @@ impl OwnedPeriodicQuotientGraph {
         self.graph.relations()
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         if self.owner().owner().seam_contacts().is_none() {
             return Err(refused(
                 "Physical quotient lost actual surface seam ownership",
@@ -349,6 +353,7 @@ pub fn own_periodic_quotient_graph(
     owner: Arc<OwnedPeriodicAlignedIntervals>,
     limits: ParameterOrderLimits,
 ) -> Result<OwnedPeriodicQuotientGraph> {
+    let _replay = super::periodic_replay::scope();
     if owner.owner().seam_contacts().is_none() {
         return Err(refused(
             "Physical quotient graph requires complete actual-support seam contacts",

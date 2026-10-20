@@ -87,6 +87,8 @@ export interface MeshReplacementMatchOptions {
   sameSourceSnapshot?: boolean
 }
 
+const POSITIONAL_ENTITY_GROUP_RE = /%23\d+(?=\/|>|$)/gi
+
 /**
  * Match replacement meshes to the previous scene by their source provenance.
  * Stable entity IDs are authoritative. Legacy provenance is only used when a
@@ -98,7 +100,7 @@ export function matchMeshesByProvenance(
   replacement: readonly MeshData[],
   options: MeshReplacementMatchOptions = {},
 ): number[] {
-  const matches = replacement.map(() => -1)
+  const matches = new Array<number>(replacement.length).fill(-1)
   const previousByEntity = new Map<string, number[]>()
   const replacementByEntity = new Map<string, number[]>()
   const previousByPositionalGroup = new Map<string, number>()
@@ -168,7 +170,7 @@ export function matchMeshesByProvenance(
  * intact because they distinguish evaluated instances rather than AST slots.
  */
 function positionalEntityGroup(entityId: string): string {
-  return entityId.replace(/%23\d+(?=\/|>|$)/gi, '%23*')
+  return entityId.replace(POSITIONAL_ENTITY_GROUP_RE, '%23*')
 }
 
 function meshProvenanceKey(mesh: MeshData): string {

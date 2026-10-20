@@ -3,12 +3,16 @@ import {warmGeometryKernel} from './geometry/kernel'
 import {solidMaterialRgb} from './solidMaterial'
 
 // Part 21 transport only: all geometry is exported and validated by the Rust kernel.
-const quoted = (value:string) => "'" + Array.from(value).map(c => {
-  const n=c.codePointAt(0)!
-  if(c==="'")return "''"
-  if(n>=32&&n<=126&&c!=='\\')return c
-  return n<=0xffff?`\\X2\\${n.toString(16).padStart(4,'0').toUpperCase()}\\X0\\`:`\\X4\\${n.toString(16).padStart(8,'0').toUpperCase()}\\X0\\`
-}).join('') + "'"
+const quoted = (value:string) => {
+  let out = "'"
+  for (const c of value) {
+    const n = c.codePointAt(0)!
+    if (c === "'") out += "''"
+    else if (n >= 32 && n <= 126 && c !== '\\') out += c
+    else out += n <= 0xffff ? `\\X2\\${n.toString(16).padStart(4, '0').toUpperCase()}\\X0\\` : `\\X4\\${n.toString(16).padStart(8, '0').toUpperCase()}\\X0\\`
+  }
+  return out + "'"
+}
 
 /** Remap entity references without interpreting hashes inside STEP string literals. */
 function remap(text:string,offset:number) {

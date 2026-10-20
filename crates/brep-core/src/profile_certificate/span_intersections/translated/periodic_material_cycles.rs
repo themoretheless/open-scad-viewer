@@ -229,8 +229,8 @@ fn derive(o: &OwnedPeriodicMaterialCycles) -> Result<Data> {
     if !(1..=1000000).contains(&o.max_darts) || n > o.max_darts || o.max_refinements > 512 {
         return Err(refused("Invalid complete material sector/dart allowance"));
     }
-    o.owner.reverify_source()?;
-    o.rotation.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    super::periodic_replay::verify_arc(&o.rotation, |x| x.reverify_source())?;
     if !Arc::ptr_eq(graph, o.rotation.owner().owner().owner()) {
         return Err(refused(
             "Material rotation belongs to a different original physical chart owner",
@@ -295,6 +295,7 @@ impl OwnedPeriodicMaterialCycles {
         &self.dart_walks
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (s, n, w, d) = derive(self)?;
         if s != self.sectors || n != self.successor || w != self.walks || d != self.dart_walks {
             return Err(refused(
@@ -313,6 +314,7 @@ pub fn own_periodic_material_cycles(
     max_refinements: usize,
     max_darts: usize,
 ) -> Result<OwnedPeriodicMaterialCycles> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicMaterialCycles {
         owner,
         rotation,
@@ -344,7 +346,7 @@ fn derive_lifts(
     if o.max_refinements > 512 || !(1..=1000000).contains(&o.max_parts) {
         return Err(refused("Invalid complete selected source lift allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let expected = o
         .owner
         .dart_walks()
@@ -370,6 +372,7 @@ impl OwnedPeriodicMaterialLifts {
         self.parts_count
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (w, n) = derive_lifts(self)?;
         if w != self.walks || n != self.parts_count {
             return Err(refused(
@@ -387,6 +390,7 @@ pub fn own_periodic_material_lifts(
     max_refinements: usize,
     max_parts: usize,
 ) -> Result<OwnedPeriodicMaterialLifts> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicMaterialLifts {
         owner,
         max_refinements,

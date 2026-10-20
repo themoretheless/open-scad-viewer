@@ -12,12 +12,23 @@ pub struct OriginalFrameSmoothnessReport {
     pub reason: Option<&'static str>,
 }
 fn basis_continuity(curve: &Curve, order: usize) -> bool {
+    if curve.periodic {
+        return false;
+    }
     let [a, b] = curve.domain();
-    !curve.periodic
-        && curve.knots.iter().filter(|&&u| a < u && u < b).all(|u| {
-            curve.degree >= order
-                && curve.knots.iter().filter(|x| *x == u).count() <= curve.degree - order
-        })
+    let mut idx = 0;
+    while idx < curve.knots.len() {
+        let u = curve.knots[idx];
+        let mut count = 1;
+        while idx + count < curve.knots.len() && curve.knots[idx + count] == u {
+            count += 1;
+        }
+        if a < u && u < b && (curve.degree < order || count > curve.degree - order) {
+            return false;
+        }
+        idx += count;
+    }
+    true
 }
 fn knot_continuity(curve:&Curve,order:usize,work:&mut u64,max_work:u64)->Result<bool>{
     if basis_continuity(curve,order){return Ok(true);}

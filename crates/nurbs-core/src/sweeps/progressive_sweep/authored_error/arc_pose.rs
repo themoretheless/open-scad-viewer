@@ -29,7 +29,7 @@ impl SharedArcPose {
         use super::super::rmf_first_images::{Image,Report};
         let key=interval.map(f64::to_bits);let mut cells=0;
         if !self.rmf_first_images.contains_key(&key){
-            let mut basis=vec![[[0.;2];3];4];for k in 0..3 {basis[k+1][k]=[1.;2];}
+            let mut basis=[[[0.;2];3];4];for k in 0..3 {basis[k+1][k]=[1.;2];}
             let report=query(&basis)?;cells=report.cells;
             let Some((pose,source))=report.pose else{return Ok(report);};
             self.rmf_first_images.insert(key,(pose,source,report.continuous_laws));
@@ -106,7 +106,7 @@ impl SharedArcPose {
         let key=[source[0].to_bits(),source[1].to_bits(),law[0].to_bits(),law[1].to_bits(),length[0].to_bits(),length[1].to_bits(),speed.to_bits()];
         let mut cells=0;
         if !self.jet_entries.contains_key(&key){
-            let mut basis=vec![[[0.;2];3];4];for j in 0..3{basis[j+1][j]=[1.;2];}
+            let mut basis=[[[0.;2];3];4];for j in 0..3{basis[j+1][j]=[1.;2];}
             let report=authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,&basis,source,law,length,speed,budget)?;
             cells=report.cells;
             if report.status!=Status::Certified{return Ok(report);}
@@ -145,7 +145,7 @@ impl SharedArcPose {
         ];
         let mut cells = 0;
         if !self.entries.contains_key(&key) {
-            let mut basis = vec![[[0.; 2]; 3]; 4];
+            let mut basis = [[[0.; 2]; 3]; 4];
             for j in 0..3 {
                 basis[j + 1][j] = [1.; 2];
             }

@@ -60,14 +60,15 @@ pub fn certify_twisted_values(
         transverse: None,
         binormal: None,
     };
-    let mut value = |curve: &Curve| -> Result<Option<I>> {
+    let mut value = |curve: &Curve, axis: usize| -> Result<Option<I>> {
         let charge = (curve.degree..curve.control_points.len())
             .filter(|&i| curve.knots[i] < curve.knots[i + 1])
             .count();
         if charge > max_cells - out.cells {
             return Ok(None);
         }
-        let result = super::scalar_certificate::value_traversal(curve, traversal, charge)?;
+        let result =
+            super::scalar_certificate::value_traversal_axis(curve, axis, traversal, charge)?;
         out.cells += charge;
         result.map(|v| I::new(v[0], v[1])).transpose()
     };
@@ -79,19 +80,13 @@ pub fn certify_twisted_values(
             "Authored frame requires XYZ controls",
         )?;
         for k in 0..3 {
-            let mut scalar = curve.clone();
-            scalar.control_points = curve
-                .control_points
-                .iter()
-                .map(|p| vec![p[k], 0., 0.])
-                .collect();
-            let Some(v) = value(&scalar)? else {
+            let Some(v) = value(curve, k)? else {
                 return Ok(out);
             };
             vectors[index][k] = v;
         }
     }
-    let Some(theta) = value(twist)? else {
+    let Some(theta) = value(twist, 0)? else {
         return Ok(out);
     };
     let constant = |v| Jet {

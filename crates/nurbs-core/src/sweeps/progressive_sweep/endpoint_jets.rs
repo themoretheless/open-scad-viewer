@@ -68,24 +68,25 @@ fn certify_sufficient(curve: &Curve, order: usize, max_work: u64) -> Result<Repo
     if curve.control_points.len() != p + 1 || curve.weights[0] != *curve.weights.last().unwrap() {
         return certify_clamped_expansion(curve, order, max_work);
     }
-    let differences = [
-        vec![(p, 1.), (0, -1.)],
-        vec![(p, 1.), (p - 1, -1.), (1, -1.), (0, 1.)],
-        if p >= 2 {
-            vec![
-                (p, 1.),
-                (p - 1, -1.),
-                (p - 1, -1.),
-                (p - 2, 1.),
-                (2, -1.),
-                (1, 1.),
-                (1, 1.),
-                (0, -1.),
-            ]
-        } else {
-            vec![]
-        },
-    ];
+    let d0 = [(p, 1.), (0, -1.)];
+    let d1 = [(p, 1.), (p - 1, -1.), (1, -1.), (0, 1.)];
+    let d2_storage;
+    let d2: &[(usize, f64)] = if p >= 2 {
+        d2_storage = [
+            (p, 1.),
+            (p - 1, -1.),
+            (p - 1, -1.),
+            (p - 2, 1.),
+            (2, -1.),
+            (1, 1.),
+            (1, 1.),
+            (0, -1.),
+        ];
+        &d2_storage
+    } else {
+        &[]
+    };
+    let differences: [&[(usize, f64)]; 3] = [&d0, &d1, d2];
     for jet in differences.iter().take(order + 1) {
         if jet.is_empty() {
             continue;
@@ -94,21 +95,20 @@ fn certify_sufficient(curve: &Curve, order: usize, max_work: u64) -> Result<Repo
             if max_work - out.exact_work < jet.len() as u64 {
                 return Ok(out);
             }
-            let terms: Vec<_> = jet
-                .iter()
-                .map(|&(i, sign)| {
-                    (
-                        curve.weights[i],
-                        sign * if coordinate == 3 {
-                            1.
-                        } else {
-                            curve.control_points[i][coordinate]
-                        },
-                    )
-                })
-                .collect();
+            let mut terms = [(0., 0.); 8];
+            for (idx, &(i, sign)) in jet.iter().enumerate() {
+                terms[idx] = (
+                    curve.weights[i],
+                    sign * if coordinate == 3 {
+                        1.
+                    } else {
+                        curve.control_points[i][coordinate]
+                    },
+                );
+            }
+            let terms = &terms[..jet.len()];
             out.exact_work += terms.len() as u64;
-            if crate::exact_products::sum_sign(&terms) != std::cmp::Ordering::Equal {
+            if crate::exact_products::sum_sign(terms) != std::cmp::Ordering::Equal {
                 return Ok(out);
             }
         }

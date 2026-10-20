@@ -55,7 +55,7 @@ fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
     if !(1..=1000000).contains(&o.max_entities) {
         return Err(refused("Invalid original boundary incidence allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let lifts = o.owner.owner().owner().owner();
     let cycles = lifts.owner();
     let ports = cycles.rotation().owner();

@@ -147,9 +147,7 @@ pub fn rational_bezier_identity(
         if identical {
             return Ok(BezierIdentity::Equal);
         }
-        let binomial = |n: usize, k: usize| -> u64 {
-            (0..k).fold(1_u64, |v, i| v * (n - i) as u64 / (i + 1) as u64)
-        };
+        let binomial = crate::binomial_u64;
         let (p, q) = (a.len() - 1, b.len() - 1);
         // The common positive factor C(p+q,k) is omitted. Every coefficient
         // of Na*Wb-Nb*Wa must vanish identically, for all three coordinates.

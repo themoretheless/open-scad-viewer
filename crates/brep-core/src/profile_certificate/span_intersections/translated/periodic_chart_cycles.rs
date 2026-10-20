@@ -255,7 +255,7 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
     {
         return Err(refused("Invalid exact local chart cycle allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let samples = o.owner.owner();
     let shores = samples.owner();
     let corners = shores.owner();
@@ -597,6 +597,7 @@ pub(super) mod actual_fan_tests {
         selection: Arc<OwnedPeriodicSupportSelection>,
         components: usize,
     ) -> OwnedPeriodicChartWinding {
+        let _replay = super::super::periodic_replay::scope();
         let signatures = fixtures::signatures(selection);
         let regions = own_periodic_support_regions(signatures, &[], 100000).unwrap();
         assert_eq!(regions.components().len(), components);

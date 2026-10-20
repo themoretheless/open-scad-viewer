@@ -20,6 +20,24 @@ pub fn certify_third_traversal(
     max_cells: usize,
 ) -> Result<ThirdReport> {
     let base = certify_traversal(c, traversal, max_cells)?;
+    certify_third_traversal_with_base(c, 0, traversal, max_cells, base)
+}
+pub(in crate::sweeps::progressive_miter) fn certify_third_traversal_axis(
+    c: &Curve,
+    axis: usize,
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ThirdReport> {
+    let base = certify_traversal_axis(c, axis, traversal, max_cells)?;
+    certify_third_traversal_with_base(c, axis, traversal, max_cells, base)
+}
+fn certify_third_traversal_with_base(
+    c: &Curve,
+    axis: usize,
+    traversal: [f64; 2],
+    max_cells: usize,
+    base: Report,
+) -> Result<ThirdReport> {
     let mut out = ThirdReport { base, third: None };
     if out.base.status != Status::Certified {
         return Ok(out);
@@ -54,25 +72,32 @@ pub fn certify_third_traversal(
             // Dividing rounded restricted poles by that tiny width creates
             // huge artificial third derivatives.
             let span_lo=c.knots[span];let span_hi=c.knots[span+1];
-            let controls=crate::curve_distance::restricted_controls(c,span,Interval::new(span_lo,span_hi)?)?;
+            let controls=crate::curve_distance::restricted_controls_axis(c,axis,span,Interval::new(span_lo,span_hi)?)?;
             let width=Interval::point(span_hi).sub(Interval::point(span_lo))?;
             let local=Interval::new(l,h)?.sub(Interval::point(span_lo))?.div(width)?.intersect(0.,1.)?;
-            let enclose=|values:Vec<Interval>|restricted_hull(&values,local);
-            let numerator = controls.iter().map(|p| p[0]).collect::<Vec<_>>();
-            let weights = controls.iter().map(|p| p[3]).collect::<Vec<_>>();
-            let weight = enclose(weights.clone())?;
-            let relative = enclose(numerator.clone())?.div(weight)?;
-            let n1 = derivative(&numerator, c.degree, width)?;
-            let w1 = derivative(&weights, c.degree, width)?;
+            let enclose=|values:&[Interval]|restricted_hull(values,local);
+            let mut numerator=[Interval::point(0.);33];
+            let mut weights=[Interval::point(0.);33];
+            let len=controls.len();
+            for (idx,p) in controls.iter().enumerate() {
+                numerator[idx]=p[0];
+                weights[idx]=p[1];
+            }
+            let numerator=&numerator[..len];
+            let weights=&weights[..len];
+            let weight = enclose(weights)?;
+            let relative = enclose(numerator)?.div(weight)?;
+            let n1 = derivative(numerator, c.degree, width)?;
+            let w1 = derivative(weights, c.degree, width)?;
             let n2 = derivative(&n1, c.degree.saturating_sub(1), width)?;
             let w2 = derivative(&w1, c.degree.saturating_sub(1), width)?;
             let n3 = derivative(&n2, c.degree.saturating_sub(2), width)?;
             let w3 = derivative(&w2, c.degree.saturating_sub(2), width)?;
-            let jets = span_jets(c, span, l, h)?;
-            enclose(n3)?
-                .sub(jets[2].mul(enclose(w1)?)?.mul(Interval::point(3.))?)?
-                .sub(jets[1].mul(enclose(w2)?)?.mul(Interval::point(3.))?)?
-                .sub(relative.mul(enclose(w3)?)?)?
+            let jets = span_jets_axis(c, axis, span, l, h)?;
+            enclose(&n3)?
+                .sub(jets[2].mul(enclose(&w1)?)?.mul(Interval::point(3.))?)?
+                .sub(jets[1].mul(enclose(&w2)?)?.mul(Interval::point(3.))?)?
+                .sub(relative.mul(enclose(&w3)?)?)?
                 .div(weight)
         })();
         let Ok(v) = result else {

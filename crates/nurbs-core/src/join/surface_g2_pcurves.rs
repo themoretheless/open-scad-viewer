@@ -605,3 +605,46 @@ mod trace_identity_tests {
         );
     }
 }
+
+/// Native ownership of positions proved on literal original coefficients.
+/// Public report fields cannot construct this token. This is positional
+/// admission only: a new G2 decision still requires fresh geometric inspection.
+#[derive(Clone)]
+pub struct OwnedPositions {
+    curve: Curve,
+    pcurves: [Curve; 2],
+    surfaces: [Surface; 2],
+    reversed: [bool; 2],
+    tolerance: f64,
+}
+impl OwnedPositions {
+    /// Only the actual stored definition/orientation may reuse admission.
+    /// Coefficient equality establishes identity of the inspected input, not
+    /// exact equality between different curve and surface representations.
+    pub fn matches(&self,c:&Curve,p:&Curve,s:&Surface,reversed:bool,tolerance:f64)->bool {
+        tolerance.is_finite() && self.tolerance<=tolerance && &self.curve==c
+            && (0..2).any(|k|&self.pcurves[k]==p && &self.surfaces[k]==s && self.reversed[k]==reversed)
+    }
+    pub fn reverify(&self)->Result<()> {
+        let proof=verify_positions(&self.curve,[&self.pcurves[0],&self.pcurves[1]],
+            [&self.surfaces[0],&self.surfaces[1]],self.reversed,self.tolerance,100000,1000000)?;
+        check(proof.proven,"Original owned seam positions remain unproven")
+    }
+}
+pub struct OwnedInspection {
+    pub report: Report,
+    pub positions: Option<OwnedPositions>,
+}
+/// Inspect actual coefficients once; retain private positional snapshots only
+/// after fresh full-curve admission. The G2 report is computed by inspect with
+/// the same caller limits, without trusting a stored report or Boolean flag.
+pub fn inspect_owned(
+    c:&Curve,p:[&Curve;2],s:[&Surface;2],reversed:[bool;2],position:f64,normal:f64,curvature:f64,
+    max_cells:usize,max_exact:u64,
+)->Result<OwnedInspection> {
+    let report=inspect(c,p,s,reversed,position,normal,curvature,max_cells,max_exact)?;
+    let positions=report.positions.proven.then(||OwnedPositions {
+        curve:c.clone(),pcurves:p.map(Clone::clone),surfaces:s.map(Clone::clone),reversed,tolerance:position,
+    });
+    Ok(OwnedInspection {report,positions})
+}

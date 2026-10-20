@@ -92,7 +92,7 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
     if o.max_refinements > 512 || o.max_steps == 0 || o.max_steps > 1000000 {
         return Err(refused("Invalid complete local vertex chart allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let mut vertex_of = BTreeMap::new();
     for (vertex, v) in o.owner.vertices().iter().enumerate() {
         for &r in &v.uses {
@@ -130,6 +130,11 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
     }
     let arrangement = o.owner.owner().owner();
     let cover = arrangement.pieces();
+    let originals = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
     let chart = cover.chart();
     let periods = chart.map(|v| Q::from_float(v[1]).unwrap() - Q::from_float(v[0]).unwrap());
     let mut charts = Vec::new();
@@ -179,8 +184,7 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
             let parameter = o.owner.owner().cuts()[source.piece][source.cut]
                 .value
                 .clone();
-            let original = cells(&cover.sources()[piece.source])?;
-            let cell = &original[piece.cell];
+            let cell = &originals[piece.source][piece.cell];
             let f = decode_polynomial(&parameter.primitive)?;
             let map = decode_polynomial(&parameter.parameter)?;
             let root = [
@@ -229,6 +233,7 @@ impl OwnedPeriodicVertexCharts {
         self.steps
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (c, w) = derive(self)?;
         if c != self.charts || w != self.steps {
             return Err(refused(
@@ -246,6 +251,7 @@ pub fn own_periodic_vertex_charts(
     max_refinements: usize,
     max_steps: usize,
 ) -> Result<OwnedPeriodicVertexCharts> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicVertexCharts {
         owner,
         max_refinements,

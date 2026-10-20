@@ -303,6 +303,7 @@ impl OwnedPeriodicAlignedIntervals {
         self.lifts
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (c, b, a, w) = derive(self)?;
         if c != self.cuts || b != self.bindings || a != self.aliases || w != self.lifts {
             return Err(refused(
@@ -317,6 +318,7 @@ pub fn own_periodic_aligned_intervals(
     limits: ParameterOrderLimits,
     max_lifts: usize,
 ) -> Result<OwnedPeriodicAlignedIntervals> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicAlignedIntervals {
         owner,
         limits,

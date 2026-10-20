@@ -49,7 +49,7 @@ impl Key {
 }
 pub(super) fn key(multi: &MultiSweep<'_>, count: usize) -> Option<Vec<u64>> {
     let MultiSweep { sweeps, options, next_sections: _ } = multi;
-    let mut key=Key(Vec::new()); key.word(count as u64)?; key.options(options)?;
+    let mut key=Key(Vec::with_capacity(256)); key.word(count as u64)?; key.options(options)?;
     key.word(sweeps.len() as u64)?;
     for sweep in sweeps {
         // Station-cache state and iterator position cannot change an explicit

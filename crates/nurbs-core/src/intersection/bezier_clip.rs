@@ -150,13 +150,10 @@ fn clip_against_band(distances: &[f64], dlo: f64, dhi: f64) -> Option<[f64; 2]> 
         lo = lo.min(t);
         hi = hi.max(t);
     };
-    let edges: Vec<([f64; 2], [f64; 2])> = hull
-        .iter()
-        .zip(hull.iter().cycle().skip(1))
-        .map(|(&a, &b)| (a, b))
-        .take(hull.len())
-        .collect();
-    for (a, b) in edges {
+    let hull_len = hull.len();
+    for idx in 0..hull_len {
+        let a = hull[idx];
+        let b = hull[(idx + 1) % hull_len];
         if dlo <= a[1] && a[1] <= dhi {
             admit(a[0]);
         }

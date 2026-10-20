@@ -589,7 +589,14 @@ fn certify(
             out.reason = "original-box-separation";
             return Ok(());
         }
-        let unknown = (0..4).filter(|&k| k != free).collect::<Vec<_>>();
+        let mut unknown = [0_usize; 3];
+        let mut u_idx = 0;
+        for k in 0..4 {
+            if k != free {
+                unknown[u_idx] = k;
+                u_idx += 1;
+            }
+        }
         out.support_regularity_proven = [regular(ja), regular(jb)];
         let mut centers = [0.; 3];
         let mut scales = [0.; 3];

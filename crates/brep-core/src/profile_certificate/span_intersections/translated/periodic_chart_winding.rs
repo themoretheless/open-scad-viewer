@@ -255,7 +255,8 @@ impl OwnedPeriodicChartWinding {
         }
     }
     pub fn reverify_source(&self) -> Result<()> {
-        self.owner.reverify_source()?;
+        let _replay = super::periodic_replay::scope();
+        super::periodic_replay::verify_arc(&self.owner, |owner| owner.reverify_source())?;
         if prepare(&self.owner, self.limits)? != self.prepared {
             return Err(refused(
                 "Chart winding original cells,cuts or frame expressions changed",
@@ -271,8 +272,9 @@ pub fn own_periodic_chart_winding(
     owner: Arc<OwnedPeriodicChartCycles>,
     limits: PeriodicChartWindingLimits,
 ) -> Result<OwnedPeriodicChartWinding> {
+    let _replay = super::periodic_replay::scope();
     validate(limits)?;
-    owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&owner, |owner| owner.reverify_source())?;
     let prepared = prepare(&owner, limits)?;
     Ok(OwnedPeriodicChartWinding {
         owner,

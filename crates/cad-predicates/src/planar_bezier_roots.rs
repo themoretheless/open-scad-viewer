@@ -48,15 +48,7 @@ fn primitive_common(
     if values.len() > 24 {
         return Ok(());
     }
-    let mut padded = std::array::from_fn::<_, 24, _>(|i| {
-        values
-            .get(i)
-            .cloned()
-            .unwrap_or_else(|| Expansion::scalar(0.))
-    });
-    Expansion::reduce_projective(&mut padded, ctx)?;
-    values.clone_from_slice(&padded[..values.len()]);
-    Ok(())
+    Expansion::reduce_projective(values, ctx)
 }
 fn trim(p: &mut Poly) {
     while p.len() > 1 && p.last().unwrap().sign() == Sign::Zero {
@@ -71,27 +63,9 @@ fn normalize(p: &mut Poly, ctx: &mut PredicateContext<'_>) -> Result<(), Reason>
     primitive_common(p, ctx)?;
     Expansion::normalize_common(p, ctx)
 }
-const BINOMIAL: [[u64; 17]; 17] = {
-    let mut table = [[0u64; 17]; 17];
-    let mut n = 0;
-    while n < 17 {
-        table[n][0] = 1;
-        let mut k = 1;
-        while k <= n {
-            table[n][k] = table[n - 1][k - 1] + table[n - 1][k];
-            k += 1;
-        }
-        n += 1;
-    }
-    table
-};
 #[inline(always)]
 fn choose(n: usize, k: usize) -> u64 {
-    if n < 17 && k < 17 {
-        BINOMIAL[n][k]
-    } else {
-        (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
-    }
+    crate::binomial_u64(n, k)
 }
 pub(crate) fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     let n = b.len() - 1;

@@ -156,13 +156,22 @@ impl Cage {
             let mut vertices = math_core::par_map_index(c.vertices.len(), 64, |v| {
                 let p = c.vertices[v];
                 let adjacent = &adjacency[v];
-                let boundary: Vec<_> = adjacent
-                    .iter()
-                    .filter(|(_, u)| u.len() == 1)
-                    .map(|((a, b), _)| c.vertices[if *a == v { *b } else { *a }])
-                    .collect();
-                if boundary.len() == 2 {
-                    std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
+                let mut b0 = [0.0; 3];
+                let mut b1 = [0.0; 3];
+                let mut b_count = 0usize;
+                for ((a, b), u) in adjacent {
+                    if u.len() == 1 {
+                        let nb = c.vertices[if *a == v { *b } else { *a }];
+                        if b_count == 0 {
+                            b0 = nb;
+                        } else if b_count == 1 {
+                            b1 = nb;
+                        }
+                        b_count += 1;
+                    }
+                }
+                if b_count == 2 {
+                    std::array::from_fn(|k| (6. * p[k] + b0[k] + b1[k]) / 8.)
                 } else {
                     let faces: FxHashSet<_> = adjacent
                         .iter()
@@ -411,13 +420,22 @@ impl Cage {
             let mut vertices = math_core::par_map_index(c.vertices.len(), 64, |v| {
                 let p = c.vertices[v];
                 let adjacent = &adjacency[v];
-                let boundary: Vec<_> = adjacent
-                    .iter()
-                    .filter(|(_, u)| u.len() == 1)
-                    .map(|((a, b), _)| c.vertices[if *a == v { *b } else { *a }])
-                    .collect();
-                if boundary.len() == 2 {
-                    std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
+                let mut b0 = [0.0; 3];
+                let mut b1 = [0.0; 3];
+                let mut b_count = 0usize;
+                for ((a, b), u) in adjacent {
+                    if u.len() == 1 {
+                        let nb = c.vertices[if *a == v { *b } else { *a }];
+                        if b_count == 0 {
+                            b0 = nb;
+                        } else if b_count == 1 {
+                            b1 = nb;
+                        }
+                        b_count += 1;
+                    }
+                }
+                if b_count == 2 {
+                    std::array::from_fn(|k| (6. * p[k] + b0[k] + b1[k]) / 8.)
                 } else {
                     let n = adjacent.len();
                     let beta = if n == 3 {
@@ -437,7 +455,7 @@ impl Cage {
                 }
             });
             vertices.reserve(edges.len());
-            let mut ei = FxHashMap::default();
+            let mut ei = FxHashMap::with_capacity_and_hasher(edges.len(), Default::default());
             for (&(a, b), u) in &edges {
                 ei.insert((a, b), vertices.len());
                 let ep = if u.len() == 2 {
@@ -484,11 +502,11 @@ impl Refined {
         // `Refined` fields are public, so callers may have mutated the cage:
         // this is a public entry point and keeps the full input validation.
         self.cage.validate()?;
-        let mut indices = Vec::new();
-        let mut ids = Vec::new();
         if self.face_ids.len() != self.cage.faces.len() {
             return Err(error("Invalid face identity count"));
         }
+        let mut indices = Vec::with_capacity(self.cage.faces.len() * 6);
+        let mut ids = Vec::with_capacity(self.cage.faces.len() * 2);
         for (fi, f) in self.cage.faces.iter().enumerate() {
             if f.len() <= 4 {
                 for i in 1..f.len() - 1 {
@@ -894,7 +912,8 @@ impl Cage {
         }
         let n = sections[0].len();
         let vertices = sections.iter().flatten().copied().collect();
-        let mut faces = Vec::new();
+        let mut faces =
+            Vec::with_capacity((sections.len() - 1) * n + if caps { 2 } else { 0 });
         for k in 0..sections.len() - 1 {
             for i in 0..n {
                 faces.push(vec![
@@ -945,16 +964,13 @@ impl Cage {
             ));
         }
         let n = profile.len();
-        let mut vertices = Vec::new();
+        let mut vertices = Vec::with_capacity(segments * n);
         for k in 0..segments {
             let a = 2. * std::f64::consts::PI * k as f64 / segments as f64;
-            vertices.extend(
-                profile
-                    .iter()
-                    .map(|p| [p[0] * a.cos(), p[0] * a.sin(), p[1]]),
-            );
+            let (s, c) = a.sin_cos();
+            vertices.extend(profile.iter().map(|p| [p[0] * c, p[0] * s, p[1]]));
         }
-        let mut faces = Vec::new();
+        let mut faces = Vec::with_capacity(segments * n);
         for k in 0..segments {
             for i in 0..n {
                 faces.push(vec![
@@ -1025,23 +1041,31 @@ impl Cage {
             adjacency[entry.0.1].push(entry);
         }
         let mut out = Vec::with_capacity(self.vertices.len());
+        let mut faces = FxHashSet::default();
         for v in 0..self.vertices.len() {
             let p = refined.vertices[v];
             let adjacent = &adjacency[v];
-            let boundary: Vec<_> = adjacent
-                .iter()
-                .filter(|(_, u)| u.len() == 1)
-                .map(|((a, b), _)| refined.vertices[if *a == v { *b } else { *a }])
-                .collect();
-            if boundary.len() == 2 {
+            let mut b0 = [0.0; 3];
+            let mut b1 = [0.0; 3];
+            let mut b_count = 0usize;
+            for ((a, b), u) in adjacent {
+                if u.len() == 1 {
+                    let nb = refined.vertices[if *a == v { *b } else { *a }];
+                    if b_count == 0 {
+                        b0 = nb;
+                    } else if b_count == 1 {
+                        b1 = nb;
+                    }
+                    b_count += 1;
+                }
+            }
+            if b_count == 2 {
                 out.push(std::array::from_fn(|k| {
-                    (4.0 * p[k] + boundary[0][k] + boundary[1][k]) / 6.0
+                    (4.0 * p[k] + b0[k] + b1[k]) / 6.0
                 }));
             } else {
-                let faces: FxHashSet<_> = adjacent
-                    .iter()
-                    .flat_map(|(_, u)| u.iter().map(|(f, _)| *f))
-                    .collect();
+                faces.clear();
+                faces.extend(adjacent.iter().flat_map(|(_, u)| u.iter().map(|(f, _)| *f)));
                 let n = adjacent.len() as f64;
                 let mut sum_e = [0.0; 3];
                 for &(&(a, b), _) in adjacent {
@@ -1121,7 +1145,7 @@ impl Cage {
             }
         };
 
-        let mut patches = Vec::new();
+        let mut patches = Vec::with_capacity(self.faces.len());
         for (fi, f) in self.faces.iter().enumerate() {
             if f.len() != 4 {
                 continue;

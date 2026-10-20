@@ -2,9 +2,13 @@
 //! Entries hold strong Arcs, preventing pointer reuse or safe in-place mutation.
 //! Every new outer operation starts empty; failed replays are never cached.
 use super::*;
-use std::{cell::RefCell, marker::PhantomData, rc::Rc, sync::Arc};
+use std::{any::Any, cell::RefCell, marker::PhantomData, rc::Rc, sync::Arc};
 const MAX_PINNED: usize = 64;
-thread_local! {static ACTIVE:RefCell<Option<Vec<Arc<OwnedPeriodicArrangementCuts>>>>=const{RefCell::new(None)};}
+const MAX_PINNED_ANY: usize = 1024;
+thread_local! {
+    static ACTIVE: RefCell<Option<Vec<Arc<OwnedPeriodicArrangementCuts>>>> = const { RefCell::new(None) };
+    static ACTIVE_ANY: RefCell<Option<Vec<Box<dyn Any>>>> = const { RefCell::new(None) };
+}
 #[cfg(test)]
 thread_local! {static DISABLED:std::cell::Cell<usize>=const{std::cell::Cell::new(0)};static COUNTS:std::cell::Cell<(usize,usize)>=const{std::cell::Cell::new((0,0))};}
 #[cfg(test)]
@@ -16,11 +20,11 @@ fn disabled() -> bool {
     false
 }
 #[must_use = "Keep the replay scope alive for the complete source operation"]
-pub(super) struct Scope {
+pub(in crate::profile_certificate::span_intersections) struct Scope {
     outer: bool,
     _thread: PhantomData<Rc<()>>,
 }
-pub(super) fn scope() -> Scope {
+pub(in crate::profile_certificate::span_intersections) fn scope() -> Scope {
     let outer = if disabled() {
         false
     } else {
@@ -28,6 +32,7 @@ pub(super) fn scope() -> Scope {
             let mut state = s.borrow_mut();
             if state.is_none() {
                 *state = Some(Vec::new());
+                ACTIVE_ANY.with(|a| *a.borrow_mut() = Some(Vec::new()));
                 true
             } else {
                 false
@@ -43,9 +48,44 @@ impl Drop for Scope {
     fn drop(&mut self) {
         if self.outer {
             let entries = ACTIVE.with(|s| s.borrow_mut().take());
-            drop(entries)
+            let entries_any = ACTIVE_ANY.with(|s| s.borrow_mut().take());
+            drop(entries);
+            drop(entries_any);
         }
     }
+}
+pub(in crate::profile_certificate::span_intersections) fn verify_arc<T: 'static>(
+    owner: &Arc<T>,
+    f: impl FnOnce(&T) -> Result<()>,
+) -> Result<()> {
+    if !disabled()
+        && ACTIVE_ANY.with(|s| {
+            s.borrow().as_ref().is_some_and(|v| {
+                v.iter().any(|p| {
+                    p.downcast_ref::<Arc<T>>()
+                        .is_some_and(|a| Arc::ptr_eq(a, owner))
+                })
+            })
+        })
+    {
+        return Ok(());
+    }
+    f(owner.as_ref())?;
+    if !disabled() {
+        ACTIVE_ANY.with(|s| {
+            if let Some(entries) = s.borrow_mut().as_mut() {
+                if entries.len() < MAX_PINNED_ANY
+                    && !entries.iter().any(|p| {
+                        p.downcast_ref::<Arc<T>>()
+                            .is_some_and(|a| Arc::ptr_eq(a, owner))
+                    })
+                {
+                    entries.push(Box::new(owner.clone()));
+                }
+            }
+        });
+    }
+    Ok(())
 }
 pub(super) fn verify(owner: &Arc<OwnedPeriodicArrangementCuts>) -> Result<()> {
     if !disabled()

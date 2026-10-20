@@ -109,7 +109,7 @@ fn derive_rule(o: &OwnedPeriodicMaterialRule) -> Result<Vec<OriginalPeriodicOper
     if !(1..=32).contains(&o.operands.len()) {
         return Err(refused("Invalid periodic material operand count"));
     }
-    o.base.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.base, |x| x.reverify_source())?;
     let path = o.base.path();
     if path.len() != 2
         || [decode_ratio(&path[0][0])?, decode_ratio(&path[0][1])?]
@@ -160,6 +160,7 @@ impl OwnedPeriodicMaterialRule {
         &self.periods
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         if derive_rule(self)? != self.periods {
             return Err(refused(
                 "Material operand periods or original source changed",
@@ -173,6 +174,7 @@ pub fn own_periodic_material_rule(
     operands: &[OriginalPeriodicOperand],
     program: &[OriginalPeriodicBooleanOp],
 ) -> Result<OwnedPeriodicMaterialRule> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicMaterialRule {
         base,
         operands: operands.to_vec(),
@@ -183,8 +185,8 @@ pub fn own_periodic_material_rule(
     Ok(o)
 }
 fn derive_sample(o: &OwnedPeriodicMaterialSample) -> Result<(Vec<String>, Vec<bool>, bool)> {
-    o.rule.reverify_source()?;
-    o.query.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.rule, |x| x.reverify_source())?;
+    super::periodic_replay::verify_arc(&o.query, |x| x.reverify_source())?;
     if !Arc::ptr_eq(o.rule.base.owner(), o.query.owner()) {
         return Err(refused(
             "Material query belongs to a different original physical owner",
@@ -236,6 +238,7 @@ impl OwnedPeriodicMaterialSample {
         self.selected
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (w, i, s) = derive_sample(self)?;
         if w != self.windings || i != self.inside || s != self.selected {
             return Err(refused(
@@ -251,6 +254,7 @@ pub fn own_periodic_material_sample(
     rule: Arc<OwnedPeriodicMaterialRule>,
     query: Arc<OwnedPeriodicRelativeWinding>,
 ) -> Result<OwnedPeriodicMaterialSample> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicMaterialSample {
         rule,
         query,

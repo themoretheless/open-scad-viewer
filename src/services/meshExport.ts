@@ -24,7 +24,9 @@ export function buildBinaryStl(meshes: readonly MeshData[], name = 'OpenSCAD Vie
   return exportScene(meshes,'stl',name)
 }
 
+const UTF8_DECODER = new TextDecoder()
+
 /** Ready-to-save OBJ; the host only decodes the native UTF-8 artifact. */
 export function buildObj(meshes: readonly MeshData[]): string {
-  return new TextDecoder().decode(exportScene(meshes,'obj',''))
+  return UTF8_DECODER.decode(exportScene(meshes,'obj',''))
 }

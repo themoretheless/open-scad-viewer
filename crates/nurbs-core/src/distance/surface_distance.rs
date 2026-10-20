@@ -63,7 +63,7 @@ pub(crate) fn interpolate(
 // original control arithmetic operation, intersection and traversal order.
 pub(crate) fn interpolation_plan(degree: usize, knots: &[f64], span: usize, parameters: &[f64])
     -> Result<Vec<(usize, Interval, Interval)>> {
-    let mut plan = Vec::new();
+    let mut plan = Vec::with_capacity(degree * (degree + 1) / 2);
     for r in 1..=degree {
         for j in (r..=degree).rev() {
             let i = span - degree + j;
@@ -89,18 +89,20 @@ fn mul_blend_factor(a: Interval, b: Interval) -> Result<Interval> {
     }
     a.mul(b)
 }
-pub(crate) fn interpolate_planned(mut d: Vec<[Interval; 4]>, degree: usize,
+pub(crate) fn interpolate_planned(d: &[[Interval; 4]], degree: usize,
     plan: &[(usize, Interval, Interval)], weights: [f64; 2]) -> Result<[Interval; 4]> {
+    let mut buf = [[Interval::point(0.); 4]; 33];
+    buf[..=degree].copy_from_slice(&d[..=degree]);
     for &(j, alpha, beta) in plan {
         for axis in 0..4 {
-            let a = d[j - 1][axis];
-            let b = d[j][axis];
-            d[j][axis] = mul_blend_factor(a,beta)?.add(mul_blend_factor(b,alpha)?)?
+            let a = buf[j - 1][axis];
+            let b = buf[j][axis];
+            buf[j][axis] = mul_blend_factor(a,beta)?.add(mul_blend_factor(b,alpha)?)?
                 .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
         }
-        d[j][3] = d[j][3].intersect(weights[0], weights[1])?;
+        buf[j][3] = buf[j][3].intersect(weights[0], weights[1])?;
     }
-    Ok(d[degree])
+    Ok(buf[degree])
 }
 /// Enclose the original rational image of a rectangle inside a knot cell.
 fn restricted_controls(
@@ -117,10 +119,10 @@ fn restricted_controls(
         }
     }
     let mut weights = [f64::INFINITY, 0_f64];
-    let mut controls = Vec::new();
+    let mut controls = Vec::with_capacity(s.degree_u + 1);
     let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     for i in iu - s.degree_u..=iu {
-        let mut row = Vec::new();
+        let mut row = Vec::with_capacity(s.degree_v + 1);
         for j in iv - s.degree_v..=iv {
             let ratio = s.weights[i][j] / scale;
             let w = if s.weights[i][j] == scale {
@@ -152,12 +154,14 @@ fn restricted_controls(
         let rows = controls.iter().map(|row| bezier_restriction::restrict(row,
             [s.knots_v[iv], s.knots_v[iv+1]], domain[1], weights))
             .collect::<Result<Vec<_>>>()?;
-        let mut restricted = Vec::new();
+        let mut restricted = Vec::with_capacity((s.degree_u + 1) * rows[0].len());
+        let mut column = Vec::with_capacity(rows.len());
         for j in 0..rows[0].len() {
-            let column = rows.iter().map(|row| row[j]).collect::<Vec<_>>();
+            column.clear();
+            column.extend(rows.iter().map(|row| row[j]));
             for h in bezier_restriction::restrict(&column,
                 [s.knots_u[iu], s.knots_u[iu+1]], domain[0], weights)? {
-                let mut control = Vec::new();
+                let mut control = Vec::with_capacity(3);
                 for k in 0..3 {
                     control.push(h[k].div(h[3])?.add(Interval::point(origin[k]))?
                         .intersect(hull[k][0], hull[k][1])?);
@@ -187,16 +191,17 @@ fn restricted_controls(
     let vs = parameters(s.degree_v, domain[1]);
     let u_plans = us.iter().map(|u| interpolation_plan(s.degree_u, &s.knots_u, iu, u))
         .collect::<Result<Vec<_>>>()?;
-    let mut restricted = Vec::new();
+    let mut restricted = Vec::with_capacity(us.len() * vs.len());
+    let mut rows = Vec::with_capacity(controls.len());
     for v in vs {
         let v_plan = interpolation_plan(s.degree_v, &s.knots_v, iv, &v)?;
-        let rows = controls
-            .iter()
-            .map(|row| interpolate_planned(row.clone(), s.degree_v, &v_plan, weights))
-            .collect::<Result<Vec<_>>>()?;
+        rows.clear();
+        for row in &controls {
+            rows.push(interpolate_planned(row, s.degree_v, &v_plan, weights)?);
+        }
         for u_plan in &u_plans {
-            let h = interpolate_planned(rows.clone(), s.degree_u, u_plan, weights)?;
-            let mut control = Vec::new();
+            let h = interpolate_planned(&rows, s.degree_u, u_plan, weights)?;
+            let mut control = Vec::with_capacity(3);
             for k in 0..3 {
                 let value = h[k]
                     .div(h[3])?
@@ -288,14 +293,17 @@ impl Patch {
 /// valid; outward projection arithmetic and an upper norm bound keep it safe.
 pub(crate) fn patch_lower(a: &Patch, b: &Patch) -> Result<f64> {
     let axis_lower = box_distance(&a.bounds, &b.bounds)?.0;
-    let origin: Vec<f64> = a.bounds.iter().map(|i| midpoint(i.lo, i.hi)).collect();
-    let mut n: Vec<f64> = b
-        .bounds
-        .iter()
-        .enumerate()
-        .map(|(k, i)| origin[k] * 0.5 - midpoint(i.lo, i.hi) * 0.5)
-        .collect();
-    let scale = n.iter().map(|v| v.abs()).fold(0., f64::max);
+    let origin = [
+        midpoint(a.bounds[0].lo, a.bounds[0].hi),
+        midpoint(a.bounds[1].lo, a.bounds[1].hi),
+        midpoint(a.bounds[2].lo, a.bounds[2].hi),
+    ];
+    let mut n = [
+        origin[0] * 0.5 - midpoint(b.bounds[0].lo, b.bounds[0].hi) * 0.5,
+        origin[1] * 0.5 - midpoint(b.bounds[1].lo, b.bounds[1].hi) * 0.5,
+        origin[2] * 0.5 - midpoint(b.bounds[2].lo, b.bounds[2].hi) * 0.5,
+    ];
+    let scale = n[0].abs().max(n[1].abs()).max(n[2].abs());
     if scale == 0. {
         return Ok(axis_lower);
     }
@@ -303,8 +311,8 @@ pub(crate) fn patch_lower(a: &Patch, b: &Patch) -> Result<f64> {
         *v /= scale;
     }
     let norm_upper = box_distance(
-        &n.iter().map(|&v| Interval::point(v)).collect::<Vec<_>>(),
-        &vec![Interval::point(0.); 3],
+        &[Interval::point(n[0]), Interval::point(n[1]), Interval::point(n[2])],
+        &[Interval::point(0.); 3],
     )?
     .1;
     let project = |patch: &Patch| -> Result<Interval> {
@@ -854,7 +862,7 @@ mod tests {
                     }).collect::<Vec<_>>();
                     let expected = interpolate(controls.clone(), degree, &knots, degree, &parameters, [1.,1.]).unwrap();
                     let plan = interpolation_plan(degree, &knots, degree, &parameters).unwrap();
-                    let actual = interpolate_planned(controls, degree, &plan, [1.,1.]).unwrap();
+                    let actual = interpolate_planned(&controls, degree, &plan, [1.,1.]).unwrap();
                     assert_eq!(actual.map(|x| [x.lo.to_bits(),x.hi.to_bits()]),
                         expected.map(|x| [x.lo.to_bits(),x.hi.to_bits()]));
                     assert_eq!(plan.len(), degree*(degree+1)/2);

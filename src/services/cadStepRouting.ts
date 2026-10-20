@@ -29,11 +29,14 @@ export interface RoutedStepImport {
 const RETAINED_STEP_KEY='open-scad-viewer.retained-step-v1'
 export const MAX_RETAINED_STEP_STORE_BYTES=16*1024*1024
 interface RetainedStepRecord {version:1|2;model:NurbsBrep;document?:DirectStepV10Document;preview:{positions:number[];indices:number[]};report:StepCapabilityReport}
-const utf8Bytes=(text:string)=>new TextEncoder().encode(text).byteLength
+const UTF8_ENCODER=new TextEncoder()
+const utf8Bytes=(text:string)=>UTF8_ENCODER.encode(text).byteLength
 export const retainedStepStoreAcceptsEncodedBytes=(text:string)=>
   utf8Bytes(text)<=MAX_RETAINED_STEP_STORE_BYTES
 const validRecord=(value:unknown):value is RetainedStepRecord=>{
-  if(!value||typeof value!=='object'||![1,2].includes((value as RetainedStepRecord).version))return false
+  if(!value||typeof value!=='object')return false
+  const v=(value as RetainedStepRecord).version
+  if(v!==1&&v!==2)return false
   const record=value as RetainedStepRecord
   try{
     inspectNurbsBrep(record.model)
@@ -51,14 +54,20 @@ const decodeRecord=(text:string|null):RetainedStepRecord|undefined=>{
   }catch{return}
 }
 
+const TESSELLATED_STEP_RE=/\b(TESSELLATED_SHAPE_REPRESENTATION|TESSELLATED_SHELL|TESSELLATED_SOLID)\s*\(/i
+const FACETED_STEP_RE=/\b(FACETED_BREP|FACETED_BREP_SHAPE_REPRESENTATION)\s*\(/i
+const EXACT_BREP_STEP_RE=/\b(ADVANCED_FACE|MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS)\s*\(/i
+const CSG_STEP_RE=/\b(CSG_SOLID|CONSTRUCTIVE_SOLID_GEOMETRY_REPRESENTATION|BOOLEAN_RESULT|BLOCK|RIGHT_CIRCULAR_CYLINDER)\s*\(/i
+const RETAINED_REP_STEP_RE=/\b(ADVANCED_BREP_SHAPE_REPRESENTATION|MANIFOLD_SURFACE_SHAPE_REPRESENTATION)\s*\(/i
+const DOCUMENT_FILE_RE=/\bDOCUMENT_FILE\s*\(/i
+
 export function inspectStepRoute(text:string):StepRoute {
-  if(/\b(TESSELLATED_SHAPE_REPRESENTATION|TESSELLATED_SHELL|TESSELLATED_SOLID)\s*\(/i.test(text))
+  if(TESSELLATED_STEP_RE.test(text))
     return 'tessellated-shape'
-  if(/\b(FACETED_BREP|FACETED_BREP_SHAPE_REPRESENTATION)\s*\(/i.test(text)
-    && !/\b(ADVANCED_FACE|MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS)\s*\(/i.test(text)) return 'faceted-brep'
-  if(/\b(CSG_SOLID|CONSTRUCTIVE_SOLID_GEOMETRY_REPRESENTATION|BOOLEAN_RESULT|BLOCK|RIGHT_CIRCULAR_CYLINDER)\s*\(/i.test(text))
+  if(FACETED_STEP_RE.test(text) && !EXACT_BREP_STEP_RE.test(text)) return 'faceted-brep'
+  if(CSG_STEP_RE.test(text))
     return 'semantic-csg'
-  if(!/\b(ADVANCED_BREP_SHAPE_REPRESENTATION|MANIFOLD_SURFACE_SHAPE_REPRESENTATION)\s*\(/i.test(text))
+  if(!RETAINED_REP_STEP_RE.test(text))
     return 'unsupported-product'
   return 'retained-ap242-brep'
 }
@@ -86,7 +95,7 @@ export function importStepForWorkbench(text:string):RoutedStepImport {
     'STEP product root is outside retained B-rep, faceted B-rep, tessellated shape, and recognized semantic CSG routes.',
   )
   const imported=importDirectStepV10(text)
-  if(/\bDOCUMENT_FILE\s*\(/i.test(text)){
+  if(DOCUMENT_FILE_RE.test(text)){
     throw Error('Retained STEP import contains external references; resolve them through an explicitly authorized resolver before workbench import.')
   }
   const preview=tessellateNurbsBrep(imported.model,8)
@@ -111,14 +120,19 @@ export function exportRetainedStepForWorkbench(model:NurbsBrep,document?:DirectS
   return document?exportDirectStepV10(document):exportDirectStepV9(model)
 }
 
+const sameArrayValues=(a:ArrayLike<number>,b:ArrayLike<number>):boolean=>{
+  if(a.length!==b.length)return false
+  for(let i=0;i<a.length;i++)if(!Object.is(a[i],b[i]))return false
+  return true
+}
+
 let retainedRecord=decodeRecord(storageGet(RETAINED_STEP_KEY))
 export const retainedStepSession={
   get:()=>retainedRecord?.model,
   body:(candidate:DirectBody):DirectBody=>{
     const record=retainedRecord
     if(!record)return candidate
-    const same=(a:ArrayLike<number>,b:ArrayLike<number>)=>a.length===b.length&&Array.from(a).every((value,index)=>Object.is(value,b[index]))
-    return same(candidate.mesh.positions,record.preview.positions)&&same(candidate.mesh.indices,record.preview.indices)
+    return sameArrayValues(candidate.mesh.positions,record.preview.positions)&&sameArrayValues(candidate.mesh.indices,record.preview.indices)
       ?{...candidate,name:'Retained AP242 STEP',brep:record.model}:candidate
   },
   set:(model:NurbsBrep|undefined,report?:StepCapabilityReport,document?:DirectStepV10Document)=>{

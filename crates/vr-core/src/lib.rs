@@ -335,7 +335,7 @@ pub fn clip_scene_by_plane(scene: &[PreparedMesh], plane: [f32; 4]) -> Vec<Prepa
     }
     let mut out = Vec::with_capacity(scene.len());
     for mesh in scene {
-        let mut kept_indices = Vec::new();
+        let mut kept_indices = Vec::with_capacity(mesh.indices.len());
         for tri in mesh.indices.chunks_exact(3) {
             let (i0, i1, i2) = (
                 (tri[0] as usize) * 3,

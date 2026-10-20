@@ -61,7 +61,7 @@ fn derive(o: &OwnedPeriodicBoundaryLifts) -> Result<(Vec<OriginalPeriodicBoundar
             "Complete original periodic boundary lift exceeds allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     lift_walks(
         ports,
         o.owner.cycles(),
@@ -256,6 +256,7 @@ impl OwnedPeriodicBoundaryLifts {
         self.parts_count
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (w, n) = derive(self)?;
         if w != self.walks || n != self.parts_count {
             return Err(refused(
@@ -273,6 +274,7 @@ pub fn own_periodic_boundary_lifts(
     max_refinements: usize,
     max_parts: usize,
 ) -> Result<OwnedPeriodicBoundaryLifts> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicBoundaryLifts {
         owner,
         max_refinements,

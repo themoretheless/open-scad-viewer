@@ -26,12 +26,15 @@ type Data = (
     usize,
 );
 fn derive(
-    wires: &OwnedOriginalPeriodicWires,
+    wires: &Arc<OwnedOriginalPeriodicWires>,
     max_cells: usize,
     atlas: OriginalInjectiveAtlasLimits,
     pairs: OriginalAtlasPairLimits,
 ) -> Result<Data> {
-    wires.reverify_source()?;
+    crate::profile_certificate::span_intersections::translated::periodic_replay::verify_arc(
+        wires,
+        |x| x.reverify_source(),
+    )?;
     let supporting = wires.surface();
     let surface = supporting.surface();
     let report = nurbs_core::surface_regularity::inspect(surface, max_cells)?;
@@ -103,6 +106,8 @@ impl OwnedOriginalPeriodicEmbedding {
         self.subdivision_cells
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay =
+            crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
         let (r, c, n, w, b, p, pw, sc) = derive(
             &self.wires,
             self.max_regularity_cells,
@@ -135,6 +140,8 @@ pub fn own_original_periodic_embedding(
     atlas_limits: OriginalInjectiveAtlasLimits,
     pair_limits: OriginalAtlasPairLimits,
 ) -> Result<OwnedOriginalPeriodicEmbedding> {
+    let _replay =
+        crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
     let (
         regularity,
         charts,

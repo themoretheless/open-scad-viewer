@@ -98,13 +98,10 @@ fn proportional_homogeneous(a: &[[f64; 4]], b: &[[f64; 4]], tol: f64) -> bool {
 }
 
 fn collinear_direction(h: &[[f64; 4]]) -> Option<[f64; 3]> {
-    let points: Vec<[f64; 3]> = h
-        .iter()
-        .map(|p| [p[0] / p[3], p[1] / p[3], p[2] / p[3]])
-        .collect();
-    let origin = points[0];
+    let origin = [h[0][0] / h[0][3], h[0][1] / h[0][3], h[0][2] / h[0][3]];
     let mut direction = None;
-    for point in &points[1..] {
+    for p in &h[1..] {
+        let point = [p[0] / p[3], p[1] / p[3], p[2] / p[3]];
         let d = [
             point[0] - origin[0],
             point[1] - origin[1],
@@ -369,20 +366,14 @@ fn admit_coincidence(
         ha[0][2] / ha[0][3],
     ];
     let dir = da;
-    let mut a_params: Vec<(f64, f64)> = ta
-        .into_iter()
-        .map(|t| {
-            let p = point3(&first.evaluate(t).unwrap().point).unwrap();
-            (t, project_line_parameter(p, origin, dir))
-        })
-        .collect();
-    let mut b_params: Vec<(f64, f64)> = tb
-        .into_iter()
-        .map(|u| {
-            let p = point3(&second.evaluate(u).unwrap().point).unwrap();
-            (u, project_line_parameter(p, origin, dir))
-        })
-        .collect();
+    let mut a_params = ta.map(|t| {
+        let p = point3(&first.evaluate(t).unwrap().point).unwrap();
+        (t, project_line_parameter(p, origin, dir))
+    });
+    let mut b_params = tb.map(|u| {
+        let p = point3(&second.evaluate(u).unwrap().point).unwrap();
+        (u, project_line_parameter(p, origin, dir))
+    });
     a_params.sort_by(|a, b| a.1.total_cmp(&b.1));
     b_params.sort_by(|a, b| a.1.total_cmp(&b.1));
     let lo = a_params[0].1.max(b_params[0].1);
@@ -693,16 +684,12 @@ pub(crate) fn intersect_curve_curve_report_with_clip(
             continue;
         }
         report.boxes_visited += 1;
-        let (pieces, ha, hb) = match (ha, hb) {
-            (Some(ha), Some(hb)) => (None, ha, hb),
+        let (untouched, ha, hb) = match (ha, hb) {
+            (Some(ha), Some(hb)) => (false, ha, hb),
             _ => {
                 let pa = first_open.trim(ta[0], ta[1])?;
                 let pb = second_open.trim(tb[0], tb[1])?;
-                (
-                    Some((pa.clone(), pb.clone())),
-                    homogeneous4(&pa)?,
-                    homogeneous4(&pb)?,
-                )
+                (true, homogeneous4(&pa)?, homogeneous4(&pb)?)
             }
         };
         let box_input = CurveIntersectionBox {
@@ -718,12 +705,11 @@ pub(crate) fn intersect_curve_curve_report_with_clip(
         // Coincidence admission only on untouched original span pairs: both
         // bisected children and clip-shrunk boxes carry depth >= 1, and their
         // re-trimmed tiny hulls can collapse into false proportional matches.
-        if let Some((pa, pb)) = &pieces
+        if untouched
             && depth == 0
             && !excluded
             && admit_coincidence(&box_input, &mut report)?
         {
-            let _ = (pa, pb);
             continue;
         }
         if excluded {

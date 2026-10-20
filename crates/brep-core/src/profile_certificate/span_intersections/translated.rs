@@ -1,5 +1,5 @@
 mod periodic_chart_winding;
-mod periodic_replay;
+pub(in crate::profile_certificate::span_intersections) mod periodic_replay;
 pub use periodic_chart_cycles::construct_periodic_chart_winding;
 pub use periodic_chart_winding::{
     OwnedPeriodicChartWinding, PeriodicChartWindingLimits, own_periodic_chart_winding,
@@ -210,27 +210,40 @@ impl OwnedTranslatedSpanIntersections {
     /// Exact original natural parameters and translated positions, not the
     /// outward floating-point parameter boxes returned by the census summary.
     pub fn exact_nodes(&self) -> Result<Vec<AlgebraicEventNode>> {
-        self.reverify_source()?;
-        let (_, x, y) = context(
-            &self.sources[0],
-            &self.sources[1],
-            &self.offsets,
-            self.certificate.self_pair,
-            self.certificate.maximum_parameter_width,
-        )?;
+        let (_, x, y) = self.verified_cells()?;
         event_nodes::assemble_cells(&x, &y, &self.certificate)
     }
     /// Complete lower/upper-image endpoints of every admitted common component.
     pub fn exact_overlap_endpoints(&self) -> Result<Vec<(usize, [AlgebraicEventNode; 2])>> {
-        self.reverify_source()?;
-        let (_, x, y) = context(
+        let (_, x, y) = self.verified_cells()?;
+        event_nodes::overlap_endpoints_cells(&x, &y, &self.certificate)
+    }
+    pub(super) fn exact_nodes_and_overlaps(
+        &self,
+    ) -> Result<(
+        String,
+        Vec<AlgebraicEventNode>,
+        Vec<(usize, [AlgebraicEventNode; 2])>,
+    )> {
+        let (key, x, y) = self.verified_cells()?;
+        let nodes = event_nodes::assemble_cells(&x, &y, &self.certificate)?;
+        let overlaps = event_nodes::overlap_endpoints_cells(&x, &y, &self.certificate)?;
+        Ok((key, nodes, overlaps))
+    }
+    fn verified_cells(&self) -> Result<(String, Vec<Cell>, Vec<Cell>)> {
+        let c = &self.certificate;
+        let (key, x, y) = context(
             &self.sources[0],
             &self.sources[1],
             &self.offsets,
-            self.certificate.self_pair,
-            self.certificate.maximum_parameter_width,
+            c.self_pair,
+            c.maximum_parameter_width,
         )?;
-        event_nodes::overlap_endpoints_cells(&x, &y, &self.certificate)
+        if c.version != 1 || c.source != key {
+            return Err(refused("Translated span source expression changed"));
+        }
+        verify_cells(&x, &y, c)?;
+        Ok((key, x, y))
     }
     pub fn reverify_source(&self) -> Result<VerifiedSpanIntersections> {
         let c = &self.certificate;
@@ -278,7 +291,7 @@ pub fn own_translated_span_intersections(
             pairs,
         },
     };
-    owner.reverify_source()?;
+    verify_cells(&x, &y, &owner.certificate)?;
     Ok(owner)
 }
 #[cfg(test)]

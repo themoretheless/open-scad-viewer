@@ -5,7 +5,9 @@ use std::fmt::Write;
 /// Exports 2D contour rings as an ASCII DXF (`LWPOLYLINE` entities on layer `0`).
 pub fn export_dxf_polylines(rings: &[Vec<[f64; 2]>], closed: bool) -> Result<String> {
     check(!rings.is_empty(), "DXF export requires at least one polyline ring.")?;
-    let mut out = String::from("0\nSECTION\n2\nENTITIES\n");
+    let total_pts: usize = rings.iter().map(Vec::len).sum();
+    let mut out = String::with_capacity(64 + rings.len() * 32 + total_pts * 24);
+    out.push_str("0\nSECTION\n2\nENTITIES\n");
     for ring in rings {
         check(
             ring.len() >= 2 && ring.iter().flatten().all(|v| v.is_finite()),
@@ -34,7 +36,8 @@ pub fn export_dxf_mesh(mesh: &MeshView<'_>) -> Result<String> {
         report.triangle_count > 0,
         "DXF mesh export requires at least one triangle.",
     )?;
-    let mut out = String::from("0\nSECTION\n2\nENTITIES\n");
+    let mut out = String::with_capacity(64 + report.triangle_count * 128);
+    out.push_str("0\nSECTION\n2\nENTITIES\n");
     for t in mesh.indices.as_chunks::<3>().0 {
         let a = mesh.point(t[0])?;
         let b = mesh.point(t[1])?;
@@ -142,7 +145,7 @@ pub fn export_dxf_drawing(
 pub fn import_dxf_polylines(dxf: &str) -> Result<Vec<Vec<[f64; 2]>>> {
     check(dxf.len() <= 4 * 1024 * 1024, "DXF input exceeds 4 MiB.")?;
     let mut lines = dxf.lines().map(str::trim);
-    let mut pairs = Vec::new();
+    let mut pairs = Vec::with_capacity(dxf.len() / 8);
     while let Some(code_str) = lines.next() {
         if code_str.is_empty() {
             continue;
@@ -296,7 +299,7 @@ pub fn import_dxf_polylines(dxf: &str) -> Result<Vec<Vec<[f64; 2]>>> {
 pub fn import_dxf_3dfaces(dxf: &str) -> Result<(Vec<f64>, Vec<usize>)> {
     check(dxf.len() <= 4 * 1024 * 1024, "DXF input exceeds 4 MiB.")?;
     let mut lines = dxf.lines().map(str::trim);
-    let mut pairs = Vec::new();
+    let mut pairs = Vec::with_capacity(dxf.len() / 8);
     while let Some(code_str) = lines.next() {
         if code_str.is_empty() {
             continue;

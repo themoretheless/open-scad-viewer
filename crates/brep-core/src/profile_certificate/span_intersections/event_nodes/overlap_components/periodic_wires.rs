@@ -62,10 +62,13 @@ fn rational_point(p: &OriginalPeriodicPoint) -> Result<[Q; 2]> {
     Ok(out)
 }
 fn derive(
-    surface: &OwnedOriginalPeriodicSurface,
+    surface: &Arc<OwnedOriginalPeriodicSurface>,
     sources: &[Vec<OriginalPeriodicSourceUse>],
 ) -> Result<Vec<OriginalPeriodicWire>> {
-    surface.reverify_source()?;
+    crate::profile_certificate::span_intersections::translated::periodic_replay::verify_arc(
+        surface,
+        |x| x.reverify_source(),
+    )?;
     let owner = surface.pieces();
     if sources.len() > 32 || sources.iter().any(Vec::is_empty) {
         return Err(refused(
@@ -240,6 +243,8 @@ impl OwnedOriginalPeriodicWires {
         &self.wires
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay =
+            crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
         if derive(&self.surface, &self.sources)? != self.wires {
             return Err(refused(
                 "Original periodic wire closure orientation or homology changed",
@@ -255,6 +260,8 @@ pub fn own_original_periodic_wires(
     surface: Arc<OwnedOriginalPeriodicSurface>,
     sources: &[Vec<OriginalPeriodicSourceUse>],
 ) -> Result<OwnedOriginalPeriodicWires> {
+    let _replay =
+        crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
     let wires = derive(&surface, sources)?;
     Ok(OwnedOriginalPeriodicWires {
         surface,

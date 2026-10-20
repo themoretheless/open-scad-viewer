@@ -84,7 +84,7 @@ pub(in super::super) fn source_probe_data(
     if o.limits.max_refinements > 512 || !(1..=128).contains(&o.limits.max_resultant_size) {
         return Err(refused("Invalid periodic side parameter allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(o.owner, |x| x.reverify_source())?;
     let graph = o.owner.owner().owner();
     let aligned = graph.owner();
     let cover = aligned.owner().pieces();
@@ -290,6 +290,7 @@ impl OwnedPeriodicSideProbes {
         &self.jumps
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let actual = derive_probes(self)?;
         if actual
             != (
@@ -335,6 +336,7 @@ fn build_probes(
     limits: ParameterOrderLimits,
     transported: bool,
 ) -> Result<OwnedPeriodicSideProbes> {
+    let _replay = super::periodic_replay::scope();
     let zero = std::array::from_fn(|_| std::array::from_fn(|_| ["0".into(), "1".into()]));
     let mut o = OwnedPeriodicSideProbes {
         owner,
@@ -373,9 +375,9 @@ fn integer(v: &str) -> Result<BigInt> {
 }
 type SideData = (Vec<String>, Option<i8>, [Vec<String>; 2], [Vec<String>; 2]);
 fn derive_sides(o: &OwnedPeriodicMaterialSides) -> Result<SideData> {
-    o.probes.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.probes, |x| x.reverify_source())?;
     for s in &o.samples {
-        s.reverify_source()?;
+        super::periodic_replay::verify_arc(s, |x| x.reverify_source())?;
     }
     if !Arc::ptr_eq(o.samples[0].rule(), o.samples[1].rule()) {
         return Err(refused(
@@ -489,6 +491,7 @@ impl OwnedPeriodicMaterialSides {
         self.direction
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (j, d, w, v) = derive_sides(self)?;
         if j != self.operand_jumps
             || d != self.direction
@@ -506,6 +509,7 @@ pub fn own_periodic_material_sides(
     probes: Arc<OwnedPeriodicChartSideProbes>,
     samples: [Arc<OwnedPeriodicMaterialSample>; 2],
 ) -> Result<OwnedPeriodicMaterialSides> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicMaterialSides {
         probes,
         samples,
@@ -535,7 +539,7 @@ pub struct OwnedPeriodicBoundarySelection {
 fn derive_selection(
     o: &OwnedPeriodicBoundarySelection,
 ) -> Result<Vec<OriginalPeriodicSelectedEdge>> {
-    o.rule.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.rule, |x| x.reverify_source())?;
     let graph = o.rule.base().owner().owner().owner();
     if o.sides.len() != graph.edges().len() || o.sides.len() > 1000000 {
         return Err(refused(
@@ -545,7 +549,7 @@ fn derive_selection(
     let mut selected = Vec::new();
     let mut flow = vec![0i64; graph.vertices().len()];
     for (edge, sides) in o.sides.iter().enumerate() {
-        sides.reverify_source()?;
+        super::periodic_replay::verify_arc(sides, |x| x.reverify_source())?;
         if sides.probes().edge() != edge || !Arc::ptr_eq(sides.samples()[0].rule(), &o.rule) {
             return Err(refused(
                 "Periodic boundary selection has missing, repeated or unrelated edge labels",
@@ -576,6 +580,7 @@ impl OwnedPeriodicBoundarySelection {
         &self.selected
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         if derive_selection(self)? != self.selected {
             return Err(refused(
                 "Complete original periodic Boolean boundary selection changed",
@@ -591,6 +596,7 @@ pub fn own_periodic_boundary_selection(
     rule: Arc<OwnedPeriodicMaterialRule>,
     sides: &[Arc<OwnedPeriodicMaterialSides>],
 ) -> Result<OwnedPeriodicBoundarySelection> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicBoundarySelection {
         rule,
         sides: sides.to_vec(),
@@ -610,6 +616,7 @@ mod tests {
     }
     #[test]
     fn actual_cylinder_shore_owns_every_view_and_selects_a_complete_closed_material_boundary() {
+        let _replay = super::super::periodic_replay::scope();
         let curve = Curve::from_polyline(vec![
             vec![0., 0.25],
             vec![1., 0.25],
@@ -715,6 +722,7 @@ mod tests {
     }
     #[test]
     fn actual_torus_seam_preserves_individual_wire_deck_corrections_before_grouping() {
+        let _replay = super::super::periodic_replay::scope();
         let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
         let curves = [
             Curve::from_polyline(vec![vec![0., 0.], vec![0., 4.]]).unwrap(),

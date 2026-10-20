@@ -378,3 +378,53 @@ mod tests {
         assert_eq!(eval(&d[1][1]), Q::one() + &p[1]);
     }
 }
+
+/// Exact rational composition of a tensor chart with a triangular UV map.
+/// UV homogeneous numerators are normalized to the tensor's unit square.
+pub(super) fn compose(h: &sb::Net, uv: &Net, work: &mut Work) -> Result<Net> {
+    let d = uv.len() - 1;
+    let (n, m) = (h.len() - 1, h[0].len() - 1);
+    if d * (n + m) > 33 {
+        return Err(fail("trimmed atlas composition degree budget exceeded"));
+    }
+    let basis = |degree: usize, axis: usize, work: &mut Work| -> Result<Vec<Scalar>> {
+        let x = scalar(uv, axis);
+        let y = difference(&scalar(uv, 3), &x);
+        let mut xp = vec![vec![vec![Q::one()]]];
+        let mut yp = xp.clone();
+        for i in 0..degree {
+            xp.push(product(&xp[i], &x, work)?);
+            yp.push(product(&yp[i], &y, work)?);
+        }
+        (0..=degree)
+            .map(|i| {
+                let mut p = product(&xp[i], &yp[degree - i], work)?;
+                for q in p.iter_mut().flatten() {
+                    *q *= choose(degree, i);
+                }
+                Ok(p)
+            })
+            .collect()
+    };
+    let (u, v) = (basis(n, 0, work)?, basis(m, 1, work)?);
+    let degree = d * (n + m);
+    let mut out = (0..=degree)
+        .map(|i| vec![std::array::from_fn(|_| Q::zero()); degree + 1 - i])
+        .collect::<Net>();
+    for i in 0..=n {
+        for j in 0..=m {
+            let p = product(&u[i], &v[j], work)?;
+            for (a, row) in p.iter().enumerate() {
+                for (b, q) in row.iter().enumerate() {
+                    for k in 0..4 {
+                        out[a][b][k] += &h[i][j][k] * q;
+                    }
+                }
+            }
+        }
+    }
+    if out.iter().flatten().any(|p| p[3] <= Q::zero()) {
+        return Err(fail("trimmed atlas composed weights are not positive"));
+    }
+    Ok(out)
+}

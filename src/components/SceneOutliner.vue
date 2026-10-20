@@ -64,13 +64,16 @@ const focusedSourceId = ref<number | null>(null)
 onBeforeUnmount(clearActiveSourceHighlight)
 watch(query, clearActiveSourceHighlight)
 watch(() => props.meshes, meshes => {
-  const availableSourceIds = new Set(
-    meshes.flatMap(mesh => (mesh.sources ?? []).map(source => source.sourceId)),
-  )
+  if (hoveredSourceId.value === null && focusedSourceId.value === null) return
+  const availableSourceIds = new Set<number>()
+  for (const mesh of meshes) {
+    if (!mesh.sources) continue
+    for (const source of mesh.sources) availableSourceIds.add(source.sourceId)
+  }
   if ((hoveredSourceId.value !== null && !availableSourceIds.has(hoveredSourceId.value))
       || (focusedSourceId.value !== null && !availableSourceIds.has(focusedSourceId.value))) {
     clearActiveSourceHighlight()
-  } else if (hoveredSourceId.value !== null || focusedSourceId.value !== null) {
+  } else {
     // setMeshes() replaces GPU buffers, so a still-active DOM row must restore
     // its overlay even though pointerenter/focus does not fire again.
     emitActiveSourceHighlight()
@@ -80,10 +83,13 @@ watch(() => props.meshes, meshes => {
 const filteredMeshes = computed(() => {
   const needle = normalize(query.value.trim())
   if (!needle) return props.meshes
-  return props.meshes.filter(mesh => normalize([
-    mesh.name,
-    ...(mesh.sources ?? []).map(source => source.label ?? ''),
-  ].join(' ')).includes(needle))
+  return props.meshes.filter(mesh => {
+    if (normalize(mesh.name).includes(needle)) return true
+    if (!mesh.sources?.length) return false
+    const parts = [mesh.name]
+    for (const source of mesh.sources) if (source.label) parts.push(source.label)
+    return normalize(parts.join(' ')).includes(needle)
+  })
 })
 
 const filteredHasSelection = computed(() => filteredMeshes.value.some(mesh => isSelected(mesh)))
@@ -94,8 +100,14 @@ watch(filteredMeshes, meshes => {
 }, { immediate: true })
 
 const allExpanded = computed(() => {
-  const expandable = filteredMeshes.value.filter(mesh => mesh.sources?.length)
-  return expandable.length > 0 && expandable.every(mesh => expandedIds.value.has(mesh.id))
+  let hasExpandable = false
+  const expanded = expandedIds.value
+  for (const mesh of filteredMeshes.value) {
+    if (!mesh.sources?.length) continue
+    hasExpandable = true
+    if (!expanded.has(mesh.id)) return false
+  }
+  return hasExpandable
 })
 
 onBeforeUpdate(() => { rowRefs.value = [] })
@@ -220,8 +232,14 @@ function closeSearch() {
   panelRef.value?.focus({ preventScroll: true })
 }
 
+const countFormatterCache = new Map<string, Intl.NumberFormat>()
 function formatCount(value: number) {
-  return value.toLocaleString(props.locale)
+  let fmt = countFormatterCache.get(props.locale)
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(props.locale)
+    countFormatterCache.set(props.locale, fmt)
+  }
+  return fmt.format(value)
 }
 
 function colorStyle(color: SceneMeshRow['color'] | SourceProvenanceRow['color']) {

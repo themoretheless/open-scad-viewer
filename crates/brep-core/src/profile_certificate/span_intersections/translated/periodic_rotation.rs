@@ -27,6 +27,7 @@ fn slice(
     axis: usize,
     sign: i8,
     l: ContactPortOrderLimits,
+    originals: &[Vec<Cell>],
 ) -> Result<(SliceBranch, BranchNeighbourhoodRecord)> {
     let charts = owner.owner();
     let graph = charts.owner();
@@ -63,8 +64,7 @@ fn slice(
             "Periodic tangent slice uses an unrelated local vertex chart",
         ));
     }
-    let actual = cells(&cover.sources()[p.source])?;
-    let cell = &actual[p.cell];
+    let cell = &originals[p.source][p.cell];
     let shift = [
         decode_ratio(&piece.translation[0])? + decode_ratio(&transport.translation[0])?,
         decode_ratio(&piece.translation[1])? + decode_ratio(&transport.translation[1])?,
@@ -111,6 +111,7 @@ fn compare(
     a: usize,
     b: usize,
     l: ContactPortOrderLimits,
+    originals: &[Vec<Cell>],
 ) -> Result<(Ordering, Option<OriginalPeriodicTangentWitness>)> {
     let first = &owner.ports()[a];
     let second = &owner.ports()[b];
@@ -130,8 +131,8 @@ fn compare(
             "Periodic tangent ports have incompatible leading directions",
         ));
     }
-    let (a_branch, a_proof) = slice(owner, first, axis, sign, l)?;
-    let (b_branch, b_proof) = slice(owner, second, axis, sign, l)?;
+    let (a_branch, a_proof) = slice(owner, first, axis, sign, l, originals)?;
+    let (b_branch, b_proof) = slice(owner, second, axis, sign, l, originals)?;
     let order = arithmetic::branch_slice::compare(
         a_branch,
         b_branch,
@@ -164,7 +165,13 @@ fn derive(o: &OwnedPeriodicRotation) -> Result<Data> {
     {
         return Err(refused("Invalid original quotient cyclic order allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    let cover = o.owner.owner().owner().owner().owner().pieces();
+    let originals = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
     let mut comparisons = 0;
     let mut rotations = Vec::new();
     let mut witnesses = Vec::new();
@@ -185,7 +192,7 @@ fn derive(o: &OwnedPeriodicRotation) -> Result<Data> {
                 }
                 comparisons += 1;
                 let mid = lo + (hi - lo) / 2;
-                let (order, witness) = compare(&o.owner, candidate, ordered[mid], l)?;
+                let (order, witness) = compare(&o.owner, candidate, ordered[mid], l, &originals)?;
                 if let Some(w) = witness {
                     witnesses.push(w);
                 }
@@ -226,6 +233,7 @@ impl OwnedPeriodicRotation {
         &self.tangent_witnesses
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (r, c, t) = derive(self)?;
         if r != self.rotations || c != self.comparisons || t != self.tangent_witnesses {
             return Err(refused(
@@ -241,6 +249,7 @@ pub fn own_periodic_rotation(
     owner: Arc<OwnedPeriodicPorts>,
     limits: ContactPortOrderLimits,
 ) -> Result<OwnedPeriodicRotation> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicRotation {
         owner,
         limits,

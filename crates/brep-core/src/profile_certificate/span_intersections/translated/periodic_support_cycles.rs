@@ -98,8 +98,8 @@ fn derive(o: &OwnedPeriodicSupportCycles) -> Result<Data> {
     if !(1..=1000000).contains(&o.max_darts) || n > o.max_darts || o.max_refinements > 512 {
         return Err(refused("Invalid complete support sector/dart allowance"));
     }
-    o.owner.reverify_source()?;
-    o.rotation.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
+    super::periodic_replay::verify_arc(&o.rotation, |rotation| rotation.reverify_source())?;
     let ports = o.rotation.owner().ports();
     let charts = o.rotation.owner().owner();
     let rows = o.rotation.rotations();
@@ -300,7 +300,7 @@ fn derive_lifts(
     if o.max_refinements > 512 || !(1..=1000000).contains(&o.max_parts) {
         return Err(refused("Invalid complete support-boundary lift allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let expected = o
         .owner
         .dart_walks()

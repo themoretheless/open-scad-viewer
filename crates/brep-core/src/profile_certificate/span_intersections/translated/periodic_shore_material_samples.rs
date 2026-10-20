@@ -328,6 +328,7 @@ mod tests {
         .unwrap()
     }
     fn qualify(o: &OwnedPeriodicShoreMaterialSamples) -> OwnedPeriodicChartCycles {
+        let _replay = super::super::periodic_replay::scope();
         let intervals = own_periodic_shore_material_intervals(
             Arc::new(o.clone()),
             ParameterOrderLimits::default(),
@@ -566,6 +567,7 @@ mod tests {
     }
     #[test]
     fn actual_zero_source_torus_point_labels_use_no_invented_sources_and_complete_interval_germs() {
+        let _replay = super::super::periodic_replay::scope();
         let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
         let input = super::super::periodic_support_boundaries::tests::original(
             &surface,

@@ -43,7 +43,7 @@ fn derive(o: &OwnedPeriodicChartFanPatches) -> Result<Data> {
     if !(1..=1_000_000).contains(&o.limits.max_relation_work) {
         return Err(refused("Invalid complete fan patch relation allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let loops = o.owner.owner();
     let cycles = loops.owner();
     let n = loops.loops().len();
@@ -195,6 +195,7 @@ mod tests {
         assert!(!alternating([0, 1], [2, 3]));
     }
     fn build(w: OwnedPeriodicChartWinding) -> OwnedPeriodicChartFanPatches {
+        let _replay = super::super::periodic_replay::scope();
         let loops = Arc::new(
             own_periodic_chart_boundary_loops(w.owner().clone(), Default::default()).unwrap(),
         );

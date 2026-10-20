@@ -24,6 +24,8 @@ struct GpuSdf {
     device: Device,
     queue: wgpu::Queue,
     kernel: Kernel,
+    #[cfg(test)]
+    disable_small_updates: bool,
     buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
@@ -33,6 +35,7 @@ struct Buffers {
     aux_capacity: usize,
     triangle_capacity: usize,
     value_capacity: usize,
+    small_input: Option<(Buffer, [usize; 5])>,
     params: Buffer,
     kinds: Buffer,
     node_params: Buffer,
@@ -65,6 +68,8 @@ impl GpuSdf {
             device: context.device.clone(),
             queue: context.queue.clone(),
             kernel,
+            #[cfg(test)]
+            disable_small_updates: false,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -96,65 +101,120 @@ impl GpuSdf {
         let aux_capacity = aux_count.max(1);
         let triangle_capacity = triangle_count.max(1);
         let value_capacity = value_count.max(1);
-        let params = mk(
-            device,
-            "sdf_params",
+        let sizes = [
             40,
-            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-        );
-        let kinds = mk(
-            device,
-            "sdf_kinds",
-            (kind_capacity * 4) as u64,
-            BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        );
-        let node_params = mk(
-            device,
-            "sdf_nodes",
-            (param_capacity * 4) as u64,
-            BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        );
-        let aux = mk(
-            device,
-            "sdf_aux",
-            (aux_capacity * 4) as u64,
-            BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        );
-        let triangles = mk(
-            device,
-            "sdf_tris",
-            (triangle_capacity * 4) as u64,
-            BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        );
+            kind_capacity * 4,
+            param_capacity * 4,
+            aux_capacity * 4,
+            triangle_capacity * 4,
+        ];
+        let alignment = device.limits().min_storage_buffer_offset_alignment as usize;
+        let mut offsets = [0usize; 5];
+        for i in 1..5 {
+            offsets[i] = (offsets[i - 1] + sizes[i - 1]).next_multiple_of(alignment);
+        }
+        let total = offsets[4] + sizes[4];
+        let allowed = {
+            #[cfg(test)]
+            {
+                !self.disable_small_updates
+            }
+            #[cfg(not(test))]
+            {
+                true
+            }
+        };
+        // Qualified on Apple Silicon Metal; other backends keep their old path.
+        let small_input = (allowed && gpu_compute::shared_memory_uploads(device) && total <= 4096)
+            .then(|| {
+                (
+                    mk(
+                        device,
+                        "sdf small inputs",
+                        total as u64,
+                        BufferUsages::UNIFORM | BufferUsages::STORAGE | BufferUsages::COPY_DST,
+                    ),
+                    offsets,
+                )
+            });
+        let (params, kinds, node_params, aux, triangles) = if let Some((buffer, _)) = &small_input {
+            (
+                buffer.clone(),
+                buffer.clone(),
+                buffer.clone(),
+                buffer.clone(),
+                buffer.clone(),
+            )
+        } else {
+            let params = mk(
+                device,
+                "sdf_params",
+                40,
+                BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            );
+            let kinds = mk(
+                device,
+                "sdf_kinds",
+                (kind_capacity * 4) as u64,
+                BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            );
+            let node_params = mk(
+                device,
+                "sdf_nodes",
+                (param_capacity * 4) as u64,
+                BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            );
+            let aux = mk(
+                device,
+                "sdf_aux",
+                (aux_capacity * 4) as u64,
+                BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            );
+            let triangles = mk(
+                device,
+                "sdf_tris",
+                (triangle_capacity * 4) as u64,
+                BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            );
+            (params, kinds, node_params, aux, triangles)
+        };
         let values = mk(
             device,
             "sdf_values",
             (value_capacity * 4) as u64,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
+        fn binding(buffer: &Buffer, offset: usize, size: usize) -> wgpu::BindingResource<'_> {
+            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer,
+                offset: offset as u64,
+                size: std::num::NonZeroU64::new(size as u64),
+            })
+        }
+        let bind_offsets = small_input.as_ref().map_or([0; 5], |(_, offsets)| *offsets);
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("sdf_grid"),
             layout: self.kernel.bind_group_layout(),
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: params.as_entire_binding(),
+                    resource: binding(&params, bind_offsets[0], sizes[0]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: kinds.as_entire_binding(),
+                    resource: binding(&kinds, bind_offsets[1], sizes[1]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: node_params.as_entire_binding(),
+                    resource: binding(&node_params, bind_offsets[2], sizes[2]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
-                    resource: aux.as_entire_binding(),
+                    resource: binding(&aux, bind_offsets[3], sizes[3]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 4,
-                    resource: triangles.as_entire_binding(),
+                    resource: binding(&triangles, bind_offsets[4], sizes[4]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 5,
@@ -168,6 +228,7 @@ impl GpuSdf {
             aux_capacity,
             triangle_capacity,
             value_capacity,
+            small_input,
             params,
             kinds,
             node_params,
@@ -202,18 +263,40 @@ impl GpuSdf {
         );
         let buffers = self.buffers.borrow();
         let b = buffers.as_ref().expect("ensure_buffers was just called");
-        self.queue.write_buffer(&b.params, 0, &params);
-        if !kinds.is_empty() {
-            self.queue.write_buffer(&b.kinds, 0, &kinds);
-        }
-        if !node_params.is_empty() {
-            self.queue.write_buffer(&b.node_params, 0, &node_params);
-        }
-        if !aux.is_empty() {
-            self.queue.write_buffer(&b.aux, 0, &aux);
-        }
-        if !tris.is_empty() {
-            self.queue.write_buffer(&b.triangles, 0, &tris);
+        if let Some((buffer, offsets)) = &b.small_input {
+            let zero = [0u8; 4096];
+            gpu_compute::write_small_parts(
+                &self.queue,
+                buffer,
+                0,
+                [
+                    params.as_slice(),
+                    &zero[..offsets[1] - params.len()],
+                    &kinds,
+                    &zero[..offsets[2] - offsets[1] - kinds.len()],
+                    &node_params,
+                    &zero[..offsets[3] - offsets[2] - node_params.len()],
+                    &aux,
+                    &zero[..offsets[4] - offsets[3] - aux.len()],
+                    &tris,
+                ]
+                .into_iter(),
+            )
+            .expect("validated small SDF upload");
+        } else {
+            self.queue.write_buffer(&b.params, 0, &params);
+            if !kinds.is_empty() {
+                self.queue.write_buffer(&b.kinds, 0, &kinds);
+            }
+            if !node_params.is_empty() {
+                self.queue.write_buffer(&b.node_params, 0, &node_params);
+            }
+            if !aux.is_empty() {
+                self.queue.write_buffer(&b.aux, 0, &aux);
+            }
+            if !tris.is_empty() {
+                self.queue.write_buffer(&b.triangles, 0, &tris);
+            }
         }
         self.kernel.dispatch_bind_group(
             &self.device,
@@ -236,6 +319,10 @@ thread_local! {
 
 /// Samples the whole grid on the GPU; None without an adapter (CPU fallback).
 pub(crate) fn sample_grid_gpu(flat: &FlatField, grid: &Grid) -> Option<Vec<f32>> {
+    #[cfg(test)]
+    if let Some(result) = TEST_SDF.with(|s| s.borrow().as_ref().map(|s| s.run(flat, grid))) {
+        return Some(result);
+    }
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuSdf)> = cell;
         shared.map(|(_, sdf)| sdf.run(flat, grid))
@@ -248,3 +335,8 @@ pub(crate) fn backend_report() -> Option<BackendReport> {
         shared.map(|(context, _)| context.backend_report())
     })
 }
+
+#[cfg(test)]
+thread_local! { static TEST_SDF: std::cell::RefCell<Option<std::rc::Rc<GpuSdf>>> = const { std::cell::RefCell::new(None) }; }
+#[cfg(test)]
+mod small_batch_tests;

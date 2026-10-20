@@ -22,7 +22,8 @@ export function constructSolidSurface(document:DirectDocument,ids:string[],kind:
 }
 
 export interface SolidSurfaceBuildOptions {kind:SolidSurfaceConstruction;ids:string[];id:string;group?:string;reversed:boolean[];sweep:SweepOptions;patchPreparation?:{enabled:boolean;maxError:number};runout?:Parameters<typeof createG2WorldRunout>[3]}
-export function isSolidSurfaceBuild(kind:unknown):kind is SolidSurfaceConstruction{return ['nurbs-loft','nurbs-sweep','nurbs-patch','nurbs-runout'].includes(String(kind))}
+const SOLID_SURFACE_BUILDS = new Set<string>(['nurbs-loft','nurbs-sweep','nurbs-patch','nurbs-runout'])
+export function isSolidSurfaceBuild(kind:unknown):kind is SolidSurfaceConstruction{return typeof kind==='string'&&SOLID_SURFACE_BUILDS.has(kind)}
 export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOptions):{document:DirectDocument|null;error:string;report:FramedSweepResult['report']|null;patchReports?:CoonsBoundaryPreparation['report'][];runoutReport?:G2RunoutReport}{
  let report:FramedSweepResult['report']|null=null
  try{
@@ -34,7 +35,10 @@ export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOpt
    const result=createG2WorldRunout(source.surface,plane.surface,curve.curve,p.runout)
    if(!result.report.complete||!result.report.withinTolerance)return {document:null,error:'RUNOUT_G2_UNPROVEN',report:null,runoutReport:result.report}
    const surfaces=result.patches.map((surface,i)=>({id:i===0?p.id:`${p.id}:${i}`,name:`G2 transition ${i+1}`,surface,segmentsU:24,segmentsV:24,...p.group?{group:p.group}:{}}))
-   if(surfaces.some(s=>document.surfaces?.some(old=>old.id===s.id)))throw Error('RUNOUT_ID_EXISTS')
+   if(document.surfaces?.length){
+    const existingIds=new Set(document.surfaces.map(old=>old.id))
+    if(surfaces.some(s=>existingIds.has(s.id)))throw Error('RUNOUT_ID_EXISTS')
+   }
    return {document:{...document,surfaces:[...document.surfaces??[],...surfaces]},error:'',report:null,runoutReport:result.report}
   }
   let source=document

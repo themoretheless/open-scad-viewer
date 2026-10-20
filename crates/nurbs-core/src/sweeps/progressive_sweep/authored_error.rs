@@ -443,9 +443,9 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
     // length residuals remain independent, fully charged source queries.
     let mut constant_relative=frame_laws.is_none();
     if constant_relative {
-        let mut laws=vec![sweep.scale,sweep.twist];
-        if let Some((axis,center))=sweep.affine_laws {laws.extend([axis,center]);}
-        'laws: for law in laws {for pole in &law.control_points {
+        let mut laws=[Some(sweep.scale),Some(sweep.twist),None,None];
+        if let Some((axis,center))=sweep.affine_laws {laws[2]=Some(axis);laws[3]=Some(center);}
+        'laws: for law in laws.into_iter().flatten() {for pole in &law.control_points {
             if out.cells==max_cells {return Ok(out);}
             out.cells+=1;
             if pole!=&law.control_points[0] {constant_relative=false;break 'laws;}
@@ -1416,15 +1416,17 @@ fn fixed_affine_interval(sweep:&Sweep<'_>,count:usize,interval:[f64;2])->bool {
 // comparisons handle separated knots; ambiguous affine maps use exact sums
 // of binary64 products, never rounded normalized knot coordinates.
 fn original_laws_have_no_interior_knots(sweep:&Sweep<'_>,interval:[f64;2],cells:&mut usize,max_cells:usize)->Result<bool> {
-    let mut curves=vec![sweep.path,sweep.scale,sweep.twist];
-    if let Some((a,b))=sweep.affine_laws {curves.extend([a,b]);}
-    if let Some((a,b))=sweep.frame_laws {curves.extend([a,b]);}
-    if let Some(guide)=sweep.orientation_guide {curves.push(guide);}
-    for curve in curves {
+    let mut curves=[Some(sweep.path),Some(sweep.scale),Some(sweep.twist),None,None,None,None,sweep.orientation_guide];
+    if let Some((a,b))=sweep.affine_laws {curves[3]=Some(a);curves[4]=Some(b);}
+    if let Some((a,b))=sweep.frame_laws {curves[5]=Some(a);curves[6]=Some(b);}
+    for curve in curves.into_iter().flatten() {
         let [a,b]=curve.domain();
         let mut previous=None;
         let width=I::point(b).sub(I::point(a))?;
-        let mapped=interval.map(|t|I::point(a).add(width.mul(I::point(t))?)).into_iter().collect::<Result<Vec<_>>>()?;
+        let mapped=[
+            I::point(a).add(width.mul(I::point(interval[0]))?)?,
+            I::point(a).add(width.mul(I::point(interval[1]))?)?,
+        ];
         for &k in &curve.knots {
             if k<=a||k>=b||previous==Some(k){continue;}
             previous=Some(k);
@@ -3696,6 +3698,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         let (speed_cover,speed_lower)=crate::curve_regularity::inspect_speed(guide,max_cells-out.cells)?;
         out.cells+=speed_cover.cells;
         let Some(speed_lower)=speed_lower else {out.reason=Some("guide-arc-speed-lower-unproved");return Ok(out);};
+        guide_source.reserve(guide_division.points.len());
         for p in &guide_division.points{
             let radius=I::point(p.residual_upper).div(I::point(speed_lower))?;
             let bracket=[p.inverse_parameter_bounds[0].max(I::point(p.parameter).sub(radius)?.lo),
@@ -3739,7 +3742,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         let Some(lower)=lower else{out.reason=reason.or(Some("corrected-arc-speed-lower-unproved"));return Ok(out);};
         Some(lower)
     }else{None};
-    let mut source=Vec::new();
+    let mut source=Vec::with_capacity(division.points.len());
     for p in &division.points{
         let mut bracket=p.inverse_parameter_bounds;
         if let Some(lower)=inverse_speed {
@@ -3854,7 +3857,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
                     let h=I::point(station[1]).sub(I::point(station[0]))?;
                     let arc=I::new(division.total.bounds[0],division.total.bounds[1])?.mul(h)?;
                     let position=curvature.mul(arc.mul(arc)?)?.div(I::point(8.))?;
-                    let mut endpoints=Vec::new();
+                    let mut endpoints=Vec::with_capacity(2);
                     for e in 0..2 {
                         let endpoint=if let Some(pose)=shared_pose.as_deref_mut(){pose.values(sweep,&qs,source[i+e],[station[e];2],max_cells-out.cells)?}
                             else{authored_frame_certificate::certify_frenet_relative_values(
@@ -3876,8 +3879,12 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
                                 displacement=displacement.max(crate::numerics::interval_vec3::norm(delta)?.add(I::point(division.points[i+e].residual_upper))?.hi);
                             }
                             endpoint_upper=endpoint_upper.max(displacement);
-                            let dd=jet.second.map(|v|I::new(v[0],v[1])).into_iter().collect::<Result<Vec<_>>>()?;
-                            let remainder=crate::numerics::interval_vec3::norm([dd[0],dd[1],dd[2]])?.mul(h.mul(h)?)?.div(I::point(8.))?;
+                            let dd=[
+                                I::new(jet.second[0][0],jet.second[0][1])?,
+                                I::new(jet.second[1][0],jet.second[1][1])?,
+                                I::new(jet.second[2][0],jet.second[2][1])?,
+                            ];
+                            let remainder=crate::numerics::interval_vec3::norm(dd)?.mul(h.mul(h)?)?.div(I::point(8.))?;
                             let refined=remainder.add(position)?.add(I::point(displacement))?.hi;
                             // Both covers enclose the same original field. A
                             // numerically broad second jet cannot worsen the

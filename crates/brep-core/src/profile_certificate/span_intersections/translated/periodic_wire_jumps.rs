@@ -73,7 +73,7 @@ fn derive(o: &OwnedPeriodicWireJumps) -> Result<Data> {
     if o.max_work == 0 || o.max_work > 10000000 {
         return Err(refused("Invalid complete original wire jump allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let wires = graph.seam_contacts().embedding().wires();
     let mut source_wire = vec![None; cover.sources().len()];
     for (wire, uses) in wires.source_uses().iter().enumerate() {
@@ -231,6 +231,7 @@ impl OwnedPeriodicWireJumps {
         self.work
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (e, b, f, w) = derive(self)?;
         if e != self.edges || b != self.balances || f != self.fluxes || w != self.work {
             return Err(refused(
@@ -247,6 +248,7 @@ pub fn own_periodic_wire_jumps(
     owner: Arc<OwnedPeriodicVertexCharts>,
     max_work: usize,
 ) -> Result<OwnedPeriodicWireJumps> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicWireJumps {
         owner,
         max_work,
@@ -303,6 +305,7 @@ pub(in crate::profile_certificate::span_intersections::translated) mod tests {
                 surface.knots_v[surface.control_points[0].len()],
             ],
         ];
+        let _replay = super::super::periodic_replay::scope();
         let copies = 3usize.pow(wrapped.iter().filter(|w| **w).count() as u32);
         let cover = Arc::new(
             own_original_periodic_pieces(

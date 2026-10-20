@@ -14,9 +14,13 @@ export function pathPoints(path:number[][],fractions:number[]):number[][] {
 }
 export function pathPoint(path:number[][],fraction:number):number[]{return pathPoints(path,[fraction])[0]}
 export function cadOperation(input:DirectDocument,o:CadOptions):DirectDocument{
- const d=structuredClone(input),selected=o.ids.map(id=>d.bodies.find(b=>b.id===id)).filter((b):b is DirectBody=>!!b)
+ const d=structuredClone(input)
+ const indexById=new Map<string,number>()
+ for(let i=0;i<d.bodies.length;i++)indexById.set(d.bodies[i].id,i)
+ const selected:DirectBody[]=[]
+ for(const id of o.ids){const idx=indexById.get(id);if(idx!==undefined)selected.push(d.bodies[idx])}
  if(!(Number.isFinite(o.origin[0])&&Number.isFinite(o.origin[1])&&Number.isFinite(o.origin[2])&&Number.isFinite(o.amount)&&Number.isFinite(o.width)&&Number.isFinite(o.height)&&Number.isFinite(o.depth)&&Number.isFinite(o.pitch)&&Number.isFinite(o.secondary)))throw Error('Enter finite parameters.')
- const replace=(b:DirectBody)=>{d.bodies[d.bodies.findIndex(old=>old.id===b.id)]=b}
+ const replace=(b:DirectBody)=>{const idx=indexById.get(b.id);if(idx!==undefined)d.bodies[idx]=b}
  if(o.action==='mirror'){
   if(!selected.length)throw Error('Select bodies.')
   const mirrored=callGeometryRust<DirectBody[]>('cad_mirror_bodies',{bodies:selected,origin:o.origin,axis:o.axis}).map(typedBody)
@@ -36,10 +40,10 @@ export function cadOperation(input:DirectDocument,o:CadOptions):DirectDocument{
   groups.forEach((group,i)=>group.forEach(body=>{if(i===0)replace(body);else d.bodies.push({...body,id:crypto.randomUUID()})}))
   return d
  }
- if(['union','difference','intersection'].includes(o.action)){
+ if(o.action==='union'||o.action==='difference'||o.action==='intersection'){
   const result=callGeometryRust<DirectBody[]>('cad_boolean_bodies',{bodies:selected,operation:o.action}).map(typedBody)
-  const first=selected[0]?.id
-  d.bodies=d.bodies.flatMap(body=>body.id===first?result:o.ids.includes(body.id)?[]:[body])
+  const first=selected[0]?.id,selectedIdSet=new Set(o.ids)
+  d.bodies=d.bodies.flatMap(body=>body.id===first?result:selectedIdSet.has(body.id)?[]:[body])
   return d
  }
  if(o.action==='hole'){

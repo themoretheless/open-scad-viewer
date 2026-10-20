@@ -35,7 +35,7 @@ fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
     if !(1..=1000000).contains(&o.max_work_per_corner) {
         return Err(refused("Invalid exact native corner work allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let incidence = o.owner.owner();
     let traces = incidence.owner();
     let regions = traces.owner();

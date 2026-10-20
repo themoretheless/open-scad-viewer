@@ -18,7 +18,7 @@ pub use backend::{
 };
 pub use buffer::{
     f32_le_bytes, pack_f32, pack_u32, read_buffer, storage_entry, u32_le_bytes, uniform_entry,
-    write_buffer_words,
+    write_buffer_words, write_small_parts,
 };
 pub use context::{GpuContext, GpuContextError};
 pub use executor::block_on;

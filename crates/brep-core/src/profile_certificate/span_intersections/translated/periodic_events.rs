@@ -110,30 +110,35 @@ fn derive(
             "Invalid exact periodic event piece reference or limits",
         ));
     }
-    o.pieces.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.pieces, |p| p.reverify_source())?;
     let a = &o.pieces.pieces()[o.pair[0]];
     let b = &o.pieces.pieces()[o.pair[1]];
-    let (key, _, _) = context(
+    let offs = offsets(a, b, &o.second_translation_delta)?;
+    let original = source(
         &o.pieces.sources()[a.source],
         &o.pieces.sources()[b.source],
-        &offsets(a, b, &o.second_translation_delta)?,
         false,
         o.census.certificate.maximum_parameter_width,
     )?;
+    let decode = |s: &[ExactRatio; 2]| -> Result<[Q; 2]> {
+        Ok([decode_ratio(&s[0])?, decode_ratio(&s[1])?])
+    };
+    let shifts = [decode(&offs[0])?, decode(&offs[1])?];
+    let key = format!(
+        "translated-span-v1/{original}/{}/{}/{}/{}",
+        shifts[0][0], shifts[0][1], shifts[1][0], shifts[1][1]
+    );
     if o.census.certificate.source != key {
         return Err(refused(
             "Periodic event census does not belong to actual translated pieces",
         ));
     }
-    let events = o
-        .census
-        .exact_nodes()?
+    let (_, raw_nodes, raw_overlaps) = o.census.exact_nodes_and_overlaps()?;
+    let events = raw_nodes
         .into_iter()
         .map(|n| classify(o, n))
         .collect::<Result<Vec<_>>>()?;
-    let common = o
-        .census
-        .exact_overlap_endpoints()?
+    let common = raw_overlaps
         .into_iter()
         .map(|(pair, [a, b])| Ok((pair, [classify(o, a)?, classify(o, b)?])))
         .collect::<Result<Vec<_>>>()?;
@@ -163,6 +168,7 @@ impl OwnedPeriodicPairEvents {
         &self.common_endpoints
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (a, b) = derive(self)?;
         if a != self.events || b != self.common_endpoints {
             return Err(refused(
@@ -195,12 +201,13 @@ pub fn own_periodic_pair_events_translated(
     limits: ParameterOrderLimits,
     delta: &[ExactRatio; 2],
 ) -> Result<OwnedPeriodicPairEvents> {
+    let _replay = super::periodic_replay::scope();
     if pair.iter().any(|i| *i >= pieces.pieces().len()) {
         return Err(refused(
             "Periodic event piece index outside actual source cover",
         ));
     }
-    pieces.reverify_source()?;
+    super::periodic_replay::verify_arc(&pieces, |p| p.reverify_source())?;
     let a = &pieces.pieces()[pair[0]];
     let b = &pieces.pieces()[pair[1]];
     let census = own_translated_span_intersections(

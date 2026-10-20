@@ -121,8 +121,9 @@ watch(() => props.open, async open => {
 }, { immediate: true })
 
 watch(document, d => {
+  if (elementDrag) return
   try { storageSet(storageKey, stringifyMeshJson(d)) } catch { /* ignore quota */ }
-}, { deep: true })
+})
 
 // A seed (the Code scene or a Solid document) replaces the workspace once; later opens keep the user's edits.
 const appliedSeeds = new WeakSet<MeshWorkspaceDocument>()
@@ -535,21 +536,25 @@ function projected(object: MeshWorkspaceDocument['objects'][number]) {
   const cam = camera.value
   const tris = projectMeshModelerFaces(object.mesh, cam)
   const verts: Array<{ x: number; y: number; id: number }> = []
+  const pos = object.mesh.positions
   if (selectMode.value === 'vertex') {
-    for (let i = 0; i < object.mesh.positions.length / 3; i++) {
-      const p = projectDirectPoint([object.mesh.positions[i * 3], object.mesh.positions[i * 3 + 1], object.mesh.positions[i * 3 + 2]], cam)
+    for (let i = 0, o = 0; o < pos.length; i++, o += 3) {
+      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
       verts.push({ x: p[0], y: -p[1], id: i })
     }
   }
-  const edges = selectMode.value === 'edge' ? getEdgeList(object.mesh).map(([a, b], id) => {
-    const point = (vertex: number) => projectDirectPoint([
-      object.mesh.positions[vertex * 3],
-      object.mesh.positions[vertex * 3 + 1],
-      object.mesh.positions[vertex * 3 + 2],
-    ], cam)
-    const pa = point(a), pb = point(b)
-    return { id, x1: pa[0], y1: -pa[1], x2: pb[0], y2: -pb[1] }
-  }) : []
+  const edges = selectMode.value === 'edge' ? (() => {
+    const edgeList = getEdgeList(object.mesh)
+    const vertexCount = pos.length / 3
+    const projX = new Float64Array(vertexCount)
+    const projY = new Float64Array(vertexCount)
+    for (let i = 0, o = 0; i < vertexCount; i++, o += 3) {
+      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
+      projX[i] = p[0]
+      projY[i] = -p[1]
+    }
+    return edgeList.map(([a, b], id) => ({ id, x1: projX[a], y1: projY[a], x2: projX[b], y2: projY[b] }))
+  })() : []
   return { tris, verts, edges }
 }
 
@@ -661,9 +666,16 @@ function onWheel(event: WheelEvent) {
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
 const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
-const sceneFaces = computed(() => scene.value.flatMap(object =>
-  object.tris.map(tri => ({ ...tri, objectId: object.id })),
-).sort((a, b) => a.depth - b.depth))
+const sceneFaces = computed(() => {
+  const faces: Array<{ points: string; face: number; depth: number; objectId: string }> = []
+  for (const object of scene.value) {
+    const objectId = object.id
+    for (const tri of object.tris) {
+      faces.push({ points: tri.points, face: tri.face, depth: tri.depth, objectId })
+    }
+  }
+  return faces.sort((a, b) => a.depth - b.depth)
+})
 </script>
 
 <template>

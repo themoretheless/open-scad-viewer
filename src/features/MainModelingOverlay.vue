@@ -21,36 +21,43 @@ const snapCandidates=computed(()=>props.operation==='move'?sceneSnapPoints(props
 const snapTarget=shallowRef<number[]|null>(null)
 const svg=ref<SVGSVGElement>(),rectangle=ref<{a:number[];b:number[]}|null>(null)
 const bodies=computed(()=>props.meshes.map(sceneBody))
-const points=(i:number)=>{const b=bodies.value[i];if(!b)return [];const pos=b.mesh.positions,count=pos.length/3,out=new Array<number[]>(count);for(let j=0;j<count;j++){const o=j*3;out[j]=[pos[o],pos[o+1],pos[o+2]]}return out}
-const selectedPoints=computed(()=>props.selection.flatMap(points))
 const center=computed<Vec3>(()=>{
- const pts=selectedPoints.value
- if(!pts.length)return [0,0,0]
- let min0=Infinity,max0=-Infinity,min1=Infinity,max1=-Infinity,min2=Infinity,max2=-Infinity
- for(let i=0;i<pts.length;i++){
-  const p=pts[i],x=p[0],y=p[1],z=p[2]
-  if(x<min0)min0=x;if(x>max0)max0=x
-  if(y<min1)min1=y;if(y>max1)max1=y
-  if(z<min2)min2=z;if(z>max2)max2=z
+ let min0=Infinity,max0=-Infinity,min1=Infinity,max1=-Infinity,min2=Infinity,max2=-Infinity,hasPoints=false
+ const allBodies=bodies.value
+ for(const idx of props.selection){
+  const b=allBodies[idx];if(!b)continue
+  const pos=b.mesh.positions
+  for(let o=0;o<pos.length;o+=3){
+   hasPoints=true
+   const x=pos[o],y=pos[o+1],z=pos[o+2]
+   if(x<min0)min0=x;if(x>max0)max0=x
+   if(y<min1)min1=y;if(y>max1)max1=y
+   if(z<min2)min2=z;if(z>max2)max2=z
+  }
  }
- return [(min0+max0)/2,(min1+max1)/2,(min2+max2)/2]
+ return hasPoints?[(min0+max0)/2,(min1+max1)/2,(min2+max2)/2]:[0,0,0]
 })
 const size=computed(()=>{
- const pts=selectedPoints.value,c=center.value,cx=c[0],cy=c[1],cz=c[2]
- let maxDist=5
- for(let i=0;i<pts.length;i++){
-  const p=pts[i],d=Math.hypot(p[0]-cx,p[1]-cy,p[2]-cz)
-  if(d>maxDist)maxDist=d
+ const c=center.value,cx=c[0],cy=c[1],cz=c[2]
+ let maxDist2=25
+ const allBodies=bodies.value
+ for(const idx of props.selection){
+  const b=allBodies[idx];if(!b)continue
+  const pos=b.mesh.positions
+  for(let o=0;o<pos.length;o+=3){
+   const dx=pos[o]-cx,dy=pos[o+1]-cy,dz=pos[o+2]-cz,d2=dx*dx+dy*dy+dz*dz
+   if(d2>maxDist2)maxDist2=d2
+  }
  }
- return maxDist*.7
+ return Math.sqrt(maxDist2)*.7
 })
 const project=(p:readonly number[])=>{void props.revision;return props.project(p)}
 const path=(points:number[][])=>points.map(project).filter((p):p is [number,number]=>p!==null).map(p=>p.join(',')).join(' ')
 const topology=computed(()=>{try{return props.selected===null?null:sceneFace(props.meshes[props.selected],props.hit)}catch{return null}})
 const axes:Vec3[]=[[1,0,0],[0,1,0],[0,0,1]],colors=['#ef665c','#60bd72','#599af0']
-const add=(a:number[],b:number[],scale=1)=>a.map((v,k)=>v+b[k]*scale) as Vec3
+const add=(a:number[],b:number[],scale=1):Vec3=>[a[0]+b[0]*scale,a[1]+b[1]*scale,a[2]+b[2]*scale]
 const normal=computed(()=>{try{return unit3(props.parameters.normal??axes[['x','y','z'].indexOf(props.parameters.axis)])}catch{return [0,0,1] as Vec3}})
-const planeCenter=computed(()=>add(center.value,normal.value,props.parameters.amount-center.value.reduce((s,v,k)=>s+v*normal.value[k],0)))
+const planeCenter=computed(()=>{const c=center.value,n=normal.value;return add(c,n,props.parameters.amount-(c[0]*n[0]+c[1]*n[1]+c[2]*n[2]))})
 const planePoints=computed(()=>{const n=normal.value,u=unit3(cross3(n,Math.abs(n[0])<.8?[1,0,0]:[0,1,0])),v=cross3(n,u);return [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b])=>add(add(planeCenter.value,u,a*size.value),v,b*size.value))})
 const rings=computed(()=>axes.map((axis,k)=>{const u=axes[(k+1)%3],v=axes[(k+2)%3];return Array.from({length:65},(_,i)=>add(add(center.value,u,Math.cos(i*Math.PI/32)*size.value),v,Math.sin(i*Math.PI/32)*size.value))}))
 const faceCenter=computed(()=>topology.value?.topology.faces[topology.value.face]?.center)
@@ -66,13 +73,25 @@ function begin(e:PointerEvent,kind:string,axis:number,origin:Vec3,direction:Vec3
 function move(e:PointerEvent){
  if(rectangle.value){const r=svg.value!.getBoundingClientRect();rectangle.value.b=[e.clientX-r.left,e.clientY-r.top];return}
  if(!drag)return
- const d=drag,dx=e.clientX-d.start[0],dy=e.clientY-d.start[1],length2=d.direction.reduce((s,v)=>s+v*v,0)
+ const d=drag,dx=e.clientX-d.start[0],dy=e.clientY-d.start[1],length2=d.direction[0]*d.direction[0]+d.direction[1]*d.direction[1]
  const distance=length2>4?(dx*d.direction[0]+dy*d.direction[1])/length2*d.factor:-dy*d.factor/80
  d.moved ||= Math.hypot(dx,dy)>2
  const p={...d.before}
  if(d.kind==='move'){
   const key=(['x','y','z'] as const)[d.axis];p[key]+=distance;snapTarget.value=null
-  if(props.parameters.snap!==false&&!e.altKey){const moved=center.value.map((v,k)=>v+p[(['x','y','z'] as const)[k]]),at=project(moved);let best=10;if(at)for(const point of snapCandidates.value){if(point.some((v,k)=>k!==d.axis&&Math.abs(v-moved[k])>1e-5))continue;const xy=project(point);if(!xy)continue;const pixels=Math.hypot(xy[0]-at[0],xy[1]-at[1]);if(pixels<best){best=pixels;p[key]=point[d.axis]-center.value[d.axis];snapTarget.value=point}}}
+  if(props.parameters.snap!==false&&!e.altKey){
+   const c=center.value,moved:Vec3=[c[0]+p.x,c[1]+p.y,c[2]+p.z],at=project(moved)
+   let best=10
+   if(at){
+    const axis=d.axis
+    for(const point of snapCandidates.value){
+     if((axis!==0&&Math.abs(point[0]-moved[0])>1e-5)||(axis!==1&&Math.abs(point[1]-moved[1])>1e-5)||(axis!==2&&Math.abs(point[2]-moved[2])>1e-5))continue
+     const xy=project(point);if(!xy)continue
+     const pixels=Math.hypot(xy[0]-at[0],xy[1]-at[1])
+     if(pixels<best){best=pixels;p[key]=point[axis]-c[axis];snapTarget.value=point}
+    }
+   }
+  }
  }
  else if(d.kind==='rotate'){
   const rect=svg.value!.getBoundingClientRect(),cx=rect.left+d.origin[0],cy=rect.top+d.origin[1]
@@ -83,7 +102,21 @@ function move(e:PointerEvent){
 }
 function end(){
  snapTarget.value=null
- if(rectangle.value){const {a,b}=rectangle.value;const ids=bodies.value.map((_,i)=>i).filter(i=>{const ps=points(i).map(project);return ps.length>0&&ps.every(p=>p&&p[0]>=Math.min(a[0],b[0])&&p[0]<=Math.max(a[0],b[0])&&p[1]>=Math.min(a[1],b[1])&&p[1]<=Math.max(a[1],b[1]))});rectangle.value=null;emit('select',ids);emit('boxDone');return}
+ if(rectangle.value){
+  const {a,b}=rectangle.value,minX=Math.min(a[0],b[0]),maxX=Math.max(a[0],b[0]),minY=Math.min(a[1],b[1]),maxY=Math.max(a[1],b[1])
+  const allBodies=bodies.value,ids:number[]=[]
+  for(let i=0;i<allBodies.length;i++){
+   const pos=allBodies[i]?.mesh.positions
+   if(!pos||!pos.length)continue
+   let inside=true
+   for(let o=0;o<pos.length;o+=3){
+    const pt=project([pos[o],pos[o+1],pos[o+2]])
+    if(!pt||pt[0]<minX||pt[0]>maxX||pt[1]<minY||pt[1]>maxY){inside=false;break}
+   }
+   if(inside)ids.push(i)
+  }
+  rectangle.value=null;emit('select',ids);emit('boxDone');return
+ }
  if(drag){const moved=drag.moved;drag=null;if(moved)emit('apply');else emit('cancel')}
 }
 function cancel(){snapTarget.value=null;if(drag)emit('parameters',drag.before);drag=null;rectangle.value=null;emit('cancel')}

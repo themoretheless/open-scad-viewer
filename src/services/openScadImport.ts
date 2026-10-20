@@ -383,8 +383,8 @@ function triangleDegenerate(vertices: ArrayLike<number>, a: number, b: number, c
 
 function geometry3D(
   format: OpenScadImportGeometry3D['format'],
-  sourceVertices: readonly number[],
-  sourceTriangles: readonly number[],
+  sourceVertices: ArrayLike<number>,
+  sourceTriangles: ArrayLike<number>,
 ): OpenScadImportGeometry3D {
   if (sourceVertices.length % 3 !== 0 || sourceTriangles.length % 3 !== 0) {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} mesh storage is inconsistent.`, format)
@@ -411,9 +411,10 @@ function geometry3D(
     vertices[index] = stored
   }
   const triangles: number[] = []
+  const validIndex = (index: number): boolean => Number.isSafeInteger(index) && index >= 0 && index < vertexCount
   for (let offset = 0; offset < sourceTriangles.length; offset += 3) {
     const a = sourceTriangles[offset], b = sourceTriangles[offset + 1], c = sourceTriangles[offset + 2]
-    if (![a, b, c].every(index => Number.isSafeInteger(index) && index >= 0 && index < vertexCount)) {
+    if (!validIndex(a) || !validIndex(b) || !validIndex(c)) {
       return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} triangle index is out of bounds.`, format)
     }
     if (!triangleDegenerate(vertices, a, b, c)) triangles.push(a, b, c)
@@ -956,19 +957,29 @@ function descendantsNs(element: XmlElement, localName: string, namespaceUri: str
 }
 
 function attribute(element: XmlElement, key: string): string | undefined {
-  const exact = element.attributes[key.toLowerCase()]
+  const normalized = key.toLowerCase()
+  const exact = element.attributes[normalized]
   if (exact !== undefined) return exact
-  const suffix = `:${key.toLowerCase()}`
-  const found = Object.entries(element.attributes).find(([name]) => name.endsWith(suffix))
-  return found?.[1]
+  const suffix = `:${normalized}`
+  for (const name in element.attributes) {
+    if (name.endsWith(suffix)) return element.attributes[name]
+  }
+  return undefined
 }
 
 function attributeNs(element: XmlElement, key: string, namespaceUri: string | null): string | undefined {
   const normalized = key.toLowerCase()
-  const found = Object.entries(element.attributes).find(([name]) => (
-    name.split(':').at(-1) === normalized && element.attributeNamespaces[name] === namespaceUri
-  ))
-  return found?.[1]
+  if (namespaceUri === null && element.attributeNamespaces[normalized] === null) {
+    const exact = element.attributes[normalized]
+    if (exact !== undefined) return exact
+  }
+  const suffix = `:${normalized}`
+  for (const name in element.attributes) {
+    if (element.attributeNamespaces[name] === namespaceUri && (name === normalized || name.endsWith(suffix))) {
+      return element.attributes[name]
+    }
+  }
+  return undefined
 }
 
 function requiredAttributeNs(
@@ -1085,20 +1096,41 @@ function appendRawMesh(
   const nextTriangles = targetTriangles.length / 3 + mesh.triangles.length / 3
   boundedCount(nextVertices, OPENSCAD_IMPORT_MAX_VERTICES, `${format.toUpperCase()} expanded vertex count`, format)
   boundedCount(nextTriangles, OPENSCAD_IMPORT_MAX_TRIANGLES, `${format.toUpperCase()} expanded triangle count`, format)
-  for (let offset = 0; offset < mesh.vertices.length; offset += 3) {
-    targetVertices.push(...transform3(matrix, mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]))
+  const m0 = matrix[0], m1 = matrix[1], m2 = matrix[2], m3 = matrix[3]
+  const m4 = matrix[4], m5 = matrix[5], m6 = matrix[6], m7 = matrix[7]
+  const m8 = matrix[8], m9 = matrix[9], m10 = matrix[10], m11 = matrix[11]
+  const srcVertices = mesh.vertices
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    targetVertices.push(
+      m0 * x + m1 * y + m2 * z + m3,
+      m4 * x + m5 * y + m6 * z + m7,
+      m8 * x + m9 * y + m10 * z + m11,
+    )
   }
-  const determinant = matrix[0] * (matrix[5] * matrix[10] - matrix[6] * matrix[9])
-    - matrix[1] * (matrix[4] * matrix[10] - matrix[6] * matrix[8])
-    + matrix[2] * (matrix[4] * matrix[9] - matrix[5] * matrix[8])
+  const determinant = m0 * (m5 * m10 - m6 * m9)
+    - m1 * (m4 * m10 - m6 * m8)
+    + m2 * (m4 * m9 - m5 * m8)
   if (determinant === 0 || !Number.isFinite(determinant)) {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} transform is singular or non-finite.`, format)
   }
-  for (let offset = 0; offset < mesh.triangles.length; offset += 3) {
-    const a = vertexOffset + mesh.triangles[offset]
-    const b = vertexOffset + mesh.triangles[offset + 1]
-    const c = vertexOffset + mesh.triangles[offset + 2]
-    targetTriangles.push(a, ...(determinant < 0 ? [c, b] : [b, c]))
+  const srcTriangles = mesh.triangles
+  if (determinant < 0) {
+    for (let offset = 0; offset < srcTriangles.length; offset += 3) {
+      targetTriangles.push(
+        vertexOffset + srcTriangles[offset],
+        vertexOffset + srcTriangles[offset + 2],
+        vertexOffset + srcTriangles[offset + 1],
+      )
+    }
+  } else {
+    for (let offset = 0; offset < srcTriangles.length; offset += 3) {
+      targetTriangles.push(
+        vertexOffset + srcTriangles[offset],
+        vertexOffset + srcTriangles[offset + 1],
+        vertexOffset + srcTriangles[offset + 2],
+      )
+    }
   }
 }
 
@@ -2649,29 +2681,35 @@ function transformLoadedGeometry(
         return [x, y] as const
       })),
     }))
-    const centerX = options.center ? (minX + maxX) / 2 : 0
-    const centerY = options.center ? (minY + maxY) / 2 : 0
-    return geometry2D(source.format, regions.map(region => ({
-      ...region,
-      contours: region.contours.map(contour => contour.map(point => [point[0] - centerX, point[1] - centerY] as const)),
-    })))
-  }
-  const vertices = [...source.vertices]
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
-  for (let offset = 0; offset < vertices.length; offset += 3) {
-    minX = Math.min(minX, vertices[offset]); maxX = Math.max(maxX, vertices[offset])
-    minY = Math.min(minY, vertices[offset + 1]); maxY = Math.max(maxY, vertices[offset + 1])
-    minZ = Math.min(minZ, vertices[offset + 2]); maxZ = Math.max(maxZ, vertices[offset + 2])
-  }
-  if (options.center) {
-    const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
-    for (let offset = 0; offset < vertices.length; offset += 3) {
-      vertices[offset] -= centerX
-      vertices[offset + 1] -= centerY
-      vertices[offset + 2] -= centerZ
+    if (options.center) {
+      const centerX = (minX + maxX) / 2
+      const centerY = (minY + maxY) / 2
+      return geometry2D(source.format, regions.map(region => ({
+        ...region,
+        contours: region.contours.map(contour => contour.map(point => [point[0] - centerX, point[1] - centerY] as const)),
+      })))
     }
+    return geometry2D(source.format, regions)
   }
-  return geometry3D(source.format, vertices, [...source.triangles])
+  if (!options.center) {
+    return cloneGeometry(source)
+  }
+  const srcVertices = source.vertices
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    if (x < minX) minX = x; if (x > maxX) maxX = x
+    if (y < minY) minY = y; if (y > maxY) maxY = y
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+  }
+  const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
+  const vertices = new Float64Array(srcVertices.length)
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    vertices[offset] = srcVertices[offset] - centerX
+    vertices[offset + 1] = srcVertices[offset + 1] - centerY
+    vertices[offset + 2] = srcVertices[offset + 2] - centerZ
+  }
+  return geometry3D(source.format, vertices, source.triangles)
 }
 
 function resolveImportAsset(
@@ -2979,6 +3017,7 @@ function roundLikeCpp(value: number): number {
 
 interface DxfQueryPathLine {
   readonly points: readonly [OpenScadImportPoint2, OpenScadImportPoint2]
+  readonly keys: readonly [string, string]
   disabled: boolean
 }
 
@@ -3035,13 +3074,16 @@ function buildDxfQueryPaths(
     if (layer !== '' && segment.layer !== layer) continue
     const start = align(segment.start)
     const end = align(segment.end)
+    const startKey = gridKeyForPoint(start)
+    const endKey = gridKeyForPoint(end)
     const index = lines.length
-    grid.get(gridKeyForPoint(start))!.push(index)
-    grid.get(gridKeyForPoint(end))!.push(index)
-    lines.push({ points: [start, end], disabled: false })
+    grid.get(startKey)!.push(index)
+    grid.get(endKey)!.push(index)
+    lines.push({ points: [start, end], keys: [startKey, endKey], disabled: false })
   }
 
-  const enabled = new Set(lines.map((_, index) => index))
+  const enabled = new Set<number>()
+  for (let i = 0; i < lines.length; i++) enabled.add(i)
   const paths: OpenScadImportPoint2[][] = []
   const follow = (initialLine: number, initialPoint: 0 | 1): OpenScadImportPoint2[] => {
     let currentLine = initialLine
@@ -3049,20 +3091,23 @@ function buildDxfQueryPaths(
     const path: OpenScadImportPoint2[] = [lines[currentLine].points[currentPoint]]
     while (true) {
       const otherPoint = currentPoint === 0 ? 1 : 0
-      const reference = lines[currentLine].points[otherPoint]
+      const line = lines[currentLine]
+      const reference = line.points[otherPoint]
+      const referenceKey = line.keys[otherPoint]
       path.push(reference)
-      lines[currentLine].disabled = true
+      line.disabled = true
       enabled.delete(currentLine)
       let nextLine: number | undefined
       let nextPoint: 0 | 1 = 0
-      for (const candidate of grid.get(gridKeyForPoint(reference)) ?? []) {
-        if (lines[candidate].disabled) continue
-        if (gridKeyForPoint(lines[candidate].points[0]) === gridKeyForPoint(reference)) {
+      for (const candidate of grid.get(referenceKey) ?? []) {
+        const candLine = lines[candidate]
+        if (candLine.disabled) continue
+        if (candLine.keys[0] === referenceKey) {
           nextLine = candidate
           nextPoint = 0
           break
         }
-        if (gridKeyForPoint(lines[candidate].points[1]) === gridKeyForPoint(reference)) {
+        if (candLine.keys[1] === referenceKey) {
           nextLine = candidate
           nextPoint = 1
           break
@@ -3078,11 +3123,19 @@ function buildDxfQueryPaths(
   while (enabled.size > 0) {
     let initial: readonly [number, 0 | 1] | undefined
     for (const lineIndex of enabled) {
+      const lineKeys = lines[lineIndex].keys
       for (const endpoint of [0, 1] as const) {
-        const point = lines[lineIndex].points[endpoint]
-        const hasNeighbor = (grid.get(gridKeyForPoint(point)) ?? []).some(candidate => (
-          candidate !== lineIndex && !lines[candidate].disabled
-        ))
+        const cell = grid.get(lineKeys[endpoint])
+        let hasNeighbor = false
+        if (cell) {
+          for (let i = 0; i < cell.length; i++) {
+            const candidate = cell[i]
+            if (candidate !== lineIndex && !lines[candidate].disabled) {
+              hasNeighbor = true
+              break
+            }
+          }
+        }
         if (!hasNeighbor) {
           initial = [lineIndex, endpoint]
           break

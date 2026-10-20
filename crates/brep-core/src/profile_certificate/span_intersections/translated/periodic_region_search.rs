@@ -362,7 +362,8 @@ pub fn construct_periodic_support_regions(
     {
         return Err(refused("Invalid automatic material connection limits"));
     }
-    owner.reverify_source()?;
+    let _replay = super::periodic_replay::scope();
+    super::periodic_replay::verify_arc(&owner, |owner| owner.reverify_source())?;
     let mut groups = BTreeMap::<Vec<String>, Vec<usize>>::new();
     for (i, p) in owner.probes().iter().enumerate() {
         groups.entry(p.signature.clone()).or_default().push(i);

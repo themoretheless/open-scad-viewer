@@ -143,7 +143,8 @@ impl OwnedPeriodicChartBoundaryLoops {
         &self.data.edge_locations
     }
     pub fn reverify_source(&self) -> Result<()> {
-        self.owner.reverify_source()?;
+        let _replay = super::periodic_replay::scope();
+        super::periodic_replay::verify_arc(&self.owner, |owner| owner.reverify_source())?;
         if decompose(
             self.owner.edges(),
             self.owner.vertices().len(),
@@ -160,7 +161,8 @@ pub fn own_periodic_chart_boundary_loops(
     owner: Arc<OwnedPeriodicChartCycles>,
     limits: PeriodicChartBoundaryLoopLimits,
 ) -> Result<OwnedPeriodicChartBoundaryLoops> {
-    owner.reverify_source()?;
+    let _replay = super::periodic_replay::scope();
+    super::periodic_replay::verify_arc(&owner, |owner| owner.reverify_source())?;
     let data = decompose(owner.edges(), owner.vertices().len(), owner.walks(), limits)?;
     Ok(OwnedPeriodicChartBoundaryLoops {
         owner,

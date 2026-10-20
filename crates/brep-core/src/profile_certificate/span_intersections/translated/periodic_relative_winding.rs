@@ -42,7 +42,7 @@ fn derive(
             "Complete chart-local winding crossing census exceeds allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
     let path = o
         .path
@@ -156,6 +156,7 @@ impl OwnedPeriodicRelativeWinding {
         &self.deltas
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (c, d) = derive(self)?;
         if c != self.crossings || d != self.deltas {
             return Err(refused(
@@ -174,6 +175,7 @@ pub fn own_periodic_relative_winding(
     limits: ParameterOrderLimits,
     max_work: usize,
 ) -> Result<OwnedPeriodicRelativeWinding> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicRelativeWinding {
         owner,
         path: path.to_vec(),
@@ -228,7 +230,7 @@ impl RelativeWindingView {
             return Err(refused("Invalid batch winding parameter allowance"));
         }
         if replay {
-            owner.reverify_source()?;
+            super::periodic_replay::verify_arc(&owner, |x| x.reverify_source())?;
         }
         let graph = owner.owner().owner();
         let cover = graph.owner().owner().pieces();

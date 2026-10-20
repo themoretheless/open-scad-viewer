@@ -158,16 +158,18 @@ fn curves_excluded(first: &Curve, second: &Curve, ta: [f64; 2], tb: [f64; 2]) ->
     Ok(a.iter().zip(&b).any(|(a, b)| a.hi < b.lo || b.hi < a.lo))
 }
 fn split_homogeneous(h: &[[f64; 4]]) -> (Vec<[f64; 4]>, Vec<[f64; 4]>) {
+    let len = h.len();
     let mut row = h.to_vec();
-    let mut left = vec![row[0]];
-    let mut right = vec![*row.last().unwrap()];
-    while row.len() > 1 {
-        row = row
-            .windows(2)
-            .map(|p| std::array::from_fn(|i| (p[0][i] + p[1][i]) * 0.5))
-            .collect();
+    let mut left = Vec::with_capacity(len);
+    let mut right = Vec::with_capacity(len);
+    left.push(row[0]);
+    right.push(row[len - 1]);
+    for rem in (1..len).rev() {
+        for j in 0..rem {
+            row[j] = std::array::from_fn(|i| (row[j][i] + row[j + 1][i]) * 0.5);
+        }
         left.push(row[0]);
-        right.push(*row.last().unwrap());
+        right.push(row[rem - 1]);
     }
     right.reverse();
     (left, right)
@@ -326,8 +328,16 @@ pub(crate) fn homogeneous_grid(surface: &Surface) -> Vec<Vec<[f64; 4]>> {
         .collect()
 }
 fn grid_hull(grid: &[Vec<[f64; 4]>]) -> [[f64; 2]; 3] {
-    let flat: Vec<[f64; 4]> = grid.iter().flatten().copied().collect();
-    hull_ranges(&flat)
+    std::array::from_fn(|axis| {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for p in grid.iter().flatten() {
+            let x = p[axis] / p[3];
+            lo = lo.min(next_down(x));
+            hi = hi.max(next_up(x));
+        }
+        [lo, hi]
+    })
 }
 pub(crate) fn grids_excluded(a: &[Vec<[f64; 4]>], curve_h: &[[f64; 4]]) -> bool {
     let ra = grid_hull(a);
@@ -335,8 +345,8 @@ pub(crate) fn grids_excluded(a: &[Vec<[f64; 4]>], curve_h: &[[f64; 4]]) -> bool 
     (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
 }
 pub(crate) fn split_grid_u(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
-    let mut left = Vec::new();
-    let mut right = Vec::new();
+    let mut left = Vec::with_capacity(grid.len());
+    let mut right = Vec::with_capacity(grid.len());
     for row in grid {
         let (l, r) = split_homogeneous(row);
         left.push(l);
@@ -346,17 +356,17 @@ pub(crate) fn split_grid_u(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
 }
 pub(crate) fn split_grid_v(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
     let cols = grid[0].len();
-    let columns: Vec<Vec<[f64; 4]>> = (0..cols)
-        .map(|j| grid.iter().map(|row| row[j]).collect())
-        .collect();
-    let mut left_cols = Vec::new();
-    let mut right_cols = Vec::new();
-    for col in &columns {
-        let (l, r) = split_homogeneous(col);
+    let rows = grid.len();
+    let mut left_cols = Vec::with_capacity(cols);
+    let mut right_cols = Vec::with_capacity(cols);
+    let mut col = Vec::with_capacity(rows);
+    for j in 0..cols {
+        col.clear();
+        col.extend(grid.iter().map(|row| row[j]));
+        let (l, r) = split_homogeneous(&col);
         left_cols.push(l);
         right_cols.push(r);
     }
-    let rows = grid.len();
     let left = (0..rows)
         .map(|i| left_cols.iter().map(|col| col[i]).collect())
         .collect();
@@ -610,13 +620,18 @@ pub fn intersect_curve_surface_report(
                     // Coefficients already checked for mixed signs above.
                 }
                 let (left, right) = {
-                    let mut row = coefficients.clone();
-                    let mut l = vec![row[0]];
-                    let mut r = vec![*row.last().unwrap()];
-                    while row.len() > 1 {
-                        row = row.windows(2).map(|w| (w[0] + w[1]) * 0.5).collect();
+                    let len = coefficients.len();
+                    let mut row = coefficients;
+                    let mut l = Vec::with_capacity(len);
+                    let mut r = Vec::with_capacity(len);
+                    l.push(row[0]);
+                    r.push(row[len - 1]);
+                    for rem in (1..len).rev() {
+                        for j in 0..rem {
+                            row[j] = (row[j] + row[j + 1]) * 0.5;
+                        }
                         l.push(row[0]);
-                        r.push(*row.last().unwrap());
+                        r.push(row[rem - 1]);
                     }
                     r.reverse();
                     (l, r)

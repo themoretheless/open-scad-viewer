@@ -471,6 +471,7 @@ fn generate_infill(
                 -std::f64::consts::FRAC_PI_3,
             ] {
                 let spans = hatch_angled(remaining, spacing * 1.5, angle, role, budget)?;
+                paths.reserve(spans.len());
                 for span in spans {
                     if span.points.len() == 2 {
                         let [a, b] = [span.points[0], span.points[1]];
@@ -1386,7 +1387,9 @@ where
             "Invalid adaptive layer height range or settings",
         ));
     }
-    let mut heights = Vec::new();
+    let mut heights = Vec::with_capacity(
+        (((z_max - z_min) / config.min_layer_height_mm).ceil() as usize + 1).min(MAX_LAYERS),
+    );
     let mut z = z_min;
     for _ in 0..MAX_LAYERS {
         if z >= z_max {
@@ -1500,7 +1503,7 @@ pub fn plan_layers_with_skins_and_supports(
     let mut out_layers = Vec::with_capacity(sections.len());
     for i in 0..sections.len() {
         let source = &normalized[i];
-        let mut paths = Vec::new();
+        let mut paths = Vec::with_capacity(settings.wall_count * source.len() + 8);
         for wall in 0..settings.wall_count {
             let inset = (wall as f64 + 0.5) * settings.line_width_mm;
             let offset = inset_rings(source, inset, &mut budget)?;

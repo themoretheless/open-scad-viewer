@@ -543,3 +543,26 @@ pub fn replace(
         exact_work,
     })
 }
+
+#[path = "region_replacement/radius_network.rs"]
+mod radius_network;
+pub use radius_network::{EdgeRadius, RadiusEdge, RadiusCorner, RadiusNetwork, plan_radius_network};
+#[path = "region_replacement/trihedral_setbacks.rs"]
+mod trihedral_setbacks;
+pub use trihedral_setbacks::{FacePort, EdgeSetback, TrihedralSetbacks, plan_trihedral_setbacks};
+
+#[path = "region_replacement/trihedral_skins.rs"]
+mod trihedral_skins;
+pub use trihedral_skins::{StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips};
+
+#[path = "region_replacement/trihedral_rim.rs"]
+mod trihedral_rim;
+pub use trihedral_rim::{RimConnector, TrihedralRim, RimSupports, build_trihedral_rim, inspect_rim_supports};
+
+#[path = "region_replacement/spatial_rim.rs"]
+mod spatial_rim;
+pub use spatial_rim::{SpatialRimReport, inspect_spatial_rim};
+
+#[path = "region_replacement/trihedral_collars.rs"]
+mod trihedral_collars;
+pub use trihedral_collars::{CornerCollar, CornerCollars, prepare_trihedral_collars};

@@ -115,7 +115,7 @@ fn derive(
             "Incomplete periodic pair census or invalid arrangement allowance",
         ));
     }
-    o.pieces.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.pieces, |p| p.reverify_source())?;
     let mut ordinal = 0;
     for a in 0..n {
         for b in a..n {
@@ -138,7 +138,7 @@ fn derive(
                 "Actual seam contacts and chart arrangement use different source covers",
             ));
         }
-        seams.reverify_source()?;
+        super::periodic_replay::verify_arc(seams, |s| s.reverify_source())?;
         for (i, p) in seams.pairs().iter().enumerate() {
             if !Arc::ptr_eq(&o.pairs[count + i], &p.owner) {
                 return Err(refused(
@@ -166,7 +166,7 @@ fn derive(
                 "Combined contact uses unrelated original source cover",
             ));
         }
-        pair.reverify_source()?;
+        super::periodic_replay::verify_arc(pair, |p| p.reverify_source())?;
         for (event, node) in events.events().iter().enumerate() {
             if node.in_both_closed_pieces() {
                 for (side, piece) in [a, b].into_iter().enumerate() {
@@ -265,6 +265,7 @@ impl OwnedPeriodicArrangementCuts {
         &self.intervals
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (c, i) = derive(self)?;
         if c != self.cuts || i != self.intervals {
             return Err(refused(
@@ -284,6 +285,7 @@ pub fn own_periodic_arrangement_cuts(
     limits: ParameterOrderLimits,
     max_pairs: usize,
 ) -> Result<OwnedPeriodicArrangementCuts> {
+    let _replay = super::periodic_replay::scope();
     let n = pieces.pieces().len();
     let count = n
         .checked_add(1)
@@ -293,7 +295,7 @@ pub fn own_periodic_arrangement_cuts(
     if max_pairs == 0 || max_pairs > 4096 || count > max_pairs {
         return Err(refused("Complete periodic pair census exceeds allowance"));
     }
-    pieces.reverify_source()?;
+    super::periodic_replay::verify_arc(&pieces, |p| p.reverify_source())?;
     let mut pairs = Vec::new();
     for a in 0..n {
         for b in a..n {
@@ -325,6 +327,7 @@ pub fn own_periodic_quotient_arrangement_cuts(
     limits: ParameterOrderLimits,
     max_pairs: usize,
 ) -> Result<OwnedPeriodicArrangementCuts> {
+    let _replay = super::periodic_replay::scope();
     if chart.seams.is_some() {
         return Err(refused("Expected an unquotiented chart arrangement"));
     }
@@ -343,8 +346,8 @@ pub fn own_periodic_quotient_arrangement_cuts(
             "Complete combined chart/seam census exceeds allowance",
         ));
     }
-    chart.reverify_source()?;
-    seams.reverify_source()?;
+    super::periodic_replay::verify(&chart)?;
+    super::periodic_replay::verify_arc(&seams, |s| s.reverify_source())?;
     let mut pairs = chart.pairs.clone();
     pairs.extend(seams.pairs().iter().map(|p| p.owner.clone()));
     let mut o = OwnedPeriodicArrangementCuts {

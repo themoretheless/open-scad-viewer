@@ -121,8 +121,7 @@ fn compare(
     ctx: &mut PredicateContext<'_>,
 ) -> Result<bool, Reason> {
     let (p, q) = (a.len() - 1, b.len() - 1);
-    let choose =
-        |n: usize, k: usize| -> u64 { (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64) };
+    let choose = crate::binomial_u64;
     for k in 0..=p + q {
         for axis in 0..3 {
             let mut coefficient = Expansion::scalar(0.);

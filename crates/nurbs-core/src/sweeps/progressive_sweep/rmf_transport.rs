@@ -294,7 +294,7 @@ fn certify_original_rmf_transport_impl(
     }
     cuts.sort_by(f64::total_cmp);
     cuts.dedup();
-    let mut planes = Vec::new();
+    let mut planes = Vec::with_capacity(path.control_points.len().saturating_sub(path.degree));
     for span in path.degree..path.control_points.len() {
         if path.knots[span] >= path.knots[span + 1] {
             continue;
@@ -342,7 +342,7 @@ fn certify_original_rmf_transport_impl(
     }
     let mut center = midpoint(n0);
     let mut radius = norm(sub(n0, point(center))?)?.hi;
-    let mut cover = Vec::with_capacity(steps);
+    let mut cover = Vec::with_capacity(cuts.len().saturating_sub(1));
     let mut last_endpoint: Option<(u64, [[f64; 2]; 3])> = None;
     let (work, source_jets) =
         super::source_jets::SourceJets::new_order(path, 2, max_cells - out.cells)?;
@@ -603,9 +603,9 @@ fn certify_original_rmf_transport_impl(
             total = total.add(I::new(cell.speed[0], cell.speed[1])?.mul(h)?)?;
         }
         let mut prefix = I::point(0.);
-        let mut corrected = Vec::with_capacity(steps);
+        let mut corrected = Vec::with_capacity(cover.len());
         let mut phases = Vec::with_capacity(cover.len());
-        let mut binormals = Vec::with_capacity(steps);
+        let mut binormals = Vec::with_capacity(cover.len());
         for cell in &cover {
             if out.cells == max_cells {
                 return Ok(out);

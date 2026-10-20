@@ -33,7 +33,7 @@ fn derive_probes(
     Vec<OriginalPeriodicNaturalCarrier>,
 )> {
     let _replay = super::periodic_replay::scope();
-    o.support.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.support, |x| x.reverify_source())?;
     if !same_wires(&o.support, &o.owner) {
         return Err(refused(
             "Support probes do not own the augmented original wire census",
@@ -228,8 +228,9 @@ impl OwnedPeriodicSupportMaterialRule {
         &self.authored
     }
     pub fn reverify_source(&self) -> Result<()> {
-        self.support.reverify_source()?;
-        self.material.reverify_source()?;
+        let _replay = super::periodic_replay::scope();
+        super::periodic_replay::verify_arc(&self.support, |x| x.reverify_source())?;
+        super::periodic_replay::verify_arc(&self.material, |x| x.reverify_source())?;
         if !same_wires(&self.support, self.material.base().owner())
             || self.material.operands() != lifted(&self.support, &self.authored)?
             || self.material.program() != self.program
@@ -247,7 +248,8 @@ pub fn own_periodic_support_material_rule(
     authored: &[OriginalPeriodicOperand],
     program: &[OriginalPeriodicBooleanOp],
 ) -> Result<OwnedPeriodicSupportMaterialRule> {
-    support.reverify_source()?;
+    let _replay = super::periodic_replay::scope();
+    super::periodic_replay::verify_arc(&support, |x| x.reverify_source())?;
     let operands = lifted(&support, authored)?;
     let material = Arc::new(own_periodic_material_rule(base, &operands, program)?);
     let o = OwnedPeriodicSupportMaterialRule {
@@ -272,8 +274,8 @@ pub struct OwnedPeriodicSupportSides {
 type SideData = ([Option<Vec<bool>>; 2], [bool; 2], Option<i8>);
 fn derive_sides(o: &OwnedPeriodicSupportSides) -> Result<SideData> {
     let _replay = super::periodic_replay::scope();
-    o.rule.reverify_source()?;
-    o.probes.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.rule, |x| x.reverify_source())?;
+    super::periodic_replay::verify_arc(&o.probes, |x| x.reverify_source())?;
     if !Arc::ptr_eq(o.rule.support(), o.probes.support())
         || !Arc::ptr_eq(o.rule.material().base().owner(), o.probes.owner())
     {
@@ -294,7 +296,7 @@ fn derive_sides(o: &OwnedPeriodicSupportSides) -> Result<SideData> {
             let s = o.samples[side]
                 .as_ref()
                 .ok_or_else(|| refused("An inward support probe has no actual material sample"))?;
-            s.reverify_source()?;
+            super::periodic_replay::verify_arc(s, |x| x.reverify_source())?;
             if !Arc::ptr_eq(s.rule(), o.rule.material())
                 || !Arc::ptr_eq(s.query().owner(), o.probes.owner())
             {
@@ -328,7 +330,7 @@ fn derive_sides(o: &OwnedPeriodicSupportSides) -> Result<SideData> {
         let pair = o.interior.as_ref().ok_or_else(|| {
             refused("Interior support edge lacks the original transported material jump proof")
         })?;
-        pair.reverify_source()?;
+        super::periodic_replay::verify_arc(pair, |x| x.reverify_source())?;
         if pair.probes().edge() != o.probes.edge()
             || !Arc::ptr_eq(pair.probes().owner(), o.probes.owner())
             || pair.probes().queries() != o.probes.queries()
@@ -387,6 +389,7 @@ pub fn own_periodic_support_sides(
     rule: Arc<OwnedPeriodicSupportMaterialRule>,
     samples: [Option<Arc<OwnedPeriodicMaterialSample>>; 2],
 ) -> Result<OwnedPeriodicSupportSides> {
+    let _replay = super::periodic_replay::scope();
     let interior = if probes.exterior().iter().any(|e| *e) {
         None
     } else {
@@ -431,7 +434,7 @@ fn derive_selection(
     o: &OwnedPeriodicSupportSelection,
 ) -> Result<Vec<OriginalPeriodicSelectedEdge>> {
     let _replay = super::periodic_replay::scope();
-    o.rule.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.rule, |x| x.reverify_source())?;
     let graph = o.rule.material().base().owner().owner().owner();
     if o.sides.len() != graph.edges().len() || o.sides.len() > 1000000 {
         return Err(refused(
@@ -441,7 +444,7 @@ fn derive_selection(
     let mut selected = Vec::new();
     let mut flow = vec![0i64; graph.vertices().len()];
     for (edge, s) in o.sides.iter().enumerate() {
-        s.reverify_source()?;
+        super::periodic_replay::verify_arc(s, |x| x.reverify_source())?;
         if s.probes().edge() != edge || !Arc::ptr_eq(s.rule(), &o.rule) {
             return Err(refused(
                 "Support boundary selection repeats or misbinds an original edge",
@@ -509,6 +512,7 @@ pub(in crate::profile_certificate::span_intersections::translated) mod tests {
         plane_selection(2, true)
     }
     fn plane_selection(shape: usize, complement: bool) -> Arc<OwnedPeriodicSupportSelection> {
+        let _replay = super::super::periodic_replay::scope();
         let surface = nurbs_core::surface::Surface {
             degree_u: 1,
             degree_v: 1,

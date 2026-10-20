@@ -182,21 +182,23 @@ fn winding(point: [f64; 2], contours: &[Vec<[f64; 2]>]) -> i32 {
 }
 
 fn min_wall_mm(section: &LayerSection) -> f64 {
-    let mut xs = Vec::new();
-    let mut ys = Vec::new();
+    let mut min_x = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    let mut has_points = false;
     for ring in &section.contours {
         for point in ring {
-            xs.push(point[0]);
-            ys.push(point[1]);
+            has_points = true;
+            min_x = min_x.min(point[0]);
+            max_x = max_x.max(point[0]);
+            min_y = min_y.min(point[1]);
+            max_y = max_y.max(point[1]);
         }
     }
-    if xs.is_empty() {
+    if !has_points {
         return 0.0;
     }
-    let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let span = (max_y - min_y).max(max_x - min_x);
     if !span.is_finite() || span <= 0.0 {
         return 0.0;
@@ -259,8 +261,9 @@ fn min_wall_mm(section: &LayerSection) -> f64 {
     }
     let step = (span / 32.0).max(span * 1e-4);
     let mut y = min_y + step * 0.5;
+    let mut hits = Vec::new();
     while y <= max_y - step * 0.25 {
-        let mut hits = Vec::new();
+        hits.clear();
         for ring in &section.contours {
             for i in 0..ring.len() {
                 let a = ring[i];
@@ -452,16 +455,12 @@ pub fn analyze_wall_thickness_3d(
         let v0 = [positions[i0 * 3], positions[i0 * 3 + 1], positions[i0 * 3 + 2]];
         let v1 = [positions[i1 * 3], positions[i1 * 3 + 1], positions[i1 * 3 + 2]];
         let v2 = [positions[i2 * 3], positions[i2 * 3 + 1], positions[i2 * 3 + 2]];
-        tris.push((v0, v1, v2));
-    }
-    let mut thicknesses = Vec::with_capacity(tri_count);
-    let mut min_t = f64::INFINITY;
-    let mut max_t = 0.0_f64;
-    let mut thin_indices = Vec::new();
-
-    for (ti, &(v0, v1, v2)) in tris.iter().enumerate() {
         let e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
         let e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+        tris.push((v0, e1, e2));
+    }
+    let thicknesses = math_core::par_map_index(tri_count, 64, |ti| {
+        let (v0, e1, e2) = tris[ti];
         let n = [
             e1[1] * e2[2] - e1[2] * e2[1],
             e1[2] * e2[0] - e1[0] * e2[2],
@@ -469,23 +468,20 @@ pub fn analyze_wall_thickness_3d(
         ];
         let n_len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
         if n_len <= 1e-12 {
-            thicknesses.push(0.0);
-            continue;
+            return 0.0;
         }
         // Inward ray direction is -normal
         let dir = [-n[0] / n_len, -n[1] / n_len, -n[2] / n_len];
         let origin = [
-            (v0[0] + v1[0] + v2[0]) / 3.0,
-            (v0[1] + v1[1] + v2[1]) / 3.0,
-            (v0[2] + v1[2] + v2[2]) / 3.0,
+            v0[0] + (e1[0] + e2[0]) / 3.0,
+            v0[1] + (e1[1] + e2[1]) / 3.0,
+            v0[2] + (e1[2] + e2[2]) / 3.0,
         ];
         let mut best_hit = f64::INFINITY;
-        for (oj, &(u0, u1, u2)) in tris.iter().enumerate() {
+        for (oj, &(u0, ue1, ue2)) in tris.iter().enumerate() {
             if ti == oj {
                 continue;
             }
-            let ue1 = [u1[0] - u0[0], u1[1] - u0[1], u1[2] - u0[2]];
-            let ue2 = [u2[0] - u0[0], u2[1] - u0[1], u2[2] - u0[2]];
             let h = [
                 dir[1] * ue2[2] - dir[2] * ue2[1],
                 dir[2] * ue2[0] - dir[0] * ue2[2],
@@ -515,7 +511,12 @@ pub fn analyze_wall_thickness_3d(
                 best_hit = dist;
             }
         }
-        let thick = if best_hit.is_finite() { best_hit } else { 0.0 };
+        if best_hit.is_finite() { best_hit } else { 0.0 }
+    });
+    let mut min_t = f64::INFINITY;
+    let mut max_t = 0.0_f64;
+    let mut thin_indices = Vec::new();
+    for (ti, &thick) in thicknesses.iter().enumerate() {
         if thick > 0.0 {
             min_t = min_t.min(thick);
             max_t = max_t.max(thick);
@@ -523,7 +524,6 @@ pub fn analyze_wall_thickness_3d(
                 thin_indices.push(ti);
             }
         }
-        thicknesses.push(thick);
     }
     Ok(WallThickness3dReport {
         triangle_thickness_mm: thicknesses,

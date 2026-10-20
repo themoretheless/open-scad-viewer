@@ -58,10 +58,16 @@ export function importedStlToMeshData(
     || imported.positions.length !== imported.triangleCount * 9) {
     throw new StlImportError('invalid-size', 'Decoded STL triangle storage is inconsistent')
   }
-  if (!imported.positions.every(Number.isFinite)) {
-    throw new StlImportError('non-finite-coordinate', 'Decoded STL contains a non-finite coordinate')
+  const pos = imported.positions
+  for (let i = 0; i < pos.length; i++) {
+    if (!Number.isFinite(pos[i])) {
+      throw new StlImportError('non-finite-coordinate', 'Decoded STL contains a non-finite coordinate')
+    }
   }
-  if (!color.every(value => Number.isFinite(value) && value >= 0 && value <= 1)) {
+  if (color.length < 4 || !Number.isFinite(color[0]) || color[0] < 0 || color[0] > 1
+    || !Number.isFinite(color[1]) || color[1] < 0 || color[1] > 1
+    || !Number.isFinite(color[2]) || color[2] < 0 || color[2] > 1
+    || !Number.isFinite(color[3]) || color[3] < 0 || color[3] > 1) {
     throw new RangeError('STL mesh color channels must be finite values in [0, 1]')
   }
 

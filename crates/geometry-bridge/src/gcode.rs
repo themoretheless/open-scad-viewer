@@ -223,21 +223,19 @@ fn preview_value(preview: GcodePreview, packed: bool) -> Value {
         "estimatedTimeS": preview.estimated_time_s,
     });
     if packed {
-        value["moveRows"] = json!(
-            preview
-                .moves
-                .iter()
-                .flat_map(|m| [
-                    m.x,
-                    m.y,
-                    m.z,
-                    m.e,
-                    m.feedrate_mm_s,
-                    m.layer_index as f64,
-                    if m.extruded { 1.0 } else { 0.0 },
-                ])
-                .collect::<Vec<_>>()
-        );
+        let mut rows = Vec::with_capacity(preview.moves.len() * 7);
+        for m in &preview.moves {
+            rows.extend_from_slice(&[
+                m.x,
+                m.y,
+                m.z,
+                m.e,
+                m.feedrate_mm_s,
+                m.layer_index as f64,
+                if m.extruded { 1.0 } else { 0.0 },
+            ]);
+        }
+        value["moveRows"] = json!(rows);
     } else {
         value["moves"] = json!(
             preview

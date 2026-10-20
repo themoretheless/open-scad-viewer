@@ -16,7 +16,7 @@ fn derive(o: &OwnedPeriodicCycles) -> Result<(Vec<usize>, Vec<Vec<usize>>, Vec<u
             "Complete physical quotient dart census exceeds allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let ports = o.owner.owner().ports();
     let rows = o.owner.rotations();
     let vertices = o.owner.owner().vertices();
@@ -126,6 +126,7 @@ impl OwnedPeriodicCycles {
         &self.dart_cycles
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (s, c, d) = derive(self)?;
         if s != self.successor || c != self.cycles || d != self.dart_cycles {
             return Err(refused(
@@ -139,6 +140,7 @@ pub fn own_periodic_cycles(
     owner: Arc<OwnedPeriodicRotation>,
     max_darts: usize,
 ) -> Result<OwnedPeriodicCycles> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicCycles {
         owner,
         max_darts,

@@ -48,6 +48,15 @@ pub fn inspect(
 ) -> Result<Report> {
     contacts[0].curve.validate()?;
     let domain = contacts[0].curve.domain();
+    inspect_contacts_in_domain(supports,skin,contacts,law,domain,sides,tolerance_mm,max_cells,max_exact)
+}
+/// Recheck independently trimmed contacts on their original radius-law domain.
+/// Original coefficients, lifts and normals are inspected afresh. A trim does
+/// not renormalize the original endpoint radii to its retained interval.
+pub fn inspect_contacts_in_domain(
+    supports:[&Surface;2],skin:&Surface,contacts:[&Contact;2],law:&RadiusLaw,
+    original_law_domain:[f64;2],sides:[f64;2],tolerance_mm:f64,max_cells:usize,max_exact:u64,
+)->Result<Report>{
     inspect_uses(
         supports,
         skin,
@@ -58,7 +67,7 @@ pub fn inspect(
             reversed: [false; 2],
         }),
         law,
-        domain,
+        original_law_domain,
         sides,
         tolerance_mm,
         max_cells,

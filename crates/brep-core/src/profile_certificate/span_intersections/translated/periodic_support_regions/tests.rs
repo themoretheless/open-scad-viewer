@@ -1,5 +1,6 @@
 use super::*;
 fn lifts(selection: Arc<OwnedPeriodicSupportSelection>) -> Arc<OwnedPeriodicSupportLifts> {
+    let _replay = super::super::periodic_replay::scope();
     let charts = selection.rule().material().base().owner().owner().clone();
     let ports = Arc::new(own_periodic_ports(charts, 192).unwrap());
     let rotation =
@@ -174,6 +175,7 @@ fn actual_hole_equal_signatures_require_an_actual_positive_connection_forest() {
 pub(in crate::profile_certificate::span_intersections::translated) fn discs(
     touching: bool,
 ) -> Arc<OwnedPeriodicSupportSelection> {
+    let _replay = super::super::periodic_replay::scope();
     let surface = nurbs_core::surface::Surface {
         degree_u: 1,
         degree_v: 1,
@@ -333,6 +335,7 @@ fn actual_cylinder_kernel_and_material_paths_bind_all_three_boundary_walks() {
 }
 #[test]
 fn actual_untrimmed_torus_has_one_full_component_without_invented_boundary_walks() {
+    let _replay = super::super::periodic_replay::scope();
     let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
     let input = super::super::periodic_support_boundaries::tests::original(
         &surface,
@@ -433,6 +436,7 @@ fn actual_rational_tangent_hole_has_one_connected_region_and_a_repeated_boundary
 
 pub(in crate::profile_certificate::span_intersections::translated) fn cylinder_bands()
 -> Arc<OwnedPeriodicSupportLifts> {
+    let _replay = super::super::periodic_replay::scope();
     let rim = Curve::from_polyline(vec![
         vec![0., 0., 0.],
         vec![1., 0., 0.],

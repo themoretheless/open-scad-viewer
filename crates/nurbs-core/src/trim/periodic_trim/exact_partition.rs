@@ -57,7 +57,12 @@ fn prove(source: &Curve, partition: &Report, max_work: u64) -> Result<(bool, u64
     )?;
     let mut work = 0;
     for p in &partition.pieces {
-        let mut values = Vec::new();
+        let mut values = Vec::with_capacity(
+            (source.control_points.len() + p.curve.control_points.len()) * 4
+                + source.knots.len()
+                + p.curve.knots.len()
+                + 3,
+        );
         for c in [source, &p.curve] {
             for (point, w) in c.control_points.iter().zip(&c.weights) {
                 values.extend([point[0], point[1], 0., *w]);

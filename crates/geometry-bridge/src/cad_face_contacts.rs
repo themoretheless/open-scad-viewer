@@ -39,7 +39,7 @@ fn diagnose_sweep_volume_impl(v:Value,proposals:&[Option<[[i8;3];2]>],capture_ch
         }
     }
     let model: brep_core::Model = field(&v, "model")?;
-    let cap = field::<Value>(&v, "capBudgets")?;
+    let cap = &v["capBudgets"];
     let inspect=|model:&brep_core::Model,tolerance:f64,limits:brep_core::volume_validity::Limits,cells:usize,
         caps:&[usize],cap_limits:brep_core::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>]| {
         if capture_charts {
@@ -76,12 +76,12 @@ fn diagnose_sweep_volume_impl(v:Value,proposals:&[Option<[[i8;3];2]>],capture_ch
         field(&v, "maxLinearCells")?,
         &field::<Vec<usize>>(&v, "capFaces")?,
         brep_core::sweep_cap_contacts::Budgets {
-            max_walls: field(&cap, "maxWalls")?,
-            max_exact_work: field(&cap, "maxExactWork")?,
-            max_chart_cells: field(&cap, "maxChartCells")?,
-            max_trim_pairs: field(&cap, "maxTrimPairs")?,
-            max_trim_cells: field(&cap, "maxTrimCells")?,
-            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+            max_walls: field(cap, "maxWalls")?,
+            max_exact_work: field(cap, "maxExactWork")?,
+            max_chart_cells: field(cap, "maxChartCells")?,
+            max_trim_pairs: field(cap, "maxTrimPairs")?,
+            max_trim_cells: field(cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(cap, "maxTrimDomainCells")?,
         },
         proposals,
     )?;
@@ -127,7 +127,7 @@ pub fn begin_sweep_volume(v:Value)->Result<Value> {
         let mut store=store.borrow_mut();
         if store.live.len()>=4 {return Err(nurbs_core::Error::new("BREP_VOLUME_SESSION","Sweep volume session limit reached"));}
         let model=std::sync::Arc::new(field::<brep_core::Model>(&v,"model")?);
-        let cap=field::<Value>(&v,"capBudgets")?;
+        let cap=&v["capBudgets"];
         let (limits,linear,caps,cap_limits)=(
         brep_core::volume_validity::Limits {
             boundary: brep_core::boundary_embedding::Limits {
@@ -154,12 +154,12 @@ pub fn begin_sweep_volume(v:Value)->Result<Value> {
         field(&v, "maxLinearCells")?,
         field::<Vec<usize>>(&v, "capFaces")?,
         brep_core::sweep_cap_contacts::Budgets {
-            max_walls: field(&cap, "maxWalls")?,
-            max_exact_work: field(&cap, "maxExactWork")?,
-            max_chart_cells: field(&cap, "maxChartCells")?,
-            max_trim_pairs: field(&cap, "maxTrimPairs")?,
-            max_trim_cells: field(&cap, "maxTrimCells")?,
-            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+            max_walls: field(cap, "maxWalls")?,
+            max_exact_work: field(cap, "maxExactWork")?,
+            max_chart_cells: field(cap, "maxChartCells")?,
+            max_trim_pairs: field(cap, "maxTrimPairs")?,
+            max_trim_cells: field(cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(cap, "maxTrimDomainCells")?,
         },
         );
         let work=brep_core::volume_validity::Inspector::new(model.clone(),field(&v,"toleranceUv")?,limits,linear,
@@ -200,7 +200,7 @@ pub fn drop_sweep_volume(v:Value)->Result<Value> {
 
 pub fn diagnose_sweep_embedding(v: Value) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
-    let cap = field::<Value>(&v, "capBudgets")?;
+    let cap = &v["capBudgets"];
     let r = brep_core::boundary_embedding::inspect_sweep(
         &model,
         field(&v, "toleranceUv")?,
@@ -221,12 +221,12 @@ pub fn diagnose_sweep_embedding(v: Value) -> Result<Value> {
         field(&v, "maxLinearCells")?,
         &field::<Vec<usize>>(&v, "capFaces")?,
         brep_core::sweep_cap_contacts::Budgets {
-            max_walls: field(&cap, "maxWalls")?,
-            max_exact_work: field(&cap, "maxExactWork")?,
-            max_chart_cells: field(&cap, "maxChartCells")?,
-            max_trim_pairs: field(&cap, "maxTrimPairs")?,
-            max_trim_cells: field(&cap, "maxTrimCells")?,
-            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+            max_walls: field(cap, "maxWalls")?,
+            max_exact_work: field(cap, "maxExactWork")?,
+            max_chart_cells: field(cap, "maxChartCells")?,
+            max_trim_pairs: field(cap, "maxTrimPairs")?,
+            max_trim_cells: field(cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(cap, "maxTrimDomainCells")?,
         },
     )?;
     Ok(boundary_value(&r))

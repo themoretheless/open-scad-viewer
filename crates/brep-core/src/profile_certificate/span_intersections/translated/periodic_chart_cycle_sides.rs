@@ -52,7 +52,7 @@ fn derive(o: &OwnedPeriodicChartCycleSides) -> Result<Vec<OriginalPeriodicChartC
     {
         return Err(refused("Invalid complete cycle side witness allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let cycles = o.owner.owner();
     derive_sides(cycles, cycles.walks(), limits, |p| o.owner.windings(p))
 }
@@ -305,6 +305,7 @@ pub fn own_periodic_chart_cycle_sides(
 
 #[cfg(test)]
 pub(super) fn check_batch(winding: &OwnedPeriodicChartWinding) {
+    let _replay = super::periodic_replay::scope();
     let o = own_periodic_chart_cycle_sides(
         Arc::new(winding.clone()),
         PeriodicChartCycleSideLimits::default(),
@@ -364,6 +365,7 @@ mod tests {
     use super::*;
     #[test]
     fn actual_hole_has_distinct_positive_outer_and_negative_inner_source_germs() {
+        let _replay = super::super::periodic_replay::scope();
         use super::super::{
             periodic_chart_shores::tests as frame, periodic_support_regions::tests as fixture,
         };

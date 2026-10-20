@@ -135,14 +135,18 @@ fn parse_original(v: Value, allow_unbudgeted_direct: bool) -> Result<OriginalReq
     let axes = axes.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([1.; 3])?);
     let center = center.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([0.; 3])?);
     let guide: Option<Curve> = optional_field(&v, "orientationGuide")?;
-    let circle: Option<Value> = optional_field(&v, "circleCorrection")?;
-    let cap: Option<Value> = optional_field(&v, "capCorrection")?;
-    let limits: Value = optional_field(&v, "limits")?.unwrap_or(json!({
+    let circle = v.get("circleCorrection").filter(|x| !x.is_null());
+    let cap = v.get("capCorrection").filter(|x| !x.is_null());
+    let default_limits = json!({
         "maxProducts":100000,"maxFaces":1024,"exactWork":1000000,
         "domainTolerance":0.001,"domainPairs":1000,"domainCells":10000,"projectionCells":10000,
         "capRegions":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,
-            "maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}}));
-    let cap_regions: Value = field(&limits, "capRegions")?;
+            "maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}});
+    let limits = v
+        .get("limits")
+        .filter(|x| !x.is_null())
+        .unwrap_or(&default_limits);
+    let cap_regions = &limits["capRegions"];
     let authored_budget: Option<f64> = optional_field(&v, "maxDeviation")?;
     let unbudgeted = allow_unbudgeted_direct && direct && authored_budget.is_none();
     if unbudgeted && circle.is_some() {
@@ -170,9 +174,8 @@ fn parse_original(v: Value, allow_unbudgeted_direct: bool) -> Result<OriginalReq
             field(&v, "maxDeviation")?
         },
     };
-    let circle = circle.as_ref().map(budget).transpose()?;
+    let circle = circle.map(budget).transpose()?;
     let caps = cap
-        .as_ref()
         .map(|c| {
             Ok::<_, nurbs_core::Error>(CapCorrection {
                 budget: budget(c)?,
@@ -180,30 +183,32 @@ fn parse_original(v: Value, allow_unbudgeted_direct: bool) -> Result<OriginalReq
             })
         })
         .transpose()?;
+    let max_faces = field(limits, "maxFaces")?;
+    let exact_work = field(limits, "exactWork")?;
     let limits = Limits {
-        max_products: field(&limits, "maxProducts")?,
-        max_faces: field(&limits, "maxFaces")?,
-        correspondence_faces: optional_field(&limits, "correspondenceMaxFaces")?
-            .unwrap_or(field(&limits, "maxFaces")?),
-        cap_max_edges: optional_field(&limits, "capMaxEdges")?
-            .unwrap_or(field(&limits, "maxFaces")?),
-        wall_cells: optional_field(&limits, "wallCells")?.unwrap_or(10000),
-        exact_work: field(&limits, "exactWork")?,
-        domain_exact_work: optional_field(&limits, "domainExactWork")?
-            .unwrap_or(field(&limits, "exactWork")?),
-        projection_exact_work: optional_field(&limits, "projectionExactWork")?
-            .unwrap_or(field(&limits, "exactWork")?),
-        domain_tolerance: field(&limits, "domainTolerance")?,
-        domain_pairs: field(&limits, "domainPairs")?,
-        domain_cells: field(&limits, "domainCells")?,
-        projection_cells: field(&limits, "projectionCells")?,
+        max_products: field(limits, "maxProducts")?,
+        max_faces,
+        correspondence_faces: optional_field(limits, "correspondenceMaxFaces")?
+            .unwrap_or(max_faces),
+        cap_max_edges: optional_field(limits, "capMaxEdges")?
+            .unwrap_or(max_faces),
+        wall_cells: optional_field(limits, "wallCells")?.unwrap_or(10000),
+        exact_work,
+        domain_exact_work: optional_field(limits, "domainExactWork")?
+            .unwrap_or(exact_work),
+        projection_exact_work: optional_field(limits, "projectionExactWork")?
+            .unwrap_or(exact_work),
+        domain_tolerance: field(limits, "domainTolerance")?,
+        domain_pairs: field(limits, "domainPairs")?,
+        domain_cells: field(limits, "domainCells")?,
+        projection_cells: field(limits, "projectionCells")?,
         cap_regions: brep_core::sweep_cap_contacts::Budgets {
-            max_walls: field(&cap_regions, "maxWalls")?,
-            max_exact_work: field(&cap_regions, "maxExactWork")?,
-            max_chart_cells: field(&cap_regions, "maxChartCells")?,
-            max_trim_pairs: field(&cap_regions, "maxTrimPairs")?,
-            max_trim_cells: field(&cap_regions, "maxTrimCells")?,
-            max_trim_domain_cells: field(&cap_regions, "maxTrimDomainCells")?,
+            max_walls: field(cap_regions, "maxWalls")?,
+            max_exact_work: field(cap_regions, "maxExactWork")?,
+            max_chart_cells: field(cap_regions, "maxChartCells")?,
+            max_trim_pairs: field(cap_regions, "maxTrimPairs")?,
+            max_trim_cells: field(cap_regions, "maxTrimCells")?,
+            max_trim_domain_cells: field(cap_regions, "maxTrimDomainCells")?,
         },
     };
     Ok(OriginalRequest {

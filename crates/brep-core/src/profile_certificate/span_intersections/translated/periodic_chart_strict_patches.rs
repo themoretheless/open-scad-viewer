@@ -117,7 +117,7 @@ fn derive(o: &OwnedPeriodicChartStrictPatches) -> Result<Data> {
     {
         return Err(refused("Invalid complete strict chart patch allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let cycles = o.owner.owner().owner();
     let n = cycles.walks().len();
     if n > l.max_cycles {

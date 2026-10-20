@@ -101,7 +101,7 @@ fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData
     {
         return Err(refused("Invalid original material signature allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let selection = o.owner.owner().owner();
     let graph = selection.rule().material().base().owner().owner().owner();
     let cover = graph.owner().owner().pieces();
@@ -401,14 +401,14 @@ fn derive_regions(o: &OwnedPeriodicSupportRegions) -> Result<RegionData> {
     if !(1..=1000000).contains(&o.max_work) {
         return Err(refused("Invalid complete material region allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let material = o.owner.owner().owner().owner().rule().material();
     if !Arc::ptr_eq(o.base.rule(), material) || !Arc::ptr_eq(o.base.query(), material.base()) {
         return Err(refused(
             "Complete regions lost their actual source-owned base sample",
         ));
     }
-    o.base.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.base, |base| base.reverify_source())?;
     let probes = o.owner.probes();
     let mut work = o.owner.work();
     add(&mut work, probes.len(), o.max_work)?;
@@ -442,7 +442,7 @@ fn derive_regions(o: &OwnedPeriodicSupportRegions) -> Result<RegionData> {
             ));
         }
         add(&mut work, p.work(), o.max_work)?;
-        p.reverify_source()?;
+        super::periodic_replay::verify_arc(p, |p| p.reverify_source())?;
         let a = find(&mut parent, ids[0]);
         let b = find(&mut parent, ids[1]);
         if a != b {
@@ -531,6 +531,7 @@ pub fn own_periodic_support_regions(
     paths: &[Arc<OwnedPeriodicSupportPath>],
     max_work: usize,
 ) -> Result<OwnedPeriodicSupportRegions> {
+    let _replay = super::periodic_replay::scope();
     if !(1..=1000000).contains(&max_work) || paths.len() > max_work {
         return Err(refused("Invalid complete material region allowance"));
     }

@@ -198,10 +198,25 @@ fn assemble(
     b: &Curve,
     c: &SpanIntersectionCertificate,
 ) -> Result<Vec<AlgebraicEventNode>> {
-    verify_span_intersections(a, b, c)?;
+    let ((nodes,), _, _) = assemble_verified(a, b, c)?;
+    Ok(nodes)
+}
+fn assemble_verified(
+    a: &Curve,
+    b: &Curve,
+    c: &SpanIntersectionCertificate,
+) -> Result<((Vec<AlgebraicEventNode>,), Vec<Cell>, Vec<Cell>)> {
+    if ![1, 2, 3].contains(&c.version)
+        || c.pairs.len() > 4096
+        || c.source != source(a, b, c.self_pair, c.maximum_parameter_width)?
+    {
+        return Err(refused("Span intersection source expression changed"));
+    }
     let x = cells(a)?;
     let y = cells(b)?;
-    assemble_cells(&x, &y, c)
+    verify_cells(&x, &y, c)?;
+    let nodes = assemble_cells(&x, &y, c)?;
+    Ok(((nodes,), x, y))
 }
 fn require_finite_common_family(c: &SpanIntersectionCertificate) -> Result<()> {
     if c.pairs.iter().any(|p| {
@@ -326,9 +341,13 @@ impl CurveEventNodes {
     /// These bound a component and are not isolated intersections. Native source
     /// parameters keep their own clocks, including distinct algebraic fields.
     pub fn overlap_endpoints(&self) -> Result<Vec<(usize, [AlgebraicEventNode; 2])>> {
-        self.reverify_source()?;
-        let first = cells(&self.sources[0])?;
-        let second = cells(&self.sources[1])?;
+        let ((fresh,), first, second) =
+            assemble_verified(&self.sources[0], &self.sources[1], &self.census)?;
+        if self.nodes != fresh {
+            return Err(refused(
+                "Original algebraic event nodes were omitted or rebound",
+            ));
+        }
         overlap_endpoints_cells(&first, &second, &self.census)
     }
 
@@ -355,13 +374,11 @@ pub fn own_curve_event_nodes(
     census: &SpanIntersectionCertificate,
 ) -> Result<CurveEventNodes> {
     let nodes = assemble(a, b, census)?;
-    let owner = CurveEventNodes {
+    Ok(CurveEventNodes {
         sources: [a.clone(), b.clone()],
         census: census.clone(),
         nodes,
-    };
-    owner.reverify_source()?;
-    Ok(owner)
+    })
 }
 
 #[cfg(test)]

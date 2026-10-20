@@ -31,8 +31,10 @@ export function facePlane(body:DirectBody,face:SolidFace):SketchPlane {
  const plane=callGeometryRust<SketchPlane>('cad_face_plane',{mesh:body.mesh,face})
  if(body.brep){
   const support=selectedBrepSupport(body,face.triangles),surface=body.brep.faces[support].surface
-  const normal=face.normal,tolerance=Math.max(body.brep.toleranceMm*10,1e-6)
-  if(surface.controlPoints.flat().some(p=>Math.abs(p.reduce((s,v,i)=>s+(v-plane.origin[i])*normal[i],0))>tolerance))throw Error('Choose a planar face for a sketch.')
+  const [n0,n1,n2]=face.normal,[o0,o1,o2]=plane.origin,tolerance=Math.max(body.brep.toleranceMm*10,1e-6)
+  for(const row of surface.controlPoints)for(const p of row){
+   if(Math.abs((p[0]-o0)*n0+(p[1]-o1)*n1+(p[2]-o2)*n2)>tolerance)throw Error('Choose a planar face for a sketch.')
+  }
  }
  return plane
 }
@@ -74,10 +76,11 @@ export function transformBodies(bodies:DirectBody[],delta:Vec3,axis:Vec3,angle:n
 
 /** Transform the entire selection around one world-space pivot, preserving analytic sketches. */
 export function transformSelection(document: import('./directModeling').DirectDocument, ids:string[],delta:Vec3,axis:Vec3,angle:number,scale:number):import('./directModeling').DirectDocument {
- const source={...document,sketches:document.sketches.map(sketch=>ids.includes(sketch.id)&&sketch.retainedProfile?{...sketch,points:sketch.retainedProfile.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints)) as [number,number][]}:sketch)}
+ const idSet=new Set(ids)
+ const source={...document,sketches:document.sketches.map(sketch=>idSet.has(sketch.id)&&sketch.retainedProfile?{...sketch,points:sketch.retainedProfile.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints)) as [number,number][]}:sketch)}
  const result=callGeometryRust<import('./directModeling').DirectDocument>('cad_transform_selection',{document:source,ids,delta,axis,angle,scale})
- for(const sketch of result.sketches)if(ids.includes(sketch.id)&&sketch.retainedProfile){
-  let offset=0;for(const curve of sketch.retainedProfile.loops.flat()){const count=curve.controlPoints.length;curve.controlPoints=sketch.points.slice(offset,offset+count);offset+=count}
+ for(const sketch of result.sketches)if(idSet.has(sketch.id)&&sketch.retainedProfile){
+  let offset=0;for(const loop of sketch.retainedProfile.loops)for(const curve of loop){const count=curve.controlPoints.length;curve.controlPoints=sketch.points.slice(offset,offset+count);offset+=count}
   Object.assign(sketch,withRetainedProfile(sketch,validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)))
  }
  result.bodies.forEach(typedBody);return result

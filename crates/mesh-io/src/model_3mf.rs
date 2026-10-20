@@ -47,7 +47,9 @@ pub fn export(mesh: &MeshView<'_>, parts: &[MeshView<'_>]) -> Result<Vec<u8>> {
             "Each 3MF object must be a closed oriented mesh with positive volume.",
         )?;
     }
-    let mut out = Document(Vec::new());
+    let mut out = Document(Vec::with_capacity(
+        (256 + vertices * 48 + triangles * 48).min(MAX_MODEL_BYTES),
+    ));
     let result = (|| -> fmt::Result {
         out.write_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"><resources>")?;
         for (index, part) in parts.iter().enumerate() {
@@ -145,7 +147,9 @@ pub fn export_beam_lattice_3mf(
             "3MF beam endpoints must be distinct valid node indices with positive finite radii.",
         )?;
     }
-    let mut out = Document(Vec::new());
+    let mut out = Document(Vec::with_capacity(
+        (512 + nodes_mm.len() * 48 + beams.len() * 56).min(MAX_MODEL_BYTES),
+    ));
     let res = (|| -> fmt::Result {
         out.write_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:b=\"http://schemas.microsoft.com/3dmanufacturing/beamlattice/2017/02\" requiredextensions=\"b\">")?;
         for &(k, v) in metadata {
@@ -212,10 +216,22 @@ pub fn import_beam_lattice_3mf(xml_bytes: &[u8]) -> Result<(Vec<[f64; 3]>, Vec<T
         .map_err(|_| error("3MF XML must be valid UTF-8."))?;
     check(xml.len() <= MAX_MODEL_BYTES, "3MF XML exceeds size limit.")?;
     let attr = |tag: &str, key: &str| -> Option<f64> {
-        let pat = format!("{key}=\"");
-        let start = tag.find(&pat)? + pat.len();
-        let end = tag[start..].find('"')? + start;
-        tag[start..end].parse::<f64>().ok().filter(|v| v.is_finite())
+        let mut search = tag;
+        let mut offset = 0usize;
+        while let Some(pos) = search.find(key) {
+            let abs = offset + pos;
+            let prev_ok = abs == 0 || matches!(tag.as_bytes()[abs - 1], b' ' | b'\t' | b'\n' | b'\r');
+            let after_key = abs + key.len();
+            if prev_ok && tag[after_key..].starts_with("=\"") {
+                let start = after_key + 2;
+                let end = tag[start..].find('"')? + start;
+                return tag[start..end].parse::<f64>().ok().filter(|v| v.is_finite());
+            }
+            let next = pos + key.len();
+            offset += next;
+            search = &search[next..];
+        }
+        None
     };
     let mut nodes = Vec::new();
     let mut beams = Vec::new();

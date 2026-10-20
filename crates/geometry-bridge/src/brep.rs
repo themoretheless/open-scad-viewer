@@ -95,9 +95,9 @@ impl value_codec::Serialize for Tessellation {
     }
 }
 pub(crate) fn weld(mesh: Mesh, tolerance: f64) -> Result<Mesh> {
-    let mut positions = Vec::<f64>::new();
+    let mut positions = Vec::<f64>::with_capacity(mesh.positions.len());
     let mut cells = BTreeMap::<[i64; 3], Vec<usize>>::new();
-    let mut remap = vec![];
+    let mut remap = Vec::with_capacity(mesh.positions.len() / 3);
     for p in mesh.positions.as_chunks::<3>().0 {
         let cell = [
             (p[0] / tolerance).floor() as i64,

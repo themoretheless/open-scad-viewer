@@ -2062,12 +2062,16 @@ const smoothDisplay = ref(true)
 // Exact geometry keys survive history clones and include retained B-rep changes.
 const displayCache = new SolidDisplayCache()
 function triangleNormals(mesh: PolygonMesh) {
-  const count = mesh.indices.length / 3, normals: number[][] = []
-  for (let t = 0; t < count; t++) {
-    const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]; return mesh.positions.slice(i * 3, i * 3 + 3) })
-    const u = b.map((v, k) => v - a[k]), w = c.map((v, k) => v - a[k])
-    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], len = Math.hypot(...n) || 1
-    normals.push(n.map(v => v / len))
+  const indices = mesh.indices, pos = mesh.positions, count = indices.length / 3
+  const normals = new Array<number[]>(count)
+  for (let t = 0, o = 0; t < count; t++, o += 3) {
+    const i0 = indices[o] * 3, i1 = indices[o + 1] * 3, i2 = indices[o + 2] * 3
+    const ax = pos[i0], ay = pos[i0 + 1], az = pos[i0 + 2]
+    const ux = pos[i1] - ax, uy = pos[i1 + 1] - ay, uz = pos[i1 + 2] - az
+    const wx = pos[i2] - ax, wy = pos[i2 + 1] - ay, wz = pos[i2 + 2] - az
+    const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx
+    const len = Math.hypot(nx, ny, nz) || 1
+    normals[t] = [nx / len, ny / len, nz / len]
   }
   return normals
 }
@@ -2320,13 +2324,26 @@ function meshPolygons(b: ReturnType<typeof directExtrusionTool>,preview=0,projec
   const display: DisplayMesh = cameraDragging.value || gpuActive.value ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: world?triangleNormals(b.mesh):[] } : displayMeshFor(b)
   const closed = display.closed ?? (b.brep?.shells.some(s=>!s.closed) ? displayQueue.get(b)?.workClosed : null)
   const allClosed = !!b.brep?.shells.length && b.brep.shells.every(s=>s.closed)
-  const mesh = display.mesh, points = bodyPoints({ ...b, mesh }).map(projectPoint)
-  return Array.from({ length: mesh.indices.length / 3 }, (_, i) => {
-    const face = Array.from(mesh.indices.slice(i * 3, i * 3 + 3), j => points[j])
-    if (!world && !preview && (b.material?.opacity??1)===1 && (closed?.[i] ?? allClosed) && (face[1][0]-face[0][0])*(face[2][1]-face[0][1])-(face[1][1]-face[0][1])*(face[2][0]-face[0][0])<=0) return null
+  const mesh = display.mesh, pos = mesh.positions, vertCount = pos.length / 3
+  const points = new Array<[number, number, number]>(vertCount)
+  for (let v = 0, o = 0; v < vertCount; v++, o += 3) points[v] = projectPoint([pos[o], pos[o + 1], pos[o + 2]])
+  const indices = mesh.indices, triCount = indices.length / 3
+  const out: Array<{ preview: number; surface: boolean; normal: number[]; closed: boolean; vertices: [number, number, number][]; id: string; material: typeof b.material; triangle: number; key: string; points: string; shade: number; depth: number }> = []
+  const checkBackface = !world && !preview && (b.material?.opacity ?? 1) === 1
+  for (let i = 0, o = 0; i < triCount; i++, o += 3) {
+    const p0 = points[indices[o]], p1 = points[indices[o + 1]], p2 = points[indices[o + 2]]
+    const isClosed = closed?.[i] ?? allClosed
+    if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0) continue
     const triangle = display.map ? display.map[i] : i
-    return { preview, surface:false, normal:display.normals[i], closed:closed?.[i]??allClosed, vertices:face, id: b.id, material:b.material, triangle, key: b.id + ':' + i, points: face.map(p => p.slice(0,2).join(',')).join(' '), shade: world ? 0 : display.map ? shadeFromNormal(display.normals[i],projectPoint) : directFaceShade(mesh, i, camera.value,projectPoint), depth: face.reduce((n,p) => n + p[2], 0) }
-  }).filter(p=>p!==null)
+    const face = [p0, p1, p2]
+    out.push({
+      preview, surface: false, normal: display.normals[i], closed: isClosed, vertices: face, id: b.id, material: b.material, triangle,
+      key: b.id + ':' + i, points: `${p0[0]},${p0[1]} ${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`,
+      shade: world ? 0 : display.map ? shadeFromNormal(display.normals[i], projectPoint) : directFaceShade(mesh, i, camera.value, projectPoint),
+      depth: p0[2] + p1[2] + p2[2],
+    })
+  }
+  return out
 }
 /**
  * While the GPU layer draws the scene, these thousands of polygons are transparent hit

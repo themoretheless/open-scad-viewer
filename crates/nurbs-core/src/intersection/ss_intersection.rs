@@ -69,12 +69,10 @@ const MAX_CONTINUATION: usize = 512;
 const MAX_BRANCHES: usize = 256;
 
 fn grids_excluded_ss(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>]) -> bool {
-    let flat_a: Vec<[f64; 4]> = a.iter().flatten().copied().collect();
-    let flat_b: Vec<[f64; 4]> = b.iter().flatten().copied().collect();
     let ra = {
         let mut lo = [f64::INFINITY; 3];
         let mut hi = [f64::NEG_INFINITY; 3];
-        for p in &flat_a {
+        for p in a.iter().flatten() {
             for axis in 0..3 {
                 let x = p[axis] / p[3];
                 lo[axis] = lo[axis].min(next_down(x));
@@ -86,7 +84,7 @@ fn grids_excluded_ss(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>]) -> bool {
     let rb = {
         let mut lo = [f64::INFINITY; 3];
         let mut hi = [f64::NEG_INFINITY; 3];
-        for p in &flat_b {
+        for p in b.iter().flatten() {
             for axis in 0..3 {
                 let x = p[axis] / p[3];
                 lo[axis] = lo[axis].min(next_down(x));

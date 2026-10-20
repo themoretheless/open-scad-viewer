@@ -257,6 +257,69 @@ impl ComputeRuntime {
         Ok(())
     }
 
+    /// Write contiguous parts in one queue update (at most 4 KiB total).
+    /// Uses stack packing memory; requests at most one queue staging region.
+    /// The complete range is validated before any write is scheduled. Empty
+    /// parts are allowed. Callers must keep submissions/dispatch boundaries
+    /// between updates that need to be observed separately.
+    pub fn write_small_parts<T: GpuElement>(
+        &self,
+        array: &GpuArray<T>,
+        offset: usize,
+        parts: &[&[T]],
+    ) -> Result<(), ComputeError> {
+        self.check(array)?;
+        let len = parts
+            .iter()
+            .try_fold(0usize, |n, part| n.checked_add(part.len()))
+            .ok_or(ComputeError::OutOfBounds)?;
+        if offset.checked_add(len).is_none_or(|end| end > array.len()) {
+            return Err(ComputeError::OutOfBounds);
+        }
+        if len > 1024 {
+            return Err(gpu_compute::BufferError::TooLarge.into());
+        }
+        if len == 0 {
+            return Ok(());
+        }
+        if let Some(part) = parts.iter().find(|part| part.len() == len) {
+            return self.write(array, offset, part);
+        }
+        #[cfg(target_endian = "little")]
+        gpu_compute::write_small_parts(
+            &self.queue,
+            array.buffer(),
+            offset as u64 * 4,
+            parts.iter().map(|part| {
+                // SAFETY: GpuElement is sealed to the padding-free f32/u32.
+                unsafe {
+                    std::slice::from_raw_parts(
+                        part.as_ptr().cast::<u8>(),
+                        std::mem::size_of_val(*part),
+                    )
+                }
+            }),
+        )?;
+        #[cfg(not(target_endian = "little"))]
+        {
+            let mut packed = [0u8; 4096];
+            let mut cursor = 0;
+            for part in parts {
+                for value in *part {
+                    packed[cursor..cursor + 4].copy_from_slice(&value.to_bytes());
+                    cursor += 4;
+                }
+            }
+            gpu_compute::write_small_parts(
+                &self.queue,
+                array.buffer(),
+                offset as u64 * 4,
+                std::iter::once(&packed[..cursor]),
+            )?;
+        }
+        Ok(())
+    }
+
     pub fn program(&self) -> ComputeProgram<'_> {
         ComputeProgram {
             runtime: self,

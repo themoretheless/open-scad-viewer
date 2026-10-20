@@ -249,11 +249,11 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
                 .map_err(|e| input(e.to_string()))?,
         });
     }
-    let mut shared_faces = Vec::new();
-    for relation in value["sharedFaces"]
+    let shared_faces_arr = value["sharedFaces"]
         .as_array()
-        .ok_or_else(|| input("sharedFaces must be an array"))?
-    {
+        .ok_or_else(|| input("sharedFaces must be an array"))?;
+    let mut shared_faces = Vec::with_capacity(shared_faces_arr.len());
+    for relation in shared_faces_arr {
         let uses = relation
             .as_array()
             .ok_or_else(|| input("shared face must be an array"))?;
@@ -271,11 +271,11 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
                 .collect::<Result<Vec<_>>>()?,
         });
     }
-    let mut radial_rings = Vec::new();
-    for relation in value["radialRings"]
+    let radial_rings_arr = value["radialRings"]
         .as_array()
-        .ok_or_else(|| input("radialRings must be an array"))?
-    {
+        .ok_or_else(|| input("radialRings must be an array"))?;
+    let mut radial_rings = Vec::with_capacity(radial_rings_arr.len());
+    for relation in radial_rings_arr {
         let uses = relation
             .as_array()
             .ok_or_else(|| input("radial ring must be an array"))?;
@@ -298,11 +298,11 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
                 .collect::<Result<Vec<_>>>()?,
         });
     }
-    let mut vertex_fans = Vec::new();
-    for fan in value["vertexFans"]
+    let vertex_fans_arr = value["vertexFans"]
         .as_array()
-        .ok_or_else(|| input("vertexFans must be an array"))?
-    {
+        .ok_or_else(|| input("vertexFans must be an array"))?;
+    let mut vertex_fans = Vec::with_capacity(vertex_fans_arr.len());
+    for fan in vertex_fans_arr {
         require_exact_fields(fan, &["part", "vertex", "closed", "uses"], "vertex fan")?;
         let uses = fan["uses"]
             .as_array()

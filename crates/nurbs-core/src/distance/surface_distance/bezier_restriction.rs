@@ -7,9 +7,14 @@ pub(super) fn is_complete_span(degree: usize, knots: &[f64], span: usize) -> boo
 }
 fn split(controls: &[[I;4]], alpha: I, weights: [f64;2]) -> Result<(Vec<[I;4]>,Vec<[I;4]>)> {
     let beta = I::point(1.).sub(alpha)?.intersect(0.,1.)?;
-    let mut d=controls.to_vec();
-    let mut left=vec![d[0]];let mut right=vec![*d.last().unwrap()];
-    for remaining in (1..d.len()).rev() {
+    let len = controls.len();
+    let mut d = [[I::point(0.); 4]; 33];
+    d[..len].copy_from_slice(controls);
+    let mut left = Vec::with_capacity(len);
+    let mut right = Vec::with_capacity(len);
+    left.push(d[0]);
+    right.push(d[len - 1]);
+    for remaining in (1..len).rev() {
         for j in 0..remaining {
             let a=d[j];let b=d[j+1];
             for k in 0..4 { d[j][k]=super::mul_blend_factor(a[k],beta)?.add(super::mul_blend_factor(b[k],alpha)?)?

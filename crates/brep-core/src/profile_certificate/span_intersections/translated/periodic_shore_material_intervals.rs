@@ -57,7 +57,7 @@ fn derive(
             "Invalid complete shore material interval allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let shores = o.owner.owner();
     let corners = shores.owner();
     let copies = corners.owner();

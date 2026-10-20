@@ -41,8 +41,9 @@ fn restrict(values: &[[I; 4]], local: I) -> Result<[I; 4]> {
         lo: f64::INFINITY,
         hi: f64::NEG_INFINITY,
     }; 4];
+    let mut controls = [[I::point(0.); 4]; 33];
     for pole in 0..=degree {
-        let mut controls = values.to_vec();
+        controls[..=degree].copy_from_slice(values);
         for r in 1..=degree {
             let t = I::point(if r - 1 < degree - pole {
                 local.lo
@@ -82,7 +83,7 @@ impl SourceJets {
             "Invalid original XYZ jet snapshot",
         )?;
         let mut cells = 0;
-        let mut spans = Vec::new();
+        let mut spans = Vec::with_capacity(curve.control_points.len().saturating_sub(curve.degree));
         for span in curve.degree..curve.control_points.len() {
             let domain = [curve.knots[span], curve.knots[span + 1]];
             if domain[0] >= domain[1] {

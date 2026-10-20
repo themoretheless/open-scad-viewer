@@ -21,7 +21,7 @@ pub struct OwnedOriginalPeriodicSurface {
     coverage: Vec<OriginalPeriodicPieceCoverage>,
 }
 fn derive(
-    pieces: &OwnedOriginalPeriodicPieces,
+    pieces: &Arc<OwnedOriginalPeriodicPieces>,
     surface: &Surface,
     l: ParameterOrderLimits,
 ) -> Result<(
@@ -33,7 +33,10 @@ fn derive(
             "Invalid original periodic surface admission limits",
         ));
     }
-    pieces.reverify_source()?;
+    crate::profile_certificate::span_intersections::translated::periodic_replay::verify_arc(
+        pieces,
+        |x| x.reverify_source(),
+    )?;
     surface.validate()?;
     let n = surface.control_points.len();
     let m = surface.control_points[0].len();
@@ -126,6 +129,8 @@ impl OwnedOriginalPeriodicSurface {
     /// Every world trace is S(original_pcurve(t)+exact_translation), retaining
     /// original natural cuts and the actual source surface, never a fitted 3D curve.
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay =
+            crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
         let (s, c) = derive(&self.pieces, &self.surface, self.limits)?;
         if s != self.seam_proofs || c != self.coverage {
             return Err(refused(
@@ -142,6 +147,8 @@ pub fn bind_original_periodic_pieces_to_surface(
     surface: &Surface,
     limits: ParameterOrderLimits,
 ) -> Result<OwnedOriginalPeriodicSurface> {
+    let _replay =
+        crate::profile_certificate::span_intersections::translated::periodic_replay::scope();
     let (seam_proofs, coverage) = derive(&pieces, surface, limits)?;
     Ok(OwnedOriginalPeriodicSurface {
         pieces,

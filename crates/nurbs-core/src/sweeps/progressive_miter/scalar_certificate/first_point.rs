@@ -5,9 +5,12 @@ pub struct PointFirstReport {
     pub cells: usize,
     pub first: Option<[f64; 2]>,
 }
-pub(super) fn evaluate(mut p: Vec<Interval>, t: Interval) -> Result<Interval> {
+pub(super) fn evaluate_slice(values: &[Interval], t: Interval) -> Result<Interval> {
+    let mut p = [Interval::point(0.); 33];
+    let len = values.len();
+    p[..len].copy_from_slice(values);
     let beta = Interval::point(1.).sub(t)?.intersect(0., 1.)?;
-    for n in (1..p.len()).rev() {
+    for n in (1..len).rev() {
         for i in 0..n {
             p[i] = p[i].mul(beta)?.add(p[i + 1].mul(t)?)?;
         }
@@ -23,6 +26,18 @@ pub fn certify_first_point(c: &Curve, t: f64, max_cells: usize) -> Result<PointF
             && c.control_points
                 .iter()
                 .all(|p| p.len() == 3 && p[1] == 0. && p[2] == 0.),
+        "Invalid scalar point derivative input",
+    )?;
+    certify_first_point_axis(c, 0, t, max_cells)
+}
+pub(in crate::sweeps::progressive_miter) fn certify_first_point_axis(
+    c: &Curve,
+    axis: usize,
+    t: f64,
+    max_cells: usize,
+) -> Result<PointFirstReport> {
+    check(
+        max_cells <= 100000 && t.is_finite() && (0. ..=1.).contains(&t),
         "Invalid scalar point derivative input",
     )?;
     let mut out = PointFirstReport {
@@ -51,21 +66,28 @@ pub fn certify_first_point(c: &Curve, t: f64, max_cells: usize) -> Result<PointF
         out.cells += 1;
         let result = (|| -> Result<Interval> {
             let controls =
-                crate::curve_distance::restricted_controls(c, span, Interval::new(a, b)?)?;
+                crate::curve_distance::restricted_controls_axis(c, axis, span, Interval::new(a, b)?)?;
             let width = Interval::point(b).sub(Interval::point(a))?;
             let local = mapped
                 .intersect(a, b)?
                 .sub(Interval::point(a))?
                 .div(width)?
                 .intersect(0., 1.)?;
-            let numerator = controls.iter().map(|p| p[0]).collect::<Vec<_>>();
-            let weights = controls.iter().map(|p| p[3]).collect::<Vec<_>>();
-            let n1 = derivative(&numerator, c.degree, width)?;
-            let w1 = derivative(&weights, c.degree, width)?;
-            let w = evaluate(weights, local)?;
-            let relative = evaluate(numerator, local)?.div(w)?;
-            evaluate(n1, local)?
-                .sub(relative.mul(evaluate(w1, local)?)?)?
+            let mut numerator = [Interval::point(0.); 33];
+            let mut weights = [Interval::point(0.); 33];
+            let len = controls.len();
+            for (idx, p) in controls.iter().enumerate() {
+                numerator[idx] = p[0];
+                weights[idx] = p[1];
+            }
+            let numerator = &numerator[..len];
+            let weights = &weights[..len];
+            let n1 = derivative(numerator, c.degree, width)?;
+            let w1 = derivative(weights, c.degree, width)?;
+            let w = evaluate_slice(weights, local)?;
+            let relative = evaluate_slice(numerator, local)?.div(w)?;
+            evaluate_slice(&n1, local)?
+                .sub(relative.mul(evaluate_slice(&w1, local)?)?)?
                 .div(w)
         })();
         let Ok(v) = result else {

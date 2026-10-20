@@ -96,7 +96,7 @@ fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
     {
         return Err(refused("Invalid original chart copy allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let traces = o.owner.owner();
     let regions = traces.owner();
     let lifts = regions.owner().owner();

@@ -5,8 +5,8 @@ use nurbs_core::curve::Curve;
 use value_codec::json;
 
 fn active_spans(loops:&[Vec<Curve>],limit:usize)->Result<Vec<Vec<Curve>>>{
-    let mut out=Vec::new();let mut count=0;
-    for wire in loops {let mut spans=Vec::new();for c in wire{
+    let mut out=Vec::with_capacity(loops.len());let mut count=0;
+    for wire in loops {let mut spans=Vec::with_capacity(wire.len());for c in wire{
         c.validate()?;let d=c.domain();let mut knots:Vec<_>=c.knots.iter().copied().filter(|v|*v>=d[0]&&*v<=d[1]).collect();knots.dedup();
         for p in knots.windows(2){count+=1;if count>limit{return Err(input("Retained profile active-span budget exceeded"));}
             spans.push(if knots.len()==2&&c.control_points.len()==c.degree+1&&!c.periodic{c.clone()}else{c.trim(p[0],p[1])?});
@@ -222,10 +222,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
             {
                 return Err(input("Invalid retained cleanup options"));
             }
-            let mut rings = Vec::new();
+            let mut rings = Vec::with_capacity(loops.len());
             let mut total = 0;
             for wire in loops {
-                let mut ring = Vec::new();
+                let mut ring = Vec::with_capacity(wire.len() * 8);
                 let mut endpoint: Option<[f64; 2]> = None;
                 for curve in wire {
                     if curve.control_points.iter().any(|p| p.len() != 2) {

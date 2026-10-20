@@ -65,6 +65,7 @@ fn qualify(
     pieces: [usize; 2],
     shift: [i8; 2],
     node: &AlgebraicEventNode,
+    originals: &[Vec<Cell>],
 ) -> Result<OriginalPeriodicSeamNode> {
     let surface = o.embedding.wires().surface();
     let cover = surface.pieces();
@@ -82,8 +83,7 @@ fn qualify(
     let mut actual = Vec::new();
     for side in 0..2 {
         let p = &cover.pieces()[pieces[side]];
-        let original = cells(&cover.sources()[p.source])?;
-        let cell = &original[p.cell];
+        let cell = &originals[p.source][p.cell];
         let parameter = decode_polynomial(&node.exact.parameters[side])?;
         actual.push(arithmetic::shore_events::translated_point(
             &cell.net,
@@ -165,6 +165,7 @@ fn qualified_pair(
     pieces: [usize; 2],
     shift: [i8; 2],
     owner: Arc<OwnedPeriodicCommonClips>,
+    originals: &[Vec<Cell>],
 ) -> Result<OriginalPeriodicSeamPair> {
     let cover = o.embedding.wires().surface().pieces();
     if owner.owner().pair() != pieces
@@ -175,11 +176,11 @@ fn qualified_pair(
             "Seam contact proof belongs to unrelated source pieces or period",
         ));
     }
-    owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&owner, |x| x.reverify_source())?;
     let mut finite = Vec::new();
     for (index, event) in owner.owner().events().iter().enumerate() {
         if event.in_both_closed_pieces() {
-            finite.push((index, qualify(o, pieces, shift, &event.node)?));
+            finite.push((index, qualify(o, pieces, shift, &event.node, originals)?));
         }
     }
     let mut common = Vec::new();
@@ -192,8 +193,7 @@ fn qualified_pair(
                 let sides = if shift[axis] > 0 { [1, 0] } else { [0, 1] };
                 for side in 0..2 {
                     let p = &cover.pieces()[pieces[side]];
-                    let source = cells(&cover.sources()[p.source])?;
-                    let cell = &source[p.cell];
+                    let cell = &originals[p.source][p.cell];
                     let offset = decode_ratio(&p.translation[axis])?;
                     let shore = Q::from_float(cover.chart()[axis][sides[side]]).unwrap();
                     if cell
@@ -211,8 +211,8 @@ fn qualified_pair(
         common.push((
             clip,
             [
-                qualify(o, pieces, shift, &c.endpoints[0])?,
-                qualify(o, pieces, shift, &c.endpoints[1])?,
+                qualify(o, pieces, shift, &c.endpoints[0], originals)?,
+                qualify(o, pieces, shift, &c.endpoints[1], originals)?,
             ],
         ));
     }
@@ -240,7 +240,12 @@ fn validate(o: &OwnedPeriodicSeamContacts) -> Result<()> {
             "Physical seam census omits source pair/period obligations",
         ));
     }
-    o.embedding.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.embedding, |e| e.reverify_source())?;
+    let originals = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
     let mut index = 0;
     for a in 0..cover.pieces().len() {
         for b in a..cover.pieces().len() {
@@ -261,7 +266,7 @@ fn validate(o: &OwnedPeriodicSeamContacts) -> Result<()> {
                         "Physical seam source pairs or period shifts reordered/changed",
                     ));
                 }
-                let fresh = qualified_pair(o, [a, b], *shift, pair.owner.clone())?;
+                let fresh = qualified_pair(o, [a, b], *shift, pair.owner.clone(), &originals)?;
                 if pair.finite != fresh.finite || pair.common != fresh.common {
                     return Err(refused(
                         "Actual seam node, shore or source position proof changed",
@@ -281,6 +286,7 @@ impl OwnedPeriodicSeamContacts {
         &self.pairs
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         validate(self)
     }
 }
@@ -294,10 +300,23 @@ pub fn own_periodic_seam_contacts(
     limits: ParameterOrderLimits,
     max_pairs: usize,
 ) -> Result<OwnedPeriodicSeamContacts> {
+    let _replay = super::periodic_replay::scope();
+    if !width.is_finite()
+        || !(1e-18..=1e-3).contains(&width)
+        || limits.max_refinements > 512
+        || !(1..=128).contains(&limits.max_resultant_size)
+    {
+        return Err(refused("Invalid physical seam census allowances"));
+    }
     let cover = embedding.wires().surface().pieces();
     let shifts = shifts(cover.wrapped());
     count(cover.pieces().len(), shifts.len(), max_pairs)?;
-    embedding.reverify_source()?;
+    super::periodic_replay::verify_arc(&embedding, |e| e.reverify_source())?;
+    let originals = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
     let mut o = OwnedPeriodicSeamContacts {
         embedding: embedding.clone(),
         width,
@@ -317,11 +336,11 @@ pub fn own_periodic_seam_contacts(
                         &delta(cover.chart(), *shift),
                     )?,
                 ))?);
-                o.pairs.push(qualified_pair(&o, [a, b], *shift, pair)?);
+                o.pairs
+                    .push(qualified_pair(&o, [a, b], *shift, pair, &originals)?);
             }
         }
     }
-    validate(&o)?;
     Ok(o)
 }
 #[cfg(test)]

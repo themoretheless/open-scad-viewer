@@ -83,29 +83,61 @@ export function createG2RunoutSurface(source:import('./nurbsSurface').NurbsSurfa
  if(!validG2RunoutResult(result,maxCells,maxExactWork,options.maxPatches??256,options.tolerances??[1e-7,1e-5,1e-4]))throw Error('Native runout receipt or seam coverage is invalid')
  return result
 }
+function isNonDecreasingKnots(k:number[]):boolean {
+ for(let i=0;i<k.length;i++){const v=k[i];if(!Number.isFinite(v)||(i>0&&v<k[i-1]))return false}
+ return true
+}
+function isValidWeightsGrid(weights:number[][],n:number,m:number):boolean {
+ if(!Array.isArray(weights)||weights.length!==n)return false
+ for(let i=0;i<n;i++){
+  const row=weights[i]
+  if(!Array.isArray(row)||row.length!==m)return false
+  for(let j=0;j<m;j++){const w=row[j];if(!Number.isFinite(w)||w<=0)return false}
+ }
+ return true
+}
+function isValidControlGrid(controlPoints:number[][][],n:number,m:number):boolean {
+ for(let i=0;i<n;i++){
+  const row=controlPoints[i]
+  if(!Array.isArray(row)||row.length!==m)return false
+  for(let j=0;j<m;j++){
+   const p=row[j]
+   if(!Array.isArray(p)||p.length!==3||!Number.isFinite(p[0])||!Number.isFinite(p[1])||!Number.isFinite(p[2]))return false
+  }
+ }
+ return true
+}
 export function validG2RunoutResult(value:unknown,maxCells:number,maxExactWork:number,maxPatches:number,tolerances:[number,number,number]=[1e-7,1e-5,1e-4]):value is ReturnType<typeof createG2RunoutSurface> {
  try{
  const result=value as ReturnType<typeof createG2RunoutSurface>
  const r=result?.report
  if(!result||!Array.isArray(result.patches)||!result.patches.length||result.patches.length>maxPatches||!r||!Array.isArray(r.supportSeams)||!Array.isArray(r.internalSeams))return false
- if(typeof r.complete!=='boolean'||typeof r.withinTolerance!=='boolean'||!Array.isArray(r.tolerances)||r.tolerances.length!==3||r.tolerances.some((x,i)=>x!==tolerances[i])
+ if(typeof r.complete!=='boolean'||typeof r.withinTolerance!=='boolean'||!Array.isArray(r.tolerances)||r.tolerances.length!==3||r.tolerances[0]!==tolerances[0]||r.tolerances[1]!==tolerances[1]||r.tolerances[2]!==tolerances[2]
   ||r.supportSeams.length>result.patches.length*2||r.internalSeams.length>result.patches.length-1)return false
  for(const s of result.patches){
   const n=s.controlPoints?.length,m=s.controlPoints?.[0]?.length
-  if(!n||!m||n*m>4096||![s.degreeU,s.degreeV].every(Number.isSafeInteger)||s.degreeU<1||s.degreeU>=n||s.degreeV<1||s.degreeV>=m
+  if(!n||!m||n*m>4096||!Number.isSafeInteger(s.degreeU)||!Number.isSafeInteger(s.degreeV)||s.degreeU<1||s.degreeU>=n||s.degreeV<1||s.degreeV>=m
    ||!Array.isArray(s.knotsU)||!Array.isArray(s.knotsV)||s.knotsU.length!==n+s.degreeU+1||s.knotsV.length!==m+s.degreeV+1
-   ||[s.knotsU,s.knotsV].some(k=>k.some((v,i)=>!Number.isFinite(v)||(i>0&&v<k[i-1])))
-   ||!Array.isArray(s.weights)||s.weights.length!==n||s.weights.some(row=>!Array.isArray(row)||row.length!==m||row.some(w=>!Number.isFinite(w)||w<=0))
-   ||s.controlPoints.some(row=>!Array.isArray(row)||row.length!==m||row.some(p=>!Array.isArray(p)||p.length!==3||p.some(v=>!Number.isFinite(v)))))return false
+   ||!isNonDecreasingKnots(s.knotsU)||!isNonDecreasingKnots(s.knotsV)
+   ||!isValidWeightsGrid(s.weights,n,m)
+   ||!isValidControlGrid(s.controlPoints,n,m))return false
  }
  if(r?.method!=='native-original-support-G2-runout/1'||r.solidGeometryCertified!==false||r.radiusLawCertified!==false||r.interiorEmbeddingCertified!==false
   ||r.maxCells!==maxCells||r.maxExactWork!==maxExactWork||!Number.isSafeInteger(r.cells)||r.cells<0||r.cells>maxCells
   ||!Number.isSafeInteger(r.exactWork)||r.exactWork<0||r.exactWork>maxExactWork)return false
- if(r.withinTolerance&&(!r.complete||r.supportSeams.length!==result.patches.length*2
-  ||result.patches.some((_,i)=>[0,1].some(side=>r.supportSeams.filter(s=>s.patch===i&&s.source===side).length!==1))
-  ||r.supportSeams.some(s=>!s.positionValidated||s.positionUpper===null||!Number.isFinite(s.positionUpper)||s.positionUpper>tolerances[0]||s.inspection.decision!=='within-tolerance'||!s.inspection.regularityProven)
-  ||r.internalSeams.length!==Math.max(0,result.patches.length-1)||r.internalSeams.some(s=>s.decision!=='within-tolerance')))
-  return false
+ if(r.withinTolerance){
+  const patchCount=result.patches.length
+  if(!r.complete||r.supportSeams.length!==patchCount*2||r.internalSeams.length!==Math.max(0,patchCount-1))return false
+  const covered=new Uint8Array(patchCount*2)
+  for(const s of r.supportSeams){
+   if(!Number.isSafeInteger(s.patch)||s.patch<0||s.patch>=patchCount||(s.source!==0&&s.source!==1))return false
+   const slot=s.patch*2+s.source
+   if(covered[slot]!==0)return false
+   covered[slot]=1
+   if(!s.positionValidated||s.positionUpper===null||!Number.isFinite(s.positionUpper)||s.positionUpper>tolerances[0]||s.inspection.decision!=='within-tolerance'||!s.inspection.regularityProven)return false
+  }
+  for(const s of r.internalSeams)if(s.decision!=='within-tolerance')return false
+ }
  return true
  }catch{return false}
 }

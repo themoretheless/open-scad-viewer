@@ -77,7 +77,7 @@ type Data = (
     Vec<OriginalPeriodicTransition>,
 );
 fn endpoint(
-    sources: &[Curve],
+    originals: &[Vec<Cell>],
     cuts: &[Vec<OriginalPeriodicCut>],
     piece: &OriginalPeriodicPiece,
     side: usize,
@@ -93,8 +93,7 @@ fn endpoint(
         decode_ratio(&value.interval[0])?,
         decode_ratio(&value.interval[1])?,
     ];
-    let original = cells(&sources[piece.source])?;
-    let cell = &original[piece.cell];
+    let cell = &originals[piece.source][piece.cell];
     let offset = [
         decode_ratio(&piece.translation[0])?,
         decode_ratio(&piece.translation[1])?,
@@ -398,8 +397,8 @@ fn derive(o: &OwnedOriginalPeriodicPieces) -> Result<Data> {
                 }
                 // Both one-sided endpoint evaluations use the SAME owned cut
                 // primitive; verify exact C0 after accounting for translations.
-                let a = endpoint(&o.sources, &cuts, first, 1, o.limits.max_refinements)?;
-                let b = endpoint(&o.sources, &cuts, &piece, 0, o.limits.max_refinements)?;
+                let a = endpoint(&originals, &cuts, first, 1, o.limits.max_refinements)?;
+                let b = endpoint(&originals, &cuts, &piece, 0, o.limits.max_refinements)?;
                 let f = decode_polynomial(&a.parameter.primitive)?;
                 let root = [
                     decode_ratio(&a.parameter.interval[0])?,
@@ -479,8 +478,13 @@ impl OwnedOriginalPeriodicPieces {
             .pieces
             .get(piece)
             .ok_or_else(|| refused("Unknown original periodic piece"))?;
+        let originals = self
+            .sources
+            .iter()
+            .map(cells)
+            .collect::<Result<Vec<_>>>()?;
         endpoint(
-            &self.sources,
+            &originals,
             &self.cuts,
             p,
             side,

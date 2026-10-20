@@ -189,11 +189,11 @@ struct Plan {
     boundaries: Vec<OriginalPeriodicNaturalBoundary>,
     work: usize,
 }
-fn plan(original: &OwnedOriginalPeriodicWires, max: usize) -> Result<Plan> {
+fn plan(original: &Arc<OwnedOriginalPeriodicWires>, max: usize) -> Result<Plan> {
     if !(1..=1000000).contains(&max) {
         return Err(refused("Invalid complete natural boundary work allowance"));
     }
-    original.reverify_source()?;
+    super::periodic_replay::verify_arc(original, |x| x.reverify_source())?;
     let supporting = original.surface();
     let cover = supporting.pieces();
     let s = supporting.surface();
@@ -279,7 +279,7 @@ fn derive(
     usize,
 )> {
     let p = plan(&o.original, o.max_work)?;
-    o.augmented.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.augmented, |x| x.reverify_source())?;
     if !surface_bits(
         o.original.surface().surface(),
         o.augmented.surface().surface(),
@@ -310,6 +310,7 @@ impl OwnedPeriodicSupportBoundaries {
         self.work
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (r, b, w) = derive(self)?;
         if r != self.roles || b != self.boundaries || w != self.work {
             return Err(refused(
@@ -442,6 +443,7 @@ pub fn own_periodic_support_boundaries(
     max_levels: usize,
     max_work: usize,
 ) -> Result<OwnedPeriodicSupportBoundaries> {
+    let _replay = super::periodic_replay::scope();
     if !width.is_finite()
         || !(1e-18..=1e-3).contains(&width)
         || limits.max_refinements > 512
@@ -535,6 +537,7 @@ pub(in crate::profile_certificate::span_intersections::translated) mod tests {
         wires: Arc<OwnedOriginalPeriodicWires>,
         pair_limits: OriginalAtlasPairLimits,
     ) -> Arc<OwnedPeriodicWireJumps> {
+        let _replay = super::super::periodic_replay::scope();
         let pieces = wires.surface().pieces().clone();
         let n = pieces.pieces().len();
         let count = n * (n + 1) / 2;

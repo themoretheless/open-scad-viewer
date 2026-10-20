@@ -374,10 +374,10 @@ fn primitive_carrier(a: [Poly; 3], ctx: &mut PredicateContext<'_>) -> Result<[Po
 /// Fraction-free echelon kernel; every candidate is checked against the
 /// original matrix before it can define a moving line.
 fn primitive_row(row: &mut Vec<Expansion>, ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
-    let mut values: [Expansion; 6] = row.clone().try_into().map_err(|_| Reason::MissingProof)?;
-    Expansion::reduce_projective(&mut values, ctx)?;
-    *row = values.to_vec();
-    Ok(())
+    if row.len() != 6 {
+        return Err(Reason::MissingProof);
+    }
+    Expansion::reduce_projective(row, ctx)
 }
 fn kernel(
     matrix: &[Vec<Expansion>],

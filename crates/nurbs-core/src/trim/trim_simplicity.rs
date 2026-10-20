@@ -345,14 +345,17 @@ pub fn prove_endpoint_contacts_only(a: &Curve, b: &Curve) -> Result<bool> {
     {
         return Ok(false);
     }
-    let shared = [&a.control_points[0], a.control_points.last().unwrap()]
-        .into_iter()
-        .filter(|p| *p == &b.control_points[0] || *p == b.control_points.last().unwrap())
-        .collect::<Vec<_>>();
-    Ok(match shared.as_slice() {
-        [point] => adjacent_separated(a, b, point),
-        [_, _] => lens_separated(a, b),
-        _ => false,
+    let b_start = &b.control_points[0];
+    let b_end = b.control_points.last().unwrap();
+    let a_start = &a.control_points[0];
+    let a_end = a.control_points.last().unwrap();
+    let s0 = a_start == b_start || a_start == b_end;
+    let s1 = a_end == b_start || a_end == b_end;
+    Ok(match (s0, s1) {
+        (true, false) => adjacent_separated(a, b, a_start),
+        (false, true) => adjacent_separated(a, b, a_end),
+        (true, true) => lens_separated(a, b),
+        (false, false) => false,
     })
 }
 
@@ -410,12 +413,13 @@ pub fn inspect(
     let exact_joins = trim_domain::exact_loop_joins(curves)?;
     let injective = curves.iter().map(injective).collect::<Vec<_>>();
     let n = curves.len();
+    let total_pairs = n * (n - 1) / 2;
     let mut out = Report {
         proven_simple: false,
         exact_joins,
         injective,
-        pairs: Vec::new(),
-        total_pairs: n * (n - 1) / 2,
+        pairs: Vec::with_capacity(total_pairs.min(max_pairs)),
+        total_pairs,
         cells: 0,
     };
     if exact_joins != Some(true) || out.injective.iter().any(|v| !*v) {

@@ -43,10 +43,14 @@ export function parseMeshDocument(text: string): MeshWorkspaceDocument {
 function validatePolygon(mesh: PolygonMesh) {
   if (!mesh || !Array.isArray(mesh.positions) || !Array.isArray(mesh.indices)
     || mesh.positions.length < 9 || mesh.positions.length > 300_000 || mesh.positions.length % 3
-    || mesh.indices.length < 3 || mesh.indices.length > 300_000 || mesh.indices.length % 3
-    || !mesh.positions.every(finite)
-    || !mesh.indices.every(i => Number.isInteger(i) && i >= 0 && i < mesh.positions.length / 3)) {
+    || mesh.indices.length < 3 || mesh.indices.length > 300_000 || mesh.indices.length % 3) {
     throw new Error('Invalid mesh geometry.')
+  }
+  const pos = mesh.positions, idx = mesh.indices, vertexCount = pos.length / 3
+  for (let i = 0; i < pos.length; i++) if (!finite(pos[i])) throw new Error('Invalid mesh geometry.')
+  for (let i = 0; i < idx.length; i++) {
+    const v = idx[i]
+    if (!Number.isInteger(v) || v < 0 || v >= vertexCount) throw new Error('Invalid mesh geometry.')
   }
   // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
   normalizePolygonMesh(mesh)

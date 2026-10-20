@@ -33,7 +33,7 @@ fn derive(o: &OwnedPeriodicPorts) -> Result<(Vec<OriginalPeriodicPort>, Vec<Vec<
             "Invalid original quotient port germ refinement allowance",
         ));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
     let graph = o.owner.owner();
     let cover = graph.owner().owner().pieces();
     let mut original = Vec::new();
@@ -165,6 +165,7 @@ impl OwnedPeriodicPorts {
         &self.vertices
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::periodic_replay::scope();
         let (p, v) = derive(self)?;
         if p != self.ports || v != self.vertices {
             return Err(refused(
@@ -181,6 +182,7 @@ pub fn own_periodic_ports(
     owner: Arc<OwnedPeriodicVertexCharts>,
     max_refinements: usize,
 ) -> Result<OwnedPeriodicPorts> {
+    let _replay = super::periodic_replay::scope();
     let mut o = OwnedPeriodicPorts {
         owner,
         max_refinements,

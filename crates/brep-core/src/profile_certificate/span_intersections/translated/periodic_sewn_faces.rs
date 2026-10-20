@@ -99,8 +99,8 @@ fn derive(o: &OwnedPeriodicSewnFaces) -> Result<Data> {
     {
         return Err(refused("Invalid complete sewn face allowance"));
     }
-    o.owner.reverify_source()?;
-    o.embedding.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
+    super::periodic_replay::verify_arc(&o.embedding, |embedding| embedding.reverify_source())?;
     let c = cycles(&o.owner);
     let shores = c.owner().owner().owner();
     let traces = shores.owner().owner().owner().owner();
@@ -423,7 +423,7 @@ pub fn own_periodic_sewn_faces(
     limits: PeriodicSewnFaceLimits,
 ) -> Result<OwnedPeriodicSewnFaces> {
     let _replay = super::periodic_replay::scope();
-    owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&owner, |owner| owner.reverify_source())?;
     let shores = cycles(&owner).owner().owner().owner();
     let traces = shores.owner().owner().owner().owner();
     let support = traces

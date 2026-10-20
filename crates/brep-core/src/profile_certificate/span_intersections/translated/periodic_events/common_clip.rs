@@ -162,8 +162,8 @@ pub(in crate::profile_certificate) fn lift_value(
     }
     Ok(out)
 }
-fn derive(o: &OwnedPeriodicPairEvents) -> Result<Vec<OriginalPeriodicCommonClip>> {
-    o.reverify_source()?;
+fn derive(o: &Arc<OwnedPeriodicPairEvents>) -> Result<Vec<OriginalPeriodicCommonClip>> {
+    super::super::periodic_replay::verify_arc(o, |x| x.reverify_source())?;
     let (_, x, y) = context(
         &o.census.sources[0],
         &o.census.sources[1],
@@ -242,6 +242,7 @@ impl OwnedPeriodicCommonClips {
         &self.clips
     }
     pub fn reverify_source(&self) -> Result<()> {
+        let _replay = super::super::periodic_replay::scope();
         if derive(&self.owner)? != self.clips {
             return Err(refused("Exact periodic clipped common interval changed"));
         }
@@ -251,6 +252,7 @@ impl OwnedPeriodicCommonClips {
 pub fn own_periodic_common_clips(
     owner: Arc<OwnedPeriodicPairEvents>,
 ) -> Result<OwnedPeriodicCommonClips> {
+    let _replay = super::super::periodic_replay::scope();
     let clips = derive(&owner)?;
     Ok(OwnedPeriodicCommonClips { owner, clips })
 }

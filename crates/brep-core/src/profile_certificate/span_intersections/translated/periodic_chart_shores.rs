@@ -182,7 +182,7 @@ fn derive(o: &OwnedPeriodicNativeChartShores) -> Result<Data> {
     {
         return Err(refused("Invalid native shore construction allowance"));
     }
-    o.owner.reverify_source()?;
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let cover = support(&o.owner).augmented().surface().pieces();
     let wrapped = cover.wrapped();
     let copies = o.owner.owner().copies();
@@ -698,6 +698,7 @@ pub(super) mod tests {
     pub(in super::super) fn corners(
         regions: Arc<OwnedPeriodicSupportRegions>,
     ) -> Arc<OwnedPeriodicNativeChartCorners> {
+        let _replay = super::super::periodic_replay::scope();
         let traces = Arc::new(
             own_periodic_support_traces(regions, ParameterOrderLimits::default(), 1000).unwrap(),
         );
@@ -825,6 +826,7 @@ pub(super) mod tests {
         );
     }
     pub(in super::super) fn cylinder_profile(curved: bool) -> Arc<OwnedPeriodicNativeChartCorners> {
+        let _replay = super::super::periodic_replay::scope();
         let rim = Curve::from_polyline(vec![
             vec![0., 0., 0.],
             vec![1., 0., 0.],
@@ -1000,6 +1002,7 @@ pub(super) mod tests {
         assert!(o.point(0, 1, &q(1, 4)).is_err());
     }
     pub(in super::super) fn full_torus() -> OwnedPeriodicNativeChartShores {
+        let _replay = super::super::periodic_replay::scope();
         let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
         let input = super::super::periodic_support_boundaries::tests::original(
             &surface,

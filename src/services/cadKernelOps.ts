@@ -151,25 +151,26 @@ function handle(dimension: 2 | 3, geometry: CadSolid | CrossSection): CadKernelH
   } as OwnedCadKernelHandle
 }
 
+const CAD_ERROR_MESSAGES: Readonly<Partial<Record<ErrorStatus, string>>> = {
+  NonFiniteVertex: 'Non-finite vertex',
+  NotManifold: 'Not manifold',
+  VertexOutOfBounds: 'Vertex index out of bounds',
+  PropertiesWrongLength: 'Properties have wrong length',
+  MissingPositionProperties: 'Less than three properties',
+  MergeVectorsDifferentLengths: 'Merge vectors have different lengths',
+  MergeIndexOutOfBounds: 'Merge index out of bounds',
+  TransformWrongLength: 'Transform vector has wrong length',
+  RunIndexWrongLength: 'Run index vector has wrong length',
+  FaceIDWrongLength: 'Face ID vector has wrong length',
+  InvalidConstruction: 'Solid constructed with invalid parameters',
+  ResultTooLarge: 'Result exceeds maximum size',
+  InvalidTangents: 'Invalid halfedge tangents',
+  Cancelled: 'Cancelled',
+}
+
 function cadStatusError(wasm: CadToplevel, status: ErrorStatus): Error {
   if (wasm.CadError !== undefined) return new wasm.CadError(status)
-  const messages: Readonly<Partial<Record<ErrorStatus, string>>> = {
-    NonFiniteVertex: 'Non-finite vertex',
-    NotManifold: 'Not manifold',
-    VertexOutOfBounds: 'Vertex index out of bounds',
-    PropertiesWrongLength: 'Properties have wrong length',
-    MissingPositionProperties: 'Less than three properties',
-    MergeVectorsDifferentLengths: 'Merge vectors have different lengths',
-    MergeIndexOutOfBounds: 'Merge index out of bounds',
-    TransformWrongLength: 'Transform vector has wrong length',
-    RunIndexWrongLength: 'Run index vector has wrong length',
-    FaceIDWrongLength: 'Face ID vector has wrong length',
-    InvalidConstruction: 'Solid constructed with invalid parameters',
-    ResultTooLarge: 'Result exceeds maximum size',
-    InvalidTangents: 'Invalid halfedge tangents',
-    Cancelled: 'Cancelled',
-  }
-  const error = new Error(messages[status] ?? 'Unknown error')
+  const error = new Error(CAD_ERROR_MESSAGES[status] ?? 'Unknown error')
   error.name = 'CadError'
   return error
 }
@@ -224,9 +225,19 @@ export function createCadKernelOps(
     },
     polyhedron(vertices, triangles) {
       const vertexData = new Float64Array(vertices.length * 3)
-      vertices.forEach((vertex, index) => vertexData.set(vertex, index * 3))
+      for (let i = 0, o = 0; i < vertices.length; i++, o += 3) {
+        const v = vertices[i]
+        vertexData[o] = v[0]
+        vertexData[o + 1] = v[1]
+        vertexData[o + 2] = v[2]
+      }
       const triangleData = new Uint32Array(triangles.length * 3)
-      triangles.forEach((triangle, index) => triangleData.set(triangle, index * 3))
+      for (let i = 0, o = 0; i < triangles.length; i++, o += 3) {
+        const t = triangles[i]
+        triangleData[o] = t[0]
+        triangleData[o + 1] = t[1]
+        triangleData[o + 2] = t[2]
+      }
       const mesh = new wasm.Mesh({
         numProp: 3,
         vertProperties: vertexData,
