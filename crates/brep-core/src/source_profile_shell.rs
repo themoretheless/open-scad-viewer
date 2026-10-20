@@ -1,5 +1,8 @@
 //! Closed oriented incidence for exact profile/transition expression faces.
 //! Global embedding, volume, radius and wall admission remain separate.
+#[path = "source_profile_shell_tangency.rs"]
+mod tangency;
+pub use tangency::{TransitionNeighborTangency,TransitionNeighborTangencyReport};
 #[path = "source_profile_shell_geometry.rs"]
 mod geometry;
 pub use geometry::EmbeddedExpressionGeometry;
@@ -11,10 +14,13 @@ mod gap;
 pub use gap::{ExpressionGapReport, ExpressionFaceClearance};
 #[path = "source_profile_shell_segment.rs"]
 mod segment;
-pub use segment::{ExpressionSegmentReport, ExpressionSegmentCandidate};
+pub use segment::{ExpressionSegmentReport, ExpressionSegmentCandidate, ExpressionLineReport, ExpressionTrimmedLineReport, ExpressionMaterialLineReport, ExpressionMaterialInterval, ExpressionMaterialLine, ExpressionMaterialLineQualification, ExpressionEndpointNormalReport};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
 pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport,ExpressionVolumeQualification,OrientedExpressionVolume};
+#[path = "source_profile_shell_wall.rs"]
+mod wall;
+pub use wall::{ExpressionWallCell, ExpressionWallReport, ExpressionWallQualification, ExpressionAlignedChordMinimum, ExpressionWallPendingReason};
 use super::*;
 use crate::source_boundary_fragment::Fragment;
 use crate::source_shell_incidence::Address;
@@ -70,7 +76,28 @@ pub struct ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     pairs: Vec<ShellPair>,
     poles: Vec<Address>,
     vertices: usize,
+    vertex_ids: BTreeMap<(usize, usize, usize), usize>,
     components: usize,
+}
+fn original_support_derivatives(source:&nurbs_core::surface::Surface,domain:[[f64;2];2],max_spans:usize)
+    ->Result<(Option<[[[f64;2];3];2]>,usize)> {
+    source.validate()?;
+    let natural=[[source.knots_u[source.degree_u],source.knots_u[source.control_points.len()]],
+        [source.knots_v[source.degree_v],source.knots_v[source.control_points[0].len()]]];
+    if max_spans>100000 || (0..2).any(|k|!domain[k].iter().all(|v|v.is_finite())
+        || domain[k][0]>domain[k][1] || domain[k][0]<natural[k][0] || domain[k][1]>natural[k][1]) {
+        return Err(Error::new("BREP_PROFILE_SHELL","Keep original derivatives in the natural domain and bounded work"));
+    }
+                let mut out = [[[0.; 2]; 3]; 2];
+                let mut spent = 0;
+                for axis in 0..2 {
+                    if spent==max_spans {return Ok((None,spent));}
+                    let (bounds, used) = nurbs_core::normal_alignment::derivative_path_bounds(source, domain, axis, max_spans - spent)?;
+                    spent += used;
+                    let Some(bounds) = bounds else { return Ok((None, spent)); };
+                    out[axis] = bounds.components();
+                }
+                Ok((Some(out), spent))
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     /// Flux of a complete support rectangle in its native chart orientation.
@@ -103,6 +130,14 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             return Err(Error::new("BREP_PROFILE_SHELL", "Bound support derivative parameters and work"));
         }
         let kind = self.faces.get(face).ok_or_else(|| Error::new("BREP_PROFILE_SHELL", "Unknown expression face"))?.kind;
+        if max_spans==0 {
+            let natural=self.support_domain(face)?;
+            if (0..2).any(|k|domain[k][0]<natural[k][0] || domain[k][1]>natural[k][1]) {
+                return Err(Error::new("BREP_PROFILE_SHELL","Keep exhausted derivative queries in the owned support domain"));
+            }
+            return Ok((None,0));
+        }
+
         let root = self.assembly.patch.rails.face.boundary.rooted[0];
         let profile = root.restricted.proposal.profile(root.face).unwrap();
         match kind {
@@ -121,20 +156,49 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             }
             ShellFaceKind::Original(index) => {
                 let source = root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
-                let mut out = [[[0.; 2]; 3]; 2];
-                let mut spent = 0;
-                for axis in 0..2 {
-                    let (bounds, used) = nurbs_core::normal_alignment::derivative_path_bounds(source, domain, axis, max_spans - spent)?;
-                    spent += used;
-                    let Some(bounds) = bounds else { return Ok((None, spent)); };
-                    out[axis] = bounds.components();
-                }
-                Ok((Some(out), spent))
+                original_support_derivatives(source,domain,max_spans)
             }
         }
     }
     pub fn assembly(&self) -> &OuterEdgeAssembly<'_, '_, '_, '_, '_, '_, '_> {
         self.assembly
+    }
+    /// Enclose original/exact-profile normals per knot span before hulling.
+    /// Corrected transitions retain their own expression derivative bounds.
+    pub fn enclose_support_normals(
+        &self, face:usize, domain:[[f64;2];2], max_controls:usize, max_spans:usize,
+    ) -> Result<(Option<[[f64;2];3]>,usize)> {
+        // Reuse owner/domain validation, including the exhausted-budget path.
+        self.enclose_support_derivatives(face,domain,max_controls,0)?;
+        if max_spans>100000 {return Err(Error::new("BREP_PROFILE_SHELL","Bound normal span work"));}
+        if max_spans==0 {return Ok((None,0));}
+        let root=self.assembly.patch.rails.face.boundary.rooted[0];
+        match self.faces[face].kind {
+            ShellFaceKind::Original(index)=> {
+                let source=root.restricted.proposal.body.geometry().shell();
+                nurbs_core::normal_alignment::normal_bounds(source.faces()[index][0].edges()[0].surface(),domain,max_spans)
+                    .map_err(Into::into)
+            }
+            ShellFaceKind::Retained(_)=>root.restricted.proposal.profile(root.face).unwrap()
+                .normal_bounds(domain,max_spans).map_err(Into::into),
+            ShellFaceKind::Transition=> {
+                let (jet,spent)=self.enclose_support_derivatives(face,domain,max_controls,max_spans)?;
+                Ok((jet.map(segment::normal_from_derivatives).transpose()?,spent))
+            }
+        }
+    }
+    /// Direction bounds may divide out a proven nonzero interior pole factor.
+    /// Boundary rectangles keep the ordinary normal enclosure and uncertainty.
+    pub fn enclose_support_normal_directions(
+        &self,face:usize,domain:[[f64;2];2],max_controls:usize,max_spans:usize,
+    ) -> Result<(Option<[[f64;2];3]>,usize)> {
+        self.enclose_support_derivatives(face,domain,max_controls,0)?;
+        if matches!(self.faces[face].kind,ShellFaceKind::Retained(_)) {
+            let root=self.assembly.patch.rails.face.boundary.rooted[0];
+            return root.restricted.proposal.profile(root.face).unwrap()
+                .interior_normal_direction_bounds(domain,max_spans).map_err(Into::into);
+        }
+        self.enclose_support_normals(face,domain,max_controls,max_spans)
     }
     pub fn faces(&self) -> &[ShellFace] {
         &self.faces
@@ -147,6 +211,15 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     }
     pub fn vertices(&self) -> usize {
         self.vertices
+    }
+    /// Qualified shell vertex at a traversal endpoint. IDs are local to this
+    /// shell and come from exact incidence, never Cartesian proximity.
+    pub fn boundary_vertex(&self, address: Address, end: usize) -> Option<usize> {
+        if end > 1 { return None; }
+        let wire = self.faces.get(address.face)?.loops.get(address.wire)?;
+        if address.edge >= wire.len() { return None; }
+        let edge = (address.edge + end) % wire.len();
+        self.vertex_ids.get(&(address.face, address.wire, edge)).copied()
     }
     pub fn components(&self) -> usize {
         self.components
@@ -692,12 +765,27 @@ impl<'o, 'i, 'f, 'a, 's, 'p, 'b> OuterEdgeAssembly<'o, 'i, 'f, 'a, 's, 'p, 'b> {
             out.reason = "profile-shell-topology-change-unproven";
             return Ok(out);
         }
+        // Preserve the already qualified endpoint equivalence classes for
+        // conforming boundary meshes. Dense IDs are deterministic in address
+        // order; discarded union representatives never become geometry.
+        let mut representatives = BTreeMap::new();
+        let mut vertex_ids = BTreeMap::new();
+        for (address, index) in &indices {
+            let root = union.root(*index);
+            let next_id = representatives.len();
+            let id = *representatives.entry(root).or_insert(next_id);
+            vertex_ids.insert(*address, id);
+        }
+        if representatives.len() != vertices {
+            return Err(Error::new("BREP_PROFILE_SHELL", "Vertex incidence accounting conflict"));
+        }
         out.shell = Some(ExpressionShell {
             assembly: self,
             faces,
             pairs,
             poles,
             vertices,
+            vertex_ids,
             components,
         });
         out.reason = "profile-shell-closed-oriented-incidence-qualified";
@@ -707,6 +795,21 @@ impl<'o, 'i, 'f, 'a, 's, 'p, 'b> OuterEdgeAssembly<'o, 'i, 'f, 'a, 's, 'p, 'b> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn original_derivative_budget_refuses_zero_and_partial_axes() {
+        let surface=nurbs_core::surface::Surface {degree_u:1,degree_v:1,
+            knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        assert!(super::original_support_derivatives(&surface,[[-1.,1.],[0.,1.]],0).is_err());
+        for budget in [0,1] {
+            let (bound,spent)=super::original_support_derivatives(&surface,[[0.,1.];2],budget).unwrap();
+            assert!(bound.is_none());assert_eq!(spent,budget);
+        }
+        let (bound,spent)=super::original_support_derivatives(&surface,[[0.,1.];2],2).unwrap();
+        assert!(bound.is_some());assert_eq!(spent,2);
+    }
+
     use super::qualify_vertex_link;
     #[test]
     fn vertex_links_refuse_pinches_and_branching() {
@@ -781,3 +884,51 @@ pub use profile_paired_contact::{ProfilePairedContact,ProfilePairedReport};
 #[path="source_profile_shell_xy_plane_contact.rs"]
 mod xy_plane_contact;
 pub use xy_plane_contact::{TransitionXyPlaneContact,TransitionXyPlaneReport};
+
+#[path = "source_profile_shell_display.rs"]
+mod display;
+pub use display::{ExpressionDisplayLimits, ExpressionDisplayCell, ExpressionDisplayReport};
+
+#[path = "source_profile_shell_mesh.rs"]
+mod display_mesh;
+pub use display_mesh::{ExpressionMeshLimits, ExpressionMeshTile, ExpressionMeshPending, ExpressionMeshReport};
+
+#[path="source_profile_shell_edge_mesh.rs"]
+mod edge_mesh;
+pub use edge_mesh::{ShellBoundaryPartition,ShellBoundaryMeshReport};
+
+#[path="source_profile_shell_boundary_graph.rs"]
+mod boundary_graph;
+pub use boundary_graph::{BoundaryGraphVertex,BoundaryGraphSegment,BoundaryGraphPending,BoundaryGraphReport};
+
+#[path="source_profile_shell_boundary_loops.rs"]
+mod boundary_loops;
+pub use boundary_loops::{BoundaryLoopSegment,BoundaryFaceLoop};
+
+#[path="source_profile_shell_face_candidates.rs"]
+mod face_candidates;
+pub use face_candidates::{FaceTriangleCandidate,FaceCandidatePending,FaceCandidateReport};
+
+#[path="source_profile_shell_refine_triangles.rs"]
+mod refine_triangles;
+pub use refine_triangles::{TriangleRefinementLimits,RefinedTriangle,TriangleRefinementPending,TriangleRefinementReport,TriangleNumericFailure,RegionalTransitionReport};
+
+#[path="source_triangle_incidence.rs"]
+mod triangle_incidence;
+pub use triangle_incidence::TriangleIncidenceReport;
+impl FaceCandidateReport {
+    pub fn inspect_incidence(&self)->TriangleIncidenceReport {triangle_incidence::inspect(&self.triangles.iter().map(|t|t.vertices).collect::<Vec<_>>())}
+}
+
+impl TriangleRefinementReport {
+    /// Counts all leaves, including unqualified geometry. This audits topology
+    /// preservation only, and does not admit pending leaves as material.
+    pub fn inspect_leaf_incidence(&self)->TriangleIncidenceReport {
+        triangle_incidence::inspect(&self.accepted.iter().map(|t|t.triangle.vertices)
+            .chain(self.pending.iter().map(|t|t.triangle.vertices)).collect::<Vec<_>>())
+    }
+}
+
+#[path="source_profile_shell_bisect_edges.rs"]
+mod bisect_edges;
+pub use bisect_edges::{InteriorBisectionReport,AdaptiveInteriorLimits};

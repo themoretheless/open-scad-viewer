@@ -1,0 +1,201 @@
+{
+  "checkedWorkerArtifacts": 2,
+  "wasm": {
+    "sha256": "499506fdcb58168d991597288619e5cc90e11394cbc481d40f5f03f6b3b25da1",
+    "byteLength": 13093802
+  },
+  "nativeParity": true,
+  "wholeCoverageParity": true,
+  "rationalProfileParity": true,
+  "normalDiameterPreserved": true,
+  "nativeErrorRecovery": true,
+  "zeroBudgetRefusal": true,
+  "cancelAndRetry": true,
+  "report": {
+    "excluded": true,
+    "method": "owned-profile-bridge-endpoint-chords",
+    "profileControls": 8,
+    "profilePositionDeviationUpperMm": [
+      [
+        6.661338147750949e-16,
+        6.661338147750949e-16,
+        1e-323
+      ],
+      [
+        6.661338147750949e-16,
+        6.661338147750949e-16,
+        1e-323
+      ]
+    ],
+    "profileWeightDeviationUpper": [
+      6.66133814775094e-16,
+      6.66133814775094e-16
+    ],
+    "proposedExpression": true,
+    "reason": "profile-bridge-chord-excluded",
+    "request": {
+      "axes": [
+        0,
+        0
+      ],
+      "maxControls": 100,
+      "maxSineSquared": 0.0001,
+      "maxSpans": 1000,
+      "op": "profile_section_bridge_chords",
+      "pair": [
+        [
+          [
+            0.1,
+            0.11
+          ],
+          [
+            0.1,
+            0.11
+          ]
+        ],
+        [
+          [
+            0.2,
+            0.21
+          ],
+          [
+            0.2,
+            0.21
+          ]
+        ]
+      ],
+      "parameters": [
+        0,
+        1
+      ],
+      "pivots": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "scales": [
+        1,
+        1
+      ],
+      "surfaces": [
+        {
+          "controlPoints": [
+            [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                1,
+                1,
+                0
+              ]
+            ]
+          ],
+          "degreeU": 1,
+          "degreeV": 1,
+          "knotsU": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "knotsV": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "periodicU": false,
+          "periodicV": false,
+          "weights": [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        },
+        {
+          "controlPoints": [
+            [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                1,
+                1,
+                0
+              ]
+            ]
+          ],
+          "degreeU": 1,
+          "degreeV": 1,
+          "knotsU": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "knotsV": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "periodicU": false,
+          "periodicV": false,
+          "weights": [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "solidQualified": false,
+    "spans": 16,
+    "version": 1,
+    "wholeThicknessQualified": false
+  }
+}

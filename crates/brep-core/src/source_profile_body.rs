@@ -79,6 +79,16 @@ pub struct RootEndedSeam<'p,'b> {
 }
 impl<'p,'b> RootEndedSeam<'p,'b> {
     pub fn restricted(&self)->&RestrictedSeam<'_,'_> {&self.restricted}
+    /// Persist authored cuts and their exact owner; carrier roots are rebuilt.
+    pub fn definition(&self)->Result<value_codec::Value> {
+        let end=|parameter|value_codec::json!({"version":1,"kind":"owned-profile-section-end",
+            "face":self.face,"edge":self.restricted.edge,"axis":self.axis,
+            "parameter":parameter,"highFreeEnd":self.high});
+        Ok(value_codec::json!({"version":1,"kind":"owned-root-ended-profile-seam",
+            "proposal":self.restricted.proposal.definition()?,
+            "ends":[end(self.parameters[0]),end(self.parameters[1])]}))
+    }
+
     pub fn points(&self)->&[crate::source_carrier_point::Point;2] {&self.points}
     /// Bind only the full Hermite-corrected expression with this exact recipe.
     pub fn qualify_transition_side<'s>(
@@ -187,6 +197,34 @@ pub struct TransitionSideReport<'s,'p,'b> {
 /// contour proposal; it does not admit a transition face or a closed Body.
 pub struct TransitionBoundary<'s,'p,'b> {rooted:[&'s RootEndedSeam<'p,'b>;2]}
 impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
+    pub fn definition(&self)->Result<value_codec::Value> {
+        Ok(value_codec::json!({"version":1,"kind":"owned-profile-transition-boundary",
+            "sides":[self.rooted[0].definition()?,self.rooted[1].definition()?]}))
+    }
+    /// Recompute both cut roots for one section and bind complementary contours
+    /// to this exact reconstructed transition boundary.
+    pub fn replay_section_contours<'a>(&'a self,high:bool,max_cut_spans:usize,
+        max_mapping_cells:usize,max_fragments:usize)->Result<TransitionSectionReport<'a,'s,'p,'b>> {
+        if max_cut_spans>100000 || max_mapping_cells>100000 || max_fragments>100000 {
+            return Err(Error::new("BREP_PROFILE_SECTION_RESTORE","Bound section root and contour replay work"));
+        }
+        let pending=|reason|TransitionSectionReport{section:None,fragments:0,reason};
+        let root=self.rooted[0];let proposal=root.restricted.proposal;
+        let parameter=root.parameters[usize::from(high)];
+        let first=proposal.cut_endpoint(root.face,root.axis,parameter,false,root.restricted.edge,max_cut_spans)?;
+        let Some(a)=first.endpoint else {return Ok(pending(first.reason));};
+        let second=proposal.cut_endpoint(root.face,root.axis,parameter,true,self.rooted[1].restricted.edge,
+            max_cut_spans.saturating_sub(first.spans))?;
+        let Some(b)=second.endpoint else {return Ok(pending(second.reason));};
+        if max_mapping_cells==0 {return Ok(pending("profile-section-replay-mapping-work-limit"));}
+        let first=a.split_source_use(max_mapping_cells)?;
+        let Some(pa)=first.partition else {return Ok(pending(first.reason));};
+        let remaining=max_mapping_cells.saturating_sub(first.mapping_cells);
+        if remaining==0 {return Ok(pending("profile-section-replay-mapping-work-limit"));}
+        let second=b.split_source_use(remaining)?;
+        let Some(pb)=second.partition else {return Ok(pending(second.reason));};
+        self.propose_section_contours(high,[&pa,&pb],max_fragments)
+    }
     /// Bind a terminal/entry section cut to this exact transition's carrier roots.
     pub fn propose_section_contours<'a>(&'a self,high:bool,parts:[&CutPartition<'_, 'p,'b>;2],max_fragments:usize)->Result<TransitionSectionReport<'a,'s,'p,'b>> {
         let mut out=TransitionSectionReport{section:None,fragments:0,reason:"profile-transition-section-ownership-unproven"};
@@ -427,7 +465,56 @@ pub struct TransitionCoefficientRadiusReport<'f,'a,'s,'p,'b> {
     pub bound:Option<nurbs_core::profile_expression_radius::CoefficientRadiusBound>,
     pub reason:&'static str,
 }
+/// Whole-boundary first-jet agreement with the original profile support.
+/// Neighboring body incidence and material admission are separate gates.
+pub struct TransitionSupportTangency<'f,'a,'s,'p,'b> {
+    face: &'f TransitionFace<'a,'s,'p,'b>,
+}
+impl TransitionSupportTangency<'_,'_,'_,'_,'_> {
+    pub fn face(&self)->&TransitionFace<'_,'_,'_,'_> {self.face}
+}
+pub struct TransitionSupportTangencyReport<'f,'a,'s,'p,'b> {
+    pub certificate: Option<TransitionSupportTangency<'f,'a,'s,'p,'b>>,
+    /// Order: section low/high, then rail low/high; absent entries were not visited.
+    pub boundaries: Vec<nurbs_core::normal_alignment::TransitionRegularityReport>,
+    pub cells: usize, pub spans: usize, pub reason: &'static str,
+}
 impl<'a,'s,'p,'b> TransitionFace<'a,'s,'p,'b> {
+    /// Rebuild the exact owned full-Hermite recipe; cover all four source
+    /// support joins under a shared budget. Partial coverage cannot certify.
+    pub fn qualify_support_tangency<'f>(&'f self, controls:usize, cells:usize, spans:usize)
+        ->Result<TransitionSupportTangencyReport<'f,'a,'s,'p,'b>> {
+        if cells>100000 || spans>1000000 {
+            return Err(Error::new("BREP_PROFILE_TANGENCY","Bound whole support-join work"));
+        }
+        let mut out=TransitionSupportTangencyReport {certificate:None,boundaries:Vec::new(),
+            cells:0,spans:0,reason:"profile-transition-support-tangency-work-limit"};
+        if controls==0 || cells==0 || spans==0 {return Ok(out);}
+        let root=self.boundary.rooted[0];
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let original=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            profile.section(root.axis,root.parameters[0])?,profile.section(root.axis,root.parameters[1])?,
+            [root.parameters[1]-root.parameters[0];2])?;
+        let (bridge,_)=original.constrain_original_rails(controls)?;
+        let Some(bridge)=bridge else {out.reason="profile-transition-support-tangency-recipe-unproven";return Ok(out);};
+        for section in [true,false] {for high in [false,true] {
+            if out.cells==cells || out.spans==spans {return Ok(out);}
+            let report=if section {
+                bridge.inspect_transverse_corrected_section_join(high,bridge.section(false).range(),
+                    cells-out.cells,spans-out.spans)?
+            } else {
+                bridge.inspect_transverse_corrected_side_join(high,[0.,1.],cells-out.cells,spans-out.spans)?
+            };
+            out.cells+=report.cells;out.spans+=report.spans;
+            let complete=report.complete_regular && report.pending.is_empty();
+            out.boundaries.push(report);
+            if !complete {return Ok(out);}
+        }}
+        out.certificate=Some(TransitionSupportTangency{face:self});
+        out.reason="profile-transition-support-tangency-qualified";
+        Ok(out)
+    }
+
     /// Rebuild the owned whole-face recipe and correlated radius coefficients.
     /// No caller-provided diagnostic bound can construct the certificate.
     pub fn qualify_radius_coefficients<'f>(&'f self,centers:&nurbs_core::curve::Curve,
@@ -548,6 +635,7 @@ impl<'f,'a,'s,'p,'b> TransitionRailIncidence<'f,'a,'s,'p,'b> {
 /// admission, retained-profile immersion and global embedding remain separate.
 pub struct TransitionPatchIncidence<'i,'f,'a,'s,'p,'b> {rails:&'i TransitionRailIncidence<'f,'a,'s,'p,'b>,retained:[Vec<crate::source_boundary_fragment::Fragment>;2]}
 impl<'i,'f,'a,'s,'p,'b> TransitionPatchIncidence<'i,'f,'a,'s,'p,'b> {
+    pub fn face(&self)->&TransitionFace<'_,'_,'_,'_> {self.rails.face()}
     /// Fresh admission of the four outer rail portions against their neighbor
     /// contour fragments. Selected geometry retains exact preserved rails.
     pub fn qualify_outer_edges<'o>(&'o self,faces:[&RetainedProfileFace<'_, '_, '_, 's,'p,'b>;2],max_work:u64,max_drivers:usize)->Result<OuterEdgeReport<'o,'i,'f,'a,'s,'p,'b>> {
@@ -1009,8 +1097,7 @@ impl<'a> Proposal<'a> {
         let use_ = &edge.uses()[side];
         let c = use_.curve();
         let boundary = section.range()[usize::from(high)];
-        if !edge.maps_complete_canonical_source()
-            || !same(use_.surface(), profile.source())
+        if !same(use_.surface(), profile.source())
             || c.periodic
             || c.degree != 1
             || c.control_points.len() != 2
@@ -1035,6 +1122,10 @@ impl<'a> Proposal<'a> {
             .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
             .intersect(d[0], d[1])?;
         let canonical = crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?;
+        if !edge.maps_complete_canonical_source()
+            && !edge.covers_retained_canonical_interval([canonical.lo,canonical.hi])? {
+            out.reason="profile-cut-retained-parameter-unproven";return Ok(out);
+        }
         for current in 0..2 {
             let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
             let ends = edge.uses()[current].parameter_bounds();
@@ -1357,7 +1448,17 @@ impl<'a> Proposal<'a> {
     fn inspect_curved_edge_interval(
         &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],
     )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
-        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,max_cells,max_spans,canonical,None)
+        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,max_cells,max_spans,canonical,None,false)
+    }
+    pub(crate) fn inspect_original_neighbor_interval(&self,face:usize,neighbor:usize,index:usize,
+        threshold:f64,cells:usize,spans:usize,canonical:[f64;2],
+    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let uses=self.body.geometry().shell().uses().get(index)
+            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned edge"))?;
+        if face==neighbor || !uses.iter().any(|u|u.face==face) || !uses.iter().any(|u|u.face==neighbor) {
+            return Err(Error::new("BREP_PROFILE_SEAM","Require the actual incident neighbor"));
+        }
+        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,cells,spans,canonical,None,true)
     }
     /// Diagnostic full-edge limit angles on the owned nonlinear pcurve map.
     /// This does not issue a regular seam or admit a collapsed vertex.
@@ -1370,10 +1471,10 @@ impl<'a> Proposal<'a> {
         if self.profile(face).is_none() || self.profile(uses[1-side].face).is_some() {
             return Err(Error::new("BREP_PROFILE_SEAM","Require proposed face and unchanged neighbor"));
         }
-        self.inspect_curved_edge_interval_policy(face,uses[1-side].face,index,threshold,cells,spans,[0.,1.],Some(high))
+        self.inspect_curved_edge_interval_policy(face,uses[1-side].face,index,threshold,cells,spans,[0.,1.],Some(high),false)
     }
     fn inspect_curved_edge_interval_policy(
-        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],pole:Option<bool>,
+        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],pole:Option<bool>,original_neighbor:bool,
     )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
         use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
         if !canonical.iter().all(|x|x.is_finite()) || canonical[0]<0. || canonical[1]>1. || canonical[0]>=canonical[1]
@@ -1405,7 +1506,7 @@ impl<'a> Proposal<'a> {
             reason: "profile-seam-carrier-unproven",
         };
         let regions = shell.regions().unwrap();
-        if !edge.maps_complete_canonical_source()
+        if (!edge.maps_complete_canonical_source() && !edge.covers_retained_canonical_interval(canonical)?)
             || [face, neighbor].iter().enumerate().any(|(side, &f)| {
                 !same(
                     edge.uses()[order[side]].surface(),
@@ -1462,7 +1563,7 @@ impl<'a> Proposal<'a> {
             let r = if let Some(high)=pole {
                 profile.inspect_original_factored_pole_normals(edge.uses()[order[1]].surface(),rectangles,high,
                     threshold,max_spans-out.spans)?
-            } else {match self.profile(neighbor) {
+            } else {match if original_neighbor {None} else {self.profile(neighbor)} {
                 Some(other) => profile.inspect_profile_normals(
                     other,
                     rectangles,
@@ -1551,6 +1652,180 @@ fn same(a: &Surface, b: &Surface) -> bool {
         && a.knots_v == b.knots_v
         && a.control_points == b.control_points
         && a.weights == b.weights
+}
+pub struct TransitionBoundaryReplayLimits {
+    /// Each side has this independent, explicit work allocation.
+    pub seam:RootSeamReplayLimits,
+    pub controls:usize,
+    pub side_cells:usize,
+    pub side_spans:usize,
+}
+pub struct TransitionBoundaryReplayReport<T> {
+    pub result:Option<T>,
+    pub reason:&'static str,
+}
+/// Rebuild owners within one call, then inspect without exporting borrowed proof.
+/// The callback may run fresh face/shell gates while all exact owners are alive.
+pub fn with_restored_transition_boundary<'p,'b,T,F>(proposal:&'p Proposal<'b>,
+    definition:value_codec::Value,limits:TransitionBoundaryReplayLimits,inspect:F,
+)->Result<TransitionBoundaryReplayReport<T>>
+where F:for<'s> FnOnce(&TransitionBoundary<'s,'p,'b>)->Result<T> {
+    let invalid=||Error::new("BREP_PROFILE_TRANSITION_RESTORE","Require an owned transition boundary recipe and bounded replay work");
+    if definition["version"].as_u64()!=Some(1)
+        || definition["kind"].as_str()!=Some("owned-profile-transition-boundary")
+        || limits.controls>1000000 || limits.side_cells>100000 || limits.side_spans>100000 {
+        return Err(invalid());
+    }
+    let recipes=definition["sides"].as_array().ok_or_else(invalid)?;
+    if recipes.len()!=2 {return Err(invalid());}
+    let pending=|reason|TransitionBoundaryReplayReport{result:None,reason};
+    let first=restore_root_ended_seam(proposal,recipes[0].clone(),limits.seam)?;
+    let Some(a)=first.seam else {return Ok(pending(first.reason));};
+    let second=restore_root_ended_seam(proposal,recipes[1].clone(),limits.seam)?;
+    let Some(b)=second.seam else {return Ok(pending(second.reason));};
+    if a.face!=b.face || a.axis!=b.axis || a.parameters!=b.parameters || a.high==b.high {
+        return Err(invalid());
+    }
+    let profile=proposal.profile(a.face).ok_or_else(invalid)?;
+    let width=a.parameters[1]-a.parameters[0];
+    let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+        profile.section(a.axis,a.parameters[0])?,profile.section(a.axis,a.parameters[1])?,[width;2])?;
+    let (bridge,_)=bridge.constrain_original_rails(limits.controls)?;
+    let Some(bridge)=bridge else {return Ok(pending("profile-transition-replay-rail-recipe-unproven"));};
+    let first=a.qualify_transition_side(&bridge,limits.side_cells,limits.side_spans)?;
+    let Some(first)=first.side else {return Ok(pending(first.reason));};
+    let second=b.qualify_transition_side(&bridge,limits.side_cells,limits.side_spans)?;
+    let Some(second)=second.side else {return Ok(pending(second.reason));};
+    let boundary=propose_transition_boundary([&first,&second])?;
+    Ok(TransitionBoundaryReplayReport{result:Some(inspect(&boundary)?),reason:"profile-transition-boundary-replayed"})
+}
+/// Replayed incident contours and their fresh common 3D carrier.
+/// This is a boundary assembly, not closed-shell or volume admission.
+pub struct RootedContourReplay<'p,'b> {
+    pub seam:RootEndedSeam<'p,'b>,
+    pub contours:IncidentContours,
+    pub edge:crate::source_shared_edge::SharedEdge,
+}
+pub struct RootedContourReplayReport<'p,'b> {
+    pub assembly:Option<RootedContourReplay<'p,'b>>,
+    pub fragments:usize,
+    pub exact_work:u64,
+    pub driver_cells:usize,
+    pub reason:&'static str,
+}
+pub fn restore_incident_contours<'p,'b>(proposal:&'p Proposal<'b>,definition:value_codec::Value,
+    seam_limits:RootSeamReplayLimits,max_fragments:usize,max_exact_work:u64,max_driver_cells:usize,
+)->Result<RootedContourReplayReport<'p,'b>> {
+    if max_fragments>100000 || max_exact_work>100000000 || max_driver_cells>100000 {
+        return Err(Error::new("BREP_PROFILE_CONTOUR_RESTORE","Bound incident contour and shared carrier replay work"));
+    }
+    let rooted=restore_root_ended_seam(proposal,definition,seam_limits)?;
+    let mut out=RootedContourReplayReport{assembly:None,fragments:0,exact_work:0,driver_cells:0,reason:rooted.reason};
+    let Some(seam)=rooted.seam else {return Ok(out);};
+    let contours=seam.propose_incident_contours(max_fragments)?;
+    out.fragments=contours.fragments;out.reason=contours.reason;
+    let Some(contours)=contours.proposal else {return Ok(out);};
+    let carrier=seam.qualify_incident_edge(max_exact_work,max_driver_cells)?;
+    out.exact_work=carrier.work_used;out.driver_cells=carrier.driver_cells;out.reason=carrier.reason;
+    let Some(edge)=carrier.edge else {return Ok(out);};
+    out.assembly=Some(RootedContourReplay{seam,contours,edge});
+    out.reason="profile-incident-contours-and-carrier-replayed";
+    Ok(out)
+}
+#[derive(Clone,Copy)]
+pub struct RootSeamReplayLimits {
+    pub cut_spans: usize,
+    pub mapping_cells: usize,
+    pub max_sine_squared: f64,
+    pub angular_cells: usize,
+    pub seam_spans: usize,
+}
+/// Re-isolate both original crossing roots and requalify shared carrier/tangency.
+/// Returned seams borrow only the proposal, never temporary decoded bounds.
+pub fn restore_root_ended_seam<'p,'b>(proposal:&'p Proposal<'b>,definition:value_codec::Value,
+    limits:RootSeamReplayLimits)->Result<RootEndedSeamReport<'p,'b>> {
+    let invalid=||Error::new("BREP_PROFILE_SEAM_RESTORE","Require an owned root-ended seam recipe and bounded replay work");
+    if definition["version"].as_u64()!=Some(1)
+        || definition["kind"].as_str()!=Some("owned-root-ended-profile-seam")
+        || !same_recipe(&definition["proposal"], &proposal.definition()?)
+        || limits.cut_spans>100000 || limits.mapping_cells>100000
+        || limits.seam_spans>100000 || !(1..=100000).contains(&limits.angular_cells)
+        || !limits.max_sine_squared.is_finite() || !(0. ..1.).contains(&limits.max_sine_squared)
+    {return Err(invalid());}
+    let ends=definition["ends"].as_array().ok_or_else(invalid)?;
+    if ends.len()!=2 {return Err(invalid());}
+    let pending=|reason|RootEndedSeamReport{seam:None,carrier_spans:0,angular:None,reason};
+    let first=restore_cut_endpoint(proposal,ends[0].clone(),limits.cut_spans)?;
+    let Some(a)=first.endpoint else {return Ok(pending(first.reason));};
+    let second=restore_cut_endpoint(proposal,ends[1].clone(),limits.cut_spans.saturating_sub(first.spans))?;
+    let Some(b)=second.endpoint else {return Ok(pending(second.reason));};
+    if limits.mapping_cells==0 {return Ok(pending("profile-root-seam-mapping-work-limit"));}
+    let first=a.split_source_use(limits.mapping_cells)?;
+    let Some(pa)=first.partition else {return Ok(pending(first.reason));};
+    let remaining_mapping=limits.mapping_cells.saturating_sub(first.mapping_cells);
+    if remaining_mapping==0 {return Ok(pending("profile-root-seam-mapping-work-limit"));}
+    let second=b.split_source_use(remaining_mapping)?;
+    let Some(pb)=second.partition else {return Ok(pending(second.reason));};
+    proposal.qualify_root_ended_seam([&pa,&pb],limits.max_sine_squared,limits.angular_cells,limits.seam_spans)
+}
+/// Restore an authored section end by fresh original-pcurve enclosure.
+pub fn restore_cut_endpoint<'p,'b>(proposal:&'p Proposal<'b>,definition:value_codec::Value,
+    max_spans:usize)->Result<CutEndpointReport<'p,'b>> {
+    use value_codec::Deserialize;
+    let invalid=||Error::new("BREP_PROFILE_CUT_RESTORE","Require an owned profile section-end recipe");
+    if definition["version"].as_u64()!=Some(1)
+        || definition["kind"].as_str()!=Some("owned-profile-section-end") {return Err(invalid());}
+    proposal.cut_endpoint(
+        usize::from_value(definition["face"].clone()).map_err(|_|invalid())?,
+        usize::from_value(definition["axis"].clone()).map_err(|_|invalid())?,
+        f64::from_value(definition["parameter"].clone()).map_err(|_|invalid())?,
+        bool::from_value(definition["highFreeEnd"].clone()).map_err(|_|invalid())?,
+        usize::from_value(definition["edge"].clone()).map_err(|_|invalid())?,max_spans)
+}
+/// Reconstruct an authored two-section Hermite expression on this proposal.
+/// The recipe binds source profiles, section axes and exact binary64 scales;
+/// regularity, sewing, embedding and wall admission remain fresh later gates.
+pub fn restore_section_bridge<'p, 'b>(
+    proposal: &'p Proposal<'b>, definition: value_codec::Value,
+) -> Result<nurbs_core::normal_alignment::ProfileSectionBridge<'p, 'b, 'p, 'b>> {
+    use value_codec::Deserialize;
+    let invalid = || Error::new("BREP_PROFILE_BRIDGE_RESTORE", "Require an owned two-section profile bridge recipe");
+    if definition["version"].as_u64() != Some(1)
+        || definition["kind"].as_str() != Some("exact-profile-section-bridge")
+        || !same_recipe(&definition["proposal"], &proposal.definition()?)
+    { return Err(invalid()); }
+    let rows=definition["sections"].as_array().ok_or_else(invalid)?;
+    if rows.len()!=2 { return Err(invalid()); }
+    let section=|row:&value_codec::Value| {
+        let face=usize::from_value(row["face"].clone()).map_err(|_|invalid())?;
+        let axis=usize::from_value(row["axis"].clone()).map_err(|_|invalid())?;
+        let parameter=f64::from_value(row["parameter"].clone()).map_err(|_|invalid())?;
+        proposal.profile(face).ok_or_else(invalid)?.section(axis,parameter)
+    };
+    let scales=<[f64;2]>::from_value(definition["scales"].clone()).map_err(|_|invalid())?;
+    nurbs_core::normal_alignment::ProfileSectionBridge::new(section(&rows[0])?,section(&rows[1])?,scales)
+}
+/// Rebuild exact retained profiles against a freshly admitted original body.
+/// Serialized diagnostic fields never replace native preparation or budgets.
+pub fn restore<'a>(body: &'a Body, definition: value_codec::Value, limits: Limits) -> Result<Report<'a>> {
+    use value_codec::Deserialize;
+    let invalid = || Error::new("BREP_PROFILE_BODY_RESTORE", "Require an owned original body and a valid exact profile recipe");
+    if definition["version"].as_u64() != Some(1)
+        || definition["kind"].as_str() != Some("boundary-preserving-weight-profiles")
+        || !same_recipe(&definition["originalBody"], &body.definition()?)
+    { return Err(invalid()); }
+    let tolerance = f64::from_value(definition["positionTolerance"].clone()).map_err(|_| invalid())?;
+    if !tolerance.is_finite() || tolerance < 0. || tolerance.to_bits() != limits.position_tolerance.to_bits() {
+        return Err(invalid());
+    }
+    let rows = definition["profiles"].as_array().ok_or_else(invalid)?;
+    let face_count = body.geometry().shell().faces().len();
+    if rows.is_empty() || rows.len() > face_count { return Err(invalid()); }
+    let specs = rows.iter().map(|row| Ok(FaceSpec {
+        face: usize::from_value(row["face"].clone()).map_err(|_| invalid())?,
+        anchor: <[usize; 2]>::from_value(row["anchor"].clone()).map_err(|_| invalid())?,
+    })).collect::<Result<Vec<_>>>()?;
+    prepare(body, &specs, limits)
 }
 pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result<Report<'a>> {
     let regions = body
@@ -1676,7 +1951,9 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
 
 #[path="source_profile_shell.rs"]
 mod assembled_shell;
-pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport,SupportPairReport,SupportProduct,ShellSupportPair,ShellSupportReport,OriginalContactReport,OriginalPlanarContact,OriginalFiberContact,OriginalFiberReport,OriginalFiberProof,OriginalAdditionalContact,OriginalAdditionalProof,OriginalAdditionalReport,ContactAuditLimits,PairContactProof,AuditedContactPair,ShellContactAudit,TransitionPlaneContact,TransitionPlaneReport};
+pub use assembled_shell::{ExpressionWallPendingReason,ExpressionWallReport,ExpressionWallCell,
+    ExpressionWallQualification,ExpressionAlignedChordMinimum};
+pub use assembled_shell::{TransitionNeighborTangency,TransitionNeighborTangencyReport,ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport,SupportPairReport,SupportProduct,ShellSupportPair,ShellSupportReport,OriginalContactReport,OriginalPlanarContact,OriginalFiberContact,OriginalFiberReport,OriginalFiberProof,OriginalAdditionalContact,OriginalAdditionalProof,OriginalAdditionalReport,ContactAuditLimits,PairContactProof,AuditedContactPair,ShellContactAudit,TransitionPlaneContact,TransitionPlaneReport};
 
 #[path="source_profile_projected_region.rs"]
 mod projected_region;
@@ -1704,3 +1981,21 @@ pub use assembled_shell::{EmbeddedExpressionGeometry,MaterialFluxReport,Expressi
 pub use assembled_shell::{ExpressionVolumeQualification,OrientedExpressionVolume};
 pub use assembled_shell::{ExpressionGapReport, ExpressionFaceClearance};
 pub use assembled_shell::{ExpressionSegmentReport, ExpressionSegmentCandidate};
+
+#[path="source_profile_shell_replay.rs"]
+mod shell_replay;
+pub use shell_replay::{ShellReplayLimits,ShellReplayReport,with_restored_expression_shell};
+
+#[path="source_profile_recipe_identity.rs"]
+mod recipe_identity;
+use recipe_identity::same_recipe;
+
+pub use assembled_shell::{ExpressionDisplayLimits, ExpressionDisplayCell, ExpressionDisplayReport};
+
+pub use assembled_shell::{ExpressionMeshLimits, ExpressionMeshTile, ExpressionMeshPending, ExpressionMeshReport};
+
+pub use assembled_shell::{BoundaryLoopSegment,BoundaryFaceLoop,BoundaryGraphReport,BoundaryGraphVertex,BoundaryGraphSegment,BoundaryGraphPending,ShellBoundaryPartition,ShellBoundaryMeshReport};
+
+pub use assembled_shell::{TriangleRefinementLimits,RefinedTriangle,TriangleRefinementPending,TriangleRefinementReport,TriangleNumericFailure,RegionalTransitionReport};
+
+pub use assembled_shell::{AdaptiveInteriorLimits,InteriorBisectionReport};

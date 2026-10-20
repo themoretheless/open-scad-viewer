@@ -1,0 +1,9 @@
+{
+  "schema": "canonical-optimized-wasm/1",
+  "path": "/Users/themoretheless/.codex/tmp/source-fixed-point-cache-wasm-stage-2026-10-11/geometry-kernel.canonical.optimized.wasm",
+  "sha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+  "byteLength": 13112736,
+  "optimizerExitCode": 0,
+  "published": false,
+  "workerQualified": false
+}

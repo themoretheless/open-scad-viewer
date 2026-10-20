@@ -81,6 +81,34 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     /// Fresh complete audit plus bounded refinement of unqualified original
     /// pairs. The immutable shell produces the frontier internally; callers
     /// cannot inject serialized diagnostics as geometric authority.
+    /// Fresh bounded contact pipeline for reconstructed expression owners.
+    /// Every stage shares cumulative work limits; unresolved pairs remain pending.
+    pub fn inspect_reconstructed_contacts<'g>(
+        &'g self,limits:ContactAuditLimits,region:&ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        max_linear_cells:usize,linear_cells_per_pair:usize,refinement_cells_per_pair:usize,
+    )->Result<ShellContactAudit<'g>> {
+        if max_linear_cells>100000 || linear_cells_per_pair>100000 || refinement_cells_per_pair>100000 {
+            return Err(Error::new("BREP_PROFILE_CONTACT_AUDIT","Bound reconstructed contact refinement work"));
+        }
+        let mut audit=self.inspect_contacts_with_profile_region_refined(limits,region,refinement_cells_per_pair)?;
+        self.resume_contact_audit(&mut audit,limits,refinement_cells_per_pair)?;
+        self.qualify_remaining_original_contacts(&mut audit,limits,max_linear_cells,linear_cells_per_pair)?;
+        self.qualify_remaining_original_hulls(&mut audit,limits)?;
+        self.qualify_remaining_original_poles(&mut audit,limits)?;
+        self.qualify_remaining_profile_hulls(&mut audit,limits)?;
+        self.qualify_remaining_original_boundaries(&mut audit,limits)?;
+        self.qualify_remaining_transition_xy_hulls(&mut audit,limits,region)?;
+        self.qualify_remaining_transition_xy_bounds(&mut audit,limits,region)?;
+        self.qualify_remaining_transition_xy_material_bounds(&mut audit,limits,region)?;
+        self.qualify_remaining_transition_coordinates(&mut audit,limits,refinement_cells_per_pair)?;
+        self.resume_transition_contact_audit(&mut audit,limits,refinement_cells_per_pair)?;
+        self.qualify_remaining_profile_vertices(&mut audit,limits)?;
+        self.qualify_remaining_profile_boundaries(&mut audit,limits)?;
+        self.qualify_remaining_profile_ruled_contacts(&mut audit,limits)?;
+        self.qualify_remaining_profile_paired_contacts(&mut audit,limits)?;
+        self.qualify_remaining_transition_xy_material_planes(&mut audit,limits,region)?;
+        Ok(audit)
+    }
     pub fn inspect_contacts_with_profile_region_refined(
         &self,
         limits: ContactAuditLimits,

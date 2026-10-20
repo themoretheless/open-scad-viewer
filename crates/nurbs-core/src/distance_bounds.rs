@@ -61,7 +61,35 @@ impl Interval {
     /// Outward-rounded quotient; `b` must be separated above zero.
     pub fn div(self, b: Self) -> Result<Self> {
         numeric(b.lo > 0., "Distance denominator is not separated from zero")?;
-        self.mul(Self::new((1. / b.hi).next_down(), (1. / b.lo).next_up())?)
+        let reciprocal = [(1. / b.hi).next_down(), (1. / b.lo).next_up()];
+        if reciprocal.iter().all(|v| v.is_finite()) {
+            return self.mul(Self::new(reciprocal[0], reciprocal[1])?);
+        }
+        // A reciprocal can overflow although every requested ratio is finite
+        // (for example, subnormal/subnormal). With a positive denominator,
+        // the exact quotient extrema occur at the four endpoint combinations.
+        let ratios = [
+            self.lo / b.lo,
+            self.lo / b.hi,
+            self.hi / b.lo,
+            self.hi / b.hi,
+        ];
+        numeric(
+            ratios.iter().all(|v| v.is_finite()),
+            "Distance quotient exceeded numeric range",
+        )?;
+        Self::new(
+            ratios
+                .iter()
+                .copied()
+                .fold(f64::INFINITY, f64::min)
+                .next_down(),
+            ratios
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .next_up(),
+        )
     }
     /// Outward-rounded quotient for a nonzero-signed denominator.
     pub fn div_signed(self, b: Self) -> Result<Self> {
@@ -201,5 +229,78 @@ mod product_regression {
                 start.elapsed().as_micros()
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod quotient_tests {
+    use super::*;
+    #[test]
+    fn affine_surface_derivative_at_subnormal_parameter_is_enclosed() {
+        let source = crate::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let tiny = f64::from_bits(4);
+        let (bound, _) = crate::normal_alignment::derivative_path_bounds(
+            &source,
+            [[tiny, tiny], [0., 0.]],
+            0,
+            32,
+        )
+        .unwrap();
+        let components = bound
+            .expect("finite affine derivative at the subnormal chart point")
+            .components();
+        for (range, exact) in components.into_iter().zip([1., 0., 0.]) {
+            assert!(range[0].is_finite() && range[1].is_finite());
+            assert!(range[0] <= exact && exact <= range[1]);
+        }
+    }
+    #[test]
+    fn finite_subnormal_ratios_survive_reciprocal_overflow() {
+        let tiny = f64::from_bits(1);
+        let one = Interval::point(tiny).div(Interval::point(tiny)).unwrap();
+        assert!(one.contains(1.));
+        assert!(one.width() < 1e-14);
+        let range = Interval::new(tiny, tiny * 4.)
+            .unwrap()
+            .div(Interval::new(tiny * 2., tiny * 8.).unwrap())
+            .unwrap();
+        assert!(range.contains(0.125) && range.contains(2.));
+        let negative = Interval::new(-tiny * 4., -tiny)
+            .unwrap()
+            .div(Interval::new(tiny * 2., tiny * 8.).unwrap())
+            .unwrap();
+        assert!(negative.contains(-2.) && negative.contains(-0.125));
+        let signed = Interval::point(tiny)
+            .div_signed(Interval::point(-tiny))
+            .unwrap();
+        assert!(signed.contains(-1.) && signed.width() < 1e-14);
+        assert!(
+            Interval::point(0.)
+                .div(Interval::point(tiny))
+                .unwrap()
+                .contains(0.)
+        );
+        assert!(
+            Interval::point(f64::MAX)
+                .div(Interval::point(tiny))
+                .is_err()
+        );
+        assert!(
+            Interval::point(tiny)
+                .div_signed(Interval::new(-tiny, tiny).unwrap())
+                .is_err()
+        );
     }
 }

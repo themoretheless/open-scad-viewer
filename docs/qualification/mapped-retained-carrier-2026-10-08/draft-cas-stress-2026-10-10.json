@@ -1,0 +1,35 @@
+{
+  "scope": "IndexedDB CAS store regression with fake-indexeddb",
+  "rounds": 20,
+  "writersPerRound": 4,
+  "committedRevisions": 21,
+  "rejectedConflicts": 60,
+  "wholeWinnerDocumentPreserved": true,
+  "wrongDocumentKeyRejectedOnReadAndWrite": true,
+  "tests": {
+    "command": "npx vitest run tests/solidDraftHeadStore.test.ts tests/solidDraftStore.test.ts",
+    "passed": 10
+  },
+  "browserSimultaneousCommitQualified": false,
+  "crashRecoveryQualified": false,
+  "fullP0Qualified": false,
+  "sha256": {
+    "src/services/solidDraftHeadStore.ts": "fd41acccc00e3ba70daac01f10d3fa8169d1ecae2cff300b50509eae7e771ab3",
+    "tests/solidDraftHeadStore.test.ts": "1d37d88027f184225c4faa083c1692c6b6c5e2c79da1b219421283e5bc639ffb",
+    "src/features/DirectModeler.vue": "3b4e255b91e9150428690dc5c52a00a67f64c9851ee6a1f6f89ae0a63658ca8c",
+    "tests/directModelerUi.test.ts": "ebd168c5de89bbd032d3e0275e0a339d85534d6ff76bf0e99c19e53b3f389e65"
+  },
+  "referencePublicationFailure": {
+    "visibleWarning": true,
+    "nextEditRetries": true,
+    "uiRegressionTestsPassed": 13,
+    "command": "npx vitest run tests/directModelerUi.test.ts -t 'draft|saved version|other tab'",
+    "typecheck": "npx vue-tsc --noEmit passed",
+    "realBrowserFaultInjectionQualified": false
+  },
+  "fullModelerRegression": {
+    "command": "npx vitest run tests/directModelerUi.test.ts tests/solidDraftHeadStore.test.ts tests/solidDraftStore.test.ts",
+    "passed": 336,
+    "durationSeconds": 207.71
+  }
+}

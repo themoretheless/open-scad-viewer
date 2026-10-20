@@ -1,3 +1,5 @@
+> **Profile cache ownership audit, 2026-10-10:** An internal-helper regression reproduced reuse across two distinct profile owners with equal UV keys. Keys now include profile identity. Inspection of the public `constrain_original_rails` constructor established that it already rejects distinct profile owners (including equal geometry), so that helper misuse is not reachable through the current public corrected-bridge workspace. Earlier blanket invalidation of aligned-chord reports was too broad; existing reports retain their original bounded scope. Public alternating-side regression and a fresh native/WASM rerun are tracked in `profile-cache-owner-correction-2026-10-10.json`. This hardening does not add support for independent-profile bridges.
+
 # Mapped retained carrier qualification
 
 The native control is a closed planar tetrahedron with one original edge split at a qualified root: four faces, seven edges and five vertices. Its affine carrier maps cover the original curve; each retained half remains incomplete. The ordered two-fragment chain proves complete coverage on both incident faces.
@@ -3267,3 +3269,2150 @@ The extended clearance fixture passed in 344.29 s. Complete support-product cove
 `moving_radius::bound_coefficient_nets` now shares the native correlated homogeneous residual algebra between source patches and corrected expression nets, with law curves on either parameter axis and explicit degree/work refusal. Three moving-radius regressions and the corrected-cylinder coefficient test passed. The latter bounds whole-patch radius error below 1e-6 mm, proves a strictly negative squared residual for radius 2 instead of 1, and refuses zero coefficient work. Actual annular law coefficient construction and complete corrected annular radius admission remain pending.
 
 Original law curves now receive interval homogeneous coefficients on the actual across domain, without rounded law trims. The nonunit/restricted law-domain cylinder test passed. The annular full-cell coefficient run passed in 3.10 s: squared residual [-1.6075818376465343e-9,5.67515920721969e-8], radius error upper 1.6214740592058623e-6 mm, 986 enclosure spans and 60,072 coefficient operations. Saved `expression-radius-whole-cell-coefficients.json`. This bounds the complete corrected chart inside the requested 1e-4 mm tolerance. `TransitionFace::qualify_radius_coefficients` now rebuilds the owned recipe and only issues a private certificate from fresh whole-face bounds. Owner identity and zero-budget refusal checks are running in the combined fixture; their completion is not yet claimed. Neither this radius relation nor the face clearance establishes pole G1 smoothness or full material-wall thickness.
+
+### Fresh owner radius and corrected-chart line roots
+
+The full `restricted_profile_seams_match_owned_neighbor_supports` fixture passed in
+323.06 s with a fresh owner-bound coefficient radius certificate. The persisted
+`expression-owned-radius-coefficients-qualified.json` records an upper radius
+error of 1.6214740592058623e-6 mm against 1e-4 mm, 986 spans and 60072 coefficient
+operations. Owner identity, original law domains and zero-budget refusal were
+checked in the fixture.
+
+The coefficient line solver uses outward homogeneous Bernstein coefficients and
+Krawczyk isolation without substituting a rounded surface. Plane and rational
+cylinder tests cover isolated roots, misses, original parameter domains and
+unresolved coincident/tangent cases. The corrected annular chart test passed in
+5.50 s: one isolated root, no unresolved cells, 41 cells. Its UV enclosure was
+[[0.49999428468685353,0.5000038195155316],
+[0.5000006481064496,0.5000009630070706]] and its line parameter enclosure was
+[0.9916472811330479,1.0083577671561548]. Evaluated points only author the test line;
+the coefficient solver supplies the root evidence.
+
+This is a single-chart diagnostic. Trim membership, all-face crossings, material
+parity and complete wall thickness remain unqualified. Pole smoothness and
+general NURBS fillet admission are not implied by either result.
+
+### Shell line audit implementation (acceptance pending)
+
+`inspect_line_support_roots` now dispatches original surfaces, exact
+separable-weight retained profiles and the rail-corrected transition. It retains
+unsupported coefficient domains and exhausted work as pending. Retained profile
+isolation passed the restricted rational cylinder test (0.10 s), including a
+zero span budget. The nine existing ray isolation regressions also passed.
+
+`inspect_trimmed_line_roots` freshly classifies owned contours, requires a strict
+interval sign of (Su cross Sv) dot direction and retains overlapping line
+parameter intervals as pending. The transverse-sign unit test passed, covering
+both crossing directions, tangency and uncertain normal sign. Shell acceptance
+of this newly combined route is pending; its report is diagnostic and cannot
+construct a material or thickness certificate.
+
+### Multi-span retained roots and material-line route
+
+Retained separable profiles now visit each intersected original knot rectangle,
+using exact factorized weights. The rational cylinder test includes two source
+U spans and one isolated interior root; it passed in 0.08 s. Zero span work now
+returns explicit pending rectangles in a report. Roots on knot boundaries are
+not silently merged or admitted.
+
+The previous full shell fixture passed in 404.68 s with the zero-cell and
+exterior-line exclusion checks. The newer trimmed/transverse fixture has a
+separate running acceptance and is not covered by that earlier success.
+
+`EmbeddedExpressionGeometry::inspect_material_line` freshly isolates and
+classifies crossings, checks a strict exterior whole-support hull seed and
+pairs the positive ordered crossings into material intervals. It preserves the
+full root audit and refuses pending boundary, seed bands and odd crossing
+counts. The combined material fixture is added but has not yet passed; no
+minimum thickness or general fillet qualification is claimed.
+
+The seam-coincident shell line [0,0,3] + t [30,0,0] produced zero admitted
+crossings and eight pending rectangles (473 cells, 1036 spans, 3756 coefficient
+operations, 484 trim cells). This explicitly preserves seam uncertainty; it is
+not a material-line qualification. Multi-span retained tests also passed the
+interior-knot-root refusal and the one-span budget retention checks. General
+infinite-line enclosure exclusion passed all nine ray regressions.
+
+### Fresh shell material intervals passed
+
+The full trimmed-line/material fixture passed in 320.63 s. The outside-seeded
+line [-30,2,3] + t [60,0,0] had four distinct transverse trimmed crossings,
+zero pending domains and two material intervals; total support work was 1104
+spans. Zero-cell refusal also passed. This qualifies only that line on the
+embedded annular expression shell, not minimum thickness over the whole wall.
+
+A further fixture run checks the private owner-bound material-line certificate
+and exports complete root/interval diagnostics. That owner/serialized-artifact
+acceptance is pending until its own terminal result is observed.
+
+### Local endpoint normal and length implementation
+
+The immutable material-line owner exposes outward endpoint-distance bounds.
+The length regression passed uncertain endpoint bands, direction scale and
+reversed direction. The shared normal-enclosure algebra preserves the prior
+parallel/antiparallel/oblique/collapsed normal test. Endpoint inspection rebuilds
+whole-root derivative enclosures on the same expression geometry, with explicit
+normal budget exhaustion. Its annular strict-angle/refusal acceptance has been
+added and compiled but is not yet run to completion. Local line intervals and
+endpoint normals do not certify the minimum over a complete wall.
+
+### Owned material-line acceptance passed
+
+The fresh owner/certificate and diagnostic-artifact fixture passed in 331.25 s.
+`expression-owned-material-line-qualified.json` records four transverse roots,
+two material intervals (faces 16–17 and 8–2), zero pending rectangles, 155 cells,
+1104 spans, 3756 coefficient operations and 36 trim cells. Certificate geometry,
+origin, direction and interval count were checked against the actual immutable
+owner. This is local material-line qualification, not a minimum wall certificate.
+The subsequent endpoint-normal/length integration remains a separate acceptance.
+
+### Whole-wall support coverage and budget repair (acceptance pending)
+
+The expression coverage route enumerates all n(n+1)/2 products, including every
+same-face product. A FIFO traversal visits original products before refinement.
+Exact original-control planarity excludes positive coplanar chords; complete
+position distance and endpoint-normal cone tests can exclude other cells.
+Paid position/normal rectangles are reused only inside the same fresh shell
+invocation. Remaining products are retained explicitly; no whole-wall minimum
+has been qualified.
+
+Endpoint acceptance found a real zero-budget derivative bug after 432.04 s:
+original surface dispatch called a positive-budget normal routine with zero.
+Dispatch now refuses exhausted derivative work, including exhaustion between
+axes. Its focused regression passed budgets 0/1/2 and invalid zero-budget input.
+The full radial/material/coverage acceptance is running separately. Later generic
+zero-budget dispatch validation was added for all face kinds; it remains subject
+to the consolidated full fixture acceptance.
+
+### Radial line and first wall pass accepted
+
+The combined fixture passed in 318.68 s. Both radial material intervals are
+approximately 15 mm long; whole-root endpoint normal squared-sine upper bounds
+are at most 1.2240019928961575e-11, below 1e-4. The oblique line failed the strict
+normal test as expected. Zero and partial normal budgets were refused.
+`expression-radial-material-lengths-qualified.json` preserves the native values.
+
+All 435 initial products were visited. Distance excluded 148 cells; 490 child
+rectangles remained pending after subdivision (435 cells, 175 spans).
+`expression-wall-first-pass-pending.json` explicitly records incomplete coverage.
+Planar exclusions and per-owner cache reuse were checked in the fixture.
+Original curved same-face products now also invoke the existing source-owned
+intrinsic chord proof on the complete union rectangle. Its combined acceptance
+is a separate running test; retained/corrected expressions cannot inherit that
+original-source certificate. Minimum whole-wall thickness is still unproven.
+
+### Original same-face intrinsic coverage verified
+
+The full `restricted_profile_seams_match_owned_neighbor_supports` test passed in 316.73 s. All 435 initial support pairs were visited. Original continuous-chart self-chord exclusion reduces pending child domains from 490 to 486 at the same 435-cell limit; span work is 189 (previously 175). Retained profiles and corrected transitions do not inherit original-surface certificates. Whole-wall qualification remains incomplete. The radial material intervals, endpoint normals, owned line intervals and volume checks also passed. The zero/partial derivative-budget regression passed separately. See `expression-wall-intrinsic-first-pass-pending.json`.
+
+### Expression Jacobian self-chord algebra
+
+Added `surface_self_chord::inspect_jacobian_self_chords` to apply the existing conservative mean-Jacobian angular bound to native derivative enclosures. It returns a diagnostic bound only, with no source certificate. Expression callers still need a proof of continuity over the convex endpoint rectangle before admitting exclusions. Invalid intervals, nonfinite entries and invalid angular tolerances are rejected; a singular zero Jacobian cannot qualify. All 33 self-chord and coverage regressions passed, including short normal-chord refusal and exhausted-budget coverage. Retained/transition continuity admission is still pending.
+
+### Retained profile intrinsic coverage integration
+
+Added exact `WeightProfile::inspect_self_chords`: natural-domain and angle validation, explicit continuity screening, fresh recipe derivative bounds, and conservative Jacobian chord exclusion. Wired retained same-face products into the owner-bound wall audit and local qualified-rectangle cache. Focused plane/budget/invalid-domain/disconnected-source regression passed; B-rep cargo check passed. Full control-fixture integration test is running (`/tmp/expression-retained-intrinsic-wall-full.log`); no new full-fixture result or reduction count is claimed yet. Corrected transition admission remains pending.
+
+### Corrected transition intrinsic coverage integration
+
+Added `RailConstrainedBridge::inspect_self_chords` on the exact transverse-corrected derivatives. It conservatively refuses source knots permitting derivative discontinuities, validates the expression rectangle, and preserves zero-budget uncertainty. Integrated transition same-face products into the wall audit without borrowing original-surface certificates. The corrected rational cylinder coefficient regression passed (0.09 s), including self-chord query, zero budget and invalid domain; B-rep cargo check passed. The running retained-only full fixture predates this transition integration; full transition fixture verification remains pending.
+
+### Combined coverage report capture
+
+All four `profile_expression` regressions passed (4.50 s). Added optional native-fixture JSON export via `BREP_EXPRESSION_WALL_REPORT_PATH`, including every pending face pair and both UV rectangles, budgets and exclusion counters. Combined retained/corrected-transition full fixture started with output `/tmp/expression-combined-intrinsic-wall-full.log` and report `/tmp/expression-combined-wall-report.json`. This is a distinct verification of the changed integration, not a restart of the still-running retained-only test. Neither new full-fixture completion nor whole-wall qualification is claimed yet.
+
+### Retained-profile full fixture and counterexample verified
+
+The retained-profile full control test passed in 320.65 s: 435/435 initial pairs, 486 pending child domains, 435 cells, 191 spans, 148 distance exclusions and 0 angular exclusions. Thus retained integration preserves the previous incomplete coverage and does not establish a whole-wall minimum. Both profile self-chord regressions passed, including an exact rational half-cylinder diameter that must remain a normal-aligned candidate and one-span exhaustion returning `(None, 1)`. The combined corrected-transition full run is still live.
+
+### Adaptive wall verification launched
+
+Added optional `BREP_EXPRESSION_WALL_CELLS` to exercise refinement beyond the 435 initial products, bounded by the native 100000-cell limit. Coverage assertions now require exact consistency of complete/pending status and reserve the expected incompleteness assertion for the initial-pair budget. Zero/partial derivative regression passed after fixture changes. An extended 10000-cell combined-expression run is live, with full pending-domain export to `/tmp/expression-adaptive-wall-report.json`; the independent default-budget combined run remains live. No completion result is claimed for either.
+
+### Owner-bound aligned-chord admission
+
+Added `qualify_minimum_aligned_chords` and private-construction `ExpressionAlignedChordMinimum`. Admission recomputes fresh support-product coverage and requires complete/no-pending evidence; it cannot consume caller-mutated reports. The certificate retains geometry identity, requested lower bound and angular scope. It certifies aligned chords only, not unconstrained thickness or an attained material witness. B-rep cargo check passed. Added full-fixture zero-budget certificate refusal assertion; its compilation/regression is running. Both preceding full runs are still live and predate this wrapper.
+
+### Combined retained and corrected-transition fixture verified
+
+The combined full control test passed in 331.30 s. Default wall audit: 435/435 initial products, 486 pending domains, 252 spans, 148 distance exclusions, 42 planar exclusions, 2 intrinsic exclusions and 1210 cache hits. There are 243 pending source pairs, including 58 domains involving transition face 28 and 30 same-face domains. These are unresolved candidate regions, not detected defects. Full native domain data and pair distribution are saved in `expression-combined-wall-first-pass-pending.json` and `expression-combined-wall-pending-summary.json`. The independent 10000-cell refinement test remains live. Whole-wall completion is still unproven.
+
+### Complete intrinsic-decision cache
+
+Unified original/retained/corrected same-face exclusion dispatch. The invocation-local cache now stores both successful exclusions and complete insufficient-exclusion results for exact owner/rectangle keys. Insufficient results never exclude a pair and incomplete calculations are never cached. This avoids repeating derivative work when child products have the same convex union. Cargo check and diff check passed. The uncached 10000-cell run remains live; a distinct cached 10000-cell run started for comparison and owner-wrapper verification (`/tmp/expression-cached-intrinsic-wall-full.log`). No measured speedup is claimed yet.
+
+### 10000-cell wall refinement verified
+
+The uncached full fixture passed in 333.70 s. All 435 initial products were visited; 10000 cells used 14403 spans, with 2968 distance, 151 angular, 42 planar and 34 intrinsic exclusions. The report retains 4045 pending domains belonging to 210 source pairs (initial audit: 243 pairs). Subdivision increases domain counts, so these counts cannot be interpreted as defect counts or compared directly with initial rectangles. Full native report: `expression-adaptive-wall-pending.json`. Whole-wall completion remains false.
+
+### Same-face product symmetry
+
+Added invocation-local product deduplication under exact endpoint exchange on the same face; cross-face products retain their ordered domains. Distance and endpoint-normal alignment are symmetric. A pending representative remains pending, and work-exhausted products are retained before registration, so symmetry reuse does not fabricate coverage. Added `symmetry_reused` report counter. The exact-key regression passed. A distinct 10000-cell symmetry/owner-wrapper full verification is running, alongside the prior cached run; no improved qualification count is claimed yet.
+
+### Line-query validation before support limits
+
+Moved retained-profile line degree-limit refusal after input/natural-domain validation. A valid degree-17 query still returns explicit unsupported-degree diagnostics, while zero direction and an out-of-domain rectangle now return input errors rather than being hidden by the degree limit. The regression passed. Cached and symmetric 10000-cell full runs remain live; neither has a new terminal result yet.
+
+### Common-chord endpoint normal cone exclusion
+
+Enhanced native `endpoint_chord_excluded` with the necessary two-normal angular condition: for squared sine s < 0.5, common-line alignment requires endpoint normal squared sine <= outward 4*s*(1-s). Fresh owner-proven normal boxes can therefore exclude incompatible cones even when coordinate chord boxes overlap. Unknown/degenerate normal cones and the 45-degree boundary do not qualify. Normal-alignment regressions: 23 passed, 1 ignored (0.01 s), including new overlapping-box, endpoint-exchange, uncertain-cone and angular-boundary controls. Current cached/symmetric full runs predate this addition and remain live; full integration verification is pending.
+
+### Complete intrinsic cache verified
+
+The cached 10000-cell full fixture passed in 512.08 s. Span work fell from 14403 to 7036 (51.15 percent reduction) with identical ordered pending UV rectangles and identical exclusion counters: 4045 domains, 2968 distance, 151 angular, 42 planar and 34 intrinsic exclusions. The comparison establishes reduced span work, not wall-clock speedup (runs overlapped). Saved native report: `expression-cached-wall-pending.json`. All 33 self-chord/coverage regressions also passed after the endpoint-normal cone change. The symmetry run remains live and predates the latter change.
+
+### Same-face symmetry full fixture verified
+
+The 10000-cell symmetry fixture passed in 447.00 s. It retains 3757 pending domains, uses 6551 spans, and records 3055 distance, 172 angular, 42 planar and 26 intrinsic exclusions. Full native report: `expression-symmetric-wall-pending.json`. Different queue allocation means individual exclusion counters need not match the preceding run. Completion remains false. Added per-knot-span original/exact-profile normal queries to avoid crossing independently hulled derivatives; cargo check passed. Full zero-normal-budget fixture assertion added; integration qualification is pending.
+
+### Owned trim exclusion integration
+
+Added fresh `ExpressionShell::inspect_support_trim_outside` using original fragment contours and root-valued endpoints. Mixed source/transition loops and exhausted work remain candidates. Added `inspect_trimmed_minimum_aligned_chords` with a separate bounded contour budget, cached only proven outside rectangles, and explicit domain-cell/trim-exclusion counters. Existing support-only API retains a zero trim budget. Full fixture accepts `BREP_EXPRESSION_WALL_TRIM_CELLS` and exports trim counters. Cargo check passed; contour regressions are being verified. Current normal-cone and per-span-normal full runs remain live and predate this optional trim integration. No new wall certificate is claimed.
+
+### Endpoint cone full fixture verified
+
+The 10000-cell common-normal-cone run passed in 316.43 s. It records 4425 pending domains belonging to 70 source pairs, 11672 spans, 1997 distance exclusions, 704 angular exclusions, 42 planar and 100 intrinsic exclusions. Different refinement allocation changes counts; no monotone improvement claim is made. Native report: `expression-normal-cones-wall-pending.json`. Whole-wall completion remains false. Contour winding regression passed after trim resource guards; unsupported contour counts remain candidates rather than input failures. Per-span-normal run remains live.
+
+### Per-span normal full fixture verified
+
+The full per-span-normal fixture passed in 314.72 s. Pending domains: 4425; pending source pairs: 70; spans: 11133. Full native report saved as `expression-span-normal-wall-pending.json`. Completion remains false. Resource-limited trim contours are preserved as candidates; contour regression passed. The independent trimmed-domain full run remains live.
+
+Per-span normal comparison: the same 70 pending source pairs and 4425 domains are retained while span work decreases from 11672 to 11133. This is a computational reduction, not expanded qualification. Endpoint-specific normal/mean-path bounds remain a possible next refinement after trimmed-domain results.
+
+### Endpoint-specific mean-Jacobian algebra
+
+Added diagnostic `inspect_jacobian_endpoint_chords`, using the existing conservative endpoint/mean-matrix cosine bound. It does not create a source certificate; callers must establish expression continuity and endpoint normal ownership before using it for coverage. Plane-normal exclusion, tangent-direction refusal, singular matrix, uncertain normal and invalid numeric inputs are tested. All 34 self-chord/coverage regressions passed (0.43 s). Expression admission/integration of this new bound remains pending; the trimmed-domain full fixture is still live.
+
+### Exact retained-profile endpoint mean-path integration
+
+Added `WeightProfile::inspect_self_chord_pair`: validate both endpoint rectangles and angular/work inputs, require a continuous exact separable profile chart over their convex union, recompute whole-path derivatives and endpoint-specific normals, and apply native mean-Jacobian exclusion. Exhaustion remains `(None, spent)`. The exact plane test qualifies; half-cylinder diameter remains a candidate and one-span work refuses. Both profile regressions passed. Integrated retained same-face pair checks after ordinary endpoint/chord exclusion; cargo check passed. Full integration verification remains pending, and the preceding trim run is still live.
+
+Trim full fixture passed in 323.00 s: 59 pending pairs, 4429 pending domains, 293 trim exclusions and 100000 contour cells. Saved `expression-trimmed-wall-pending.json`; complete remains false.
+
+### Corrected expression endpoint mean-path integration
+
+Added `RailConstrainedBridge::inspect_self_chord_pair`, sharing conservative C1 source-field continuity screening with the whole-union inspector. Fresh corrected derivatives over the connecting rectangle and corrected endpoint normals feed the native mean-path bound. Zero/exhausted work stays unproven. Integrated transition same-face pairs after ordinary exclusion; no original-surface certificate is borrowed. All six profile-expression regressions passed (4.54 s), and cargo check passed. Retained-only full endpoint-pair test remains live and predates this transition addition; combined verification is pending.
+
+### Endpoint mean-path scale normalization
+
+Normalized each mean-Jacobian parameter column by a fixed positive enclosure scale and endpoint normals by their maximum component before computing the cosine bound. Both transformations preserve the geometric angle/path theorem while reducing overflow risk. Algebraic plane controls at scales 1e-90, 1 and 1e90 pass; all 34 self-chord/coverage regressions passed (0.45 s). This qualifies the bound computation, not arbitrary full models at those scales. Existing retained/corrected full runs remain live and predate normalization; profile regressions are running.
+
+### Trim-aware owner admission
+
+Added `qualify_trimmed_minimum_aligned_chords`, recomputing fresh complete coverage including owned outside-trim exclusions before issuing the private geometry-bound aligned-chord certificate. Support-only qualification delegates with a zero contour budget. The full fixture now asserts certificate/complete consistency and checks geometry identity, lower bound and angular tolerance if admitted. Fixture compilation and the derivative-budget regression passed. Neither an actual whole-wall certificate nor completion of the new full assertion is claimed; earlier retained/corrected pair full runs remain live and predate the wrapper/scale normalization.
+
+### Retained endpoint-pair full fixture verified
+
+The retained-only endpoint-pair run passed in 361.22 s: 59 pending source pairs and 4429 domains, using 13711 spans. It did not improve the prior trimmed fixture coverage; the extra pair-specific bound remains available for broader geometry. Native report: `expression-retained-endpoint-pair-wall-pending.json`. Added complete inside/outside trim decisions with invocation-local caching; unresolved/boundary/resource cases remain `None` and are not cached. Combined corrected-pair run remains live and predates scale/owner/cache changes.
+
+### Corrected endpoint pair full fixture and rank precondition
+
+The corrected-pair full fixture passed in 441.47 s, retaining 59 pairs and 4429 domains with 68794 spans. No coverage improvement over the preceding fixture was observed. Saved `expression-corrected-endpoint-pair-wall-pending.json`. Added a balanced interval mean-matrix rank precondition before endpoint-normal queries in exact profiles/corrected bridges: failure skips only this insufficient theorem, never the candidate product. Six profile regressions and 34 self-chord regressions passed. Full rank-precondition comparison remains pending; complete trim-cache run remains live.
+
+Additional rank-precondition regression passed: independently scaled columns at 1e-90 and 1e90 retain the sufficient rank bound; an enclosure admitting coincident columns refuses both rank qualification and endpoint exclusion. Reversed and infinite intervals are rejected. Both endpoint-Jacobian tests passed. The new full comparison uses 10000 wall cells and 100000 trim cells; it remains running, so no reduced-work or complete-wall claim is made.
+
+### Complete trim-decision cache verified
+
+The complete inside/outside trim-cache fixture passed in 412.20 s. Its ordered pending rectangles are identical to the corrected endpoint-pair report: 59 source pairs, 4429 domains, 68794 spans and 293 trim exclusions. Cache hits increased to 36828; neither coverage improvement nor wall-clock acceleration is claimed. Saved `expression-complete-trim-cache-wall-pending.json`. The rank-precondition full run is separate and remains pending.
+
+### Original NURBS endpoint-pair integration
+
+Added `inspect_original_endpoint_pair`: validate both original rectangles and angle/work bounds, recompute the continuous convex-union mean matrix, then query source-bound endpoint normals within the remaining budget. False remains unproven. Zero work still validates inputs before refusal. Connected original same-face products to wall coverage, alongside retained and corrected expressions. The planar varying-tangent regression passed, including zero/one-span refusal and two-span qualification; B-rep cargo check passed. Full model comparison is running and no additional resolved pairs are claimed yet.
+
+The independent parabola endpoint-pair regression also passed: analytic chords and endpoint normals for `S(u,v)=(u,v,0.01u²)` agree with the exclusion over separated endpoint rectangles. Invalid angular tolerance, excessive work and NaN rectangles reject even at zero budget. These analytic samples are regression controls, not substitutes for the native interval coverage. The earlier 35 self-chord regressions passed before this additional test.
+
+### Rank-precondition full comparison verified
+
+Full fixture passed in 388.87 s. Ordered pending rectangles and every exclusion counter are identical to the complete trim-cache report: 59 pairs, 4429 domains. Spans decreased from 68794 to 30666 (55.42% less); overlapping run timings do not establish a wall-clock speedup. Saved `expression-rank-precondition-wall-pending.json`. This run predates original endpoint-pair integration and the pending-reason counters.
+
+Added separate pending counters for global budget exhaustion, incomplete position enclosures and UV resolution limits. Their sum is asserted against the entire pending list in the full fixture and exported in its native report. Fixture compilation and the exact-product symmetry regression passed; full counter verification remains pending.
+
+### Exact-profile coordinate-strip fallback
+
+When the convex-union Jacobian cannot provide a rank bound, exact-profile endpoint inspection now bounds a two-leg coordinate path: U across A's V strip, then V across B's U strip. The existing source continuity screening covers both paths; derivatives are freshly recomputed from the exact profile and charged to the same budget. Rank or angular uncertainty still refuses exclusion. Three profile regressions passed and B-rep cargo check passed. The planar chart `S=(uv,u(1-v),0)` qualifies using the regular B endpoint while its collapsed A boundary receives no regular normal. The spatial chart `S=(uv,u(1-v),v)` remains unproven; a half-cylinder diameter is preserved. Existing full runs predate this fallback, so no full-fixture coverage gain is claimed.
+
+### Original endpoint-pair full fixture verified
+
+Passed in 347.57 s. The pending source-pair set is unchanged at 59 (zero newly pending or resolved pairs); pending subdivisions changed from 4429 to 4443 under the fixed 10000-cell allocation. Spans are 34702. Saved `expression-original-endpoint-wall-pending.json`. This fixture predates the coordinate-strip fallback and pending-reason counters.
+
+The corrected transition endpoint inspector now also uses the two-leg fallback, with each derivative column freshly bounded from the corrected expression and its continuous source derivative fields. All seven profile-expression tests passed in 4.54 s. Combined full comparison, including pending-reason accounting, is running separately; no new whole-body qualification is claimed.
+
+Pending-reason accounting assertion now covers both zero-budget and refined reports. The first insertion matched only the zero-budget report; the refined assertion was added explicitly after reviewing the fixture. Compilation and the exact-product regression passed. The two running full binaries predate the refined assertion, so their reason sums must also be checked directly from native JSON when terminal results arrive.
+
+### Pending-reason full result
+
+The reasons fixture passed in 344.47 s. Direct native JSON accounting confirms all 4443 pending domains are global-budget pending; enclosure and resolution counters are both zero. All 435 initial pairs were visited. Saved `expression-wall-reasons-pending.json`. Thus this 10000-cell run does not establish an irreducible 59-pair geometric limitation. Started a distinct 50000-cell run of the current coordinate-strip implementation, retaining the same tolerance and 100000 trim-cell budget; results are pending.
+
+### Original NURBS coordinate-path fallback
+
+Original endpoint inspection now recomputes U/V strip mean matrices when the full convex-union rank bound is insufficient, and uses the existing source-identity/domain-checked coordinate-path construction. Every strip and normal query pays the same span budget. The collapsed-boundary planar control qualifies with five spans; budgets zero through three preserve uncertainty. All 37 self-chord/coverage regressions passed in 0.40 s, and B-rep cargo check passed. The live 10000/50000-cell binaries predate this original-chart fallback; no whole-model improvement is claimed.
+
+### Profile/transition coordinate-strip full fixture
+
+Passed in 369.30 s: 59 pairs, 4443 domains, all budget pending; no new coverage compared with the original endpoint-pair run. Spans increased to 72856. Saved `expression-coordinate-strips-wall-pending.json`; full native reason accounting matches. This run predates the original-chart fallback and per-domain reasons.
+
+Each pending product now carries an explicit budget/enclosure/resolution reason alongside owned face indices and UV rectangles. Global span exhaustion during position enclosure is classified as budget rather than geometric uncertainty. Reasons are exported in the native JSON; refined fixture counts are checked against the actual per-domain tags. The enum is re-exported through `source_profile_body`. Fixture compilation and the exact-product regression passed. No WASM/UI transport or full per-domain integration qualification is claimed yet.
+
+### Runtime transport boundary inspected
+
+`geometry-bridge/src/cad_whole_wall.rs` decodes an ordinary `brep_core::Model` and calls `material_wall_coverage::inspect`; its stated scope is all original face pairs. `src/services/solidWholeWall.ts` validates that same original-face scope. This route does not reconstruct the source-bound retained/corrected expression shell used here. Integrating expression-wall evidence requires native reconstruction of its exact recipe/owners before transport of pending rectangles and reasons. Existing original-model whole-wall UI evidence does not qualify this expression fixture.
+
+### Per-domain reasons full fixture verified
+
+Passed in 365.91 s with the original coordinate-path fallback: 59 source pairs, 4443 domains, 74056 spans. All pending domains carry `budget`, matching every native aggregate counter; enclosure/resolution counts are zero. Saved `expression-domain-reasons-wall-pending.json`. No new resolved pairs were observed under the fixed 10000-cell budget.
+
+A one-second process sample of the still-running 50000-cell fixture captured two test-thread stacks in corrected transition endpoint derivative evaluation, including profile homogeneous-net enclosure/interpolation. This confirms its active wall-computation path, not a statistically meaningful hotspot percentage or speedup. Its complete report remains pending.
+
+### 50000-cell result verified
+
+Passed in 772.66 s: the same 59 source pairs remain pending, with 28881 subdivided domains, all budget pending. Spans reached 931312 of 1000000; 4983 angular and 4477 distance exclusions were obtained. No enclosure/resolution pending domains occurred. Saved `expression-50000-cells-wall-pending.json`. Increasing cell allocation alone did not close source pairs; this remains incomplete whole-support coverage, not detected thin-wall defects. The run predates the original coordinate-path fallback and per-domain tags.
+
+Prepared the immutable corrected transition once per wall inspection and reused it for intrinsic/pair checks. Zero cell/span budgets skip preparation; a preparation refusal remains None. B-rep cargo check passed. A separate 10000-cell comparison is running; no changed geometric conclusions or speedup are asserted before it finishes.
+
+### Endpoint-domain chord enclosure
+
+Added native `inspect_jacobian_endpoint_pair_chords`, bounding `M*(B-A)` with outward interval arithmetic and testing its unoriented angle against an owned endpoint normal. It issues no source certificate; original/profile/corrected callers bind the continuous matrix, domains and normal. Original callers use the unscaled parameter matrix for this enclosure, preserving parameter differences. Existing zero/aligned chord candidates remain unproven. The previously unresolved spatial ruled control `S=(uv,u(1-v),v)` now qualifies over the tested separated rectangles, with independent analytic corner chords/normals as regression controls. All 38 self-chord/coverage tests and seven profile-expression tests passed; B-rep cargo check passed. Full comparison is running; arbitrary geometry and whole-wall admission remain unqualified.
+
+Endpoint-domain enclosure now uses common positive scales for the whole matrix and all endpoint coordinates before multiplying. Unlike independent column scaling, these preserve the actual chord direction without changing relative parameter differences. Algebraic controls at scales 1e-200, 1 and 1e200, including exchanged endpoints, preserve exclusions and aligned candidates; all 38 self-chord and seven profile-expression regressions passed. These scale controls do not qualify extreme-scale source models. B-rep cargo check passed. Both live full binaries predate this normalization.
+
+### Prepared transition reuse full result
+
+Passed in 450.27 s. The entire native report is identical to `expression-domain-reasons-wall-pending.json`, including ordered pending rectangles/reasons and 74056 spans. Saved `expression-prepared-transition-wall-pending.json`. Concurrent timings do not establish acceleration; preparation reuse preserves the tested geometry conclusions.
+
+### Shared original corner paths
+
+Added `inspect_shared_corner_chords`, considering only exactly equal authored clamped corners, then delegating to the existing source-bound continuous corner-path cone proof. Integrated distinct original faces after ordinary chord exclusion; midpoint-box direction is only a finite projection proposal. Each product has at most 64 additional charged spans; refusals stay candidates. Eight original corner regressions passed, including approximately coincident corner refusal and reflected/exchanged source domains. B-rep cargo check passed. A separate full comparison with scale normalization and this cross-face path is running; no new resolved fixture pairs are claimed yet.
+
+Added a curved-chart regression for `S=(sign*u,sign*v,0.01*u*v)`: the two nonplanar charts share their authored corner and qualify through fresh original paths. Zero projection and zero work remain unproven; out-of-domain endpoints reject even at zero work. All nine original corner regressions passed (0.02 s). This extends selected controls, not arbitrary seam or whole-wall qualification; both full comparisons remain pending.
+
+The shared-corner inspection wrapper now explicitly requires finite positive-width endpoint rectangles before any zero-budget refusal. Degenerate/out-of-domain inputs reject at the API boundary instead of reaching a later positive-width path query. All nine corner regressions passed again. Existing full fixture rectangles already satisfy this contract; full cross-face coverage remains pending.
+
+### Native diagnostic wire contract
+
+Added `value_codec::Serialize` for pending reasons, cells and the report, with explicit expression support-product method/scope. Public report types are re-exported through `source_profile_body`. The geometry-owned certificate has no wire decoder or serialization admission path. JSON round-trip preserves domains, reasons and counters and carries no certificate field; the focused contract test and B-rep cargo check passed. Replaced fixture-only hand-built JSON with this same serializer plus request parameters; fixture compilation passed. Runtime recipe reconstruction, WASM/worker transport and UI remain open.
+
+### Endpoint-domain full fixture result
+
+Passed in 658.19 s. Its pending pair set remains 59 with 4443 budget domains and 74056 spans; zero pairs were newly pending or resolved. Saved `expression-endpoint-domain-chord-wall-pending.json`. This full run predates common scale normalization, shared-corner integration and diagnostic serialization. Its runtime overlaps other work and does not establish a performance regression or speedup.
+
+The native report now stores the validated minimum aligned-chord length, squared-sine threshold and UV tolerance, and serializes those exact request values. The fixture no longer inserts hard-coded query metadata. The wire round-trip test verifies all three fields; fixture compilation passed. Runtime fillet dispatch still returns ordinary Models, whereas expression qualification requires source/profile/transition owners and a reproducible native recipe. Preserving/reconstructing that operation recipe remains required before expression-wall WASM integration.
+
+### Shared-corner full fixture result
+
+The full fixture passed in 654.45 s. Saved `expression-shared-corner-wall-pending.json`: 59 pending source pairs, 4443 budget domains, 80688 spans. No source pair was resolved or newly pending compared with endpoint-domain coverage. Shared-corner integration increased charged span work for this fixture without closing coverage. This run predates interior factored-direction handling and native query serialization. Overlapping host work prevents a wall-clock performance conclusion.
+
+### Interior profile normal directions
+
+Added a separate direction-only enclosure API, retaining ordinary normals on rectangles touching either U endpoint. Strictly interior rectangles may use exact factored pole normals when ordinary component intervals all contain zero and a factored component separates from zero. This does not certify pole immersion or a unique limiting plane. The wall angle gate consumes directions; the existing normal-magnitude API remains unchanged. A focused regression passed for both endpoint orientations, boundary equality, zero budgets and invalid domains. B-rep cargo check passed; full coverage qualification remains unverified for this change.
+
+The rational regression now exercises the actual factoring branch on `S=(u,u^2*4v/(1+3v),0)`, U=[0.01,0.99], V=0.5: ordinary normals contain zero, factored Z encloses the analytic value 0.64 and separates from zero. Exhausting the additional work retains ordinary uncertainty; widening V to [0,1] remains uncertain. All 26 profile tests passed (6.87 s); diff check passed. The full body comparison is running and is not yet evidence of improved coverage.
+
+Extended the rational direction regression to reversed U orientation (analytic factored Z=-0.64), every span budget from 0 through 20, and rejection above the public 100000-span limit. Both direction regressions passed (0.01 s). Added expression-shell assertions for zero direction budget on every face and equality with ordinary normals on pole-touching retained domains; fixture compilation passed. A pre-existing ambiguous test sum in `miter_seams.rs` was annotated as `usize` to compile with the current dependency set. Those new shell assertions are not yet executed by the already-running full fixture.
+
+Added a rational quadratic noncollapsed-end control with an uncertain ordinary normal box. Neither endpoint admits factor removal: direction bounds and spent spans exactly match ordinary bounds. All three direction regressions passed (0.01 s); diff check passed. Full comparison remains live.
+
+### Interior direction full fixture result
+
+Full fixture passed in 360.55 s. Saved `expression-interior-direction-wall-pending.json`: 59 pending pairs, 4337 budget domains (previously 4443), 81990 spans (previously 80688), 744 angular exclusions. Pending source-pair sets are identical: zero newly pending or resolved pairs. The report uses native serialization and exact validated query parameters. This run predates the subsequent profile endpoint-pair direction integration and newly compiled shell assertions. Completion remains false; runtime differences do not establish a speedup.
+
+The endpoint-pair angle inspector now also requests interior direction enclosures; its mean Jacobian still uses ordinary derivatives and its rank gate remains mandatory. Rational planar interior pairs qualify in both U orientations. A wider near-pole pair qualifies in the low orientation but remains unproven after U reversal, exposing coordinate-path rank limitations rather than assuming symmetric proof strength. The cylinder diameter control remains pending.
+
+### Direct endpoint chord versus rank admission
+
+Exact profile and corrected-expression endpoint inspectors no longer refuse all angular checks solely because the mean-Jacobian rank bound remains unresolved. Direct outward `M*(B-A)` enclosure requires its own nonzero chord and incompatible endpoint normal; rank admission still guards the mean-matrix fallback. A wide rational interior pair now excludes in both U orientations. Six profile/expression regressions passed (5.41 s), including preservation of the cylinder diameter candidate. A separate uncertain-rank matrix regression verifies direct exclusion while overlapping endpoints and zero normals remain candidates. The currently running full pair-direction comparison predates this rank-gate change.
+
+Original source-bound `MeanMatrix::exclude_pair` now follows the same direct-versus-rank distinction. A conservatively widened source derivative enclosure includes rank-deficient matrices but proves nonzero planar chord direction through separated X. The degenerate zero surface still refuses, now charging two fresh endpoint-normal queries. All 40 self-chord/coverage regressions passed (0.45 s); diff check passed. Full pair-direction run remains live and predates these latest rank changes.
+
+Validated the direct-rank distinction against aligned chord candidates in both endpoint orders: they remain unexcluded while the incompatible Z direction excludes. Focused regression passed (0.01 s); B-rep cargo check passed (1.92 s); diff check passed. This verifies algebraic admission boundaries, not whole-body coverage.
+
+Saved `expression-interior-direction-wall-comparison.json` with per-pair domain changes and exact query metadata. Reductions mainly involve retained faces 0 and 27; corrected transition pairs 27/28 (512 domains) and 0/28 (462) are unchanged. Some original self-pairs gain subdivisions as work is redistributed. Domain-count deltas therefore do not measure removed physical wall defects or prove increased covered parameter volume. Cross-chart transition/retained chord exclusion remains a major next target.
+
+### Endpoint-pair direction full comparison
+
+Full fixture passed in 351.77 s. Saved `expression-pair-direction-wall-pending.json`. The entire native diagnostic report is identical to the preceding interior-direction run: 59 pending pairs, 4337 budget domains, 81990 spans. No coverage gain from endpoint direction integration on this fixture. This run executes the added expression-shell zero-budget/pole-boundary assertions but predates the direct-chord rank separation. The next comparison isolates those latest original/profile/corrected rank changes.
+
+### Native profile-to-corrected chord path
+
+Added `RailConstrainedBridge::inspect_profile_endpoint_chord`, binding the source profile through the bridge own section. Its three-leg path integrates profile transverse and free derivatives to the exact section, then corrected across derivatives to the target. Fresh endpoint normals and outward chord bounds supply angular exclusion; no foreign profile or decoded proof is admitted. All seven profile/expression tests passed (4.64 s): both source axes and both sections, planar nonzero chords, overlap candidate preservation, exhausted work and invalid domains. The overlap control needs a larger budget for both endpoint normals and remains a candidate. This helper is not yet connected to expression-wall cross-face dispatch; curved qualification and full coverage remain open. The current direct-rank full run predates this helper.
+
+Added rational-cylinder cross-chart controls: sufficiently narrow rectangles near both owned sections exclude through fresh corrected derivatives; wider source/transition rectangles remain unproven. Both cases are retained as tests. All seven profile/expression regressions passed (6.66 s). Connected retained/transition products in expression-wall dispatch with side/order handling, retained end selecting its owned section, and at most 256 additional spans per product charged to the global budget. B-rep cargo check passed; diff check passed. Full cross-chart integration has not yet run; the existing direct-rank full fixture remains live and predates this dispatch. No whole-wall coverage gain claimed.
+
+### Direct-chord rank full comparison
+
+Full fixture passed in 388.81 s. Saved `expression-direct-rank-wall-pending.json`: 59 pending pairs, 4321 domains, 125622 spans. Resolved pair set: []; newly pending: []. This run predates cross-profile transition dispatch. Full coverage remains False. Additional cross-path budget regressions (1 through 8), invalid angle, oversized work and zero-width domains passed (0.03 s); diff check passed.
+
+Added an aligned-diameter control using a single-span positive-weight rational cubic with opposite endpoints and vertical endpoint tangents. With equal axial coordinates the source/transition chord is normal at both endpoints. Neither owned section excludes this candidate at budgets 0, 1, 64 or 1000. Focused regression passed (0.09 s); diff check passed. The interior-section rail constructor refused this recipe, so the control uses exactly admitted natural endpoint sections and explicitly qualifies only that scope. The full cross-profile wall run remains live.
+
+Cross-profile inspection now encloses both source coordinate-path orders, shares the already paid corrected leg, and intersects complete outward chord enclosures. Missing/exhausted alternate bounds do not authorize an exclusion. All eight profile/expression regressions passed (7.03 s), including diameter/overlap candidates and wide-cylinder refusal. Thus this local improvement is not yet evidence of wider curved coverage. Full wall run remains live and predates the alternate path intersection.
+
+Added cross-profile controls on U=[2,4], V=[-3,1], both transverse axes and both sections. Exact dyadic section widths preserve native rail admission; the chord path excludes planar nonzero chords with correctly scaled profile/free derivatives. Zero-work refusal remains validated. Focused regression passed (0.02 s); diff check passed. This expands parameter-domain controls, not arbitrary curved qualification. Full cross-wall run remains live.
+
+Checked source-seam admission: an internal degree-one derivative seam is refused by native original-rail construction before it can supply a corrected cross-chart owner. A disconnected multiplicity-two degree-one source is rejected by Surface validation. The regression passed (0.00 s); diff check passed. This tests constructor/validation refusal, not support of piecewise charts or execution of the cross-chord helper on an admitted seam. Full cross-wall run remains live.
+
+Added native diagnostic counters for retained/transition path attempts, exclusions and charged spans, including JSON round-trip checks. Focused wire regression passed (0.00 s). Fixture checks require attempts <= visited cells, exclusions <= attempts/total angular exclusions, and path spans <= total spans. These counters will separate extra cost from coverage gain; the currently running first cross-wall fixture predates instrumentation and alternate-path intersection. No live runtime or coverage claim from serialization alone.
+
+### First cross-profile full fixture result
+
+Full fixture passed in 646.06 s. Saved `expression-cross-profile-wall-pending.json`: 59 pending pairs, 4291 budget domains, 264263 spans. Compared with direct-rank coverage, domain count falls by 30 while span work more than doubles; no source pair resolved or became newly pending. No complete wall certificate. This run predates alternate path intersection and method-specific counters. Runtime overlaps other host work and is not a controlled benchmark. Fixture with new counter invariants compiles; diff check passed.
+
+### Immutable cross-chord workspace
+
+Added `ProfileChordWorkspace` bound by reference to one immutable native `RailConstrainedBridge`. Private exact-UV caches store only complete profile derivative hulls, cap entries at 100000, and expose only hit counts. Wall dispatch reuses one workspace per owner-bound invocation and charges actual fresh spans. Repeat queries preserve results and spend fewer spans; independent workspaces reproduce the cold cost; warmed zero-budget queries still refuse and invalid domains reject. Ten profile/expression tests passed (4.57 s), B-rep cargo check passed, and an additional two-knot-span regression verifies incomplete hulls never enter the cache (0.00 s). Full body savings are not yet measured; running two-path comparison predates workspace caching. Corrected derivative/normal reuse remains a next performance target.
+
+Extended the same immutable workspace to complete corrected derivative jets and exact-profile direction enclosures (each cache bounded to 100000 entries). Corrected normals are recomputed algebraically from cached native jets with the same outward cross product as the uncached API. Tests verify exact enclosure equality and zero fresh spans on repeat normal queries; warmed diameter controls remain unexcluded at budgets 0, 1, 64 and 1000. All 11 profile/expression tests passed (4.57 s), B-rep cargo check passed, diff check passed. Full geometry/cache savings remain unmeasured: the currently running two-path fixture predates both caches.
+
+Direction-cache retry correction: do not cache boxes containing zero in every component, because they can be complete ordinary normal bounds while optional pole-factor tightening exhausted its budget. A small-budget rational query stays uncertain; a later larger-budget query freshly finds separated factored Z, which may then be reused. Focused regression passed (0.00 s); diff check passed. Latest cached fixture compiled before this small correction; full two-path uncached comparison remains live.
+
+### Two-path full fixture result
+
+Full fixture passed in 463.48 s. Saved `expression-cross-two-paths-wall-pending.json`: 59 pending pairs, 4287 budget domains, 266321 spans. No source pair resolved or became newly pending compared with the first cross-profile run. The method-specific counters show 1090 attempts, 20 exclusions and 140661 charged spans. This run predates workspace caching. All 12 latest profile/expression regressions passed (5.38 s); diff check passed. A same-query cached comparison is next; no complete wall certificate or runtime performance conclusion.
+
+Extended corrected-cache tests: a one-span exhausted corrected derivative query leaves no stored hull, a sufficient fresh budget supplies complete jets, and a repeated small-budget query reuses those complete jets with zero fresh spans. The regression covers both transverse axes and owned sections and passed (0.08 s); diff check passed. Full cached wall comparison remains live.
+
+Shared workspace now also covers corrected-expression same-face endpoint inspections, caching only complete union/coordinate-strip jets and deriving normals from the same native cached jets. Wall self-transition dispatch shares the invocation-owned workspace with cross-face queries and charges actual cache hits. Twelve profile/expression tests passed (9.58 s); additional cold/warm planar equality and zero-budget controls passed (0.26 s), and the aligned rational diameter remains a candidate after self-cache warming at all tested budgets (0.10 s). B-rep cargo check and diff check passed. Running full cached comparison predates this same-face integration, so its full savings remain unmeasured.
+
+### Cached cross-profile full fixture result
+
+Full fixture passed in 399.24 s. Saved `expression-cross-cached-wall-pending.json` and its comparison. Pending domains are exactly identical to uncached two-path coverage: 59 pairs, 4287 budget domains, no complete certificate. Overall span work falls 266321 -> 129039 (51.55%); cross-profile method work falls 140661 -> 3379, preserving all 1090 attempts and 20 exclusions. Cache hits total 44138. This is span-work evidence on one fixture, not a controlled runtime benchmark. Running code predates same-face corrected-cache integration; that comparison is next. Latest same-face fixture compiles; diff check passed.
+
+### Independent endpoint-position chord refinement
+
+The native cross-profile endpoint inspector now intersects its two derivative-path
+chord enclosures with the independently enclosed corrected endpoint minus the
+exact weight-profile endpoint. This refinement runs only after path/normal checks
+remain unresolved. Every fresh position span is charged; incomplete position
+hulls return pending and are never cached or used for exclusion. Position caches
+are private to the immutable transition workspace and accept no caller bounds.
+
+Focused `profile_expression_radius` qualification: 12 tests passed (5.92 s).
+The rational-cylinder case with axial separation at least 0.49 now excludes
+alignment: cylinder normals have zero axial component, while both endpoints lie
+inside a unit cube, so the axial chord fraction exceeds 0.49/sqrt(3), well above
+the requested sine threshold 0.01. Exact normal diameters and overlapping domains
+remain non-excluded; zero budgets still refuse. A two-span position cache test
+checks incomplete-budget refusal followed by complete retry and reuse.
+The full shell run with this refinement has not yet been qualified. These
+endpoint-aligned support-chord checks are not a whole-wall thickness certificate.
+
+Additional position-cache controls passed: corrected position enclosure with one
+span returns no hull and leaves its cache empty; a larger-budget retry completes
+and the exact same owned rectangle can subsequently reuse the paid hull.
+Relevant native regressions also passed: 40 self-chord tests and 23 normal-alignment
+tests (one pre-existing ignored test). No WASM/UI or whole-model admission is
+implied by these focused native checks.
+
+### Shared corrected-jet cache: full fixture result
+
+The complete restricted-profile shell fixture passed with the corrected same-face
+inspector sharing the immutable transition workspace. Compared with the previous
+cross-profile-only cache, all 4287 pending domain records are exactly identical;
+the report remains incomplete. Total paid spans decreased from 129039 to 40711,
+cache hits increased from 44138 to 45586, and cross-profile paid spans decreased
+from 3379 to 1305 through shared corrected jets. These are work-counter results
+for this fixture, not a controlled latency benchmark or additional coverage.
+Artifacts: `expression-shared-corrected-cache-wall-pending.json` and
+`expression-shared-corrected-cache-wall-comparison.json`.
+A separate full fixture run for endpoint-position chord refinement is in progress.
+
+### Translation/scale limit regression
+
+A new native cylinder regression passed at scales 0.001, 1 and 1000, checking
+fresh/warm agreement, bounded work and zero-budget refusal. At the origin, all
+three analytically non-aligned chord cases exclude. Translating the cylinder by
+(1000000, -2000000, 3000000) leaves the 0.001 and 1 scale cases unresolved
+(`Some(false)`, not an exclusion). This is a numerical enclosure limitation:
+large translated homogeneous coordinates widen derivative/correction bounds.
+The translated case is retained as a qualification limit; coordinate-centered
+native derivative/correction evaluation remains needed. It is not evidence of
+translation-invariant complete wall qualification.
+
+### Center coordinates before weight multiplication
+
+`WeightProfile::derivative_bounds` now builds the extracted homogeneous net from
+interval-enclosed original control differences relative to a local original
+control point, before multiplying by exact separable weights. The quotient
+Jacobian then uses zero origin. This is the same exact translated expression:
+its derivatives are unchanged, and subtraction remains outward interval arithmetic.
+The existing absolute-position net API retains its original behavior.
+
+All 13 profile-expression tests passed. The translated-scale regression now also
+requires the exact extrusion derivative dX/du to remain inside (0.5*scale,
+2*scale) at scales 0.001, 1 and 1000, including translation by coordinates of
+order millions; it passed. Full corrected-transition chord qualification at the
+far translation remains unresolved for scales 0.001 and 1, so additional
+centering in corrected transition evaluation is still required. The running full
+position-chord shell comparison predates this derivative centering change.
+
+### Endpoint-position chord intersection: full fixture result
+
+The full restricted-profile shell fixture passed in 337.02 s. With the same
+10000-cell budget, pending domains decreased from 4287 to 4257; cross-profile
+attempts changed from 1090 to 1087 and exclusions increased from 20 to 35.
+Paid spans increased from 40711 to 41796 (cross-profile spans 1305 to 2374).
+This run predates all early-centering derivative changes. Domain counts reflect
+adaptive subdivision, not a measured UV-volume fraction or physical defects.
+The whole-support report remains incomplete. Saved artifacts:
+`expression-position-chord-wall-pending.json` and
+`expression-position-chord-wall-comparison.json`.
+
+Early local centering has additionally been applied to second and higher exact
+profile quotient derivatives, using the same outward-centered original-control
+net. The 13 profile-expression tests passed after this extension (4.57 s).
+A separate full shell run with all centered derivatives is in progress.
+
+Higher-derivative translated-cylinder controls passed: the exactly zero mixed
+axial partial and order-(2,1) axial partial both enclose zero with interval width
+less than the model scale, at all tested scales and both origin/far translations.
+Each query covers one complete span. The centered-net helper now skips subtraction
+for an exactly zero origin component, preserving the original absolute net's
+arithmetic rather than adding unnecessary rounding inflation. The full corrected
+transition at far translation is still not qualified by this derivative check.
+
+The profile normal path now also constructs its quotient Jacobian from the early
+centered original-control net, instead of independently reintroducing an absolute
+homogeneous network. The translated-cylinder regression passed with an explicit
+normal control: its exactly zero axial component contains zero and has enclosure
+width below 1e-6*scale^2 at all tested scales and translations. This isolates
+normal accuracy from the still-unresolved full corrected-chord query. The live
+centered-derivative shell run predates this separate normal-path change.
+
+### Centered derivatives: complete fixture comparison
+
+The full shell fixture passed (344.62 s). Its pending-domain records and all
+reported work are identical to the preceding endpoint-position run: 4257 pending
+domains, 41796 paid spans, 35 cross-profile exclusions. This run predates the
+separate centered-normal path and quadratic transverse-derivative refinement.
+Artifacts: `expression-centered-derivative-wall-pending.json` and comparison JSON.
+
+### Preserve transverse Hermite cancellation
+
+The bridge transverse derivative is now also enclosed as its exact quadratic
+Bezier polynomial, restricted by blossom evaluations to the requested interval.
+Its controls are scaled endpoint tangents and three times the endpoint difference
+minus both tangents. The complete restricted-control hull intersects the existing
+Hermite derivative enclosure; no source geometry or work-span count is changed.
+This avoids treating cancelling Hermite basis contributions as independent over
+wide intervals. Interval endpoint differences and all control arithmetic remain
+outward; exact common-source differences are used only with existing ownership.
+
+All 13 profile-expression and 9 section-bridge tests passed. The formerly unresolved
+translated-cylinder regression now excludes at every tested scale (0.001, 1, 1000),
+both section ends and both zero/far translations. This supersedes the earlier
+recorded translation limitation for these selected cases only. Exact normal
+candidates, overlap, cache retry and zero-budget controls remain in the passing
+suite. General NURBS and whole-wall qualification remain open.
+
+### Both bridge first derivatives in restricted Bezier form
+
+An independent curved cubic Hermite regression passed for endpoint tangent scales
+0.75 and 1.25, zero/far translation, whole/partial/point transverse ranges, and
+ordinary/common-source difference modes. Its native derivative hull contains all
+65 independently evaluated polynomial derivative samples per case; sampling is a
+regression check, while the restricted-control hull supplies the continuous bound.
+A one-span insufficient budget still returns no complete jet.
+
+The free derivative now also intersects a restricted cubic Bezier-control hull
+of the same exact Hermite field. Its four controls use the endpoint free tangents
+and scaled mixed partials. This preserves their common variation in the normalized
+transverse parameter. All 10 section-bridge tests passed (1.73 s); the curved
+regression additionally encloses the exact extrusion tangent (0,1,2) with width
+below 1e-8 per component, including far translation. The live full shell fixture
+predates this cubic free-derivative addition.
+
+### Restricted mixed Hermite derivative
+
+The bridge mixed derivative now intersects its existing enclosure with the
+restricted quadratic Bezier hull of the exact differentiated free Hermite field.
+This uses endpoint free-tangent differences and scaled mixed partials; no sampled
+values enter admission. All 11 section-bridge tests passed (1.36 s), including a
+new varying free-tangent field whose independent analytic mixed derivatives are
+inside the native bound at 65 points on whole/partial/point ranges. Insufficient
+work still returns no complete bound. These samples check the implementation;
+the interval control-hull argument covers the continuous interval. The active
+full shell run predates both cubic free and quadratic mixed refinements.
+
+### Transverse Bezier derivative: complete shell result
+
+The full restricted-profile shell fixture passed in 296.30 s, with 4165 pending
+domains instead of 4257, 87 cross-profile exclusions instead of 35, and 42019
+paid spans instead of 41796. All 59 source face pairs still have some pending
+coverage; the report is incomplete. The largest pending groups are retained
+profile 27/transition 28 (448 domains), retained profile 0/self (402), retained
+profile 0/transition 28 (336), and corrected transition 28/self (272).
+These counts measure adaptive leaves, not physical defects or area coverage.
+The saved report/comparison are `expression-bernstein-transverse-wall-pending.json`
+and `expression-bernstein-transverse-wall-comparison.json`.
+This full result includes centered normals and quadratic transverse refinement;
+it predates cubic free and quadratic mixed refinement. A separate complete
+fixture run with all current jet refinements has been started.
+
+### Corrected self-pair chords: two exact coordinate paths
+
+Unresolved corrected-transition self-pairs now also inspect the reversed two-leg
+coordinate path. Complete native corrected derivatives on both connecting strips
+produce a second enclosure of the exact endpoint chord. The intersection is
+checked against both already computed endpoint normals. No incomplete strip may
+supply a chord exclusion; all fresh strip spans share the existing query budget
+and the immutable native corrected-jet workspace. Earlier direct/rank exclusions
+still return before this additional work.
+All 13 profile-expression tests passed (1.79 s). The exact rational normal-diameter
+control additionally exchanges endpoints under fresh/warm budgets 0, 1, 64 and
+1000; both orientations must remain non-excluded and every call stays in budget.
+The running full fixture predates this self-pair path extension.
+
+### All Bezier jets: full shell comparison
+
+The full fixture passed (210.66 s), with 4167 pending domains versus 4165 before,
+42019 paid spans in both reports and 87 cross-profile exclusions in both. All 59
+source face pairs remain pending. This is not a coverage improvement; adaptive
+leaf counts do not measure geometric coverage. Artifacts:
+`expression-bernstein-all-jets-wall-pending.json` and comparison JSON.
+This run predates corrected self-pair path/position intersections.
+
+Corrected self-pairs now additionally intersect both path chord enclosures with
+the independent difference of complete native corrected endpoint-position hulls.
+No partial position hull supplies exclusion. The 13 profile-expression tests passed
+(1.90 s), including exact normal diameter, swapped endpoints, budgets and cache
+retry. Unresolved pairs now inspect both coordinate paths even when the wider
+union Jacobian has full rank: rank alone does not imply the union is the tighter
+chord enclosure. Earlier successful rank/direct exclusions still return first.
+
+### Retained exact-profile self-pair chord intersections
+
+The exact separable-weight profile self-pair inspector now also intersects both
+complete coordinate-path chord bounds and, only if still unresolved, the independent
+complete endpoint-position difference. All fresh derivative/position spans share
+its original work budget. Continuity and input validation remain required; incomplete
+paths/hulls never exclude. Earlier rank/direct exclusions return first.
+All 4 dedicated profile self-chord tests passed, including a two-span rational
+normal diameter and discontinuity/budget controls. The broader 13 profile-expression
+tests passed too. The diameter regression now additionally exchanges endpoints
+under budgets 0, 1, 4, 8 and 100. The active full corrected-transition shell run
+predates this retained-profile extension.
+
+### Corrected self-path/position: full shell result
+
+The full fixture passed (236.67 s). Pending count remains 4167 across 59 face pairs,
+with 42019 paid spans and 87 cross-profile exclusions, equal to the preceding
+all-jet run. No additional complete coverage is claimed. Saved artifacts:
+`expression-corrected-two-path-position-wall-pending.json` and comparison JSON.
+This run predates retained-profile and original-surface two-path additions.
+
+Original rational surfaces now also inspect both source-bound coordinate paths
+when previous endpoint checks remain unresolved. Their exact chord enclosures
+are intersected, with the reversed-path chord sign corrected before intersection.
+Every connecting strip must complete under the same span budget; fresh original
+endpoint normals supply the angle test. All 40 existing self-chord tests passed
+(0.43 s). No unbudgeted surface-position query or caller-supplied bounds are used.
+
+### Early centering for original rational Jacobians and normals
+
+Original `jacobian_on` now centers original controls before multiplying by their
+original binary64 weights and extracting the homogeneous chart, rather than
+subtracting the origin after extraction. The finite evaluated reference point
+is only a translation choice; outward control-coordinate subtraction encloses
+the exact translated original surface, with unchanged derivatives. No sampled
+normal or different weight recipe replaces the native source.
+
+All 23 existing normal-alignment tests passed (one existing ignored). A new
+original quarter-cylinder test passed at scales 0.001, 1 and 1000 with zero/far
+translation: the exactly zero axial normal is enclosed with width below
+1e-6*scale^2, while both transverse normal components retain their strict signs.
+The running all-source two-path shell fixture predates this original-Jacobian
+centering change.
+
+### Center original second-derivative jets before extraction
+
+Original second jets now extract the centered original-control homogeneous net
+before quotient recurrence, then restore the original translation only to the
+returned position enclosure. First/second derivatives retain their actual source
+meaning. All 24 normal-alignment tests passed (one existing ignored), including
+the scale/translation cylinder control. Its exact zero axial second partials
+contain zero with width below 0.1*scale; ordinary rational interval dependency
+still gives about 0.03*scale width even at the origin, so no exact-zero or tighter
+curvature certificate is claimed. The test also checks that world-position hulls
+contain an independently evaluated source point after centering. The active full
+shell run predates this original second-jet change.
+
+### Original/retained two-path extension: full shell result
+
+The complete restricted-profile fixture passed (322.55 s). Pending domains decreased
+from 4167 to 4085, with paid spans increasing from 42019 to 57479; cross-profile
+exclusions remain 87. All 59 source face pairs still have pending domains, so the
+report does not qualify the whole support. Retained profile 0/self now has 374
+pending domains versus 402 in the earlier transverse-only run. Adaptive leaves
+are not area coverage or defect counts. Saved artifacts:
+`expression-all-source-two-path-wall-pending.json` and comparison JSON.
+This result predates early centering of original first/second jets. The entire
+current NURBS library test suite has been started to check the wider impact of
+those shared derivative/normal changes before further full shell qualification.
+
+The full current NURBS library suite completed successfully: 823 passed, 0 failed,
+2 existing ignored, no filtered tests (21.88 s). This is broad native regression
+evidence for the current source, including centered original first/second jets;
+it does not qualify generated WASM, the UI, STEP exchange or the full plan.
+
+### Current native-to-WASM delivery work
+
+The standard `scripts/build-geometry-kernels.mjs` build has been started after the
+823-test native NURBS suite passed. It rebuilds the geometry WASM from the current
+worktree and repackages the browser artifact. Verification must wait for successful
+build completion: the original-body whole-wall WASM script and worker/client
+regressions cover ordinary native models, cancellation, stale replies and Retry.
+They do not reconstruct or admit the retained/corrected expression-shell fixture;
+that native operation recipe and ownership-preserving runtime integration remain
+open. The centered-original shell run is separately still active.
+
+WASM delivery progress: the release Rust compilation for wasm32 completed
+successfully (1m47s); the standard optimizer/packager is still running, so the
+new browser artifact is not yet qualified. The existing whole-wall client test
+for cancellation, ignored stale replies, forged source rejection and Retry passed
+(1 selected test, 3 skipped). It uses a controlled fake worker port and is protocol
+regression evidence, not real WASM/UI completion. Fresh artifact tests remain
+pending successful packaging.
+
+### All centered original jets: complete native shell result
+
+The full restricted-profile shell fixture passed (216.52 s). It retains 4085
+pending domains across 59 source pairs, 57479 paid spans and 87 cross-profile
+exclusions, equal to the preceding all-source two-path result. Centering improves
+the separately tested large-coordinate cases but adds no full-fixture coverage
+here. Artifacts: `expression-all-centered-source-wall-pending.json` and comparison
+JSON. The original-body WASM optimizer remains active; packaged-artifact and live
+worker checks have not yet been run against its new output.
+
+### Prepared actual worker cancellation/Retry qualification
+
+New `scripts/check-cad-whole-wall-worker.mts` plus its `.mjs` worker entrypoint
+exercise production handler/client through actual Node worker threads. The check
+requires a warm native result, cancellation after request-dispatch observation,
+termination and joined worker exit, then a qualified matching result through a
+fresh worker realm. It records the stable public WASM hash and joins both realms
+on cleanup. Dispatch observation deliberately does not claim interruption inside
+Rust, and Node worker evidence does not substitute for browser UI qualification.
+Command after successful packaging:
+`node --import tsx scripts/check-cad-whole-wall-worker.mts <fresh-output-directory>`.
+The entrypoint syntax check passed; actual execution awaits the active packager.
+
+### Updated packaged WASM and actual worker checks passed
+
+The standard geometry-WASM build/optimizer/packager completed successfully:
+12203679 bytes, SHA-256
+`b19235bbd01860c519c18054e462e229ce31caf3e5959ceb867c909fdec280aa`.
+The packed generated literal decodes byte-identically to the public WASM.
+The whole-wall native-WASM script passed all 7 control cases and 7 production
+handler calls, including qualified automatic box/enclosure searches. All 4
+whole-wall protocol tests passed. The actual Node-worker cancellation/Retry
+check passed with 2 started and joined realms, warm qualified result, cancellation
+before response admission and matching fresh-realm result. Its initially named
+baseline output hash matches this newly built artifact, so it qualifies the new
+WASM. The worker entrypoint has a distinct filename to avoid TS-loader `.mjs` to
+`.mts` sibling resolution. Saved reports/fixtures: `wasm-current-2026-10-09/`.
+
+These checks cover ordinary original-body whole-wall dispatch and transport;
+the exact retained/corrected expression-shell recipe is still not reconstructed
+by that runtime API. Browser highlights, actual UI cancellation/Retry, general
+fillets, STEP/history acceptance and the remaining P0/P2/P3 scope stay open.
+
+### Material diagnostic cancellation and browser check — 2026-10-09
+
+Added an explicit Cancel calculation button. Cancellation clears the job, candidate, wall result, overlay and progress; the existing current-job guard prevents late result admission. Three component regressions cover pending whole-wall cancellation and retry, worker failure and retry, and active-body replacement. The selected UI/worker suite passed 11 tests; vue-tsc --noEmit and git diff --check passed.
+
+CUA browser inspection on separate origin 5196 preserved the existing document at 5195. The exact cube primitive returned 20 … 20 mm with 21/21 face pairs. A sphere returned volume-unproven with 36/36 pairs and eight unchecked faces, displayed as orange markers. Extended sphere calculation was cancelled in the browser, then retried and returned its explicit unresolved status. Escape removed the panel. No console errors were captured. Evidence: wasm-current-2026-10-09/ui-material-cancellation/report.json and screenshots. These checks qualify the ordinary original-face pipeline only; corrected expression shell transport and general geometry completion remain open.
+
+### Native exact profile and section-bridge recipe replay — 2026-10-09
+
+source_profile_body::restore binds the persisted profile definition to a freshly admitted original Body, validates its version/kind/tolerance and face-anchor recipe, and reruns native preparation with caller work limits. restore_section_bridge reconstructs the exact two-section Hermite expression from owned proposal/face/axis/parameter/scales; stored certificates do not admit geometry. The annular retained_profile_recipe_replays_native_admission regression passed: definition round trip, identical interval enclosures, original-rail constraints, zero-budget refusal, invalid source/recipe rejection and ignored forged certificate. git diff --check passed. This is native reconstruction plumbing only: rooted trims, closed expression-shell assembly and new WASM/worker transport are still pending, and the currently served WASM predates these reconstruction functions.
+
+### Native root-ended seam recipe replay — 2026-10-09
+
+RootEndedSeam::definition persists the owned proposal and two authored section-end recipes. restore_cut_endpoint freshly encloses the original pcurve crossing; restore_root_ended_seam reruns both root splits, private carrier-point ownership and tangency qualification. Endpoint enclosure and mapping budgets are shared across both ends; no saved world bounds or certificate admits geometry. The extended retained_profile_recipe_replays_native_admission regression passed: canonical interval/owner round trip, zero cut/mapping/carrier budget refusal, invalid owner/version/recipe rejection, duplicate and incompatible ends refusal, and forged world bounds ignored. This preserves common trimmed-edge roots after reconstruction; closed expression-shell recipe replay and WASM transport remain pending.
+
+### Incident contour and common carrier replay — 2026-10-09
+
+restore_incident_contours rebuilds the owner-bound root seam, splits both neighboring contours at the same private crossing roots, verifies contour joins and requalifies the retained common 3D edge. It returns the boundary assembly only after all three gates succeed; it does not admit a closed shell or volume. Extended native recipe regression passed in 10.79 seconds: fragment definitions, face/middle addresses, contour cyclic joins and shared-edge definition match the fresh original construction; zero fragment and insufficient exact/driver work return no assembly. git diff --check passed. Closed transition patch/outer-edge shell replay and runtime transport remain open.
+
+### Transition boundary replay and fresh face admission — 2026-10-09
+
+TransitionBoundary::definition records its two exact owner-bound seam recipes. with_restored_transition_boundary restores both root seams, rebuilds the exact implicit section-width bridge, reruns original rail constraints and full corrected side regularity, and invokes inspection while native owners remain alive. A higher-ranked callback prevents returning borrowed proof attached to local replay owners. Budgets for seam replay are explicitly allocated per side.
+
+The expanded retained_profile_recipe_replays_native_admission test passed in 27.92 seconds: all four boundary enclosures and normalized recipe match the original; duplicate sides reject; zero controls never invokes inspection. Inside replay, fresh full-domain interval injectivity from original rails admits the selected transition face (2000 cells / 100000 spans allocation); zero face work refuses. Candidate midpoint derivatives choose a projection only, not proof. geometry-bridge cargo check and git diff --check passed. This establishes native replay for one qualified annular transition fixture, not general fillet completion; retained exterior faces, outer-edge assembly, closed-shell replay and WASM transport remain pending.
+
+### Section-contour replay through closed shell incidence — 2026-10-09
+
+TransitionBoundary::replay_section_contours freshly reconstructs both cut endpoints and root splits for an entry/terminal section, sharing bounded endpoint/mapping work and binding the resulting complementary contours to the already replayed owner boundary. Zero endpoint, mapping and fragment budgets refuse.
+
+The expanded retained_profile_recipe_replays_native_admission regression passed in 27.76 seconds. Inside the replay callback, both section joins and retained exterior faces requalified, including the terminal factored-pole/quotient case. Fresh transition rail incidence, section incidence and four outer shared-edge checks produced a closed 29-face, single-component expression shell. Insufficient outer-edge work and zero/one-less-than-required shell-use budgets refuse. geometry-bridge cargo check and git diff --check passed. This is restored closed incidence for the annular fixture; fresh shell embedding/self-intersection and volume qualification, general geometry, and WASM/worker exposure remain pending. The public WASM still predates these native restoration changes.
+
+### Restored contact pipeline and oriented volume — 2026-10-09
+
+ExpressionShell::inspect_reconstructed_contacts runs the existing source, retained-profile and transition contact qualifiers in one bounded native pipeline, sharing cumulative audit work and retaining every unresolved pair. The restored annular fixture requalified all 406 cross-face pairs: zero pending, 7228 cells, 41318 spans, 38855 domain cells, 15108246 exact-work units and four driver cells. Fresh owner-bound embedding then admitted the shell.
+
+Fresh oriented volume qualification returned positive bounds [7049.541261407235, 7069.534459645989] mm³, with 5835 cells and 31993 spans; interval width is below the requested 20 mm³. Zero volume budget refused. The expanded restoration test passed in 57.74 seconds; geometry-bridge cargo check and git diff --check passed. Reports: restored-contact-pipeline-qualified-2026-10-09.json and restored-volume-qualified-2026-10-09.json. This is one restored annular fixture, not arbitrary NURBS/mixed-radius fillets, global wall thickness, STEP acceptance or complete P0. WASM/worker/UI exposure of expression reconstruction remains open.
+
+### One-call native shell replay entry point — 2026-10-09
+
+source_profile_shell_replay.rs adds with_restored_expression_shell with explicit per-stage work limits. It replays the boundary, both entry/terminal contours, section joins, retained exterior faces, transition injectivity, both rail incidences, section incidences, four outer shared edges and closed manifold incidence. A scoped higher-ranked callback keeps the full owner graph alive and permits only owned inspection outputs to escape. Incomplete stages return no shell result with the native reason. Excessive stage allocations reject before reconstruction. Embedding, oriented volume and wall admission remain separate fresh gates.
+
+The expanded recipe regression passed in 75.27 seconds: the new single-call entry returns 29 faces and one component; no boundary controls never invokes the shell callback; excessive shell-use allocation rejects. Existing restored contact/volume qualification also passed in the same test. This is a native API prerequisite for WASM transport; no new WASM action or UI capability is claimed.
+
+
+### Native expression shell dispatcher — 2026-10-09
+
+`cad_expression_shell_restore` reconstructs the original source body, retained profiles, root-ended boundary and closed shell from recipes and explicit work limits. The saved request is `expression-shell-replay-request-2026-10-09.json`.
+
+The geometry-bridge dispatcher regression passed: 29 faces, one connected component, closed incidence qualified. A zero profile control budget refuses reconstruction even with forged input qualification flags. The response explicitly leaves embedding and material qualification false. This qualifies the annular fixture only; it does not establish general fillets, wall thickness, or solid admission. The command has not yet been rebuilt into the served WASM or connected to the worker/UI.
+
+Validation: native retained-profile replay regression passed in 76.05 seconds; geometry-bridge dispatcher regression passed in 32.73 seconds.
+
+
+### Expression shell worker transport — 2026-10-09
+
+Added `expressionShellRestore` to the shared worker registry, executor, client and response validation. The native response echoes the full request so recipe and budget identity can be checked before accepting metadata. Embedding/material flags must remain false; closed incidence does not authorize insertion as a solid. A zero-budget refusal carries no shell.
+
+`vue-tsc --noEmit` passed. The expression transport and existing main-solid worker client suites passed 33 tests total. Transport tests cover changed recipes/budgets, object/array identity collisions and forged solid admission; worker client tests cover its existing cancellation/stale-reply lifecycle, and an expression replay test confirms cancellation, late-reply rejection and Retry for the new job. Actual WASM execution of the new job and its UI remain unverified.
+
+
+### JavaScript numeric recipe round-trip — 2026-10-09
+
+The first actual expression worker check failed on artifact `b304b35c8dbdfaacf5b5cc5c5e68cde1063a9ccd9035264b638bf2c8d2a18930`: JavaScript converts integral JSON floats to integer transport values, while native structural recipe equality distinguished numeric variants. No successful worker qualification report was published.
+
+Native recipe comparison now permits exactly representable safe integers to match their identical floating value. It uses no geometric tolerance and rejects rounding beyond the safe integer range; finite floating values preserve their bit identity, including signed zero. The geometry-bridge annular replay regression with simulated JavaScript integer transport passed in 20.72 seconds. Dedicated numeric boundary tests also passed. A final WASM rebuild from these sources and actual-worker validation remain required.
+
+
+The native dispatcher regression additionally rejects a transition boundary bound to a proposal with a different position tolerance. Exhausting boundary controls returns no shell. The extended JavaScript numeric round-trip regression passed in 25.92 seconds. Transport suites now pass 34 tests, including bounded topology metadata. Actual-worker qualification remains open following the first numeric variant failure.
+
+The full retained-profile recipe replay regression passed after exact numeric identity changes in 74.36 seconds, including fresh shell contact and volume gates on the annular fixture. General fillets and global thickness remain outside this qualification.
+
+
+### Actual expression replay worker and native inspection dispatcher — 2026-10-09
+
+Actual Node worker replay passed on WASM `06acde521eb641a1efc8b5efa339f97bf4422e4160818618a48c16c8ee4a8cbf`: matching published/packed bytes, zero-profile-budget refusal, dispatch cancellation, terminated/joined realm, fresh-worker Retry, 29 faces and one closed component. See `expression-wasm-replay-2026-10-09/expression-worker-report.json`. This checks replay only; browser preview and global material/thickness are not qualified.
+
+The new native `cad_expression_shell_inspect` dispatcher replays the shell and freshly checks projected-region authority, all cross-face contacts and signed volume on its current owners. The annular native regression and projected-region zero-budget refusal passed. Its result remains `materialQualified:false`: a volume certificate does not prove radius, wall thickness or construct an admitted solid Body. The native request/result are saved in `expression-shell-inspection-native-2026-10-09.json`. This inspection command and the final signed-zero comparison require a further WASM build and transport/UI integration.
+
+
+### Expression inspection worker transport — 2026-10-09
+
+Added `expressionShellInspect` to the worker registry, executor and client. Response validation binds full source/recipe/budget identity, checks unique complete face-pair coverage and pending histograms, finite UV products, native work limits and coherent oriented volume bounds. `materialQualified` remains false because these diagnostics do not admit a solid Body or certify radius/thickness.
+
+The actual native request/result/refusal fixtures pass transport validation. Malformed pair coverage, nonfinite geometry, forged pending counts, oversized work and altered volume are rejected. Three transport/client suites pass 38 tests, and `vue-tsc --noEmit` passes. Actual new WASM inspection worker execution and browser integration remain unverified while the current build completes. `scripts/check-expression-inspection-worker.mts` is prepared for artifact-identity, refusal, cancellation and Retry qualification.
+
+
+### Unresolved inspection and UI controller — 2026-10-09
+
+With contact cells and exact-work budgets set to zero, fresh native replay keeps closed incidence but reports 391 pending cross-face pairs, no embedding and no volume. The expanded native inspection regression passed in 83.68 seconds. The saved pending response is `expression-shell-inspection-pending-2026-10-09.json`; transport validation accepts its incomplete status and rejects a forged embedding flag.
+
+`useExpressionInspection` now owns a separate worker lifecycle for UI consumers: run/cancel/Retry, immediate invalidation on active/recipe changes, disposal, and full request-identity comparison before publishing a result. Its tests cover late replies after cancel, retry, failure, close and raw recipe mutation. Four controller/transport/client suites passed 40 tests; after adding the actual native pending fixture, the two focused controller/inspection suites passed 7 tests. Typecheck and diff checks passed. This controller is not yet attached to a visible panel or expression viewport; actual inspection WASM execution remains unqualified until the build and worker check complete.
+
+
+### Actual WASM inspection and visible panel integration — 2026-10-09
+
+Actual worker inspection passed on WASM `24ea250aac4203ee070e2a58e8bec3beac6b2afd58d3db81700a80b725d941d7` (12,669,436 bytes). Published and packed artifacts match. The test covers refusal, dispatch cancellation, worker termination/join, fresh-worker Retry, 29 faces, full 406-pair contact coverage with zero pending pairs and qualified signed-volume bounds. See `expression-inspection-wasm-2026-10-09/expression-inspection-worker-report.json`. This is one annular recipe and does not prove general fillets, wall thickness or a solid Body.
+
+Source records can now retain an optional independent MGV1 inspection recipe, strictly bound to the original body. Original source admission is preserved; saved diagnostic flags are not authority. `ExpressionShellCheck.vue` is attached to selected source bodies carrying this recipe in the existing file/source controls. It displays incidence, pending contacts and volume, provides cancel/Esc and Retry, and maps selected pending pairs to highlighted original source faces. The panel explicitly states that the scene still shows the original body; expression viewport rendering remains open.
+
+Archive/controller/inspection transport suites pass 9 tests and typecheck passes. `scripts/prepare-expression-inspection-ui.mts` generates a native document fixture for the upcoming isolated browser check. Visual panel behavior is not yet qualified.
+
+
+### Browser inspection panel qualification — 2026-10-09
+
+On isolated origin 5197, the actual browser imported the native expression archive, selected its source edge by keyboard and ran the inspection panel. Manual cancel cleared the result; Retry qualified 29 faces, 406 cross-face pairs with zero pending and the native volume interval. The limited-budget recipe instead showed 391 pending pairs and unqualified volume. Selecting pair 0↔1 highlights both original faces, including unresolved display boxes. Esc cancels, and reload restores the saved recipe for a fresh native rerun. Inspection-tab console error capture was empty. The main user document at 5195 was preserved; the temporary tab/server were closed.
+
+Visual review prompted two UI corrections: a compact selector for all pending pairs replaces the long button list, and unresolved source-face boxes participate in highlighting. Display volume is explicitly rounded (≈); exact native endpoints remain in Details. Five selected suites passed 43 tests; final typecheck and diff checks passed. Screenshots and report are in `expression-inspection-ui-2026-10-09/`. This qualifies one recipe and this panel only. The viewport still shows the original body; the transition-shell preview and the full roadmap remain open.
+
+
+### Native display enclosure groundwork — 2026-10-09
+
+Added bounded support-domain display enclosures to the native expression shell and optional `displayLimits` on replay/inspection commands. All original, retained and transition faces are covered; work exhaustion preserves complete unsampled face domains instead of silently dropping them. Output explicitly carries `trimQualified:false`: support rectangles may include trimmed-out material and are not a mesh or a solid certificate.
+
+On the annular dispatcher fixture, a 2×2 partition of all 29 faces produced 116 enclosed cells. Zero cell budget preserved all 29 faces with null bounds; oversized divisions were rejected, full request identity was echoed and display did not promote embedding admission. The expanded dispatcher regression passed in 101.55 seconds. The grid endpoint/shared-coordinate regression passed. Diff checks passed. This new native API is not in the current published WASM yet; bounded transport validation and scene rendering remain open, as does native trim-aware triangulation.
+
+
+### Native trim classification for display — 2026-10-09
+
+Display cells now carry inside/outside/unresolved classification from current root-ended source contours, with a separate bounded winding budget. Only an equivalent original face with admitted whole-chart material, or the admitted rectangular transition chart, bypasses contour work. Retained support identity alone does not authorize a whole-chart trim. Exhausted faces preserve unresolved coverage; display remains `trimQualified:false` because no boundary triangulation or solid admission is produced.
+
+The expanded native annular dispatcher regression passed in 78.28 seconds, checking 116 enclosures, finite ordered bounds, positive classification work, unresolved boundary cells, aggregate coverage, explicit zero-budget face coverage and oversized-budget refusal. Five transport/archive/controller suites passed 19 tests, including malformed/nonfinite intervals, duplicate or missing faces, forged counts, work limits, unsolicited display responses and stale display-budget identity. Typecheck and diff checks passed. Native display work is ready for the new WASM build; scene rendering and trim-aware boundary tessellation remain open.
+
+
+### Display UI wiring awaiting packaged runtime — 2026-10-09
+
+The inspection panel requests a bounded 4×4 native display partition and can emit validated display data to the scene. A switch shows interval boxes, filters native outside cells and marks unresolved trim in orange. Cancellation and invalidated results clear the overlay through the existing independent controller lifecycle. This is diagnostic region display, not trim-aware triangles; the original body remains visible. Vue typecheck passed. The real-worker checker has an optional `--display` mode for the 464-cell annular fixture. The WASM build is still running its optimizer; actual new worker execution and this overlay's visual behavior remain unqualified.
+
+
+### Actual display WASM, worker and browser qualification — 2026-10-09
+
+The new published and packed WASM is `36057c96090d7d6d923d49c117290070519cdc36c69ec5d32347602b65315101` (12,676,396 bytes). The production Node 24.19.0 worker handler/client passed refusal, dispatch cancellation, terminated/joined workers and fresh-worker Retry with optional display work. On the annular recipe, all 464 cell position enclosures were returned: 248 inside, 120 outside and 96 unresolved trim, spending 960 support spans and 2,839 winding cells. Native contact coverage remained 406 pairs with no pending pairs and volume qualified. Unresolved trim is display classification, not a detected self-intersection. See `expression-display-wasm-2026-10-09/expression-inspection-worker-report.json`.
+
+The actual in-app browser loaded this artifact on isolated origin 5197 and showed 344 interval boxes, omitting the 120 native outside cells. Turning the switch off, starting another calculation, pressing Esc and closing the panel each clear the overlay. A fresh calculation restores the same boxes and qualified contact/volume result. Inspection-tab console capture was empty. Screenshots and scope report are in `expression-display-ui-2026-10-09/`. The user document/server on 5195 was preserved. This qualifies diagnostic box rendering and its lifecycle for one recipe, not a transition mesh. Boundary triangulation, mesh deviation control, general fillets, global thickness and the broader roadmap remain open.
+
+
+### Adaptive native display mesh with bounded deviation — 2026-10-09
+
+Added adaptive breadth-first subdivision on every owned expression face. Only entire rectangles classified as material produce two display triangles. Native singleton position enclosures provide rounded corners, shared within each face. An outward interval L1 diameter bounds the pointwise Euclidean distance between the exact support and affine triangles, including rounded vertices. Unresolved trim, vertex/support enclosure failure, depth limits and exhausted work preserve pending domains. This is not a watertight mesh or a replacement for exact topology; cross-face welding and boundary clipping remain open.
+
+Three native algorithm regressions passed: curved polynomial patches with pointwise samples and shared vertex identity, complete domain coverage after cell/span/control/depth limits, and explicit unresolved trim bands. The actual annular dispatcher regression passed in 60.58 seconds. With an intentionally coarse 8 mm target and 4,096 cells, it produced 304 tiles (608 triangles), including 40 transition tiles, with maximum reported deviation 7.94598576681575 mm. It preserved 3,120 pending domains and excluded 168 outside domains. The 3,592 leaves equal 29 original face domains plus 3,563 binary splits. Work was 7,977 support spans and the full 30,000 winding-cell budget. Zero mesh-cell budget preserves all 29 faces pending and ignores forged qualification flags. Saved request/result: `expression-mesh-native-2026-10-09.json`.
+
+Six selected transport/archive/controller suites passed 23 tests, including native partial mesh acceptance, missing leaves, duplicate domains, coordinate/deviation corruption, work counters, stale request identity and unsolicited triangles. Typecheck and diff checks passed. The new mesh API is not in the currently published WASM (which still qualifies diagnostic boxes only). Practical mesh precision, tighter error bounds, boundary triangulation, cross-face welding, new WASM/worker/viewport integration and the full CAD roadmap remain unfinished.
+
+
+### Derivative residual precision qualification — 2026-10-09
+
+Native mesh error now uses outward enclosures of the actual support derivatives minus each affine triangle gradient, including the anchor enclosure and rounded vertex error. Continuous nonperiodic validated NURBS supports enable this tighter bound; periodic supports retain the support-box fallback. Seven focused native algorithm tests passed. The annular dispatcher regression passed in 55.91 seconds with a 0.05 mm target: 881 tiles (1,762 triangles), including 179 transition tiles, maximum error upper bound 0.049955340660326926 mm. There are 6,123 pending work-limit domains and 168 outside domains; winding work exhausted its 30,000-cell budget. Pending domains are unverified coverage, not detected defects. Exact boundary clipping, welding and solid admission remain unfinished.
+
+The saved precision request/result is `expression-mesh-precision-native-2026-10-09.json`. All five mesh transport tests passed, including acceptance of this actual native result, rejection of the stale coarse response and an error exceeding 0.05 mm. The production worker checker now accepts `--mesh` with these same limits; execution awaits a new packaged WASM. The current published artifact still provides diagnostic boxes only. No new worker or browser mesh qualification is claimed.
+
+
+### Mesh preview UI wiring awaiting packaged execution — 2026-10-09
+
+The inspection panel can request native 0.05 mm mesh certificates with standard (8,192 support cells / 30,000 winding cells / depth 14) or extended (32,768 / 100,000 / depth 18) work budgets. Both retain a 100,000-span cap. Changing budgets invalidates the current result through the existing controller. A switch renders only validated native tile corners; it does not compute geometry or certificates in TypeScript. A separate selector can highlight one pending domain's native position enclosure in orange. Missing native coordinates disable highlighting. Cancellation, recipe changes and closed inspection panels clear emitted mesh data.
+
+Six transport/archive/controller suites passed 25 tests, including a partial mesh response, cancellation and a late answer with stale precision limits. Direct Vue and MCP TypeScript checks passed, including the budget controls and pending-region selector. The new WASM is still optimizing, so actual mesh worker execution and browser rendering remain unqualified. Partial preview does not close trimmed boundaries, weld neighboring faces or admit a material Body.
+
+
+### Actual mesh WASM, worker and browser — 2026-10-09
+
+The packaged/published WASM is 12,701,819 bytes, SHA256 `1e4099284758502a394d2bbed7a67e183c7c71e2a5fa789cefbe608d4bce55fd`. Production Node worker qualification with `--display --mesh` passed, including dispatch cancellation, joined workers and fresh Retry. Timings were 969.877 ms refusal, 31.455 ms cancellation including worker exit, and 12,595.440 ms Retry. It reproduced 881 native tiles (1,762 triangles), 6,123 pending domains, 168 outside domains and maximum error 0.049955340660326926 mm. These timings cover the client/worker operation, not individual Rust stages.
+
+The actual in-app browser on isolated origin 5197 rendered 1,762 triangles and one selected pending enclosure. Hiding the mesh clears triangles; starting another inspection clears triangles and pending highlights. A fresh result restores 1,762 triangles. Escape on the focused cancel button cancels the pending request and leaves zero triangles with inspection enabled. Inspection console capture was empty. The compact panel was corrected to wrap long bounds and keep selects within its width. Screenshots and scope report are in `expression-mesh-ui-2026-10-09/`; worker report is in `expression-mesh-wasm-2026-10-09/`. Temporary tab and server were closed; user origin 5195 was preserved. Exact boundary clipping, cross-face welding, complete material-domain coverage and Body admission remain open.
+
+
+### Extended preview budget qualification — 2026-10-09
+
+The same production WASM/worker passed `--display --mesh --extended-mesh`. Fresh Retry took 13,629.490 ms, producing 6,619 tiles (13,238 triangles), 8,252 pending work-limit domains and 404 outside domains. Maximum error upper bound was 0.04998378468685881 mm. It spent 22,269 of 32,768 support cells, all 100,000 support spans and all 100,000 winding cells; 15,275 leaves equal 29 original face domains plus 15,246 splits. Both standard and extended runs cover the entire rectangular transition chart (face 28) with accepted tiles. Retained and original trims remain partial.
+
+Pending leaf counts grow with subdivision and must not be interpreted as defect counts or remaining physical surface area. Summing UV rectangle areas per face and averaging normalized fractions across the 29 charts gives accepted parameter-domain coverage 0.27875808189655166 (standard) and 0.5425141433189655 (extended). This is a parameter-domain reporting metric, not a physical surface-area measurement or trim/solid certificate. Current exhausted budgets obscure whether each pending domain is an actual trim-boundary crossing. Exact trimming and shared boundary vertices remain the next geometry work, along with better native work accounting.
+
+Report: `expression-mesh-extended-wasm-2026-10-09/expression-inspection-worker-report.json`. A transport regression consumes that actual production response and rejects mismatched winding limits.
+
+
+### Canonical shared boundary sampling foundation — 2026-10-09
+
+Added Rust `SharedEdge::sample_interior`: a sample retains a borrow of its privately admitted shared edge, one normalized canonical world parameter, inverse parameter enclosures and UV enclosures on both original uses, and one canonical world enclosure. The entire inverse interval must lie strictly inside both actual retained fragments. Uncertain root caps and endpoints are refused rather than rounded. Span exhaustion returns a pending report with accounted work. Unsupported incomplete original source mappings are refused. This is positional ownership for future shared mesh vertices, not triangulation or Body admission.
+
+All 11 shared-edge native tests passed. New checks cover opposite traversal, fixed trimmed ranges, endpoints, out-of-range samples, zero/insufficient work and nonfinite input. Existing polynomial and rational curved-support fixtures with independently qualified root ends now also check a shared interior sample and refusal past the retained root. The initial test used the wrong qualifier orientation flag; it was corrected to the forward-pcurve convention before the passing run. This API is not yet consumed by display meshing or the published WASM. Shared boundary subdivision, root endpoint vertices, clipping and cross-face welding remain unfinished.
+
+
+### Shared interior boundary chain — 2026-10-09
+
+Added bounded `SharedEdge::sample_interior_chain`. Strictly increasing canonical parameters identify one shared ordered point list for both incident faces. The operation preserves every requested point, including retained-domain refusal and span exhaustion; no unverified point silently disappears. Duplicate, reversed, nonfinite and out-of-domain requests are rejected before work. The chain is discrete positional evidence, not a complete curve deviation or topology certificate.
+
+All 11 shared-edge tests passed after the addition. A five-point trimmed-line request with six span units returns two confirmed interior points and three explicit pending points; a zero-work request preserves all three points pending. Root endpoint sampling, adaptive chord error certification, mesh boundary clipping and using these chains in the shell mesher remain open. Published WASM remains the previously qualified mesh artifact; this new chain API is native-only until integration and rebuild.
+
+
+### Shared root endpoint enclosures — 2026-10-09
+
+Added Rust `SharedEdge::sample_endpoint`. The first use's directed endpoint is paired with the opposite endpoint of the second use through the privately admitted shared edge. Both original root/parameter definitions remain owned by that edge. Canonical parameter intervals are mapped from both uses and intersected only to tighten enclosures; overlap is not the identity proof. Native evaluations return UV intervals on both charts and one canonical world interval. No Cartesian vertex, midpoint root or rounded welding is manufactured. Unsupported original maps and exhausted span work retain explicit refusal.
+
+All 11 shared-edge tests passed. Fixed trimmed endpoints check directed pairing and world bounds, invalid endpoint indices and exhausted work. Polynomial and rational curved-sheet fixtures check the paired irrational root endpoint, retention of each original parameter interval and a nonzero canonical root interval. These source qualifiers still reject wrong world curves and ambiguous endpoint roots. The new endpoint/chain APIs are not yet connected to shell triangulation or packaged WASM. Chord error certification, shared boundary vertex emission, exact trim clipping and closed mesh admission remain open.
+
+
+### Native curve-to-affine error bound — 2026-10-09
+
+Added `interval_eval::curve_affine_error_upper` in nurbs-core. For every nonempty knot interval it restricts the original homogeneous Bernstein controls, elevates numerator/weight to degree p+1, subtracts the weight multiplied by the prescribed affine segment, and bounds the resulting positive-weight rational residual. The outward L1 residual norm bounds pointwise Euclidean deviation and includes supplied vertex rounding. Exhausted span work returns no bound. It does not infer curve/segment equality from sampled values.
+
+Seven interval-evaluation tests passed, including the three new error-bound regressions: a 1,000-unit straight line has a near-roundoff bound, a displaced endpoint includes its perturbation, a rational bend and restricted subinterval are bounded, and all spans of a piecewise line must be covered. Invalid/nonfinite domains and insufficient budgets are refused. Numerical point samples are regression checks only; the certificate comes from native interval controls. Adaptive shared-edge subdivision and uncertain root endpoint cap handling are still pending, and this API is not yet packaged or connected to display meshing.
+
+### Shared adaptive boundary partition — 2026-10-09
+
+Native `SharedEdge::prepare_boundary_mesh` now creates one vertex list for both incident uses. Original root endpoint parameter intervals are retained. Polynomial and rational curved support fixtures subdivide to a 0.01 mm conservative chord deviation; internal vertex indices have exactly two segment incidences and both end indices have one. A restricted straight edge needs one segment. Zero cells, zero spans, and an exhausted cell budget preserve explicit pending coverage.
+
+Validation: `cargo check` succeeded; `cargo test --manifest-path crates/brep-core/Cargo.toml source_shared_edge:: --lib` passed all 11 tests, including the new assertions; `git diff --check` passed. These are native fixture checks. Face clipping, cross-edge root vertex links, conforming face triangulation, shell mesh consumption, and publication in WASM remain unfinished. The current published WASM does not contain this boundary partition.
+
+### Shell boundary vertex identities and source partitions
+
+Shell assembly retains dense endpoint IDs from its qualified union classes. `boundary_vertex(address,end)` rejects invalid addresses/ends and never compares Cartesian positions. The annular native recipe replay passed (1 test, 74.70 s), checking contour closure, paired opposite endpoints, pole collapse, and the complete vertex count.
+
+`prepare_source_boundary_mesh` connects original/outer shared carriers to those endpoint IDs under one global cell/span budget. Every shell pair remains in the report; rail/section expression carriers explicitly have no partition yet. Cargo check passed. The extended annular replay covering source partitions is running; face clipping and shared face triangulation remain unfinished.
+
+The extended native source-boundary replay passed (1 test, 75.69 s), checking all shell pair entries, endpoint IDs and aggregate budgets. Rail carriers are now partitioned using their qualified shared source curves; the report records native UV chart side indices and carrier endpoint orientation explicitly. The transition chart itself remains unqualified for this partition. Section carriers remain explicit pending entries. Rail changes compile; their extended replay is running separately.
+
+Rail partition replay passed (1 test, 83.50 s). Each rail now also carries interval UV coordinates in shell-use order: the selected original chart maps its section-axis coordinate to normalized across parameter, while the free coordinate stays at its owned low/high range endpoint. This uses the original-rail-constrained bridge and the existing qualified rail ownership, without fitting or inversion by sample proximity. Cargo check passed. A separate replay checks transition enclosure overlap at every shared vertex; it is still running. These checks do not yet prove a closed face triangulation.
+
+The rail UV replay passed (1 test, 76.73 s), including every partition vertex's transition enclosure overlap. A new native section partition now uses the admitted profile section range and actual retained traversal direction. It supplies retained/transition UV intervals, preserves both shell endpoint IDs, and bounds bidirectional chord deviation using an outward box diameter including rounded vertices. Cell/span/depth exhaustion preserves pending segments. Cargo check passed; the extended section replay is running. This conservative section bound is not yet an optimized residual bound or a closed triangulation certificate.
+
+The section replay passed (1 test, 75.42 s), checking both section partitions, actual shell-use UV arrays, and transition enclosure overlap. A native boundary graph now merges endpoint positions only by qualified shell vertex IDs, intersects their proven enclosures, and leaves any conflict pending. Interior vertices remain pair-local. Rounding shifts introduced by the common endpoint position are added conservatively to each segment's deviation; segments exceeding the target remain pending. The graph carries UV intervals in both shell charts. Its annular replay is running; this graph does not yet contain face triangles.
+
+The shared boundary graph replay passed (1 test, 79.35 s). Every shell vertex had a common position enclosure; no shared-endpoint conflict was reported. Face contour ordering now reuses graph segment indices, validates endpoint incidence, and checks loop closure. A focused chain regression passed for forward/reverse traversal and rejection of missing, branched and detached constraints. The annular contour replay is running. Closed single-edge cycles remain explicitly unqualified; these ordered constraints are preparation for triangulation, not face triangles or a solid admission.
+
+The annular ordered-contour replay passed (1 test, 81.40 s). Boundary-preserving face triangulation proposals now use the existing native planar triangulator, retain shared graph IDs, and reject omitted boundary segments, ambiguous UV vertex identity, or nonmanifold edge counts. Holes are passed to the same triangulator. Every face is represented by proposed triangles or a pending reason. Cargo check passed; the annular candidate replay is running. Surface deviation, exact trim correspondence, oriented global incidence, and solid admission remain separate unfinished gates.
+
+Face triangulation candidate replay passed (1 test, 78.94 s), checking per-face coverage/pending accounting and every proposed boundary edge. Native triangle residual error now uses interval affine slopes in arbitrary skew UV coordinates, support derivatives over the enclosing rectangle, and the original support anchor including rounded graph positions. Degenerate determinants and insufficient work refuse the bound. Two focused tests passed: affine skew triangles, rounding error, degenerate UV, and an interior bow invisible at the three vertices. The annular numerical-bound replay is running. This numerical bound neither classifies exact trim nor admits material topology.
+
+The first annular triangle-error replay failed on its zero-budget regression: original NURBS support evaluation rejected zero spans. The numerical triangle gate now returns explicit unqualified/zero work after checking the owned domain, rather than issuing the invalid query. A native centroid refinement stage preserves boundary edges, checks interval orientation of each split, and admits only triangles whose exact trim classification is Inside and whose numerical error meets the target. Work/depth/trim failures preserve pending triangles. Refinement compiles; corrected annular replay is running. This stage still needs better interior-edge refinement and boundary trim-band admission before full mesh closure.
+
+Corrected numerical error and interior refinement replay passed (1 test, 77.55 s). Candidate face orientation now follows actual ordered shell constraints, with opposite internal edge directions. A native triangle incidence audit counts open/nonmanifold edges, reversed neighbors, duplicate/degenerate triangles, and disconnected vertex links. The tetrahedron regression passed and correctly rejected an open tetrahedron, reversed face, duplicate face, and two closed fans pinched at one vertex. The annular orientation replay is running. This is an incidence audit only; it does not certify geometric embedding, material or a complete mesh while faces remain pending.
+
+The annular oriented candidate replay passed (1 test, 76.23 s): 2564 triangles, zero pending faces, zero open edges, zero nonmanifold edges, zero orientation conflicts and zero invalid vertex links. All original shared boundary constraints are retained. This proves closed oriented combinatorial incidence for this fixture, not the final surface tolerance or exact curved trim correspondence. A separate extended 0.05 mm refinement run now uses 8192 cells, 100000 spans and 100000 trim cells and emits a native JSON report with per-face/per-pair pending reasons. The extended run is active.
+
+The extended refinement initially failed after 78.99 s with `NURBS_NUMERIC_ERROR: Distance denominator is not separated from zero`. It did not establish full geometric qualification. Refinement now preserves that triangle with an explicit numeric-unproven reason. Because the lower-level exception lacks spent-work accounting, the entire issued span allowance is conservatively charged; other leaves remain pending when exhausted. Refinement also checks the leaf count identity (initial triangles + two per split) and audits the incidence of all accepted/pending leaves. The corrected extended run is active. Removing the denominator ambiguity and improving low-level spent-work reporting remain necessary for full coverage.
+
+Correction to the denominator diagnosis: the triangle affine-slope code used positive-only interval division for a signed UV determinant. Reversing a face made that determinant negative, so this was an implementation error rather than proof of a singular surface. Both affine slope quotients now use `div_signed`; the existing determinant separation test still rejects true degeneracy. Both triangle error tests passed, including the added reverse-orientation regression. The older active extended replay was compiled before this fix; its numeric-pending results must not be used as current geometry limits. A fresh extended run follows its completion.
+
+Signed-determinant extended refinement passed in 127.67 s: 2564 initial triangles, 2540 splits, 2541 evaluated cells, 100000 spans, 9657 trim cells; all 7644 leaves remain work-limit pending and zero are geometrically admitted. The complete leaf incidence remains closed/oriented. This is preserved topology, not successful 0.05 mm surface qualification. Breadth-first centroid refinement exhausted the span budget before evaluating children; long inherited interior edges also require conforming edge bisection. The native report is `boundary-triangle-refinement-2026-10-09.json`.
+
+The geometry bridge now accepts optional `boundaryMeshLimits`, binds them into the echoed request, and returns the native graph, both UV charts, candidate triangles and pending reasons. Closed oriented incidence is reported separately from material and surface-tolerance qualification (both false). Geometry bridge cargo check passed. A fresh packaged WASM, worker transport validation, and UI consumption are still pending.
+
+Native conforming interior-edge bisection now chooses long interior edges, verifies both incident uses have the same face and UV endpoint identities, evaluates one original support midpoint, and splits both neighbors using one graph vertex. Shared CAD boundary constraints are excluded. The focused midpoint/edge-incidence regression passed. Numerical refinement can now consume the subdivided candidate set directly. The annular replay requests 32 interior splits and verifies closed oriented incidence before checking the resulting candidates; that replay is active. Surface/trim qualification remains separate.
+
+The annular 32-edge bisection and downstream refinement replay passed (1 test, 84.74 s), preserving closed oriented incidence. Bisection now additionally requires interval-separated UV orientation for every child matching its parent; the focused test passed for forward/reversed and degenerate UV configurations. A new packaged geometry WASM build has started to expose the native boundary graph through the optional bridge request. WASM/worker/UI verification is still pending.
+
+Boundary mesh transport now validates native request identity, limits, finite coordinates, indexed references, per-edge tolerance, explicit unqualified material/surface flags and incidence/pending consistency. Vue typecheck passed and nine selected transport tests passed. The UI can request the shared boundary graph and display its preliminary triangles separately from tolerance-qualified display tiles, with explicit surface/trim limitations. Pending/cancel/replacement clears the emitted boundary preview. The UI typecheck passed; fresh packaged WASM, actual worker response validation and browser visual checks remain pending while the build runs.
+
+Seven controller/transport tests passed, including an explicit shared-boundary response: cancel removes the result and a late reply with stale boundary cell limits is rejected. This uses a synthetic transport fixture, not geometric evidence. The production worker checker now requests the native boundary graph and independently checks all 29 face entries, zero incidence defects, and separate false material/surface-tolerance flags. Its actual run awaits the current wasm-opt process.
+
+
+### Packaged shared boundary mesh, 2026-10-09
+
+WASM packaging completed: SHA256 `e6bdada2d184c4d9546b0b5723057d0e11de0e921fc11fb2fd5a72f19beb4140`, 12,769,971 bytes. The actual worker checker with `--boundary-mesh` passed, including cancellation/join and Retry in a fresh worker. Its report is in `boundary-mesh-wasm-2026-10-09/expression-inspection-worker-report.json`. All 29 fixture faces are represented; boundary and face pending lists and incidence defects are empty. These are fixture and combinatorial checks, not surface tolerance or material admission.
+
+In the localhost UI, requesting and showing the preliminary boundary mesh produced 2,564 SVG triangles. The UI explicitly states that surface tolerance and trimming remain unconfirmed. Starting a new request immediately cleared the triangles; Escape on the cancel control left zero triangles. MCP TypeScript check and diff whitespace check passed.
+
+The UI retry after Escape completed again with 2,564 candidate triangles. Screenshot: `boundary-mesh-wasm-2026-10-09/ui-preview.png`. No full surface/trim qualification is claimed.
+
+
+### Triangle directional error bound, 2026-10-09
+
+The native mean-value bound now takes the hull of the three vertex directional residuals instead of multiplying gradient intervals by an independent enclosing UV rectangle. For every enclosed gradient, a linear directional residual has extrema at triangle vertices; outward interval operations retain anchor/mesh rounding and either orientation. A skew affine regression with rounded mesh vertices retains the 0.1 discrepancy without inheriting unrelated box corners. Three error-bound tests and all five triangle-related tests passed.
+
+Extended annular replay passed in 128.63 seconds; report `triangle-directional-refinement-2026-10-09.json`. With the existing 32 paired interior bisections, 2,628 initial triangles, 2,540 centroid splits, 2,541 examined cells and 100,000 spans produced zero accepted and 7,708 pending leaves, all work-limit pending. Leaf incidence remains closed and oriented. This does not qualify surface tolerance or trim; the scheduling and subdivision bottleneck remains. The published WASM predates this native bound update.
+
+
+### Per-query native refinement allowance, 2026-10-09
+
+Added `spans_per_query` independently of total spans. Support error and centroid queries receive at most that issued allowance. Numeric exceptions conservatively charge only their issued allowance, keep the leaf pending and allow subsequent leaves to proceed; centroid numeric errors now follow the same policy rather than aborting the report. A zero-query native replay asserts zero cells/spans/domain work/splits, no graph mutation, full pending coverage and closed oriented incidence.
+
+Native check and all five triangle tests passed. Extended replay passed in 129.62 seconds with a 64-span query cap and unchanged total work: 0 accepted, 7708 pending, 100000 spans. Leaf incidence remains closed. Report: `triangle-bounded-query-refinement-2026-10-09.json`. The cap is resource isolation, not proof that refinement converges; surface and trim qualification remains incomplete. This change has not been packaged into WASM.
+
+
+### Incremental conforming interior bisection, 2026-10-09
+
+Interior bisection now maintains triangle-edge adjacency locally and selects candidate lengths from a heap rather than rebuilding and rescanning the whole adjacency table after each split. Length is a subdivision proposal only; it never certifies approximation error. Each split preserves both original triangle orientations, inserts one original-support midpoint shared by both neighbors, and excludes every admitted CAD boundary edge. Qualification split count can be selected with `CAD_BOUNDARY_INTERIOR_SPLITS`; default remains 32.
+
+The paired-neighbor regression passed. Extended annular replay with 512 requested splits passed in 139.83 seconds: all 512 completed, 512 support spans, zero refused edges. Subsequent 100,000-span refinement of 3,588 candidates accepted one triangle at the 0.05 mm target and exact trim gate; 8,665 leaves remain work-limit pending after 2,539 centroid splits. Closed oriented leaf incidence is preserved. The pending count increased with the larger initial mesh and is not an improvement claim. Report: `triangle-conforming-512-refinement-2026-10-09.json`. This supplies first fixture-level joint trim/tolerance acceptance, not a qualified full shell. Full convergence and geometric admission remain incomplete; WASM has not been rebuilt for these changes.
+
+
+### Adaptive numerical interior bisection, 2026-10-09
+
+Added `bisect_candidate_deviation_edges`: candidate support-error bounds are queried lazily and cached per unchanged triangle. An interior edge whose two uses already satisfy the numerical target is skipped. Replacing either triangle invalidates its cached bound; new children remain unexamined until selected. Every query has its own issued span cap, and numeric exceptions charge only that cap. This gate intentionally proves no material-trim coverage. Native zero-query replay asserts no queries, spans, splits or graph mutation and unchanged incidence.
+
+Paired-neighbor and all five triangle tests passed, as did geometry-bridge check. Extended 512-split adaptive annular replay passed in 167.42 seconds: 512 splits, 1,236 numerical queries, zero numerically unproven queries, zero refused edges, 4,220 bisection spans. Subsequent refinement retained closed oriented leaf incidence but accepted zero triangles; 8,668 leaves remained pending at the 100,000-span work limit. Report: `triangle-adaptive-512-refinement-2026-10-09.json`. This is weaker acceptance than the length-only run (one accepted) and does not improve full qualification. Adaptive selection also needs trim uncertainty; numerical tolerance alone must not stop material-region refinement. The native API has not been packaged into WASM.
+
+
+### Joint trim/deviation adaptive bisection, 2026-10-09
+
+Added `AdaptiveInteriorLimits` and `bisect_candidate_trimmed_edges`, exported through the source-profile facade. A candidate edge is skipped only when both uses satisfy the numerical target and their complete UV rectangles classify Inside the current material. Outside/Unresolved regions are kept and remain eligible. Trim and numerical caches invalidate on triangle replacement. Trim classification has separate total/per-query budgets; numeric exceptions charge the issued trim allowance and stay Unresolved. Zero-query fixture checks preserve the graph, full candidate coverage and incidence with zero numerical/trim calls.
+
+Neighbor regression, all five triangle tests, bridge check and whitespace check passed. Extended 512-split joint replay passed in 149.06 seconds: 512 splits, zero refusals, 1,024 numerical queries (none unproven), 3,584 support spans; 1,024 trim queries, 26,195 trim cells, 644 unresolved query results. Subsequent refinement accepted one triangle and left 8,665 work-limit pending leaves with closed oriented incidence. Report: `triangle-trim-adaptive-512-refinement-2026-10-09.json`. Acceptance matches the earlier length-only fixture and remains incomplete. Next scheduling work must examine all current candidates before spending the remaining support budget on centroid subdivisions. These native changes are not in the published WASM.
+
+
+### Inspect-first triangle refinement, 2026-10-09
+
+Refinement now keeps a separate deferred-subdivision queue. All current candidates receive their trim/tolerance inspection before midpoint queries are issued; failed candidates remain queued, and accepted triangles keep their shared edges unchanged. `initial_checked` reports actual inspected input triangles. Native replay asserts that no splits occur if resource exhaustion prevents a complete initial pass; zero-query checks include zero initial checks. All leaf identities and coverage accounting remain intact.
+
+All five triangle tests, bridge check and whitespace check passed. The extended trim-adaptive 512-split replay passed in 144.00 seconds: all 3,588 original candidates were inspected; 239 leaves passed both the 0.05 mm numerical bound and exact trim gate. After 918 centroid splits, 5,185 leaves remain pending (5,183 work-limit, two numerical-unproven); the domain budget reached 100,000 cells, using 78,349 support spans and 6,340 examined cells. Closed oriented leaf incidence remains true. Report: `triangle-two-phase-512-refinement-2026-10-09.json`. This improves fixture-level coverage over the prior one accepted leaf, but does not qualify the full shell, radius, tangency, wall thickness or all requested geometry classes. Published WASM predates this native scheduling change.
+
+
+### Inherited material rectangles and numeric localization, 2026-10-09
+
+A descendant inherits Inside only when its complete rounded UV rectangle lies inside its proved parent rectangle on the same immutable face. Centroids are clamped to their parent box; interval orientation still refuses degenerate children. Proven Outside triangles are retained as explicit pending leaves rather than subdivided or dropped. Exhausted trim work does not block already proved Inside descendants. Reports now include inherited classification count and numeric failure face/indices/UV/stage/code/message. Replay checks every numerical pending leaf has a matching failure record.
+
+Five triangle tests, one contour-winding test, bridge check and whitespace check passed. Extended replay passed in 144.66 seconds: all 3,588 initial triangles inspected, 1,086 classifications inherited, 255 accepted; 5,475 pending after 1,071 splits, with closed oriented incidence. Both total trim and support budgets reached 100,000. Report: `triangle-trim-inheritance-512-refinement-2026-10-09.json`. Two numeric failures were localized on face 0 in support-bound evaluation, each including UV `2e-323` and `Distance interval exceeded numeric range`. Subsequent arithmetic repair is being qualified separately; no full-shell or packaged-WASM qualification is claimed here.
+
+
+### Subnormal quotient repair, 2026-10-09
+
+Positive-denominator interval division preserves its previous reciprocal/multiplication path when the outward reciprocal is finite. If that reciprocal overflows, it computes the four endpoint quotients directly and rounds their extrema outward. This admits finite subnormal/subnormal ratios while retaining refusals for a denominator crossing zero or a genuinely unrepresentable quotient. Signed division shares the same repair. Regression cases cover exact positive/negative ratios, signed denominators, zero numerator, actual overflow refusal, and a planar surface derivative queried at parameter `f64::from_bits(4)` (the observed near-zero scale).
+
+The actual extended annular replay passed in 127.54 seconds. Both previously captured support-bound failures disappeared: `numericFailures` is empty in `triangle-subnormal-quotient-512-refinement-2026-10-09.json`. All 3,588 original triangles were examined; 255 accepted, 5,477 pending (5,474 overall-work limit and three trim-work limit), 1,072 splits and 1,087 inherited trim proofs. Closed oriented incidence is preserved. The larger pending count follows additional subdivisions after numeric refusals were removed and is not full-shell qualification. Native WASM packaging and UI verification of these changes remain outstanding.
+
+Final post-regression NURBS library suite: 828 passed, two ignored, 22.03 seconds. Geometry-bridge check and whitespace check passed. A fresh WASM build was started after these native checks; packaging and real worker/UI qualification are still pending.
+
+
+### Fresh WASM and inspection disposal qualification, 2026-10-09
+
+Packaging completed successfully: 12,770,564 bytes, SHA256 `5f6001640ee46ec3640d980ed4292c58419fc6b1f8100b4b909ccc4901fbc9df`. The actual worker checker passed using two worker realms: cancellation and fresh-worker retry, 29 inspected faces, contact and candidate-boundary checks. Its report is `subnormal-quotient-wasm-2026-10-09/expression-inspection-worker-report.json`. Native triangle refinement acceptance is not exposed by this boundary-mesh bridge.
+
+The isolated localhost:5197 UI restored the saved annular fixture, accepted source-edge keyboard selection, canceled an active calculation with Escape, and completed a second calculation. Enabling boundary display produced exactly 2,564 DOM triangles. A subsequent request immediately cleared all displayed triangles; Escape restored the run button. The UI explicitly retained the warning that surface tolerance and trimming are unqualified. Screenshot: `subnormal-quotient-wasm-2026-10-09/ui-preview.png`. These checks qualify this fixture and inspection path, not the complete command matrix or all geometry classes.
+
+A controller regression reproduced a stale Retry starting another worker request after Vue scope disposal. The permanent disposed guard now prevents it. Late success and late rejection cases both leave result/error/pending cleared and start no additional request. Controller and mesh transport suites: 15 passed across three files; Vue type checking and whitespace checks passed. This does not establish the cause of the reported browser renderer crash. Reopening localhost:5195 restored the model and displayed 60 FPS without captured console errors, but crash prevention remains unproven.
+
+
+### Exact rectangle proof reuse, 2026-10-09
+
+Triangle refinement now caches only proved Inside/Outside results for bit-identical UV rectangles on the same immutable face, within one invocation and one tolerance. Unresolved results are not cached; different faces and domains cannot share proofs. Cache hits charge no new domain work and are reported separately from parent inheritance. The zero-query replay also asserts zero cache hits.
+
+Bridge compilation, whitespace check and full retained-recipe replay passed (214.95 seconds). Report: `triangle-trim-proof-cache-2026-10-09.json`. There were 203 exact proof reuses, all 3,588 initial triangles inspected, 255 accepted, 5,479 pending after 1,073 splits, no numerical failures, and closed oriented leaf incidence. Both work budgets still reached 100,000. Acceptance did not improve over the preceding quotient-repair fixture; no speed improvement is established from this run. The next geometry work must address unresolved material bands and support bounds rather than rely on exact-domain reuse alone. This native change has not been repackaged into WASM.
+
+
+### Spatial triangle error norm, 2026-10-09
+
+The mean-value bound now combines coordinate residual bounds with an outward Euclidean norm, scaled before squaring to avoid range loss on tiny or large models. The preceding L1 upper bound is retained as a second upper bound; their minimum remains conservative. Four native regressions passed, including affine/skew triangles, interior bowing and known 3-4-5 residuals at scales 1e-150, 1 and 1e150. Bridge compilation and whitespace checks passed.
+
+The extended annular replay passed. Report: `triangle-euclidean-error-2026-10-09.json`. Results: {'accepted': 309, 'cells': 6805, 'domainCells': 100000, 'initialChecked': 3588, 'initialTriangles': 3588, 'leafIncidenceClosed': True, 'spans': 100000, 'splits': 1073, 'trimCacheHits': 203, 'trimInherited': 1087}; pending leaves 5425, numeric failures 0. These finite-fixture results do not establish full material/surface, radius, tangency, thickness or general fillet qualification. This native change is not repackaged into WASM.
+
+
+### Triangle-shaped exact trim queries, 2026-10-09
+
+Added outward separating-axis exclusion of source arc enclosures against a tolerance-padded triangle. The homotopy ray witness additionally requires its reference point outside the axis-aligned enclosure before a contribution is counted. Native rational-contour regression covers triangles inside/outside where the bounding rectangle overlaps the contour, and retains boundary-band refusal. Nonfinite triangle coordinates are rejected. Rectangle classification remains unchanged.
+
+Refinement uses this fallback only after an unresolved rectangle query, charges its actual domain work, and never caches or inherits a triangle proof as a rectangle proof. Bridge check, contour test, full retained-recipe replay and whitespace checks passed. Report: `triangle-shaped-trim-2026-10-09.json`; {'accepted': 244, 'cells': 4755, 'domainCells': 100000, 'initialChecked': 3588, 'initialTriangles': 3588, 'leafIncidenceClosed': True, 'spans': 100000, 'splits': 389, 'trimCacheHits': 203, 'trimInherited': 1167}; pending 4122, numeric failures 0. Full shell qualification remains incomplete. No new WASM package is claimed.
+
+
+### Deviation-gated triangle trim fallback, 2026-10-09
+
+Triangle-shaped fallback work is now issued only when a numerical support bound already meets the target. Exact rectangle caching/inheritance remains separate; a triangle proof is never promoted to a rectangle proof. Counters track fallback queries and proved responses; zero-work replay asserts both remain zero and the replay checks counter bounds. Bridge compilation, whitespace check and full retained-recipe replay passed.
+
+`triangle-gated-trim-2026-10-09.json`: 3,588 initial triangles checked; 271 accepted, 4,615 pending after 649 splits; closed oriented incidence, zero numeric failures. Both support and domain budgets reached 100,000. There were 819 triangle fallback queries and zero proved triangle responses on this fixture. The gated scheduling improves acceptance over the unconditional fallback (244), but remains below the rectangle-only spatial-norm run (309). The measured fallback currently consumes work without proving additional material. Next work should use one shape-aware traversal with explicit rectangle-versus-triangle proof provenance, rather than two contour traversals per candidate. No full geometry or WASM completion is claimed.
+
+
+### Single shape-aware contour traversal, 2026-10-09
+
+Refinement now issues one shape-aware query instead of sequential rectangle and triangle queries. The winding report separately records whether every contributing enclosure also excludes the full padded rectangle. Only such resolved proofs enter the rectangle cache or parent inheritance; triangle-only proofs are not promoted. A reference-point orientation enclosure must prove the chosen winding reference lies strictly inside the triangle before tracing; otherwise classification remains unresolved. Contour regression checks both provenance classes.
+
+Native contour tests, bridge check, whitespace check and extended retained-recipe replay passed. Report: `triangle-single-pass-trim-2026-10-09.json`: all 3,588 initial triangles checked, 271 accepted, 4,349 pending after 516 splits; zero numeric failures and closed oriented leaf incidence. Domain/support budgets both reached 100,000. There were 3,781 shape-aware query calls with 1,670 resolved responses, including full-rectangle responses; these are not 1,670 newly admitted triangles. Accepted coverage is unchanged from deviation-gated double traversal and remains below the prior rectangle-only spatial-norm run (309). Pending count follows a different number of subdivisions and cannot establish increased global coverage. Additional domain preparation and boundary-aware admission remain necessary. No new WASM package is claimed.
+
+
+### Borrowed source contours, 2026-10-09
+
+Contour winding accepts either owned or borrowed exact Fragments via Borrow. Expression display/triangle queries now collect fragment references instead of cloning full source curves, surfaces and rooted endpoints for every query. The geometry remains immutable and retains original identity. Native regression compares complete classification outcomes, work counters, endpoint query counts, reasons, uncertain addresses and rectangle-proof provenance for rectangle/triangle inside/outside/boundary fixtures at budgets 1, 1,000 and 10,000.
+
+Contour regression, bridge compilation, whitespace checks and extended retained-recipe replay passed (204.04 seconds). `triangle-borrowed-contours-2026-10-09.json` has an entirely identical refinement report to the preceding single-pass report, including 271 accepted, 4,349 pending, zero numerical failures and closed oriented leaf incidence. Deep-copy removal is confirmed from source; no runtime speedup is claimed from these uncontrolled replay timings. The full-shell and broader CAD roadmap remain incomplete; this change is not in the packaged WASM.
+
+
+### Prepared immutable contour enclosures, 2026-10-09
+
+Prepared contour queries own shallow references to one immutable inventory and a bounded cache of outward UV curve enclosures. Keys include loop/fragment indexes and exact parameter endpoint bits. Root endpoint contributions are hulled explicitly on each use. Classification and winding checks still run per query; visited-cell charging is unchanged. Refinement constructs one inventory per face, with total enclosure-cache capacity bounded by 100,000 entries across its faces. No global or cross-body cache is used.
+
+Regressions compare cached versus fresh geometric outcomes, work counts and provenance for multiple shapes and capacities 0/1/8/100,000, assert capacity bounds, reject oversized capacity, and verify a repeated query performs zero new enclosure evaluations with actual cache hits. Zero-refinement work asserts zero enclosure evaluations/hits. Contour regression, bridge compilation, whitespace check and full retained-recipe replay passed (126.22 seconds).
+
+`triangle-prepared-contours-2026-10-09.json`: 17,570 fresh curve enclosures and 74,545 reused enclosures (about 81 percent of those accesses). Excluding the two new cache counters, the entire refinement report is identical to `triangle-borrowed-contours-2026-10-09.json`: 271 accepted, 4,349 pending, zero numeric failures, closed oriented leaf incidence. This establishes eliminated repeated enclosure evaluations, not a controlled wall-clock speedup or increased geometric coverage. Remaining material-boundary and surface admission work is unchanged. Native changes are not yet packaged into WASM.
+
+
+### Reserved initial material-query budget, 2026-10-09
+
+Each original candidate receives at most the remaining domain budget divided by the number of original candidates still to inspect, capped by the per-query allowance. Zero-cost whole-chart/cached proofs leave the reserved work available for later candidates. Descendants continue under the existing per-query/global caps. The report distinguishes initial domain work; zero-query replay asserts zero, and replay bounds it by total domain work.
+
+Bridge compilation, whitespace checks and extended retained-recipe replay passed (121.64 seconds). `triangle-fair-initial-trim-2026-10-09.json`: all 3,588 originals inspected using 46,211 domain cells, leaving 53,789 cells for descendants; 271 accepted and 4,615 pending after 649 splits, closed oriented incidence and no numerical failures. Total domain/support budgets still reached 100,000. Acceptance is unchanged from the previous prepared single-pass run; the greater pending count follows more subdivisions, not established loss or gain of geometric coverage. There were 24,410 fresh enclosure evaluations and 66,049 cache hits. Initial scheduling no longer consumes the full trim budget, but full boundary/material/surface qualification remains open. Native changes are not yet packaged into WASM.
+
+
+### Centered mean-value anchor qualification and restoration, 2026-10-09
+
+Added an outward mean-value bound supporting an arbitrary anchor UV point, including interval evaluation of the affine mesh plane at that anchor. Five regressions cover flat/skew/degenerate triangles, spatial norms across scale, interior bowing, and orientation reversal. The centered anchor improves the explicit bow fixture without an additional support query.
+
+On the actual extended annular replay, however, `triangle-centered-anchor-2026-10-09.json` accepted only 209 leaves versus 271 with the vertex anchor (637 splits, 4,653 pending; no numeric failures and closed oriented incidence). Center anchoring was therefore removed from the production candidate path. The generalized helper is retained for further qualification, while the original vertex special case preserves its preceding arithmetic.
+
+Five tests, bridge compilation and whitespace checks passed. A second full replay, `triangle-vertex-anchor-restored-2026-10-09.json`, has an entirely identical refinement report to `triangle-fair-initial-trim-2026-10-09.json`, restoring 271 accepted, 4,615 pending and no numeric failures. This experiment establishes that universal centroid anchoring is not a useful default for the current fixture; no coverage improvement, full geometry qualification or new WASM package is claimed.
+
+## Addressed unresolved triangles, 2026-10-09
+
+Native retained-profile replay passes in 125.50 seconds. The new diagnostic export adds vertex IDs and UV triangles to every unresolved leaf. Removing these additional fields produces exact equality with triangle-vertex-anchor-restored-2026-10-09.json, so no geometry result or work accounting changed: 271 accepted, 4615 unresolved, closed oriented leaf incidence, zero numeric failures. Solid qualification remains false.
+
+The summary script validates finite addresses, retains all UV triangle addresses and records the input SHA256. Largest unresolved faces: 28 (1193), 0 (1078), 27 (508), then 16/20/24 (226 each). Face 28 spans the full [0,1]² chart; face 0 spans [0,0.75] × [0,1]; face 27 spans [0.9,1] × [0,1]. UV area sums are numerical diagnostic quantities, not physical material areas or certificates. This now supports targeted investigation of surface and trim bounds without silently treating budget exhaustion as a clean result.
+
+## Fair face scheduling
+
+Interleaving initial candidates across all faces preserves within-face order and all candidates. The retained-profile replay passes at the same 0.05 mm tolerance, initial candidate set, bisection inputs and work limits. Accepted leaves increase from 271 to 371; unresolved leaves increase from 4615 to 5105 because refinement creates additional leaves. Numerical unresolved UV area decreases on 12 faces and increases on none above 1e-10 UV units. Closed oriented leaf incidence is preserved, numeric failures remain zero, and solidQualified remains false. Eight focused native triangle/error/incidence/scheduling checks pass. See triangle-face-round-robin-comparison-2026-10-09.json. This is bounded coverage improvement, not full surface, tangency, thickness or self-intersection qualification. Packaged WASM has not been rebuilt for this native scheduling change.
+
+## Descendant trim sharing experiment
+
+Dividing remaining trim work among unproven queued/deferred descendants increases accepted leaves 371 to 512, with 5516 unresolved leaves, closed oriented incidence and no numeric failures. Numerical unresolved UV area decreases on six faces but increases by 1.349163857 UV units on face 1. The change was reverted because the count gain masks a per-face coverage regression; the previously validated face round-robin scheduling remains. Experimental result and per-face comparison are retained. Surface qualification remains incomplete.
+
+## Vertex spatial error bound
+
+The support-minus-affine-plane mean-value residual uses the same enclosed gradients and anchor as before. For each admissible residual gradient and anchor, its spatial norm is convex in triangle displacement, so its maximum is attained at a vertex. Each vertex residual is enclosed independently with outward interval arithmetic, its norm is bounded with scaled outward arithmetic, and the maximum is intersected with the previous valid upper bound. This avoids mixing coordinate extrema from different vertices and issues no new native support queries. A fixture with disjoint X/Y extrema improves the upper bound from 5 to approximately 4. Nine focused checks pass; an additional finite adversarial control covers all 512 corners of anchor/gradient interval inputs on 66 barycentric points each. These finite controls supplement the convexity argument; the whole-body replay is still pending at the time of this entry.
+
+## Vertex spatial bound whole-body result
+
+The completed native replay passes in 133.32 seconds. At the same candidate inputs, bisection, tolerance and work limits, the result is 371 accepted and 5105 unresolved leaves, exactly matching the face round-robin baseline in every per-face numerical unresolved UV area. Closed oriented leaf incidence is preserved and numeric failures remain zero. The tighter bound improves the isolated disjoint-extrema control but does not increase coverage on this annular fixture. Full solid qualification remains false. See triangle-vertex-spatial-norm-comparison-2026-10-09.json. The report additionally identifies original, retained and transition faces; face 28 is a transition and retains 1159 unresolved leaves spanning its full chart. This result directs subsequent work toward transition trim/support bounds rather than claiming a coverage gain from the new norm. No updated packaged WASM or full thickness, tangency or self-intersection qualification is claimed.
+
+## Resource-specific unresolved diagnostics
+
+Native refinement now distinguishes exhausted cell, support-span and exact-trim budgets, retaining simultaneous exhaustion explicitly. Disabled queries also receive a separate reason. All unresolved triangles and the existing work accounting are preserved; this changes diagnosis, not admission. Two scheduling/diagnostic tests pass and whitespace checks pass. The full annular replay producing triangle-resource-diagnostics-2026-10-09.json is running; its result has not yet been accepted or compared.
+
+Resource-specific replay completed successfully. Coverage remains 371 accepted / 5105 unresolved, with identical per-face numerical UV areas to the preceding run, no numeric failures and closed oriented incidence. Unresolved reasons: {'triangle-trim-work-limit': 390, 'triangle-span-trim-work-limit': 1971, 'triangle-span-work-limit': 2744}. Face 28: {'triangle-span-work-limit': 1159}. The transition is stopped by support-span work, so subsequent coverage work must address support evaluation/refinement rather than exact trim for this face. Full solid qualification remains false.
+
+## Immutable-call support anchor cache
+
+Triangle refinement now reuses successful native support point enclosures for identical face, exact UV bits and control-limit keys. The cache is scoped to one immutable shell/refinement call, capped at 100000 entries, and never stores unresolved answers or boundary graph estimates. Exact native centroid enclosures populate the same cache. Cache hits charge zero new span work; derivative queries keep their previous admission and remaining-budget checks. Public uncached calls retain an empty per-call cache. The full annular replay is running into triangle-anchor-cache-2026-10-09.json; coverage improvement and packaged WASM integration remain unverified.
+
+Anchor-cache replay completed successfully. Comparison: {'acceptedBefore': 371, 'acceptedAfter': 371, 'pendingBefore': 5105, 'pendingAfter': 5281, 'solidQualified': False}. Per-face UV changes: []. Leaf incidence closed: True; numeric failures: 0. UV sums are diagnostic, not physical areas or solid qualification.
+
+The anchor-cache experiment was removed from the production refinement path: it creates more unresolved leaves without increasing accepted count or reducing any per-face numerical unresolved UV area. The baseline resource diagnostics remain. The experiment is retained as evidence, not a shipped coverage improvement.
+
+## Rotation-independent interior-edge priority
+
+Interior edge bisection now ranks spatial Euclidean length using scaled hypot rather than the largest coordinate difference. The preceding scheduling metric changes under rotation and can rank a shorter axis-aligned edge above a longer diagonal. The new metric remains a scheduling choice, never an error certificate. Two regressions pass: rotation and extreme-scale length controls, and shared midpoint/orientation/boundary preservation across both adjacent triangles. Full annular replay is running into triangle-euclidean-edge-priority-2026-10-09.json. Candidate subdivision may differ, so geometry coverage comparisons must identify changed bisection inputs; no coverage gain, general rotation equivalence of the entire pipeline, or packaged WASM change is claimed.
+
+Euclidean edge-priority replay completed successfully. Result: {'acceptedBefore': 371, 'acceptedAfter': 215, 'pendingBefore': 5105, 'pendingAfter': 5261, 'subdivisionChanged': True}. Per-face numerical unresolved UV changes: [(6, 1.0538158899762209), (9, -18.62116535311793), (15, 29.09514951221732), (18, 32.91459154998597), (19, 25.725894993348533), (22, 34.348733165073725), (23, 26.032562304676958), (26, 34.348733165073725)]. Closed incidence: True; numeric failures: 0. This comparison explicitly allows and labels changed subdivision. Full solid qualification remains false.
+
+The Euclidean priority experiment was reverted in the production scheduler: it lowers accepted leaves from 371 to 215, increasing unresolved UV area on seven faces while improving one. Its rotation-independent metric is mathematically preferable, but bounded scheduling needs face-aware work distribution before adoption. Baseline scheduling is restored; changed-subdivision comparison support and diagnostic evidence are retained.
+
+## Current packaged WASM inspection worker qualification
+
+Actual production handler/client in Node worker passes with published/packed WASM SHA256 3afcab4a6f41e5db19fecd9ce108245372c1595e1dbfdc6e2d8a14a5a1b4c4b7. The refused budget remains explicit; dispatch cancellation terminates and joins the first worker, and Retry succeeds in a fresh worker. Two workers started and joined. Timings: refusal 935.32 ms, dispatch cancellation 24.53 ms, Retry 8546.12 ms. The annular response contains 29 faces, 406 contact pairs with zero pending contacts, positive bounded signed volume and 2564 boundary-preserving candidate triangles with closed oriented incidence. Material and surface-tolerance qualification remain false. Evidence: current-inspection-worker-2026-10-09/expression-inspection-worker-report.json. This confirms the current package transport/cancellation path; it does not expose the subsequent native refined leaves, qualify a full fillet solid, or prove browser preview behavior.
+
+Current browser boundary preview control passed in isolated localhost:5198 tab: imported source recipe, selected shared-boundary computation, started, cancelled by Escape, reran and displayed the result. DOM contains 2564 rendered polygon elements across 29 faces. UI explicitly states surface tolerance and trim remain unqualified, and radius/tangency/thickness require separate checks. Evidence and screenshot are in current-inspection-worker-2026-10-09/browser-preview.json and browser-preview.png. The temporary tab was closed; user localhost:5195 tabs were preserved. No forced delayed browser worker reply or full solid qualification is claimed.
+
+## Current trimmed shared-edge root replay controls
+
+Eleven native source_shared_edge tests and the shell root-partition test pass. The curved-support regression now explicitly rejects endpoint sampling at zero span budget for both ends and restores the admitted edge from original definitions with fresh native qualification. On both polynomial and rational curved carrier controls, replay preserves the original definition, retained parameter bounds and the irrational root enclosure around 1/sqrt(2), while complete-original-edge coverage remains false. The strengthened control passes separately. Existing tests cover opposite charts, reflected charts, distinct parameter domains, mixed fixed/root ends, unique-root requirements and rejection of two world-plane roots. This validates these authored classes; arbitrary general NURBS/mixed corners and a full admitted fillet Body remain open.
+
+## Explicit refinement work-limit evidence
+
+Native TriangleRefinementReport now retains the exact limits used by the call; export reads this retained value rather than reconstructing it from environment flags. Reports include deviation tolerance, cell/span/query/control limits, trim budgets, UV tolerance and maximum depth. Comparison rejects unequal explicit refinement limits even when changed subdivision is allowed. Legacy reports remain readable but receive refinementLimitsVerified=false and an explicit unavailable status; this field covers refinement only, not the entire geometry pipeline. Three comparison controls and two native scheduling/diagnostic tests pass. A new explicit-limits annular replay is running; no coverage improvement is claimed by this metadata change.
+
+Explicit-limit replay completed in 129.15 seconds: 371 accepted / 5105 unresolved, unchanged coverage and closed incidence. New optional transitionBudgetProbes evaluate three original transition candidates at four per-query budgets (64,128,256,512), retaining addresses, actual spent spans and optional deviation bound. These probes are independent of production budgets/refinement and do not change admission. Probe compilation and two native controls pass; the full probe run is active and its numerical results remain pending.
+
+Transition-budget probes complete. All three transition candidates return the same bound at budgets 64/128/256/512, spending 62 spans each. Bounds are 0.09200271400391716, 0.09200271400391845 and 0.09187832959843595 mm, all above the 0.05 mm target. Their UV triangles span the full transverse [0,1] direction despite narrow free-parameter width. Therefore insufficient per-query allowance is not the cause for these controls; increasing it cannot improve their bound. Full replay remains 371 accepted / 5105 unresolved, with explicit refinement limits matched against the baseline. Next work must reduce transverse mean-value overestimation or provide conforming refinement in that direction. These probes do not establish all transition candidates behave identically.
+
+## Rectangle-center anchor diagnostic
+
+Added a diagnostic candidate bound anchored at the center of its derivative UV rectangle, preserving the production vertex-anchor path. Each anchor-to-triangle segment remains inside the derivative rectangle; the existing affine-plane-at-anchor residual and outward mean-value bound therefore apply. A finite quadratic residual control covers an anchor outside the triangle but inside the owned derivative rectangle. Native transition probes now compare vertex and rectangle-center anchors at the same four per-query budgets; the full replay is running. No center-anchor adoption, coverage gain or updated WASM package is claimed before the results are examined.
+
+Rectangle-center probe replay completed successfully. At 64 spans per query, measured vertex/center results: [{'anchor': 'vertex', 'deviationUpperMm': 0.09200271400391716, 'spent': 62, 'vertices': [774, 10, 0]}, {'anchor': 'rectangle-center', 'deviationUpperMm': None, 'spent': 64, 'vertices': [774, 10, 0]}, {'anchor': 'vertex', 'deviationUpperMm': 0.09200271400391845, 'spent': 62, 'vertices': [774, 1164, 10]}, {'anchor': 'rectangle-center', 'deviationUpperMm': None, 'spent': 64, 'vertices': [774, 1164, 10]}, {'anchor': 'vertex', 'deviationUpperMm': 0.09187832959843595, 'spent': 62, 'vertices': [774, 1000, 1164]}, {'anchor': 'rectangle-center', 'deviationUpperMm': None, 'spent': 64, 'vertices': [774, 1000, 1164]}]. Production refinement remains unchanged; this diagnostic result alone does not qualify the whole surface or justify default anchor replacement.
+
+All rectangle-center budgets: [([774, 10, 0], 64, 64, None), ([774, 10, 0], 128, 93, 0.061701186311430053), ([774, 10, 0], 256, 93, 0.061701186311430053), ([774, 10, 0], 512, 93, 0.061701186311430053), ([774, 1164, 10], 64, 64, None), ([774, 1164, 10], 128, 93, 0.061622928371964814), ([774, 1164, 10], 256, 93, 0.061622928371964814), ([774, 1164, 10], 512, 93, 0.061622928371964814), ([774, 1000, 1164], 64, 64, None), ([774, 1000, 1164], 128, 93, 0.06162595362584684), ([774, 1000, 1164], 256, 93, 0.06162595362584684), ([774, 1000, 1164], 512, 93, 0.06162595362584684)].
+
+## Regional error against the original mesh plane
+
+The native mean-value helper now supports a local parameter triangle while retaining the original mesh triangle and its affine plane. Existing whole-triangle entry points delegate with the original region, preserving their arithmetic. A quadratic control checks that a local bound becomes tighter but still encloses the 0.25 mm residual against the parent plane, which would be hidden by refitting a subtriangle to the surface. Nine triangle-error tests pass. Whole-triangle admission still requires independently proved coverage of all regional derivative domains; this helper alone grants no surface certificate and has not changed production scheduling or the packaged WASM. A future rectangular partition can preserve exact common floating split coordinates and cover the parent derivative rectangle without changing shared mesh boundaries.
+
+## Complete rectangular regional support diagnostic
+
+Added an optional diagnostic bound that partitions the complete derivative rectangle into four rectangles sharing identical split coordinates. Each rectangle evaluates its own native anchor and derivative enclosure, then bounds both triangles of that rectangle against the original parent mesh plane. Taking their maximum covers the parent rectangle conservatively, including parts outside the candidate triangle. Any unresolved anchor, derivative or residual returns an unresolved result with actual spent work; no partial certificate is admitted. The production vertex-anchor path remains unchanged. Extreme and subnormal partition controls and transition probes are running; results remain pending before any integration or coverage claim.
+
+Partitioned diagnostic succeeds for all three controlled transition candidates: bounds [0.029804155355868278, 0.02976139562298375, 0.029826479388759538] mm, below the 0.05 mm target, each spending 372 spans. Budgets 64/128/256 remain explicitly unresolved. This provides complete supporting-surface error coverage of these candidate rectangles against their original mesh planes; material trim, the rest of the surface and full solid qualification remain separate. Production refinement still has 371 accepted / 5105 unresolved because this diagnostic is not yet integrated. Newly added zero-budget entry-point assertions compile but were added after this run started and have not yet executed.
+
+## Explicit regional transition admission stage
+
+Added a native second stage for pending transition leaves. It independently asks exact trim classification, evaluates complete regional support coverage against the unchanged mesh plane, and plans all new admissions before committing changes to the report. It preserves all vertices, leaves and prior accepted results; failures cannot partially commit new admissions. Additional span work is bounded at 100000 and each query at 512, recorded separately from the baseline refinement. Comparison rejects changed additional budgets unless explicitly requested and then labels them; no same-total-budget gain is implied. Zero-budget controls for all diagnostic paths are included in the next full run. The regional native replay is running; full-body improvement remains unverified until its report is examined.
+
+Regional transition replay passes in 177.10 seconds. Stage work: {'accepted': 0, 'maxSpans': 100000, 'queries': 269, 'spans': 100000}. Accepted leaves 371 -> 371; unresolved 5105 -> 5105. Per-face numerical unresolved UV changes: []. No per-face numerical area regression, closed oriented incidence and zero numeric failures. The additional 100000-span budget produces no new admissions; this stage is not enabled by default. All zero-budget diagnostic and regional controls included in this replay pass. Full solid qualification remains false; no new WASM package or UI refinement bridge is claimed.
+
+### Face-aware interior edge scheduling — 2026-10-09
+
+A per-face round robin heap experiment preserved shared midpoint and boundary controls. The full retained shell replay passed in 138.02 s. At matching refinement limits, accepted triangles rose from 371 to 429, while pending leaves rose from 5105 to 5417. Numerical pending UV area improved on 17 faces but worsened on six (15, 18, 19, 22, 23, 26); the transition face 28 did not improve. This is not a coverage improvement suitable for the default pipeline. The scheduler was reverted.
+
+Evidence: `triangle-face-edge-queue-2026-10-09.json` and `triangle-face-edge-queue-comparison-2026-10-09.json`. Leaf incidence remained closed and oriented; no numeric failures were reported. Solid qualification remains false. UV area is a numerical parameter-space diagnostic, not physical area or a solid certificate.
+
+### Native point deviation lower bounds — 2026-10-09
+
+Added an outward interval lower bound for correspondence error between a native support point and the original affine triangle plane. The conservative coordinate bound avoids inward-rounded norms; degenerate UV triangles return no result. Ten triangle error tests pass, including an interior bow at tiny and large scales, reversed orientation, overlapping intervals and degeneracy. The retained-shell replay passed in 81.80 s; 16 pending transition point queries and their zero-budget controls are recorded in `triangle-point-witness-controls-2026-10-09.json`.
+
+This diagnostic does not change admission, mesh refinement, or packaged WASM. A small point lower bound cannot establish whole-triangle tolerance. Material membership, parameter correspondence and closest-surface distance must be qualified separately before using a point result as a rejection gate.
+
+### Recursive regional bounds - 2026-10-09
+
+The native diagnostic supports bounded recursive rectangle partitions through depth 4. Shared floating split coordinates cover the parent box. Two partition tests pass, including recursive seams, extreme and subnormal domains. The original affine mesh plane is retained in every bound.
+
+triangle-point-depth-controls-2026-10-09.json (134.94 s replay) records 16 original pending transition leaves. Upper bounds at depths 1/2/3 are respectively 0.029826-0.047534, 0.020147-0.026955 and 0.017275-0.020943 mm.
+
+triangle-pending-depth-controls-2026-10-09.json (181.20 s replay) examines 16 leaves remaining after the full 512-edge adaptive split and extended refinement. Depth 1 bounds are 0.083574-0.091769 mm, depth 2 bounds are 0.043281-0.045928 mm and depth 3 bounds are 0.032561-0.034259 mm. All 16 meet the 0.05 mm support-deviation target at depth 2. Point lower bounds are 0.018131-0.018830 mm. Depths 1/2/3 spend 5952/23808/95232 spans across these controls; this is additional diagnostic work. Point correspondence and surface error do not establish material membership or solid qualification.
+
+The depth-2 regional admission replay passed in 303.22 s. At an explicit additional 100000-span budget it issued 68 queries and admitted 30 formerly pending transition triangles. Baseline accepted/pending counts change from 371/5105 to 401/5075. Existing mesh vertices, prior admitted leaves and oriented incidence are preserved. No numeric failures were reported; full solid qualification remains false. Evidence: triangle-regional-depth2-2026-10-09.json and triangle-regional-depth2-comparison-2026-10-09.json.
+
+The raw exporter in this compiled replay still labelled the old per-query constant (512). Its original bytes and hash are preserved in triangle-regional-depth2-raw-export-2026-10-09.json. The corrected report records the actual native depth-2 limit (2048) and a metadataCorrection trace; geometry and results were not changed. The exporter source is fixed for subsequent runs. This additional native stage is not yet packaged in WASM or exposed in the UI.
+
+Comparison against the previous regional stage also uses the same total additional 100000-span budget: depth 1 admitted zero leaves, depth 2 admits 30. The per-query partition depth and allowance differ and are labelled explicitly. The subdivision remains unchanged; only transition face 28 improves in numerical pending UV area (delta -0.0185546875); no other face regresses. See triangle-regional-depth2-equal-total-budget-2026-10-09.json.
+
+### Early unproven regional evaluation - 2026-10-09
+
+The additional native stage now stops a query when any regional upper bound exceeds its target. It returns no whole-triangle certificate and keeps the triangle pending; this is not a proof of a geometric defect. Only complete coverage meeting the target admits a triangle, after independent material classification.
+
+At the same 100000-span regional budget, the full replay passed in 198.93 s: 425 queries, 42 additional admissions (previous depth-2 stage: 68 queries, 30 admissions). Accepted/pending counts are now 413/5063. The exact remaining face/vertex/UV addresses are a subset of the preceding result, with 12 removed pending addresses and zero new ones. Only transition face 28 improves (numerical pending UV delta -0.005859375). Oriented incidence remains closed, numeric failures are empty, and solid qualification remains false. Evidence: triangle-regional-early-unproven-2026-10-09.json and its comparison report. Timings are individual runs, not a matched performance benchmark.
+
+triangle-target-stop-controls-2026-10-09.json (107.49 s replay) verifies three native transition triangles at depths 1/2/3: successful targeted bounds and work counts equal complete evaluation; an intentionally tight target returns no certificate using strictly less work. Zero budget returns no result, and nonfinite tolerance or zero partition depth is refused. These controls do not change mesh or production admission. Packaged WASM and UI integration remain outstanding.
+
+### Refined boundary transport and UI integration - 2026-10-09
+
+The geometry bridge accepts an optional boundaryMeshLimits.refinement request and returns native accepted/pending triangles, per-leaf upper errors or refusal reasons, numerical failures, work counters and exact requested limits. The initial shared graph and its incidence remain separate; solid and global material/surface qualification are not inflated. Interior vertices generated by refinement are serialized with native point enclosures.
+
+The transport verifies the requested tolerance/work limits, original triangle count plus two leaves per centroid split, valid point references, unique leaf addresses and bounded accepted errors. A refined response is required only when requested. Eighteen transport/controller tests pass, including cancellation, Retry and a late response after a regional-budget change. The native bridge replay passed in 39.62 s and its actual result passes the TypeScript transport validator: expression-triangle-refinement-bridge-2026-10-09.json. Zero-budget replay retains every initial triangle as pending.
+
+The new UI includes an optional refinement toggle and green qualified/orange unproven/red numerical-error triangle rendering. Reason text is localized. All 321 direct modeler UI tests pass (70.35 s). Direct Vue type checks pass. The optimized WASM build is still active at this checkpoint; real packaged worker and rendered browser verification are pending. No claim of completed WASM/UI runtime qualification is made here.
+
+### Packaged refinement runtime - 2026-10-09
+
+The full WASM build, npm typecheck and Cargo check completed successfully. Current package: 12838695 bytes, SHA256 dd8599c34e8311b0818d4b4b21ac12c63c914b05a52ea5fb5662240c9ae8faa8. Nineteen transport/controller tests pass after adding malformed optional-request controls.
+
+The production Node worker/client replay passes against this package, with two workers started and joined, native budget refusal, dispatch cancellation, a terminated worker realm and a fresh-worker Retry. Actual timing samples are 1003.33 ms refusal, 24.49 ms dispatch cancellation and 11948.80 ms Retry. At the UI request budgets (512 cells, 20000 spans, 10000 regional spans) the native reply retains all 2564 initial triangles: 6 accepted and 2558 pending, without numeric failures. This differs from the larger native 413/5063 qualification run; budgets and subdivision are not interchangeable.
+
+The browser replay on port 5198 uses the same code/package. It loads the saved transition recipe, requests refinement, and shows 6 green and 2558 orange polygons. Esc during a second request clears every preview polygon; rerunning restores the same counts. Evidence: refined-inspection-worker-2026-10-09/expression-inspection-worker-report.json, browser-preview.json and browser-preview.png. Red numeric-error rendering is implemented, but this fixture contains no numeric errors. Late-response protection and error Retry are additionally covered by controller tests; no browser fault injection is claimed. The pre-existing Rush background build error and WebGPU unavailable warning remain outside this SVG CAD replay. Solid qualification, radius, tangency and thickness are still incomplete.
+
+### Regional support cache experiment - 2026-10-09
+
+The bounded per-call native support cache experiment was not retained. The 171.89 s full replay recorded zero cache hits at the current 100000-span additional budget, identical 413 accepted / 5063 pending leaves, exact unchanged pending addresses and per-face numerical UV coverage. It preserved closed incidence and reported no numeric failures, but did not reduce actual enclosure work or improve admission. Source changes were reverted. Evidence: triangle-regional-support-cache-2026-10-09.json and its comparison report.
+
+### Strict interval triangle separation - 2026-10-09
+
+Regional bounds now omit only rectangles proved strictly separated from the original UV triangle by outward interval half-plane tests. Touching, degenerate and unresolved cases remain in the support evaluation. Rectangle partitions still cover the original triangle, and every retained region evaluates the original affine mesh plane. This is not sample-based trimming. Three partition/separation tests pass, covering both orientations, boundary contact, degenerate UV triangles and scales from 1e-150 to 1e150.
+
+The 176.96 s full replay uses the same subdivision and the same additional 100000-span regional budget. It issues 441 queries and adds 69 admissions to the 371 baseline leaves, giving 440 accepted / 5036 pending (previous early-unproven stage: 413 / 5063). All 27 newly removed pending addresses become admissions; no new pending addresses appear. Only transition face 28 improves in numerical pending UV area (delta -0.0185546875), with no per-face regression. Oriented incidence remains closed, numeric failures are empty, and solid qualification is false. Evidence: triangle-regional-separated-cells-2026-10-09.json and its comparison report. The packaged dd8599 kernel predates this optimization; a fresh build is required before runtime claims.
+
+### Separation transport validation, 2026-10-09
+
+The native geometry bridge replay after strict triangle separation passed in 41.23 s. The exported `expression-triangle-refinement-separated-bridge-2026-10-09.json` passes the actual `validBoundaryMesh` UI transport validator: 1 accepted and 2563 pending triangles under its smaller bridge-test budget. All 19 tests in expressionBoundaryMeshTransport, expressionShellInspectionTransport and expressionInspectionController passed. These checks validate bounded transport and cancellation/stale-result handling; they do not establish general fillet admission or runtime qualification of the rebuilt WASM. The geometry WASM release compilation finished; package optimization was still running when these checks completed.
+
+### Native radius and source seam checks, 2026-10-09
+
+Six source_seam_tangency tests pass (0.06 s), covering a complete authored curved seam, reversed/partial carriers, rational root endpoints and refusal for creases, singular endpoints and insufficient work budgets. The rotating-plane case bounds sine squared by 1e-3; this is an angular bound for the owned test seam, not assembled-fillet tangency admission. The annular_corrected_expression_coefficient_radius_cell test passes (4.51 s). Ten native triangle-error tests also pass. General mixed-radius corners, whole-shell radius/tangency, wall thickness and self-intersection qualification remain open.
+
+### Separated regional bounds packaged runtime, 2026-10-09
+
+Geometry WASM build completed: 12840942 bytes, SHA256 aa42d375984159f2da456eb5c4606468a32a9b4b1ac8787763c653622b8d15fd. The real worker replay passed, with both workers joined: refusal 1277.16 ms, dispatch cancellation 30.99 ms, fresh-worker Retry 13232.97 ms. The browser preview at the same UI budgets contains 10 accepted and 2554 pending triangles, versus 6/2558 before separation; numeric errors are zero. Esc during calculation clears all preview polygons, and rerunning restores 10/2554. Evidence is in separated-refined-inspection-worker-2026-10-09. This is bounded preview admission, not whole-solid/radius/tangency/thickness qualification. The pre-existing background Rush invalid-surface and WebGPU warning remain visible; this verification uses the Solid SVG viewport.
+
+### Strict-separation refusal controls, 2026-10-09
+
+All four partition tests pass after adding one-ULP diagonal contact, contained point rectangles in both triangle orientations at scales 1e-160 through 1e150, and overflow refusal. These are regression controls for conservative interval separation, not sampled surface admission. Only test code changed, so the packaged aa42d375 runtime evidence remains applicable.
+
+### Coefficient radius law mutation control, 2026-10-09
+
+The annular coefficient-radius replay passes with an added law mutation control. The original whole-domain upper bound is 1.595684089104902e-6 mm, within the 1e-4 mm tolerance. Increasing every radius-law control value by 0.25 mm produces an upper bound of 0.40019526485580814 mm, which cannot admit that tolerance; this upper bound is not a certified lower-bound violation. Both attempts use 986 spans and 60072 coefficient-work units. The exported coefficient-radius-refusal-2026-10-09.json contains both outcomes. No production geometry code changed. The separate authored-law interval replay is still running and has not established complete coverage.
+
+### Certified coefficient radial mismatch lower bound, 2026-10-09
+
+The native CoefficientRadiusBound now includes an optional error_lower. For positive Bernstein weight enclosures, the signed squared residual gives its minimum absolute magnitude; division by the outward upper bound 2*r_upper+error_upper yields a whole-cell radial error lower bound. Overlapping residual intervals yield zero (inconclusive), and incomplete coefficient work yields no lower bound. The mutated annular radius law has error_lower 0.06197609549178115 mm and error_upper 0.40019526485580814 mm, proving a mismatch above 1e-4 mm. Evidence: coefficient-radius-lower-bound-2026-10-09.json. Two native coefficient module tests pass. This native API addition is not yet rebuilt into the packaged aa42d375 WASM or exposed in UI. The separate authored-radius test completed successfully in 615.32 s, but its assertions allow pending coverage and its captured passing output does not establish completeness.
+
+### Owned expression radius bridge, 2026-10-09
+
+The expression-shell restore/inspect request accepts optional radiusCheck with centers, radius, lawDomains, toleranceMm, controls, spans and coefficientWork. It rebuilds the actual owned transition face and issues fresh coefficient radius qualification. The result distinguishes qualified and violationQualified with lower/upper error bounds; exhausted work remains unproven, and solidQualified/materialQualified remain false. The native dispatch test passes in 92.99 s for original, changed-law and zero-span requests, including exact request echo. Evidence: expression-radius-dispatch-2026-10-09.json. Cargo check passes. WASM/TS transport/UI integration of this new request remains pending; the packaged aa42d375 predates it.
+
+### Radius transport validation, 2026-10-09
+
+ExpressionShellOptions now carries optional radiusCheck, and the base shell validator requires the requested native report with bounded work, finite nonnegative error bounds, consistent admission/violation flags and explicit solidQualified=false. Request identity includes the entire radius and center laws. No radius geometry runs in TypeScript. All 11 radius/inspection transport tests pass against actual native dispatch fixtures, covering original/violation/unproven states, changed law identities, malformed requests, missing reports, budget overruns and contradictory qualification flags. Vue typecheck passes. Packaged WASM and UI exposure of radiusCheck remain pending.
+
+### Radius UI and stale law protection, 2026-10-09
+
+The inspection panel displays the original-law tolerance and native radius admission, certified violation or unproven state, including numeric radial error bounds. Radius input comes from the saved inspection recipe; no synthetic law is inferred in TypeScript. The new controller regression ignores a late response after law replacement and accepts the current violation reply. Fourteen radius/controller tests and Vue typecheck pass. UI preparation and real-worker scripts accept --radius, --radius-violation and --radius-unproven, using actual native fixture laws. Three UI fixtures were prepared successfully. The radius WASM build is running; browser and packaged-worker validation remain pending.
+
+### Radius law archive preservation, 2026-10-09
+
+Seventeen archive/radius/controller tests pass. The archive test round-trips native admitted, violated and unproven radius requests including exact center/radius control data, law domains, tolerance and work limits. Original source bytes remain unchanged; mutating decoded radius data cannot mutate a saved archive. The running geometry WASM rebuild is still compiling release code. No new packaged-runtime result is claimed.
+
+### Radius mismatch region localization, 2026-10-09
+
+The radius panel now offers region highlighting for a certified mismatch. It emits only transition face IDs from the current native reply; pending calculation, cancellation and source-body replacement clear the selection. The scene draws available support enclosure boxes in red with data-radius-violation, retaining trim state separately. This is support-region localization rather than watertight material admission. Three SSR panel tests pass for qualified/violated/unproven labels, and Vue typecheck passes. Actual browser highlighting awaits the rebuilt package; no visual/runtime claim is made yet.
+
+### Disabled radius work transport guard, 2026-10-09
+
+The radius report validator rejects any lower/upper error bound when controls, spans or coefficientWork is zero. Regression checks reject fabricated admission and fabricated violation even with zero reported work, while accepting a bound-free unproven report. All 21 radius panel/archive/transport/controller tests pass. Geometry WASM optimization is still running; packaged radius runtime remains unverified.
+
+### Independent radial-bound scale controls, 2026-10-09
+
+A native coefficient-radius regression passes nine cylinder-law combinations: scales 1e-50, 1 and 1e8, with requested radius factors 0, 1 and 1.25. Lower and upper bounds enclose the analytical cylinder reference error; mismatched laws have strictly positive lower bounds. This includes a zero radius law. The initial 1e50 fixture was refused by the native input rule limiting coordinates to 1e9, so no above-limit support is claimed. The test completes in 0.34 s. Production code remains unchanged by this test; WASM optimization is still running.
+
+### Packaged radius diagnostics and browser cancellation, 2026-10-09
+
+The WASM rebuild completed: 12,873,854 bytes, SHA256 `0f1f7848bb72556b46587a186f7817b6a118f43db9a3b872c925c008bc7b5de0`. The qualified, violation and unproven real-worker reports each pass with two workers started and joined. Retry took 8.40–8.45 s; dispatch cancellation took 22.3–23.2 ms. These measurements concern the controlled annular recipe, not all commands.
+
+Browser evidence `radius-ui-cancel-retry-2026-10-09.json` and its PNG confirm source-body selection by mouse, a native radial-error interval of 0.06197609549178115–0.40019526485580814 mm, and 16 highlighted transition support boxes. Esc clears the result and all 16 boxes; a fresh run restores the same 16. The earlier inability to select via an automated SVG polyline center click is not sufficient evidence of a production pointer bug. Arbitrary edge-stroke picking still needs a targeted hit-location test.
+
+The display remains a support enclosure preview. Tangency, wall thickness, full material admission, general NURBS fillets and the full P0 matrix remain incomplete. Prior entries describing the radius build/runtime as pending are superseded by these current reports.
+
+### Interior crease with matching endpoint planes, 2026-10-09
+
+A new native regression uses an exactly shared straight carrier between a plane and the polynomial patch z=2*a*u*(1-u)*v, for a=0.1, 1 and 10. The native normal bounds confirm matching tangent planes at both ends and oblique planes at the midpoint. Whole-seam qualification refuses admission in all three cases. This prevents endpoint-only evidence from being treated as full G1 qualification. All seven source seam tests pass in 0.05 s, including curved seams, root endpoints, reversed partial carriers and singular endpoints. Production geometry is unchanged; no WASM rebuild is required for this test-only addition. General assembled fillet seam qualification remains open.
+
+### Owned full support tangency gate, 2026-10-09 (qualification running)
+
+`TransitionFace::qualify_support_tangency` rebuilds the owned exact full-Hermite recipe and covers section-low, section-high, rail-low and rail-high joins with a shared cell/span budget. It creates a face-bound certificate only after all four complete covers; zero work, exhausted work and incomplete covers cannot admit. This proves first-jet agreement with the original profile support only. Neighbor body incidence, all assembled seams, wall thickness and material admission remain separate. Cargo check and diff check pass. The existing `restricted_profile_seams_match_owned_neighbor_supports` native test now checks complete four-boundary admission, exact face identity, total work bounds and zero/short-budget refusals; its current process is still running, so test success is not yet claimed. Log: `/tmp/owned-support-tangency.log`. The packaged WASM predates this new gate.
+
+### Support tangency bridge and transport verified, 2026-10-09
+
+The owned native support tangency test passes in 195.18 s, including four complete boundary covers, exact face identity and zero/short-budget refusals. The optional `supportTangencyCheck` bridge request is echoed exactly; all four complete covers are required. The dispatch fixture `expression-support-tangency-dispatch-2026-10-09.json` contains admitted, radius-mismatch and exhausted-work responses. Support tangency takes 32 cells/32 spans in the controlled recipe; changing the independent radius law preserves support tangency, while zero spans produces no certificate or visited boundaries. The bridge test passes; the first run reached the export step but failed on a relative output path, then the corrected absolute-path run passed.
+
+The TypeScript transport validates request identity, boundary order/coverage flags, budget totals, disabled work and explicit false neighbor-body/solid flags. All 21 tests across support tangency, radius transport, inspection controller and archive pass; Vue typecheck passes. This is original profile support G1, not qualification against all neighboring body faces. UI presentation, rebuilt WASM and real-worker qualification of this new gate remain pending. The previous radius WASM package remains unchanged.
+
+### Support tangency UI integration, 2026-10-09
+
+The panel has an optional original-support tangency request with bounded native work, displays qualified/unproven states, four-boundary coverage and cell/span counts, and explicitly retains neighbor-body/thickness limits. Five SSR panel tests pass, including both new states; Vue typecheck passes. Worker and UI fixture scripts accept `--support-tangency` and `--support-tangency-unproven`. Prepared UI inputs are `/tmp/cad-support-tangency-qualified-20261009.json` and `/tmp/cad-support-tangency-unproven-20261009.json`. The geometry WASM rebuild is running (`/tmp/support-tangency-wasm-build.log`); no new packaged-worker or browser qualification is claimed yet.
+
+### Support tangency recovery controls, 2026-10-10
+
+Archive regression preserves support work limits and original source geometry across reload, including disabled spans; decoded mutations cannot alter saved limits. Controller regression ignores a late support certificate after the request budget changes and accepts the current unproven response. All 21 tests in the archive/controller/transport/panel batch pass. UI now offers saved, standard (10000 cells/100000 spans) and extended (100000/1000000) support budgets, enabling an explicit retry after exhausted work. Vue typecheck and all five panel tests pass. Native geometry stays Rust-owned. The current build process remains live in WASM optimization, so packaged-worker/browser evidence is still pending.
+
+### Support tangency packaged runtime, 2026-10-10
+
+WASM rebuild completed: 12,880,978 bytes, SHA256 `3caaa4ad6559488d4544e22473d5d3551b4f1882f0714a1eaee42d93c76e2fa9`. Real-worker reports in `support-tangency-qualified-worker-2026-10-10` and `support-tangency-unproven-worker-2026-10-10` both pass; published bytes and packed identity agree. Each run starts and joins two workers, checks dispatch cancellation and fresh-worker retry. Qualified/unproven retries take 8983.99/8988.75 ms, cancellation 27.36/24.89 ms. The controlled request admits four original-support joins at normal budget and refuses with zero spans. Neighbor-body/solid flags remain false. Browser qualification is being recorded separately.
+
+### Browser budget recovery confirmed, 2026-10-10
+
+Browser evidence `support-tangency-browser-2026-10-10.json` and PNG confirms the actual new WASM path: imported zero-span request displays unproven 0/4 with zero work; changing the UI budget to standard clears the prior result. Esc on the running request clears the result; a new run admits 4/4 original-support boundaries using 32 cells/32 spans. Neighbor-body and wall thickness remain explicitly separate. Source-edge selection used keyboard Enter after import; immediate source-body mouse selection did not stick during this run, so the full pointer path still needs targeted qualification. Final five panel tests pass and diff check passes.
+
+### Import menu overlay recovery, 2026-10-10
+
+The open File popover overlays the source body scene row. After it is explicitly closed, body selection by mouse succeeds. A successful Solid/ModelGraph JSON import now closes its enclosing details menu after the history transaction commits, preserving error/cancellation paths. Actual browser evidence `source-import-menu-recovery-2026-10-10.json` and PNG confirm the menu is closed and the first scene-row click selects source edge 0 after importing the controlled recipe. Vue typecheck and diff check pass. No WASM rebuild is needed for this UI-only change.
+
+`source-pointer-selection-2026-10-10.json` records a separate stroke experiment: a native scene click selected source edge 1, while the preceding DOM hit check identified edge 0. This does not qualify exact intended-edge selection in a dense projection. The full mouse/key command matrix remains open.
+
+### Current UI regression suite, 2026-10-10
+
+All 321 DirectModeler component scenarios pass in 75.76 s against the current packaged geometry (SHA256 3caaa4ad6559488d4544e22473d5d3551b4f1882f0714a1eaee42d93c76e2fa9), after support-tangency UI and import-menu changes. This is regression evidence for the harness scenarios, not full mouse/key qualification of all 95 commands, crash recovery or multi-tab acceptance. Summary: `cad-ui-current-2026-10-10.json`.
+
+### Actual assembled-neighbor tangency, 2026-10-10
+
+The native gate binds its certificate to the exact assembled ExpressionShell and verifies its four transition/retained/original incidences. It recomputes both root-ended rail angle covers against the actual original neighboring surfaces, including when their profiles also occur in the proposal. Full regular Hermite support joins and these angle covers share one cell/span budget. Exhausted work, invalid neighbor incidence and nonfinite tolerance issue no certificate. The dedicated proposed-neighbor independence regression passes in 18.55 s: full-edge original-neighbor bounds and work counts match with and without the proposed neighboring profile. The assembled-shell regression, including small/zero budgets and exact owner identity, passes in 267.06 s.
+
+Bridge qualification passes in 68.43 s. Actual native replies are preserved in `expression-neighbor-tangency-dispatch-2026-10-10.json`. Transport validates exact angular/work request identity, finite four-join bounds and false solid admission. Archive checks retain tolerance/budgets after reload and prevent detached changes from mutating the saved recipe. Controller tests reject late authority after budget or tolerance changes. The panel displays the requested tolerance and qualified/unproven joins, while keeping thickness, other seams and self-intersections separate.
+
+The rebuilt WASM is 12,885,509 bytes, SHA256 `4cf2545b10c2d9f53534fc46f052a94a9a2b42a6767bf434bd9c369fa3843696`. Both real-worker scenarios pass with two workers started/joined, package identity verification, dispatch cancellation and fresh-worker retry. Cancellation samples are 24.66/24.78 ms; qualified/unproven retries are 10758.95/10433.13 ms. The qualified controlled recipe uses 2298 cells/9096 spans, with squared-angle-sine upper bounds `[0,0,2.17e-321,9.981695228808158e-7]` at requested tolerance `1e-6`. These are finite tolerance bounds, not exact zero-angle evidence.
+
+`neighbor-tangency-browser-2026-10-10.json` and PNG record the actual UI path: keyboard edge selection, native zero-budget refusal, budget change clearing the prior result, Esc cancellation clearing results, and a fresh standard-budget calculation qualifying all four joins. This qualifies the saved annular transition only; general NURBS/complex corners, full body thickness, remaining shell seams and whole-body acceptance stay open. `neighbor-tangency-native-2026-10-10.json` summarizes the evidence. All 321 existing CAD component tests pass after the controls were added; that run used the preceding WASM and does not independently qualify the new gate or the complete 95-command browser matrix.
+
+### Intrinsic cache, packaged parity and extended coverage, 2026-10-10
+
+The owner-bound corrected-jet cache is shared by whole-rectangle and endpoint-pair chord queries. Standard native and packaged worker reports match exactly, including all pending domains and work counters: 10,000 cells, 48,488 spans, 4,085 pending regions. WASM SHA256 is `7c77219ae1ee8e8899ef563a8124b67c93f896784c2fd6fbd00848055164183d`. Both zero-budget and bounded worker runs pass cancellation/fresh-worker Retry. The browser displays the same standard counters; see `intrinsic-cache-ui-2026-10-10.json` and PNG. Standard span work is 15.63% below the earlier 57,471-span baseline; this is not a wall-clock performance claim.
+
+The extended native run passes in 1,394.10 s with the unchanged 100,000-cell / 1,000,000-span / 1,000,000-trim-cell limits. It processes 92,368 cells and leaves 40,791 pending regions across 45 face pairs, compared with 30,952 regions across 46 pairs before intrinsic-cache reuse. Pair [0,27] has no remaining pending regions. Exact endpoint containment confirms every new pending product is inside an earlier pending product, allowing endpoint exchange only on the same face. More regions reflect finer subdivision; raw parameter volumes are not physical wall volume or thickness. Detailed accounting and containment are in `expression-wall-intrinsic-extended-summary-2026-10-10.json` and `expression-wall-intrinsic-extended-containment-2026-10-10.json`. Whole-body thickness remains unqualified.
+
+A subsequent first-path short circuit now tests a complete coordinate-path chord before computing the alternate path. Thirteen expression-radius tests and 41 self-chord theorem tests pass. Its standard full-body comparison is still running and this subsequent change is not in the packaged WASM above.
+
+The inspection controller also rejects stale worker errors after raw recipe mutations that bypass Vue notifications. Valid and invalid mutation regressions both permit a corrected Retry; 74 related controller/transport/focus/panel tests and Vue typecheck pass. This is bounded inspection coverage, not the full 96-command P0 matrix.
+
+
+### Original surface chord cache: native standard qualification (2026-10-10)
+
+The pair-only cache and shared intrinsic/pair cache both preserve every standard-budget coverage field and all 4,085 pending parameter products exactly. The regression comparator permits only reduced span work and its accounting fields. Pair-only work is 38,894 spans; shared work is 38,179, compared with 48,488 before caching (10,309 fewer, 21.26%). These are operation counts, not a measured latency speedup. The tests passed in 403.77 s and 374.06 s under concurrent load. Geometry remains unqualified. Reports and comparison certificates are saved alongside this document. The existing packaged WASM does not yet contain this original-surface cache; a new build is required.
+
+
+### Browser cancellation and tangency acceptance (2026-10-10)
+
+Packaged first-path WASM bc8bb52d0e1ea23a5614d7989628d0e83590235b9a55928f25fb2405a3f7ab98 was exercised in the new UI at port 5198. Selecting source edge 0, standard inspection, Escape while pending and a fresh successful run produced 4,085 explicit pending areas / 48,488 spans. The candidate source-face action was invoked. A separate run with actual-neighbor and original-support tangency enabled qualified four joins and four support boundaries; maximum displayed sin-squared bound 9.981695228808158e-7 is below 1e-6. Console error list was empty. These are controlled-recipe checks, not full P0 or global thickness/solid admission. JSON and screenshots are saved alongside this document. The original-cache WASM build is still running and is not covered by this evidence.
+
+
+### Extended first-path result and input focus (2026-10-10)
+
+The completed first-path extended run used 92,376 cells and exhausted both 1,000,000-span and trim budgets. All 435 initial products were checked; 40,797 pending regions remain across 45 face pairs. Exact comparison confirms every pending product is contained in a previous pending product. Only transition self-pair [28,28] changes: 15,061 to 15,067 finer regions, with raw parameter-product sum 0.32354736328125 to 0.323516845703125. This is a tiny bounded coverage improvement, not global geometry admission or physical volume. Native test passed in 1,429.65 s.
+
+Invalid distance-check numeric inputs now cancel old diagnostics and focus the first invalid field before dispatch. Invalid saved parameters focus the budget selector because saved inputs are locked. The controller/panel suite passed 22 tests; actual browser invalid-angle focus, correction, Enter start and Escape cancellation were observed. Diagnostic selections are transient component state; durable model/recipe restoration does not currently promise persistence of these temporary UI overrides.
+
+
+### Independent-profile Hermite local chord diagnostic (2026-10-10)
+
+`ProfileSectionBridge::inspect_self_chords` now supports independently owned source profiles using this exact bridge's interval derivatives and the existing mean-Jacobian theorem. The complete requested local rectangle must have positive widths, valid source parameters, bounded work and a conservative continuous derivative field. Insufficient bounds remain explicitly unresolved. Twelve bridge tests passed in 2.72 s: 256 planar local rectangles, actual rational normal-diameter preservation at five budgets, folded-candidate refusal and invalid inputs. This does not sew independent rails, check cross-rectangle chords, establish a radius law, or admit a closed body. It is a native API and is not exported through the currently building WASM.
+
+
+### Profile-owner hardening native rerun (2026-10-10)
+
+The standard-budget shell test passed in 341.51 s after owner keys were added. Its complete report is byte-identical to the prior shared-original-cache report (SHA256 02e7a4779241f8d03b4cdc750d2546737ecde17d13173578aef4ecad3dcea5d5): 10,000 cells, 38,179 spans, 4,085 pending regions. This controlled-case rerun supports the public-constructor reachability audit; no change to whole-body admission is claimed.
+
+
+The independent bridge now also exposes `inspect_self_chord_pair`: complete owned mean-derivative and endpoint-normal enclosures are followed by two exact coordinate-path bounds for the same chord. Both endpoint orders, genuine rational normal diameters, conservative C1 refusal and invalid/zero-budget requests are covered. The expanded native chord regression suite passed 102 tests in 1.33 s. No cache, wire certificate or B-rep admission is introduced by this API; native-to-WASM/UI integration and independent-profile shell assembly remain open.
+
+### Independent-profile JSON and typed worker transport (2026-10-10)
+
+The native `profile_section_bridge_chords` operation reconstructs both profile owners, validates source domains before budget refusal, and echoes the complete request. Its native fixture is saved in `profile-bridge-native-transport-2026-10-10.json`. Reports identify a proposed expression, include profile deviation bounds when qualified, and keep whole-thickness and solid admission false. The TS validator binds all input fields and work limits; three transport tests cover native replay, malformed admission/bounds, zero-budget refusal, cancellation and late replies after Retry. The existing worker regression suite passed 70 tests and vue-tsc passed. These are native and transport checks, not actual deployment of this new operation through WASM.
+
+`scripts/check-profile-bridge-chords-worker.mts` is the prepared real-WASM gate: it checks packed identity, full native-report equality through the actual worker, zero-budget refusal, cancellation and Retry. It has not yet passed against a build containing this operation. The owner-hardening WASM build already running predates this API; it must not be used as evidence that the new operation is deployed. Independent-profile shell assembly, UI controls and global body qualification remain open.
+
+Transport qualification was extended with a nonseparable rational source: its reported profile-weight and position deviation bounds are nonzero, while proposed-expression and non-admission flags remain explicit. A separate rational cylinder case contains a genuine normal diameter; native transport preserves it as unresolved rather than excluding it. The native test also rejects out-of-domain rectangles, section parameters and pivots even at zero work budgets. Both additional native reports are included in the replay fixture and the prepared real-worker gate.
+
+
+### Whole independent-bridge endpoint coverage and packaged worker parity (2026-10-10)
+
+`inspect_self_chord_coverage` adaptively covers the complete symmetric endpoint product, using LL/LR/RR on diagonal products and binary subdivision elsewhere. Unsupported or exhausted obligations remain explicit. The native regression passed 103 tests in 1.06 s, including conserved unresolved parameter-product mass, complete planar coverage and preservation of a genuine rational normal diameter. This excludes normal-aligned chords only; it does not prove absence of zero-length self-intersections, minimum thickness or closed-body validity.
+
+Owner-hardening WASM 9dd27d1c48ca260b5dfc953eaeef6b2ebc7f85f958217e2ee4025bd4fb3dd829 passed the actual worker gate, including exact complete native wall-report equality, termination and fresh Retry. Two workers were started and joined; dispatch cancellation took 92.39 ms and Retry 21,644.40 ms in this controlled run. The wall report still has 4,085 pending regions. This build predates the independent-profile transport operation; a subsequent build containing that operation has started and remains unqualified.
+
+
+### Independent-profile injectivity negative control (2026-10-10)
+
+The existing fixed-projection P-matrix injectivity path was exercised with distinct profile owners. The planar bridge qualifies. A genuinely overlapping bridge, x(t)=4t−9t²+6t³, maps three distinct parameters to x=1/2 and remains unqualified at all 16 tested cell/span budget combinations. Each run retains the central fold, conserves the entire parameter area and respects both work limits. The native test passed in 0.06 s. This is separate evidence from normal-chord exclusion; it does not qualify arbitrary B-rep self-intersections or a closed solid.
+
+
+The whole-bridge chord test additionally qualifies a reparameterized planar source with u=[10,12], v=[-2,6]. Five increasing cell budgets preserve unresolved cylinder products inside previous pending products, allowing endpoint exchange. Invalid domains, angles and excessive budgets reject even with zero work. The expanded chord regression remains 103 passing tests (1.98 s). This is native evidence; the current WASM build began before these additional test and comment changes and is still compiling. The prepared real-worker gate now also requires recovery after native validation failure before reporting success.
+
+### Whole bridge coverage transport (2026-10-10)
+
+`profile_section_bridge_chords` accepts optional `coverage: {domain,cells,spans}`. Its independent coverage budget is separate from the local pair budget. Native chart validation occurs before profile-budget refusal; complete coverage, work counts and all unresolved symmetric endpoint products are returned separately from the local pair result. The native fixture includes a complete planar product and a zero-cell product where the local pair is excluded but the whole product remains unresolved. Six TS transport tests passed (1.82 s), including absent/forged coverage, invalid product bounds and impossible complete claims. Whole-thickness and solid flags remain false.
+
+The real-worker script has an explicit `--whole-coverage` gate. That gate is not yet qualified: the running WASM optimization includes the earlier pair API but predates this optional transport field. The default pair gate can be exercised on that build; optional whole-coverage deployment needs a subsequent build. Native-to-UI whole coverage, body assembly and full B-rep qualification remain open.
+
+### Shared reactive inspection controller (2026-10-10)
+
+The expression-shell controller and independent-profile controller now share `useBoundNativeInspection`. Both bind success and failure to the complete request identity, invalidate on reactive edits or deactivation, detect raw mutations before accepting a response, cancel their disposable worker, and clear reports on Cancel/Retry. Existing panel/controller regression passed 22 tests (9.86 s); the new profile controller test passed (3.23 s), covering whole-product reports, raw coverage-budget mutation followed by a late error, changed profile scales, Retry and deactivation. vue-tsc passed. This supplies the reactive controller for UI integration; no new visible profile-selection panel or actual browser acceptance is claimed.
+
+### Profile transition panel in the new UI (2026-10-10)
+
+Selecting two NURBS surfaces now exposes `ProfileBridgeCheck` beside existing surface diagnostics. Section axes/parameters, tangent scales, angular tolerance and optional whole-product coverage are editable. The shared controller owns cancellation, Retry and stale-response guards. Source-profile modification bounds and normal-chord scope are displayed separately from thickness/self-intersection/solid admission. Invalid numeric parameters show a correction message; Enter focuses the first invalid field before any worker dispatch.
+
+Actual browser acceptance at port 5198 created two temporary NURBS surfaces, selected them with Shift, opened the panel, entered sin²=1 and pressed Enter in section A. Focus moved to the angle input with aria-invalid=true; Escape closed the panel. Screenshot `profile-bridge-panel-2026-10-10.png` records the visible panel. vue-tsc passed. No successful native calculation in this panel is claimed yet: the current optimization predates optional whole-product transport, and the packaged kernel still predates the pair API. Existing user model at port 5195 was not edited.
+
+### Profile panel focus and P0 regression (2026-10-10)
+
+Cancel now restores focus to Inspect; completion/failure restores it to Inspect/Retry, and Escape closing restores it to the panel toggle. A panel test using the real reactive controller with a controlled worker covers invalid-input focus, pending cancellation, late response suppression, error/Retry, successful report display, source replacement invalidation, closing and disposal. The combined panel/controller suite passed 24 tests (22.67 s); the final panel rerun passed (6.27 s).
+
+Actual browser verification observed Retry focused after a quick worker failure and the toggle focused after Escape closing. The published pre-API kernel reports `NURBS_INVALID_INPUT: Invalid surface: Expected object` for this unknown operation because its old fallback attempts surface parsing. That run is only error/focus acceptance, not geometry validation or a confirmed defect in the selected surfaces. Native errors are available under Error details. Screenshot `profile-bridge-retry-focus-2026-10-10.png` records this state. The newer pair-API kernel is still optimizing; whole-coverage transport will require a subsequent build.
+
+### Direct compiled WASM ABI replay (2026-10-10)
+
+The compiled pre-Binaryen pair-API module (SHA256 506509c0df54c8fc8f9e70f17d16115e49872dcdaf7b793d24026307c4b98fa0, 14,654,750 bytes) passed direct binary ABI replay using production valueBinaryCodec/wasmHost helpers. Plane, nonseparable rational-profile and genuine normal-diameter reports exactly match native Rust. Zero-budget refusal, invalid-domain refusal at zero work and recovery after a validation error also pass. `profile-bridge-unoptimized-abi-2026-10-10.json` records the artifact identity and scope. This does not qualify the packaged optimized worker or UI calculation.
+
+Binaryen optimization consumes a private immutable input snapshot, so a cargo-only build of the subsequent whole-coverage API was started while that optimizer continues. It does not publish generated JS or public WASM. The last panel delivery typecheck completed successfully.
+
+### Optimized pair worker and whole-product ABI replay (2026-10-10)
+
+The published optimized pair-API kernel passed the actual MainSolidWorkerClient gate (`profile-bridge-worker-2026-10-10.json`). Plane, rational proposed-profile and normal-diameter reports match the native fixtures. Zero-budget refusal, invalid-domain refusal, recovery, cancellation and a fresh Retry pass. This qualifies the tested transport cases; it does not qualify arbitrary fillet bodies or UI geometry acceptance.
+
+The subsequent whole-product module passed direct binary ABI replay for all five native fixture cases, zero-budget refusal, invalid-domain refusal and recovery. `profile-bridge-whole-unoptimized-abi-2026-10-10.json` records SHA256 cd9861840f85255f5dafdedb71e7ee9164a9e23dc90e2d721091ea6db52958d6 and 14,660,836 bytes. Its optimized publication build is running; whole-product packaged-worker acceptance remains open.
+
+Actual browser acceptance on port 5198 reloaded the optimized pair kernel, selected the two temporary default NURBS surfaces with Shift, opened the panel and dispatched Inspect. The native report rendered as “Предварительная проверка не подтверждена”, with source-profile deviation details and the explicit separate thickness/self-intersection/closed-body scope. This is a successful request/render path with an unqualified geometry result, not a successful exclusion claim. Screenshot: `profile-bridge-native-ui-2026-10-10.png`.
+
+### Profile command palette reference correction (2026-10-10)
+
+The profile diagnostic lives under the pane loop. Its string template ref therefore became an array in Vue, whereas the command expected a single exposed component. A function ref now assigns the actual mounted component. vue-tsc passes. Actual browser acceptance closes the panel, opens Commands, searches “переход профилей” and presses Enter: the panel expands and the active element is “Параметр сечения A”. Screenshot: `profile-bridge-palette-focus-2026-10-10.png`. This qualifies that command route only; the complete P0 command matrix remains open.
+
+### Whole-product curved negative control (2026-10-10)
+
+The transport fixture now also includes `curvedWholeCoverage`: a rational arch bridge with a genuine normal diameter at the chart endpoints, 31 cells and 10,000 spans. Native acceptance requires incomplete exclusion and explicitly checks that an unresolved endpoint product contains both diameter ends (allowing endpoint exchange). The native transport test passes in 0.20 s. The six-case direct WASM ABI replay passes with exact native report equality. The optimized-worker script now requires this curved whole-product fixture when `--whole-coverage` is enabled. Packaged whole-product acceptance remains pending optimization. This is a negative control for normal chords; it does not prove self-intersection or qualify thickness.
+
+### Endpoint enclosures on partial affine source coverage (2026-10-10)
+
+`SharedEdge::sample_endpoint` now uses the privately admitted exact affine maps for retained endpoints even when an original pcurve covers only part of the canonical source. The previous full-canonical-coverage guard unnecessarily refused these endpoints. Pair admission remains the authority for endpoint identity; intersecting outward enclosures does not create identity or weld rounded vertices. Complete retained coverage is still reported false.
+
+Five mapped-edge unit tests pass (0.02 s), including differently covered source charts, a fixed/root mixed end and insufficient span budget. Eleven shared-edge unit tests pass (0.02 s). The current optimized whole-profile build predates this change; endpoint deployment and partial-map boundary meshing remain open.
+
+### Partial affine boundary partition and replay (2026-10-10)
+
+Interior sampling now uses privately admitted partial affine maps. An inverse outside either original chart returns an unresolved retained-interior result; no extrapolation is authorized. On the differently covered fixed-end control edge the shared boundary mesh has two vertices and one qualified segment. Zero cells retains that segment as pending, and the six-span chain preserves all five requests with three pending. Definition restoration reproduces canonical, UV, parameter and world intervals exactly. Reversed carrier sampling also passes. Five mapped-edge and eleven shared-edge unit tests pass (0.02 s each); `partial-affine-boundary-2026-10-10.json` records source identities and scope. Curved partial-map mesh qualification and deployment remain open.
+
+### Curved partial affine boundary control (2026-10-10)
+
+A quadratic world edge is now qualified between noncoplanar source surfaces whose original pcurves cover different canonical portions and have different parameter domains. Its common boundary mesh adaptively uses multiple segments, each with deviation upper bound at most 0.001 mm. With zero subdivision depth the complete segment remains pending. A mixed fixed/root endpoint variant independently qualifies the common plane root, keeps its interval-valued endpoint, and also meets the mesh tolerance. Six mapped-edge and eleven shared-edge tests pass (0.02 s each). `curved-partial-affine-boundary-2026-10-10.json` records scope/source identity. This control does not qualify arbitrary rational NURBS, vertex links, clipped face meshes or closed-solid assembly.
+
+### Rational partial-map root endpoint control (2026-10-10)
+
+The curved boundary control now exercises both polynomial weights [1,1,1] and rational weights [1,0.5,1]. Both use differently covered original charts and produce shared adaptive partitions within 0.001 mm, with fixed endpoints and an independently qualified mixed root endpoint. The rational root is at the exact symmetry plane x=1/2; no rounded plane-coordinate approximation is used. The six mapped-edge tests pass (0.02 s). `rational-partial-root-boundary-2026-10-10.json` records the bounded control scope. The full-map guard in shared-chord direction preparation is intentionally retained: its free-endpoint formula needs a separate partial-map derivation before support can expand.
+
+### Published whole-product worker and browser acceptance (2026-10-10)
+
+Optimized module SHA256 a3def4970533d7d4f30cfb7b90a775d7dec35cd5165d908b34f1db50efe50114 (13,000,641 bytes) finished packaging. `profile-bridge-whole-worker-2026-10-10.json` passes exact native parity for whole planar coverage, stopped coverage and curved normal-diameter coverage, together with error recovery, zero-budget refusal, cancellation and fresh Retry. The gate accepts `--expected-sha256` to prevent testing an earlier still-published package while compression runs. An earlier premature run correctly refused the previous pair-only report; no Binaryen semantic failure was found.
+
+Actual browser acceptance reloaded the new kernel on port 5198, Shift-selected the temporary surfaces, enabled whole coverage and dispatched Inspect. The whole product excludes normal chords after 172 cells while the unsubdivided pair remains unproven. UI wording now states these distinct scopes explicitly. Screenshot `profile-bridge-whole-ui-2026-10-10.png` records the result. The calculation completed before the attempted Escape action, so that browser run does not qualify pending cancellation; the real-worker gate and controlled panel tests cover cancellation separately. Seven panel/transport tests pass (4.21 s). This is normal-chord exclusion for the proposed expression, not thickness, self-intersection or closed-solid admission.
+
+A full native B-rep library regression (1,029 tests) is running separately in `/tmp/brep-current-all-lib-20261010.log`; no aggregate pass is claimed until its terminal result. The deployed kernel predates partial-affine edge sampling changes.
+
+### Partial affine charts for chord diagnostics (2026-10-10)
+
+`source_shared_chord_chart` retains exact rational canonical endpoint pairs and outward direct/inverse maps. The tangent scale is d(free)/d(canonical), including sign and the partial canonical span. Unit controls exercise reversed [1/3,2/3] maps, inverse midpoint containment, derivative scale ±24 and disjoint-domain refusal. The arithmetic test passes.
+
+Wall-pair chord preparation now has a separate partial-map route; regular seam preparation retains its previous full-source contract. Partial chord anchors must stay in the conservative common canonical domain of both original charts. Tangent intervals are mapped back through the first original chart, and uncertain/outside coverage refuses rather than extrapolates. A current-source annular diagnostic regression is running in `/tmp/partial-chord-annular-regression-20261010.log`. No end-to-end partial-map Body fixture, general wall qualification or deployed WASM support is claimed yet. The previously launched full B-rep regression predates this chart change.
+
+### Partial canonical carrier in an admitted Body (2026-10-10)
+
+A cuboid source shell is serialized with one line carrier extended by a factor of three. Exact pcurve map endpoints become [1/3,2/3], while original region and fragment definitions stay unchanged. Restoration rechecks shell incidence, embedded geometry and volume. The admitted volume still encloses 6,000 mm³. Chord-only preparation selects that partial carrier; full-source seam preparation refuses it. Both midpoint chart maps enclose canonical 1/2, and tangent bounds enclose three times the original carrier vector. The current native test passes (0.08 s); `partial-carrier-body-native-2026-10-10.json` contains the restored body definition and diagnostic values.
+
+The expanded test exposed a zero-budget tangent bug: the public diagnostic forwarded zero to a positive-budget derivative primitive. It now validates both endpoint charts first and returns (None,0) for stopped work. Outside-chart queries remain errors. The rational chart regression also passes. Annular diagnostic regression on the partial-map implementation passed in 82.62 s. A new WASM publication build includes the partial endpoint/interior/mesh and chord-map changes; deployment is not yet qualified.
+
+### Partial carrier cut endpoint and restricted seam (2026-10-10)
+
+Inverse canonical conversion now has an unclipped form. Partial-map retained-interval admission checks that outward inverse intervals lie inside both retained uses before chart clipping can remove unsupported tails. The source-profile cut endpoint and restricted angular path use this sufficient check. Full-source contracts elsewhere are unchanged.
+
+The restored partial-carrier cuboid now exercises a proposed face: the midpoint cut owns canonical 1/2; its zero-span request remains unproved; angular inspection on [0.4,0.6] detects the actual sharp angle and issues no seam. Requesting [0,1] on the extended carrier remains `profile-seam-carrier-unproven`. The expanded native test passes (0.07 s); `partial-carrier-body-cut-native-2026-10-10.json` records the body and diagnostic values. Six mapped-edge and eleven shared-edge regressions also pass (0.02 s each). This does not qualify a smooth partial seam, general fillet assembly or deployed support: the running WASM build began before these cut/seam changes.
+
+The full B-rep library run launched before the partial-chord chart changes completed successfully: 1,026 passed, 3 ignored, 0 failed in 864.82 s. Log: `/tmp/brep-current-all-lib-20261010.log`. This establishes the earlier source baseline; current partial-map changes are covered by the targeted regressions above rather than attributed to that older full binary.
+
+### Smooth partial-carrier contact control (2026-10-10)
+
+The contact certificate now separates complete original-pcurve coverage from canonical-carrier coverage. For an admitted partial affine line, literal clamped natural-boundary surface corners provide the owned support segment; canonical extension tails no longer enter the planar contact hull. Unsupported corner charts remain unresolved. No evaluated endpoint weld is introduced.
+
+The body regression passes for both a sharp cuboid and a prism with two coplanar adjacent side faces (0.18 s). The smooth prism retains volume 6000, admits a proposal-owned seam on [0.4,0.6], and refuses [0,1] on the extended carrier. The native body and diagnostic report is `partial-carrier-smooth-body-native-2026-10-10.json`. Four root-partition regressions pass (2.37 s), including complete mapped chains and refusal of incomplete fragments. This is a straight coplanar seam control, not qualification of arbitrary curved fillets.
+
+A separate cylinder control fails the original, unmodified shell geometry gate with `source-shell-different-face-contacts-unproven` for faces [0,1]. Cylinder contact support remains open; the failure is not evidence of a partial-map regression. The publication artifact c4ececb5133303d19b19ca7df08b664fd2f0d8f865781d1600381294c879739e (13004529 bytes) predates the latest cut/seam/contact changes.
+
+### Cylinder straight-edge contact correction (2026-10-10)
+
+Follow-up diagnosis localized the preceding cylinder refusal: the paired-fiber certificate proposed a separator for a two-control shared line only from collapsed poles. An ordinary cylinder has no such poles. The candidate search now also proposes finite coordinate-transverse planes through the original line. Every candidate still requires exact, nondegenerate plane-fiber proofs on both unchanged source surfaces, opposite material sides and owned boundary contacts; a candidate alone authorizes nothing.
+
+`cylinder_straight_shared_edge_has_owned_paired_contact` passes (0.08 s): both face orders return certificates bound to their shared edges, budget counters remain bounded, and the complete original cylinder passes fresh shell-geometry admission. This supersedes the original-cylinder refusal above, without claiming a curved fillet or partial-carrier cylinder. The current running WASM build started before this latest candidate-search change.
+
+### Partial canonical carrier on curved cylinder faces (2026-10-10)
+
+The restored-body regression now also extends a cylinder's straight shared seam to a canonical carrier whose retained source range is [1/3,2/3]. Fresh shell geometry, volume, proposal-owned tangency on [0.4,0.6], midpoint cut ownership, zero-budget refusal and full-carrier refusal all pass. The recorded volume interval [9424.77771346221,9424.778130090697] encloses 3000*pi. The cut interval encloses canonical 1/2, and restricted tangency returns `profile-path-tangent-planes-qualified`; [0,1] remains `profile-seam-carrier-unproven`.
+
+`partial-carrier-cylinder-native-2026-10-10.json` records unchanged source definitions and diagnostic enclosures. The expanded three-body test passed in 8.05 s. This qualifies a straight seam between adjacent curved cylinder charts, not a new rolling-ball fillet surface, arbitrary NURBS seam, mixed-radius corner, or complete wall-thickness proof. The full native run and WASM build already in progress predate the paired-fiber candidate correction and must not be credited with this latest change.
+
+### Transition-shell contact transfer and remaining rational layout gate (2026-10-10)
+
+The retained/original paired-contact transfer no longer requires complete canonical-carrier coverage. It still requires both current source-fragment definitions to equal the source edge uses, every current pair to be an original edge, complete coverage of the freshly recomputed source certificate's exact edge definitions, and a fresh plane-image certificate. The existing full transition-shell regression is running; transfer through an actual rational partial carrier is not yet qualified.
+
+The attempted annular transfer fixture has a quadratic rational common edge. A three-span carrier can preserve its middle Bezier span literally while adding constant outer spans, avoiding rounded homogeneous quotient construction. Restoration refuses this layout with `source-affine-layout-unproven`: `curve_surface_affine::verify_algebraic` currently requires the canonical curve itself to be a single Bezier segment. `partial_rational_multispan_carrier_requires_affine_layout_proof` verifies this explicit refusal (0.68 s), not successful transition assembly. The next implementation needs exact span-local affine composition while preserving the original world curve and rational endpoint maps.
+
+### Exact affine composition on an original B-spline knot span (2026-10-10)
+
+`rational_bspline_composition_affine_identity` now computes the canonical curve's homogeneous polynomial on one knot span with exact de Boor arithmetic. Each recurrence retains polynomial numerators and a shared scalar denominator; Euclidean cross products cancel only that common factor. Original knot values, poles, weights and endpoint fractions remain authored leaves. Both mapped endpoints must lie inside the selected span by exact sign checks. The approximate midpoint in `curve_surface_affine` only proposes a span and cannot authorize containment.
+
+Three `curve_surface_affine` tests pass (0.01 s), including a quadratic rational span with repeated knots and a non-Bezier quadratic span with simple internal knots. Both orientations qualify; changed weights are different; zero work and a range crossing spans are indeterminate. Input curve definitions remain unchanged. This removes the single-Bezier canonical-layout restriction for a single owned knot span. Multi-span pcurves/surface charts and a mapped interval crossing several canonical spans remain outside this predicate's current qualification.
+
+The annular transition control now attempts positive restoration and contact transfer with a literal unchanged rational middle span and constant outer spans. Candidate contact planes use distinct original poles so repeated outer controls cannot hide the middle span's separator. The full integration regression and predicate library tests are running; successful complete transition-body admission is not yet established by this entry.
+
+The complete existing `restricted_profile_seams_match_owned_neighbor_supports` regression passed in 417.91 s with the redundant canonical-coverage guard removed. The cad-predicates library suite passed: 41 tests, 0 failures (0.01 s). These do not substitute for the still-running partial rational transition integration test or qualify the latest sources in WASM.
+
+### Exact fraction boundary refusal (2026-10-10)
+
+The spline-span test now perturbs each numerator outward by one binary64 step at the owned interval boundaries. Exact containment refuses both excursions, for both rational repeated-knot and simple-knot controls, even though floating midpoint selection still proposes the middle span. All three affine-composition tests pass (0.03 s). This verifies that candidate-span selection cannot clip an unsupported tail into the identity proof.
+
+### Piecewise canonical affine identity and transition integration (2026-10-10)
+
+The exact predicate now also partitions the mapped canonical range across all intersected knot spans. Each positive-width intersection uses exact fraction comparisons; its source-pcurve interval is obtained by cross-multiplied affine inversion. Both homogeneous canonical and pcurve pullbacks are compared against the unchanged surface. Every nonempty span must be equal under one shared work budget. Zero work remains indeterminate; a difference on a later span cannot be hidden by earlier equal spans. The wrapper no longer uses a floating midpoint candidate.
+
+Four affine-composition regressions pass on the piecewise implementation (0.01 s before the final wrapper simplification), including polynomial and nonuniform rational curves spanning an internal simple knot, both traversal directions, and a changed control on the last span. Outward one-step endpoint excursions cannot be clipped into the original span; they now may return an exact difference after inspecting the adjacent span. The predicate library suite passes 41 tests (0.02 s). Multi-span pcurves and multi-span surface charts remain unsupported by this composition path.
+
+`partial_rational_multispan_carrier_transfers_owned_transition_contact` passed in 335.50 s using the preceding single-span composition implementation: the three-span carrier's unchanged rational middle span restored, the expression transition shell assembled, and the retained/original paired contact transferred in both face orders. The test also preserves existing bounded refusal and ownership checks. It does not establish complete contact absence or universal fillet-body admission; unresolved diagnostics remain relevant. This successful integration supersedes the earlier layout refusal for that fixture. The latest piecewise change still needs B-rep integration regression and a fresh WASM publication.
+
+The earlier full B-rep run completed: 1,028 passed, 3 ignored, 0 failed in 1,033.69 s (`/tmp/brep-partial-contact-all-lib-20261010.log`). Its binary predates the later paired-fiber candidates and spline-composition work; it verifies that source snapshot only. The final piecewise wrapper's four affine tests pass (0.01 s). A fresh mapped-edge regression and partial rational transition integration run now target the latest piecewise source, with a requested contact-audit JSON artifact.
+
+### Partial piecewise parameter domains and late resource exhaustion (2026-10-10)
+
+Five affine-composition tests pass (0.02 s). The new control maps canonical [1/4,3/4] across an internal knot, with world domain [-5,3] and pcurve domain [10,18], for both polynomial and nonuniform rational curves. Exact source coefficients qualify in both traversal directions; a changed control on the later span is different. A budget one unit below the complete proof's measured work produces `Indeterminate(ResourceLimit)` with bounded charged work, never partial equality. Knot-order verification now propagates resource/cancellation reasons instead of replacing them with MissingProof. The predicate suite passes 41 tests after this correction (0.02 s).
+
+A B-rep regression additionally attempts two independently owned crossing endpoints with distinct pcurve domains on a canonical line split at an internal knot, then replays the complete shared-edge definition and tests a perturbed root. That regression is running; its result is not established by the native composition tests above.
+
+The extended `linear_roots_on_different_source_coverage_keep_exact_canonical_parameters` B-rep regression passes (0.02 s), including both the original one-span line and a two-span canonical line. Both crossing endpoints retain their independent root ownership; fresh shared-edge replay preserves exact definitions; the displaced root is refused. This establishes that the new piecewise correspondence reaches B-rep endpoint admission rather than only a standalone composition predicate.
+
+The preceding WASM publication completed successfully with SHA-256 `284b888d0d0939d8fecdd394c08331fea63a2ff71ebc87d8295bdd6f19b387d9`, 13007632 bytes. It includes the earlier partial cut/seam/contact implementation but predates the later paired-fiber and spline-composition changes. A worker gate pinned to that hash is running; no claim is made that the newly added spline path is deployed by that binary.
+
+### Require complete cross-face contact acceptance (2026-10-10)
+
+Review found that the large transition regression previously allowed all geometry/material/volume checks to be skipped when the final contact audit was incomplete. The control now explicitly requires `complete_cross_face_contacts()` after its bounded contact passes. Diagnostic JSON is written at that point, before expensive material/volume work, so unresolved pairs remain inspectable even if acceptance fails. A new run of the partial rational fixture targets this stronger condition and the current piecewise source; its result remains pending. The already-running earlier binary is preserved and is not credited with the new assertion.
+
+The command inventory remains incomplete P0 evidence: the saved coverage file lists 96 commands and zero commands fully qualified across the whole acceptance matrix. Geometry progress must not be interpreted as completion of that interface matrix.
+
+The preceding piecewise integration run completed successfully in 415.36 s. Its `partial-rational-piecewise-contact-audit-2026-10-10.json` contains 29 faces and all 406 unordered cross-face pairs, zero pending pairs and no pair labelled pending. Pair [0,5] carries `profile-paired-contact` after the rational partial-carrier change. Native work: 52824 spans, 15115426 exact-work units and 4 driver cells. The complete audit triggers the test's owner-bound embedding and subsequent bounded material/volume checks; it is not a universal geometry or whole-wall thickness certificate. The separately launched run with the strengthened unconditional acceptance requirement remains active.
+
+### Require an owned oriented-volume certificate (2026-10-10)
+
+A dedicated `partial_rational_transition_has_owned_oriented_volume` control now runs the same rational partial-carrier reconstruction, transition assembly and complete contact acceptance, then explicitly requires an `OrientedExpressionVolume` certificate from the current embedded geometry. Its positive bounds must exclude zero and have width at most 20 cubic model units. An incomplete report cannot pass this control. The optional output `CAD_PARTIAL_RATIONAL_VOLUME_REPORT_PATH` records actual bounds, orientation, work and pair count, with `wholeWallQualified:false`. The new test is running; no volume bounds are claimed for this fixture yet. The older expression-volume artifact is separate evidence and must not substitute for it.
+
+The strengthened partial rational transition regression passed in 293.25 s. Its required-contact audit again contains all 406 pairs and zero pending pairs. Thus the unconditional contact acceptance requirement is now tested, rather than inferred from the earlier conditional branch.
+
+### Cross-piece retained-profile chord exclusion (2026-10-10)
+
+The wall checker now recognizes that both `Retained` faces in this expression assembly restrict the same immutable selected profile in unchanged source coordinates. Its endpoint-pair self-chord proof is therefore applicable across those two pieces as well as within one face. This additional sufficient proof runs after distance and general normal exclusion, avoiding a new whole-profile derivative query before cheap distance separation. Other face-kind combinations are unchanged. No minimum-thickness certificate follows unless every product is excluded.
+
+Five native profile self-chord controls pass (0.03 s), including preservation of a real cylindrical diameter, transformations and reversed endpoints. The full B-rep fixture is running with the same 10000-cell/1000000-span budget as `expression-wall-original-shared-standard-2026-10-10.json`; the new report is `expression-retained-cross-pair-wall-2026-10-10.json`. Pending-count and work improvements are not yet claimed.
+
+### Partial rational transition: owned volume accepted (2026-10-10)
+
+The dedicated `partial_rational_transition_has_owned_oriented_volume` control passed (283.41 s). The current artifact `partial-rational-oriented-volume-2026-10-10.json` records all 406 cross-face pairs, zero pending pairs, and an owner-bound oriented-volume certificate with positive bounds [7049.541261407235, 7069.534459645989] cubic model units. The interval width is 19.993198238754, below the requested 20; orientation is not reversed. Work: 5835 cells, 31993 spans and 63670 domain cells. This completes the volume requirement for this fixture only. `wholeWallQualified:false` remains explicit: volume and contact acceptance do not prove minimum wall thickness or general fillet admission.
+
+Current inspection UI regression run: `profileBridgeInspectionController`, `profileBridgePanel`, `expressionInspectionController` and `expressionInspectionFocus` passed all 24 tests in 4 files (6.31 s). This is controller/panel evidence for bounded inspection behavior; it does not replace the pinned worker gate for the pending WASM publication, browser interaction acceptance or the full P0 command matrix.
+
+### Correct the retained-piece wall comparison budget (2026-10-10)
+
+The cross-piece retained-profile run passed its bounded regression (307.41 s), but its report has `domain_cells:0`, `trim_excluded:0` and 4213 pending products, whereas the baseline consumed 100000 contour-domain cells and excluded 271 products. Its 35111 spans cannot be credited as an improvement over the baseline's 38179 spans / 4085 pending products: the contour budgets differ. A matched rerun explicitly sets `BREP_EXPRESSION_WALL_TRIM_CELLS=100000`, 10000 wall cells and 1000000 spans, writing `expression-retained-cross-pair-trimmed-wall-2026-10-10.json`. Whole-wall admission remains unproven.
+
+### Preserve completed Retry against an older generation (2026-10-10)
+
+Two profile-bridge controller regressions now settle the cancelled request only after a newer Retry has already published its complete coverage. Both an obsolete success and an obsolete `CAD_TIMEOUT` failure must preserve the exact current result reference, cleared error/code and non-pending state. `profileBridgeInspectionController` and `expressionInspectionController` pass all 24 tests in two files (4.21 s). These exercise delayed callback ordering in the UI controller; actual worker/publication and full command-matrix acceptance remain separate requirements.
+
+### Piecewise kernel published and worker checked (2026-10-10)
+
+The piecewise affine-composition build completed: SHA-256 `271c328a0a95dc1af811cfdd646be015a1764c4b00eed22a577398147ac62ba9`, 13031120 bytes. The pinned `piecewise-current-publication-worker-2026-10-10.json` gate passes native parity, rational profile parity, whole coverage parity, preservation of a real normal diameter, zero-budget refusal, recovery from native validation failure and cancel/Retry via the actual worker client. This publication predates the new cross-retained chord proof and exclusion cache. A separate browser tab loaded the current app on port 5195, recovered the saved source body, rendered its diagnostic regions and selected an original edge with interval endpoints. No console errors were captured. This is a restoration/selection smoke check, not full fillet-command or WebGPU qualification (the other scene displayed a WebGPU-unavailable notice).
+
+### Reuse proven retained-profile endpoint exclusions (2026-10-10)
+
+The wall inspector now retains only successful endpoint-pair exclusions on the immutable selected profile. Reuse requires exact containment of both endpoint rectangles, allowing their exchange; union-box containment is insufficient. Failed and incomplete proofs are never stored. The cache is local to the fresh inspection and its angular policy; other face kinds cannot use it. Four wall product regressions pass (0.02 s), including a gap between endpoint regions, a one-step outward escape and non-finite input refusal. The matched 10000-cell / 1000000-span / 100000-trim-cell regression is running with output `expression-retained-pair-cache-trimmed-wall-2026-10-10.json`; no performance or whole-wall improvement is claimed yet.
+
+### Matched cross-retained wall result (2026-10-10)
+
+The explicit 10000-cell / 1000000-span / 100000-trim-cell run passed its bounded integration regression (353.09 s). `expression-retained-cross-pair-trimmed-wall-2026-10-10.json` remains incomplete: 4081 pending products in 58 face pairs, versus 4085 / 59 in the baseline. Span work increased from 38179 to 38693. The exact containment comparison in `expression-retained-cross-pair-trimmed-containment-2026-10-10.json` passes: no new pending product escapes its previous obligation, allowing only same-face endpoint exchange. Face pair [0,27] drops from 16 unresolved products to zero; pair [23,28] loses one product; additional subdivisions on [24,24] shrink their unresolved raw parameter volume despite increasing their count. Parameter volume is not physical thickness. This is a bounded coverage improvement, not a speedup or whole-wall certificate. The separate positive-exclusion-cache run remains live and is not credited with these numbers.
+
+Native report output now additionally writes `<report-path>.request.json` with all actual wall/span/trim/control budgets, angular and UV tolerances, carrier mode and aligned-chord scope. This avoids inferring request budgets from consumed work; the transport report remains unchanged. `cargo check --tests` passes for this instrumentation (16.95 s). The already-running measurements predate the sidecar change and their settings are recorded explicitly above.
+
+### Retained exclusion-cache experiment: no benefit, removed (2026-10-10)
+
+The matched cache regression passed (303.22 s), but `expression-retained-pair-cache-comparison-2026-10-10.json` proves identical coverage and zero saved span work. Both reports have 4081 pending products, 38693 spans and 59339 cache hits. The cache, containment helper and its dedicated test were removed rather than retaining unsupported performance complexity. The cross-retained native chord proof remains: its separate matched result did close face pair [0,27]. The recorded cache artifact is experimental history, not the current implementation.
+
+### Exact multi-span UV and canonical correspondence (2026-10-10)
+
+The native affine correspondence no longer requires the original UV pcurve to be one Bézier segment. `rational_bspline_pair_composition_piecewise_identity` intersects the canonical and UV knot partitions with exact fractions, including reversal and partial canonical coverage. Homogeneous de Boor pullbacks retain common scalar denominators; no rounded split control or resampled knot is introduced. Every nonempty span pair must match the unchanged surface composition under one shared work/cancellation budget. The de Boor helper now supports both 3D and UV homogeneous coordinates.
+
+Six affine-composition regressions pass (0.02 s), including rational weights, independent authored domains, noncoincident internal knots, partial coverage crossing knots, reverse traversal, a changed last UV span, changed knot and zero/late budget exhaustion. The predicate library passes all 41 tests (0.02 s). Seven B-rep mapped-edge regressions pass (0.04 s): the new independently partitioned UV uses bind to one partial canonical edge, fresh restoration preserves the exact definition, and a displaced fixed endpoint is refused. Existing root-ended and curved-edge regressions remain passing. This establishes native source correspondence; general root isolation on newly supported multi-span pcurves is not established by the fixed-end fixture. Surface charts still require one Bézier tensor patch; periodic charts and general non-affine parameter maps remain unsupported here.
+
+All five current expression bridge regressions also passed (152.29 s), covering dispatch/closed incidence, mesh trim/deviation, inspection contacts/volume, radius admission/violation/unproven and pending triangle coverage. That run predates the new multi-span UV implementation. A fresh WASM build for the latest implementation is running (`/tmp/spline-pair-current-wasm-20261010.log`); the earlier SHA `271c328a...` does not contain this new path.
+
+### Root candidates on independent multi-span UV uses (2026-10-10)
+
+`curve_point_identity::verify` now admits exact point comparisons on original nonperiodic rational B-splines, using the new native `rational_bspline_uv_point_identity`. Scalar homogeneous de Boor evaluation retains a shared exact denominator at every interpolation stage. Span selection is based on exact authored knot/parameter comparisons. At internal knots all touching positive-width spans must agree; no rounded Cartesian evaluation or caller-supplied span can establish equality. Invalid/disconnected source curves refuse before identity.
+
+Both point-identity regressions pass (0.00 s): rational multi-span curves with independent domains, interior knots, reversed traversal, changed poles, outside parameters and zero/late exhaustion. A disconnected-curve negative control is rejected by native curve validation. The expanded B-rep independent-partition fixture passed (0.02 s): four privately certified crossing endpoints retain their original expressions, fresh exact parameter candidates identify each root, both uses bind to one partial canonical edge, all four root checks run, and fresh definition replay preserves ownership. A candidate displaced by 1e-12 is refused. This qualifies exact authored candidate roots for this fixture; automatic discovery of all irrational roots and arbitrary multi-span root relations remain open.
+
+The live spline-composition WASM build started before this root-point extension, so its eventual artifact must not be credited with the new root path without an additional build and pinned gate.
+
+The complete mapped-edge regression selection passes all seven tests on the root-point extension (0.02 s), and the predicate library passes all 41 tests (0.01 s). These results qualify native regressions only; WASM publication and worker/UI acceptance of this latest extension remain pending.
+
+### Irrational root ends without numerical parameter candidates (2026-10-10)
+
+The multi-span mapped-edge regression now additionally covers x(q)=(q+q²)/2 and two independent UV knot partitions. Roots at x=1/4 and x=1/2 are irrational. Neither root is replaced by a binary64 parameter candidate. Original `SourcePoint` crossing expressions on both faces, exact source-cutter plane composition and a fresh monotone canonical-coordinate proof establish one shared endpoint per plane. Both one-span and two-span original canonical definitions pass fresh shared-edge replay. Missing plane evidence, zero driver work and a plane displaced by 1e-12 refuse.
+
+All eight mapped-edge regressions pass (0.05 s). This supersedes the earlier statement that no irrational-root case had been qualified for multi-span UV uses. The support scope is still bounded: the canonical coordinate must admit the existing monotonicity/unique-plane proof; nonmonotone curves with several plane intersections and arbitrary root relations remain open. No universal root or fillet admission follows. The full native B-rep regression is being rerun against the source snapshot in `root-point-native-suite-inputs-2026-10-10.json`.
+
+### Local plane uniqueness on nonmonotone canonical curves (2026-10-10)
+
+Mapped root/root endpoint admission now maps both privately owned root enclosures outward to canonical parameter intervals and proves plane uniqueness on their full contiguous union. The new `curve_axis_driver::certify_domain` covers every original span intersecting that contained interval and requires consistent strict derivative sign across all admitted cells. It creates no rounded subcurve and does not use evaluated endpoint coordinates as proof. Zero work and invalid domains cannot qualify. The existing global driver remains unchanged for other callers.
+
+The new two-branch control x(q)=(2q−1)² has two global intersections for each chosen plane. Roots on the same left branch qualify and fresh restoration preserves the complete definition. A mate on the opposite branch is refused, even though it meets the same physical plane and point. Missing plane evidence and zero driver work also refuse. All nine mapped-edge regressions pass (0.03 s); all three axis-driver regressions pass (0.02 s), including a domain spanning a turn. This extends the preceding globally monotone support scope to locally monotone root neighborhoods. General oblique curves with varying coordinates, tangencies and root relations without an owned plane remain open.
+
+The full native B-rep run still active in `/tmp/spline-root-brep-all-20261010.log` was compiled before this local-uniqueness change. Its source snapshot remains the preceding one and must not be credited with current local-driver coverage. The live WASM build also predates this change.
+
+### Local oblique-plane root uniqueness — 2026-10-10
+
+The original-curve restricted driver now bounds the derivative of signed plane
+position directly using outward interval arithmetic on authored plane anchors.
+It does not require all but one world coordinate to be constant. Both owned
+root parameter bounds form the covered canonical interval; strict sign over
+that interval proves at most one plane intersection there. The original UV
+root ownership and exact cutter-plane membership remain required.
+
+Evidence: `/tmp/oblique-plane-driver-native-20261010.log` contains four passing
+driver tests (0.01 s), including reversed normals, turning intervals, tangent
+and degenerate planes, invalid anchors and zero work. The mapped-edge suite
+`/tmp/oblique-plane-mapped-all-20261010.log` passes nine tests (0.06 s). The
+nonmonotone quadratic fixture runs both axis-aligned and exact affine-sheared
+surfaces/canonical curves: independently isolated irrational roots on the
+same branch agree and survive fresh definition restore; opposite-branch roots,
+missing planes and exhausted driver work refuse admission.
+
+Scope: root/root pairs with a common owned plane and a strictly monotone signed
+plane position on their enclosing canonical interval. This is not arbitrary
+root equivalence, mixed fixed/root generalization, complete fillet-body
+qualification, or current WASM/UI evidence. The concurrently running WASM
+build started before this change and does not include it.
+
+### Mixed fixed/root local uniqueness — 2026-10-10
+
+Mapped mixed endpoints now use the enclosing outward canonical interval from
+both immutable mapped uses for signed-plane derivative coverage. Exact fixed
+parameter plane membership and original crossing cutter membership remain
+mandatory. A failed strict local derivative proof can use the existing global
+coordinate proof with only the remaining work budget; this preserves the
+qualified zero-endpoint-derivative case.
+
+`/tmp/mixed-local-plane-mapped-20261010.log`: nine mapped-edge tests pass
+(0.07 s). The axis-aligned and sheared quadratic fixtures additionally match a
+fixed q=1/4 with its independently owned root on the left branch, restore the
+full edge definition, and refuse a fixed q=3/4 on the other branch despite
+identical plane position. An initial run exposed the zero-endpoint-derivative
+regression; the final run includes and passes that existing control. Direct
+unmapped mixed endpoints still use their original global proof. No WASM/UI
+qualification is inferred from these native tests.
+
+### Published multi-span composition kernel worker gate — 2026-10-10
+
+The completed build published SHA256
+`ec4828e66d4bfb072d5153d85fb12d9a7974ddb84ffb0712add3a4d648bc015b`
+(13,052,541 bytes). `spline-pair-publication-worker-2026-10-10.json` passes
+native parity, whole-coverage transport parity, rational profile parity,
+normal-diameter preservation, native error recovery, zero-budget refusal,
+and cancel/Retry. A first invocation refused the old published SHA while
+packing was still live; the successful invocation occurred after that build
+process terminated. These are the bridge-chord worker gate cases, not direct
+qualification of every new mapped-edge path or whole-wall certification.
+This binary includes multi-span composition but predates root-point and local
+plane uniqueness changes. A subsequent build is in progress, with selected
+source hashes in `local-oblique-wasm-inputs-2026-10-10.json` and build log
+`/tmp/local-oblique-root-current-wasm-20261010.log`; its success is not yet claimed.
+
+### Current native integration controls — 2026-10-10
+
+After the mixed fixed/root extension, the existing shared-edge suite passes
+11 tests (0.02 s; `/tmp/local-root-shared-restore-20261010.log`). The mapped
+root partition closed-body chain passes (one test, 2.36 s;
+`/tmp/local-root-shell-chain-20261010.log`). This checks its existing fixture's
+complete chain and does not qualify arbitrary fillet bodies.
+
+The driver suite now passes five tests (0.01 s;
+`/tmp/oblique-rational-driver-native-20261010.log`). The added rational
+multi-span curve uses nonuniform positive weights and a nonunit authored
+domain: outward coverage spans the internal knot without gaps, confirms each
+local direction, refuses their union after an interior reversal, and refuses
+insufficient work. The added source change is test-only and postdates the
+selected input hashes of the in-progress WASM build; production driver code
+is unchanged from that snapshot. The older full B-rep suite remains live and
+predates local-plane changes, so it is not current full-suite evidence.
+
+### Profile transition failure recovery messages — 2026-10-10
+
+`ProfileBridgeCheck.vue` now distinguishes request validation, timeout,
+worker startup/crash, disposal, transport and protocol failures with Russian
+and English next-action hints. The existing keyboard lifecycle panel test now
+injects all seven codes, checks each English recovery hint, retains Retry
+focus, and finally recovers a native coverage result. Three panel/controller
+suites pass 25 tests (13.11 s; `/tmp/profile-bridge-p0-errors-20261010.log`).
+These are component/controller checks, not real browser crash injection,
+Russian rendered-layout qualification, or the full P0 command matrix.
+`npx vue-tsc --noEmit` also completed successfully after the panel changes
+(`/tmp/profile-bridge-p0-typecheck-20261010.log`).
+
+### Retained-piece union proof experiment — in progress 2026-10-10
+
+Whole-rectangle intrinsic profile chord exclusion is now attempted for two
+retained pieces of the same immutable selected profile, using their enclosing
+original UV rectangle. The existing paired-endpoint retained proof remains
+available. Only a complete positive native self-chord certificate excludes the
+product; incomplete or negative calculations preserve its obligation. Cache
+keys remain local to this immutable owner and angular policy.
+
+A matched native integration run is live, with explicit settings
+`BREP_EXPRESSION_WALL_CELLS=10000`, `BREP_EXPRESSION_WALL_SPANS=1000000`,
+`BREP_EXPRESSION_WALL_TRIM_CELLS=100000`. Its eventual report is
+`expression-retained-union-trimmed-wall-2026-10-10.json` and log is
+`/tmp/retained-union-trimmed-wall-20261010.log`. Compare against the retained
+cross-pair trimmed baseline (4081 pending products / 38693 spans), including
+containment of pending domains. No reduction, speedup or full thickness
+certificate is claimed before that comparison. The currently optimizing WASM
+build predates this union-proof change.
+
+### Global signed-plane fallback — 2026-10-10
+
+The direct/global plane-uniqueness helper now also attempts outward signed
+plane derivative coverage over the original canonical domain when the existing
+exact coordinate proof is insufficient and driver work remains. It preserves
+the existing endpoint-zero coordinate proof and all original cutter/point
+membership requirements. The fallback supports multiple varying coordinates;
+it never admits solely from sampled monotonicity or a proposed plane normal.
+
+`/tmp/global-oblique-shared-edge-20261010.log`: 12 tests pass (0.02 s).
+The additional quadratic control has x-y=q despite a reversal in y; the
+oblique-plane proof succeeds, while a turning signed-plane function,
+degenerate plane and zero driver budget refuse. Existing different-chart,
+owned irrational root, mixed endpoint and two-root refusal cases remain green.
+The currently optimizing WASM predates this fallback. The pending-region
+comparison tool's four controls also pass, including rejection of expanded
+regions and forbidden different-face endpoint exchange.
+
+### Rendered Russian/English recovery hint controls — 2026-10-10
+
+The Vue panel test now switches the live component between English and Russian
+for each of seven worker/request failure codes. It checks the Russian next
+action and preserved code, prevents raw opaque native failure text from
+replacing the localized hint, verifies the localized Retry button, and confirms
+that changing locale does not dispatch an additional calculation. The final
+Retry still recovers the native result. Panel plus both controller suites pass
+25 tests (6.99 s; `/tmp/profile-bridge-p0-locales-20261010.log`). This uses the
+Vue test renderer, not a browser screenshot or the entire P0 matrix.
+
+### Retained union experiment rejected — 2026-10-10
+
+The run reached the native wall summary: 4081 pending products, 10000 cells,
+100000 trim-domain cells and 38701 spans, versus the prior 4081 / 38693 spans.
+It then FAILED while writing the request sidecar because Cargo ran the test
+with the crate directory as cwd and the relative output directory did not
+exist. No complete comparison report was produced and no pending-domain
+containment claim follows from the printed counts. Preserve the failed log
+`/tmp/retained-union-trimmed-wall-20261010.log` (363.89 s) as experimental evidence.
+The extra cross-piece intrinsic union attempt was removed: no measured pending
+count benefit, and eight extra spans. The earlier cross-piece paired-endpoint
+proof remains. Report export now creates its parent directory; future runs
+should still pass an absolute output path to make placement explicit.
+
+### Worker artifact identity across Cancel/Retry — 2026-10-10
+
+The bridge worker qualification script now sends the expected SHA/length to
+each worker. The worker checks the identity module imported by its kernel
+before accepting work, including replacements after cancellation. A publication
+change refuses qualification rather than assigning results to the initial SHA.
+`spline-pair-pinned-workers-2026-10-10.json` passes the existing parity/recovery
+cases and records two checked worker artifacts for SHA
+`ec4828e66d4bfb072d5153d85fb12d9a7974ddb84ffb0712add3a4d648bc015b`.
+`tests/workerArtifactPin.test.mjs` passes both matching and mismatching startup
+controls (0.58 s; `/tmp/worker-artifact-pin-controls-20261010.log`). This is a
+qualification harness improvement; it does not broaden geometry qualification.
+
+### Continuous knot-seam crossing admission — 2026-10-10
+
+The independently partitioned complete root-chain fixture initially failed
+native restoration with `NURBS_CROSSING_BOX`: the original selector crossed
+multiple knot spans, including the root at a continuous seam. This limitation
+was addressed in `uv_curve_crossings::certify_box`. The complete selector now
+uses interval position/derivative hulls over all touched original spans. Each
+span's locally normalized derivative is converted outward to the selector's
+normalized coordinates before hulling. Validated curves are continuous, so
+strict inclusion plus contraction bounds the continuous piecewise map, even
+at C0 seams. Disconnected curves remain invalid; selectors touching more than
+256 positive-width spans conservatively remain unresolved.
+
+Seven crossing tests pass (0.35 s;
+`/tmp/piecewise-crossing-native-20261010.log`), including a root at a C0 knot,
+independent nonunit parameter partitions, two-root refusal and discontinuity
+refusal. `prepare-multispan-root-body.py` authors only exact binary64 dyadic
+fixture data and grants no admission. Its 57 independently partitioned source
+curves are in `multispan-root-body-request-2026-10-10.json`.
+Native bridge restoration now admits the whole four-face/seven-edge body,
+preserving its original definition (1478.30 ms;
+`multispan-root-body-native-2026-10-10.json`). The first failed attempt is kept
+in `/tmp/multispan-root-body-native-20261010.log`; the successful run is in
+`/tmp/multispan-root-body-native-piecewise-20261010.log`.
+
+The older full B-rep run completed: 1033 passed, three ignored, 1856.57 s
+(`/tmp/spline-root-brep-all-20261010.log`). It predates local/global signed-plane
+and continuous crossing changes; it is not their full-suite qualification.
+The published kernel SHA
+`4d5d6ed2b990585ab6cee9ee2eb2538c48d5d34119f2e637c236e8f0b4ad8676`
+(13,077,409 bytes) passes the pinned bridge-chord worker gate, with both
+initial and replacement worker identities checked
+(`local-oblique-root-publication-worker-2026-10-10.json`). It includes the
+local-plane/root-point changes but predates global-plane and knot-seam changes.
+The next full kernel build is live in
+`/tmp/piecewise-root-seam-current-wasm-20261010.log`; no new binary result is
+claimed yet.
+
+### Independently partitioned knot-root body: native STEP acceptance
+
+The current native bridge prepares STEP for the same four-face/seven-edge
+body without replacing its crossing recipes with fixed points. The result is
+`multispan-root-body-step-native-2026-10-10.json`; its endpoint error upper
+bound is 3.858025010572423e-15 mm. The exported artifact is
+`multispan-root-body-native-2026-10-10.step`.
+
+Independent OpenCascade verification passes (`multispan-root-step-occt-2026-10-10.json`):
+one valid solid, volume 0.16666666666666663 mm³ versus 1/6 mm³,
+and maximum unit-cube bounds error 1.0000000005838672e-7 mm.
+This qualifies this supplied fixture and exchange path, not general fillets,
+whole-wall thickness, or the three-part browser acceptance matrix.
+The new real-worker STEP/history/altered-candidate regression awaits the
+kernel containing continuous knot-seam crossing certification.
+
+Current-source rerun: all seven `uv_curve_crossings` tests pass (0.26 s),
+and all nine `source_mapped_edge` tests pass (0.11 s), with zero failures.
+Logs: `/tmp/piecewise-crossing-current-20261010.log` and
+`/tmp/knot-seam-current-mapped-20261010.log`.
+TypeScript checking completed without diagnostics
+(`/tmp/multispan-root-worker-typecheck-20261010.log`).
+The full NURBS library run is separate and its completion is not implied by
+these selected regressions.
+
+The full current NURBS library run passes: 844 passed, two ignored, zero
+failures, 35.34 s (`/tmp/knot-seam-current-nurbs-all-20261010.log`).
+The three UI/controller regression suites also pass: 25 tests in 4.86 s
+(`/tmp/knot-seam-p0-controls-20261010.log`). These cover localized recovery,
+request cancellation and stale-response handling at controller level, not the
+full command matrix or browser crash qualification.
+The pending knot-root real-worker regression now also requires cancellation
+and successful Retry in a replacement worker, reproducing the native STEP
+result. TypeScript checking passes after this test change.
+A fresh full B-rep library run is active under
+`/tmp/knot-seam-current-brep-all-20261010.log`; its result is not yet claimed.
+
+### Rational C0 knot-seam controls
+
+`rational_quadratic_and_cubic_c0_seams_keep_original_root_boxes` passes
+(`/tmp/rational-knot-seam-current-20261010.log`). It checks degree-two and
+degree-three rational curves with nonuniform positive weights, repeated
+interior knots and nonunit original domains. Their supplied selectors cross
+C0 seams; the certified boxes contain the original seam parameter and the
+corresponding parameter on the other original curve. Swapped inputs also
+qualify. Coincident curves remain unresolved and separated boxes are excluded.
+This expands supplied-selector qualification; automatic isolation at seam
+boundaries, arbitrary tangency and general fillet construction are separate.
+The artifact pin controls were run separately with Node's test runner:
+four passed, zero failed (`/tmp/knot-seam-artifact-pin-controls-20261010.log`).
+
+### Preserve derivative correlation across original seams
+
+An exact affine shear plus a translation of 1048576 exposed a conservative
+failure in the new rational degree-two/three seam control: the original code
+returned `Unresolved` (`/tmp/affine-rational-knot-seam-20261010.log`). Hulling
+axis derivatives across C0 spans before preconditioning erased the relation
+between tangent components.
+
+The Krawczyk check now applies its fixed preconditioner to each original
+span derivative enclosure before taking their hull. Each transformed bound
+still contains its complete original span, and their hull covers the entire
+continuous selector. This avoids replacing correlated span data with a larger
+coordinatewise hull before the linear operation. All eight crossing controls
+pass, including the affine rational case and the exclusion/coincidence/
+multiple-root controls (`/tmp/correlated-knot-seam-native-20261010.log`, 0.26 s).
+
+The already-running `piecewise-root-seam-current-wasm` build predates this
+production change. Its successful publication must not be reported as WASM
+qualification of derivative-correlation preservation. The current full B-rep
+run also predates this change; a source-matched follow-up is still needed.
+
+After the correlation change, complete native restoration still admits the
+four-face/seven-edge body and prepares STEP. The entire returned result is
+exactly equal to the previous native STEP result, including the STEP text
+(`multispan-root-body-correlated-native-2026-10-10.json`). Thus this change
+preserves that exchange artifact rather than silently changing its geometry.
+
+### Automatic global knot-root isolation
+
+Before decomposing a multi-span curve pair, isolation now attempts a complete
+original-domain certificate, charged as one visited cell. A unique result
+covers the entire product and is refined with the same continuous-span check.
+If unresolved and work remains, the original span-product search continues
+using the remaining budget. On exhaustion the unresolved complete domain is
+retained, so no unvisited region disappears.
+
+All eight crossing regressions pass (0.40 s;
+`/tmp/global-knot-root-isolation-20261010.log`), including discovery of the
+continuous seam root as one globally unique result and refinement to 1e-8
+original parameter widths. This does not solve all multiple-root or tangency
+cases at partition boundaries. The full current NURBS run is separate.
+
+The preceding derivative-correlation source snapshot passed the full NURBS
+suite: 845 passed, two ignored, zero failures, 58.66 s
+(`/tmp/correlated-knot-seam-nurbs-all-20261010.log`), and all nine mapped-edge
+regressions (0.06 s; `/tmp/correlated-knot-mapped-native-20261010.log`).
+These runs predate the global isolation prepass.
+
+The full NURBS library run including the global isolation prepass and the
+one-cell exhaustion control passes: 845 passed, two ignored, zero failures,
+87.08 s (`/tmp/global-knot-root-nurbs-all-20261010.log`). The one-cell
+multiple-root stop retains the complete original parameter product and never
+claims uniqueness or completion. The longer elapsed time is not a matched
+performance comparison; other native builds/tests were running concurrently.
+
+All 12 current-source shared-edge regressions pass (0.02 s;
+`/tmp/global-knot-root-shared-native-20261010.log`), including original
+root-ended edges on curved support charts and oblique signed-plane drivers.
+
+### Scene-row layout recovery
+
+Browser inspection found both direct row buttons sharing equal flex width:
+the isolate button consumed the same space as the source name, and the long
+name wrapped beyond the virtual row's 32 px height. The scene dock also grew
+to its content minimum. Names now have a single-line ellipsis with the full
+name in a title; action buttons keep intrinsic width and the dock permits
+shrinking. Measured on the running 5195 UI: row 285×32 px, selection button
+207.47 px, isolate 23.53 px, visibility/lock 26 px each; the name is 126.51×17
+px with 263 px original text width. The model and selection were not edited.
+Screenshot: `/tmp/cad-scene-row-layout-20261010.png`.
+TypeScript and `git diff --check` pass. This fixes the visible overlap;
+it does not establish a cause or fix for the reported browser renderer crash.
+
+### Published knot-seam WASM: complete worker path
+
+The piecewise crossing kernel build completed and published SHA
+`1a90900b3c779322463cbb70f2a09f49473a59dcaa9d7496357a0a7189fb8113`
+(13,080,430 bytes). The pinned real-worker regression passes: complete body
+restoration equals the native result, STEP prepares, rename/Undo/Redo and
+archive serialize/reparse preserve original recipes and edge vertex IDs,
+altered endpoint candidates are refused, cancellation is observed and Retry
+in a replacement worker reproduces the native result. Artifact:
+`multispan-root-worker-2026-10-10.json`; log:
+`/tmp/multispan-root-worker-fixed-20261010.log` (two selected tests, 5.42 s).
+The separate bridge-chord publication gate also passes, checking initial and
+replacement worker artifact identities and whole-coverage transport parity
+(`piecewise-root-publication-worker-2026-10-10.json`).
+
+The initial worker regression exposed a transport bug: a valid native denial
+`mapped-source-endpoints-unproven` was rejected as `CAD_PROTOCOL` because
+only `source-` refusal labels were recognized. The validator now recognizes
+three explicit native mapped-edge refusal codes. Denial responses must still
+contain no source body, edges, STEP or diagnostic qualification payloads.
+New controls reject geometry-bearing denials and success/unknown labels.
+The original failure remains in `/tmp/multispan-root-worker-20261010.log`;
+the captured denial is `/tmp/multispan-root-worker-raw-20261010.json`.
+
+This published binary predates derivative-correlation preservation and global
+isolation. Their next build is running from the recorded inputs in
+`correlated-global-root-wasm-inputs-2026-10-10.json`, log
+`/tmp/correlated-global-root-current-wasm-20261010.log`.
+No qualification of those later changes in WASM is claimed yet.
+
+### Localized source-display refusal locations
+
+Display restoration now preserves the native diagnostic in a structured
+`SourceBodyDisplayError`. A validated native incidence pair index is mapped
+back to that exact source definition's two face uses. The UI presents the
+body name, edge/face address, an RU/EN next action and expandable raw reason.
+Invalid, missing or out-of-range addresses never produce invented locations.
+The three mapped refusal causes and work-limit stops have specific guidance;
+other errors retain the general recovery message.
+
+Three source-display controls pass (1.88 s;
+`/tmp/source-display-error-location-tests-20261010.log`): denial is never
+published as geometry, original addresses/locales survive, and a canceled
+request cannot publish a late denial or its address. TypeScript and diff
+whitespace checks pass. Error-state browser rendering is not yet qualified.
+
+The full B-rep run started before derivative-correlation/global isolation
+changes completed: 1035 passed, three ignored, zero failures, 1000.30 s
+(`/tmp/knot-seam-current-brep-all-20261010.log`). A fresh source-matched run
+is now active in `/tmp/correlated-global-root-brep-all-20261010.log`.
+
+### Refusal notice browser acceptance
+
+`SourceBodyFailureNotice.vue` is now used by the production source-display
+error path and provides a local Retry button bound to refresh preparation.
+The same component was rendered in a dedicated qualification page with the
+saved real-worker denial (`source-refusal-notice-browser-2026-10-10.json`).
+RU/EN guidance, edge 6 / faces 1 and 2, expanded native reason and Retry by
+mouse and Enter were verified in the browser. Event count advanced exactly
+0→1→2; console errors were empty. Screenshots are saved beside the report.
+The page clearly records Retry events only; it does not impersonate native
+recomputation or the complete modeler command flow. Real worker cancellation
+and replacement-worker Retry remain covered by the separate worker artifact.
+TypeScript and diff checks pass after extracting the production component.
+The final source-display unit suite passes all four controls in 2.62 s
+(`/tmp/source-display-error-locales-final-20261010.log`).
+
+### Current partial-rational whole-product qualification run
+
+The old extended runs already reached one million spans with unresolved
+products: the both-paths run checked 92376 cells and retained 40797 budget
+pending regions. Thus raising the old cell budget alone is not evidence of
+complete thickness. Its largest costs were intrinsic (33.76%), corrected
+pairs (24.26%) and retained pairs (21.79%); the dominant pending face was
+transition self-products. These historical figures are not current timings.
+
+A fresh bounded native run is active for the current *partial rational*
+carrier fixture: 100000 cells, 1000000 spans, 1000000 trim cells, unchanged
+1 mm aligned-chord threshold, 1e-4 sine-squared bound and 0.05 UV tolerance.
+Log: `/tmp/partial-rational-wall-max-work-20261010.log`.
+Expected report: `partial-rational-wall-max-work-2026-10-10.json`, with an
+explicit request sidecar. No complete thickness or runtime improvement is
+claimed before the run returns. Even a complete aligned-chord certificate
+would retain its stated scope; unconstrained material thickness is separate.
+
+### Current global crossing isolation: native body replay (2026-10-10)
+
+`multispan-root-body-global-native-2026-10-10.json` repeats the original
+independently partitioned root-ended body request against the current native
+source, including derivative correlation and the global isolation prepass.
+The complete result is exactly equal to
+`multispan-root-body-correlated-native-2026-10-10.json`, including STEP text:
+admitted, 4 faces, 7 edges, 5 vertices, STEP prepared, endpoint error upper bound
+3.858025010572423e-15 mm. Native dispatch took 2807.42 ms under concurrent work;
+this is not a standalone performance benchmark. This supplied-root request
+checks compatibility, not coverage of automatic isolation's new global path.
+Log: `/tmp/multispan-root-body-global-native-20261010.log`.
+The current WASM publication and full BRep/partial-wall runs were still live at
+this observation; their results are not inferred from this native replay.
+
+### Correlated/global-root WASM publication and real worker gates (2026-10-10)
+
+Build completed successfully. Public and packed runtime artifact:
+SHA256 `7525335b37e56aa8548e38b12206c175ac2e0a74a441fb6d5b478269498090b9`,
+13,082,826 bytes. All 1,811 Rust source inputs still match
+`correlated-global-root-wasm-inputs-2026-10-10.json` after publication.
+Earlier gate attempts refused the old public binary during packaging; no result
+from those attempts is credited to this publication.
+
+- `multispan-global-root-worker-2026-10-10.json`: actual worker, pinned hash,
+  native complete-body parity, prepared STEP, identity-preserving history replay,
+  altered-candidate denial, cancellation and replacement-worker Retry.
+  Two selected tests pass, 6.59 seconds.
+  Log: `/tmp/multispan-global-root-worker-published-20261010.log`.
+- `global-root-publication-worker-2026-10-10.json`: public file, packed bytes,
+  runtime identity and both worker instances checked against the same hash;
+  native and rational-profile parity, whole-coverage report parity, preserved
+  normal diameter, native failure recovery, zero-budget refusal, cancel/Retry.
+  Command exited zero. Log:
+  `/tmp/global-root-publication-worker-published-20261010.log`.
+
+Whole-coverage parity means equal native and WASM reports, including pending or
+refused regions; it is not a claim of complete physical wall thickness coverage.
+The root body remains a bounded original-curve fixture. General NURBS fillets,
+complex corners and the full UI command matrix are still unfinished.
+
+Current matched full BRep library suite also completed: 1,035 passed, zero
+failed, three ignored; 1,269.54 seconds under concurrent work. Log:
+`/tmp/correlated-global-root-brep-all-20261010.log`. This suite includes the
+latest derivative-correlation and global-crossing-isolation source snapshot;
+ignored tests and unsupported geometry are not qualified by its green result.

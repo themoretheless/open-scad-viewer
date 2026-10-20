@@ -3,25 +3,25 @@
 use crate::source_volume::Body;
 use nurbs_core::{Error,Result,surface_self_chord as chord,rational_pole_differential as polar};
 
-pub struct PreparedPair<'a> {
-    body:&'a Body,faces:[usize;2],
+pub struct PreparedPair<'a,E = crate::source_shared_edge::SharedEdge> {
+    body:&'a Body<E>,faces:[usize;2],
     anchors:[chord::SurfaceAnchorCertificate<'a>;2],
     differential:[Option<polar::Certificate<'a>>;2],
 }
-pub struct Preparation<'a> {pub prepared:Option<PreparedPair<'a>>,pub exact_work:u64}
-pub struct ProductCertificate<'a> {
-    body:&'a Body,faces:[usize;2],rectangles:[[[f64;2];2];2],max_sine_squared:f64,
+pub struct Preparation<'a,E = crate::source_shared_edge::SharedEdge> {pub prepared:Option<PreparedPair<'a,E>>,pub exact_work:u64}
+pub struct ProductCertificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body:&'a Body<E>,faces:[usize;2],rectangles:[[[f64;2];2];2],max_sine_squared:f64,
 }
-impl<'a> ProductCertificate<'a> {
-    pub fn body(&self)->&'a Body{self.body}
+impl<'a,E: crate::source_seam_tangency::Carrier> ProductCertificate<'a,E> {
+    pub fn body(&self)->&'a Body<E>{self.body}
     pub fn faces(&self)->[usize;2]{self.faces}
     pub fn rectangles(&self)->[[[f64;2];2];2]{self.rectangles}
     pub fn max_sine_squared(&self)->f64{self.max_sine_squared}
 }
 /// UV and world inputs are proposals; exact composition on both original
 /// surfaces must prove their common identity before preparing any paths.
-pub fn prepare<'a>(body:&'a Body,faces:[usize;2],uv:[[f64;2];2],world:[f64;3],max_work:u64)
-    ->Result<Preparation<'a>> {
+pub fn prepare<'a,E: crate::source_seam_tangency::Carrier>(body:&'a Body<E>,faces:[usize;2],uv:[[f64;2];2],world:[f64;3],max_work:u64)
+    ->Result<Preparation<'a,E>> {
     let regions=body.geometry().shell().regions().ok_or_else(||Error::new("BREP_SOURCE_WALL_ANCHOR","Require original retained regions"))?;
     if faces[0]==faces[1]||faces.iter().any(|&f|f>=regions.len())||max_work>100000000 {
         return Err(Error::new("BREP_SOURCE_WALL_ANCHOR","Choose distinct owned faces and bounded exact work"));
@@ -51,7 +51,7 @@ pub fn prepare<'a>(body:&'a Body,faces:[usize;2],uv:[[f64;2];2],world:[f64;3],ma
 }
 /// Authored pcurve ends propose anchors; evaluated coincidence is only a
 /// candidate filter. Exact source identities remain mandatory on both sides.
-pub fn prepare_boundary_anchor<'a>(body:&'a Body,faces:[usize;2],max_work:u64)->Result<Preparation<'a>> {
+pub fn prepare_boundary_anchor<'a,E: crate::source_seam_tangency::Carrier>(body:&'a Body<E>,faces:[usize;2],max_work:u64)->Result<Preparation<'a,E>> {
     let regions=body.geometry().shell().regions().ok_or_else(||Error::new("BREP_SOURCE_WALL_ANCHOR","Require original retained regions"))?;
     if faces[0]==faces[1]||faces.iter().any(|&f|f>=regions.len())||max_work>100000000 {
         return Err(Error::new("BREP_SOURCE_WALL_ANCHOR","Choose distinct owned faces and bounded exact work"));
@@ -79,27 +79,27 @@ pub fn prepare_boundary_anchor<'a>(body:&'a Body,faces:[usize;2],max_work:u64)->
     }}
     Ok(Preparation{prepared:None,exact_work:used})
 }
-impl<'a> PreparedPair<'a> {
-    pub(crate) fn matches(&self,body:&Body,faces:[usize;2])->bool {
+impl<'a,E: crate::source_seam_tangency::Carrier> PreparedPair<'a,E> {
+    pub(crate) fn matches(&self,body:&Body<E>,faces:[usize;2])->bool {
         std::ptr::eq(self.body,body)&&self.faces==faces
     }
     /// All reusable facts remain attached to this immutable original Body.
     /// Query work includes path restrictions, endpoint enclosures and normals.
     pub fn qualify_product_projections(&self,rectangles:[[[f64;2];2];2],projections:&[[f64;3]],sine:f64,max_spans:usize)
-        ->Result<(Option<ProductCertificate<'a>>,usize)> {
+        ->Result<(Option<ProductCertificate<'a,E>>,usize)> {
         self.qualify_product_projections_with_normals(rectangles,projections,sine,max_spans,[None,None])
     }
     /// The caller charges each supplied normal factor before this query.
     /// Native validation keeps factors attached to their original source/pole.
     pub fn qualify_product_projections_with_normals(&self,rectangles:[[[f64;2];2];2],projections:&[[f64;3]],sine:f64,max_spans:usize,
         normals:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2])
-        ->Result<(Option<ProductCertificate<'a>>,usize)> {
+        ->Result<(Option<ProductCertificate<'a,E>>,usize)> {
         let (proof,used)=chord::qualify_polar_anchored_chords_with_projections(self.anchors.each_ref(),rectangles,
             self.differential.each_ref().map(Option::as_ref),normals,projections,sine,max_spans)?;
         Ok((proof.map(|_|ProductCertificate{body:self.body,faces:self.faces,rectangles,max_sine_squared:sine}),used))
     }
     pub fn qualify_product(&self,rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize)
-        ->Result<(Option<ProductCertificate<'a>>,usize)> {
+        ->Result<(Option<ProductCertificate<'a,E>>,usize)> {
         let (proof,used)=chord::qualify_polar_anchored_chords(self.anchors.each_ref(),rectangles,
             self.differential.each_ref().map(Option::as_ref),[None,None],projection,sine,max_spans)?;
         Ok((proof.map(|_|ProductCertificate{body:self.body,faces:self.faces,rectangles,max_sine_squared:sine}),used))

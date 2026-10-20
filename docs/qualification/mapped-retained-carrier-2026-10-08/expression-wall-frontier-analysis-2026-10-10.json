@@ -1,0 +1,380 @@
+{
+  "schema": "wall-budget-frontier/1",
+  "complete": false,
+  "pendingRegions": 30555,
+  "pendingFacePairs": 46,
+  "selfPairRegions": 23043,
+  "pairs": [
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "pendingRegions": 10417,
+      "selfPair": true
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "pendingRegions": 4172,
+      "selfPair": true
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "pendingRegions": 4142,
+      "selfPair": true
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "pendingRegions": 2886,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "pendingRegions": 2438,
+      "selfPair": true
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "pendingRegions": 1874,
+      "selfPair": true
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "pendingRegions": 1754,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "pendingRegions": 768,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "pendingRegions": 172,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "pendingRegions": 168,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "pendingRegions": 154,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "pendingRegions": 116,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "pendingRegions": 104,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "pendingRegions": 100,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "pendingRegions": 62,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "pendingRegions": 60,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "pendingRegions": 54,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "pendingRegions": 54,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "pendingRegions": 40,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "pendingRegions": 36,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "pendingRegions": 32,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "pendingRegions": 30,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "pendingRegions": 28,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "pendingRegions": 16,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "pendingRegions": 10,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "pendingRegions": 8,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "pendingRegions": 8,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "pendingRegions": 4,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "pendingRegions": 2,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "pendingRegions": 2,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "pendingRegions": 2,
+      "selfPair": false
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "pendingRegions": 2,
+      "selfPair": false
+    }
+  ],
+  "scope": "original-retained-transition-support-products",
+  "method": "expression-support-aligned-chord-coverage",
+  "nextWork": "Reduce repeated normal/trim domain work for dominant products; retain refusal until all requested products are resolved. Counts are subdivision leaves, not coverage percentages."
+}

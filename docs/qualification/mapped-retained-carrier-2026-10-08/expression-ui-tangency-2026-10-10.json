@@ -1,0 +1,18 @@
+{
+  "schema": "expression-ui-tangency-bounded/1",
+  "passed": true,
+  "url": "http://127.0.0.1:5198/",
+  "wasmSha256": "bc8bb52d0e1ea23a5614d7989628d0e83590235b9a55928f25fb2405a3f7ab98",
+  "actualNeighborJoinsQualified": 4,
+  "originalSupportBoundariesQualified": 4,
+  "neighborUpperSineSquared": [
+    0,
+    0,
+    2.17e-321,
+    9.981695228808158e-07
+  ],
+  "threshold": 1e-06,
+  "wallPendingRegions": 4085,
+  "consoleErrors": [],
+  "scope": "Actual browser request with both tangency options enabled on saved annular recipe. Native method requires four actual opposite shell uses and interval covers for root-ended original-neighbor joins plus support tangency. Does not qualify all original shell edges, arbitrary fillets, global embedding or whole thickness."
+}

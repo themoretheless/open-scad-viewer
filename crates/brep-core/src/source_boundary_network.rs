@@ -50,7 +50,7 @@ fn meet(
 /// Incidence proves identities; interval intersections only tighten their
 /// display enclosures. No centre point, rounded root or distance join is authority.
 /// This does not certify tessellation, new topology, embedding or volume.
-pub fn inspect(shell: &Shell, max_spans: usize, max_endpoints: usize) -> Result<Network> {
+pub fn inspect<E: crate::source_edge_restriction::RestrictionCarrier>(shell: &Shell<E>, max_spans: usize, max_endpoints: usize) -> Result<Network> {
     if !(1..=100000).contains(&max_spans) || !(1..=100000).contains(&max_endpoints) {
         return Err(error("Bound source boundary work"));
     }
@@ -84,7 +84,7 @@ pub fn inspect(shell: &Shell, max_spans: usize, max_endpoints: usize) -> Result<
     for (index, edge) in shell.edges().iter().enumerate() {
         let use_ = shell.uses()[index][0];
         let mut ids = shell.vertices()[use_.face][use_.wire][use_.edge];
-        if edge.reversed()[0] {
+        if edge.restriction_reversed(0) {
             ids.reverse();
         }
         let restriction = crate::source_edge_restriction::Restriction::from_edge(edge);

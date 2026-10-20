@@ -1,0 +1,11 @@
+{
+  "scope": "Source snapshot for pending full native B-rep regression; no completion or geometry certificate",
+  "files": {
+    "crates/cad-predicates/src/bezier_point_identity.rs": "0fd925f6353bbd8cdbfac0f0eee5f413060f9e4fa299e2386b5e96fdae049115",
+    "crates/cad-predicates/src/bezier_composition_identity.rs": "5c644d770a1239c2902702c70cf216bd485c7df1c2c63f8e111ed70381b80e63",
+    "crates/nurbs-core/src/curve_point_identity.rs": "62914e6905403d275264c49493bb4e40ebbcf55f908492c82468004d9fe854e8",
+    "crates/nurbs-core/src/curve_surface_affine.rs": "51d44f807eba0999e224be2fce47fda1b16797e4f3564c94b8114577651b525c",
+    "crates/brep-core/src/source_mapped_edge.rs": "cf4fb798bd20dc393d2ce389a607a82e64328926ba9b2e664ed823a5de56c35e",
+    "crates/brep-core/src/source_profile_shell_wall.rs": "8ea3bf5e4f8eb537717213d9d88144765e9c5e637cbae75bc34d9c4131d425ab"
+  }
+}

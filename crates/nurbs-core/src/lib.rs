@@ -205,3 +205,5 @@ pub mod surface_projected_jordan;
 pub mod surface_self_chord;
 
 pub mod surface_self_chord_coverage;
+
+pub mod synchronized_boundary_normals;

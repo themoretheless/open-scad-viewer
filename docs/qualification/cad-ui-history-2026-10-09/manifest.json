@@ -1,0 +1,67 @@
+{
+  "toleranceMm": 1e-06,
+  "relativeVolumeTolerance": 1e-08,
+  "parts": [
+    {
+      "name": "bracket UI move +2mm and reload",
+      "file": "bracket-moved-ui.step",
+      "sha256": "bd46bbdda8a050b507e5fec6284c6cd133bd981f3cf4285177d893f0f9a2a811",
+      "expected": {
+        "boundsMm": [
+          [
+            9,
+            0,
+            0
+          ],
+          [
+            55,
+            30,
+            26
+          ]
+        ],
+        "volumeMm3": 9224.420352247613,
+        "solids": 1
+      }
+    },
+    {
+      "name": "flange UI 20 edits and reload",
+      "file": "flange-20-ui.step",
+      "sha256": "efd7467fe8350bf51087fb4dcbab4fa8dddfca3fb04e4e4895ffb324524109ea",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -18,
+            0
+          ],
+          [
+            27,
+            22,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure UI 20 edits fixed history and reload",
+      "file": "enclosure-fixed-ui.step",
+      "sha256": "3bb186a297a76bfb47423bfa4dec8bb0f17f6cd24b36b88011f3024219b7a506",
+      "expected": {
+        "volumeMm3": 7981.620352259761,
+        "boundsMm": [
+          [
+            7,
+            0,
+            2
+          ],
+          [
+            47,
+            30,
+            28
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -10,15 +10,15 @@ pub struct Limits {
     pub cells_per_face: usize,
     pub spans_per_face: usize,
 }
-pub struct FaceCertificate<'a> {
-    body: &'a Body,
+pub struct FaceCertificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     face: usize,
     minimum_mm: f64,
     max_sine_squared: f64,
     adaptive: Option<adaptive::Certificate<'a>>,
 }
-impl<'a> FaceCertificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E: crate::source_seam_tangency::Carrier> FaceCertificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn face(&self) -> usize {
@@ -45,8 +45,8 @@ pub struct Face {
     /// Closed representatives also cover their exchanged endpoint order.
     pub unresolved_pairs: Vec<[[[f64;2];2];2]>,
 }
-pub struct Report<'a> {
-    body: &'a Body,
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     minimum_mm: f64,
     max_sine_squared: f64,
     refinement_attempted: bool,
@@ -59,14 +59,14 @@ pub struct Report<'a> {
     pub plane_controls: usize,
     pub cells: usize,
     pub spans: usize,
-    certificates: Vec<FaceCertificate<'a>>,
+    certificates: Vec<FaceCertificate<'a,E>>,
     expected_faces: usize,
 }
-impl<'a> Report<'a> {
-    pub fn into_certificates(self) -> Vec<FaceCertificate<'a>> {
+impl<'a,E: crate::source_seam_tangency::Carrier> Report<'a,E> {
+    pub fn into_certificates(self) -> Vec<FaceCertificate<'a,E>> {
         self.certificates
     }
-    pub fn certificates(&self) -> &[FaceCertificate<'a>] {
+    pub fn certificates(&self) -> &[FaceCertificate<'a,E>] {
         &self.certificates
     }
     pub fn all_self_pairs_qualified(&self) -> bool {
@@ -76,12 +76,12 @@ impl<'a> Report<'a> {
 /// Every original face receives a result. Per-face work is capped independently
 /// while all counted work also respects global limits. Qualified face facts are
 /// private, freshly reconstructed and bound to this immutable source Body.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     minimum_mm: f64,
     max_sine_squared: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.
         || !max_sine_squared.is_finite()
@@ -197,8 +197,8 @@ pub fn qualify<'a>(
 }
 
 /// Additional bounded pass preserves all previously certified original faces.
-pub fn extend_with_pole_facts<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:f64,
-    out:&mut Report<'a>,limits:Limits,max_pole_exact_work:u64)->Result<()> {
+pub fn extend_with_pole_facts<'a,E: crate::source_seam_tangency::Carrier>(body:&'a Body<E>,minimum_mm:f64,max_sine_squared:f64,
+    out:&mut Report<'a,E>,limits:Limits,max_pole_exact_work:u64)->Result<()> {
     if !std::ptr::eq(out.body,body) || out.minimum_mm!=minimum_mm || out.max_sine_squared!=max_sine_squared
         || !(1..=100_000_000).contains(&max_pole_exact_work)
         || [limits.cells,limits.spans,limits.cells_per_face,limits.spans_per_face].iter().any(|n|!(1..=100000).contains(n))
@@ -245,8 +245,8 @@ pub fn extend_with_pole_facts<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:
 }
 
 /// Independently bounded ordinary refinement retains all accepted facts.
-pub fn refine_unqualified<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:f64,
-    out:&mut Report<'a>,limits:Limits)->Result<()> {
+pub fn refine_unqualified<'a,E: crate::source_seam_tangency::Carrier>(body:&'a Body<E>,minimum_mm:f64,max_sine_squared:f64,
+    out:&mut Report<'a,E>,limits:Limits)->Result<()> {
     if !std::ptr::eq(out.body,body)||out.minimum_mm!=minimum_mm||out.max_sine_squared!=max_sine_squared
         ||out.refinement_attempted||out.refinement_cells!=0||out.refinement_spans!=0
         ||[limits.cells,limits.spans,limits.cells_per_face,limits.spans_per_face].iter().any(|n|!(1..=100000).contains(n))

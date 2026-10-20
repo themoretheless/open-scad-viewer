@@ -1,0 +1,135 @@
+{
+  "wasmBuild": {
+    "session": 51104,
+    "exitCode": 0
+  },
+  "workerZeroBudget": {
+    "passed": true,
+    "report": "../aligned-chord-worker-2026-10-10/expression-inspection-worker-report.json"
+  },
+  "workerBounded": {
+    "session": 5675,
+    "status": "passed",
+    "report": "../aligned-chord-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+    "coverage": {
+      "complete": false,
+      "pendingRegions": 4085,
+      "initialPairsChecked": 435,
+      "cells": 10000,
+      "spans": 57471
+    }
+  },
+  "tests": {
+    "panelController": 31,
+    "savedPrecisionPanel": 19,
+    "vueTsc": "passed",
+    "diffCheck": "passed"
+  },
+  "limits": [
+    "Actual browser inspection of new controls remains pending",
+    "Whole-body minimum thickness remains unqualified",
+    "General geometry and full P0 remain incomplete"
+  ],
+  "sha256": {
+    "src/components/ExpressionShellCheck.vue": "9eeb7c1dbdb7623988ce5f6d5cd6d87cd2b0c9bd804366cd58c25072bb5714b8",
+    "tests/expressionRadiusPanel.test.ts": "d2d68aeb109dee2aedafd4696f6c8871d2c8638bc831803d5a848a12029c1551",
+    "public/wasm/geometry-kernel.wasm": "50eafb19ba357c6ac9536d5f94d7ab89cf5f78681ce911272c939d53e468fee1"
+  },
+  "browser": {
+    "tab": 66,
+    "url": "http://127.0.0.1:5198/",
+    "fixture": "ui-zero.json",
+    "verified": [
+      "saved precision controls visible",
+      "29-face closure confirmed",
+      "406 contacts, zero unchecked",
+      "zero-budget aligned check shows 435 pending regions"
+    ],
+    "screenshot": "/tmp/aligned-chord-controls-20261010.png",
+    "remaining": [
+      "changed precision and budget",
+      "cancel during verified pending state",
+      "source-face highlight"
+    ]
+  },
+  "escapeCancellation": {
+    "browserVerified": true,
+    "regression": "tests/expressionInspectionFocus.test.ts",
+    "typecheck": "passed",
+    "scope": "active pending expression inspection only",
+    "screenshot": "/tmp/expression-escape-cancelled-20261010.png",
+    "ownershipRegression": {
+      "passed": true,
+      "checks": [
+        "inactive workspace does not cancel or prevent Escape",
+        "Enter is untouched",
+        "active pending inspection cancels on Escape",
+        "unmounted panel has no handler"
+      ],
+      "log": "/tmp/expression-escape-ownership-20261010.log"
+    }
+  },
+  "regionSelection": {
+    "change": "Clear prior source-face highlight when pending-region or contact-pair selector changes",
+    "testsPassed": 20,
+    "log": "/tmp/expression-region-focus-tests-20261010.log",
+    "browserVisualVerification": {
+      "passed": true,
+      "tab": 66,
+      "firstCandidate": {
+        "polygons": 128,
+        "boxes": 0
+      },
+      "afterSelectorChange": {
+        "polygons": 0,
+        "boxes": 0
+      },
+      "secondCandidate": {
+        "polygons": 128,
+        "boxes": 10
+      },
+      "scope": "Candidate source-face highlight only; exact UV-region display remains unqualified"
+    }
+  },
+  "combinedTests": {
+    "passed": 46,
+    "log": "/tmp/expression-diagnostics-combined-20261010.log"
+  },
+  "transitionRegionPresentation": {
+    "testsPassed": 22,
+    "typecheck": "passed",
+    "scope": "Show native candidate UV rectangles; disable source highlighting when neither face maps to source; explain partial source mapping for transition faces",
+    "browser": {
+      "passed": true,
+      "region": 435,
+      "faces": [
+        28,
+        28
+      ],
+      "sourceHighlightDisabled": true,
+      "nativeUvDisplayed": [
+        [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      ],
+      "screenshot": "expression-transition-uv-20261010.png"
+    }
+  }
+}

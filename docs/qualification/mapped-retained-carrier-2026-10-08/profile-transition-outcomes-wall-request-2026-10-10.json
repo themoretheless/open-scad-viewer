@@ -1,0 +1,10 @@
+{
+  "test": "restricted_profile_seams_match_owned_neighbor_supports",
+  "cells": 10000,
+  "spans": 1000000,
+  "trimCells": 100000,
+  "sourceManifest": "profile-transition-outcomes-native-inputs-2026-10-10.json",
+  "sourceManifestSha256": "f85f001d02a265b7f332d22d50aa4971c89301a4d5b067c167e9005addf103b8",
+  "report": "profile-transition-outcomes-wall-2026-10-10.json",
+  "comparisonBaseline": "section-position-reuse-trimmed-wall-2026-10-10.json"
+}

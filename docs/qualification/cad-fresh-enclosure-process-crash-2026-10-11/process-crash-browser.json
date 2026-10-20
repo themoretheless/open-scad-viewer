@@ -1,0 +1,52 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "profile": "/tmp/cad-crash-profile-0eZ9sr",
+  "origin": "http://127.0.0.1:5195/",
+  "fixturePath": "docs/qualification/cad-fresh-ui-fillet-faults-2026-10-11/enclosure-edited.json",
+  "fixtureSha256": "90c9501459047d1351f1e3f5bf8c83673de5da86ce93ca581929cede31a7b17a",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "phases": [
+    {
+      "phase": "before",
+      "pid": 65675,
+      "code": null,
+      "signal": "SIGKILL",
+      "recoveredBodies": 1,
+      "recoveredGroups": 0,
+      "referenceBeforeCharacters": 168977,
+      "referenceAfterCharacters": 168977,
+      "snapshots": [
+        {
+          "id": "2bccbebd-3a95-452a-a905-ce680571ff37",
+          "characters": 4370872
+        }
+      ],
+      "matches": true
+    },
+    {
+      "phase": "after",
+      "pid": 65876,
+      "code": null,
+      "signal": "SIGKILL",
+      "recoveredBodies": 1,
+      "recoveredGroups": 60,
+      "referenceBeforeCharacters": 168977,
+      "referenceAfterCharacters": 168977,
+      "snapshots": [
+        {
+          "id": "2bccbebd-3a95-452a-a905-ce680571ff37",
+          "characters": 4370872
+        },
+        {
+          "id": "68b2876f-33b6-4fdf-98fa-45b4223562d1",
+          "characters": 4370872
+        }
+      ],
+      "matches": true
+    }
+  ],
+  "persistentProfileReopened": true,
+  "legacyDraftMigrated": true,
+  "scope": "Owned Chromium process SIGKILL before/after IndexedDB head publication, reopened persistent test profile and exact document recovery. No user browser process is killed."
+}

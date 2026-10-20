@@ -1,0 +1,16 @@
+{
+  "schema": "cad-real-tabs-draft/1",
+  "passed": true,
+  "fixture": "tests/fixtures/cad-draft-tabs.html",
+  "wasmSha256": "ffb7c3ba14d85c5e5872f2b5bebe17dba49da81bef48c27b26ec27ab69983eaf",
+  "initialRevision": "5e54c627-6499-4be4-b853-aaf0c4ca08e1",
+  "winnerRevision": "2d708a33-7a96-4cc0-b60d-83b1f4962443",
+  "winnerTranslations": 1,
+  "rejectedTabTranslations": 2,
+  "conflict": "DRAFT_CONFLICT",
+  "recoveredWinnerInBothTabs": true,
+  "exactDocumentRoundtrip": true,
+  "consoleErrors": [],
+  "screenshot": "/tmp/cad-real-tabs-recovery-20261010.png",
+  "scope": "Actual two browser tabs and production CAD/IndexedDB stores using isolated fixture key; reload recovery. Not browser process crash, full modeler save UI, localStorage event or all commands qualification."
+}

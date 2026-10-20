@@ -42,7 +42,7 @@
     "test:cooperative-bvh": "node tools/browser-qualification/cooperative-bvh.mjs",
     "test:build-recovery": "node tools/browser-qualification/build-recovery.mjs",
     "audit:wasm-package": "node scripts/audit-wasm-package.mjs",
-    "test:wasm-package": "node --test tests/auditWasmPackage.test.mjs",
+    "test:wasm-package": "node --test tests/auditWasmPackage.test.mjs tests/geometryPackPublication.test.mjs",
     "test:wasm-optimize": "node --test tests/wasmOptimize.test.mjs tests/wasmOptCache.test.mjs",
     "audit:qualification-drift": "node scripts/audit-qualification-drift.mjs",
     "audit:runtime-manifests": "node --import tsx scripts/audit-runtime-manifests.mts",

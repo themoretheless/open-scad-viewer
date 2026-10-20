@@ -1,0 +1,12 @@
+{
+  "passed": false,
+  "edits": 20,
+  "expected_total_z_mm": 2,
+  "actual_total_z_mm": 1.999999999999993,
+  "undo_remaining_z_mm": 0.29999999999999893,
+  "undo_matches_baseline": false,
+  "compact_document_characters": 929854,
+  "history_retention_limit_characters": 16000000,
+  "source": "src/services/directModeling.ts DirectHistory.commitValidated",
+  "next": "Use compact history representations preserving 20 edits without retaining full geometry text for every snapshot"
+}

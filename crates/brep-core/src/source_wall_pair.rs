@@ -18,14 +18,14 @@ pub struct Limits {
     pub domain_cells_per_query: usize,
     pub tolerance_uv: f64,
 }
-pub struct Certificate<'a> {
-    body: &'a Body,
+pub struct Certificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     faces: [usize; 2],
     lower_mm: f64,
     max_sine_squared: f64,
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E: crate::source_shared_chord_map::ChordCarrier> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn faces(&self) -> [usize; 2] {
@@ -38,8 +38,8 @@ impl<'a> Certificate<'a> {
         self.lower_mm
     }
 }
-pub struct Report<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub normal_spans: usize,
     pub normal_products: usize,
     pub factored_queries: usize,
@@ -69,32 +69,32 @@ fn spans(s: &Surface, r: [[f64; 2]; 2]) -> usize {
 }
 /// A certificate requires complete coverage of the unchanged domain product.
 /// Proximity, boundary membership and exhausted work never create a certificate.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
     faces: [usize; 2],
     minimum_mm: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     qualify_with_factors(body,faces,minimum_mm,limits,[None,None],0)
 }
 /// Reuse only source-bound factors already prepared by the whole-wall gate.
 /// Their directions at poles do not establish regular tangent planes.
-pub(crate) fn qualify_with_factors<'a>(
-    body: &'a Body, faces: [usize;2], minimum_mm:f64, limits:Limits,
+pub(crate) fn qualify_with_factors<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>, faces: [usize;2], minimum_mm:f64, limits:Limits,
     factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
     query_budget:usize,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     qualify_with_prepared(body,faces,minimum_mm,limits,factors,query_budget,None)
 }
 /// Reuse exact original anchors whose preparation work was charged by the caller.
 /// Full coverage is still required for a pair certificate.
-pub fn qualify_with_anchors<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
-    limits:Limits,anchors:&crate::source_wall_anchor::PreparedPair<'a>)->Result<Report<'a>> {
+pub fn qualify_with_anchors<'a,E: crate::source_shared_chord_map::ChordCarrier>(body:&'a Body<E>,faces:[usize;2],minimum_mm:f64,
+    limits:Limits,anchors:&crate::source_wall_anchor::PreparedPair<'a,E>)->Result<Report<'a,E>> {
     qualify_with_prepared(body,faces,minimum_mm,limits,[None,None],0,Some(anchors))
 }
-pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
+pub(crate) fn qualify_with_prepared<'a,E: crate::source_shared_chord_map::ChordCarrier>(body:&'a Body<E>,faces:[usize;2],minimum_mm:f64,
     limits:Limits,factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
-    query_budget:usize,anchors:Option<&crate::source_wall_anchor::PreparedPair<'a>>)->Result<Report<'a>> {
+    query_budget:usize,anchors:Option<&crate::source_wall_anchor::PreparedPair<'a,E>>)->Result<Report<'a,E>> {
     if anchors.is_some_and(|a|!a.matches(body,faces)) {
         return Err(nurbs_core::Error::new("NURBS_INVALID_INPUT","Use anchors prepared for this original body and ordered face pair"));
     }
@@ -138,7 +138,7 @@ pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm
     // Reuse the exact retained-region sources that own prepared normal facts.
     let surfaces = faces.map(|f| regions[f].loops()[0][0].surface());
     let natural = surfaces.map(domain);
-    let shared_boundary=crate::source_shared_chord_map::prepare(body,faces,100000)?;
+    let shared_boundary=crate::source_shared_chord_map::prepare_for_chords(body,faces,100000)?;
     let [mut first_normals, mut second_normals] =
         surfaces.map(nurbs_core::normal_alignment::OriginalNormalCache::new);
     let mut queue = vec![natural];

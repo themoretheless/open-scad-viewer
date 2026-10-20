@@ -1,0 +1,281 @@
+{
+  "purpose": "Attribute all aligned-chord span work before selecting next optimization",
+  "check": "sum of six new stages plus intrinsic and profile-transition equals total spans",
+  "nativeCheck": "passed",
+  "run": {
+    "session": 20344,
+    "status": "running",
+    "cells": 100000,
+    "spans": 1000000,
+    "trimCells": 1000000,
+    "report": "/tmp/expression-wall-stage-report-20261010.json",
+    "log": "/tmp/expression-wall-stage-run-20261010.log",
+    "observedPid": 47049
+  },
+  "sourceSHA256": {
+    "crates/brep-core/src/source_profile_shell_wall.rs": "a554c1df274436942a855ca77a1b05b28714aef6f4fc0581df2e593a519b144d",
+    "crates/brep-core/src/source_support_shell.rs": "b15d91b9752d063f0ee13c86281c4c407601d0f7b300b816b9b01ef23f4eca22"
+  },
+  "limits": [
+    "Instrumentation does not improve coverage by itself",
+    "New native counters are not yet WASM packaged",
+    "Whole-body minimum thickness remains unqualified"
+  ],
+  "transport": {
+    "stageFields": "optional for compatibility with currently packaged WASM",
+    "whenPresent": "all six stages required, nonnegative safe integers, exact sum with intrinsic and profile-transition must equal spans",
+    "testsPassed": 26,
+    "typecheck": "passed",
+    "nativeWireTest": "passed",
+    "log": "/tmp/aligned-stage-transport-tests-20261010.log"
+  },
+  "boundedRun": {
+    "session": 15704,
+    "pid": 54513,
+    "status": "running",
+    "cells": 10000,
+    "spans": 1000000,
+    "trimCells": 100000,
+    "report": "/tmp/expression-wall-stage-standard-20261010.json",
+    "log": "/tmp/expression-wall-stage-standard-20261010.log",
+    "scope": "Same cell and trim limits as standard UI; native fixture span limit is 1000000, versus 100000 in UI. Compare actual spent work before asserting equivalence."
+  },
+  "wasmBuild": {
+    "session": 96167,
+    "status": "running",
+    "log": "/tmp/expression-stage-wasm-build-20261010.log"
+  },
+  "stagePanel": {
+    "testsPassed": 31,
+    "typecheck": "passed",
+    "browser": "pending new WASM",
+    "workerGate": "scripts/check-expression-inspection-worker.mts --aligned-chords --span-stages",
+    "scope": "Native span-work counts only, not elapsed time"
+  },
+  "analysisTool": {
+    "path": "scripts/summarize-expression-wall-work.mjs",
+    "baselineSummary": "expression-wall-stage-baseline-summary-2026-10-10.json",
+    "baselineUnattributedSpans": 723963,
+    "scope": "Diagnostic counts only; does not infer geometry or timing"
+  },
+  "boundedStageVerified": {
+    "status": "passed",
+    "testSeconds": 428.39,
+    "cells": 10000,
+    "spans": 57471,
+    "domainCells": 100000,
+    "pendingRegions": 4085,
+    "pendingFacePairs": 59,
+    "unattributedSpans": 0,
+    "wholeBodyThicknessQualified": false,
+    "report": "expression-wall-stage-standard-20261010.json",
+    "summary": "expression-wall-stage-standard-summary-20261010.json"
+  },
+  "preparedTransitionReuse": {
+    "status": "passed-fixture-and-exact-report-comparison",
+    "testSession": 34258,
+    "log": "/tmp/expression-wall-prepared-standard-20261010.log",
+    "report": "/tmp/expression-wall-prepared-standard-20261010.json",
+    "scope": "Reuse immutable constrained transition for position and normal cache misses; cfg(test) compares exact bounds and span counts to original public shell path",
+    "wasmIncludesChange": false,
+    "pid": 66241,
+    "sourceSha256": "a912d6a33f91a02c0a03ecd4b73a8c9f7a2b35e028af7d99ce4bfa99553c0c60",
+    "comparison": "Exact equality of Option interval bounds and spent spans for every transition position/normal cache miss in test builds",
+    "performanceMeasured": false,
+    "exactReportEquality": true,
+    "reportSha256": "9eb81df035282cb4fbe5cd06352d9893a2125b650193f61b45b189e896044b7c",
+    "pendingRegions": 4085,
+    "spans": 57471,
+    "geometryQualified": false,
+    "fixtureExitCode": 0
+  },
+  "exactReportComparator": {
+    "script": "scripts/compare-expression-wall-reports.mjs",
+    "sameReportControl": "passed",
+    "mutatedUvControl": "rejected-as-required",
+    "newReportComparison": "passed-byte-identical",
+    "geometryQualified": false
+  },
+  "nativeSpanBudgetControl": {
+    "environment": "BREP_EXPRESSION_WALL_SPANS",
+    "range": [
+      100000,
+      1000000
+    ],
+    "default": 1000000,
+    "purpose": "Match standard UI span limit without changing existing extended baseline",
+    "status": "compiled-new-exact-ui-budget-run-started"
+  },
+  "fullStageVerified": {
+    "status": "passed",
+    "seconds": 1241.13,
+    "cells": 66202,
+    "spans": 1000000,
+    "pendingRegions": 30557,
+    "pendingFacePairs": 46,
+    "baselineExactEqualityExcludingAddedSpanStages": true,
+    "largestStage": "corrected_pair",
+    "largestStageSpans": 427438,
+    "wholeBodyThicknessQualified": false,
+    "largestPendingPair": {
+      "faces": [
+        28,
+        28
+      ],
+      "regions": 10419
+    }
+  },
+  "wireStageRegression": {
+    "passed": 3,
+    "command": "native test binary source_profile_body::assembled_shell::wall::product_tests --nocapture",
+    "includesNonzeroSixStageWireFields": true,
+    "log": "/tmp/expression-wall-stage-wire-tests-20261010.log"
+  },
+  "currentWallSourceSha256": "1a90e63391373864bca4bc1caac6d6057448580b17744226285fa7be41b35c98",
+  "sharedTransitionWorkspace": {
+    "status": "standard-native-fixture-and-coverage-comparison-passed",
+    "testSession": 63488,
+    "log": "/tmp/shared-transition-workspace-20261010.log",
+    "sourceSha256": "9c83d85efa1bb7bfc68d49bfc553523f39ee0220b578795b25f831740689eb2f",
+    "scope": "Owner-bound position and derivative cache shared with corrected endpoint-pair work; validates domain before cache and preserves zero-budget refusal",
+    "wallIntegrated": true,
+    "wasmIncludesChange": false,
+    "focusedTestSeconds": 0.7,
+    "suiteSession": 84325,
+    "suiteLog": "/tmp/shared-transition-workspace-suite-20261010.log",
+    "wallRegressionSession": 14367,
+    "wallRegressionLog": "/tmp/expression-wall-shared-standard-20261010.log",
+    "wallRegressionReport": "/tmp/expression-wall-shared-standard-20261010.json",
+    "wallBudgets": {
+      "cells": 10000,
+      "spans": 100000,
+      "domainCells": 100000
+    },
+    "wallSourceSha256": "3cc4e7c81a0de5b064b283481b8f526b7423f7d864153719477e38ffa0cb297d",
+    "performanceMeasured": false,
+    "suitePassed": 9,
+    "suiteSeconds": 4.54,
+    "endpointPairReuseRegression": {
+      "passed": true,
+      "testSeconds": 0.48,
+      "log": "/tmp/shared-transition-endpoint-reuse-20261010.log",
+      "scope": "Two source axes on planar corrected bridge; preloaded native endpoint position/derivative hulls preserve the pair exclusion and strictly reduce pair span work",
+      "wholeBodyPerformanceQualified": false
+    },
+    "wallFixtureSeconds": 398.52,
+    "wallFixtureExitCode": 0,
+    "standardCells": 10000,
+    "standardSpans": 54588,
+    "baselineSpans": 57471,
+    "spanWorkSaved": 2883,
+    "pendingRegions": 4085,
+    "exactCoveragePreserved": true,
+    "wallTimeSpeedupQualified": false,
+    "wasmBuildSession": 56897,
+    "wasmBuildLog": "/tmp/shared-transition-wasm-build-20261010.log",
+    "extendedSession": 93993,
+    "extendedLog": "/tmp/expression-wall-shared-extended-20261010.log",
+    "extendedReport": "/tmp/expression-wall-shared-extended-20261010.json"
+  },
+  "nativeOptimizerParity": {
+    "status": "passed-byte-identical",
+    "session": 27318,
+    "optimizer": "/Users/themoretheless/.cargo/bin/wasm-opt",
+    "version": "116",
+    "pinnedBinaryenVersion": "116.0.0",
+    "input": "/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/osv-wasm-opt-9doiJg/input.wasm",
+    "output": "/tmp/expression-stage-native-opt-parity-20261010.wasm",
+    "log": "/tmp/expression-stage-native-opt-parity-20261010.log",
+    "currentJsBuildPreserved": true,
+    "buildRecipeChanged": false,
+    "exitCode": 0,
+    "sha256": "55fa368b07f2b69792a0c5f886c7cae7c9ae27f66e4249865b03dce6793d9cf6",
+    "byteLength": 12969392,
+    "scope": "One exact stage-instrumented artifact only; default build recipe remains pinned JS Binaryen"
+  },
+  "sharedCoverageComparator": {
+    "script": "scripts/compare-expression-wall-reports.mjs",
+    "flag": "--work-reduction",
+    "sameCoverageControl": "passed",
+    "mutatedUvControl": "rejected-as-required",
+    "invariants": "Exact regions, domains, refusal reasons and exclusion counts; complete stage accounting; nonincreasing total span work",
+    "geometryQualified": false
+  },
+  "stageWasmOptimizedArtifact": {
+    "status": "build-passed",
+    "sha256": "55fa368b07f2b69792a0c5f886c7cae7c9ae27f66e4249865b03dce6793d9cf6",
+    "byteLength": 12969392,
+    "includesSharedCache": false,
+    "includesSixStageCounters": true,
+    "exitCode": 0
+  },
+  "stageWorkerVerified": {
+    "zero": {
+      "passed": true,
+      "session": 99259
+    },
+    "bounded": {
+      "passed": true,
+      "session": 9108
+    },
+    "wasmSha256": "55fa368b07f2b69792a0c5f886c7cae7c9ae27f66e4249865b03dce6793d9cf6",
+    "validatesSpanStageSum": true,
+    "checksCancellationRetryAndLateResponses": true
+  },
+  "stagePanelBrowser": {
+    "status": "passed",
+    "tab": "67",
+    "url": "http://127.0.0.1:5198/",
+    "userTab56Preserved": true,
+    "pendingRegions": 4085,
+    "cells": 10000,
+    "spans": 57471,
+    "stageCounts": {
+      "position": 1892,
+      "normal": 3087,
+      "shared_corner": 6952,
+      "original_pair": 18550,
+      "retained_pair": 12004,
+      "corrected_pair": 6877,
+      "intrinsic": 7065,
+      "profile_transition": 1044
+    },
+    "screenshot": "expression-span-stage-ui-2026-10-10.png",
+    "includesSharedCache": false,
+    "escapeRetry": {
+      "passed": true,
+      "escapeClearedResult": true,
+      "controlsReenabled": true,
+      "retryPendingRegions": 4085,
+      "retryCells": 10000,
+      "retrySpans": 57471,
+      "screenshot": "expression-span-stage-retry-ui-2026-10-10.png",
+      "wasmSha256": "55fa368b07f2b69792a0c5f886c7cae7c9ae27f66e4249865b03dce6793d9cf6"
+    }
+  },
+  "intrinsicTransitionWorkspace": {
+    "status": "native-fixture-and-exact-coverage-comparison-passed",
+    "suitePassed": 9,
+    "suiteSeconds": 2.86,
+    "suiteLog": "/tmp/shared-transition-intrinsic-suite-20261010.log",
+    "checkLog": "/tmp/shared-intrinsic-wall-check-20261010.log",
+    "fixtureSession": 64648,
+    "fixtureLog": "/tmp/expression-wall-shared-intrinsic-standard-20261010.log",
+    "fixtureReport": "/tmp/expression-wall-shared-intrinsic-standard-20261010.json",
+    "sourceSha256": "74a8b29706946f7c18d78204bac111d1763af9333a143a85824eefb6c777494d",
+    "wallSourceSha256": "0ed1b62baad09a7f08bde7e26187cb1646c34ee779ab0d1f4e2a606973e0feee",
+    "scope": "Reuse complete corrected derivatives between whole-rectangle self-chord and endpoint-pair inspections; same native exclusion theorem and owner; zero-work refusal preserved",
+    "includedInWasmBuild56897": false,
+    "wholeBodyPerformanceQualified": false,
+    "fixtureExitCode": 0,
+    "fixtureSeconds": 563.35,
+    "cells": 10000,
+    "spans": 48488,
+    "priorSharedSpans": 54588,
+    "baselineSpans": 57471,
+    "savedSpansFromBaseline": 8983,
+    "pendingRegions": 4085,
+    "exactCoveragePreserved": true,
+    "wallTimeSpeedupQualified": false
+  }
+}

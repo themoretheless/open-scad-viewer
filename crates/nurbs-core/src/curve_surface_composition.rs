@@ -258,6 +258,14 @@ pub(crate) fn surface_net_on_with_weights(
     s:&Surface,span:[usize;2],domain:[[f64;2];2],
     weight:impl Fn(usize,usize)->Result<Interval>,
 )->Result<Vec<Vec<[Interval;4]>>> {
+    surface_net_on_with_weights_centered(s,span,domain,weight,[0.;3])
+}
+/// Center original positions before homogeneous multiplication and extraction.
+/// The interval subtraction encloses the exact translated control coordinates.
+pub(crate) fn surface_net_on_with_weights_centered(
+    s:&Surface,span:[usize;2],domain:[[f64;2];2],
+    weight:impl Fn(usize,usize)->Result<Interval>,origin:[f64;3],
+)->Result<Vec<Vec<[Interval;4]>>> {
     let [iu, iv] = span;
     let (p, q) = (s.degree_u, s.degree_v);
     let mut controls = Vec::new();
@@ -269,10 +277,14 @@ pub(crate) fn surface_net_on_with_weights(
             weights[0] = weights[0].min(w.lo);
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];
+            let centered=|k:usize| -> Result<Interval> {
+                if origin[k]==0. {Ok(Interval::point(cp[k]))}
+                else {Interval::point(cp[k]).sub(Interval::point(origin[k]))}
+            };
             row.push([
-                Interval::point(cp[0]).mul(w)?,
-                Interval::point(cp[1]).mul(w)?,
-                Interval::point(cp[2]).mul(w)?,
+                centered(0)?.mul(w)?,
+                centered(1)?.mul(w)?,
+                centered(2)?.mul(w)?,
                 w,
             ]);
         }

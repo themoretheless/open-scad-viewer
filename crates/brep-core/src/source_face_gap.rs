@@ -12,13 +12,13 @@ pub struct Limits {
     pub cells: usize,
     pub spans: usize,
 }
-pub struct Certificate<'a> {
-    body: &'a Body,
+pub struct Certificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     faces: [Vec<usize>; 2],
     lower_mm: f64,
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E: crate::source_seam_tangency::Carrier> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn faces(&self) -> [&[usize]; 2] {
@@ -28,8 +28,8 @@ impl<'a> Certificate<'a> {
         self.lower_mm
     }
 }
-pub struct Report<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub cells: usize,
     pub spans: usize,
     pub uncertain_faces: Option<[usize; 2]>,
@@ -84,12 +84,12 @@ fn midpoint_chart_pair(
 }
 /// Certificates retain every selected pair. An exhausted or unresolved pair
 /// refuses; chart clearance never creates a trimmed-face upper witness.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     faces: [&[usize]; 2],
     minimum_mm: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     let shell = body.geometry().shell();
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.

@@ -1,6 +1,38 @@
 import {it,expect} from 'vitest'
 import {selectedBrepSupport,solidTopology} from '../src/services/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep,createBrepSphere} from '../src/services/geometry/brep'
+import {exportDirectStepV9,importDirectStepV9} from '../src/services/cadNurbsStep'
+it('keeps authored selection identities attached to geometry after STEP reorders topology',async()=>{
+ const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
+ const source=createBrepBox([2,3,4],[7,11,13])
+ const imported=importDirectStepV9(exportDirectStepV9(source).text)
+ expect(imported.identity.preserved).toBe(true)
+ expect(imported.identity.createdCount).toBe(0)
+ const before=JSON.stringify(source)
+ const key=(values:number[])=>values.map(v=>v.toFixed(7)).join(',')
+ const faceIds=new Map<string,string>(),edgeIds=new Map<string,string>()
+ for(const [cycle,brep] of [source,imported.model].entries()){
+  const mesh=tessellateNurbsBrep(brep,cycle?8:1),body={id:'part',name:'Part',brep,mesh}
+  const topology=solidTopology(mesh)
+  for(const face of topology.faces){
+   const index=selectedBrepSupport(body,face.triangles)
+   const id=brep.topologyIds!.faces[index]
+   const signature=key([...face.normal,...face.center])
+   if(cycle===0)faceIds.set(signature,id)
+   else expect(id).toBe(faceIds.get(signature))
+  }
+  for(const edge of topology.edges){
+   const index=selectedBrepStraightEdge(body,[edge.a,edge.b])
+   const id=brep.topologyIds!.edges[index]
+   const endpoints=brep.edges[index].vertices.map(v=>key(brep.vertices[v].point)).sort().join('|')
+   if(cycle===0)edgeIds.set(endpoints,id)
+   else expect(id).toBe(edgeIds.get(endpoints))
+  }
+ }
+ expect(faceIds.size).toBe(6)
+ expect(edgeIds.size).toBe(12)
+ expect(JSON.stringify(source)).toBe(before)
+})
 it('resolves each planar display face to its authored support at different display detail',()=>{
  const brep=createBrepBox([2,3,4],[7,11,13])
  for(const detail of [1,3,8]){

@@ -79,3 +79,43 @@ it('preserves quota errors and the old head when put throws, then retries succes
  const next=await writeSolidDraftHead('model',initial.revision,'new geometry')
  expect(await readSolidDraftHead('model')).toEqual(next)
 })
+
+it('rejects a head returned for another document key',async()=>{
+ vi.stubGlobal('indexedDB',new IDBFactory())
+ const initial=await writeSolidDraftHead('model',null,'retained')
+ const request=indexedDB.open('scad-solid-draft-heads-v1')
+ const db=await new Promise<IDBDatabase>((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
+ const prototype=Object.getPrototypeOf(db.transaction('heads','readonly').objectStore('heads'))
+ const original=prototype.get
+ const spy=vi.spyOn(prototype,'get').mockImplementation(function(this:IDBObjectStore,...args:any[]){
+  const result=original.apply(this,args)
+  result.addEventListener('success',()=>{Object.defineProperty(result,'result',{value:{...initial,key:'another-model'}})})
+  return result
+ })
+ try{
+  await expect(readSolidDraftHead('model')).rejects.toThrow('Saved draft head is invalid')
+  await expect(writeSolidDraftHead('model',initial.revision,'replacement')).rejects.toThrow('DRAFT_CORRUPT')
+ }finally{spy.mockRestore();db.close()}
+ expect(await readSolidDraftHead('model')).toEqual(initial)
+})
+it('preserves one complete winner across twenty rounds of competing document revisions',async()=>{
+ vi.stubGlobal('indexedDB',new IDBFactory())
+ let head=await writeSolidDraftHead('model',null,JSON.stringify({revision:0,bodies:[]}))
+ const revisions=new Set([head.revision])
+ for(let step=1;step<=20;step++){
+  const candidates=Array.from({length:4},(_,writer)=>JSON.stringify({revision:step,writer,bodies:[{id:'stable-body',dimensions:[step,writer+1,3]}]}))
+  const results=await Promise.allSettled(candidates.map(text=>writeSolidDraftHead('model',head.revision,text)))
+  const winners=results.filter((r):r is PromiseFulfilledResult<Awaited<ReturnType<typeof writeSolidDraftHead>>>=>r.status==='fulfilled')
+  expect(winners).toHaveLength(1)
+  expect(results.filter(r=>r.status==='rejected')).toHaveLength(3)
+  for(const result of results)if(result.status==='rejected')expect(result.reason.message).toBe('DRAFT_CONFLICT')
+  const saved=await readSolidDraftHead('model')
+  expect(saved).toEqual(winners[0]!.value)
+  expect(candidates).toContain(saved!.text)
+  expect(revisions.has(saved!.revision)).toBe(false)
+  revisions.add(saved!.revision)
+  head=saved!
+ }
+ expect(revisions.size).toBe(21)
+ expect(JSON.parse((await readSolidDraftHead('model'))!.text).revision).toBe(20)
+})

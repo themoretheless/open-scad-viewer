@@ -1,0 +1,247 @@
+{
+  "schema": "cad-refinement-comparison/1",
+  "acceptedBefore": 271,
+  "acceptedAfter": 371,
+  "pendingBefore": 4615,
+  "pendingAfter": 5105,
+  "solidQualified": false,
+  "faces": [
+    {
+      "face": 0,
+      "pendingBefore": 1078,
+      "pendingAfter": 616,
+      "pendingUvAreaBefore": 0.7499999999999993,
+      "pendingUvAreaAfter": 0.7499999999999998,
+      "pendingUvAreaDelta": 4.440892098500626e-16
+    },
+    {
+      "face": 1,
+      "pendingBefore": 22,
+      "pendingAfter": 54,
+      "pendingUvAreaBefore": 68.82071809694591,
+      "pendingUvAreaAfter": 59.44354996701541,
+      "pendingUvAreaDelta": -9.377168129930503
+    },
+    {
+      "face": 2,
+      "pendingBefore": 30,
+      "pendingAfter": 30,
+      "pendingUvAreaBefore": 2.859375000000001,
+      "pendingUvAreaAfter": 2.859375000000001,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 3,
+      "pendingBefore": 10,
+      "pendingAfter": 10,
+      "pendingUvAreaBefore": 2.5000000000000004,
+      "pendingUvAreaAfter": 2.5000000000000004,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 4,
+      "pendingBefore": 12,
+      "pendingAfter": 32,
+      "pendingUvAreaBefore": 73.53645200861634,
+      "pendingUvAreaAfter": 71.11355553560509,
+      "pendingUvAreaDelta": -2.4228964730112494
+    },
+    {
+      "face": 5,
+      "pendingBefore": 94,
+      "pendingAfter": 126,
+      "pendingUvAreaBefore": 0.9999999999999998,
+      "pendingUvAreaAfter": 1.0,
+      "pendingUvAreaDelta": 2.220446049250313e-16
+    },
+    {
+      "face": 6,
+      "pendingBefore": 34,
+      "pendingAfter": 82,
+      "pendingUvAreaBefore": 128.08202337852472,
+      "pendingUvAreaAfter": 109.91233035236951,
+      "pendingUvAreaDelta": -18.169693026155215
+    },
+    {
+      "face": 7,
+      "pendingBefore": 58,
+      "pendingAfter": 78,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.0,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 8,
+      "pendingBefore": 24,
+      "pendingAfter": 24,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.0,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 9,
+      "pendingBefore": 26,
+      "pendingAfter": 66,
+      "pendingUvAreaBefore": 129.1944599695292,
+      "pendingUvAreaAfter": 106.84149794810543,
+      "pendingUvAreaDelta": -22.352962021423764
+    },
+    {
+      "face": 10,
+      "pendingBefore": 51,
+      "pendingAfter": 51,
+      "pendingUvAreaBefore": 0.9374999999999998,
+      "pendingUvAreaAfter": 0.9374999999999998,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 11,
+      "pendingBefore": 22,
+      "pendingAfter": 54,
+      "pendingUvAreaBefore": 68.84388171707253,
+      "pendingUvAreaAfter": 60.711865811117676,
+      "pendingUvAreaDelta": -8.132015905954859
+    },
+    {
+      "face": 12,
+      "pendingBefore": 32,
+      "pendingAfter": 32,
+      "pendingUvAreaBefore": 2.9375,
+      "pendingUvAreaAfter": 2.9375,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 13,
+      "pendingBefore": 10,
+      "pendingAfter": 10,
+      "pendingUvAreaBefore": 2.5000000000000004,
+      "pendingUvAreaAfter": 2.5000000000000004,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 14,
+      "pendingBefore": 12,
+      "pendingAfter": 32,
+      "pendingUvAreaBefore": 73.53645200861637,
+      "pendingUvAreaAfter": 71.11355553560512,
+      "pendingUvAreaDelta": -2.4228964730112494
+    },
+    {
+      "face": 15,
+      "pendingBefore": 89,
+      "pendingAfter": 140,
+      "pendingUvAreaBefore": 256.9151115494015,
+      "pendingUvAreaAfter": 250.6829363385634,
+      "pendingUvAreaDelta": -6.232175210838108
+    },
+    {
+      "face": 16,
+      "pendingBefore": 226,
+      "pendingAfter": 348,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.000000000000001,
+      "pendingUvAreaDelta": 8.881784197001252e-16
+    },
+    {
+      "face": 17,
+      "pendingBefore": 60,
+      "pendingAfter": 60,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.0,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 18,
+      "pendingBefore": 91,
+      "pendingAfter": 140,
+      "pendingUvAreaBefore": 258.496044816454,
+      "pendingUvAreaAfter": 249.90046650608184,
+      "pendingUvAreaDelta": -8.595578310372161
+    },
+    {
+      "face": 19,
+      "pendingBefore": 89,
+      "pendingAfter": 140,
+      "pendingUvAreaBefore": 256.91511154940156,
+      "pendingUvAreaAfter": 250.68293633856345,
+      "pendingUvAreaDelta": -6.232175210838108
+    },
+    {
+      "face": 20,
+      "pendingBefore": 226,
+      "pendingAfter": 348,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.000000000000001,
+      "pendingUvAreaDelta": 8.881784197001252e-16
+    },
+    {
+      "face": 21,
+      "pendingBefore": 60,
+      "pendingAfter": 60,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.0,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 22,
+      "pendingBefore": 91,
+      "pendingAfter": 140,
+      "pendingUvAreaBefore": 258.4960448164539,
+      "pendingUvAreaAfter": 249.90046650608184,
+      "pendingUvAreaDelta": -8.595578310372048
+    },
+    {
+      "face": 23,
+      "pendingBefore": 90,
+      "pendingAfter": 141,
+      "pendingUvAreaBefore": 256.60844423807316,
+      "pendingUvAreaAfter": 250.37626902723508,
+      "pendingUvAreaDelta": -6.232175210838079
+    },
+    {
+      "face": 24,
+      "pendingBefore": 226,
+      "pendingAfter": 348,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.000000000000001,
+      "pendingUvAreaDelta": 8.881784197001252e-16
+    },
+    {
+      "face": 25,
+      "pendingBefore": 60,
+      "pendingAfter": 60,
+      "pendingUvAreaBefore": 3.0,
+      "pendingUvAreaAfter": 3.0,
+      "pendingUvAreaDelta": 0.0
+    },
+    {
+      "face": 26,
+      "pendingBefore": 91,
+      "pendingAfter": 140,
+      "pendingUvAreaBefore": 258.49604481645395,
+      "pendingUvAreaAfter": 249.90046650608184,
+      "pendingUvAreaDelta": -8.595578310372105
+    },
+    {
+      "face": 27,
+      "pendingBefore": 508,
+      "pendingAfter": 584,
+      "pendingUvAreaBefore": 0.04999999999999999,
+      "pendingUvAreaAfter": 0.04999999999999997,
+      "pendingUvAreaDelta": -2.0816681711721685e-17
+    },
+    {
+      "face": 28,
+      "pendingBefore": 1193,
+      "pendingAfter": 1159,
+      "pendingUvAreaBefore": 0.988932291666665,
+      "pendingUvAreaAfter": 0.9889322916666655,
+      "pendingUvAreaDelta": 5.551115123125783e-16
+    }
+  ],
+  "numericFailuresAfter": [],
+  "leafIncidenceClosedAfter": true,
+  "scope": "Numerical UV coverage diagnostic. Different leaf counts alone do not establish better geometric coverage.",
+  "beforeSha256": "32831efafd91ad816d018cf98d49958c658412539b5b4ba5497098ac25a6e963",
+  "afterSha256": "d88ad8eb3dd38df9e0c752ba61c420898b4f6830b62ba733b62e5985aca98f91"
+}

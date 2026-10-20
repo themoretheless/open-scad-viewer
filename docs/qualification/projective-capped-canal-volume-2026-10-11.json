@@ -1,0 +1,49 @@
+{
+  "scope": "native-projective-capped-canal-contact-and-volume",
+  "verification": {
+    "integration_passed": 5,
+    "failed": 0,
+    "integration_log": "/tmp/source-projective-endcap-volume-20261011.log",
+    "pole_regression_passed": 1,
+    "pole_regression_log": "/tmp/source-projective-pole-contact-regression-20261011.log"
+  },
+  "fixture": {
+    "spine": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        8
+      ]
+    ],
+    "endpoint_radii": [
+      0.5,
+      1.25
+    ],
+    "face_pairs": 120,
+    "absolute_volume_interval_width_max": 0.25
+  },
+  "verified": [
+    "all original face pairs qualify including allowed pole contacts",
+    "conservative positive unsigned volume contains independent frustum and two spherical segment formula",
+    "signed volume excludes zero and reverse orientation is required",
+    "original regions, poles and vertices remain retained",
+    "paired pole contacts qualify both orders and refuse exhausted work"
+  ],
+  "limitations": [
+    "specific straight-spine linear-radius envelope only",
+    "projective pole body replay and Model STEP transfer not yet qualified",
+    "general curved-spine and complex corner fillets incomplete",
+    "WASM deployment unchanged"
+  ],
+  "sha256": {
+    "source_pole_planar_contact.rs": "894b188a52202bc47da434b15b115fe12bbdaadb14e7afa8c7a6ae442b5f2856",
+    "source_pole_paired_contact.rs": "4bfa340b574b286cbabbf10f5cb94f2d69a4a25192d04189a3977cfb68bb9381",
+    "source_face_contacts.rs": "35ee1ff4c1357c9a63965cf40e8c36029488f118e66611b89759c22b5f29deec",
+    "source_support_shell.rs": "9fcdc3e415f11197421f646ede404ee41341b6c3b60aa0c74153f0beb7d89880"
+  }
+}

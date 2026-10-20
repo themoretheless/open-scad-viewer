@@ -1,0 +1,103 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "beforeRegions": 18,
+      "afterRegions": 10,
+      "beforeRawParameterVolume": {
+        "numerator": 759982437118771335,
+        "denominator": 36028797018963968,
+        "value": 21.093750000000004
+      },
+      "afterRawParameterVolume": {
+        "numerator": 422212465065984075,
+        "denominator": 36028797018963968,
+        "value": 11.718750000000002
+      }
+    },
+    {
+      "faces": [
+        5,
+        23
+      ],
+      "beforeRegions": 6,
+      "afterRegions": 0,
+      "beforeRawParameterVolume": {
+        "numerator": 84442493013196805,
+        "denominator": 9007199254740992,
+        "value": 9.375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0
+      }
+    },
+    {
+      "faces": [
+        10,
+        19
+      ],
+      "beforeRegions": 8,
+      "afterRegions": 0,
+      "beforeRawParameterVolume": {
+        "numerator": 28147497671065605,
+        "denominator": 2251799813685248,
+        "value": 12.500000000000002
+      },
+      "afterRawParameterVolume": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0
+      }
+    },
+    {
+      "faces": [
+        10,
+        23
+      ],
+      "beforeRegions": 32,
+      "afterRegions": 0,
+      "beforeRawParameterVolume": {
+        "numerator": 50,
+        "denominator": 1,
+        "value": 50.0
+      },
+      "afterRawParameterVolume": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0
+      }
+    },
+    {
+      "faces": [
+        24,
+        24
+      ],
+      "beforeRegions": 101,
+      "afterRegions": 109,
+      "beforeRawParameterVolume": {
+        "numerator": 621,
+        "denominator": 512,
+        "value": 1.212890625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 261,
+        "denominator": 256,
+        "value": 1.01953125
+      }
+    }
+  ],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "requestSha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+  "sourceSha256": {
+    "alternate-owned-path-dispatch-native-2026-10-11.json": "642307338270b65d3df027b7cc7eb3b7945b5e8da3e372120f34ed754d520e51",
+    "source-boundary-point-band-dispatch-native-2026-10-11.json": "793de4840c9f2d7f294c07851db4fe098a801d5ffbf57f32cfb208a7be9ac38f"
+  }
+}

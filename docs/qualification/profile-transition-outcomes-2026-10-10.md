@@ -1,0 +1,13 @@
+# Retained/transition chord query outcomes
+
+Native diagnostics now distinguish complete false (inconclusive exclusion) from None (incomplete query) using profile_transition_inconclusive and profile_transition_unresolved. Together with profile_transition_excluded these partition profile_transition_checked. No query budgets, query order, certificates or geometric formulas changed. None is not labelled as budget exhaustion: source continuity or enclosure refusal can also be incomplete.
+
+Transport accepts legacy reports without either field; if one is present, both must be valid nonnegative integers and their sum with excluded must equal checked. Focused transport tests: 9 passed. Native product/serialization tests: 3 passed; subsequent added wire assertions have a separate run. Logs `/tmp/profile-transition-outcomes-native-20261010.log`, `/tmp/profile-transition-outcomes-transport-20261010.log`.
+
+The measured carrier run is active with 10000 cells, 1000000 spans, 100000 trim cells and unchanged 256-span per retained/transition query cap. Report target `mapped-retained-carrier-2026-10-08/profile-transition-outcomes-wall-2026-10-10.json`. The older full B-rep suite (session 10415) predates these diagnostic additions and remains active on its original binary. Published WASM predates the section position reuse and these counters.
+
+Current wire assertion run terminated successfully (1 passed). vue-tsc exited 0. Comparator extension requires explicit --transition-outcomes alongside work-reduction mode; it validates nonnegative integer outcome accounting, preserves existing outcome counts when already present, and keeps every original coverage/refusal/exclusion field exact. Four synthetic controls passed: opt-in schema extension accepted, default mode refused the extra fields, wrong outcome sum refused, changed pending reason refused. These are verifier controls, not geometry evidence. Both native integration sessions remain active.
+
+## Terminal carrier result
+
+The matched carrier test completed: 1 passed, 0 failed in 914.10 seconds. Exact coverage comparison with explicit outcome schema extension passed, as did the independent pending containment and request budget comparison. All 4081 pending products remain exact and span work remains 18911. Of 1033 transition queries, 87 excluded contact, 946 returned complete but inconclusive exclusions, and 0 were unresolved. Thus this fixture does not support attributing pending products to incomplete transition queries. Reports: `mapped-retained-carrier-2026-10-08/profile-transition-outcomes-regression-2026-10-10.json` and `profile-transition-outcomes-pending-2026-10-10.json`. This does not qualify whole-wall thickness. The later chord query order run remains active.

@@ -1,0 +1,11 @@
+{
+  "schema": "wasm-compiled-snapshot/1",
+  "sourceManifest": "docs/qualification/mapped-retained-carrier-2026-10-08/exact-rational-boundary-native-inputs-2026-10-11.json",
+  "nativeInputs": 1812,
+  "changedInputs": [],
+  "rawWasm": "crates/target/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+  "rawSha256": "68bc000728b3b668cbb59335b74e99e361ffce65fc5885a7f0210669beadd4a7",
+  "rawBytes": 14780595,
+  "scope": "Latest exact rational-boundary and transverse-cone generation; optimizer copies immutable raw bytes before publication",
+  "workerQualified": false
+}

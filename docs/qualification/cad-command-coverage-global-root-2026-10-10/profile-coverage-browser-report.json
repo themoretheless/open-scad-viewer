@@ -1,0 +1,24 @@
+{
+  "scope": "Actual browser production ProfileBridgeCheck panel and production WASM worker; isolated fixture, no document writes",
+  "wasmSha256": "41a8746ec39e719a4bf9866771fe65c4e3dd6f7e3162b531b9bea6431903884a",
+  "fixture": "tests/fixtures/profile-coverage-browser.html",
+  "checks": {
+    "invalidZeroScaleAlertAndFocus": true,
+    "enterStartsRealWorker": true,
+    "escapeCancelsAndReturnsRunFocus": true,
+    "mouseRerunAfterCancel": true,
+    "unresolvedPairsDisplayed": 15,
+    "coverageCells": 2564,
+    "firstAndLastPairCoordinatesDisplayed": true,
+    "sourceReplacementClearsResult": true,
+    "escapeClosesAndReturnsToggleFocus": true
+  },
+  "consoleErrors": [],
+  "screenshot": "/tmp/profile-coverage-browser-20261010.png",
+  "limits": [
+    "No full-modeler selection or scene highlight qualification",
+    "No worker failure injection or localized Retry-after-error browser claim",
+    "No full P0 command qualification",
+    "Predates fixed-shear and retained-profile-cache WASM publication"
+  ]
+}

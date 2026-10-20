@@ -1,0 +1,35 @@
+{
+  "scope": "Shared retained original single-Bezier edges with rational candidates for nonlinear UV crossings under exact positive projective maps",
+  "evidence": {
+    "predicates": {
+      "passed": 46,
+      "log": "/tmp/source-fraction-endpoint-predicates-20261011.log",
+      "includes": "Translated authored domains, wrong rational parameter, invalid denominator and work limit"
+    },
+    "native_shared_edge_and_restriction": {
+      "passed": 2,
+      "log": "/tmp/source-fraction-shared-edge-regression-20261011.log",
+      "includes": [
+        "original root parameters 1/3 and 1/5",
+        "exact source composition",
+        "fresh root candidate membership",
+        "fresh canonical identity",
+        "binary edge replay",
+        "whole retained seam tangent planes",
+        "restriction bounds, endpoint boxes and display replay",
+        "wrong candidate, wrong map, missing candidate and exact work refusal"
+      ]
+    },
+    "legacy_shell_incidence_and_restore": {
+      "passed": 12,
+      "log": "/tmp/source-fraction-shared-edge-incidence-20261011.log"
+    }
+  },
+  "persistence": "Optional fractionCandidates field; old definitions remain unchanged when no rational candidates are supplied. Cached admission is never serialized.",
+  "limitations": [
+    "Shell assembly does not yet propose rational candidate metadata automatically",
+    "This is a native shared-edge gate, not general fillet-body completion",
+    "Piecewise UV candidate verification and irrational root identity remain separate",
+    "WASM worker UI publication unchanged"
+  ]
+}

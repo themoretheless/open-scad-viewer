@@ -1,0 +1,56 @@
+{
+  "status": "implemented-focused-tests-passed",
+  "scope": "Reuse complete outside-trim rectangle exclusions on contained rectangles of same immutable face; unknown and inside decisions are never reused by containment. Exact finite comparisons, no epsilon.",
+  "sourceSHA256": "13b00a01c006172d62ed94279e3aa524103a67d39e1ee14c6bda775f08b0f212",
+  "runningPreviousBuildSHA256": "2adebe6ba7fd747722034ed533faf998f083a890a6c98242a869950e344f696e",
+  "validation": [
+    "exact containment including ULP, invalid order, NaN and infinity",
+    "rational contour outside subrectangles and boundary refusal",
+    "all contour winding unit tests"
+  ],
+  "pending": [
+    "full controlled wall run with new trim cache",
+    "performance comparison",
+    "WASM packaging",
+    "whole-wall certificate"
+  ],
+  "diagnosticCounters": [
+    "intrinsic_checked",
+    "intrinsic_spans",
+    "intrinsic_unresolved"
+  ],
+  "diagnosticCounterTransportTest": "passed",
+  "fullRun": {
+    "session": 92583,
+    "status": "passed-test-coverage-incomplete",
+    "report": "../expression-wall-trim-cache-2026-10-10.json",
+    "log": "/tmp/expression-wall-trim-cache-20261010.log",
+    "maxCells": 100000,
+    "maxSpans": 1000000,
+    "maxTrimCells": 1000000,
+    "sourceSHA256": "13b00a01c006172d62ed94279e3aa524103a67d39e1ee14c6bda775f08b0f212",
+    "durationSeconds": 1463.84,
+    "pendingRegions": 30557,
+    "pendingFacePairs": 46,
+    "intrinsicChecked": 12309,
+    "intrinsicSpans": 269769,
+    "intrinsicUnresolved": 0
+  },
+  "followup": {
+    "change": "Memoize unresolved intrinsic queries only for the exact immutable face and UV rectangle, retrying when work budget increases; reuse remains None and never excludes a candidate.",
+    "sourceSHA256": "7e594e9fad8cadb405d21c38df1fcad8fa282c5abbee62863564566db332cbfd",
+    "fullRun": {
+      "session": 95879,
+      "status": "passed-test-coverage-incomplete",
+      "report": "../expression-wall-unresolved-cache-2026-10-10.json",
+      "log": "/tmp/expression-wall-unresolved-cache-20261010.log",
+      "sourceSHA256": "7e594e9fad8cadb405d21c38df1fcad8fa282c5abbee62863564566db332cbfd",
+      "maxCells": 100000,
+      "maxSpans": 1000000,
+      "maxTrimCells": 1000000,
+      "pendingRegions": 30557,
+      "intrinsicUnresolved": 0
+    }
+  },
+  "conclusion": "Contained trim cache did not change this fixture coverage. All intrinsic queries completed; unresolved-query memoization is not expected to address the main budget bottleneck on this fixture."
+}

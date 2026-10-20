@@ -1879,6 +1879,10 @@ pub mod source_paired_fiber_contact;
 pub mod source_fiber_boundary;
 pub mod source_fiber_contact;
 pub mod source_affine_use;
+pub mod source_projective_use;
+pub mod source_projective_edge;
+pub mod source_projective_shell_restore;
+pub mod source_projective_body_restore;
 pub mod source_mapped_edge;
 
 pub mod trimmed_shell_recipe;
@@ -1929,7 +1933,7 @@ pub mod source_planar_material_hull;
 
 pub mod source_corner_plane_image;
 
-pub(crate) mod source_planar_flux;
+pub mod source_planar_flux;
 
 pub mod source_face_gap;
 pub mod source_retained_face_gap;

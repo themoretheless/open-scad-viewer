@@ -8,28 +8,28 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
     fiber: source_interior_fiber::Certificate,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
     pub fn regions(&self) -> &[SourceRegion; 2] {
         &self.regions
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
     pub fn fiber(&self) -> &source_interior_fiber::Certificate {
         &self.fiber
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub spans: usize,
     pub driver_cells: usize,
@@ -39,14 +39,14 @@ pub struct Report {
 }
 /// Recheck chart injectivity, the complete original plane preimage, retained
 /// region support on one side, and every possible contact's shared ownership.
-pub fn certify_with_linear_chart(
-    shell: &Shell,
+pub fn certify_with_linear_chart<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_spans: usize,
     max_driver_cells: usize,
     max_linear_cells: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     if faces[0] == faces[1]
         || faces.iter().any(|&f| f >= shell.faces().len())
         || !(1..=100_000_000).contains(&max_work)

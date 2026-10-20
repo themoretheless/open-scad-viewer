@@ -1,0 +1,10 @@
+{
+  "requestSame": true,
+  "responseOutsideWallSame": true,
+  "beforePending": 4081,
+  "afterPending": 6166,
+  "beforeSpans": 17759,
+  "afterSpans": 28392,
+  "accepted": false,
+  "reason": "Coverage regression under unchanged budget; remove candidate integration."
+}

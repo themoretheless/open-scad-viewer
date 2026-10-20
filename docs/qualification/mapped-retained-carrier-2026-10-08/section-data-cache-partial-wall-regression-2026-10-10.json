@@ -1,0 +1,19 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/width-gram-partial-wall-max-2026-10-10.json",
+    "sha256": "d392def9f8c83269c26053dc3e282d1036096448b2aa0e4327d3a0875fd956ba"
+  },
+  "after": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/section-data-cache-partial-wall-max-2026-10-10.json",
+    "sha256": "a84b07d66bef6aab5f791754b2b9407d2763e00b9c1f3f451ec61656fa67fcc8"
+  },
+  "pendingRegions": 46287,
+  "cells": 100000,
+  "spans": 694187,
+  "comparison": "exact-coverage-with-nonincreasing-span-work",
+  "spanWorkSaved": 94672,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

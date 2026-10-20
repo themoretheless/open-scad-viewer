@@ -19,8 +19,8 @@ pub struct Preview {
 /// Keep original parameter intervals and source enclosures. Replace only display
 /// endpoints by the common vertex representative; widen display segment boxes
 /// to include its complete uncertainty enclosure. No proximity joins are used.
-pub fn prepare(
-    shell: &Shell,
+pub fn prepare<E: crate::source_edge_restriction::RestrictionCarrier>(
+    shell: &Shell<E>,
     segments: usize,
     max_spans: usize,
     max_endpoints: usize,
@@ -51,7 +51,7 @@ pub fn prepare(
     for (index, edge) in shell.edges().iter().enumerate() {
         let use_ = shell.uses()[index][0];
         let mut vertices = shell.vertices()[use_.face][use_.wire][use_.edge];
-        if edge.reversed()[0] {
+        if edge.restriction_reversed(0) {
             vertices.reverse();
         }
         let mut display = Restriction::from_edge(edge).display_segments(segments)?;

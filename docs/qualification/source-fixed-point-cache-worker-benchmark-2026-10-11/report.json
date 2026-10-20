@@ -1,0 +1,107 @@
+{
+  "schema": "expression-worker-artifact-benchmark/1",
+  "passed": true,
+  "requestSha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+  "requestBytes": 504950,
+  "artifacts": [
+    {
+      "name": "baseline",
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "byteLength": 13108282,
+      "runtimeManifestSha256": "84d298d7704bd9ff7b46298294eef14a6299f05c16a42ec71c60ea9978919e5a"
+    },
+    {
+      "name": "candidate",
+      "sha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+      "byteLength": 13112736,
+      "runtimeManifestSha256": "c83ce53e54df5464e8e4df66acbe5102731cd1884c2835c7387df3ee2f8683cc"
+    }
+  ],
+  "rows": [
+    {
+      "round": 1,
+      "artifact": "baseline",
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "elapsedMs": 31201.649707999997,
+      "timing": {
+        "warmupMs": 249.53870899999993,
+        "executeMs": 29496.3715,
+        "prepareMs": 0.1836250000014843,
+        "clientElapsedMs": 31152.735167
+      },
+      "fullNativeParity": true
+    },
+    {
+      "round": 1,
+      "artifact": "candidate",
+      "sha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+      "elapsedMs": 32847.40574999999,
+      "timing": {
+        "warmupMs": 516.4604589999944,
+        "executeMs": 30661.226665999995,
+        "prepareMs": 0.24437500000203727,
+        "clientElapsedMs": 32803.44858299999
+      },
+      "fullNativeParity": true
+    },
+    {
+      "round": 2,
+      "artifact": "candidate",
+      "sha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+      "elapsedMs": 32494.908582999997,
+      "timing": {
+        "warmupMs": 249.69724999999744,
+        "executeMs": 31552.68129200001,
+        "prepareMs": 0.15237500000512227,
+        "clientElapsedMs": 32440.708583999993
+      },
+      "fullNativeParity": true
+    },
+    {
+      "round": 2,
+      "artifact": "baseline",
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "elapsedMs": 36898.959625,
+      "timing": {
+        "warmupMs": 268.86212499999965,
+        "executeMs": 35878.19462499999,
+        "prepareMs": 0.12466699999640696,
+        "clientElapsedMs": 36855.881708
+      },
+      "fullNativeParity": true
+    },
+    {
+      "round": 3,
+      "artifact": "baseline",
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "elapsedMs": 45843.25745799998,
+      "timing": {
+        "warmupMs": 306.53925000000163,
+        "executeMs": 44730.62179199999,
+        "prepareMs": 0.11662499999511056,
+        "clientElapsedMs": 45808.78983299999
+      },
+      "fullNativeParity": true
+    },
+    {
+      "round": 3,
+      "artifact": "candidate",
+      "sha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+      "elapsedMs": 46996.101167000015,
+      "timing": {
+        "warmupMs": 695.9957500000019,
+        "executeMs": 45458.82804199998,
+        "prepareMs": 0.11362500002724119,
+        "clientElapsedMs": 46960.965
+      },
+      "fullNativeParity": true
+    }
+  ],
+  "scope": "Three alternating serial rounds per artifact, fresh production Node worker/client each time, complete native response parity on one saved request. Timings include host load and cold worker startup; not browser latency or universal geometry performance.",
+  "concurrentOwnedWorkload": "Fresh enclosure process-crash browser test overlapped rounds; preliminary timing only.",
+  "mediansMs": {
+    "baseline": 36898.959625,
+    "candidate": 32847.40574999999
+  },
+  "performanceImprovementQualified": false
+}

@@ -1,0 +1,12 @@
+{
+  "edits": 20,
+  "deltaMm": [
+    0,
+    2,
+    0
+  ],
+  "undo_matches_baseline": true,
+  "redo_reload_matches_final": true,
+  "topology_ids_preserved": true,
+  "max_vertex_error_mm": 2.842170943040401e-14
+}

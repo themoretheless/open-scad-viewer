@@ -1,0 +1,642 @@
+{
+  "schema": "cad-fresh-independent-dimensions/1",
+  "oracle": "OpenCascade STEP face/line intersection",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-source",
+      "stepSha256": "effeb0fa7d62cf58f082144b6235b7a18d91caee753503f17095206aad8308fe",
+      "gauges": [
+        {
+          "gauge": "horizontal web",
+          "origin": [
+            20,
+            -10,
+            10
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "upright web",
+          "origin": [
+            -10,
+            20,
+            10
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius section",
+          "origin": [
+            -10,
+            0.5,
+            10
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "bracket-edited-rounded",
+      "stepSha256": "943d1749699aad04c95be55ef67993b7b64da3d83dea23a60d81b8decc45c694",
+      "gauges": [
+        {
+          "gauge": "horizontal web",
+          "origin": [
+            23,
+            -12,
+            11
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "upright web",
+          "origin": [
+            -7,
+            18,
+            11
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius section",
+          "origin": [
+            -7,
+            -1.5,
+            11
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10.13397459621556,
+            50
+          ],
+          "actualParametersMm": [
+            10.133974596215563,
+            50.0
+          ],
+          "maxErrorMm": 1.7763568394002505e-15,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "flange-source",
+      "stepSha256": "2831a600c9522878f4f430b40bb7a4ad6a5238aa9481d792ffe76afc7c38348f",
+      "gauges": [
+        {
+          "gauge": "bore and radial walls",
+          "origin": [
+            -30,
+            0,
+            3
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            25,
+            35,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            25.0,
+            35.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "bore off-axis section",
+          "origin": [
+            -30,
+            3,
+            3
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10.22628006671481,
+            26,
+            34,
+            49.77371993328519
+          ],
+          "actualParametersMm": [
+            10.226280066714812,
+            26.0,
+            34.0,
+            49.773719933285186
+          ],
+          "maxErrorMm": 7.105427357601002e-15,
+          "passed": true
+        },
+        {
+          "gauge": "axial thickness",
+          "origin": [
+            10,
+            0,
+            -10
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            16
+          ],
+          "actualParametersMm": [
+            10.0,
+            16.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer rim radius section",
+          "origin": [
+            -30,
+            0,
+            5.5
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            25,
+            35,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            25.0,
+            35.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "flange-edited-rounded",
+      "stepSha256": "ca5a75b8cdeda831e9acf196cb620c65b81bfc9aa96d7642516080c27f582dd7",
+      "gauges": [
+        {
+          "gauge": "bore and radial walls",
+          "origin": [
+            -27,
+            -2,
+            4
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            25,
+            35,
+            50
+          ],
+          "actualParametersMm": [
+            9.999999999999995,
+            25.0,
+            35.0,
+            50.0
+          ],
+          "maxErrorMm": 5.329070518200751e-15,
+          "passed": true
+        },
+        {
+          "gauge": "bore off-axis section",
+          "origin": [
+            -27,
+            1,
+            4
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10.22628006671481,
+            26,
+            34,
+            49.77371993328519
+          ],
+          "actualParametersMm": [
+            10.22628006671481,
+            26.0,
+            34.0,
+            49.77371993328519
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "axial thickness",
+          "origin": [
+            13,
+            -2,
+            -9
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            16
+          ],
+          "actualParametersMm": [
+            10.0,
+            16.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer rim radius section",
+          "origin": [
+            -27,
+            -2,
+            6.5
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10.133974596215563,
+            25,
+            35,
+            49.866025403784434
+          ],
+          "actualParametersMm": [
+            10.133974596215564,
+            25.0,
+            35.0,
+            49.866025403784434
+          ],
+          "maxErrorMm": 1.7763568394002505e-15,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "enclosure-source",
+      "stepSha256": "e04cf2a8da6ea08993f01f9ed2c2305d94df3d13fc8b3173927fae0ec80df8e3",
+      "gauges": [
+        {
+          "gauge": "x walls and cavity",
+          "origin": [
+            -10,
+            15,
+            10
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            12,
+            48,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0,
+            48.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "y walls and cavity",
+          "origin": [
+            20,
+            -10,
+            10
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            12,
+            38,
+            40
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0,
+            38.0,
+            40.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "bottom thickness and open top",
+          "origin": [
+            20,
+            15,
+            -10
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            12
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "wall height",
+          "origin": [
+            1,
+            15,
+            -10
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            30
+          ],
+          "actualParametersMm": [
+            10.0,
+            30.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer corner radius section",
+          "origin": [
+            -10,
+            0.5,
+            10
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "enclosure-edited-rounded",
+      "stepSha256": "6ee2638110051c3c235009a86997032ea752f3e73a6c050535d1042cf242d1ab",
+      "gauges": [
+        {
+          "gauge": "x walls and cavity",
+          "origin": [
+            -7,
+            13,
+            11
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            12,
+            48,
+            50
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0,
+            48.0,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "y walls and cavity",
+          "origin": [
+            23,
+            -12,
+            11
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            12,
+            38,
+            40
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0,
+            38.0,
+            40.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "bottom thickness and open top",
+          "origin": [
+            23,
+            13,
+            -9
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            12
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "wall height",
+          "origin": [
+            4,
+            13,
+            -9
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            30
+          ],
+          "actualParametersMm": [
+            10.0,
+            30.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer corner radius section",
+          "origin": [
+            -7,
+            -1.5,
+            11
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            10.13397459621556,
+            50
+          ],
+          "actualParametersMm": [
+            10.13397459621556,
+            50.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "scope": "Declared cross sections only: web/wall/bottom thickness, cavity, bore, axial size and radius-1 sections. Not whole-wall or full seam certification."
+}

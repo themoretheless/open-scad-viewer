@@ -18,7 +18,7 @@ from OCP.TopExp import TopExp_Explorer
 from OCP.TopAbs import TopAbs_SOLID
 
 
-def main(step_path, output):
+def main(step_path, output, fixture=None):
     reader = STEPControl_Reader()
     assert reader.ReadFile(str(step_path)) == IFSelect_RetDone
     assert reader.TransferRoots() > 0
@@ -32,7 +32,13 @@ def main(step_path, output):
     props = GProp_GProps()
     BRepGProp.VolumeProperties_s(shape, props, 1e-10, True)
     volume = props.Mass()
-    r0, r1, length = .5, 1.25, 13.
+    fixture = fixture or dict(centers=[[10.,-7.,5.],[13.,-3.,17.]], radii=[.5,1.25])
+    c0, c1 = fixture['centers']
+    r0, r1 = fixture['radii']
+    assert len(c0) == len(c1) == 3
+    assert all(math.isfinite(x) for x in [*c0,*c1,r0,r1])
+    length = math.dist(c0,c1)
+    assert r0 > 0 and r1 > 0 and length > abs(r1-r0)
     slope = (r1-r0)/length
     h0, h1 = r0*(1-slope), r1*(1+slope)
     expected = math.pi*(length*(1-slope*slope)**2*(r0*r0+r0*r1+r1*r1)/3
@@ -41,14 +47,14 @@ def main(step_path, output):
     BRepBndLib.AddOptimal_s(shape, box, False, False)
     lo, hi = box.CornerMin(), box.CornerMax()
     actual_bounds = [lo.X(),lo.Y(),lo.Z(),hi.X(),hi.Y(),hi.Z()]
-    expected_bounds = [9.5, -7.5, 4.5, 14.25, -1.75, 18.25]
+    expected_bounds = [min(a-r0,b-r1) for a,b in zip(c0,c1)] + [max(a+r0,b+r1) for a,b in zip(c0,c1)]
     bounds_error = max(abs(a-b) for a,b in zip(actual_bounds,expected_bounds))
     volume_error = abs(volume-expected)
     passed = valid and solids == 1 and volume_error < 1e-6 and bounds_error < 1e-6
     report = dict(schema='cad-source-capped-body-step-occt/1',
                   stepSha256=hashlib.sha256(step_path.read_bytes()).hexdigest(),
                   scope='One specified native source-body STEP export; independent solid validity, signed volume and axis extents.',
-                  occtValid=valid, solids=solids, volumeMm3=volume,
+                  fixture=fixture, occtValid=valid, solids=solids, volumeMm3=volume,
                   expectedVolumeMm3=expected, volumeErrorMm3=volume_error,
                   boundsMm=actual_bounds, expectedBoundsMm=expected_bounds,
                   maxBoundsErrorMm=bounds_error, passed=passed)
@@ -58,4 +64,4 @@ def main(step_path, output):
 
 
 if __name__ == '__main__':
-    sys.exit(main(Path(sys.argv[1]),Path(sys.argv[2])))
+    sys.exit(main(Path(sys.argv[1]),Path(sys.argv[2]),json.loads(Path(sys.argv[3]).read_text()) if len(sys.argv)>3 else None))

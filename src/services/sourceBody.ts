@@ -4,6 +4,8 @@ import {wallExpectation,validWall,type SourceWallOptions,type SourceWallResult} 
 import {callGeometryRust} from './geometry/kernel'
 /** Original native recipes only; display intervals never authorize geometry. */
 export interface SourceBodyDefinition {
+ /** Native restore selects the original projective carrier when present. */
+ kind?:'projective-body'
  version:1
  inverseShear?:{axes:[number,number];coefficient:number}
  shell:{version:1;regions:unknown[];pairs:{uses:[number[],number[]];edge:unknown}[];poles:unknown[]}
@@ -98,7 +100,7 @@ export function validSeamEndpointLimits(seam:SourceSeamResult,budget:number|unde
  if(budget===undefined||seam.qualified||seam.reason!=='source-seam-endpoint-normal-unresolved'
   ||!seam.uncertainCanonical||seam.uncertainCanonical[0]!==seam.uncertainCanonical[1]
   ||d.canonical!==seam.uncertainCanonical[0]||![0,1].includes(d.canonical)||!integer(d.exactWork,budget)
-  ||!['source-seam-endpoint-limits-unresolved','source-seam-endpoint-limits-identity-required','source-seam-endpoint-limits-work-limit','source-seam-endpoint-limits-unsupported','source-seam-endpoint-distinct-tangent-limits'].includes(d.reason)
+  ||!['source-seam-endpoint-limits-unresolved','source-seam-endpoint-limits-identity-required','source-seam-endpoint-limits-work-limit','source-seam-endpoint-limits-unsupported','projective-endpoint-limits-unproven','source-seam-endpoint-distinct-tangent-limits'].includes(d.reason)
   ||!Array.isArray(d.sides)||d.sides.length>4)return false
  const seen=new Set<string>()
  for(const s of d.sides){
@@ -113,12 +115,12 @@ export function validSeamEndpointLimits(seam:SourceSeamResult,budget:number|unde
  if(d.sides.length>0&&d.exactWork===0)return false
  if(d.reason==='source-seam-endpoint-limits-unresolved'&&d.sides.some(s=>s.distinctTangentLimits))return false
  if(d.reason==='source-seam-endpoint-distinct-tangent-limits'&&!d.sides.some(s=>s.distinctTangentLimits))return false
- if(d.reason==='source-seam-endpoint-limits-identity-required'&&(d.exactWork!==0||d.sides.length!==0))return false
+ if(['source-seam-endpoint-limits-identity-required','projective-endpoint-limits-unproven'].includes(d.reason)&&(d.exactWork!==0||d.sides.length!==0))return false
  return true
 }
 export function sourceBodyExpectation(options:SourceBodyOptions) {
  const d=options.definition,s=d?.shell
- if(d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
+ if((d?.kind!==undefined&&d.kind!=='projective-body')||(d?.kind==='projective-body'&&d.inverseShear!==undefined)||d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
   ||!Array.isArray(s.pairs)||s.pairs.length>524288||!Array.isArray(s.poles)||s.poles.length>1000000
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
  const coverage=options.wallCoverage?coverageExpectation(options.wallCoverage):undefined
@@ -149,14 +151,14 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
- return {wallCoverage:coverage,wallScan:scan,wallQualification:wall,seamQualification:seam?key(seam):null,seamEndpointWork:seam?.endpointLimitsExactWork,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
+ return {wallCoverage:coverage,wallScan:scan,wallQualification:wall,seamQualification:seam?key(seam):null,seamEndpointWork:seam?.endpointLimitsExactWork,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,...(d.kind?{kind:d.kind}:{}),shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
   absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {
  try {
   const r=value as SourceBodyResult
   if(!r||typeof r.admitted!=='boolean'||!Array.isArray(r.edges)||typeof r.diagnostics?.reason!=='string')return false
-  if(!r.admitted)return r.wallCoverage==null&&r.wallScan==null&&r.wallQualification==null&&r.seamQualification==null&&r.stepExchange==null&&r.sourceBody===null&&r.edges.length===0&&r.diagnostics.reason.startsWith('source-')&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
+  if(!r.admitted)return r.wallCoverage==null&&r.wallScan==null&&r.wallQualification==null&&r.seamQualification==null&&r.stepExchange==null&&r.sourceBody===null&&r.edges.length===0&&(r.diagnostics.reason.startsWith('source-')||['mapped-source-endpoints-unproven','mapped-source-composition-unproven','mapped-source-uses-not-opposite'].includes(r.diagnostics.reason))&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
   if(r.diagnostics.reason!=='source-volume-and-orientation-qualified'||!r.sourceBody||key(r.sourceBody)!==e.definition
    ||r.faceCount!==e.faces||r.poleCount!==e.poles||typeof r.reverseOrientation!=='boolean'
    ||!interval(r.volume)||r.volume[0]<=0||!Number.isFinite(e.absoluteError)||e.absoluteError<=0||r.volume[1]-r.volume[0]>e.absoluteError

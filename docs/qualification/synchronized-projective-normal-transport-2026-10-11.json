@@ -1,0 +1,40 @@
+{
+  "scope": "Whole natural Bezier boundary tangent-plane bounds with original positive Mobius correspondence",
+  "evidence": {
+    "rational_parameter_correct_and_wrong_map": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-projective-normal-20261011.log"
+    },
+    "generated_end_junctions": {
+      "passed": 1,
+      "seams": 8,
+      "log": "/tmp/source-synchronized-projective-junctions-20261011.log"
+    },
+    "reverse_map_and_work_exhaustion": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-projective-directions-20261011.log"
+    },
+    "retained_root_and_oblique_fallback": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-projective-root-regression-20261011.log"
+    },
+    "qualified_rational_native_edge_replay": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-projective-native-edge-20261011.log",
+      "description": "Exact original composition of two rational surface boundaries with nonunit Mobius map, opposite traversal, binary replay, synchronized tangent plane proof, forged map rejection"
+    },
+    "native_edge_replay_and_nonbinary_root_refusal": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-projective-native-root-refusal-20261011.log"
+    }
+  },
+  "authority": "Outward homogeneous Bernstein coefficient substitution, no sampled qualification",
+  "limitations": [
+    "Piecewise charts and nonlinear UV boundary curves require fallback",
+    "Canonical map endpoints must be full 0/1 range",
+    "Finite coefficient arithmetic may refuse extreme weights",
+    "General fillet, radius, thickness, UI and P0 remain incomplete",
+    "The 1/2 versus 1/3 control is now admitted for original transverse linear UV crossings by exact projective line-root identity. Nonlinear cutter correspondence still needs additional proof."
+  ],
+  "wasm_published": false
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "original-chord-workspace/1",
+  "owner": "Immutable source surface and fixed angular tolerance",
+  "sourceSha256": "5d48dc57f3b77b81550c7c2f80b9b0904f8c31805255bf7a905e75f19e0cdb78",
+  "cachePolicy": "Only complete rectangle reports, at most 100000 entries; no serialized or caller-provided bounds",
+  "regression": {
+    "coldSpans": 2,
+    "warmSpans": 1,
+    "zeroBudgetExcluded": false,
+    "independentWorkspaceBudgetOneExcluded": false,
+    "invalidDomainRejected": true,
+    "overBudgetRejected": true,
+    "testsPassed": 41,
+    "seconds": 1.05,
+    "log": "/tmp/original-chord-shared-intrinsic-20261010.log",
+    "additionalControls": [
+      "Incomplete two-span rectangle never cached",
+      "Larger-budget retry stores complete enclosure",
+      "Warm cache preserves normal diameter for both endpoint orders and six budgets",
+      "Warm plane workspace cannot exclude another rational surface normal diameter with matching UV domains and degrees",
+      "Whole-rectangle evaluation seeds endpoint query; cached invalid and zero-budget rectangle requests rejected"
+    ]
+  },
+  "brepIntegration": true,
+  "wasmIncludesWorkspace": false,
+  "wholeWallQualified": false,
+  "standardBodyComparison": {
+    "state": "running",
+    "session": 5302,
+    "report": "/tmp/expression-wall-original-cache-standard-20261010.json",
+    "log": "/tmp/expression-wall-original-cache-standard-20261010.log"
+  },
+  "cargoCheckPassed": true,
+  "brepSourceSha256": "83d78f97c03a0c712b7407b21c3cd501e189915b3a179ef3397e1983a31295db",
+  "sharedIntrinsicIntegration": true,
+  "sharedStandardComparison": {
+    "state": "running",
+    "report": "/tmp/expression-wall-original-shared-standard-20261010.json",
+    "log": "/tmp/expression-wall-original-shared-standard-20261010.log"
+  }
+}

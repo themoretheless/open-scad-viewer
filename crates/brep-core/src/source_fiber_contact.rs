@@ -8,28 +8,28 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
     fiber: source_plane_fiber::Certificate,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
     pub fn regions(&self) -> &[SourceRegion; 2] {
         &self.regions
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
     pub fn fiber(&self) -> &source_plane_fiber::Certificate {
         &self.fiber
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub spans: usize,
     pub driver_cells: usize,
@@ -41,24 +41,24 @@ pub struct Report {
 /// chart edge. Every retained boundary fragment on that edge must be paired
 /// with the first face; every possible endpoint contact must join such an edge.
 /// Thus every possible material contact has exact shared source ownership.
-pub fn certify(
-    shell: &Shell,
+pub fn certify<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_spans: usize,
     max_driver_cells: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     certify_with_linear_chart(shell, faces, max_work, max_spans, max_driver_cells, 0)
 }
 /// Optional fresh oblique chart proof has a separate globally bounded budget.
-pub fn certify_with_linear_chart(
-    shell: &Shell,
+pub fn certify_with_linear_chart<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_spans: usize,
     max_driver_cells: usize,
     max_linear_cells: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     if faces[0] == faces[1]
         || faces.iter().any(|&f| f >= shell.faces().len())
         || !(1..=100_000_000).contains(&max_work)
@@ -237,6 +237,30 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn projective_shell_retains_nonlinear_natural_fiber_ownership() {
+        let (regions,pairs)=wedge_regions(0.5);
+        let report=source_shell_incidence::assemble_regions_projective(&regions,&pairs,&[],&[],&[],100000000,10000).unwrap();
+        let shell=report.shell.expect(report.reason);
+        let mut proven=0;
+        for a in 0..regions.len() {for b in 0..regions.len() {
+            if a==b {continue;}
+            let report=certify_with_linear_chart(&shell,[a,b],10000000,10000,10000,10000).unwrap();
+            if let Some(proof)=report.certificate {
+                assert!(!proof.edges().is_empty());
+                assert_eq!(proof.faces(),[a,b]);proven+=1;
+            }
+        }}
+        assert!(proven>=2,"Only {proven} original fiber contacts qualified");
+        let contacts=crate::source_face_contacts::inspect_shell_with_projective_fibers(&shell,1e-8,
+            crate::face_contacts::Limits{pairs:100,cells:1000,domain_cells:10000,cells_per_pair:100,domain_cells_per_pair:1000},
+            10000000,10000,10000,10000).unwrap();
+        assert_eq!(contacts.pairs.len(),regions.len()*(regions.len()-1)/2);
+        assert!(contacts.pairs.iter().any(|p|p.fiber.is_some()));
+        assert!(contacts.exact_work<=10000000 && contacts.spans<=10000 && contacts.driver_cells<=10000 && contacts.linear_cells<=10000);
+
+        assert!(certify(&shell,[0,2],1,1,1).unwrap().certificate.is_none());
     }
     fn wedge() -> Shell {
         let (regions, pairs) = wedge_regions(0.5_f64.sqrt());
@@ -1409,6 +1433,18 @@ mod tests {
             .shell
             .is_none()
         );
+
+        let projective_maps=maps.iter().map(|m|source_shell_incidence::ProjectiveMaps{pair:m.pair,ranges:m.ranges,weights:[[1.,1.];2]}).collect::<Vec<_>>();
+        let projective=source_shell_incidence::assemble_regions_projective(&regions,&pairs,&[],&projective_maps,&witnesses,100000000,10000).unwrap();
+        assert!(projective.shell.is_some(),"{} {:?}",projective.reason,projective.uncertain_pair);
+        let projective=projective.shell.unwrap();
+        let mut interior_proofs=0;
+        for a in 0..regions.len() {
+            if a==5 {continue;}
+            let r=crate::source_interior_contact::certify_with_linear_chart(&projective,[5,a],10000000,10000,10000,10000).unwrap();
+            if let Some(proof)=r.certificate {assert!(!proof.edges().is_empty());interior_proofs+=1;}
+        }
+        assert!(interior_proofs>0,"New cap must own a qualified original interior contact");
 
         let geometry_limits = |corners, pair_count| crate::source_shell_geometry::Limits {
             tolerance_uv: 1e-8,

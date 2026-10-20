@@ -2,6 +2,337 @@
 //! Original rational derivative bounds cover every nonempty knot rectangle.
 use crate::{check, distance_bounds::Interval as I, normal_alignment, surface::Surface, Result};
 
+/// Algebraic self-chord exclusion from an enclosed Jacobian.
+/// This does not issue a geometry certificate. The caller must establish that
+/// these derivatives cover a continuous chart on the convex endpoint domain.
+pub fn inspect_jacobian_self_chords(
+    jacobian: [[[f64; 2]; 2]; 3],
+    max_sine_squared: f64,
+) -> Result<(bool, f64)> {
+    check(max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+        "Self chord exclusion requires squared sine in [0,1)")?;
+    let mut j = [[I::point(0.); 2]; 3];
+    for k in 0..3 {
+        for axis in 0..2 {
+            let bounds = jacobian[k][axis];
+            check(bounds.iter().all(|x| x.is_finite()) && bounds[0] <= bounds[1],
+                "Self chord Jacobian requires finite ordered bounds")?;
+            j[k][axis] = I::new(bounds[0], bounds[1])?;
+        }
+    }
+    let upper = balanced_cosine_upper(j)?;
+    let threshold = I::point(1.).sub(I::point(max_sine_squared))?;
+    Ok((upper < threshold.lo, upper))
+}
+
+#[cfg(test)]
+mod expression_jacobian_tests {
+    use super::*;
+    #[test]
+    fn fixed_parameter_shear_strengthens_the_complete_interval_bound() {
+        let j = [[[1.,1.],[19.62,20.38]],[[0.,0.],[1.,1.]],[[0.,0.],[0.,0.]]];
+        let mut interval = [[I::point(0.);2];3];
+        for k in 0..3 {for axis in 0..2 {
+            interval[k][axis]=I::new(j[k][axis][0],j[k][axis][1]).unwrap();
+        }}
+        let mut diagonal = interval;
+        for row in &mut diagonal {row[1]=row[1].div(I::point(20.38)).unwrap();}
+        assert!(cosine_upper(interval).unwrap()>=1.);
+        assert!(cosine_upper(diagonal).unwrap()>=1.,"Diagonal-only bound must remain unresolved on this fixture");
+        assert!(inspect_jacobian_self_chords(j,1e-4).unwrap().0);
+        for scale in [1e-90,1.,1e90] {
+            let scaled=j.map(|row|row.map(|d|d.map(|x|x*scale)));
+            assert!(inspect_jacobian_self_chords(scaled,1e-4).unwrap().0);
+        }
+        // An enclosed singular matrix still forbids intrinsic exclusion.
+        let singular=[[[1.,1.],[19.62,20.38]],[[0.,0.],[-1.,1.]],[[0.,0.],[0.,0.]]];
+        assert!(!inspect_jacobian_self_chords(singular,1e-4).unwrap().0);
+    }
+    #[test]
+    fn independent_interval_widths_use_operator_bound_without_hiding_singular_charts() {
+        // Complete independent derivative intervals. The old Frobenius
+        // numerator is .72, exceeding the squared minimum singular value .49.
+        // The width-Gram row bound is .36 and proves the same full enclosure.
+        let j=[[[0.7,1.3],[0.,0.]],[[0.,0.],[0.7,1.3]],[[0.,0.],[0.,0.]]];
+        assert!(0.72/0.49>1.);
+        for scale in [1e-90,1.,1e90] {
+            let scaled=j.map(|row|row.map(|d|d.map(|x|x*scale)));
+            let (excluded,upper)=inspect_jacobian_self_chords(scaled,1e-4).unwrap();
+            assert!(excluded && upper<0.74);
+        }
+        let singular=[[[ -0.3,0.3],[0.,0.]],[[0.,0.],[0.7,1.3]],[[0.,0.],[0.,0.]]];
+        assert!(!inspect_jacobian_self_chords(singular,1e-4).unwrap().0);
+        // Correlated width columns do not gain the independent-column factor.
+        let uncertain=[[[0.7,1.3],[0.7,1.3]],[[0.,0.],[-0.3,0.3]],[[0.,0.],[0.,0.]]];
+        assert!(!inspect_jacobian_self_chords(uncertain,1e-4).unwrap().0);
+    }
+    #[test]
+    fn nonlinear_planar_parameterization_qualifies_its_complete_original_chart() {
+        // x(u)=.7u+.3u^2, y(v)=.7v+.3v^2. Both original derivatives
+        // vary independently over [.7,1.3], while every chord lies in XY
+        // and every regular normal is parallel to Z.
+        let coordinates=[0.,0.35,1.];
+        let surface=Surface {degree_u:2,degree_v:2,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+            control_points:coordinates.iter().map(|x|coordinates.iter().map(|y|vec![*x,*y,0.]).collect()).collect(),
+            weights:vec![vec![1.;3];3],periodic_u:false,periodic_v:false};
+        let report=qualify_rectangle(&surface,[[0.,1.];2],1e-4,100).unwrap();
+        assert!(report.complete && report.certificate.is_some());
+        assert!(report.cosine_squared_upper.unwrap()<1.-1e-4);
+        // Original-surface qualification requires a positive span limit;
+        // unlike the diagnostic profile API, zero is an input refusal.
+        assert!(qualify_rectangle(&surface,[[0.,1.];2],1e-4,0).is_err());
+    }
+    #[test]
+    fn enclosed_plane_excludes_normal_chords_and_rejects_invalid_inputs() {
+        let j = [[[1., 1.], [0., 0.]], [[0., 0.], [1., 1.]], [[0., 0.], [0., 0.]]];
+        assert!(inspect_jacobian_self_chords(j, 1e-4).unwrap().0);
+        let mut invalid = j;
+        invalid[0][0] = [2., 1.];
+        assert!(inspect_jacobian_self_chords(invalid, 1e-4).is_err());
+        invalid[0][0] = [f64::NAN, 1.];
+        assert!(inspect_jacobian_self_chords(invalid, 1e-4).is_err());
+        assert!(inspect_jacobian_self_chords(j, 1.).is_err());
+        assert!(!inspect_jacobian_self_chords([[[0., 0.]; 2]; 3], 1e-4).unwrap().0);
+    }
+}
+/// Algebraic endpoint-specific mean-path exclusion. This diagnostic carries
+/// no source authority: callers must prove continuity of the enclosed path
+/// and bind the endpoint normal to the same immutable expression.
+pub fn inspect_jacobian_endpoint_chords(
+    jacobian: [[[f64;2];2];3], normal:[[f64;2];3], max_sine_squared:f64,
+) -> Result<(bool,f64)> {
+    check(max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared)
+        && jacobian.iter().flatten().chain(normal.iter()).all(|d|
+            d.iter().all(|x|x.is_finite()) && d[0]<=d[1]),
+        "Bound mean Jacobian, endpoint normal and angular tolerance")?;
+    let mut j=[[I::point(0.);2];3];
+    let mut n=[I::point(0.);3];
+    for k in 0..3 {
+        n[k]=I::new(normal[k][0],normal[k][1])?;
+        for axis in 0..2 {j[k][axis]=I::new(jacobian[k][axis][0],jacobian[k][axis][1])?;}
+    }
+    // Fixed positive parameter rescaling preserves every connecting path;
+    // normal magnitude likewise has no effect on its unoriented angle.
+    for axis in 0..2 {
+        let scale=jacobian.iter().map(|row|row[axis][0].abs().max(row[axis][1].abs())).fold(0_f64,f64::max);
+        if scale>=f64::MIN_POSITIVE {
+            for row in &mut j {row[axis]=row[axis].div(I::point(scale))?;}
+        }
+    }
+    let scale=normal.iter().flatten().map(|x|x.abs()).fold(0_f64,f64::max);
+    if scale>=f64::MIN_POSITIVE {
+        for value in &mut n {*value=value.div(I::point(scale))?;}
+    }
+    let upper=endpoint_matrix_cosine(j,n)?;
+    let threshold=I::point(1.).sub(I::point(max_sine_squared))?.lo;
+    Ok((upper<threshold,upper))
+}
+/// Endpoint-domain chord enclosure from an enclosed continuous-path matrix.
+/// This diagnostic issues no source certificate; the caller owns continuity
+/// and binds both parameter rectangles and the normal to that path.
+pub fn inspect_jacobian_endpoint_pair_chords(
+    jacobian:[[[f64;2];2];3],pair:[[[f64;2];2];2],normal:[[f64;2];3],sine:f64,
+) -> Result<bool> {
+    check(pair.iter().flatten().all(|d|d.iter().all(|x|x.is_finite()) && d[0]<=d[1])
+        && jacobian.iter().flatten().all(|d|d.iter().all(|x|x.is_finite()) && d[0]<=d[1]),
+        "Finite ordered chord domains and mean Jacobian")?;
+    let mut delta=[I::point(0.);2];
+    // Common positive scales preserve M*(B-A)'s direction. Columns must
+    // not be scaled independently without also changing parameter deltas.
+    let parameter_scale=pair.iter().flatten().flatten().map(|x|x.abs())
+        .fold(0_f64,f64::max).max(f64::MIN_POSITIVE);
+    let matrix_scale=jacobian.iter().flatten().flatten().map(|x|x.abs())
+        .fold(0_f64,f64::max).max(f64::MIN_POSITIVE);
+    for axis in 0..2 {
+        delta[axis]=I::new(pair[1][axis][0],pair[1][axis][1])?
+            .div(I::point(parameter_scale))?
+            .sub(I::new(pair[0][axis][0],pair[0][axis][1])?.div(I::point(parameter_scale))?)?;
+    }
+    let mut chord=[[0.;2];3];
+    for k in 0..3 {
+        let mut value=I::point(0.);
+        for axis in 0..2 {
+            value=value.add(I::new(jacobian[k][axis][0],jacobian[k][axis][1])?
+                .div(I::point(matrix_scale))?.mul(delta[axis])?)?;
+        }
+        chord[k]=[value.lo,value.hi];
+    }
+    Ok(normal_alignment::inspect_pair_bounds([normal,chord],sine)?.aligned==Some(false))
+}
+
+/// Algebraic exclusion for a three-leg path whose transverse coefficients
+/// have the same sign. Columns are source transverse, free, bridge transverse.
+/// The caller owns complete path bounds, continuity and the endpoint normal.
+/// Only nonzero chords are candidates; this issues no geometry certificate.
+pub fn inspect_same_sign_transverse_chords(
+    columns: [[[f64;2];3];3], transverse: [[f64;2];2], source_scale:f64,
+    normal:[[f64;2];3], sine:f64,
+) -> Result<bool> {
+    check(source_scale.is_finite() && source_scale>0.
+        && sine.is_finite() && (0. ..1.).contains(&sine)
+        && columns.iter().flatten().chain(transverse.iter()).chain(normal.iter())
+            .all(|d|d.iter().all(|x|x.is_finite()) && d[0]<=d[1]),
+        "Finite path columns, signed coefficients, positive scale and endpoint normal")?;
+    if !(transverse.iter().all(|d|d[0]>=0.) || transverse.iter().all(|d|d[1]<=0.)) {
+        return Ok(false);
+    }
+    // With a=delta_source/scale and b=delta_bridge, q=a+b has their
+    // common sign. For q!=0, a/q and b/q are convex weights. For q=0
+    // both transverse legs vanish. The free coefficient is unrestricted.
+    let mut matrix=[[[0.;2];2];3];
+    for k in 0..3 {
+        let source=I::new(columns[0][k][0],columns[0][k][1])?.mul(I::point(source_scale))?;
+        matrix[k][0]=columns[1][k];
+        matrix[k][1]=[source.lo.min(columns[2][k][0]),source.hi.max(columns[2][k][1])];
+    }
+    Ok(inspect_jacobian_rank_bound(matrix)?
+        && inspect_jacobian_endpoint_chords(matrix,normal,sine)?.0)
+}
+
+#[cfg(test)]
+mod transverse_cone_tests {
+    use super::*;
+    #[test]
+    fn same_sign_legs_cover_short_chords_without_accepting_cancellation() {
+        let columns=[[[1.,1.],[0.,0.],[0.,0.]],[[0.,0.],[1.,1.],[0.,0.]],[[2.,2.],[0.,0.],[0.,0.]]];
+        let normal=[[0.,0.],[0.,0.],[1.,1.]];
+        for tiny in [0.,1e-200,1.] {
+            for sign in [1.,-1.] {
+                let d=if sign>0. {[0.,tiny]}else{[-tiny,0.]};
+                assert!(inspect_same_sign_transverse_chords(columns,[d,d],1.,normal,1e-4).unwrap());
+            }
+        }
+        assert!(!inspect_same_sign_transverse_chords(columns,[[0.,1.];2],1.,[[1.,1.],[0.,0.],[0.,0.]],1e-4).unwrap());
+        // Opposite coefficients cancel x and leave a chord parallel to z.
+        let cancellation=[[[1.,1.],[0.,0.],[0.001,0.001]],columns[1],[[1.,1.],[0.,0.],[-0.001,-0.001]]];
+        assert!(!inspect_same_sign_transverse_chords(cancellation,[[1.,1.],[-1.,-1.]],1.,normal,1e-4).unwrap());
+        let wrongly_merged=[[[0.,0.],[1.,1.]],[[1.,1.],[0.,0.]],[[0.,0.],[-0.001,0.001]]];
+        assert!(inspect_jacobian_endpoint_chords(wrongly_merged,normal,1e-4).unwrap().0,
+            "The sign guard must prevent a falsely admitted normal chord");
+    }
+    #[test]
+    fn independent_complete_path_hulls_can_resolve_an_inconclusive_cone() {
+        let normal=[[0.,0.],[0.,0.],[1.,1.]];
+        let narrow=[[[1.,1.],[0.,0.],[0.,0.]],
+            [[0.,0.],[1.,1.],[0.,0.]],[[1.,1.],[0.,0.],[0.,0.]]];
+        let mut broad=narrow;
+        broad[0][0]=[-1.,1.];
+        for transverse in [[[0.,1.];2],[[-1.,0.];2]] {
+            assert!(!inspect_same_sign_transverse_chords(broad,transverse,1.,normal,1e-4).unwrap());
+            assert!(inspect_same_sign_transverse_chords(narrow,transverse,1.,normal,1e-4).unwrap());
+        }
+        // Narrow columns cannot repair missing signed ownership.
+        assert!(!inspect_same_sign_transverse_chords(narrow,[[0.,1.],[-1.,0.]],1.,normal,1e-4).unwrap());
+        // These are independent algebraic enclosures, not a surface fixture
+        // or proof that either enclosure belongs to a specific CAD path.
+    }
+    #[test]
+    fn scale_rank_normal_and_invalid_inputs_remain_conservative() {
+        let normal=[[0.,0.],[0.,0.],[1.,1.]];
+        for scale in [1e-90,1.,1e90] {
+            let columns=[[[1./scale,1./scale],[0.,0.],[0.,0.]],[[0.,0.],[1.,1.],[0.,0.]],[[1.,1.],[0.,0.],[0.,0.]]];
+            assert!(inspect_same_sign_transverse_chords(columns,[[0.,1.];2],scale,normal,1e-4).unwrap());
+            assert!(!inspect_same_sign_transverse_chords(columns,[[0.,1.];2],scale,[[-1.,1.];3],1e-4).unwrap());
+            for bad in [0.,-1.,f64::INFINITY,f64::NAN] {
+                assert!(inspect_same_sign_transverse_chords(columns,[[0.,1.];2],bad,normal,1e-4).is_err());
+            }
+            assert!(inspect_same_sign_transverse_chords(columns,[[1.,0.];2],scale,normal,1e-4).is_err());
+            assert!(inspect_same_sign_transverse_chords(columns,[[0.,1.];2],scale,normal,1.).is_err());
+        }
+        assert!(!inspect_same_sign_transverse_chords([[[0.,0.];3];3],[[0.,1.];2],1.,normal,1e-4).unwrap());
+    }
+}
+
+/// Sufficient rank bound for every enclosed connecting-path differential.
+/// False means this interval matrix cannot support the mean-path theorem,
+/// not that the underlying geometry is singular.
+pub fn inspect_jacobian_rank_bound(jacobian:[[[f64;2];2];3]) -> Result<bool> {
+    check(jacobian.iter().flatten().all(|d|d.iter().all(|x|x.is_finite()) && d[0]<=d[1]),
+        "Finite ordered mean Jacobian")?;
+    let mut j=[[I::point(0.);2];3];
+    for axis in 0..2 {
+        let scale=jacobian.iter().map(|r|r[axis][0].abs().max(r[axis][1].abs())).fold(0_f64,f64::max);
+        for k in 0..3 {
+            j[k][axis]=I::new(jacobian[k][axis][0],jacobian[k][axis][1])?;
+            if scale>=f64::MIN_POSITIVE {j[k][axis]=j[k][axis].div(I::point(scale))?;}
+        }
+    }
+    Ok(mean_matrix_lower(j)?>0.)
+}
+#[cfg(test)]
+mod endpoint_jacobian_tests {
+    use super::*;
+    #[test]
+    fn rank_precondition_handles_independent_scales_and_uncertain_rank() {
+        for scales in [[1e-90,1e90],[1e90,1e-90],[1.,1.]] {
+            let j=[[[scales[0],scales[0]],[0.,0.]],
+                [[0.,0.],[scales[1],scales[1]]],[[0.,0.],[0.,0.]]];
+            assert!(inspect_jacobian_rank_bound(j).unwrap());
+        }
+        // Both columns can coincide in this enclosure, even though some
+        // individual matrices inside it have full rank.
+        let uncertain=[[[1.,1.],[1.,1.]],[[0.,0.],[-1.,1.]],[[0.,0.],[0.,0.]]];
+        assert!(!inspect_jacobian_rank_bound(uncertain).unwrap());
+        assert!(!inspect_jacobian_endpoint_chords(uncertain,[[0.,0.],[0.,0.],[1.,1.]],1e-4).unwrap().0);
+        let mut invalid=uncertain;
+        invalid[1][1]=[1.,-1.];
+        assert!(inspect_jacobian_rank_bound(invalid).is_err());
+        invalid[1][1]=[0.,f64::INFINITY];
+        assert!(inspect_jacobian_rank_bound(invalid).is_err());
+    }
+    #[test]
+    fn direct_chord_excludes_without_uniform_matrix_rank() {
+        let j=[[[1.,1.],[1.,1.]],[[0.,0.],[-1.,1.]],[[0.,0.],[0.,0.]]];
+        assert!(!inspect_jacobian_rank_bound(j).unwrap());
+        let pair=[[[0.,0.1],[0.,0.1]],[[0.9,1.],[0.,0.1]]];
+        let normal=[[0.,0.],[0.,0.],[1.,1.]];
+        for domains in [pair,[pair[1],pair[0]]] {
+            assert!(inspect_jacobian_endpoint_pair_chords(j,domains,normal,1e-4).unwrap());
+            assert!(!inspect_jacobian_endpoint_pair_chords(j,domains,
+                [[1.,1.],[0.,0.],[0.,0.]],1e-4).unwrap(),
+                "a rank-deficient enclosure must preserve an aligned chord candidate");
+        }
+        assert!(!inspect_jacobian_endpoint_chords(j,normal,1e-4).unwrap().0);
+        assert!(!inspect_jacobian_endpoint_pair_chords(j,[pair[0];2],normal,1e-4).unwrap());
+        assert!(!inspect_jacobian_endpoint_pair_chords(j,pair,[[0.,0.];3],1e-4).unwrap());
+    }
+    #[test]
+    fn endpoint_pair_chord_enclosure_preserves_aligned_and_zero_candidates() {
+        let j=[[[1.,1.],[0.,0.]],[[0.,0.],[1.,1.]],[[0.,0.],[0.,0.]]];
+        let pair=[[[0.,0.1],[0.,0.1]],[[0.9,1.],[0.,0.1]]];
+        assert!(inspect_jacobian_endpoint_pair_chords(j,pair,[[0.,0.],[0.,0.],[1.,1.]],1e-4).unwrap());
+        assert!(!inspect_jacobian_endpoint_pair_chords(j,pair,[[1.,1.],[0.,0.],[0.,0.]],1e-4).unwrap());
+        assert!(!inspect_jacobian_endpoint_pair_chords(j,[pair[0];2],[[0.,0.],[0.,0.],[1.,1.]],1e-4).unwrap());
+        assert!(inspect_jacobian_endpoint_pair_chords(j,pair,[[f64::NAN;2];3],1e-4).is_err());
+        for scale in [1e-200,1.,1e200] {
+            let matrix=j.map(|row|row.map(|d|d.map(|x|x*scale)));
+            let domains=pair.map(|uv|uv.map(|d|d.map(|x|x*scale)));
+            for domains in [domains,[domains[1],domains[0]]] {
+                assert!(inspect_jacobian_endpoint_pair_chords(matrix,domains,
+                    [[0.,0.],[0.,0.],[scale,scale]],1e-4).unwrap());
+                assert!(!inspect_jacobian_endpoint_pair_chords(matrix,domains,
+                    [[scale,scale],[0.,0.],[0.,0.]],1e-4).unwrap());
+            }
+        }
+    }
+    #[test]
+    fn endpoint_mean_path_refuses_tangent_and_singular_candidates() {
+        let j=[[[1.,1.],[0.,0.]],[[0.,0.],[1.,1.]],[[0.,0.],[0.,0.]]];
+        assert!(inspect_jacobian_rank_bound(j).unwrap());
+        assert!(!inspect_jacobian_rank_bound([[[0.,0.];2];3]).unwrap());
+        assert!(inspect_jacobian_endpoint_chords(j,[[0.,0.],[0.,0.],[1.,1.]],1e-4).unwrap().0);
+        assert!(!inspect_jacobian_endpoint_chords(j,[[1.,1.],[0.,0.],[0.,0.]],1e-4).unwrap().0);
+        assert!(!inspect_jacobian_endpoint_chords([[[0.,0.];2];3],[[0.,0.],[0.,0.],[1.,1.]],1e-4).unwrap().0);
+        assert!(!inspect_jacobian_endpoint_chords(j,[[-1.,1.];3],1e-4).unwrap().0);
+        assert!(inspect_jacobian_endpoint_chords(j,[[f64::NAN;2];3],1e-4).is_err());
+        for scale in [1e-90,1.,1e90] {
+            let scaled=j.map(|row|row.map(|d|d.map(|x|x*scale)));
+            assert!(inspect_jacobian_endpoint_chords(scaled,[[0.,0.],[0.,0.],[scale,scale]],1e-4).unwrap().0);
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Certificate<'a> {
     surface: &'a Surface,
@@ -68,6 +399,16 @@ impl MeanMatrix<'_> {
             &crate::factored_surface_normals::PairBounds<'_>)>,
         original: Option<&normal_alignment::OriginalPairBounds<'_>>,
     ) -> Result<(bool,usize)> {
+        self.exclude_pair_with_normal(pair,sine,max_spans,cached,original,
+            &mut |domain,budget|normal_alignment::normal_bounds(self.surface,domain,budget))
+    }
+    fn exclude_pair_with_normal(
+        &self, pair: [[[f64; 2]; 2]; 2], sine: f64, max_spans: usize,
+        cached: Option<(&crate::factored_surface_normals::Certificate<'_>,
+            &crate::factored_surface_normals::PairBounds<'_>)>,
+        original: Option<&normal_alignment::OriginalPairBounds<'_>>,
+        normal: &mut impl FnMut([[f64;2];2],usize)->Result<(Option<[[f64;2];3]>,usize)>,
+    ) -> Result<(bool,usize)> {
         check(sine.is_finite() && (0. ..1.).contains(&sine)
             && pair.iter().all(|rect| (0..2).all(|a| rect[a][0].is_finite()
                 && rect[a][1].is_finite() && self.domain[a][0]<=rect[a][0]
@@ -86,24 +427,28 @@ impl MeanMatrix<'_> {
                 for row in &mut j { row[a]=row[a].div(I::point(scale))?; }
             }
         }
-        // This necessary algebraic precondition is shared with projection.
-        // Failure is an unproven matrix, not an assertion of singular geometry.
-        if mean_matrix_lower(j)?<=0. {return Ok((false,0));}
+        // Rank is required only for the mean-matrix cosine theorem. A direct
+        // endpoint chord enclosure can establish nonzero direction independently.
+        let ranked=mean_matrix_lower(j)?>0.;
         let threshold=I::point(1.).sub(I::point(sine))?.lo;
         let mut used=0;
         for (index,rect) in pair.into_iter().enumerate() {
             let (bounds,spent)=if let Some(values)=components {(Some(values[index]),0)}
                 else {
                     if used==max_spans { break; }
-                    normal_alignment::normal_bounds(self.surface,rect,max_spans-used)?
+                    normal(rect,max_spans-used)?
                 };
             used+=spent;
             let Some(bounds)=bounds else {continue};
+            if inspect_jacobian_endpoint_pair_chords(
+                self.jacobian.map(|row|row.map(|d|[d.lo,d.hi])),pair,bounds,sine)? {
+                return Ok((true,used));
+            }
             let scale=bounds.iter().flatten().map(|x|x.abs()).fold(0_f64,f64::max);
             if scale<f64::MIN_POSITIVE {continue;}
             let mut n=[I::point(0.);3];
             for k in 0..3 {n[k]=I::new(bounds[k][0],bounds[k][1])?.div(I::point(scale))?;}
-            if endpoint_matrix_cosine(j,n)?<threshold {return Ok((true,used));}
+            if ranked && endpoint_matrix_cosine(j,n)?<threshold {return Ok((true,used));}
         }
         Ok((false,used))
     }
@@ -163,12 +508,26 @@ fn direct_gram_lower(lower: [I; 2], off_upper: f64) -> Result<f64> {
 }
 fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     let mut variation = I::point(0.);
+    let mut width_gram = [I::point(0.);3];
     for row in j {
-        for x in row {
+        let mut widths=[I::point(0.);2];
+        for (axis,x) in row.into_iter().enumerate() {
             let width = I::point(x.hi).sub(I::point(x.lo))?;
             variation = variation.add(width.mul(width)?)?;
+            widths[axis]=I::point(width.hi);
         }
+        width_gram[0]=width_gram[0].add(widths[0].mul(widths[0])?)?;
+        width_gram[1]=width_gram[1].add(widths[0].mul(widths[1])?)?;
+        width_gram[2]=width_gram[2].add(widths[1].mul(widths[1])?)?;
     }
+    // For every difference E between two enclosed differentials, |E| <= W
+    // componentwise, where W contains the complete interval widths. Thus
+    // ||E||_2^2 <= rho(W^T W) <= max row sum(W^T W). Take the smaller
+    // of this outward bound and the existing Frobenius bound. No midpoint
+    // derivative or sampled normal enters this whole-enclosure inequality.
+    let row_upper=width_gram[0].add(width_gram[1])?.hi
+        .max(width_gram[2].add(width_gram[1])?.hi);
+    variation=I::point(variation.hi.min(row_upper));
     let mut best = 1_f64;
     let (_, lower, off) = gram_bounds(j)?;
     let least = direct_gram_lower(lower, off.lo.abs().max(off.hi.abs()))?;
@@ -450,7 +809,9 @@ pub(crate) fn rational_pole_pair_report_cached(
     })
 }
 fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
-    let mut best = cosine_upper(j)?;
+    // Raw fourth-order Gram arithmetic can overflow on a valid uniformly
+    // scaled chart. Keep it unresolved and try the normalized enclosure.
+    let mut best = cosine_upper(j).unwrap_or(1.);
     // J D is the same original differential in rescaled parameter coordinates:
     // chord = M D (D^-1 delta), and n.(J D)=0. The intrinsic inequality
     // therefore applies unchanged to any fixed positive diagonal D.
@@ -474,6 +835,36 @@ fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
         if finite {
             if let Ok(bound) = cosine_upper(balanced) {
                 best = best.min(bound);
+            }
+            // A fixed triangular parameter shear is invertible (det=1),
+            // so JQ describes the same chords with delta=Q*z, and n.JQ=0.
+            // Midpoints choose Q only; every transformed derivative remains
+            // outward enclosed. No sampled rank or normal enters the proof.
+            for target in 0..2 {
+                let base = 1 - target;
+                let midpoint = balanced.map(|row| row.map(|v| v.lo * 0.5 + v.hi * 0.5));
+                let norm: f64 = midpoint.iter().map(|row| row[base] * row[base]).sum();
+                if norm <= f64::MIN_POSITIVE { continue; }
+                let coefficient = midpoint.iter().map(|row| row[base] * row[target]).sum::<f64>() / norm;
+                if !coefficient.is_finite() { continue; }
+                let candidate = (|| -> Result<[[I; 2]; 3]> {
+                    let mut sheared = balanced;
+                    for k in 0..3 {
+                        sheared[k][target] = balanced[k][target]
+                            .sub(balanced[k][base].mul(I::point(coefficient))?)?;
+                    }
+                    for axis in 0..2 {
+                        let scale = sheared.iter().map(|row| row[axis].lo.abs().max(row[axis].hi.abs()))
+                            .fold(0_f64, f64::max);
+                        if scale >= f64::MIN_POSITIVE {
+                            for row in &mut sheared { row[axis] = row[axis].div(I::point(scale))?; }
+                        }
+                    }
+                    Ok(sheared)
+                })();
+                if let Ok(candidate) = candidate {
+                    if let Ok(bound) = cosine_upper(candidate) { best = best.min(bound); }
+                }
             }
         }
     }
@@ -599,6 +990,136 @@ pub fn qualify_rectangle<'a>(
     Ok(out)
 }
 
+/// Fresh original-chart endpoint exclusion over the convex connecting domain.
+/// False leaves the product unproven, including continuity or budget refusal.
+/// Complete rectangle reports are reusable only on this immutable source and
+/// angular policy. Partial calculations and zero-budget queries never admit.
+pub struct OriginalChordWorkspace<'a> {
+    surface:&'a Surface,
+    sine:f64,
+    rectangles:std::collections::HashMap<[[u64;2];2],Report<'a>>,
+    normals:std::collections::HashMap<[[u64;2];2],[[f64;2];3]>,
+    hits:usize,
+}
+impl<'a> OriginalChordWorkspace<'a> {
+    pub fn new(surface:&'a Surface,sine:f64)->Result<Self> {
+        surface.validate()?;
+        check(sine.is_finite()&&(0. ..1.).contains(&sine),"Valid original chord workspace angle")?;
+        Ok(Self{surface,sine,rectangles:std::collections::HashMap::new(),normals:std::collections::HashMap::new(),hits:0})
+    }
+    pub fn cache_hits(&self)->usize {self.hits}
+    /// Whole-rectangle report on the same immutable surface and angle policy.
+    /// As in the uncached API, the span budget must be positive and bounded.
+    pub fn qualify_rectangle(&mut self,domain:[[f64;2];2],budget:usize)->Result<Report<'a>> {
+        check(domain.iter().all(|d|d[0]<d[1]),"Original cached rectangle requires positive widths")?;
+        normal_alignment::validate_rectangle(self.surface,domain,budget)?;
+        let key=domain.map(|d|d.map(f64::to_bits));
+        if let Some(report)=self.rectangles.get(&key) {
+            self.hits+=1;let mut report=report.clone();report.spans=0;return Ok(report);
+        }
+        let report=qualify_rectangle(self.surface,domain,self.sine,budget)?;
+        if report.complete&&self.rectangles.len()<100000 {self.rectangles.insert(key,report.clone());}
+        Ok(report)
+    }
+    fn cached_normal(&mut self,domain:[[f64;2];2],budget:usize)->Result<(Option<[[f64;2];3]>,usize)> {
+        normal_alignment::validate_rectangle(self.surface,domain,budget)?;
+        let key=domain.map(|d|d.map(f64::to_bits));
+        if let Some(bounds)=self.normals.get(&key) {self.hits+=1;return Ok((Some(*bounds),0));}
+        let result=normal_alignment::normal_bounds(self.surface,domain,budget)?;
+        if let Some(bounds)=result.0 {if self.normals.len()<100000 {self.normals.insert(key,bounds);}}
+        Ok(result)
+    }
+    pub fn inspect_pair(&mut self,pair:[[[f64;2];2];2],max_spans:usize)->Result<(bool,usize)> {
+        let surface=self.surface;let sine=self.sine;
+        // Normal hulls are reusable only on this immutable source. Partial
+        // queries are never cached; the caller still enforces positive work.
+        let mut normals=std::mem::take(&mut self.normals);
+        let mut normal_hits=0;
+        let result=inspect_original_endpoint_pair_with(surface,pair,sine,max_spans,
+            &mut |domain,budget|self.qualify_rectangle(domain,budget),
+            &mut |domain,budget| {
+                normal_alignment::validate_rectangle(surface,domain,budget)?;
+                let key=domain.map(|d|d.map(f64::to_bits));
+                if let Some(bounds)=normals.get(&key) {normal_hits+=1;return Ok((Some(*bounds),0));}
+                let result=normal_alignment::normal_bounds(surface,domain,budget)?;
+                if let Some(bounds)=result.0 {if normals.len()<100000 {normals.insert(key,bounds);}}
+                Ok(result)
+            });
+        self.normals=normals;self.hits+=normal_hits;
+        result
+    }
+}
+pub fn inspect_original_endpoint_pair(
+    s:&Surface, pair:[[[f64;2];2];2], sine:f64, max_spans:usize,
+) -> Result<(bool,usize)> {
+    inspect_original_endpoint_pair_with(s,pair,sine,max_spans,&mut |domain,budget|qualify_rectangle(s,domain,sine,budget),
+        &mut |domain,budget|normal_alignment::normal_bounds(s,domain,budget))
+}
+fn inspect_original_endpoint_pair_with<'a>(
+    s:&'a Surface,pair:[[[f64;2];2];2],sine:f64,max_spans:usize,
+    qualify:&mut impl FnMut([[f64;2];2],usize)->Result<Report<'a>>,
+    normal:&mut impl FnMut([[f64;2];2],usize)->Result<(Option<[[f64;2];3]>,usize)>,
+)->Result<(bool,usize)> {
+    s.validate()?;
+    check(sine.is_finite() && (0. ..1.).contains(&sine) && max_spans<=100000,
+        "Bound original endpoint angle and work")?;
+    for rect in pair {
+        check(rect.iter().all(|a|a[0]<a[1]),"Endpoint rectangles require positive widths")?;
+        normal_alignment::validate_rectangle(s,rect,max_spans.max(1))?;
+    }
+    if max_spans==0 {return Ok((false,0));}
+    let union=std::array::from_fn(|a|[pair[0][a][0].min(pair[1][a][0]),pair[0][a][1].max(pair[1][a][1])]);
+    let report=qualify(union,max_spans)?;
+    let mut used=report.spans;
+    let Some(mut matrix)=report.mean_matrix else {return Ok((false,used));};
+    let raw=matrix.jacobian.map(|row|row.map(|d|[d.lo,d.hi]));
+    if !inspect_jacobian_rank_bound(raw)? {
+        let strips=[[union[0],pair[0][1]],[pair[1][0],union[1]]];
+        if used==max_spans {return Ok((false,used));}
+        let u=qualify(strips[0],max_spans-used)?;
+        used+=u.spans;
+        let Some(u)=u.mean_matrix else {return Ok((false,used));};
+        if used==max_spans {return Ok((false,used));}
+        let v=qualify(strips[1],max_spans-used)?;
+        used+=v.spans;
+        let Some(v)=v.mean_matrix else {return Ok((false,used));};
+        let tightened=matrix.coordinate_path(pair,&u,&v)?.matrix.jacobian;
+        matrix.jacobian=tightened;
+    }
+    // Share the immutable endpoint normal hulls with the later coordinate-path
+    // exclusion instead of paying for the same source rectangle twice.
+    let (excluded,spent)=matrix.exclude_pair_with_normal(pair,sine,max_spans-used,None,None,normal)?;used+=spent;
+    if excluded {return Ok((true,used));}
+    // Intersect the two exact original coordinate-path chords. Each path is
+    // source-bound and all connecting strip coverage must complete first.
+    let mut chord=[[f64::NEG_INFINITY,f64::INFINITY];3];
+    for reverse in [false,true] {
+        let endpoints=if reverse {[pair[1],pair[0]]}else{pair};
+        let strips=[[union[0],endpoints[0][1]],[endpoints[1][0],union[1]]];
+        if used==max_spans {return Ok((false,used));}
+        let u=qualify(strips[0],max_spans-used)?;used+=u.spans;
+        let Some(u)=u.mean_matrix else {return Ok((false,used));};
+        if used==max_spans {return Ok((false,used));}
+        let v=qualify(strips[1],max_spans-used)?;used+=v.spans;
+        let Some(v)=v.mean_matrix else {return Ok((false,used));};
+        let bounds=matrix.coordinate_path(endpoints,&u,&v)?.chord_bounds()?;
+        for k in 0..3 {
+            let value=if reverse {[-bounds[k][1],-bounds[k][0]]}else{bounds[k]};
+            chord[k]=[chord[k][0].max(value[0]),chord[k][1].min(value[1])];
+            I::new(chord[k][0],chord[k][1])?;
+        }
+    }
+    for endpoint in pair {
+        if used==max_spans {return Ok((false,used));}
+        let (normal,spent)=normal(endpoint,max_spans-used)?;used+=spent;
+        let Some(normal)=normal else {return Ok((false,used));};
+        if normal_alignment::inspect_pair_bounds([normal,chord],sine)?.aligned==Some(false) {
+            return Ok((true,used));
+        }
+    }
+    Ok((false,used))
+}
+
 /// Source-bound exclusion for chords between two original rectangles connected
 /// through exactly equal clamped chart corners. This proves direction only.
 pub struct CornerChordCertificate<'a> {
@@ -659,6 +1180,12 @@ pub fn qualify_corner_chords<'a>(
     sources:[&'a Surface;2], high_corners:[[bool;2];2], rectangles:[[[f64;2];2];2],
     projection:[f64;3], sine:f64, max_spans:usize,
 )->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    qualify_corner_chords_with(sources,high_corners,rectangles,projection,sine,max_spans,None)
+}
+fn qualify_corner_chords_with<'a>(sources:[&'a Surface;2],high_corners:[[bool;2];2],
+    rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize,
+    cache:Option<&mut [OriginalChordWorkspace<'a>;2]>,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
     check((1..=100000).contains(&max_spans)&&projection.iter().all(|x|x.is_finite())
         &&sine.is_finite()&&(0. ..1.).contains(&sine),"Choose bounded original corner path work and a finite projection")?;
     let mut anchors=[[0.;2];2];let mut poles=[Vec::new(),Vec::new()];
@@ -679,8 +1206,68 @@ pub fn qualify_corner_chords<'a>(
         poles[side]=s.control_points[indices[0]][indices[1]].clone();
     }
     check(poles[0].len()==3&&poles[0]==poles[1],"Require exactly equal original corner coordinates")?;
-    qualify_verified_anchor_paths(sources,anchors,rectangles,projection,sine,max_spans)
+    qualify_verified_anchor_paths_with(sources,anchors,rectangles,projection,sine,max_spans,cache)
 }
+/// Try only exactly shared authored clamped corners. Projection is a proposal;
+/// the continuous path/cone gate recomputes all geometric evidence.
+pub fn inspect_shared_corner_chords(
+    sources:[&Surface;2],rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize,
+) -> Result<(bool,usize)> {
+    inspect_shared_corner_chords_with(sources,rectangles,projection,sine,max_spans,None)
+}
+/// Cache complete interval evidence on these two immutable originals only.
+/// Directions and exact common-corner ownership are rechecked on every call.
+pub struct SharedCornerWorkspace<'a> {
+    sources:[&'a Surface;2],sine:f64,cache:[OriginalChordWorkspace<'a>;2],
+}
+impl<'a> SharedCornerWorkspace<'a> {
+    pub fn new(sources:[&'a Surface;2],sine:f64)->Result<Self> {
+        Ok(Self{sources,sine,cache:[OriginalChordWorkspace::new(sources[0],sine)?,OriginalChordWorkspace::new(sources[1],sine)?]})
+    }
+    pub fn cache_hits(&self)->usize {self.cache.iter().map(|c|c.cache_hits()).sum()}
+    pub fn inspect(&mut self,rectangles:[[[f64;2];2];2],projection:[f64;3],budget:usize)->Result<(bool,usize)> {
+        inspect_shared_corner_chords_with(self.sources,rectangles,projection,self.sine,budget,Some(&mut self.cache))
+    }
+}
+fn inspect_shared_corner_chords_with<'a>(sources:[&'a Surface;2],rectangles:[[[f64;2];2];2],
+    projection:[f64;3],sine:f64,max_spans:usize,mut cache:Option<&mut [OriginalChordWorkspace<'a>;2]>,
+)->Result<(bool,usize)> {
+    check(max_spans<=100000 && sine.is_finite() && (0. ..1.).contains(&sine)
+        && projection.iter().all(|x|x.is_finite())
+        && rectangles.iter().flatten().all(|d|d.iter().all(|x|x.is_finite()) && d[0]<d[1]),
+        "Bound shared-corner angle, projection, positive endpoint rectangles and work")?;
+    for side in 0..2 {
+        sources[side].validate()?;
+        normal_alignment::validate_rectangle(sources[side],rectangles[side],max_spans.max(1))?;
+    }
+    if max_spans==0 || sources.iter().any(|s|s.periodic_u||s.periodic_v) {return Ok((false,0));}
+    let corners=|s:&Surface| {
+        let counts=[s.control_points.len(),s.control_points[0].len()];
+        let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+        let mut out=Vec::new();
+        for u in [false,true] {for v in [false,true] {
+            let high=[u,v];
+            if !(0..2).all(|a| {
+                let k=knots[a];let value=k[if high[a]{counts[a]}else{degrees[a]}];
+                let end=if high[a]{&k[counts[a]..]}else{&k[..=degrees[a]]};
+                end.iter().all(|x|*x==value)
+            }) {continue;}
+            let p=&s.control_points[if u{counts[0]-1}else{0}][if v{counts[1]-1}else{0}];
+            out.push((high,[p[0],p[1],p[2]]));
+        }}
+        out
+    };
+    let a=corners(sources[0]);let b=corners(sources[1]);let mut used=0;
+    for (ah,ap) in a {for &(bh,bp) in &b {
+        if ap!=bp {continue;}
+        if used==max_spans {return Ok((false,used));}
+        let (proof,spent)=qualify_corner_chords_with(sources,[ah,bh],rectangles,projection,sine,max_spans-used,cache.as_deref_mut())?;
+        used+=spent;
+        if proof.is_some() {return Ok((true,used));}
+    }}
+    Ok((false,used))
+}
+
 /// Connect only anchors already certified on their own immutable originals.
 pub fn qualify_anchored_chords<'a>(
     anchors:[&SurfaceAnchorCertificate<'a>;2],rectangles:[[[f64;2];2];2],
@@ -781,6 +1368,12 @@ fn qualify_polar_anchored_chords_impl<'a>(
 fn qualify_verified_anchor_paths<'a>(sources:[&'a Surface;2],anchors:[[f64;2];2],
     rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize,
 )->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    qualify_verified_anchor_paths_with(sources,anchors,rectangles,projection,sine,max_spans,None)
+}
+fn qualify_verified_anchor_paths_with<'a>(sources:[&'a Surface;2],anchors:[[f64;2];2],
+    rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize,
+    mut cache:Option<&mut [OriginalChordWorkspace<'a>;2]>,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
     check((1..=100000).contains(&max_spans)&&projection.iter().all(|x|x.is_finite())
         &&sine.is_finite()&&(0. ..1.).contains(&sine),"Choose bounded original anchor path work")?;
     for side in 0..2 {normal_alignment::validate_rectangle(sources[side],rectangles[side],max_spans)?;}
@@ -794,7 +1387,8 @@ fn qualify_verified_anchor_paths<'a>(sources:[&'a Surface;2],anchors:[[f64;2];2]
     for side in 0..2 {
         if spans==max_spans{return Ok((None,spans));}
         let domain=std::array::from_fn(|a|[anchors[side][a].min(rectangles[side][a][0]),anchors[side][a].max(rectangles[side][a][1])]);
-        let report=qualify_rectangle(sources[side],domain,sine,max_spans-spans)?;
+        let report=if let Some(c)=cache.as_deref_mut() {c[side].qualify_rectangle(domain,max_spans-spans)?}
+            else {qualify_rectangle(sources[side],domain,sine,max_spans-spans)?};
         spans+=report.spans;
         let Some(matrix)=report.mean_matrix else{return Ok((None,spans));};
         for axis in 0..2 {
@@ -806,7 +1400,8 @@ fn qualify_verified_anchor_paths<'a>(sources:[&'a Surface;2],anchors:[[f64;2];2]
     }
     for side in 0..2 {
         if spans==max_spans {break;}
-        let (normal,used)=normal_alignment::normal_bounds(sources[side],rectangles[side],max_spans-spans)?;
+        let (normal,used)=if let Some(c)=cache.as_deref_mut() {c[side].cached_normal(rectangles[side],max_spans-spans)?}
+            else {normal_alignment::normal_bounds(sources[side],rectangles[side],max_spans-spans)?};
         spans+=used;
         if let Some(n)=normal {
             if normal_alignment::positive_chord_cone_excluded(&generators,n,projection,sine)? {
@@ -826,10 +1421,35 @@ mod original_corner_chord_tests {
             weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false}
     }
     #[test]
+    fn shared_corner_workspace_preserves_direct_decisions_and_zero_budget_refusal() {
+        let mut a=plane(-1.);let mut b=plane(1.);
+        a.control_points[1][1][2]=0.01;b.control_points[1][1][2]=0.01;
+        let rects=[[[0.,0.1];2];2];
+        let mut cache=SharedCornerWorkspace::new([&a,&b],1e-4).unwrap();
+        let direct=inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-4,64).unwrap();
+        assert!(direct.0);assert_eq!(cache.inspect(rects,[1.,1.,0.],64).unwrap(),direct);
+        let warmed=cache.inspect(rects,[1.,1.,0.],64).unwrap();
+        assert!(warmed.0);assert_eq!(warmed.1,0);assert!(cache.cache_hits()>=3);
+        assert_eq!(cache.inspect(rects,[1.,1.,0.],0).unwrap(),(false,0));
+        for direction in [[0.;3],[0.,0.,1.],[-1.,-1.,0.]] {
+            let expected=inspect_shared_corner_chords([&a,&b],rects,direction,1e-4,64).unwrap();
+            let actual=cache.inspect(rects,direction,64).unwrap();
+            assert_eq!(actual.0,expected.0);assert!(actual.1<=expected.1);
+        }
+        let mut invalid=rects;invalid[0][0]=[-0.1,0.1];
+        assert!(cache.inspect(invalid,[1.,1.,0.],0).is_err());
+        assert!(cache.inspect(rects,[f64::NAN,0.,0.],64).is_err());
+        b.control_points[0][0][2]=1e-15;
+        let mut other=SharedCornerWorkspace::new([&a,&b],1e-4).unwrap();
+        assert_eq!(other.inspect(rects,[1.,1.,0.],64).unwrap(),(false,0));
+    }
+    #[test]
     fn owns_original_paths_and_accounts_normal_work() {
         let a=plane(-1.);let b=plane(1.);let rects=[[[0.,0.1];2];2];
         let (cert,used)=qualify_corner_chords([&a,&b],[[false;2];2],rects,[1.,1.,0.],1e-6,3).unwrap();
         let cert=cert.unwrap();assert_eq!(used,3);assert!(std::ptr::eq(cert.sources()[0],&a));
+        assert_eq!(inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-6,3).unwrap(),(true,3));
+        assert!(!inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-6,2).unwrap().0);
         assert!(std::ptr::eq(cert.sources()[1],&b));assert_eq!(cert.rectangles(),rects);
         assert!(qualify_corner_chords([&a,&b],[[false;2];2],rects,[1.,1.,0.],1e-6,2).unwrap().0.is_none());
         assert!(qualify_corner_chords([&a,&a],[[false;2];2],rects,[1.,1.,0.],1e-6,4).unwrap().0.is_none());
@@ -845,8 +1465,24 @@ mod original_corner_chord_tests {
     #[test]
     fn rejects_approximate_common_corner_and_invalid_projection() {
         let a=plane(-1.);let mut b=plane(1.);b.control_points[0][0][2]=1e-15;
+        assert_eq!(inspect_shared_corner_chords([&a,&b],[[[0.,0.1];2];2],[1.,1.,0.],1e-6,4).unwrap(),(false,0));
         assert!(qualify_corner_chords([&a,&b],[[false;2];2],[[[0.,0.1];2];2],[1.,1.,0.],1e-6,4).is_err());
         assert!(qualify_corner_chords([&a,&a],[[false;2];2],[[[0.,0.1];2];2],[f64::NAN,0.,0.],1e-6,4).is_err());
+    }
+    #[test]
+    fn shared_corner_covers_curved_charts_and_refuses_zero_projection() {
+        let mut a=plane(-1.);let mut b=plane(1.);
+        a.control_points[1][1][2]=0.01;b.control_points[1][1][2]=0.01;
+        let rects=[[[0.,0.1];2];2];
+        // Independent charts S=(sign*u,sign*v,0.01*u*v) share only
+        // their authored corner. Neither chart is planar.
+        assert!(inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-4,3).unwrap().0);
+        assert!(!inspect_shared_corner_chords([&a,&b],rects,[0.;3],1e-4,4).unwrap().0);
+        assert_eq!(inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-4,0).unwrap(),(false,0));
+        let mut invalid=rects;invalid[0][0]=[-0.1,0.1];
+        assert!(inspect_shared_corner_chords([&a,&b],invalid,[1.,1.,0.],1e-4,0).is_err());
+        invalid[0][0]=[0.,0.];
+        assert!(inspect_shared_corner_chords([&a,&b],invalid,[1.,1.,0.],1e-4,0).is_err());
     }
     #[test]
     fn covers_reflected_affine_parameter_domains_without_rebinding_sources() {
@@ -859,6 +1495,8 @@ mod original_corner_chord_tests {
         let (cert,used)=qualify_corner_chords([&a,&b],[[true;2],[false;2]],rects,[1.,1.,0.],1e-6,3).unwrap();
         assert!(cert.is_some());assert_eq!(used,3);
         assert!(qualify_corner_chords([&b,&a],[[false;2],[true;2]],[rects[1],rects[0]],[-1.,-1.,0.],1e-6,3).unwrap().0.is_some());
+        assert_eq!(inspect_shared_corner_chords([&a,&b],rects,[1.,1.,0.],1e-6,3).unwrap(),(true,3));
+        assert_eq!(inspect_shared_corner_chords([&b,&a],[rects[1],rects[0]],[-1.,-1.,0.],1e-6,3).unwrap(),(true,3));
     }
     #[test]
     fn exact_anchor_on_large_identity_plane() {
@@ -1070,6 +1708,44 @@ mod tests {
         assert!(r.complete && r.certificate.is_none());
         let matrix=r.mean_matrix.unwrap();
         let pair=[[[0.,0.1],[0.,0.1]],[[0.8,0.9],[0.8,0.9]]];
+        let mut broad=qualify_rectangle(&s,[[0.,1.];2],1e-4,1).unwrap().mean_matrix.unwrap();
+        // A conservative widening includes rank-deficient matrices while
+        // every source chord still has separated X and zero Z components.
+        broad.jacobian[1][1]=I::new(0.,20.).unwrap();
+        assert!(!inspect_jacobian_rank_bound(broad.jacobian.map(|r|r.map(|d|[d.lo,d.hi]))).unwrap());
+        assert_eq!(broad.exclude_pair(pair,1e-4,2,None,None).unwrap(),(true,1));
+        assert_eq!(inspect_original_endpoint_pair(&s,pair,1e-4,0).unwrap(),(false,0));
+        assert_eq!(inspect_original_endpoint_pair(&s,pair,1e-4,1).unwrap(),(false,1));
+        assert_eq!(inspect_original_endpoint_pair(&s,pair,1e-4,2).unwrap(),(true,2));
+        let mut workspace=OriginalChordWorkspace::new(&s,1e-4).unwrap();
+        assert_eq!(workspace.inspect_pair(pair,2).unwrap(),(true,2));
+        assert_eq!(workspace.inspect_pair(pair,1).unwrap(),(true,0),
+            "Warm mean matrix and endpoint hull must not repay source normal work");
+        assert_eq!(workspace.inspect_pair(pair,0).unwrap(),(false,0));
+        assert!(workspace.cache_hits()>0);
+        let mut seeded=OriginalChordWorkspace::new(&s,1e-4).unwrap();
+        assert!(seeded.qualify_rectangle([[0.,0.9];2],1).unwrap().complete);
+        assert_eq!(seeded.inspect_pair(pair,1).unwrap(),(true,1));
+        assert!(seeded.cache_hits()>0);
+        assert!(seeded.qualify_rectangle([[0.,0.9];2],0).is_err());
+        assert!(seeded.qualify_rectangle([[0.,0.9];2],100001).is_err());
+        assert!(seeded.qualify_rectangle([[-0.1,0.9];2],1).is_err());
+        assert!(workspace.inspect_pair(pair,100001).is_err());
+        assert!(workspace.inspect_pair([pair[0],[[0.,1.1],[0.,1.]]],0).is_err());
+        let mut independent=OriginalChordWorkspace::new(&s,1e-4).unwrap();
+        assert_eq!(independent.inspect_pair(pair,1).unwrap(),(false,1));
+        assert!(OriginalChordWorkspace::new(&s,f64::NAN).is_err());
+        let split=Surface{degree_u:1,degree_v:1,knots_u:vec![0.,0.,0.5,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:[0.,0.5,1.].iter().map(|u|vec![vec![*u,0.,0.],vec![*u,1.,0.]]).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false};
+        let mut partial=OriginalChordWorkspace::new(&split,1e-4).unwrap();
+        assert!(!partial.qualify_rectangle([[0.,1.];2],1).unwrap().complete);
+        assert!(partial.rectangles.is_empty());
+        assert!(partial.qualify_rectangle([[0.,1.];2],2).unwrap().complete);
+        assert_eq!(partial.qualify_rectangle([[0.,1.];2],1).unwrap().spans,0);
+
+
+        assert!(inspect_original_endpoint_pair(&s,[pair[0],[[0.,1.1],[0.,1.]]],1e-4,0).is_err());
         assert_eq!(matrix.exclude_pair(pair,1e-4,0,None,None).unwrap(),(false,0));
         assert_eq!(matrix.exclude_pair(pair,1e-4,1,None,None).unwrap(),(true,1));
         let (paid,cache)=normal_alignment::inspect_original_pair_cached(&s,pair,1e-4,2).unwrap();
@@ -1089,7 +1765,7 @@ mod tests {
         for row in &mut collapsed.control_points {for point in row {point.fill(0.);}}
         let collapsed=qualify_rectangle(&collapsed,[[0.,1.];2],1e-4,1).unwrap();
         assert_eq!(collapsed.mean_matrix.unwrap().exclude_pair(pair,1e-4,2,None,None)
-            .unwrap(),(false,0));
+            .unwrap(),(false,2));
         let mut multiple=s.clone();multiple.degree_u=1;
         multiple.knots_u=vec![0.,0.,0.5,1.,1.];
         let incomplete=qualify_rectangle(&multiple,[[0.,1.];2],1e-4,1).unwrap();
@@ -1252,6 +1928,126 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn original_endpoint_pair_matches_independent_parabola_chords() {
+        let s=graph(0.01);
+        let pair=[[[0.,0.2],[0.,0.2]],[[0.8,1.],[0.8,1.]]];
+        assert!(inspect_original_endpoint_pair(&s,pair,1e-4,3).unwrap().0);
+        for u in [0.,0.1,0.2] {
+            for v in [0.8,0.9,1.] {
+                for dy in [0.6,0.8,1.] {
+                    let dx:f64=v-u;
+                    let dz:f64=0.01*(v*v-u*u);
+                    for endpoint in [u,v] {
+                        let nx:f64=-0.02*endpoint;
+                        let cosine_squared=(nx*dx+dz).powi(2)
+                            / ((nx*nx+1.)*(dx*dx+dy*dy+dz*dz));
+                        assert!(cosine_squared<1.-1e-4);
+                    }
+                }
+            }
+        }
+        assert!(inspect_original_endpoint_pair(&s,pair,1.,0).is_err());
+        assert!(inspect_original_endpoint_pair(&s,pair,1e-4,100001).is_err());
+        let mut invalid=pair;
+        invalid[0][0]=[f64::NAN,0.2];
+        assert!(inspect_original_endpoint_pair(&s,invalid,1e-4,0).is_err());
+    }
+    #[test]
+    fn original_cache_keeps_angular_policy_and_rectangle_authority() {
+        let s=graph(0.01);
+        let domain=[[0.,1.];2];
+        let mut strict=OriginalChordWorkspace::new(&s,1e-6).unwrap();
+        assert!(strict.qualify_rectangle(domain,1).unwrap().certificate.is_some());
+        let warmed=strict.qualify_rectangle(domain,1).unwrap();
+        assert_eq!(warmed.spans,0);
+        assert_eq!(warmed.certificate.unwrap().max_sine_squared(),1e-6);
+        // A much wider normal cone includes chords excluded by the strict
+        // policy. Identical source and UV coordinates cannot transfer that
+        // exclusion across policies, even after both caches are warm.
+        let mut wide=OriginalChordWorkspace::new(&s,0.999999).unwrap();
+        for _ in 0..2 {
+            let r=wide.qualify_rectangle(domain,1).unwrap();
+            assert!(r.complete && r.certificate.is_none());
+            assert_eq!(r.cosine_squared_upper,
+                qualify_rectangle(&s,domain,0.999999,1).unwrap().cosine_squared_upper);
+        }
+        // Warm keys do not authorize degenerate, nonfinite or foreign UV
+        // rectangles, including refusals requested with a zero budget.
+        for bad in [[[0.,0.],[0.,1.]],[[0.,f64::NAN],[0.,1.]],
+            [[0.,1.],[0.,f64::INFINITY]],[[-0.01,1.],[0.,1.]]] {
+            for budget in [0,1] {assert!(strict.qualify_rectangle(bad,budget).is_err());}
+        }
+        assert!(strict.qualify_rectangle([[0.,0.5];2],1).unwrap().complete);
+        assert_eq!(strict.qualify_rectangle([[0.,0.5];2],1).unwrap().spans,0);
+        assert!(strict.qualify_rectangle(domain,0).is_err());
+    }
+    #[test]
+    fn original_two_coordinate_paths_preserve_exact_normal_diameter() {
+        let s=Surface {
+            degree_u:1,degree_v:3,knots_u:vec![0.,0.,1.,1.],
+            knots_v:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:[0.,1.].into_iter().map(|x|
+                [[1.,0.],[1.,2.],[-1.,2.],[-1.,0.]].into_iter().map(|p|vec![x,p[0],p[1]]).collect()).collect(),
+            weights:vec![vec![1.,1./3.,1./3.,1.];2],periodic_u:false,periodic_v:false,
+        };
+        let pair=[[[0.4,0.41],[0.,0.001]],[[0.4,0.41],[0.999,1.]]];
+        // Equal UV domains and degrees on a different source cannot borrow
+        // the plane's exclusion: this rational arch has a normal diameter.
+        let mut plane=s.clone();
+        for row in &mut plane.control_points {for (i,point) in row.iter_mut().enumerate() {
+            point[1]=i as f64/3.;point[2]=0.;
+        }}
+        plane.weights=vec![vec![1.;4];2];
+        let mut planar=OriginalChordWorkspace::new(&plane,1e-4).unwrap();
+        assert!(planar.inspect_pair(pair,1000).unwrap().0);
+        assert!(planar.inspect_pair(pair,1000).unwrap().0);
+        let mut workspace=OriginalChordWorkspace::new(&s,1e-4).unwrap();
+        let first=workspace.inspect_pair(pair,1000).unwrap();
+        assert!(!first.0);
+        let direct=inspect_original_endpoint_pair(&s,pair,1e-4,1000).unwrap();
+        assert_eq!(first.0,direct.0);
+        assert!(first.1<direct.1,
+            "Even a cold workspace shares endpoint hulls between the two exclusion stages");
+        assert_eq!(workspace.normals.len(),2,"Both original endpoint normals are completely enclosed");
+        let second=workspace.inspect_pair(pair,1000).unwrap();
+        assert!(!second.0 && second.1<first.1,"Warm source-bound normals save actual span work");
+        // Hold all rectangle certificates warm and remove only the normals:
+        // the extra work must come from the two original endpoint enclosures.
+        workspace.normals.clear();
+        let rectangle_warm=workspace.inspect_pair(pair,1000).unwrap();
+        assert_eq!(rectangle_warm.0,second.0);
+        assert_eq!(rectangle_warm.1,second.1+2);
+        eprintln!("original normal cache cold={} rectangleWarm={} fullyWarm={}",first.1,rectangle_warm.1,second.1);
+        assert_eq!(workspace.inspect_pair(pair,0).unwrap(),(false,0));
+        for endpoints in [pair,[pair[1],pair[0]]] {
+            for budget in [0,1,4,16,64,1000] {
+                let (cached,paid)=workspace.inspect_pair(endpoints,budget).unwrap();
+                assert!(!cached&&paid<=budget,"Warm original cache must retain an actual normal diameter");
+                let (excluded,spent)=inspect_original_endpoint_pair(&s,endpoints,1e-4,budget).unwrap();
+                assert!(!excluded && spent<=budget,
+                    "original normal diameter must survive two complete or partial path bounds");
+            }
+        }
+    }
+    #[test]
+    fn original_coordinate_path_preserves_collapsed_boundary_and_work_limits() {
+        let s=Surface {
+            degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,0.,0.]],
+                vec![vec![0.,1.,0.],vec![1.,0.,0.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false,
+        };
+        let pair=[[[0.,0.1],[0.,0.1]],[[0.9,1.],[0.9,1.]]];
+        assert!(qualify_rectangle(&s,[[0.,1.];2],1e-4,1).unwrap().certificate.is_none());
+        for budget in 0..=3 {
+            let (excluded,spent)=inspect_original_endpoint_pair(&s,pair,1e-4,budget).unwrap();
+            assert!(!excluded);
+            assert!(spent<=budget);
+        }
+        // XY chords cannot align with the regular B normal (0,0,-u).
+        assert!(inspect_original_endpoint_pair(&s,pair,1e-4,5).unwrap().0);
     }
     #[test]
     fn whole_curved_graph_excludes_aligned_chords_and_retains_source_identity() {

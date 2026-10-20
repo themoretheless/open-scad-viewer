@@ -1,5 +1,21 @@
 //! Positional error bound for an exact separable original rational weight profile.
 use crate::{Result, check, interval_eval::Interval as I, surface::Surface};
+// Compare positive binary64 products as exact dyadic integers. Each significand
+// has at most 53 bits, so their product fits u128 even when f64 would overflow
+// or underflow. Surface validation guarantees finite positive weights.
+fn exact_positive_products_equal(a:f64,b:f64,c:f64,d:f64)->bool {
+    fn product(a:f64,b:f64)->(u128,i32) {
+        fn parts(x:f64)->(u128,i32) {
+            let bits=x.to_bits();let exponent=((bits>>52)&0x7ff) as i32;
+            let fraction=bits&((1_u64<<52)-1);
+            if exponent==0 {(fraction as u128,-1074)}
+            else {(((1_u64<<52)|fraction) as u128,exponent-1023-52)}
+        }
+        let (am,ae)=parts(a);let (bm,be)=parts(b);let m=am*bm;
+        let shift=m.trailing_zeros();(m>>shift,ae+be+shift as i32)
+    }
+    [a,b,c,d].iter().all(|v|v.is_finite()&&*v>0.) && product(a,b)==product(c,d)
+}
 /// A proposal certificate, not a replacement Surface or a B-rep admission.
 /// The target weights are the exact expressions row[i]*column[j]/pivot;
 /// flattening those expressions to binary64 is not covered by this certificate.
@@ -750,11 +766,11 @@ impl<'source> WeightProfile<'source> {
                     return Ok((None, spent));
                 }
                 let values = crate::normal_alignment::jacobian_net_on(
-                    self.homogeneous_on([u, v], span)?,
+                    self.homogeneous_centered_on([u,v],span,&s.control_points[u][v])?,
                     degrees,
                     span,
                     section,
-                    &s.control_points[u][v],
+                    &[0.;3],
                 )?;
                 for k in 0..3 {
                     for axis in 0..2 {
@@ -812,9 +828,7 @@ impl<'source> WeightProfile<'source> {
             let part=std::array::from_fn(|a|[span[a][0].max(domain[a][0]),span[a][1].min(domain[a][1])]);
             if part.iter().any(|r|r[0]>r[1]) {continue;}
             if spent==max_spans {return Ok((None,spent));}
-            let mut net=self.homogeneous_on([u,v],span)?;
-            let origin=&s.control_points[u][v];
-            for row in &mut net {for h in row {for k in 0..3 {h[k]=h[k].sub(I::point(origin[k]).mul(h[3])?)?;}}}
+            let net=self.homogeneous_centered_on([u,v],span,&s.control_points[u][v])?;
             let mut h=vec![vec![[I::point(0.);4];order[1]+1];order[0]+1];
             let mut f=vec![vec![[I::point(0.);3];order[1]+1];order[0]+1];
             for a in 0..=order[0] {for b in 0..=order[1] {
@@ -875,11 +889,11 @@ impl<'source> WeightProfile<'source> {
                     return Ok((None, spent));
                 }
                 let jet = crate::normal_alignment::jet_net_on(
-                    self.homogeneous_on([u, v], span)?,
+                    self.homogeneous_centered_on([u,v],span,&s.control_points[u][v])?,
                     degrees,
                     span,
                     section,
-                    &s.control_points[u][v],
+                    &[0.;3],
                 )?;
                 for k in 0..3 {
                     hull[k][0] = hull[k][0].min(jet.second[axes[0]+axes[1]][k].lo);
@@ -923,13 +937,13 @@ impl<'source> WeightProfile<'source> {
                 if spent == max_spans {
                     return Ok((None, spent));
                 }
-                let net = self.homogeneous_on([u, v], span)?;
+                let net = self.homogeneous_centered_on([u,v],span,&s.control_points[u][v])?;
                 let j = crate::normal_alignment::jacobian_net_on(
                     net,
                     degrees,
                     span,
                     section,
-                    &s.control_points[u][v],
+                    &[0.;3],
                 )?;
                 for k in 0..3 {
                     let a = (k + 1) % 3;
@@ -942,6 +956,34 @@ impl<'source> WeightProfile<'source> {
             }
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
+    }
+    /// Direction enclosure on the exact profile. A pole factor may tighten
+    /// uncertain normals only on rectangles strictly inside the U domain;
+    /// no regular normal or unique tangent is supplied at collapsed endpoints.
+    pub fn interior_normal_direction_bounds(&self,domain:[[f64;2];2],max_spans:usize)
+        ->Result<(Option<[[f64;2];3]>,usize)> {
+        check(max_spans<=100000,"Bound interior profile normal-direction work")?;
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans.max(1))?;
+        if max_spans==0 {return Ok((None,0));}
+        let (normal,mut spent)=self.normal_bounds(domain,max_spans)?;
+        let Some(bounds)=normal else {return Ok((None,spent));};
+        let s=self.source;
+        if !bounds.iter().all(|d|d[0]<=0. && d[1]>=0.)
+            || domain[0][0]<=s.knots_u[s.degree_u]
+            || domain[0][1]>=s.knots_u[s.control_points.len()] {
+            return Ok((normal,spent));
+        }
+        for high in [false,true] {
+            if max_spans-spent<6 {break;}
+            let (factored,used)=self.factored_pole_normal_bounds(domain,high,max_spans-spent)?;
+            spent+=used;
+            if let Some(factored)=factored {
+                if factored.components.iter().any(|d|d[0]>0. || d[1]<0.) {
+                    return Ok((Some(factored.components),spent));
+                }
+            }
+        }
+        Ok((normal,spent))
     }
     /// Normal divided by exact longitudinal and transverse collapsed-U factors.
     /// This is a factored interior/pole-limit diagnostic, not immersion at the pole.
@@ -1381,6 +1423,14 @@ impl<'source> WeightProfile<'source> {
             spent,
         ))
     }
+    fn homogeneous_centered_on(&self,span:[usize;2],domain:[[f64;2];2],origin:&[f64])
+        ->Result<Vec<Vec<[I;4]>>> {
+        crate::curve_surface_composition::surface_net_on_with_weights_centered(
+            self.source,span,domain,
+            |i,j| I::point(self.row[i]).mul(I::point(self.column[j]))?.div(I::point(self.pivot)),
+            std::array::from_fn(|k|origin[k]),
+        )
+    }
     pub(crate) fn homogeneous_on(
         &self,
         span: [usize; 2],
@@ -1594,9 +1644,9 @@ impl<'source> WeightProfile<'source> {
             };
             constant &= s.control_points[i][j] == *position;
             weights_equal &= if axis == 0 {
-                self.row[fixed] == self.pivot && s.weights[i][j] == self.column[j]
+                exact_positive_products_equal(self.row[fixed],self.column[j],s.weights[i][j],self.pivot)
             } else {
-                self.column[fixed] == self.pivot && s.weights[i][j] == self.row[i]
+                exact_positive_products_equal(self.column[fixed],self.row[i],s.weights[i][j],self.pivot)
             };
             spent += 1;
         }
@@ -1705,6 +1755,67 @@ mod tests {
             weights: vec![vec![1.; 2]; 2],
             periodic_u: false,
             periodic_v: false,
+        }
+    }
+    #[test]
+    fn interior_direction_factors_uncertain_rational_normals() {
+        let mut s=surface();s.degree_u=2;s.knots_u=vec![0.,0.,0.,1.,1.,1.];
+        s.control_points=vec![vec![vec![0.,0.,0.];2],vec![vec![0.5,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]];
+        s.weights=vec![vec![1.,4.];3];
+        let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+        let domain=[[0.01,0.99],[0.5,0.5]];
+        let ordinary=p.normal_bounds(domain,100).unwrap();
+        assert!(ordinary.0.unwrap().iter().all(|d|d[0]<=0. && d[1]>=0.));
+        let (direction,spent)=p.interior_normal_direction_bounds(domain,100).unwrap();
+        assert!(spent>ordinary.1 && spent<=100);
+        let z=direction.unwrap()[2];
+        assert!(z[0]>0. && z[0]<=0.64 && z[1]>=0.64);
+        assert_eq!(p.interior_normal_direction_bounds(domain,ordinary.1).unwrap(),ordinary);
+        let wide=[[0.01,0.99],[0.,1.]];
+        let ordinary_wide=p.normal_bounds(wide,100).unwrap();
+        assert_eq!(p.interior_normal_direction_bounds(wide,100).unwrap().0,ordinary_wide.0);
+        for budget in 0..=20 {
+            let (_,spent)=p.interior_normal_direction_bounds(domain,budget).unwrap();
+            assert!(spent<=budget);
+        }
+        assert!(p.interior_normal_direction_bounds(domain,100001).is_err());
+        s.control_points.reverse();
+        let reversed=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+        let (direction,spent)=reversed.interior_normal_direction_bounds(domain,100).unwrap();
+        let z=direction.unwrap()[2];
+        assert!(spent<=100 && z[1]<0. && z[0]<=-0.64 && z[1]>=-0.64);
+    }
+    #[test]
+    fn interior_direction_without_collapsed_end_keeps_original_bounds() {
+        let mut s=surface();s.degree_u=2;s.knots_u=vec![0.,0.,0.,1.,1.,1.];
+        s.control_points=vec![vec![vec![0.,0.,0.],vec![0.,0.01,0.]],vec![vec![0.5,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]];
+        s.weights=vec![vec![1.,4.];3];
+        let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+        let domain=[[0.01,0.99],[0.,1.]];
+        let ordinary=p.normal_bounds(domain,100).unwrap();
+        assert!(ordinary.0.unwrap().iter().all(|d|d[0]<=0. && d[1]>=0.));
+        assert_eq!(p.interior_normal_direction_bounds(domain,100).unwrap(),ordinary);
+    }
+    #[test]
+    fn interior_direction_preserves_pole_uncertainty_and_budget() {
+        for high in [false,true] {
+            let mut s=surface();
+            if high {s.control_points.reverse();s.control_points[1]=vec![vec![0.,0.,0.];2];}
+            else {s.control_points[0]=vec![vec![0.,0.,0.];2];}
+            let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+            for domain in [[[0.,1.],[0.,1.]],[[0.1,0.9],[0.,1.]]] {
+                assert_eq!(p.interior_normal_direction_bounds(domain,0).unwrap(),(None,0));
+                let ordinary=p.normal_bounds(domain,20).unwrap();
+                let direction=p.interior_normal_direction_bounds(domain,20).unwrap();
+                assert!(direction.1<=20);
+                if domain[0]==[0.,1.] {assert_eq!(direction,ordinary);}
+                let bounds=direction.0.unwrap();
+                // S=(u,u*v,0), or reversed: every interior normal is +/-Z.
+                assert!(bounds[0][0]<=0. && bounds[0][1]>=0.);
+                assert!(bounds[1][0]<=0. && bounds[1][1]>=0.);
+                if !high {assert!(bounds[2][1]>0.);} else {assert!(bounds[2][0]<0.);}
+            }
+            assert!(p.interior_normal_direction_bounds([[-0.1,0.9],[0.,1.]],0).is_err());
         }
     }
     #[test]
@@ -2514,6 +2625,25 @@ mod tests {
                 .boundary_direction([[0.99, 1.], [0.2, 0.3]], 1, 1., 0)
                 .is_err()
         );
+    }
+    #[test]
+    fn separable_rational_boundaries_preserve_exact_weight_products() {
+        for scale in [f64::from_bits(1),1.,f64::MAX/4.] {
+            assert!(exact_positive_products_equal(scale,2.,scale*2.,1.));
+            assert!(!exact_positive_products_equal(scale,2.,(scale*2.).next_up(),1.));
+        }
+        assert!(exact_positive_products_equal(f64::MAX,f64::MAX,f64::MAX,f64::MAX));
+        assert!(!exact_positive_products_equal(0.,1.,0.,1.));
+        assert!(!exact_positive_products_equal(f64::INFINITY,1.,1.,1.));
+        let mut s=surface();s.weights=vec![vec![1.,1.125],vec![1.25,1.40625]];
+        let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for axis in [0,1] {for high in [false,true] {
+            assert!(profile.preserved_boundary(axis,high,2).unwrap().0.is_some());
+            assert!(profile.preserved_boundary(axis,high,1).unwrap().0.is_none());
+        }}
+        s.weights[1][1]=s.weights[1][1].next_up();
+        let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for axis in [0,1] {assert!(profile.preserved_boundary(axis,true,2).unwrap().0.is_none());}
     }
     #[test]
     fn preserved_boundaries_are_exact_and_budgeted() {

@@ -29,7 +29,7 @@ pub fn line_crossing_parameter_identity_oriented(
     cutter: [[[LeafRef; 2]; 2]; 2],
     reversed: [bool; 2],
 ) -> Result<ParameterDecision, InputError> {
-    line_parameter_impl(ctx, main, cutter, reversed, None)
+    line_parameter_impl(ctx, main, cutter, reversed, None, None)
 }
 /// Compare original linear crossing parameters after exact affine carrier maps.
 pub fn line_crossing_parameter_identity_affine(
@@ -38,7 +38,18 @@ pub fn line_crossing_parameter_identity_affine(
     cutter: [[[LeafRef; 2]; 2]; 2],
     ranges: [[[LeafRef; 2]; 2]; 2],
 ) -> Result<ParameterDecision, InputError> {
-    line_parameter_impl(ctx, main, cutter, [false, false], Some(ranges))
+    line_parameter_impl(ctx, main, cutter, [false, false], Some(ranges), None)
+}
+/// Compare original transverse linear roots after positive Mobius maps.
+/// Rational root fractions are never converted to binary64 parameters.
+pub fn line_crossing_parameter_identity_projective(
+    ctx: &mut PredicateContext<'_>,
+    main: [[[LeafRef; 3]; 2]; 2],
+    cutter: [[[LeafRef; 2]; 2]; 2],
+    ranges: [[[LeafRef; 2]; 2]; 2],
+    weights: [[LeafRef; 2]; 2],
+) -> Result<ParameterDecision, InputError> {
+    line_parameter_impl(ctx, main, cutter, [false;2], Some(ranges), Some(weights))
 }
 fn line_parameter_impl(
     ctx: &mut PredicateContext<'_>,
@@ -46,6 +57,7 @@ fn line_parameter_impl(
     cutter: [[[LeafRef; 2]; 2]; 2],
     reversed: [bool; 2],
     ranges: Option<[[[LeafRef; 2]; 2]; 2]>,
+    weights: Option<[[LeafRef;2];2]>,
 ) -> Result<ParameterDecision, InputError> {
     let refs: Vec<_> = (0..2)
         .flat_map(|i| {
@@ -56,6 +68,7 @@ fn line_parameter_impl(
                 .copied()
         })
         .chain(ranges.iter().flatten().flatten().flatten().copied())
+        .chain(weights.iter().flatten().flatten().copied())
         .collect();
     let values = refs
         .iter()
@@ -94,6 +107,16 @@ fn line_parameter_impl(
             } else {
                 numerator
             };
+            let (numerator,denominator)=if weights.is_some() {
+                let w=&all[28+2*i..30+2*i];
+                if w.iter().any(|v|v.sign()!=Sign::Positive) {
+                    return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+                }
+                let n=numerator.mul(&w[1],ctx)?;
+                let d=denominator.sub(&numerator,ctx)?.mul(&w[0],ctx)?.add(&n,ctx)?;
+                if d.sign()==Sign::Zero {return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));}
+                (n,d)
+            }else{(numerator,denominator)};
             let ratio = if ranges.is_some() {
                 let Some(r) =
                     affine_fraction(&numerator, &denominator, &all[20 + 4 * i..24 + 4 * i], ctx)?
@@ -152,6 +175,26 @@ pub fn reflected_parameter_identity(
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn projective_linear_crossings_keep_one_third_exact() {
+        let evaluate=|weight:f64,budget:u64| {
+            let values=[1.,0.,1.,1.,1.,1.,-1.,0.5,2.,0.5,
+                0.,0.,1.,0.,1.,1.,-1.,0.,2.,1.,
+                0.,1.,1.,1.,0.,1.,1.,1.,1.,1.,1.,weight];
+            let arena=SourceArena::authored("projective-line-roots",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).unwrap();
+            let main=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|arena.leaf(10*i+3*j+k).unwrap())));
+            let cutter=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|arena.leaf(10*i+6+2*j+k).unwrap())));
+            let ranges=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|arena.leaf(20+4*i+2*j+k).unwrap())));
+            let weights=std::array::from_fn(|i|std::array::from_fn(|j|arena.leaf(28+2*i+j).unwrap()));
+            let tolerance=ToleranceContext::default_valid();
+            let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:budget,..Limits::default()},None);
+            line_crossing_parameter_identity_projective(&mut ctx,main,cutter,ranges,weights).unwrap()
+        };
+        let proof=evaluate(2.,1000000);assert_eq!(proof.outcome,ParameterIdentity::Equal);
+        assert_eq!(evaluate(1.,1000000).outcome,ParameterIdentity::Different);
+        assert!(matches!(evaluate(0.,1000000).outcome,ParameterIdentity::Indeterminate(_)));
+        assert_eq!(evaluate(2.,proof.work_used-1).outcome,ParameterIdentity::Indeterminate(Reason::ResourceLimit));
+    }
     fn check(second_x: f64, second_weight: f64, budget: u64) -> ParameterIdentity {
         let values = vec![
             0.,
@@ -462,4 +505,134 @@ pub fn affine_parameter_identity(
         work_used: ctx.work_used(),
         context: ctx.identity(),
     })
+}
+
+/// Compare source parameters after positive rational-linear carrier maps.
+/// The normalized source fractions and mapped values remain unreduced exact
+/// numerator/denominator expressions throughout the comparison.
+pub fn projective_parameter_identity(
+    ctx: &mut PredicateContext<'_>,
+    parameters: [[LeafRef; 3]; 2],
+    ranges: [[[LeafRef; 2]; 2]; 2],
+    weights: [[LeafRef; 2]; 2],
+) -> Result<ParameterDecision, InputError> {
+    let values=parameters.iter().flatten().chain(ranges.iter().flatten().flatten())
+        .chain(weights.iter().flatten()).map(|&r|ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let computed=(||->Result<ParameterIdentity,Reason>{
+        let v=exact_inputs(&values,ctx)?;
+        let mut ratios=Vec::new();
+        for i in 0..2 {
+            let row=&v[3*i..3*i+3];
+            let d=row[2].sub(&row[1],ctx)?;
+            let n=row[0].sub(&row[1],ctx)?;
+            let high=d.sub(&n,ctx)?;
+            let w=&v[14+2*i..16+2*i];
+            if d.sign()!=Sign::Positive || n.sign()==Sign::Negative || high.sign()==Sign::Negative
+                || w.iter().any(|x|x.sign()!=Sign::Positive) {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            }
+            let numerator=n.mul(&w[1],ctx)?;
+            let denominator=high.mul(&w[0],ctx)?.add(&numerator,ctx)?;
+            let Some(r)=affine_fraction(&numerator,&denominator,&v[6+4*i..10+4*i],ctx)? else {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            };
+            ratios.push(r);
+        }
+        let delta=ratios[0].0.mul(&ratios[1].1,ctx)?.sub(&ratios[1].0.mul(&ratios[0].1,ctx)?,ctx)?;
+        ctx.charge(0)?;
+        Ok(if delta.sign()==Sign::Zero {ParameterIdentity::Equal}else{ParameterIdentity::Different})
+    })();
+    Ok(ParameterDecision{outcome:computed.unwrap_or_else(ParameterIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}
+/// Source parameter rows: numerator, positive denominator, domain low, domain high.
+pub fn projective_parameter_fraction_identity(
+    ctx: &mut PredicateContext<'_>,
+    parameters: [[LeafRef; 4]; 2],
+    ranges: [[[LeafRef; 2]; 2]; 2],
+    weights: [[LeafRef; 2]; 2],
+) -> Result<ParameterDecision, InputError> {
+    let mut values=parameters.iter().flatten().chain(ranges.iter().flatten().flatten())
+        .chain(weights.iter().flatten()).map(|&r|ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    values.push(AuthoredScalar::Binary64Bits(1_f64.to_bits()));
+    let computed=(||->Result<ParameterIdentity,Reason>{
+        let v=exact_inputs(&values,ctx)?;
+        let mut ratios=Vec::new();
+        for i in 0..2 {
+            let row=&v[4*i..4*i+4];
+            if row[1].sign()!=Sign::Positive {return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));}
+            let d=row[3].sub(&row[2],ctx)?.mul(&row[1],ctx)?;
+            let n=row[0].mul(v.last().unwrap(),ctx)?.sub(&row[2].mul(&row[1],ctx)?,ctx)?;
+            let high=d.sub(&n,ctx)?;
+            let w=&v[16+2*i..18+2*i];
+            if d.sign()!=Sign::Positive || n.sign()==Sign::Negative || high.sign()==Sign::Negative
+                || w.iter().any(|x|x.sign()!=Sign::Positive) {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            }
+            let numerator=n.mul(&w[1],ctx)?;
+            let denominator=high.mul(&w[0],ctx)?.add(&numerator,ctx)?;
+            let Some(r)=affine_fraction(&numerator,&denominator,&v[8+4*i..12+4*i],ctx)? else {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            };
+            ratios.push(r);
+        }
+        let delta=ratios[0].0.mul(&ratios[1].1,ctx)?.sub(&ratios[1].0.mul(&ratios[0].1,ctx)?,ctx)?;
+        ctx.charge(0)?;
+        Ok(if delta.sign()==Sign::Zero {ParameterIdentity::Equal}else{ParameterIdentity::Different})
+    })();
+    Ok(ParameterDecision{outcome:computed.unwrap_or_else(ParameterIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}
+#[cfg(test)]
+mod projective_parameter_tests {
+    use super::*;
+    use crate::{Limits,SourceArena,ToleranceContext};
+    #[test]
+    fn fraction_parameters_keep_authored_domains_and_exact_map_identity() {
+        let evaluate=|second:f64,denominator:f64,budget:u64| {
+            let parameters=[[38.,3.,10.,18.],[second,denominator,10.,18.]];
+            let ranges=[[[0.,1.],[1.,1.]];2];let weights=[[1.,1.],[1.,2.]];
+            let values:Vec<f64>=parameters.iter().flatten().chain(ranges.iter().flatten().flatten()).chain(weights.iter().flatten()).copied().collect();
+            let arena=SourceArena::authored("fraction-parameter-domains",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).unwrap();
+            let p=std::array::from_fn(|i|std::array::from_fn(|j|arena.leaf(4*i+j).unwrap()));
+            let r=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|arena.leaf(8+4*i+2*j+k).unwrap())));
+            let w=std::array::from_fn(|i|std::array::from_fn(|j|arena.leaf(16+2*i+j).unwrap()));
+            let tolerance=ToleranceContext::default_valid();
+            let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:budget,..Limits::default()},None);
+            projective_parameter_fraction_identity(&mut ctx,p,r,w).unwrap()
+        };
+        let proof=evaluate(58.,5.,1000000);assert_eq!(proof.outcome,ParameterIdentity::Equal);
+        assert_eq!(evaluate(59.,5.,1000000).outcome,ParameterIdentity::Different);
+        assert!(matches!(evaluate(58.,0.,1000000).outcome,ParameterIdentity::Indeterminate(_)));
+        assert_eq!(evaluate(58.,5.,proof.work_used-1).outcome,ParameterIdentity::Indeterminate(Reason::ResourceLimit));
+    }
+    fn check(parameters:[[f64;3];2],ranges:[[[f64;2];2];2],weights:[[f64;2];2],budget:u64)->ParameterDecision {
+        let source=SourceArena::authored("projective-parameters",1,
+            parameters.iter().flatten().chain(ranges.iter().flatten().flatten()).chain(weights.iter().flatten())
+            .map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).unwrap();
+        let p=std::array::from_fn(|i|std::array::from_fn(|j|source.leaf(3*i+j).unwrap()));
+        let r=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|source.leaf(6+4*i+2*j+k).unwrap())));
+        let w=std::array::from_fn(|i|std::array::from_fn(|j|source.leaf(14+2*i+j).unwrap()));
+        let tolerance=ToleranceContext::default_valid();
+        let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work:budget,..Limits::default()},None);
+        projective_parameter_identity(&mut ctx,p,r,w).unwrap()
+    }
+    #[test]
+    fn rational_parameters_are_compared_without_rounded_map_values() {
+        let parameters=[[1.,0.,3.],[0.5,0.,1.]];
+        let ranges=[[[0.,1.],[1.,1.]];2];let weights=[[1.,2.],[1.,1.]];
+        let full=check(parameters,ranges,weights,1000000);
+        assert_eq!(full.outcome,ParameterIdentity::Equal);
+        assert_eq!(check([[1./3.,0.,1.],parameters[1]],ranges,weights,1000000).outcome,ParameterIdentity::Different);
+        assert_eq!(check(parameters,[[[1.,1.],[0.,1.]],ranges[1]],weights,1000000).outcome,ParameterIdentity::Equal);
+        assert_eq!(check(parameters,[[[1.,4.],[3.,4.]],ranges[1]],weights,1000000).outcome,ParameterIdentity::Equal);
+        for budget in [0,full.work_used-1] {
+            let r=check(parameters,ranges,weights,budget);
+            assert_eq!(r.outcome,ParameterIdentity::Indeterminate(Reason::ResourceLimit));assert!(r.work_used<=budget);
+        }
+        for weights in [[[0.,2.],[1.,1.]],[[-1.,2.],[1.,1.]]] {
+            assert_eq!(check(parameters,ranges,weights,1000000).outcome,ParameterIdentity::Indeterminate(Reason::MissingProof));
+        }
+        assert_eq!(check([[-1.,0.,3.],parameters[1]],ranges,weights,1000000).outcome,ParameterIdentity::Indeterminate(Reason::MissingProof));
+    }
 }

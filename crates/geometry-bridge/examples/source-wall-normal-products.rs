@@ -39,7 +39,7 @@ fn main() {
         assert!(coverage["normalProductCells"].as_u64().unwrap()<=cells);
         let pairs=coverage["pairs"].as_array().unwrap();assert_eq!(pairs.len(),378);
         let unresolved=pairs.iter().filter(|p|p["proven"]==json!(false)).count();
-        if cells<=1 {assert_eq!(unresolved,257);}else{assert!(unresolved<=177);}
+        if cells<=1 {assert_eq!(unresolved,255);}else{assert!(unresolved<=177);}
         if factored {
             assert!(coverage["factoredExactWork"].as_u64().unwrap()<=100000000);
             assert!(coverage["factoredQueries"].as_u64().unwrap()<=10000);

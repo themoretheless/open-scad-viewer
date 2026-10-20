@@ -38,10 +38,10 @@ pub struct Pole {
     pub use_: Address,
     pub point: [f64; 3],
 }
-pub struct Shell {
+pub struct Shell<E = SharedEdge> {
     poles: Vec<(Address, crate::source_collapsed_boundary::CollapsedBoundary)>,
     faces: Vec<Vec<Wire>>,
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
     uses: Vec<[Address; 2]>,
     vertices: Vec<Vec<Vec<[usize; 2]>>>,
     regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
@@ -50,6 +50,8 @@ impl Shell {
     pub fn definition(&self) -> Result<value_codec::Value> {
         crate::source_shell_restore::definition(self)
     }
+}
+impl<E> Shell<E> {
     pub fn poles(&self) -> &[(Address, crate::source_collapsed_boundary::CollapsedBoundary)] {
         &self.poles
     }
@@ -59,7 +61,7 @@ impl Shell {
     pub fn faces(&self) -> &[Vec<Wire>] {
         &self.faces
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
     pub fn uses(&self) -> &[[Address; 2]] {
@@ -92,7 +94,7 @@ pub struct ChartReport {
     pub linear_cells: usize,
     pub faces: Vec<ChartFace>,
 }
-impl Shell {
+impl<E> Shell<E> {
     /// Prove whole original charts injective, hence any retained source subset.
     /// Does not classify contacts between different faces or certify a volume.
     pub fn inspect_face_charts(
@@ -220,8 +222,8 @@ impl Shell {
         Ok(out)
     }
 }
-pub struct Report {
-    pub shell: Option<Shell>,
+pub struct Report<E = SharedEdge> {
+    pub shell: Option<Shell<E>>,
     pub work_used: u64,
     pub root_checks: usize,
     pub driver_cells: usize,
@@ -399,6 +401,14 @@ pub fn assemble_with_poles(
 ) -> Result<Report> {
     assemble_with_pole_inputs(faces, pairs, &[], &[], &[], poles, max_work, 0)
 }
+type Ranges=[[[f64;2];2];2];
+type Planes=[Option<[[f64;3];3]>;2];
+type Candidates=[[Option<[f64;2]>;2];2];
+struct PairInput<'a> {
+    index:usize,pair:&'a Pair,sources:[&'a crate::source_boundary_fragment::Fragment;2],
+    ranges:Option<Ranges>,planes:Planes,candidates:Option<Candidates>,
+}
+struct EdgeReport<E> {edge:Option<E>,work_used:u64,root_checks:usize,driver_cells:usize,reason:&'static str}
 pub fn assemble_with_pole_inputs(
     faces: &[Vec<Wire>],
     pairs: &[Pair],
@@ -409,6 +419,109 @@ pub fn assemble_with_pole_inputs(
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
+    assemble_core(faces,pairs,planes,maps,candidates,poles,max_work,max_driver_cells,|input,work,driver| {
+        let p=input.pair;
+        let report=if input.ranges.is_some() || input.candidates.is_some() {
+            let full=p.world_reversed.map(|r|if r {[[1.,1.],[0.,1.]]}else{[[0.,1.],[1.,1.]]});
+            crate::source_mapped_edge::qualify_with_candidates(&p.world,input.sources,input.ranges.unwrap_or(full),input.planes,
+                input.candidates.unwrap_or([[None;2];2]),work,driver)?
+        } else {
+            source_shared_edge::qualify_with_cutters_and_planes(&p.world,input.sources,p.world_reversed,
+                [p.cutters[0].as_ref(),p.cutters[1].as_ref()],input.planes,work,driver)?
+        };
+        Ok(EdgeReport{edge:report.edge,work_used:report.work_used,root_checks:report.root_checks,driver_cells:report.driver_cells,reason:report.reason})
+    })
+}
+/// Original rational-linear map proposals, rechecked for every paired use.
+pub struct ProjectiveMaps {pub pair:usize,pub ranges:Ranges,pub weights:[[f64;2];2]}
+/// Original boundary/contact parameter fractions for addressed retained roots.
+pub struct RootFractionCandidates {pub pair:usize,pub candidates:crate::source_projective_edge::FractionCandidates}
+
+/// Closed oriented incidence using freshly qualified projective shared edges.
+/// This establishes edge/vertex ownership, not embedded material or volume.
+pub fn assemble_projective(faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[ProjectiveMaps],
+    candidates:&[RootCandidates],max_work:u64,max_driver_cells:usize)->Result<Report<crate::source_projective_edge::Edge>> {
+    assemble_projective_with_poles(faces,pairs,planes,maps,candidates,&[],max_work,max_driver_cells)
+}
+pub fn assemble_projective_with_poles(faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[ProjectiveMaps],
+    candidates:&[RootCandidates],poles:&[Pole],max_work:u64,max_driver_cells:usize)->Result<Report<crate::source_projective_edge::Edge>> {
+    assemble_projective_with_fraction_candidates(faces,pairs,planes,maps,candidates,&[],poles,max_work,max_driver_cells)
+}
+/// Candidate proposals have no authority until each original root is rechecked.
+pub fn assemble_projective_with_fraction_candidates(faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[ProjectiveMaps],
+    candidates:&[RootCandidates],fraction_candidates:&[RootFractionCandidates],poles:&[Pole],max_work:u64,max_driver_cells:usize)->Result<Report<crate::source_projective_edge::Edge>> {
+    assemble_projective_fraction_impl(faces,pairs,planes,maps,candidates,fraction_candidates,poles,None,max_work,max_driver_cells)
+}
+/// Discover rational original-root parameters under the same shell work limit.
+pub fn assemble_projective_with_discovered_fraction_candidates(faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[ProjectiveMaps],
+    candidates:&[RootCandidates],poles:&[Pole],max_denominator:usize,max_candidates_per_axis:usize,max_work:u64,max_driver_cells:usize)->Result<Report<crate::source_projective_edge::Edge>> {
+    if !(1..=4096).contains(&max_denominator) || !(1..=64).contains(&max_candidates_per_axis) {return Err(error("Bounded rational discovery required"));}
+    assemble_projective_fraction_impl(faces,pairs,planes,maps,candidates,&[],poles,Some([max_denominator,max_candidates_per_axis]),max_work,max_driver_cells)
+}
+fn assemble_projective_fraction_impl(faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[ProjectiveMaps],
+    candidates:&[RootCandidates],fraction_candidates:&[RootFractionCandidates],poles:&[Pole],discovery:Option<[usize;2]>,max_work:u64,max_driver_cells:usize)->Result<Report<crate::source_projective_edge::Edge>> {
+    let mut fractions=BTreeMap::new();
+    for proposal in fraction_candidates {
+        if proposal.pair>=pairs.len() || fractions.insert(proposal.pair,proposal.candidates).is_some()
+            || proposal.candidates.iter().flatten().flatten().flatten().any(|q|q.iter().any(|v|!v.is_finite()) || q[1]<=0.) {
+            return Err(error("Require unique addressed finite rational root candidates"));
+        }
+    }
+    let mut weights=BTreeMap::new();
+    for map in maps {
+        if map.pair>=pairs.len() || weights.insert(map.pair,map.weights).is_some()
+            || map.weights.iter().flatten().any(|w|!w.is_finite() || *w<=0.) {return Err(error("Require unique positive projective map weights"));}
+    }
+    if pairs.iter().any(|p|p.cutters.iter().any(Option::is_some)) {return Err(error("Projective incidence requires original root/plane inputs rather than cutter hints"));}
+    let affine:Vec<_>=maps.iter().map(|m|AffineMaps{pair:m.pair,ranges:m.ranges}).collect();
+    assemble_core(faces,pairs,planes,&affine,candidates,poles,max_work,max_driver_cells,|input,work,driver| {
+        let full=std::array::from_fn(|side|if input.pair.world_reversed[side]^input.sources[side].reversed() {[[1.,1.],[0.,1.]]}else{[[0.,1.],[1.,1.]]});
+        let ranges=input.ranges.unwrap_or(full);let weights=weights.get(&input.index).copied().unwrap_or([[1.,1.];2]);
+        let candidates=input.candidates.unwrap_or([[None;2];2]);
+        let r=if let Some(fractions)=fractions.get(&input.index) {
+            crate::source_projective_edge::qualify_with_fraction_candidates(&input.pair.world,input.sources,ranges,weights,input.planes,candidates,*fractions,work,driver)?
+        }else if let Some([denominator,count])=discovery {
+            crate::source_projective_edge::qualify_with_discovered_fraction_candidates(&input.pair.world,input.sources,ranges,weights,input.planes,candidates,denominator,count,work,driver)?
+        }else {crate::source_projective_edge::qualify(&input.pair.world,input.sources,ranges,weights,input.planes,candidates,work,driver)?};
+        Ok(EdgeReport{edge:r.edge,work_used:r.exact_work,root_checks:r.root_checks,driver_cells:r.driver_cells,reason:r.reason})
+    })
+}
+/// Retain freshly qualified material-region ownership through projective pairing.
+pub fn assemble_regions_projective(regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
+    planes:&[RootPlanes],maps:&[ProjectiveMaps],candidates:&[RootCandidates],max_work:u64,max_driver_cells:usize,
+)->Result<Report<crate::source_projective_edge::Edge>> {
+    assemble_regions_projective_with_poles(regions,pairs,planes,maps,candidates,&[],max_work,max_driver_cells)
+}
+pub fn assemble_regions_projective_with_poles(regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
+    planes:&[RootPlanes],maps:&[ProjectiveMaps],candidates:&[RootCandidates],poles:&[Pole],max_work:u64,max_driver_cells:usize,
+)->Result<Report<crate::source_projective_edge::Edge>> {
+    assemble_regions_projective_with_fraction_candidates(regions,pairs,planes,maps,candidates,&[],poles,max_work,max_driver_cells)
+}
+/// Preserve material regions while transporting exact rational root proposals.
+pub fn assemble_regions_projective_with_fraction_candidates(regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
+    planes:&[RootPlanes],maps:&[ProjectiveMaps],candidates:&[RootCandidates],fraction_candidates:&[RootFractionCandidates],poles:&[Pole],max_work:u64,max_driver_cells:usize,
+)->Result<Report<crate::source_projective_edge::Edge>> {
+    if !(2..=4096).contains(&regions.len()) {return Err(error("Choose bounded qualified source regions"));}
+    let faces=regions.iter().map(|r|r.world_wires()).collect::<Result<Vec<_>>>()?;
+    let mut report=assemble_projective_with_fraction_candidates(&faces,pairs,planes,maps,candidates,fraction_candidates,poles,max_work,max_driver_cells)?;
+    if let Some(shell)=report.shell.as_mut() {shell.regions=Some(regions.to_vec());}
+    Ok(report)
+}
+/// Preserve material ownership while discovering exact rational root proposals.
+pub fn assemble_regions_projective_with_discovered_fraction_candidates(regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
+    planes:&[RootPlanes],maps:&[ProjectiveMaps],candidates:&[RootCandidates],poles:&[Pole],max_denominator:usize,max_candidates_per_axis:usize,max_work:u64,max_driver_cells:usize,
+)->Result<Report<crate::source_projective_edge::Edge>> {
+    if !(2..=4096).contains(&regions.len()) {return Err(error("Choose bounded qualified source regions"));}
+    let faces=regions.iter().map(|r|r.world_wires()).collect::<Result<Vec<_>>>()?;
+    let mut report=assemble_projective_with_discovered_fraction_candidates(&faces,pairs,planes,maps,candidates,poles,max_denominator,max_candidates_per_axis,max_work,max_driver_cells)?;
+    if let Some(shell)=report.shell.as_mut() {shell.regions=Some(regions.to_vec());}
+    Ok(report)
+}
+fn assemble_core<E>(
+    faces:&[Vec<Wire>],pairs:&[Pair],planes:&[RootPlanes],maps:&[AffineMaps],candidates:&[RootCandidates],poles:&[Pole],
+    max_work:u64,max_driver_cells:usize,
+    mut qualify:impl FnMut(PairInput<'_>,u64,usize)->Result<EdgeReport<E>>,
+)->Result<Report<E>> {
     if faces.len() < 2
         || faces.len() > 4096
         || max_work == 0
@@ -571,35 +684,9 @@ pub fn assemble_with_pole_inputs(
             return Ok(out);
         }
         let sources = p.uses.map(|a| &faces[a.face][a.wire].edges()[a.edge]);
-        let report = if mapped.contains_key(&i) || witnessed.contains_key(&i) {
-            let full = p.world_reversed.map(|r| {
-                if r {
-                    [[1., 1.], [0., 1.]]
-                } else {
-                    [[0., 1.], [1., 1.]]
-                }
-            });
-            let ranges = mapped.get(&i).copied().unwrap_or(full);
-            crate::source_mapped_edge::qualify_with_candidates(
-                &p.world,
-                sources,
-                ranges,
-                supplied.get(&i).copied().unwrap_or([None, None]),
-                witnessed.get(&i).copied().unwrap_or([[None; 2]; 2]),
-                max_work - out.work_used,
-                max_driver_cells - out.driver_cells,
-            )?
-        } else {
-            source_shared_edge::qualify_with_cutters_and_planes(
-                &p.world,
-                sources,
-                p.world_reversed,
-                [p.cutters[0].as_ref(), p.cutters[1].as_ref()],
-                supplied.get(&i).copied().unwrap_or([None, None]),
-                max_work - out.work_used,
-                max_driver_cells - out.driver_cells,
-            )?
-        };
+        let report=qualify(PairInput{index:i,pair:p,sources,ranges:mapped.get(&i).copied(),
+            planes:supplied.get(&i).copied().unwrap_or([None;2]),candidates:witnessed.get(&i).copied()},
+            max_work-out.work_used,max_driver_cells-out.driver_cells)?;
         out.work_used += report.work_used;
         out.root_checks += report.root_checks;
         out.driver_cells += report.driver_cells;
@@ -945,6 +1032,9 @@ mod tests {
     fn tetrahedron() -> (Vec<Vec<Wire>>, Vec<Pair>) {
         let points = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
         let triangles = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [2, 0, 3]];
+        polyhedron(&points,&triangles)
+    }
+    fn polyhedron(points:&[[f64;3]],triangles:&[[usize;3]]) -> (Vec<Vec<Wire>>,Vec<Pair>) {
         let mut pending = BTreeMap::new();
         let mut pairs = Vec::new();
         let mut faces = Vec::new();
@@ -1001,6 +1091,177 @@ mod tests {
         }
         assert!(pending.is_empty());
         (faces, pairs)
+    }
+    #[test]
+    fn projective_octahedron_proves_owned_four_edge_vertex_contacts() {
+        let points=[[1.,0.,0.],[0.,1.,0.],[-1.,0.,0.],[0.,-1.,0.],[0.,0.,1.],[0.,0.,-1.]];
+        let triangles:Vec<_>=(0..4).flat_map(|i|[[4,i,(i+1)%4],[5,(i+1)%4,i]]).collect();
+        let (mut faces,pairs)=polyhedron(&points,&triangles);
+        let mut authored_weights=BTreeMap::new();
+        for (face,wires) in faces.iter_mut().enumerate() {
+            let fragments:Vec<_>=wires[0].edges().iter().enumerate().map(|(edge,fragment)| {
+                let mut curve=fragment.curve().clone();
+                let weights=[1.,2.+face as f64+edge as f64];curve.weights=weights.to_vec();
+                authored_weights.insert((face,edge),weights);
+                Fragment::new(fragment.surface(),&curve,Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap()
+            }).collect();
+            wires[0]=Wire::new(&fragments).unwrap();
+        }
+        let maps:Vec<_>=pairs.iter().enumerate().map(|(pair,p)|ProjectiveMaps{pair,
+            ranges:[[[0.,1.],[1.,1.]],[[1.,1.],[0.,1.]]],
+            weights:p.uses.map(|a|authored_weights[&(a.face,a.edge)])}).collect();
+        let context=cad_predicates::ToleranceContext::default_valid();
+        let regions:Vec<_>=faces.iter().map(|wires| {
+            let surface=wires[0].edges()[0].surface();
+            let boundaries:Vec<Vec<_>>=wires.iter().map(|wire|wire.edges().iter().map(|fragment| {
+                let pc=fragment.curve();let a=&surface.control_points[0][0];
+                let points=pc.control_points.iter().map(|uv|(0..3).map(|k|
+                    a[k]+uv[0]*(surface.control_points[1][0][k]-a[k])+uv[1]*(surface.control_points[0][1][k]-a[k])).collect()).collect();
+                let world=Curve{degree:pc.degree,knots:pc.knots.clone(),control_points:points,weights:pc.weights.clone(),periodic:false};
+                crate::trimmed_face_recipe::Boundary{curve:world,pcurve:pc.clone(),reversed:false}
+            }).collect()).collect();
+            let r=crate::source_contour_proposal::qualify_original_region(&context,surface,&boundaries,1e-8,
+                crate::trimmed_face_recipe::Limits{pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000}).unwrap();
+            r.region.expect(r.reason)
+        }).collect();
+        let material=assemble_regions_projective(&regions,&pairs,&[],&maps,&[],100000000,10000).unwrap().shell.unwrap();
+
+        let links=crate::source_vertex_links::inspect(&material,24).unwrap();
+        assert!(links.all_manifold);assert_eq!(links.links.len(),6);
+        assert!(links.links.iter().all(|v|v.cycle.len()==4));
+        let mut vertex_pairs=0;
+        for a in 0..8 {for b in a+1..8 {
+            if triangles[a].iter().filter(|v|triangles[b].contains(v)).count()!=1 {continue;}
+            let proof=crate::source_vertex_contact::certify(&material,[a,b],1000000).unwrap();
+            let proof=proof.certificate.expect(proof.reason);
+            let back=crate::source_vertex_contact::certify(&material,[b,a],1000000).unwrap();
+            assert_eq!(back.certificate.unwrap().point(),proof.point());
+            for (address,end) in proof.uses() {assert_eq!(material.vertices()[address.face][address.wire][address.edge][*end],proof.vertex());}
+            assert!(crate::source_vertex_contact::certify(&material,[a,b],1).unwrap().certificate.is_none());
+            vertex_pairs+=1;
+        }}
+        assert_eq!(vertex_pairs,12);
+        let embedded=crate::source_shell_geometry::qualify_projective(material,crate::source_shell_geometry::Limits{
+            tolerance_uv:1e-8,corners:24,spans:10000,linear_cells:10000,exact_work:100000000,driver_cells:10000,
+            pairs:crate::face_contacts::Limits{pairs:28,cells:100000,domain_cells:100000,cells_per_pair:10000,domain_cells_per_pair:10000}}).unwrap();
+        let geometry=embedded.geometry.expect(embedded.reason);
+        assert!(geometry.contacts().all_pairs_qualified);assert_eq!(geometry.contacts().pairs.len(),28);
+        assert_eq!(geometry.contacts().pairs.iter().filter(|p|p.vertex_contact.is_some()).count(),12);
+
+    }
+    #[test]
+    fn projective_tetrahedron_has_closed_edges_and_manifold_vertex_links() {
+        let (mut faces,pairs)=tetrahedron();
+        let mut authored_weights=BTreeMap::new();
+        for (face,wires) in faces.iter_mut().enumerate() {
+            let fragments:Vec<_>=wires[0].edges().iter().enumerate().map(|(edge,fragment)| {
+                let mut curve=fragment.curve().clone();
+                let weights=[1.,2.+face as f64+edge as f64];curve.weights=weights.to_vec();
+                authored_weights.insert((face,edge),weights);
+                Fragment::new(fragment.surface(),&curve,Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap()
+            }).collect();
+            wires[0]=Wire::new(&fragments).unwrap();
+        }
+        let mut maps:Vec<_>=pairs.iter().enumerate().map(|(pair,p)|ProjectiveMaps{pair,
+            ranges:[[[0.,1.],[1.,1.]],[[1.,1.],[0.,1.]]],
+            weights:p.uses.map(|a|authored_weights[&(a.face,a.edge)])}).collect();
+        let report=assemble_projective(&faces,&pairs,&[],&maps,&[],100000000,10000).unwrap();
+        assert!(report.shell.is_some(),"{} {:?}",report.reason,report.uncertain_pair);
+        let shell=report.shell.unwrap();assert_eq!(shell.edges().len(),6);
+        let links=crate::source_vertex_links::inspect(&shell,12).unwrap();
+        assert!(links.all_manifold);assert_eq!(links.links.len(),4);
+        assert!(links.links.iter().all(|v|v.cycle.len()==3));
+        assert!(shell.inspect_face_charts(1000,1000).unwrap().all_injective);
+        assert!(shell.edges().iter().all(|edge|edge.sample_interior(0.5,100).unwrap().sample.is_some()));
+        let context=cad_predicates::ToleranceContext::default_valid();
+        let regions:Vec<_>=faces.iter().map(|wires| {
+            let surface=wires[0].edges()[0].surface();
+            let boundaries:Vec<Vec<_>>=wires.iter().map(|wire|wire.edges().iter().map(|fragment| {
+                let pc=fragment.curve();let a=&surface.control_points[0][0];
+                let points=pc.control_points.iter().map(|uv|(0..3).map(|k|
+                    a[k]+uv[0]*(surface.control_points[1][0][k]-a[k])+uv[1]*(surface.control_points[0][1][k]-a[k])).collect()).collect();
+                let world=Curve{degree:pc.degree,knots:pc.knots.clone(),control_points:points,weights:pc.weights.clone(),periodic:false};
+                crate::trimmed_face_recipe::Boundary{curve:world,pcurve:pc.clone(),reversed:false}
+            }).collect()).collect();
+            let r=crate::source_contour_proposal::qualify_original_region(&context,surface,&boundaries,1e-8,
+                crate::trimmed_face_recipe::Limits{pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000}).unwrap();
+            r.region.expect(r.reason)
+        }).collect();
+        let material=assemble_regions_projective(&regions,&pairs,&[],&maps,&[],100000000,10000).unwrap().shell.unwrap();
+        let definition=material.definition().unwrap();
+        let text=value_codec::to_string(&definition).unwrap();
+        let decoded=value_codec::from_str_strict(&text).unwrap();
+        let limits=crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000};
+        let replay=crate::source_projective_shell_restore::restore(decoded,&limits).unwrap().shell.unwrap();
+        assert_eq!(replay.definition().unwrap(),definition);
+        let bytes=value_codec::encode_binary(&definition).unwrap();
+        let binary=value_codec::decode_binary(&bytes).unwrap();
+        let binary_replay=crate::source_projective_shell_restore::restore(binary,&limits).unwrap().shell.unwrap();
+        assert_eq!(binary_replay.definition().unwrap(),definition);
+        assert_eq!(binary_replay.vertices(),material.vertices());
+
+        assert_eq!(replay.vertices(),material.vertices());assert_eq!(replay.uses(),material.uses());
+        assert!(crate::source_vertex_links::inspect(&replay,12).unwrap().all_manifold);
+        let material_links=crate::source_vertex_links::inspect(&binary_replay,12).unwrap();
+        assert_eq!(material_links.euler_characteristic,Some(2));assert_eq!(material_links.genus,Some(0));
+        let geometry=crate::source_shell_geometry::qualify_projective(binary_replay,crate::source_shell_geometry::Limits{
+            tolerance_uv:1e-8,corners:100,spans:10000,linear_cells:10000,exact_work:100000000,driver_cells:10000,
+            pairs:crate::face_contacts::Limits{pairs:100,cells:1000,domain_cells:10000,cells_per_pair:100,domain_cells_per_pair:1000}}).unwrap();
+        assert!(geometry.geometry.is_some(),"{}",geometry.reason);
+        let geometry=geometry.geometry.unwrap();
+        assert_eq!(geometry.contacts().pairs.len(),6);assert!(geometry.contacts().all_pairs_qualified);
+        assert!(geometry.contacts().pairs.iter().all(|p|p.allowed.is_some()));
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits{axis:0,origin:0.,absolute_error:0.01,tolerance_uv:1e-8,
+            cells:100000,spans:100000,domain_cells:1000000}).unwrap();
+        assert!(volume.body.is_some(),"{} {:?}",volume.reason,volume.signed_bounds);
+        let body=volume.body.unwrap();let bounds=body.volume();
+        assert!(bounds[0]<=1./6. && 1./6.<=bounds[1]);assert!(bounds[1]-bounds[0]<=0.01);
+        assert!(!body.reverse_orientation());assert_eq!(body.definition().unwrap()["kind"].as_str(),Some("projective-body"));
+        let restore_limits=|pair_budget|crate::source_projective_body_restore::Limits{
+            shell:crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000},
+            embedding:crate::source_shell_geometry::Limits{
+                tolerance_uv:1e-8,corners:100,spans:10000,linear_cells:10000,exact_work:100000000,driver_cells:10000,
+                pairs:crate::face_contacts::Limits{pairs:pair_budget,cells:1000,domain_cells:10000,cells_per_pair:100,domain_cells_per_pair:1000}},
+            volume:crate::source_volume::Limits{axis:0,origin:0.,absolute_error:0.01,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000}};
+        let transferred=crate::source_body_model::convert(&body,1e-7).unwrap();
+        assert_eq!(transferred.bodies.len(),1);assert!(transferred.shells[0].closed);
+        assert_eq!(transferred.edges.len(),6);
+        let (step,_,_)=crate::export_step_v6(&transferred).unwrap();
+        let (imported,_,_)=crate::import_step_v6(&step).unwrap();
+        crate::source_body_model::assert_step_identity(&transferred,&imported);
+
+        let body_definition=body.definition().unwrap();
+        let body_bytes=value_codec::encode_binary(&body_definition).unwrap();
+        let restored=crate::source_projective_body_restore::restore(value_codec::decode_binary(&body_bytes).unwrap(),restore_limits(100)).unwrap();
+        let restored_body=restored.body().expect(restored.reason());
+        assert_eq!(restored_body.definition().unwrap(),body_definition);
+        assert_eq!(restored_body.geometry().shell().vertices(),body.geometry().shell().vertices());
+        assert!(restored_body.volume()[0]<=1./6. && restored_body.volume()[1]>=1./6.);
+        let mut forged_body=body_definition.clone();
+        forged_body["certificateQualified"]=value_codec::json!(true);
+        forged_body["volume"]=value_codec::json!([1./6.,1./6.]);
+        let incomplete_body=crate::source_projective_body_restore::restore(forged_body.clone(),restore_limits(1)).unwrap();
+        assert!(incomplete_body.body().is_none());assert!(incomplete_body.volume.is_none());
+        forged_body["shell"]["pairs"][0]["edge"]["uses"][0]["weights"]=value_codec::json!([1.,1.]);
+        assert!(crate::source_projective_body_restore::restore(forged_body,restore_limits(100)).unwrap().body().is_none());
+
+
+        let incomplete=crate::source_projective_shell_restore::restore(definition.clone(),&limits).unwrap().shell.unwrap();
+        let refused=crate::source_shell_geometry::qualify_projective(incomplete,crate::source_shell_geometry::Limits{
+            tolerance_uv:1e-8,corners:100,spans:10000,linear_cells:10000,exact_work:100000000,driver_cells:10000,
+            pairs:crate::face_contacts::Limits{pairs:1,cells:1000,domain_cells:10000,cells_per_pair:100,domain_cells_per_pair:1000}}).unwrap();
+        assert!(refused.geometry.is_none());assert_eq!(refused.pairs,1);assert_eq!(refused.next_pair,Some([0,2]));
+
+
+        let mut forged=definition.clone();forged["pairs"][0]["edge"]["uses"][0]["weights"]=value_codec::json!([1.,1.]);
+        forged["certificateQualified"]=value_codec::json!(true);
+        assert!(crate::source_projective_shell_restore::restore(forged,&limits).unwrap().shell.is_none());
+        let mut missing=definition.clone();missing["pairs"].as_array_mut().unwrap().pop();
+        assert!(crate::source_projective_shell_restore::restore(missing,&limits).is_err());
+        maps[0].weights[0][1]+=1.;
+        assert!(assemble_projective(&faces,&pairs,&[],&maps,&[],100000000,10000).unwrap().shell.is_none());
+        assert!(assemble_projective(&faces,&pairs[..5],&[],&maps[..5],&[],100000000,10000).is_err());
+        assert!(assemble_projective(&faces,&pairs,&[],&[],&[],1,10000).unwrap().shell.is_none());
     }
     #[test]
     fn tetrahedron_pairs_produce_shared_vertex_owners_and_refuse_missing_or_duplicate_uses() {
@@ -1067,6 +1328,79 @@ mod tests {
         );
     }
     #[test]
+    fn nonlinear_fraction_candidates_preserve_closed_incidence_and_material_replay() {
+        use crate::source_boundary_fragment::Role;
+        let surface=Surface{degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let a=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.,0.],vec![0.5,0.],vec![1.,1.]],weights:vec![1.;3],periodic:false};
+        let mut b=a.clone();b.weights=vec![1.,2.,4.];
+        for p in &mut b.control_points {p.swap(0,1);}let b=b.reverse().unwrap();
+        let mut other_surface=surface.clone();other_surface.control_points=vec![vec![vec![0.,0.,0.],vec![1.,0.,0.]],vec![vec![0.,1.,0.],vec![1.,1.,0.]]];
+        let closing=Curve::from_polyline(vec![vec![1.,1.],vec![0.5,0.5]]).unwrap();
+        let tail=Curve::from_polyline(vec![vec![0.5,0.5],vec![0.,0.]]).unwrap();
+        let world=|c:&Curve|Curve{control_points:c.control_points.iter().map(|p|vec![p[0],p[1],0.]).collect(),..c.clone()};
+        let boundary=|pc:&Curve,swap:bool| {
+            let mut curve=world(pc);if swap {for p in &mut curve.control_points {p.swap(0,1);}}
+            crate::trimmed_face_recipe::Boundary{curve,pcurve:pc.clone(),reversed:false}
+        };
+        let transpose=|c:&Curve| {let mut c=c.clone();for p in &mut c.control_points {p.swap(0,1);}c};
+        let closing_b=transpose(&closing).reverse().unwrap();let tail_b=transpose(&tail).reverse().unwrap();
+        let context=cad_predicates::ToleranceContext::default_valid();
+        // The original chord control now has a strict open-curve supporting
+        // line proof, including its other endpoint outside the adjacent edge.
+        let diagonal=Curve::from_polyline(vec![vec![1.,1.],vec![0.5,0.5]]).unwrap();
+        let diagonal_tail=Curve::from_polyline(vec![vec![0.5,0.5],vec![0.,0.]]).unwrap();
+        let chord_region=crate::source_contour_proposal::qualify_original_region(&context,&surface,
+            &[vec![boundary(&a,false),boundary(&diagonal,false),boundary(&diagonal_tail,false)]],1e-8,
+            crate::trimmed_face_recipe::Limits{pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000}).unwrap();
+        assert!(chord_region.region.is_some(),"{} / {}",chord_region.reason,chord_region.audit.reason);
+        let mut regions=Vec::new();
+        for (chart,boundaries) in [(&surface,vec![boundary(&a,false),boundary(&closing,false),boundary(&tail,false)]),
+            (&other_surface,vec![boundary(&tail_b,true),boundary(&closing_b,true),boundary(&b,true)])] {
+            let report=crate::source_contour_proposal::qualify_original_region(&context,chart,&[boundaries],1e-8,
+                crate::trimmed_face_recipe::Limits{pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000}).unwrap();
+            assert!(report.region.is_some(),"{} / {} / {}",report.reason,report.audit.reason,report.audit.region.reason);
+            regions.push(report.region.unwrap());
+        }
+        let cutter=Curve::from_polyline(vec![vec![0.,0.],vec![3.,1.]]).unwrap();
+        let other_cutter=Curve::from_polyline(vec![vec![0.,0.],vec![1.,3.]]).unwrap();
+        for (face,chart,pc,cut,selector,edge) in [(0,&surface,&a,&cutter,[[0.3,0.36],[0.10,0.12]],0),
+            (1,&other_surface,&b,&other_cutter,[[0.78,0.82],[0.10,0.12]],2)] {
+            let root=crate::source_contact_point::qualify(chart,pc,cut,selector,10000).unwrap();
+            regions[face]=regions[face].split_boundary(0,edge,&root.point.expect(root.reason),Role::Boundary).unwrap();
+        }
+        let address=|face,edge|Address{face,wire:0,edge};
+        let pairs=vec![
+            Pair{uses:[address(0,0),address(1,3)],world:world(&a),world_reversed:[false,true],cutters:[None,None]},
+            Pair{uses:[address(0,1),address(1,2)],world:world(&a),world_reversed:[false,true],cutters:[None,None]},
+            Pair{uses:[address(0,2),address(1,1)],world:world(&closing),world_reversed:[false,true],cutters:[None,None]},
+            Pair{uses:[address(0,3),address(1,0)],world:world(&tail),world_reversed:[false,true],cutters:[None,None]},
+        ];
+        let maps:Vec<_>=(0..4).map(|pair|ProjectiveMaps{pair,ranges:[[[0.,1.],[1.,1.]],[[1.,1.],[0.,1.]]],weights:if pair<2 {[[1.,1.],[2.,1.]]}else{[[1.,1.];2]}}).collect();
+        let ca=[[1.,3.],[1.,9.]];let cb=[[4.,5.],[1.,9.]];
+        let fractions=vec![RootFractionCandidates{pair:0,candidates:[[None,Some(ca)],[Some(cb),None]]},
+            RootFractionCandidates{pair:1,candidates:[[Some(ca),None],[None,Some(cb)]]}];
+        assert!(assemble_regions_projective(&regions,&pairs,&[],&maps,&[],100000000,10000).unwrap().shell.is_none());
+        let report=assemble_regions_projective_with_fraction_candidates(&regions,&pairs,&[],&maps,&[],&fractions,&[],100000000,10000).unwrap();
+        let shell=report.shell.expect(report.reason);assert_eq!(shell.edges().len(),4);assert_eq!(shell.vertices().len(),2);
+        let links=crate::source_vertex_links::inspect(&shell,10000).unwrap();assert!(links.all_manifold);assert_eq!(links.genus,Some(0));assert_eq!(links.links.len(),4);
+        // This is a coincident two-face incidence control, not an embedded solid.
+        let definition=shell.definition().unwrap();let bytes=value_codec::encode_binary(&definition).unwrap();
+        let automatic=assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,100000000,10000).unwrap();
+        let automatic_work=automatic.work_used;
+        let automatic=automatic.shell.expect(automatic.reason);
+        assert_eq!(automatic.definition().unwrap(),definition);
+        assert_eq!(automatic.vertices(),shell.vertices());
+        assert!(assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,automatic_work-1,10000).unwrap().shell.is_none());
+        let limits=crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000};
+        let replay=crate::source_projective_shell_restore::restore(value_codec::decode_binary(&bytes).unwrap(),&limits).unwrap();
+        let replay=replay.shell.expect(replay.reason);assert_eq!(replay.definition().unwrap(),definition);assert_eq!(replay.vertices(),shell.vertices());
+        let mut wrong=definition;wrong["pairs"][0]["edge"]["fractionCandidates"][1][0]=value_codec::json!([[39.,49.],[1.,9.]]);
+        assert!(crate::source_projective_shell_restore::restore(wrong,&limits).unwrap().shell.is_none());
+        let duplicate=vec![RootFractionCandidates{pair:0,candidates:fractions[0].candidates},RootFractionCandidates{pair:0,candidates:fractions[0].candidates}];
+        assert!(assemble_regions_projective_with_fraction_candidates(&regions,&pairs,&[],&maps,&[],&duplicate,&[],100000000,10000).is_err());
+    }
+    #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
         root_partition_control(false, false, false);
     }
@@ -1081,6 +1415,56 @@ mod tests {
     #[test]
     fn mapped_root_partitions_qualify_complete_chain_without_complete_fragments() {
         root_partition_control(false, false, true);
+    }
+    fn assert_projective_root_exchange(regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair]) {
+        let maps=pairs.iter().enumerate().map(|(pair,p)|ProjectiveMaps{pair,
+            ranges:p.world_reversed.map(|reversed|if reversed {[[1.,1.],[0.,1.]]}else{[[0.,1.],[1.,1.]]}),weights:[[1.,1.];2]}).collect::<Vec<_>>();
+        let r=assemble_regions_projective_with_discovered_fraction_candidates(regions,pairs,&[],&maps,&[],&[],128,16,100000000,10000).unwrap();
+        let shell=r.shell.expect(r.reason);
+        assert_eq!(shell.edges().len(),7);
+        let geometry=crate::source_shell_geometry::qualify_projective(shell,crate::source_shell_geometry::Limits{
+            tolerance_uv:1e-8,corners:100,spans:10000,linear_cells:10000,exact_work:100000000,driver_cells:10000,
+            pairs:crate::face_contacts::Limits{pairs:6,cells:10000,domain_cells:10000,cells_per_pair:1000,domain_cells_per_pair:1000}}).unwrap();
+        let geometry=geometry.geometry.expect(geometry.reason);
+        assert!(geometry.contacts().all_pairs_qualified);
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits{
+            axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:10000,spans:100000,domain_cells:1000000}).unwrap();
+        let body=volume.body.expect(volume.reason);let original=body.definition().unwrap();
+        assert!(crate::source_body_model::convert(&body,1e-7).is_err());
+        let preview=crate::source_boundary_display::prepare(body.geometry().shell(),8,10000,100).unwrap();
+        assert_eq!(preview.edges.len(),7);
+        assert_eq!(preview.network.vertices.len(),5);
+        let mut anchors=std::collections::BTreeMap::new();
+        for edge in &preview.edges {
+            assert_eq!(edge.segments.len(),8);
+            for end in 0..2 {
+                let segment=&edge.segments[if end==0 {0}else{7}];
+                let point=segment.1[end];
+                for axis in 0..3 {assert!(point[axis]>=segment.2[axis][0]&&point[axis]<=segment.2[axis][1]);}
+                if let Some(previous)=anchors.insert(edge.vertices[end],point) {assert_eq!(previous,point);}
+            }
+        }
+        assert_eq!(anchors.len(),5);
+        assert!(anchors.values().any(|p|(p[0]-0.75).abs()<1e-7&&p[1].abs()<1e-7&&p[2].abs()<1e-7));
+        assert!(crate::source_boundary_display::prepare(body.geometry().shell(),8,1,1).is_err());
+        assert_eq!(body.definition().unwrap(),original);
+        let limits=||crate::source_exchange_endpoints::Limits{root_checks:10000,mapping_cells:100000,replay_mapping_per_use:10000,
+            exact_work:100000000,driver_cells:10000,spans:10000,endpoints:100};
+        let report=crate::source_exchange_endpoints::prepare(&body,1e-7,limits()).unwrap();
+        let points=report.prepared.expect(report.reason);
+        assert_eq!(points.vertices().len(),5);assert_eq!(points.restrictions().len(),7);
+        assert_eq!(points.original(),&original);assert!(points.vertices().iter().all(|v|v.error_upper<=1e-7));
+        let trims=crate::source_exchange_trims::prepare(&body,&points,1e-7,1000000).unwrap().unwrap();
+        assert_eq!(trims.edges().len(),7);
+        let candidate=crate::source_exchange_step::prepare(&body,1e-7,limits(),1000000).unwrap().unwrap();
+        assert_eq!((candidate.vertices,candidate.edges,candidate.faces),(5,7,4));
+        assert!(candidate.endpoint_error_upper<=1e-7);
+        assert!(candidate.text.contains("TRIMMED_CURVE"));
+        assert_eq!(body.definition().unwrap(),original);
+        let mut exhausted=limits();exhausted.exact_work=1;
+        assert!(crate::source_exchange_endpoints::prepare(&body,1e-7,exhausted).unwrap().prepared.is_none());
+        assert!(crate::source_exchange_trims::prepare(&body,&points,1e-7,1).unwrap().is_none());
+        if let Some(path)=std::env::var_os("CAD_PROJECTIVE_ROOT_STEP_OUTPUT") {std::fs::write(path,&candidate.text).unwrap();}
     }
     fn root_partition_control(irrational: bool, curved: bool, mapped: bool) {
         use crate::source_boundary_fragment::Role;
@@ -1302,6 +1686,7 @@ mod tests {
         } else {assemble_regions(&regions, &pairs, 100_000_000).unwrap()};
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
+        if !irrational && !curved && !mapped {assert_projective_root_exchange(&regions,&pairs);}
         crate::source_shell_restore::assert_replay(&shell);
         assert_eq!(shell.regions().unwrap().len(), 4);
         let network = crate::source_boundary_network::inspect(&shell, 14, 14).unwrap();

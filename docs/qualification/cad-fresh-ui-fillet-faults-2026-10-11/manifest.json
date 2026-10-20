@@ -1,0 +1,189 @@
+{
+  "schema": "fresh-cad-ui-step/1",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "toleranceMm": 0.00001,
+  "relativeVolumeTolerance": 1e-7,
+  "parts": [
+    {
+      "name": "bracket-ui-edited",
+      "file": "bracket-ui-edited.step",
+      "sha256": "8c75bae2861b8b3afbf46baeb4ea54a60a9bdd2eb536290bb249bf1996736eec",
+      "expected": {
+        "boundsMm": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            41,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 6495.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "bracket",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "bracket-ui-reloaded",
+      "file": "bracket-ui-reloaded.step",
+      "sha256": "8c75bae2861b8b3afbf46baeb4ea54a60a9bdd2eb536290bb249bf1996736eec",
+      "expected": {
+        "boundsMm": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            41,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 6495.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "bracket",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "flange-ui-edited",
+      "file": "flange-ui-edited.step",
+      "sha256": "76838c0ab7141cde0eb6d417b7f50d19bd713c207533a34d83ef4a731f50f6c7",
+      "expected": {
+        "boundsMm": [
+          [
+            -19,
+            -20,
+            0
+          ],
+          [
+            21,
+            20,
+            6
+          ]
+        ],
+        "volumeMm3": 7041.916993999775,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "flange",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "flange-ui-reloaded",
+      "file": "flange-ui-reloaded.step",
+      "sha256": "76838c0ab7141cde0eb6d417b7f50d19bd713c207533a34d83ef4a731f50f6c7",
+      "expected": {
+        "boundsMm": [
+          [
+            -19,
+            -20,
+            0
+          ],
+          [
+            21,
+            20,
+            6
+          ]
+        ],
+        "volumeMm3": 7041.916993999775,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "flange",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui-edited",
+      "file": "enclosure-ui-edited.step",
+      "sha256": "844a4d3cdd3c8e66db41e953f8a08ebd6896e6e2c82d137368e109fdcc8c87b4",
+      "expected": {
+        "boundsMm": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            41,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 7147.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "enclosure",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui-reloaded",
+      "file": "enclosure-ui-reloaded.step",
+      "sha256": "844a4d3cdd3c8e66db41e953f8a08ebd6896e6e2c82d137368e109fdcc8c87b4",
+      "expected": {
+        "boundsMm": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            41,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 7147.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "enclosure",
+        "rounded": true,
+        "translationMm": [
+          1,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "independentStepQualified": false
+}

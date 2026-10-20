@@ -1,0 +1,29 @@
+{
+  "scope": "Original material-region replay and exact projective closed incidence on a tetrahedron; JSON/binary reconstruction, vertex ownership and manifold links",
+  "passed": true,
+  "publishedWasmChanged": false,
+  "sourceSha256": {
+    "source_projective_shell_restore.rs": "9efab87f59ea63d7a4b9f34144d4fe6d98852c4e13dc5323b8405630c7bca23d",
+    "source_shell_incidence.rs": "06be1db1cc018fe6ea3f35d036152ee18a6e44f0f726e66c34efbf17c4cbaec7",
+    "source_projective_use.rs": "2ec560d3f1d568bb9ba46939aaccc559e0fae791de38a73e0a4af65a9c769a47",
+    "source_projective_edge.rs": "54400da116ef32bc6afead8385bfd317f7d3c7039392ea746e267dade0142cd6"
+  },
+  "log": "/tmp/source-projective-shell-final-20261011.log",
+  "checks": [
+    "fresh source-region audit",
+    "fresh composition/orientation/endpoint pairing",
+    "JSON replay",
+    "binary replay",
+    "same vertex owners and pair addresses",
+    "Euler characteristic 2 and genus 0",
+    "changed weights refused despite forged admission flag",
+    "missing pair refused",
+    "exact root candidate checks counted"
+  ],
+  "remaining": [
+    "projective shell embeddedness/contact admission",
+    "orientation and volume admission",
+    "general fillet assembly and radius/thickness qualification",
+    "WASM worker UI rebuild and qualification"
+  ]
+}

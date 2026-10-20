@@ -1,0 +1,38 @@
+{
+  "scope": "Original transverse degree-one rational UV crossings under positive Mobius canonical maps",
+  "authority": "Exact expansion arithmetic on original line equations, positive map weights and rational range endpoints; no rounded source root or world point",
+  "evidence": {
+    "native_trimmed_edge_replay_tangency": {
+      "passed": 1,
+      "log": "/tmp/source-projective-linear-root-admission-20261011.log",
+      "source_parameters": [
+        "1/2",
+        "1/3"
+      ]
+    },
+    "predicates": {
+      "passed": 44,
+      "log": "/tmp/source-projective-linear-root-predicates-20261011.log",
+      "includes": [
+        "correct and incorrect map",
+        "nonpositive weight refusal",
+        "one-less-than-required work refusal"
+      ]
+    },
+    "original_projective_root_regression": {
+      "passed": 1,
+      "log": "/tmp/source-projective-linear-root-regression-20261011.log"
+    },
+    "shell_incidence_regression": {
+      "passed": 12,
+      "seconds": 58.83,
+      "log": "/tmp/source-projective-linear-root-incidence-20261011.log"
+    }
+  },
+  "remaining": [
+    "Nonlinear UV root correspondence without planar cutter identity",
+    "General mixed-radius corner bodies",
+    "WASM worker UI publication and full P0"
+  ],
+  "wasm_published": false
+}

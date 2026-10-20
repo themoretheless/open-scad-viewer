@@ -1,0 +1,19 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-retained-cross-pair-trimmed-wall-2026-10-10.json",
+    "sha256": "dded2865ab5ccace49ccb085bfc3cc154b0d34974e45a76af073471d95776e42"
+  },
+  "after": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-retained-pair-cache-trimmed-wall-2026-10-10.json",
+    "sha256": "dded2865ab5ccace49ccb085bfc3cc154b0d34974e45a76af073471d95776e42"
+  },
+  "pendingRegions": 4081,
+  "cells": 10000,
+  "spans": 38693,
+  "comparison": "exact-coverage-with-nonincreasing-span-work",
+  "spanWorkSaved": 0,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

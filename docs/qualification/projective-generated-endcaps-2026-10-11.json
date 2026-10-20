@@ -1,0 +1,26 @@
+{
+  "scope": "native-projective-generated-endcaps-incidence-and-replay",
+  "validation": {
+    "passed": 5,
+    "failed": 0,
+    "log": "/tmp/source-projective-generated-endcap-20261011.log"
+  },
+  "verified": [
+    "authored linear canal with unequal endpoint radii 0.5 and 1.25 and spherical end supports",
+    "exact collapsed-boundary qualification through shared generic incidence",
+    "manifold genus-zero links and whole-chart injectivity including pole quotient proofs",
+    "binary replay preserves original definitions, vertices and poles",
+    "perturbed pole by 1e-12 refuses incidence",
+    "default correspondence includes original fragment traversal orientation"
+  ],
+  "limitations": [
+    "new projective endcap shell not yet all-pair contact/volume qualified",
+    "not general curved-spine fillet or mixed-radius corner construction",
+    "WASM worker UI unchanged"
+  ],
+  "sha256": {
+    "source_shell_incidence.rs": "00b1d348067b3ccf8302481f3324da075d3bc926d598f248b19653f5656530d7",
+    "source_projective_shell_restore.rs": "2cf6b417a13027868072d2b5496c18428f1ff9b2b83eb4bf208b1620e1331b6c",
+    "source_support_shell.rs": "101b7b70475613f61683894ec70874331fbd3254281aee206fba40b5fef4fec0"
+  }
+}

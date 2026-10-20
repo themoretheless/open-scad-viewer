@@ -1,0 +1,13 @@
+{
+  "before": {
+    "spans": 57479,
+    "budget_pending": 4085,
+    "profile_transition_excluded": 87
+  },
+  "after": {
+    "spans": 57479,
+    "budget_pending": 4085,
+    "profile_transition_excluded": 87
+  },
+  "pending_pairs": 59
+}

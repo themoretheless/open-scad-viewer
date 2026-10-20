@@ -1,0 +1,36 @@
+{
+  "scope": "native-projective-capped-body-step-and-restoration",
+  "native_replay": {
+    "passed": 1,
+    "failed": 0,
+    "log": "/tmp/source-projective-endcap-step-replay-20261011.log"
+  },
+  "model_regression": {
+    "passed": 2,
+    "failed": 0,
+    "log": "/tmp/source-projective-model-regression-20261011.log"
+  },
+  "external_oracle": "projective-capped-canal-step-occt-2026-10-11.json",
+  "artifact": "projective-capped-canal-2026-10-11.step",
+  "artifact_sha256": "86982557f19e79356ce8345c5ca74337e208bac53dcbec2c71a20b94a18dd20d",
+  "verified": [
+    "fresh native body replay preserves definitions volume intervals vertex owners and Model",
+    "native STEP roundtrip preserves entity identities and geometry",
+    "OCCT confirms one valid solid signed volume and bounds against independently supplied dimensions"
+  ],
+  "limitations": [
+    "one straight-spine variable-radius capped control",
+    "general curved-spine mixed-radius corner construction incomplete",
+    "root-trimmed Model storage and UI deployment incomplete"
+  ],
+  "sha256": {
+    "crates/brep-core/src/source_body_model.rs": "23c4cf5efa1bffd211fd46828658b99d5233c5db8d7d2f746a6a6418c1b34ad5",
+    "crates/brep-core/src/source_support_shell.rs": "3fb0062f353ce425ed88bb2b1946f7c7ed8b4c9524f7f90a134fbe535c954ca9",
+    "scripts/verify-source-capped-body-step.py": "1e8b1139c7cf01cb376ff14c01c4fe67462992951c1d4cd468c9429e0a024a80"
+  },
+  "artifact_export_replay": {
+    "passed": 1,
+    "failed": 0,
+    "log": "/tmp/source-projective-endcap-step-artifact-20261011.log"
+  }
+}

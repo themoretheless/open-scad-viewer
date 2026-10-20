@@ -57,18 +57,18 @@ pub struct RetainedReport {
     pub cells:usize,pub spans:usize,pub domain_cells:usize,
     pub domain_queries:usize,pub endpoint_queries:usize,pub pairs:Vec<RetainedPair>,
 }
-pub struct Certificate<'a> {
-    body: &'a Body,
+pub struct Certificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     minimum_mm: f64,
     max_sine_squared: f64,
-    gaps: Vec<source_face_gap::Certificate<'a>>,
-    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a>>,
-    mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a>>,
+    gaps: Vec<source_face_gap::Certificate<'a,E>>,
+    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
+    mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a,E>>,
     self_chords: Vec<nurbs_core::surface_self_chord::Certificate<'a>>,
-    adaptive_self: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    adaptive_self: Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E: crate::source_shared_chord_map::ChordCarrier> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn minimum_mm(&self) -> f64 {
@@ -79,22 +79,22 @@ impl<'a> Certificate<'a> {
     }
     pub fn adaptive_self_certificates(
         &self,
-    ) -> &[crate::source_wall_self_coverage::FaceCertificate<'a>] {
+    ) -> &[crate::source_wall_self_coverage::FaceCertificate<'a,E>] {
         &self.adaptive_self
     }
     pub fn self_chord_certificates(&self) -> &[nurbs_core::surface_self_chord::Certificate<'a>] {
         &self.self_chords
     }
-    pub fn retained_gap_certificates(&self) -> &[crate::source_retained_face_gap::Certificate<'a>] { &self.retained_gaps }
-    pub fn mixed_pair_certificates(&self) -> &[crate::source_wall_pair::Certificate<'a>] { &self.mixed_pairs }
-    pub fn gap_certificates(&self) -> &[source_face_gap::Certificate<'a>] {
+    pub fn retained_gap_certificates(&self) -> &[crate::source_retained_face_gap::Certificate<'a,E>] { &self.retained_gaps }
+    pub fn mixed_pair_certificates(&self) -> &[crate::source_wall_pair::Certificate<'a,E>] { &self.mixed_pairs }
+    pub fn gap_certificates(&self) -> &[source_face_gap::Certificate<'a,E>] {
         &self.gaps
     }
 }
-pub struct Report<'a> {
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
     pub retained_gap:Option<RetainedReport>,
     pub mixed:Option<MixedReport>,
-    pub certificate: Option<Certificate<'a>>,
+    pub certificate: Option<Certificate<'a,E>>,
     pub pairs: Vec<Pair>,
     pub total_pairs: usize,
     pub enumeration_complete: bool,
@@ -117,81 +117,81 @@ fn domain(s: &nurbs_core::surface::Surface) -> [[f64; 2]; 2] {
 /// Proves a lower threshold for aligned material chords, including unselected
 /// walls, cavities, same-face pairs and root-ended trim regions. Exclusions and
 /// distance bounds use complete original charts as conservative supersets.
-pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Report<'a>> {
+pub fn qualify<'a,E: crate::source_shared_chord_map::ChordCarrier>(body: &'a Body<E>, minimum_mm: f64, limits: Limits) -> Result<Report<'a,E>> {
     qualify_with_self_facts(body, minimum_mm, limits, Vec::new())
 }
 /// Reuses only owned private self-face facts for this immutable Body. Public
 /// reports cannot supply proof. Higher thresholds or broader angle requests
 /// cannot be covered by a stale or narrower certificate.
-pub fn qualify_with_self_facts<'a>(
-    body: &'a Body,
+pub fn qualify_with_self_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
     minimum_mm: f64,
     limits: Limits,
-    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
-) -> Result<Report<'a>> {
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
+) -> Result<Report<'a,E>> {
     qualify_with_self_facts_and_normal_products(body,minimum_mm,limits,facts,
         NormalProductLimits{cells:0,cells_per_pair:0})
 }
 /// Optional bounded full-chart normal exclusions. Zero cells preserves the
 /// original scheduling; only a completely excluded product proves a pair.
-pub fn qualify_with_self_facts_and_normal_products<'a>(
-    body:&'a Body, minimum_mm:f64, limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_self_facts_and_normal_products<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>, minimum_mm:f64, limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     qualify_with_self_facts_and_factored_normals(body,minimum_mm,limits,facts,products,
         FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0})
 }
 /// Reuses exact limiting directions only for their immutable original face.
 /// Regular-normal proofs retain their scheduling and are never replaced.
-pub fn qualify_with_self_facts_and_factored_normals<'a>(
-    body:&'a Body, minimum_mm:f64, limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_self_facts_and_factored_normals<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>, minimum_mm:f64, limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits, factors:FactoredNormalLimits,
-)->Result<Report<'a>> {
+)->Result<Report<'a,E>> {
     qualify_with_retained_gap_facts(body,minimum_mm,limits,facts,products,factors,Vec::new())
 }
 /// Add private original retained-domain certificates without replacing earlier proofs.
-pub fn qualify_with_retained_gap_facts<'a>(
-    body:&'a Body,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_retained_gap_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
-)->Result<Report<'a>> {
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
+)->Result<Report<'a,E>> {
     qualify_with_retained_gap_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,None)
 }
 /// Additional fair bounded pass over unresolved original distinct-face products.
-pub fn qualify_with_retained_gap_pass<'a>(
-    body:&'a Body,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_retained_gap_pass<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
     retained:Option<RetainedGapLimits>,
-)->Result<Report<'a>> {
+)->Result<Report<'a,E>> {
     qualify_with_mixed_pair_facts(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,Vec::new())
 }
 /// Reuse complete retained product proofs bound to this original immutable body.
 /// Certificates cover the requested threshold and normal-angle criterion.
-pub fn qualify_with_mixed_pair_facts<'a>(
-    body:&'a Body,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_mixed_pair_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
     retained:Option<RetainedGapLimits>,
-    mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a>>,
-)->Result<Report<'a>> {
+    mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a,E>>,
+)->Result<Report<'a,E>> {
     qualify_with_mixed_pair_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,mixed_pairs,None)
 }
 /// Additional bounded mixed criterion over the remaining original products.
-pub fn qualify_with_mixed_pair_pass<'a>(
-    body:&'a Body,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+pub fn qualify_with_mixed_pair_pass<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
     retained:Option<RetainedGapLimits>,
-    mut mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a>>,
+    mut mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a,E>>,
     mixed:Option<MixedPairLimits>,
-)->Result<Report<'a>> {
+)->Result<Report<'a,E>> {
     if let Some(m)=mixed {
         let r=m.domains;
         if [m.normal_spans,m.normal_spans_per_pair,r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))

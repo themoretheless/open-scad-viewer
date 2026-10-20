@@ -37,13 +37,15 @@ it('retains the serialized-size bound after undo/redo and a new commit', () => {
   })
   const history = new DirectHistory(large(0))
   for (let revision = 1; revision <= 4; revision++) history.commit(large(revision))
-  // Three 5.12M-character snapshots fit, four do not.
-  for (let revision = 3; revision >= 1; revision--) expect(history.undo().groups![0]!.name).toBe(`${revision}-0`)
+  // The current snapshot now counts toward the unique-text budget too.
+  // Three 5.12M-character states fit: current plus two undo states.
+  for (let revision = 3; revision >= 2; revision--) expect(history.undo().groups![0]!.name).toBe(`${revision}-0`)
   expect(history.canUndo).toBe(false)
-  for (let revision = 2; revision <= 4; revision++) expect(history.redo().groups![0]!.name).toBe(`${revision}-0`)
+  for (let revision = 3; revision <= 4; revision++) expect(history.redo().groups![0]!.name).toBe(`${revision}-0`)
   history.commit(large(5))
-  for (let revision = 4; revision >= 2; revision--) expect(history.undo().groups![0]!.name).toBe(`${revision}-0`)
+  for (let revision = 4; revision >= 3; revision--) expect(history.undo().groups![0]!.name).toBe(`${revision}-0`)
   expect(history.canUndo).toBe(false)
+  expect(history.storageStats.retainedCharacters).toBeLessThanOrEqual(16_000_000)
 })
 
 it('projects detached object identities without copying mesh geometry',()=>{

@@ -5,6 +5,8 @@ use crate::surface::Surface;
 mod retained_body_coverage;
 use crate::retained_wall_domain;
 use value_codec::{Deserialize, Serialize, Value, json};
+#[path="profile_bridge_chord_transport.rs"]
+mod profile_bridge_chord_transport;
 
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
@@ -34,6 +36,7 @@ fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> {
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op=="profile_section_bridge_chords" {return profile_bridge_chord_transport::inspect(&v);}
     if op == "sweep_repair_circle_sections" || op == "sweep_project_sections" {
         let sections: Vec<Vec<curve::Curve>> = field(&v,"sections")?;
         let max_work = field(&v,"maxWork")?;

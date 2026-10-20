@@ -1,0 +1,53 @@
+{
+  "scope": "Original positive rational Bezier UV boundaries, degree 1..32, with exact supporting-line separation",
+  "proof": [
+    "Each curve must already have an injectivity proof",
+    "Exact orientations of original controls bound closed supporting half-planes",
+    "At least one strict Bernstein coefficient puts the entire open curve strictly on one side",
+    "The other nonshared endpoint must lie on the strict side or outside the other control hull",
+    "Two-curve loops may share both independently owned endpoints"
+  ],
+  "budget": "Every orientation consumes one cell with at most 256 predicate work units; the existing global cell limit is retained",
+  "evidence": {
+    "trim_simplicity": {
+      "passed": 7,
+      "log": "/tmp/source-supporting-chord-simplicity-20261011.log",
+      "includes": [
+        "two-endpoint arc/chord loop",
+        "three-edge chord loop",
+        "reversed traversal",
+        "dyadic rotation and translation",
+        "coincident curves refused",
+        "nonshared endpoint intersection refused",
+        "work exhaustion refused"
+      ]
+    },
+    "material_shell_original_chord_replay": {
+      "passed": 1,
+      "log": "/tmp/source-supported-chord-shell-replay-20261011.log"
+    },
+    "trim_region_audit": {
+      "passed": 4,
+      "log": "/tmp/source-supported-chord-region-regression-20261011.log"
+    },
+    "source_shell_incidence": {
+      "passed": 13,
+      "failed": 0,
+      "seconds": 32.38,
+      "log": "/tmp/source-supported-chord-incidence-regression-20261011.log"
+    },
+    "full_nurbs_core": {
+      "passed": 860,
+      "failed": 0,
+      "ignored": 2,
+      "seconds": 295.93,
+      "log": "/tmp/source-supporting-line-nurbs-full-20261011.log"
+    }
+  },
+  "limitations": [
+    "This proves UV loop simplicity for sufficient supporting-line cases, not general NURBS self-intersection completeness",
+    "No fillet radius, wall thickness or embedded body is implied",
+    "WASM publication unchanged"
+  ],
+  "published_wasm_sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3"
+}

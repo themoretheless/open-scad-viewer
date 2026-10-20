@@ -1,0 +1,9 @@
+{
+  "test": "restricted_profile_seams_match_owned_neighbor_supports",
+  "cells": 10000,
+  "spans": 1000000,
+  "trimCells": 100000,
+  "sourceManifest": "original-endpoint-normal-sharing-cold-test-inputs-2026-10-10.json",
+  "report": "original-endpoint-normal-sharing-trimmed-wall-2026-10-10.json",
+  "comparisonBaseline": "section-data-cache-trimmed-wall-2026-10-10.json"
+}

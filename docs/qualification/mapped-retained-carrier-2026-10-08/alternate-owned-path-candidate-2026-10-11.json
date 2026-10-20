@@ -1,0 +1,30 @@
+{
+  "schema": "native-proof-candidate/1",
+  "source": "crates/nurbs-core/src/profile_expression_radius.rs",
+  "sha256": "62f77757dfecc69b878a0ef427b738ca63aa4323578eeb30e117f9d2daf0ae18",
+  "focusedTests": {
+    "passed": 4,
+    "failed": 0,
+    "log": "/tmp/alternate-owned-path-focused-20261011.log"
+  },
+  "scope": "Alternate complete owned path cone check; no coverage improvement demonstrated yet. Public 558 WASM and staged shared-corner optimized snapshot exclude this candidate.",
+  "fullNurbsTests": {
+    "passed": 856,
+    "failed": 0,
+    "ignored": 2,
+    "seconds": 161.66,
+    "log": "/tmp/alternate-owned-path-nurbs-all-20261011.log"
+  },
+  "brepConsumerTests": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 19.66
+  },
+  "controlReplay": {
+    "comparison": "alternate-owned-path-dispatch-comparison-2026-10-11.json",
+    "completeResponseExact": true,
+    "pending": 4081,
+    "spans": 11821,
+    "coverageGainDemonstrated": false
+  }
+}

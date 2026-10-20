@@ -1,0 +1,16 @@
+{
+  "schema": "expression-worker-qualification-failure/1",
+  "passed": false,
+  "phase": "fresh-worker-retry",
+  "elapsedMs": 131916.59487499998,
+  "timeoutMs": 120000,
+  "wasmSha256": "a3902e6ed3541b67463f1839f278668be4de9b9085cf2e09da6cd6e281555be8",
+  "wasmUnchanged": true,
+  "workersStarted": 2,
+  "error": {
+    "name": "MainSolidWorkerError",
+    "message": "CAD operation exceeded its time limit",
+    "code": "CAD_TIMEOUT"
+  },
+  "scope": "Failed qualification only; no geometry or latency admission"
+}

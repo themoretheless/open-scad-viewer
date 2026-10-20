@@ -1,0 +1,13 @@
+{
+  "schema": "expression-worker-staging/1",
+  "stage": "/Users/themoretheless/.codex/tmp/source-fixed-point-cache-canonical-optimized-worker-2026-10-11",
+  "input": "/Users/themoretheless/.codex/tmp/source-fixed-point-cache-wasm-stage-2026-10-11/geometry-kernel.canonical.optimized.wasm",
+  "wasmSha256": "68b872ac8479a8d4af850bf3949b2f3b8bb5fc34fbe229a3c1b17d094cbb6a21",
+  "byteLength": 13112736,
+  "liveWasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "liveWasmUnchanged": true,
+  "workerQualified": false,
+  "runtimeManifestSha256": "c83ce53e54df5464e8e4df66acbe5102731cd1884c2835c7387df3ee2f8683cc",
+  "runtimeFileCount": 860,
+  "scope": "Disposable runtime/package copy only. Run checker from this directory with absolute saved request and native replay paths. No live package publication."
+}

@@ -1,0 +1,70 @@
+{
+  "buildComplete": true,
+  "sha256": "17dd580d438021acead0664c5ec6fafc140024442a863b9e06eefa39eb2081fc",
+  "bytes": 12971503,
+  "includes": [
+    "prepared transition reuse",
+    "shared corrected position and derivative cache",
+    "span stage counters"
+  ],
+  "excludes": [
+    "later intrinsic cache reuse"
+  ],
+  "rationalCylinderSharedCacheTest": {
+    "passed": true,
+    "domains": 3,
+    "coldBoundsEqualDirect": true,
+    "warmWorkSpans": 0,
+    "zeroBudgetRefuses": true
+  },
+  "workerQualification": {
+    "passed": true,
+    "workersStarted": 2,
+    "workersJoined": 2,
+    "timingsMs": {
+      "refusal": 2035.1152499999998,
+      "dispatchCancellation": 74.91895799999975,
+      "retry": 21432.662084
+    },
+    "report": "shared-cache-worker-bounded-2026-10-10/expression-inspection-worker-report.json"
+  },
+  "generalGeometryQualified": false,
+  "zeroBudgetWorker": {
+    "passed": true,
+    "wasmSha256": "17dd580d438021acead0664c5ec6fafc140024442a863b9e06eefa39eb2081fc",
+    "workersStarted": 2,
+    "workersJoined": 2,
+    "timingsMs": {
+      "refusal": 1325.095209,
+      "dispatchCancellation": 38.57116700000006,
+      "retry": 15586.247958
+    }
+  },
+  "extendedNative": {
+    "passed": true,
+    "durationSeconds": 1648.44,
+    "cells": 66805,
+    "spans": 1000000,
+    "domainCells": 1000000,
+    "pendingRegions": 30952,
+    "pendingFacePairs": 46,
+    "complete": false,
+    "allPendingReasons": "budget",
+    "includesIntrinsicCache": false
+  },
+  "nextIntrinsicBuild": {
+    "session": 58459,
+    "log": "/tmp/shared-intrinsic-wasm-build-20261010.log",
+    "status": "running"
+  },
+  "browserStandard": {
+    "tab": 68,
+    "port": 5198,
+    "pendingRegions": 4085,
+    "initialPairsChecked": 435,
+    "cells": 10000,
+    "spans": 54588,
+    "screenshot": "/tmp/shared-cache-ui-20261010.png",
+    "wholeThicknessQualified": false
+  }
+}

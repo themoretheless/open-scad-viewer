@@ -24,24 +24,60 @@ pub struct Vertex {
     pub bounds: [[f64; 2]; 3],
     pub error_upper: f64,
 }
-pub struct Prepared {
+pub struct Replay<E> {
+    pub edge: Option<E>,
+    pub work: u64,
+    pub driver: usize,
+    pub root_checks: usize,
+    pub reason: &'static str,
+}
+/// Native sealed carriers replay original compositions after root refinement.
+pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
+    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value>;
+    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>>;
+    fn same_mapping(&self, other: &Self) -> bool;
+}
+impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
+    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> { body.definition() }
+    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>> {
+        let mut value=self.definition();
+        value["uses"]=value_codec::Value::Array(fragments.iter().map(Fragment::definition).collect());
+        let r=crate::source_shared_edge_restore::restore(value,limits)?;
+        Ok(Replay{edge:r.edge,work:r.work_used,driver:r.driver_cells,root_checks:r.root_checks,reason:r.reason})
+    }
+    fn same_mapping(&self, other: &Self) -> bool { self.world()==other.world() && self.reversed()==other.reversed() && self.ranges()==other.ranges() }
+}
+impl ExchangeCarrier for crate::source_projective_edge::Edge {
+    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> { body.definition() }
+    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>> {
+        let mut value=self.definition();
+        for side in 0..2 { value["uses"][side]["fragment"]=fragments[side].definition(); }
+        let r=crate::source_projective_edge::restore(value,limits.mapping_cells_per_use,limits.exact_work,limits.driver_cells)?;
+        Ok(Replay{edge:r.edge,work:r.exact_work,driver:r.driver_cells,root_checks:r.root_checks,reason:r.reason})
+    }
+    fn same_mapping(&self, other: &Self) -> bool {
+        self.world()==other.world() && (0..2).all(|side|self.uses()[side].reversed()==other.uses()[side].reversed()
+            && self.uses()[side].range()==other.uses()[side].range() && self.uses()[side].weights()==other.uses()[side].weights())
+    }
+}
+pub struct Prepared<E = crate::source_shared_edge::SharedEdge> {
     original: value_codec::Value,
-    restrictions: Vec<Restriction>,
+    restrictions: Vec<Restriction<E>>,
     vertices: Vec<Vertex>,
 }
-impl Prepared {
+impl<E> Prepared<E> {
     pub fn original(&self) -> &value_codec::Value {
         &self.original
     }
-    pub fn restrictions(&self) -> &[Restriction] {
+    pub fn restrictions(&self) -> &[Restriction<E>] {
         &self.restrictions
     }
     pub fn vertices(&self) -> &[Vertex] {
         &self.vertices
     }
 }
-pub struct Report {
-    pub prepared: Option<Prepared>,
+pub struct Report<E = crate::source_shared_edge::SharedEdge> {
+    pub prepared: Option<Prepared<E>>,
     pub root_checks: usize,
     pub identity_root_checks: usize,
     pub mapping_cells: usize,
@@ -54,11 +90,11 @@ pub struct Report {
 fn invalid(message: &str) -> Error {
     Error::new("BREP_SOURCE_EXCHANGE_ENDPOINTS", message)
 }
-pub fn prepare(
-    body: &crate::source_volume::Body,
+pub fn prepare<E: ExchangeCarrier>(
+    body: &crate::source_volume::Body<E>,
     tolerance_mm: f64,
     limits: Limits,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     if !tolerance_mm.is_finite()
         || tolerance_mm <= 0.
         || !(1..=100000).contains(&limits.root_checks)
@@ -113,9 +149,9 @@ pub fn prepare(
         Ok(())
     };
     for (index, edge) in shell.edges().iter().enumerate() {
-        let mut value = edge.definition();
         let mut uses = Vec::new();
-        for fragment in edge.uses() {
+        for side in 0..2 {
+            let fragment=edge.fragment(side);
             let mut endpoints = Vec::new();
             for endpoint in fragment.endpoints() {
                 endpoints.push(match endpoint {
@@ -158,33 +194,29 @@ pub fn prepare(
                     fragment.curve(),
                     endpoints.next().unwrap(),
                     endpoints.next().unwrap(),
-                )?
-                .definition(),
+                )?,
             );
         }
-        value["uses"] = value_codec::Value::Array(uses);
         if out.exact_work == limits.exact_work {
             return Ok(out);
         }
-        let replay = crate::source_shared_edge_restore::restore(
-            value,
+        let mut uses=uses.into_iter();
+        let replay = edge.replay_refined(
+            [uses.next().unwrap(),uses.next().unwrap()],
             crate::source_shared_edge_restore::Limits {
                 mapping_cells_per_use: limits.replay_mapping_per_use,
                 exact_work: limits.exact_work - out.exact_work,
                 driver_cells: limits.driver_cells - out.driver_cells,
             },
         )?;
-        out.exact_work += replay.work_used;
-        out.driver_cells += replay.driver_cells;
+        out.exact_work += replay.work;
+        out.driver_cells += replay.driver;
         out.identity_root_checks += replay.root_checks;
         let Some(refined) = replay.edge else {
             out.reason = replay.reason;
             return Ok(out);
         };
-        if refined.world() != edge.world()
-            || refined.reversed() != edge.reversed()
-            || refined.ranges() != edge.ranges()
-        {
+        if !edge.same_mapping(&refined) {
             return Err(invalid(
                 "Refined restriction changed original carrier or direction",
             ));
@@ -203,7 +235,7 @@ pub fn prepare(
         }
         let address = shell.uses()[index][0];
         let mut ids = shell.vertices()[address.face][address.wire][address.edge];
-        if edge.reversed()[0] {
+        if edge.restriction_reversed(0) {
             ids.reverse();
         }
         for (end, bounds) in restriction
@@ -241,7 +273,7 @@ pub fn prepare(
         });
     }
     out.prepared = Some(Prepared {
-        original: body.definition()?,
+        original: E::body_definition(body)?,
         restrictions,
         vertices,
     });

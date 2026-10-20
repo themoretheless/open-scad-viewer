@@ -1,0 +1,132 @@
+{
+  "schema": "cad-mixed-ui-history/1",
+  "part": "enclosure",
+  "mixedOperations": 20,
+  "uniqueStates": 21,
+  "undoVerified": 20,
+  "redoVerified": 20,
+  "cancelVerified": 7,
+  "reloadStructuralEquality": true,
+  "allBrepMatchServiceHistory": true,
+  "stepSha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+  "independentOracle": "OpenCascade exact line intersections",
+  "gauges": [
+    {
+      "gauge": "opposing walls 1.4 mm",
+      "actualParametersMm": [
+        17.0,
+        18.4,
+        55.6,
+        57.0
+      ],
+      "expectedParametersMm": [
+        17,
+        18.4,
+        55.6,
+        57
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    },
+    {
+      "gauge": "bottom thickness 2 mm",
+      "actualParametersMm": [
+        10.0,
+        12.0
+      ],
+      "expectedParametersMm": [
+        10,
+        12
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    },
+    {
+      "gauge": "corner radius 1 mm",
+      "actualParametersMm": [
+        17.133974596215563,
+        57.0
+      ],
+      "expectedParametersMm": [
+        17.133974596215563,
+        57
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    }
+  ],
+  "scope": "Declared section gauges only; whole-wall thickness, general fillets and full P0 matrix remain open",
+  "files": {
+    "enclosure-11.json": "4dd5f752039663deed60f7fb9c7e9c027767f6383f26881d1c0f21a8e895b350",
+    "enclosure-undo-0.json": "a867c3adf5c8f4b371cb70ae2080b313bb8f859fedb7659de6149c9c0ce3ef45",
+    "enclosure-undo-14.json": "22a4aa2e5f87da2bcaf1003fc8f86af8e32389080603f3e4c62bc8db8fdeeee4",
+    "enclosure-redo-7.json": "89d19e6df9b6de6eeae6c6b3e556a1fd0321df55aca5e5291ac3b19e20b6ea94",
+    "enclosure-undo-18.json": "c043af1964de5482675b1ccc665cca826368607b12d235b76f80522572b5d9ec",
+    "enclosure-7.json": "89d19e6df9b6de6eeae6c6b3e556a1fd0321df55aca5e5291ac3b19e20b6ea94",
+    "enclosure-redo-12.json": "a7d2c2d78da45ffdeab247308ce521f00c6dcd5493b2de40669f305cd55afe90",
+    "enclosure-redo-13.json": "a42d7766b530b4a60f72578ee53fe1c11ded7d7c03d1900c80d954ae7e5595a5",
+    "enclosure-6.json": "fed70b72d15bae7a267c1acf4bd3fedb4d9b40e11735c4b4c5214bdb5c8d0807",
+    "enclosure-undo-19.json": "345f492a8cc1a53155fe1029abaa9ae4831020c99ec04ba6c078d149145bf67d",
+    "enclosure-redo-6.json": "fed70b72d15bae7a267c1acf4bd3fedb4d9b40e11735c4b4c5214bdb5c8d0807",
+    "enclosure-undo-15.json": "1b1f2bbf210a564ba4c87ce37cd970b0608c18811a51ba0ecb41476060ec9e7e",
+    "enclosure-undo-1.json": "b6299e596a6811a37475fe0f4a6ad9e7a39e63c6dd6fe4350e27df35986bd57b",
+    "enclosure-10.json": "b2b4803f26e1f0380ebd90f28acfbf40ec343b60aff3e3760472bf2993d5a550",
+    "enclosure-redo-1.json": "b6299e596a6811a37475fe0f4a6ad9e7a39e63c6dd6fe4350e27df35986bd57b",
+    "enclosure-1.json": "b6299e596a6811a37475fe0f4a6ad9e7a39e63c6dd6fe4350e27df35986bd57b",
+    "enclosure-redo-14.json": "22a4aa2e5f87da2bcaf1003fc8f86af8e32389080603f3e4c62bc8db8fdeeee4",
+    "enclosure-17.json": "aadf8e0e4a00ba829b3c5ec12a0b3b81f8a4008d082592660be728f2811fd8e6",
+    "enclosure-undo-6.json": "fed70b72d15bae7a267c1acf4bd3fedb4d9b40e11735c4b4c5214bdb5c8d0807",
+    "enclosure-cancel-0.json": "a867c3adf5c8f4b371cb70ae2080b313bb8f859fedb7659de6149c9c0ce3ef45",
+    "enclosure-undo-12.json": "a7d2c2d78da45ffdeab247308ce521f00c6dcd5493b2de40669f305cd55afe90",
+    "enclosure-redo-18.json": "c043af1964de5482675b1ccc665cca826368607b12d235b76f80522572b5d9ec",
+    "enclosure-redo-19.json": "345f492a8cc1a53155fe1029abaa9ae4831020c99ec04ba6c078d149145bf67d",
+    "enclosure-undo-13.json": "a42d7766b530b4a60f72578ee53fe1c11ded7d7c03d1900c80d954ae7e5595a5",
+    "enclosure-cancel-1.json": "53d11cded892c303d70de4435abf1e86f6ce077deabc65d4afc3f81e60ce74c0",
+    "enclosure-undo-7.json": "89d19e6df9b6de6eeae6c6b3e556a1fd0321df55aca5e5291ac3b19e20b6ea94",
+    "enclosure-16.json": "23e0b20bba313593b21e502f8a4ee1eab4816f7fd0d023221b4fe3a1afbfb978",
+    "enclosure-redo-15.json": "1b1f2bbf210a564ba4c87ce37cd970b0608c18811a51ba0ecb41476060ec9e7e",
+    "enclosure-0.json": "a867c3adf5c8f4b371cb70ae2080b313bb8f859fedb7659de6149c9c0ce3ef45",
+    "enclosure-20.json": "92adec87e183913ab8e87c7bc1cc8daed3db1545d5701c0c1e986cd0f51ae96e",
+    "enclosure-reload.json": "db859f663b3b72bddfc2ea23ad0d011a6f6cde4dd59b09001fa4669f2d2d1c89",
+    "enclosure-redo-16.json": "23e0b20bba313593b21e502f8a4ee1eab4816f7fd0d023221b4fe3a1afbfb978",
+    "enclosure-3.json": "53d11cded892c303d70de4435abf1e86f6ce077deabc65d4afc3f81e60ce74c0",
+    "enclosure-cancel-fillet.json": "c043af1964de5482675b1ccc665cca826368607b12d235b76f80522572b5d9ec",
+    "enclosure-redo-3.json": "53d11cded892c303d70de4435abf1e86f6ce077deabc65d4afc3f81e60ce74c0",
+    "enclosure-19.json": "345f492a8cc1a53155fe1029abaa9ae4831020c99ec04ba6c078d149145bf67d",
+    "enclosure-undo-8.json": "048bb3300a3260d789c8a3ea9db98f0666bb261d43d3a19f63ed877408a9cb88",
+    "enclosure-undo-10.json": "b2b4803f26e1f0380ebd90f28acfbf40ec343b60aff3e3760472bf2993d5a550",
+    "enclosure-redo-20.json": "92adec87e183913ab8e87c7bc1cc8daed3db1545d5701c0c1e986cd0f51ae96e",
+    "enclosure-cancel-2.json": "fed70b72d15bae7a267c1acf4bd3fedb4d9b40e11735c4b4c5214bdb5c8d0807",
+    "enclosure-undo-4.json": "6974aeb4a830aa0effee2ed4630a55192397d6fe7824efb469243f1a4b600ff3",
+    "enclosure-15.json": "1b1f2bbf210a564ba4c87ce37cd970b0608c18811a51ba0ecb41476060ec9e7e",
+    "enclosure-14.json": "22a4aa2e5f87da2bcaf1003fc8f86af8e32389080603f3e4c62bc8db8fdeeee4",
+    "enclosure-undo-5.json": "e9bfceb3326337d570283dbb3f765cf645761f99f0f009953503a975b694943f",
+    "enclosure-cancel-3.json": "5b6c4e82514feb3275f2f308244492267bc2b7b5257b6d1732e695d322fd458a",
+    "enclosure-undo-11.json": "4dd5f752039663deed60f7fb9c7e9c027767f6383f26881d1c0f21a8e895b350",
+    "enclosure-undo-9.json": "5b6c4e82514feb3275f2f308244492267bc2b7b5257b6d1732e695d322fd458a",
+    "enclosure-18.json": "c043af1964de5482675b1ccc665cca826368607b12d235b76f80522572b5d9ec",
+    "enclosure-ui20-0.step": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+    "enclosure-redo-2.json": "732db40628f3729b183e29e15d9e5d4acde4d2c94897e7c82ea1b6c19540f18e",
+    "enclosure-2.json": "732db40628f3729b183e29e15d9e5d4acde4d2c94897e7c82ea1b6c19540f18e",
+    "enclosure-redo-17.json": "aadf8e0e4a00ba829b3c5ec12a0b3b81f8a4008d082592660be728f2811fd8e6",
+    "enclosure-9.json": "5b6c4e82514feb3275f2f308244492267bc2b7b5257b6d1732e695d322fd458a",
+    "enclosure-undo-16.json": "23e0b20bba313593b21e502f8a4ee1eab4816f7fd0d023221b4fe3a1afbfb978",
+    "enclosure-redo-9.json": "5b6c4e82514feb3275f2f308244492267bc2b7b5257b6d1732e695d322fd458a",
+    "enclosure-cancel-4.json": "a7d2c2d78da45ffdeab247308ce521f00c6dcd5493b2de40669f305cd55afe90",
+    "enclosure-undo-2.json": "732db40628f3729b183e29e15d9e5d4acde4d2c94897e7c82ea1b6c19540f18e",
+    "enclosure-13.json": "a42d7766b530b4a60f72578ee53fe1c11ded7d7c03d1900c80d954ae7e5595a5",
+    "browser.png": "08fd6d7e88ea00a998d7c14f9ee956d12823a16fd5b8927009d638cc82c7168d",
+    "enclosure-redo-10.json": "b2b4803f26e1f0380ebd90f28acfbf40ec343b60aff3e3760472bf2993d5a550",
+    "enclosure-5.json": "e9bfceb3326337d570283dbb3f765cf645761f99f0f009953503a975b694943f",
+    "enclosure-redo-5.json": "e9bfceb3326337d570283dbb3f765cf645761f99f0f009953503a975b694943f",
+    "enclosure-redo-4.json": "6974aeb4a830aa0effee2ed4630a55192397d6fe7824efb469243f1a4b600ff3",
+    "enclosure-4.json": "6974aeb4a830aa0effee2ed4630a55192397d6fe7824efb469243f1a4b600ff3",
+    "enclosure-redo-11.json": "4dd5f752039663deed60f7fb9c7e9c027767f6383f26881d1c0f21a8e895b350",
+    "enclosure-12.json": "a7d2c2d78da45ffdeab247308ce521f00c6dcd5493b2de40669f305cd55afe90",
+    "enclosure-undo-3.json": "53d11cded892c303d70de4435abf1e86f6ce077deabc65d4afc3f81e60ce74c0",
+    "enclosure-cancel-5.json": "1b1f2bbf210a564ba4c87ce37cd970b0608c18811a51ba0ecb41476060ec9e7e",
+    "enclosure-redo-8.json": "048bb3300a3260d789c8a3ea9db98f0666bb261d43d3a19f63ed877408a9cb88",
+    "enclosure-undo-17.json": "aadf8e0e4a00ba829b3c5ec12a0b3b81f8a4008d082592660be728f2811fd8e6",
+    "enclosure-8.json": "048bb3300a3260d789c8a3ea9db98f0666bb261d43d3a19f63ed877408a9cb88"
+  }
+}

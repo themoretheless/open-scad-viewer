@@ -1,0 +1,6 @@
+{
+  "rawWasmSha256": "fb09c075d163d9bb4b3e74c58f85d19d5591ddf6ca862ef78e5ce8bd40feb08c",
+  "rawWasmBytes": 14778006,
+  "sourceManifest": "mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-inputs-2026-10-10.json",
+  "scope": "Compiled rail-position-cache generation; subsequent seam-cone source work is outside this immutable optimizer snapshot."
+}

@@ -688,6 +688,52 @@ it('restores a saved body after asynchronous kernel warm-up without recording an
  }finally{ready.mockRestore();warm.mockRestore()}
 })
 
+it('retries kernel loading after failure and restores the saved document without an undo entry', async()=>{
+ const ready=vi.spyOn(geometryKernel,'isGeometryKernelReady').mockReturnValue(false)
+ const warm=vi.spyOn(geometryKernel,'warmGeometryKernel').mockRejectedValueOnce(new Error('WASM unavailable')).mockResolvedValue(undefined)
+ try {
+  const ui=await mount();await new Promise(resolve=>setTimeout(resolve,0));await nextTick()
+  expect(ui.all().some(n=>n.props['aria-label']==='kernel-load-error')).toBe(true)
+  const primitives=ui.commands().filter(command=>['box','wedge','cylinder','frustum','tube','cone','sphere','torus'].some(kind=>command.id===`add-${kind}`))
+  expect(primitives.length).toBeGreaterThan(0)
+  expect(primitives.every(command=>command.enabled===false && !!command.disabledReason)).toBe(true)
+  expect(ui.all().some(n=>n.text.includes('Could not restore the saved document'))).toBe(false)
+  await ui.click('Retry kernel loading');await new Promise(resolve=>setTimeout(resolve,0));await nextTick()
+  expect(warm).toHaveBeenCalledTimes(2)
+  expect(ui.doc().bodies).toHaveLength(1)
+  expect(ui.button('↶').props.disabled).toBe(true)
+  expect(ui.all().some(n=>n.props['aria-label']==='kernel-load-error')).toBe(false)
+ } finally {ready.mockRestore();warm.mockRestore()}
+})
+
+it.each(['success','failure'])('ignores a late kernel %s after recovery cancellation and preserves the saved draft', async(outcome)=>{
+ let resolve!: ()=>void, reject!: (reason:Error)=>void
+ const ready=vi.spyOn(geometryKernel,'isGeometryKernelReady').mockReturnValue(false)
+ const warm=vi.spyOn(geometryKernel,'warmGeometryKernel').mockImplementation(()=>new Promise<void>((done,fail)=>{resolve=done;reject=fail}))
+ try {
+  const ui=await mount();const saved=ui.serialized()
+  await ui.click('Cancel · Esc')
+  if(outcome==='success')resolve();else reject(new Error('late WASM failure'));await new Promise(resolve=>setTimeout(resolve,0));await nextTick()
+  expect(ui.serialized()).toBe(saved)
+  expect(ui.all().some(n=>n.props['aria-label']==='kernel-load-error')).toBe(false)
+  expect(ui.all().some(n=>ui.text(n).includes('Recovery cancelled.'))).toBe(true)
+  expect(ui.all().some(n=>n.props['aria-label']==='draft-recovery')).toBe(false)
+ } finally {ready.mockRestore();warm.mockRestore()}
+})
+
+it('keeps kernel Retry available after a repeated loading failure without changing the draft', async()=>{
+ const ready=vi.spyOn(geometryKernel,'isGeometryKernelReady').mockReturnValue(false)
+ const warm=vi.spyOn(geometryKernel,'warmGeometryKernel').mockRejectedValueOnce(new Error('first WASM failure')).mockRejectedValueOnce(new Error('second WASM failure'))
+ try {
+  const ui=await mount();const saved=ui.serialized()
+  await ui.click('Retry kernel loading')
+  expect(ui.serialized()).toBe(saved)
+  expect(ui.button('Retry kernel loading').props.disabled).toBe(false)
+  expect(ui.all().some(n=>ui.text(n).includes('second WASM failure'))).toBe(true)
+  expect(ui.all().some(n=>ui.text(n).includes('Could not restore the saved document'))).toBe(false)
+ } finally {ready.mockRestore();warm.mockRestore()}
+})
+
 it('isolates selected bodies without changing the saved document and restores scene visibility',async()=>{
  const ui=await mount();const before=ui.doc()
  await ui.click('Cube')
@@ -889,7 +935,7 @@ it('edits a face sketch dimension with units before extrusion and restores both 
  const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await flushClearance()
- await ui.click('Sketch dimensions');await ui.click('Add dimension');const before=ui.doc()
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.button('Add dimension')).toBeDefined());await ui.click('Add dimension');const before=ui.doc()
  const input=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!
  input().props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Apply dimension 0').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
  input().props['onUpdate:modelValue']('0.3 cm');await nextTick();expect(ui.doc()).toEqual(before)
@@ -2478,6 +2524,18 @@ it('detects another tab and loads its version while retaining local edits in Und
  expect(ui.doc().bodies[0].name).toBe(local.bodies[0].name)
 })
 
+it.each(['en','ru'])('shows a direct localized save conflict without a generic failure prefix: %s',async(locale)=>{
+ const ui=await mount({locale});await ui.click(locale==='ru'?'Куб':'Box')
+ const external=structuredClone(ui.doc());external.bodies[0].name='External saved geometry'
+ const saved=stringifyMeshJson(external)
+ localStorage.setItem('scad-solid-modeler-v1',saved);ui.storageChanged();await flushClearance()
+ await ui.click(locale==='ru'?'Клин':'Wedge');await flushClearance()
+ const text=ui.text(ui.all()[0])
+ expect(text).toContain(locale==='ru'?'Документ изменён в другой вкладке.':'Document changed in another tab.')
+ expect(text).not.toContain(locale==='ru'?'Не удалось сохранить черновик:':'Could not save draft:')
+ expect(ui.serialized()).toBe(saved)
+})
+
 it('retains the last saved draft if safe locking is unavailable and permits retry',async()=>{
  const ui=await mount(),saved=ui.serialized()
  vi.stubGlobal('navigator',{})
@@ -2810,12 +2868,27 @@ it('keeps surface display tied to current geometry, cancels and retries without 
 })
 
 
-it('ignores a late topology result after changing the selected body',async()=>{
+it.each(['en','ru'])('retries failed topology preparation on the same body without a cached null: %s',async locale=>{
+ topologyWorkerRun.mockRejectedValueOnce(Error('internal topology failure'))
+ const ui=await mount({locale});await ui.click('Cube');const before=ui.doc()
+ await flushClearance()
+ const retry=locale==='ru'?'Повторить выбор граней':'Retry face selection'
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось подготовить выбор граней.':'Could not prepare face selection.')
+ expect(ui.text(ui.all()[0])).not.toContain('internal topology failure')
+ const requests=topologyWorkerRun.mock.calls.length
+ await ui.click(retry);await flushClearance()
+ expect(topologyWorkerRun.mock.calls.length).toBe(requests+1)
+ expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)===retry)).toBe(false)
+ expect(ui.all().some(n=>n.props['aria-label']==='topology-preparation')).toBe(false)
+ expect(ui.doc()).toEqual(before)
+})
+
+it.each(['success','failure'])('ignores a late topology response after changing the selected body: %s',async outcome=>{
  await geometryKernel.warmGeometryKernel()
  const make=(id:string,size:number)=>{const brep=createBrepBox([0,0,0],[size,size,size]);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,2)}}
  const a=make('Topology A',10),b=make('Topology B',20)
- const requests:{job:any;resolve:(value:any)=>void}[]=[]
- topologyWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
+ const requests:{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}[]=[]
+ topologyWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[a,b]}))
  await ui.click(a.name)
  expect(requests.length).toBeGreaterThan(0)
@@ -2823,7 +2896,10 @@ it('ignores a late topology result after changing the selected body',async()=>{
  await ui.click(b.name)
  const current=requests.at(-1)!
  expect(current).not.toBe(old)
- old.resolve(solidTopology(old.job.mesh));await flushClearance()
+ if(outcome==='failure')old.reject(Error('obsolete topology failure'));else old.resolve(solidTopology(old.job.mesh))
+ await flushClearance()
+ expect(ui.text(ui.all()[0])).not.toContain('obsolete topology failure')
+ expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Retry face selection')).toBe(false)
  expect(ui.button(b.name).props['aria-pressed']).toBe(true)
  expect(ui.all().some(n=>n.props['aria-label']==='topology-preparation')).toBe(true)
  current.resolve(solidTopology(current.job.mesh));await flushClearance()
@@ -3859,7 +3935,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(96);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(97);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
@@ -3868,6 +3944,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  }
  expect(ids).toContain('repeat')
  expect(ids).toContain('scene-panel')
+ expect(ids).toContain('profile-bridge-check')
  for(const kind of ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'])expect(ids).toContain('add-'+kind)
 })
 
@@ -4155,4 +4232,178 @@ it('keeps partial annular mode preview-only and ignores a response after Escape'
   await flushClearance();expect(ui.doc()).toEqual(before)
   expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')).toBe(false)
  }finally {previewWorkerRun.mockReset()}
+})
+
+for(const locale of ['en','ru'])it('adds explicit edges without clearing selection or editing geometry: '+locale,async()=>{
+ const seed=cylinderSeed(),ui=await mount({locale,seedDocument:seed});await ui.click('Imported cylinder');await ui.click(locale==='ru'?'Рёбра':'Edges')
+ const field=(en:string,ru:string)=>ui.all().find(n=>n.props['aria-label']===(locale==='ru'?ru:en))!
+ const before=ui.doc(),picker=field('Select edge','Выбрать ребро')
+ picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance()
+ const first=picker.props.value,additional=field('Additional edge','Дополнительное ребро')
+ const option=additional.children.find((n:any)=>n.props?.value>=0&&n.props.value!==first)
+ expect(option).toBeDefined()
+ additional.props['onUpdate:modelValue'](option.props.value);await flushClearance();await ui.click(locale==='ru'?'Добавить ребро':'Add edge')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Рёбра: 2':'Edges: 2')
+ additional.props['onUpdate:modelValue'](option.props.value);await flushClearance();await ui.click(locale==='ru'?'Добавить ребро':'Add edge')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Рёбра: 2':'Edges: 2');expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'])it('rejects a shared version replaced during decoding and retries the latest version: '+locale,async()=>{
+ const ui=await mount({locale});await ui.click(locale==='ru'?'Куб':'Box');const local=ui.doc()
+ const stale=structuredClone(local),latest=structuredClone(local)
+ stale.bodies[0].name='Obsolete external version';latest.bodies[0].name='Latest external version'
+ localStorage.setItem('scad-solid-modeler-v1',stringifyMeshJson(stale));ui.storageChanged();await flushClearance()
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const load=locale==='ru'?'Загрузить сохранённую версию · локальная останется в Undo':'Load saved version · keep local in Undo'
+ try{
+  await ui.click(load);expect(requests).toHaveLength(1)
+  localStorage.setItem('scad-solid-modeler-v1',stringifyMeshJson(latest));ui.storageChanged()
+  requests[0].resolve(parseDirectDocument(requests[0].job.text));await flushClearance()
+  expect(ui.text(ui.all()[0])).not.toContain('Obsolete external version')
+  expect(ui.text(ui.all()[0])).not.toContain('Latest external version')
+  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Документ изменился во время загрузки. Повторите загрузку.':'Document changed while loading. Load it again.')
+  expect(ui.button(load).props.disabled).toBe(false)
+  await ui.click(load);expect(requests).toHaveLength(2)
+  requests[1].resolve(parseDirectDocument(requests[1].job.text));await flushClearance()
+  expect(ui.doc()).toEqual(latest);expect(ui.text(ui.all()[0])).toContain('Latest external version')
+  previewWorkerRun.mockReset();await ui.click('↶');expect(ui.doc()).toEqual(local)
+ }finally{previewWorkerRun.mockReset()}
+})
+
+ it('reports a failed draft reference publication and allows the next edit to save',async()=>{
+ const ui=await mount();await ui.click('Cube')
+ const prior=ui.serialized()
+ const safe=await import('../src/services/safeStorage')
+ const original=safe.storageSet
+ const spy=vi.spyOn(safe,'storageSet').mockImplementation((key,value)=>key==='scad-solid-modeler-v1'?false:original(key,value))
+ try{
+  await ui.click('Box')
+  await vi.waitFor(()=>expect(ui.text(ui.all()[0])).toContain('Document saved to IndexedDB, but its reference'))
+  expect(ui.serialized()).toBe(prior)
+ }finally{spy.mockRestore()}
+ await ui.click('Box')
+ await vi.waitFor(()=>expect(ui.serialized()).not.toBe(prior))
+ expect(ui.text(ui.all()[0])).not.toContain('its reference and other tabs could not be updated')
+ })
+
+it('restores the committed durable geometry after reference publication fails and the editor is reopened',async()=>{
+ await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
+ const heads=await import('../src/services/solidDraftHeadStore')
+ const actual=await vi.importActual<typeof import('../src/services/solidDraftHeadStore')>('../src/services/solidDraftHeadStore')
+ const read=vi.spyOn(heads,'readSolidDraftHead').mockImplementation(actual.readSolidDraftHead)
+ const write=vi.spyOn(heads,'writeSolidDraftHead').mockImplementation(actual.writeSolidDraftHead)
+ const safe=await import('../src/services/safeStorage'),original=safe.storageSet
+ let publication:ReturnType<typeof vi.spyOn>|undefined
+ try{
+  const ui=await mount()
+  await vi.waitFor(()=>expect(ui.text(ui.all()[0])).not.toContain('Restoring geometry…'))
+  await ui.click('Box')
+  await vi.waitFor(async()=>expect((await actual.readSolidDraftHead('scad-solid-modeler-v1'))?.text).toBe(ui.serialized()))
+  const oldReference=ui.serialized()
+  publication=vi.spyOn(safe,'storageSet').mockImplementation((key,value)=>key==='scad-solid-modeler-v1'?false:original(key,value))
+  await ui.click('Box')
+  await vi.waitFor(()=>expect(ui.text(ui.all()[0])).toContain('Document saved to IndexedDB, but its reference'))
+  const committed=await actual.readSolidDraftHead('scad-solid-modeler-v1')
+  expect(committed).not.toBeNull();expect(committed!.text).not.toBe(oldReference)
+  const expected=parseDirectDocument(committed!.text)
+  expect(expected.bodies).toHaveLength(3)
+  publication.mockRestore();publication=undefined
+  mounts.pop()!()
+  const recovered=await mount({},oldReference)
+  await vi.waitFor(()=>expect(recovered.text(recovered.all()[0])).not.toContain('Restoring geometry…'))
+  await recovered.click('Box')
+  await vi.waitFor(()=>expect(recovered.doc().bodies).toHaveLength(4))
+  expect(recovered.doc().bodies.slice(0,3)).toEqual(JSON.parse(stringifyMeshJson(expected.bodies)))
+  await recovered.click('↶')
+  await vi.waitFor(()=>expect(recovered.doc().bodies).toHaveLength(3))
+  expect(recovered.doc().bodies).toEqual(JSON.parse(stringifyMeshJson(expected.bodies)))
+ }finally{publication?.mockRestore();read.mockRestore();write.mockRestore()}
+})
+
+it.each(['Escape','selection'])('drops a late duplicate after %s and permits a fresh duplicate',async(action)=>{
+ const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Cube');const before=ui.doc()
+ await ui.click('Duplicate');expect(requests).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ if(action==='Escape')await commandKey(ui,'Escape');else await ui.click('Profile')
+ requests[0].resolve(applySolidSceneEdit(requests[0].job.document,requests[0].job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ await ui.click('Cube')
+ await ui.click('Duplicate');expect(requests).toHaveLength(2)
+ requests[1].resolve(applySolidSceneEdit(requests[1].job.document,requests[1].job.options));await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('retains the model after a duplicate worker failure and allows retry',async()=>{
+ const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ let fail=true
+ previewWorkerRun.mockImplementation(job=>{
+  if(job.kind!=='sceneEdit')return undefined
+  if(fail)return Promise.reject(Error('Duplicate worker unavailable'))
+  return Promise.resolve(applySolidSceneEdit(job.document,job.options))
+ })
+ const ui=await mount();await ui.click('Cube');const before=ui.doc()
+ await ui.click('Duplicate');await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain('Duplicate worker unavailable')
+ fail=false;await ui.click('Duplicate');await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it.each([
+ ['ru','Не удалось получить корректный результат вычисления.'],
+ ['en','A valid calculation result could not be received.'],
+])('localizes duplicate worker protocol failures in %s without changing geometry',async(locale,message)=>{
+ previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?Promise.reject(Object.assign(Error('Malformed worker response'),{code:'CAD_PROTOCOL'})):undefined)
+ const ui=await mount({locale});await ui.click(locale==='ru'?'Куб':'Cube');const before=ui.doc()
+ await ui.click(locale==='ru'?'Копия':'Duplicate');await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain(message)
+ expect(ui.text(ui.all()[0])).not.toContain('Malformed worker response')
+})
+
+it('explains why a mixed body and NURBS selection cannot be duplicated partially',async()=>{
+ const ui=await mount();await ui.click('NURBS curve');await ui.click('Cube',true)
+ const before=ui.doc(),command=ui.commands().find(command=>command.id==='duplicate')!
+ expect(command.enabled).toBe(false)
+ expect(command.disabledReason).toBe('Select only bodies or sketches to duplicate')
+ expect(ui.doc()).toEqual(before)
+})
+
+it.each(['ctrlKey','metaKey'])('duplicates from %s D with one undoable worker result',async modifier=>{
+ const ui=await mount();await ui.click('Cube');const before=ui.doc()
+ const prevented=await commandKey(ui,'d',undefined,{[modifier]:true});await flushClearance()
+ expect(prevented).toHaveBeenCalled()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ await commandKey(ui,'z',undefined,{[modifier]:true});await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'z',undefined,{[modifier]:true,shiftKey:true});await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+})
+
+it('keeps keyboard duplication consistent with disabled mixed-selection commands',async()=>{
+ const ui=await mount();await ui.click('NURBS curve');await ui.click('Cube',true);const before=ui.doc()
+ previewWorkerRun.mockClear()
+ await commandKey(ui,'d',undefined,{ctrlKey:true});await flushClearance()
+ expect(previewWorkerRun.mock.calls.some(([job])=>job.kind==='sceneEdit')).toBe(false)
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain('Select only bodies or sketches to duplicate')
+})
+
+it('keeps duplicate shortcuts and menu blocked until the active extrusion is cancelled',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Extrude');await flushClearance()
+ const before=ui.doc(),command=ui.commands().find(command=>command.id==='duplicate')!
+ expect(command.enabled).toBe(false);expect(command.disabledReason).toBe('Finish the current command')
+ previewWorkerRun.mockClear()
+ await commandKey(ui,'d',undefined,{ctrlKey:true});await flushClearance()
+ expect(previewWorkerRun.mock.calls.some(([job])=>job.kind==='sceneEdit')).toBe(false)
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain('Finish the current command')
+ await commandKey(ui,'Escape');await commandKey(ui,'d',undefined,{ctrlKey:true});await flushClearance()
+ expect(ui.doc().sketches).toHaveLength(before.sketches.length+1)
+ expect(ui.doc().bodies).toEqual(before.bodies)
 })

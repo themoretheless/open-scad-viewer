@@ -7,13 +7,13 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
     fibers: [source_plane_fiber::Certificate; 2],
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
@@ -23,22 +23,22 @@ impl Certificate {
     pub fn fibers(&self) -> &[source_plane_fiber::Certificate; 2] {
         &self.fibers
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub driver_cells: usize,
     pub reason: &'static str,
 }
-pub fn certify(
-    shell: &Shell,
+pub fn certify<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_driver_cells: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     let regions = shell
         .regions()
         .ok_or_else(|| Error::new("BREP_SOURCE_CONTACT", "Qualified original regions required"))?;
@@ -67,20 +67,38 @@ pub fn certify(
     for (index, _) in &shared {
         let c = shell.edges()[*index].world();
         let mut planes = Vec::new();
-        if c.control_points.len() >= 3 {
+        let mut distinct=Vec::new();
+        for point in &c.control_points {
+            if !distinct.contains(&point) {distinct.push(point);}
+            if distinct.len()==3 {break;}
+        }
+        if distinct.len() == 3 {
             planes.push(std::array::from_fn(|i| {
-                std::array::from_fn(|k| c.control_points[i][k])
+                std::array::from_fn(|k| distinct[i][k])
             }));
-        } else if c.control_points.len() == 2 {
+        } else if distinct.len() == 2 {
             // Pole points are source-owned proposals, not a geometric plane
             // certificate. Both original chart preimages are still rechecked.
             let mut seen = std::collections::BTreeSet::new();
+            // A straight shared edge need not have a collapsed pole. Propose
+            // transverse coordinate planes; exact fiber and ownership proofs
+            // below remain the only authority for accepting contact.
+            let a: [f64; 3] = distinct[0].as_slice().try_into().unwrap();
+            let b: [f64; 3] = distinct[1].as_slice().try_into().unwrap();
+            for axis in 0..3 {
+                let mut point = a;
+                point[axis] += 1.;
+                if point[axis].is_finite() && point[axis] != a[axis]
+                    && seen.insert(point.map(f64::to_bits)) {
+                    planes.push([a, b, point]);
+                }
+            }
             for (_, pole) in shell.poles() {
                 let point = pole.point();
                 if seen.insert(point.map(f64::to_bits)) {
                     planes.push([
-                        c.control_points[0].as_slice().try_into().unwrap(),
-                        c.control_points[1].as_slice().try_into().unwrap(),
+                        a,
+                        b,
                         point,
                     ]);
                 }

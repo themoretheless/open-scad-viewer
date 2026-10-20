@@ -2,9 +2,13 @@ import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/so
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
-import {readFileSync,writeFileSync} from 'node:fs'
+import {readFileSync,writeFileSync,appendFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {gunzipSync} from 'node:zlib'
+import artifactIdentity from '../src/generated/geometry-kernels/identity'
+const wasmSha256=createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex')
+expect(artifactIdentity.sha256).toBe(wasmSha256)
+if(process.env.CAD_EXPECTED_WASM_SHA256)expect(wasmSha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
 import {Worker} from 'node:worker_threads'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
@@ -21,7 +25,7 @@ const timings:unknown[]=[]
 class NodePort implements MainSolidPort {
  onmessage:MainSolidPort['onmessage']=null;onerror:MainSolidPort['onerror']=null;onmessageerror:MainSolidPort['onmessageerror']=null
  constructor(readonly worker:Worker){
-  worker.on('message',data=>{if(data.kind==='sourceBodyRestore'&&data.timing)timings.push({id:data.id,ok:data.ok,admitted:data.result?.admitted,...data.timing});this.onmessage?.({data} as MessageEvent)})
+  worker.on('message',data=>{if(data?.__webWorkerHarness==='artifact'){expect(data.identity).toEqual(artifactIdentity);return}if(data.kind==='sourceBodyRestore'&&process.env.CAD_SOURCE_WORKER_RAW)writeFileSync(process.env.CAD_SOURCE_WORKER_RAW,JSON.stringify(data,null,2)+'\n');if(data.kind==='sourceBodyRestore'&&data.timing)timings.push({id:data.id,ok:data.ok,admitted:data.result?.admitted,...data.timing});this.onmessage?.({data} as MessageEvent)})
   worker.on('error',e=>this.onerror?.({message:e.message} as ErrorEvent))
   worker.on('messageerror',()=>this.onmessageerror?.({} as MessageEvent))
  }
@@ -33,12 +37,25 @@ afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(
 function realClient(){
  const client=new MainSolidWorkerClient(()=>{
   const worker=new Worker(new URL('./fixtures/web-worker-node-harness.mjs',import.meta.url),{
-   workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false}})
+   workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false,expectedArtifact:artifactIdentity}})
   workers.push(worker);return new NodePort(worker)
  });clients.push(client);return client
 }
 const denied:SourceBodyResult={admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'source-volume-initial-work-limit',incidence:{},embedding:{},volume:{}}}
 function reply(port:Port,result:SourceBodyResult){port.onmessage?.({data:{version:1,id:port.requests.at(-1)!.id,kind:'sourceBodyRestore',ok:true,result}} as MessageEvent)}
+it('accepts native mapped-edge refusals without accepting geometry or success labels',()=>{
+ const expected=sourceBodyExpectation(options())
+ for(const reason of ['mapped-source-endpoints-unproven','mapped-source-composition-unproven','mapped-source-uses-not-opposite']){
+  const result={...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}}
+  expect(validSourceBody(expected,result)).toBe(true)
+  expect(validSourceBody(expected,{...result,sourceBody:options().definition})).toBe(false)
+  expect(validSourceBody(expected,{...result,stepExchange:{prepared:true}})).toBe(false)
+ }
+ for(const reason of ['mapped-source-shared-edge-qualified','source-volume-and-orientation-qualified','unexpected']){
+  expect(validSourceBody(expected,{...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}})).toBe(false)
+ }
+})
+
 it('restores original source definitions through the real WASM CAD worker',async()=>{
  const o={...options(),displaySegments:8,faceDisplay:{divisions:4,toleranceUv:1e-8,domainCellsPerFace:10000}},before=JSON.stringify(o),client=realClient()
  const start=performance.now()
@@ -206,7 +223,7 @@ it.each([
  expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(record.source)
  const documentOutput=process.env[documentEnv],reportOutput=process.env[reportEnv]
  if(documentOutput)writeFileSync(documentOutput,serializeDirectDocument(document))
- if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
+ if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:wasmSha256,restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
 },120000)
 
 it('exchanges original curved root carriers through real WASM and worker STEP gates',async()=>{
@@ -309,7 +326,7 @@ it('certifies automatically searched annular wall thickness through real WASM wo
   results.push(wall)
  }
  if(process.env.CAD_SOURCE_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Selected annular flat face groups only; no full body wall coverage or UI proof.'},null,2)+'\n')
 },120000)
 
@@ -358,7 +375,7 @@ it('qualifies curved annular cavity walls through original WASM worker',async()=
  expect(validSourceBody(sourceBodyExpectation(tooThick),staleWitness)).toBe(false)
  expect(refused.wallQualification!.search.attempts).toBe(54);expect(refused.wallQualification!.search.refused).toBe(0)
  if(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,wall,refusedWall:refused.wallQualification,scope:'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.'},null,2)+'\n')
 },120000)
 
@@ -382,7 +399,7 @@ it('discovers an original thin wall without selected groups through real WASM wo
   results.push(scan)
  }
  if(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Finite all-face original normal proposals; discovered local thin wall, no whole-wall safety certificate.'},null,2)+'\n')
 },180000)
 
@@ -411,7 +428,11 @@ it('reports continuous original whole-wall coverage through the real WASM worker
    ...(factored?{factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128}}:{}),
    ...(products?{normalProducts:{cells:products,cellsPerPair:128}}:{}),
    limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options})
+  const caseStarted=performance.now(),caseIndex=results.length
+  const trace=(event:unknown)=>{if(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT)appendFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT,JSON.stringify(event)+'\n')}
+  trace({phase:'started',caseIndex,options:options.wallCoverage,wasmSha256})
+  const r=await client.run({kind:'sourceBodyRestore',options},{onTiming:timing=>trace({phase:'timing',caseIndex,timing})})
+  trace({phase:'completed',caseIndex,elapsedMs:performance.now()-caseStarted,pending:r.wallCoverage?.pairs.filter(p=>!p.proven).length})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
   const coverage=r.wallCoverage!;expect(coverage.request).toEqual(options.wallCoverage)
   expect(coverage.totalPairs).toBe(378);expect(coverage.pairs).toHaveLength(pairs)
@@ -420,7 +441,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   if(pairs===378){
    if(products){
     if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(refinement?160:expanded?161:pole?167:factored?169:adaptive?173:177)
-    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
+    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
     expect(coverage.normalProductCells).toBeGreaterThan(0)
     expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
     const missing=structuredClone(r);delete missing.wallCoverage!.normalProductCells
@@ -430,7 +451,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
     const prior=results[1]!
     for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
    }else if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
-   else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
+   else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
    expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(factored?20000:products===50000?(adaptive?3916:3922):adaptive?36:42)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(!refinement)
   }
@@ -494,7 +515,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   results.push(coverage)
  }
  if(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Continuous original all-pair coverage with explicit curved self-pair refusals.'},null,2)+'\n')
 },180000)
 
@@ -532,7 +553,7 @@ it('qualifies the original cuboid whole-wall threshold through real WASM worker'
   results.push(coverage)
  }
  if(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.'},null,2)+'\n')
 },120000)
 
@@ -558,7 +579,7 @@ it('preserves original pair proofs when close-chart refusals release gap work th
   results.push(coverage)
  }
  if(process.env.CAD_SOURCE_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_GAP_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   results,scope:'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.'},null,2)+'\n')
 },180000)
 
@@ -589,7 +610,7 @@ it('qualifies bounded retained face products without losing prior proofs through
   }
   results.push(c)
  }
- if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
+ if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
 },180000)
 
 it('qualifies mixed retained wall products through real WASM and preserves every earlier proof',async()=>{
@@ -612,7 +633,7 @@ it('qualifies mixed retained wall products through real WASM and preserves every
    domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000}
   const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options:o})
   results.push({elapsedMs:performance.now()-started,result:r})
-  if(process.env.CAD_MIXED_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_MIXED_WALL_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results},null,2)+'\n')
+  if(process.env.CAD_MIXED_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_MIXED_WALL_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results},null,2)+'\n')
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
   const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull()
   expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
@@ -621,7 +642,7 @@ it('qualifies mixed retained wall products through real WASM and preserves every
    expect(c.mixedProducts!.pairs).toHaveLength(45)
    expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(17)
    // Compare continuous UV/direction qualification against the native original-body replay.
-   const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-shared-transverse-native.json',import.meta.url),'utf8')).automatic
+   const native=JSON.parse(readFileSync(new URL('../docs/qualification/projective-editor-2026-10-13/mixed-wall-native-baseline.json',import.meta.url),'utf8')).automatic
    expect(c.factoredQueries).toBe(native.factoredQueries)
    expect(c.factoredExactWork).toBe(native.factoredExactWork)
    expect(c.mixedProducts!.cells).toBe(native.cells)
@@ -647,7 +668,7 @@ it('qualifies mixed retained wall products through real WASM and preserves every
 it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...o}=request,client=realClient(),r=await client.run({kind:'sourceBodyRestore',options:o})
- if(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)writeFileSync(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),result:r,scope:'Closed mapped root chain admission, original definitions and native endpoint ownership.'},null,2)+'\n')
+ if(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)writeFileSync(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,result:r,scope:'Closed mapped root chain admission, original definitions and native endpoint ownership.'},null,2)+'\n')
  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
  expect(r.faceCount).toBe(4);expect(r.edges).toHaveLength(7)
  expect(r.sourceBody).toEqual(o.definition)
@@ -661,6 +682,38 @@ it('admits an exact mapped root chain without promoting its separate retained ha
   expect(Math.max(a[0],b[0])).toBeLessThanOrEqual(Math.min(a[1],b[1]))
  }
  client.dispose()
+},180000)
+
+it('restores independently partitioned knot-root curves through STEP, refusal and history',async()=>{
+ const request=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',import.meta.url),'utf8'))
+ const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-native-2026-10-10.json',import.meta.url),'utf8')).result
+ const {op:_op,...options}=request,client=realClient()
+ try{
+  const result=await client.run({kind:'sourceBodyRestore',options})
+  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
+  expect(result).toEqual(native)
+  expect(result.sourceBody).toEqual(options.definition)
+  expect(result.stepExchange?.prepared).toBe(true)
+  const record=createSourceBodyRecord('knot-root-chain','Knot root chain',options)
+  const history=new DirectHistory({...emptyDirectDocument(),sourceBodies:[record]})
+  const changed=history.document;changed.sourceBodies![0]!.name='Renamed knot root chain';history.commit(changed)
+  expect(history.undo().sourceBodies).toEqual([record]);history.redo()
+  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
+  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
+  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(result.sourceBody)
+  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
+  const wrong=structuredClone(options)
+  wrong.definition.shell.pairs[5].edge.recipe.candidates[0][1][0]+=1e-12
+  const refused=await client.run({kind:'sourceBodyRestore',options:wrong})
+  expect(refused.admitted).toBe(false);expect(validSourceBody(sourceBodyExpectation(wrong),refused)).toBe(true)
+  const pending=client.run({kind:'sourceBodyRestore',options})
+  const canceled=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED',name:'AbortError'})
+  client.cancel();await canceled
+  const retry=await client.run({kind:'sourceBodyRestore',options})
+  expect(retry).toEqual(native)
+  if(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT)writeFileSync(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT,
+   JSON.stringify({wasmSha256,result,replay,refused,retry,cancellationObserved:true,scope:'One complete independently partitioned knot-root body, native parity, STEP, history, altered-candidate refusal and replacement-worker Retry.'},null,2)+'\n')
+ }finally{client.dispose()}
 },180000)
 
 it('preserves mapped root carriers through STEP preparation and document history',async()=>{
@@ -725,7 +778,7 @@ it('diagnoses owned sharp endpoints while preserving regular seam refusals throu
   results.push({edge,seam})
  }
  client.dispose()
- if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),limited:stopped.seamQualification,results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
+ if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,limited:stopped.seamQualification,results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
 },180000)
 
 it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
@@ -741,7 +794,7 @@ it('qualifies all reference regular seams at UI budgets and preserves singular e
   const rebound=structuredClone(r);rebound.seamQualification!.request.edge=(edge+1)%r.edges.length;expect(validSourceBody(sourceBodyExpectation(o),rebound)).toBe(false)
   results.push(seam)
  }
- if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
+ if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
 },180000)
 
 it('cancels a changed mixed request, ignores its late proof and retries the original snapshot',async()=>{

@@ -183,3 +183,43 @@ it('terminates a curve-distance request and ignores its late reply after restart
  ports[1].reply({ok:true,result})
  await expect(second).resolves.toEqual(result)
 })
+
+it('observes stage timings only for the accepted response without changing settlement',async()=>{
+  const {client,ports}=setup(),onTiming=vi.fn((_timing:import('../src/services/mainSolidWorkerClient').MainSolidTiming)=>{throw new Error('observer failure')})
+  const task=client.run({kind:'inspect',bodies:[]},{onTiming})
+  expect(ports[0].postMessage.mock.lastCall![0].traceTiming).toBe(true)
+  ports[0].reply({id:0,ok:true,result:[],timing:{warmupMs:1,executeMs:2,prepareMs:3}})
+  await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+  expect(onTiming).not.toHaveBeenCalled()
+  const retry=client.run({kind:'inspect',bodies:[]},{onTiming})
+  ports[1].reply({ok:true,result:[],timing:{warmupMs:1,executeMs:2,prepareMs:3}})
+  await expect(retry).resolves.toEqual([])
+  expect(onTiming).toHaveBeenCalledTimes(1)
+  expect(onTiming.mock.calls[0][0]).toMatchObject({warmupMs:1,executeMs:2,prepareMs:3})
+})
+it('keeps timing optional and ignores malformed diagnostic values',async()=>{
+  const {client,ports}=setup(),onTiming=vi.fn()
+  const first=client.run({kind:'inspect',bodies:[]})
+  expect(ports[0].postMessage.mock.lastCall![0].traceTiming).toBeUndefined()
+  ports[0].reply({ok:true,result:[]});await first
+  const next=client.run({kind:'inspect',bodies:[]},{onTiming})
+  ports[0].reply({id:1,ok:true,result:[],timing:{warmupMs:1,executeMs:2,prepareMs:3}})
+  expect(onTiming).not.toHaveBeenCalled()
+  ports[0].reply({ok:true,result:[],timing:{warmupMs:NaN,executeMs:2,prepareMs:3}})
+  await expect(next).resolves.toEqual([]);expect(onTiming).not.toHaveBeenCalled()
+})
+it('reports a typed operation failure but never reports a late cancelled response',async()=>{
+  const {client,ports}=setup(),onTiming=vi.fn(),timing={warmupMs:1,executeMs:2,prepareMs:0}
+  const failure=client.run({kind:'inspect',bodies:[]},{onTiming})
+  ports[0].reply({ok:false,error:{name:'Error',code:'CAD_OPERATION',message:'known failure'},timing})
+  await expect(failure).rejects.toMatchObject({code:'CAD_OPERATION'})
+  expect(onTiming).toHaveBeenCalledTimes(1)
+  expect(onTiming.mock.calls[0][0].clientElapsedMs).toBeGreaterThanOrEqual(0)
+  const controller=new AbortController()
+  const pending=client.run({kind:'inspect',bodies:[]},{onTiming,signal:controller.signal})
+  const rejected=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+  const late=ports[0].onmessage!,request=ports[0].postMessage.mock.lastCall![0]
+  controller.abort();await rejected
+  late({data:{version:1,id:request.id,kind:'inspect',ok:true,result:[],timing}} as MessageEvent)
+  expect(onTiming).toHaveBeenCalledTimes(1)
+})

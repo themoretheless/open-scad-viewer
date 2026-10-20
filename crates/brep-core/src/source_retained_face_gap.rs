@@ -16,13 +16,13 @@ pub struct Limits {
     pub domain_cells_per_query: usize,
     pub tolerance_uv: f64,
 }
-pub struct Certificate<'a> {
-    body: &'a Body,
+pub struct Certificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     faces: [usize; 2],
     lower_mm: f64,
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E: crate::source_seam_tangency::Carrier> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn faces(&self) -> [usize; 2] {
@@ -32,8 +32,8 @@ impl<'a> Certificate<'a> {
         self.lower_mm
     }
 }
-pub struct Report<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub cells: usize,
     pub spans: usize,
     pub domain_cells: usize,
@@ -60,12 +60,12 @@ fn spans(s: &Surface, r: [[f64; 2]; 2]) -> usize {
 }
 /// A certificate requires complete coverage of the unchanged domain product.
 /// Proximity, boundary membership and exhausted work never create a certificate.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     faces: [usize; 2],
     minimum_mm: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     let shell = body.geometry().shell();
     if faces[0] == faces[1]
         || faces.iter().any(|&f| f >= shell.faces().len())

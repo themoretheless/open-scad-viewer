@@ -1,7 +1,7 @@
 //! Source-body restoration and exact edge selection transport for the editor.
 use super::{Result, Value, field};
 use value_codec::json;
-fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
+pub(crate) fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
     let shell = &v["shell"];
     let regions = &shell["regions"];
     let region = &regions["region"];
@@ -55,7 +55,50 @@ fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
         },
     })
 }
+trait EditorCarrier: brep_core::source_exchange_endpoints::ExchangeCarrier + brep_core::source_shared_chord_map::ChordCarrier {
+    fn endpoint_limits(&self, canonical:f64, angle:f64, budget:u64)->Result<Value>;
+}
+impl EditorCarrier for brep_core::source_shared_edge::SharedEdge {
+    fn endpoint_limits(&self, canonical:f64, angle:f64, budget:u64)->Result<Value> {
+        let d=brep_core::source_seam_tangency::inspect_endpoint_limits(self,canonical,angle,budget)?;
+        Ok(json!({"canonical":d.canonical,"exactWork":d.exact_work,"reason":d.reason,
+            "sides":d.sides.iter().map(|s|json!({"side":s.side,"boundaryEnd":s.boundary_end,"collapsedPoint":s.limits.collapsed_point,
+                "components":s.limits.components,"sineSquaredBounds":s.limits.sine_squared_interval,"distinctTangentLimits":s.limits.distinct_tangent_limits})).collect::<Vec<_>>()}))
+    }
+}
+impl EditorCarrier for brep_core::source_projective_edge::Edge {
+    fn endpoint_limits(&self, canonical:f64, _angle:f64, _budget:u64)->Result<Value> {
+        Ok(json!({"canonical":canonical,"exactWork":0,"reason":"projective-endpoint-limits-unproven","sides":[]}))
+    }
+}
+fn restore_diagnostics<E>(reason:&str, incidence:&brep_core::source_shell_incidence::Report<E>,
+    embedding:Option<&brep_core::source_shell_geometry::Report<E>>, volume:Option<&brep_core::source_volume::Report<E>>)->Value {
+    json!({"reason":reason,
+        "incidence":{"work":incidence.work_used,"rootChecks":incidence.root_checks,
+            "driverCells":incidence.driver_cells,"uncertainPair":incidence.uncertain_pair},
+        "embedding":embedding.map(|r|json!({"reason":r.reason,"pairs":r.pairs,
+            "uncertainVertex":r.uncertain_vertex,"uncertainFace":r.uncertain_face,"nextPair":r.next_pair})),
+        "volume":volume.map(|r|json!({"reason":r.reason,"bounds":r.signed_bounds,
+            "cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"uncertainFace":r.uncertain_face,"uncertainUv":r.uncertain_uv}))})
+}
 pub fn restore(v: Value) -> Result<Value> {
+    if v["definition"]["kind"].as_str()==Some("projective-body") {
+        restore_using::<brep_core::source_projective_edge::Edge>(v,|definition,config| {
+            let mut r=brep_core::source_projective_body_restore::restore(definition,config)?;
+            let diagnostics=restore_diagnostics(r.reason(),&r.incidence,r.embedding.as_ref(),r.volume.as_ref());
+            Ok((r.volume.as_mut().and_then(|r|r.body.take()),diagnostics))
+        })
+    } else {
+        restore_using::<brep_core::source_shared_edge::SharedEdge>(v,|definition,config| {
+            let mut r=brep_core::source_body_restore::restore(definition,config)?;
+            let diagnostics=restore_diagnostics(r.reason(),&r.incidence,r.embedding.as_ref(),r.volume.as_ref());
+            Ok((r.volume.as_mut().and_then(|r|r.body.take()),diagnostics))
+        })
+    }
+}
+fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_core::source_body_restore::Limits)
+    ->Result<(Option<brep_core::source_volume::Body<E>>,Value)>)->Result<Value> {
+
     let definition: Value = field(&v, "definition")?;
     let config: Value = field(&v, "limits")?;
     let display_segments: usize = if v["displaySegments"].is_null() {
@@ -252,18 +295,9 @@ pub fn restore(v: Value) -> Result<Value> {
         };
         Some((minimum,work,self_work,products,factors,retained,mixed))
     };
-    let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
-    let diagnostics = json!({"reason":report.reason(),
-        "incidence":{"work":report.incidence.work_used,"rootChecks":report.incidence.root_checks,
-            "driverCells":report.incidence.driver_cells,"uncertainPair":report.incidence.uncertain_pair},
-        "embedding":report.embedding.as_ref().map(|r|json!({"reason":r.reason,"pairs":r.pairs,
-            "uncertainVertex":r.uncertain_vertex,"uncertainFace":r.uncertain_face,"nextPair":r.next_pair})),
-        "volume":report.volume.as_ref().map(|r|json!({"reason":r.reason,"bounds":r.signed_bounds,
-            "cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"uncertainFace":r.uncertain_face,"uncertainUv":r.uncertain_uv}))});
-    let Some(body) = report.body() else {
-        return Ok(
-            json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}),
-        );
+    let (body,diagnostics)=restore_body(definition,limits(&config)?)?;
+    let Some(body)=body.as_ref() else {
+        return Ok(json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}));
     };
     let seam_qualification = seam_request.map(|(edge, work, endpoint_work)| -> Result<Value> {
         let angle=work.max_sine_squared;
@@ -272,10 +306,7 @@ pub fn restore(v: Value) -> Result<Value> {
             && let (Some(budget),Some([a,b]))=(endpoint_work,r.uncertain_canonical)
             && a==b && [0.,1.].contains(&a)
         {
-            let d=brep_core::source_seam_tangency::inspect_endpoint_limits(&body.geometry().shell().edges()[edge],a,angle,budget)?;
-            json!({"canonical":d.canonical,"exactWork":d.exact_work,"reason":d.reason,
-                "sides":d.sides.iter().map(|s|json!({"side":s.side,"boundaryEnd":s.boundary_end,"collapsedPoint":s.limits.collapsed_point,
-                    "components":s.limits.components,"sineSquaredBounds":s.limits.sine_squared_interval,"distinctTangentLimits":s.limits.distinct_tangent_limits})).collect::<Vec<_>>()})
+            body.geometry().shell().edges()[edge].endpoint_limits(a,angle,budget)?
         }else {Value::Null};
         Ok(json!({"request":v["seamQualification"],"qualified":r.seam.is_some(),
             "endpointLimits":endpoint_limits,
@@ -372,7 +403,7 @@ pub fn restore(v: Value) -> Result<Value> {
         let r = body.edge_restriction(index)?;
         let uses = shell.uses()[index];
         let mut vertices = shell.vertices()[uses[0].face][uses[0].wire][uses[0].edge];
-        if shell.edges()[index].reversed()[0] { vertices.reverse(); }
+        if shell.edges()[index].restriction_reversed(0) { vertices.reverse(); }
         let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().unwrap().edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
         Ok(json!({"index":index,"displaySegments":display,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
@@ -396,7 +427,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,"wallCoverage":wall_coverage,
+        json!({"admitted":true,"sourceBody":E::body_definition(body)?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,"wallCoverage":wall_coverage,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
@@ -412,6 +443,56 @@ mod tests {
             "embedding":{"toleranceUv":1e-8,"corners":10000,"spans":20000,"linearCells":10000,
                 "exactWork":10000000,"driverCells":10000,"pairs":{"pairs":10000,"cells":10000,"domainCells":100000,"cellsPerPair":32,"domainCellsPerPair":512}},
             "volume":{"axis":2,"origin":0.,"absoluteError":0.25,"toleranceUv":1e-8,"cells":cells,"spans":100000,"domainCells":100000}})
+    }
+    #[test]
+    fn projective_json_dispatch_preserves_preview_wall_coverage_and_step() {
+        let model=brep_core::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
+        let shell=brep_core::source_support_shell::prepare_projective(&model,brep_core::source_support_shell::Limits{
+            tolerance_uv:1e-8,faces:4096,uses:100000,exact_work:100000000,
+            regions:brep_core::trimmed_face_recipe::Limits{pairs:10000,region_cells:10000,domain_cells:10000,agreement_cells:10000}}).unwrap().shell.unwrap();
+        let native_limits=limits(&config(50000)).unwrap();
+        let geometry=brep_core::source_shell_geometry::qualify_projective(shell,native_limits.embedding).unwrap().geometry.unwrap();
+        let body=brep_core::source_volume::qualify(geometry,native_limits.volume).unwrap().body.unwrap();
+        let original=body.definition().unwrap();
+        let request=json!({"op":"cad_source_body_restore","definition":original.clone(),"limits":config(50000),"endpointSpans":10000,
+            "displaySegments":4,"faceDisplay":{"divisions":2,"toleranceUv":1e-8,"domainCellsPerFace":10000},
+            "wallScan":{"minimumMm":11.,"toleranceUv":1e-8,"grid":1,"maxAttempts":6,
+                "limits":{"cells":10000,"domainCells":10000,"normalSpans":10000,"maxSineSquared":1e-12}},
+            "wallCoverage":{"minimumMm":9.99,"limits":{"pairs":21,"planeControls":10000,"normalSpans":10000,"gapCells":10000,"gapSpans":20000,"maxSineSquared":1e-6}},
+            "stepExchange":{"toleranceMm":1e-7,"trimWork":1000000,"limits":{"rootChecks":10000,"mappingCells":100000,
+                "replayMappingPerUse":10000,"exactWork":100000000,"driverCells":10000,"spans":100000,"endpoints":10000}}});
+        let response:Value=value_codec::from_str(&super::super::execute(&value_codec::to_string(&request).unwrap())).unwrap();
+        assert_eq!(response["ok"],json!(true),"{response:?}");let response=&response["value"];
+        assert_eq!(response["admitted"],json!(true));assert_eq!(response["sourceBody"],original);
+        assert_eq!(response["faceCount"],json!(6));assert_eq!(response["edges"].as_array().unwrap().len(),12);
+        assert_eq!(response["displayFaces"].as_array().unwrap().len(),6);
+        assert_eq!(response["wallScan"]["thinFound"],json!(true));assert_eq!(response["wallScan"]["wholeWallQualified"],json!(false));
+        assert_eq!(response["wallCoverage"]["wholeWallQualified"],json!(true));assert_eq!(response["wallCoverage"]["totalPairs"],json!(21));
+        assert_eq!(response["stepExchange"]["prepared"],json!(true));assert!(response["stepExchange"]["text"].as_str().unwrap().contains("ISO-10303-21"));
+        let mut ids=std::collections::BTreeMap::new();
+        for edge in response["edges"].as_array().unwrap() {
+            let segments=edge["displaySegments"].as_array().unwrap();assert_eq!(segments.len(),4);
+            for end in 0..2 {
+                let id=edge["vertices"][end].as_u64().unwrap();
+                let segment=&segments[if end==0 {0}else{3}];let point=segment[1][end].clone();
+                if let Some(previous)=ids.insert(id,point.clone()) {assert_eq!(previous,point);}
+            }
+        }
+        assert_eq!(ids.len(),8);
+        // Export only native-authored inputs and the checked response for the
+        // independent WASM/worker replay; saved admission never grants authority.
+        if let Ok(directory)=std::env::var("CAD_PROJECTIVE_WORKER_FIXTURE_DIR") {
+            let directory=std::path::Path::new(&directory);
+            std::fs::create_dir_all(directory).unwrap();
+            std::fs::write(directory.join("request.json"),value_codec::to_string(&request).unwrap()).unwrap();
+            std::fs::write(directory.join("native-response.json"),value_codec::to_string(response).unwrap()).unwrap();
+        }
+        let mut exhausted=request.clone();exhausted["limits"]["embedding"]["pairs"]["pairs"]=json!(1);
+        let denied=super::super::dispatch(exhausted).unwrap();assert_eq!(denied["admitted"],json!(false));assert!(denied["sourceBody"].is_null());
+        let mut forged=request.clone();forged["definition"]["shell"]["pairs"][0]["edge"]["uses"][0]["weights"]=json!([1.,2.]);
+        assert_eq!(super::super::dispatch(forged).unwrap()["admitted"],json!(false));
+        let mut invalid=request;invalid["endpointSpans"]=json!(0);assert!(super::super::dispatch(invalid).is_err());
+        assert_eq!(body.definition().unwrap(),original);
     }
     #[test]
     fn json_dispatch_restores_body_and_preserves_exact_edge_addresses() {

@@ -1,0 +1,20 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/profile-transition-outcomes-wall-2026-10-10.json",
+    "sha256": "02148f99fa8e601d696d88274d5a447f4aaf32e5a875d490bdee12e46566161c"
+  },
+  "after": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/profile-chord-query-order-wall-2026-10-10.json",
+    "sha256": "59557814283df89d76b676e47205acd4466356bdea62aa2d8525dee92010dbdb"
+  },
+  "transitionOutcomeSchemaExtension": true,
+  "pendingRegions": 4081,
+  "cells": 10000,
+  "spans": 18899,
+  "comparison": "exact-coverage-with-nonincreasing-span-work",
+  "spanWorkSaved": 12,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

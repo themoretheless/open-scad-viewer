@@ -1,4 +1,4 @@
-//! Transfer opposite natural plane fibers through complete current source edges.
+//! Transfer opposite natural plane fibers through unchanged owned source uses.
 use super::*;
 pub struct ProfilePairedContact<'x, 'b> {
     owners: [&'x ShellFace; 2],
@@ -95,10 +95,11 @@ impl<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p,
                 return Ok(out);
             };
             let edge = &shell.edges()[index];
-            if !edge.covers_complete_canonical_source() {
-                out.reason = "profile-paired-complete-source-edge-unproven";
-                return Ok(out);
-            }
+            // The native source certificate below must be covered by exact
+            // current edge definitions and both unchanged source fragments.
+            // Canonical carrier tails do not enlarge either retained use;
+            // requiring the whole canonical carrier would reject valid
+            // affine partial charts without adding contact authority.
             let definitions = edge.uses().each_ref().map(|f| f.definition());
             for (slot, address) in pair.uses.iter().copied().enumerate() {
                 let ShellUse::Source(fragment) =

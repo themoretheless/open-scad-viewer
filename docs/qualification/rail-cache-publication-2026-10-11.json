@@ -1,0 +1,12 @@
+{
+  "schema": "wasm-publication/1",
+  "sha256": "853d0656a470c6b09e6f82a3eb9efb793269f7f7389342de5bd66df55ead80ad",
+  "byteLength": 13100699,
+  "generation": "rail-position-cache immutable compiled snapshot",
+  "buildLog": "/tmp/rail-position-cache-wasm-build-20261011.log",
+  "buildExit": 0,
+  "containsTransverseCone": false,
+  "containsExactRationalBoundary": false,
+  "workerQualification": "passed: exact complete native response, cancellation, fresh worker retry, both workers joined",
+  "workerReport": "rail-cache-matched-worker-2026-10-11/expression-inspection-worker-report.json"
+}

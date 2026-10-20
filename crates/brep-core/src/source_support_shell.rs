@@ -14,6 +14,21 @@ pub fn prepare(
     model: &crate::Model,
     limits: Limits,
 ) -> crate::Result<crate::source_shell_incidence::Report> {
+    prepare_using(model,limits,|regions,pairs,poles,work| {
+        crate::source_shell_incidence::assemble_regions_with_poles(regions,pairs,poles,work)
+    })
+}
+/// Rebuild authored support sheets using exact projective edge correspondence.
+/// Pole contractions are proved from original surfaces; flags grant no authority.
+pub fn prepare_projective(model:&crate::Model,limits:Limits)
+    ->crate::Result<crate::source_shell_incidence::Report<crate::source_projective_edge::Edge>> {
+    prepare_using(model,limits,|regions,pairs,poles,work| {
+        crate::source_shell_incidence::assemble_regions_projective_with_poles(regions,pairs,&[],&[],&[],poles,work,0)
+    })
+}
+fn prepare_using<E>(model:&crate::Model,limits:Limits,
+    assemble:impl FnOnce(&[crate::source_contour_proposal::SourceRegion],&[Pair],&[Pole],u64)->nurbs_core::Result<crate::source_shell_incidence::Report<E>>,
+)->crate::Result<crate::source_shell_incidence::Report<E>> {
     if !limits.tolerance_uv.is_finite()
         || limits.tolerance_uv <= 0.
         || !(1..=4096).contains(&limits.faces)
@@ -105,7 +120,7 @@ pub fn prepare(
             "Source supports retain unpaired ordinary edges",
         ));
     }
-    crate::source_shell_incidence::assemble_regions_with_poles(
+    assemble(
         &regions,
         &pairs,
         &poles,
@@ -145,6 +160,276 @@ mod tests {
                 cells_per_pair: 32,
                 domain_cells_per_pair: 512,
             },
+        }
+    }
+    #[test]
+    fn projective_body_material_chord_and_automatic_thin_witness_keep_source_ownership() {
+        let model=crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
+        let shell=prepare_projective(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify_projective(shell,geometry_limits()).unwrap();
+        let geometry=geometry.geometry.expect(geometry.reason);
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits{
+            axis:0,origin:0.,absolute_error:0.01,tolerance_uv:1e-8,cells:10000,spans:100000,domain_cells:100000}).unwrap();
+        let body=volume.body.expect(volume.reason);let original=body.definition().unwrap();
+        let chord_limits=||crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:10000,max_sine_squared:1e-12};
+        let r=crate::source_material_chord::qualify(&body,[-1.,7.,11.],[12.,0.,0.],1e-8,chord_limits()).unwrap();
+        assert!(r.boundary.unresolved.is_empty());assert_eq!(r.boundary.contacts.len(),2);
+        let proof=r.certificate.expect(r.reason);assert!(std::ptr::eq(proof.body(),&body));
+        assert!(proof.length_mm()[0]<=10. && proof.length_mm()[1]>=10.);
+        assert!(proof.length_mm()[1]-proof.length_mm()[0]<1e-6);
+        let found=crate::source_wall_scan::search(&body,11.,1,6,1e-8,chord_limits()).unwrap();
+        assert_eq!(found.attempts,6);assert_eq!(found.faces_visited,6);assert!(found.proposals_exhausted);
+        let thin=found.thin_witness().expect("A certified 10 mm chord lies below 11 mm");
+        assert!(std::ptr::eq(thin.body(),&body));assert!(thin.length_mm()[1]<11.);
+        let no_thin=crate::source_wall_scan::search(&body,9.,1,6,1e-8,chord_limits()).unwrap();
+        assert!(no_thin.best().is_some());assert!(no_thin.thin_witness().is_none());
+        let limited=crate::source_wall_scan::search(&body,11.,1,1,1e-8,chord_limits()).unwrap();
+        assert_eq!(limited.attempts,1);assert!(!limited.proposals_exhausted);
+        let refused=crate::source_material_chord::qualify(&body,[-1.,7.,11.],[12.,0.,0.],1e-8,
+            crate::source_material_chord::Limits{cells:1,domain_cells:1,normal_spans:1,max_sine_squared:1e-12}).unwrap();
+        assert!(refused.certificate.is_none());assert!(!refused.boundary.unresolved.is_empty());
+        for (minimum,pairs,normals,accepted) in [(9.99,21,6,true),(10.01,21,6,false),(9.99,20,6,false),(9.99,21,1,false)] {
+            let lower=crate::source_wall_coverage::qualify(&body,minimum,crate::source_wall_coverage::Limits{
+                pairs,plane_controls:10000,normal_spans:normals,gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:1e-6}).unwrap();
+            assert_eq!(lower.total_pairs,21);assert_eq!(lower.enumeration_complete,pairs==21);
+            assert_eq!(lower.certificate.is_some(),accepted,"{}",lower.reason);
+            if let Some(proof)=lower.certificate {assert!(std::ptr::eq(proof.body(),&body));assert_eq!(proof.minimum_mm(),minimum);}
+        }
+        let opposing=proof.faces();let first=[opposing[0]];let second=[opposing[1]];
+        let bounded=crate::source_material_wall::qualify(&body,[&first,&second],9.99,0.02,[-1.,7.,11.],[12.,0.,0.],1e-8,
+            crate::source_material_wall::Limits{gap:crate::source_face_gap::Limits{cells:10000,spans:20000},chord:chord_limits()}).unwrap();
+        assert!(bounded.converged);let interval=bounded.certificate.unwrap();
+        assert!(std::ptr::eq(interval.body(),&body));assert!(interval.interval_mm()[0]<=10. && interval.interval_mm()[1]>=10.);
+        let refined=crate::source_material_wall::search_and_refine(&body,[&first,&second],9.,1e-4,1e-8,1,1,
+            crate::source_material_wall::Limits{gap:crate::source_face_gap::Limits{cells:10000,spans:20000},chord:chord_limits()}).unwrap();
+        assert!(refined.result.converged);let refined=refined.result.certificate.unwrap();
+        assert!(std::ptr::eq(refined.body(),&body));assert!(refined.interval_mm()[1]-refined.interval_mm()[0]<=1e-4);
+        let self_limits=||crate::source_wall_self_coverage::Limits{plane_controls:10000,cells:1,spans:1,cells_per_face:1,spans_per_face:1};
+        for (minimum,angle,accepted) in [(9.99,1e-6,true),(10.01,1e-6,false),(9.99,2e-6,false)] {
+            let own=crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,self_limits()).unwrap();
+            assert!(own.all_self_pairs_qualified());assert_eq!(own.certificates().len(),6);
+            let covered=crate::source_wall_coverage::qualify_with_self_facts(&body,minimum,crate::source_wall_coverage::Limits{
+                pairs:21,plane_controls:10000,normal_spans:6,gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:angle},own.into_certificates());
+            if accepted {assert_eq!(covered.unwrap().certificate.unwrap().adaptive_self_certificates().len(),6);}
+            else {assert_eq!(covered.err().expect("Stale threshold or angle").code,"BREP_SOURCE_SELF_WALL_FACT");}
+        }
+        assert_eq!(body.definition().unwrap(),original);
+    }
+    #[test]
+    fn projective_spherical_end_junctions_have_synchronized_whole_seam_tangency() {
+        let spans=crate::linear_canal::construct([[0.,0.,0.],[0.,0.,8.]],[0.5,1.25],[1.,0.,0.],std::f64::consts::TAU).unwrap();
+        let model=crate::linear_canal::to_capped_region(&spans,1e-7).unwrap();
+        let shell=prepare_projective(&model,limits()).unwrap().shell.unwrap();
+        let mut joins=0;
+        for edge in shell.edges() {
+            let degrees=edge.uses().each_ref().map(|u|u.fragment().surface().degree_u);
+            if degrees[0]==degrees[1] {continue;}
+            let r=crate::source_seam_tangency::qualify_with_synchronized_boundaries(edge,
+                crate::source_seam_tangency::Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
+            assert!(r.report.seam.is_some(),"{} / {} {:?}",r.report.reason,r.synchronized_reason,r.report.uncertain_canonical);
+            assert!(r.polynomial_work<=100000);assert_eq!(r.report.accepted_cells,1);
+            assert!(r.report.seam.unwrap().sine_squared_bounds()[1]<=1e-10);joins+=1;
+        }
+        assert_eq!(joins,8);
+    }
+    #[test]
+    fn projective_generated_end_caps_keep_exact_poles_and_replay() {
+        let spans=crate::linear_canal::construct([[0.,0.,0.],[0.,0.,8.]],[0.5,1.25],[1.,0.,0.],std::f64::consts::TAU).unwrap();
+        let model=crate::linear_canal::to_capped_region(&spans,1e-7).unwrap();
+        let report=prepare_projective(&model,limits()).unwrap();
+        let shell=report.shell.expect(report.reason);
+        assert!(!shell.poles().is_empty());
+        let links=crate::source_vertex_links::inspect(&shell,10000).unwrap();
+        assert!(links.all_manifold);assert_eq!(links.genus,Some(0));
+        assert!(shell.inspect_face_charts(100000,100000).unwrap().all_injective);
+        let definition=shell.definition().unwrap();
+        let bytes=value_codec::encode_binary(&definition).unwrap();
+        let restored=crate::source_projective_shell_restore::restore(value_codec::decode_binary(&bytes).unwrap(),
+            &crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000}).unwrap();
+        let replay=restored.shell.expect(restored.reason);
+        assert_eq!(replay.definition().unwrap(),definition);
+        assert_eq!(replay.vertices(),shell.vertices());
+        assert_eq!(replay.poles().len(),shell.poles().len());
+        let embedded=crate::source_shell_geometry::qualify_projective(replay,geometry_limits()).unwrap();
+        assert!(embedded.geometry.is_some(),"{} pairs {} next {:?}",embedded.reason,embedded.pairs,embedded.next_pair);
+        let geometry=embedded.geometry.unwrap();
+        assert!(geometry.contacts().all_pairs_qualified);
+        assert!(geometry.contacts().pairs.iter().any(|p|p.pole_paired.is_some()));
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits{
+            axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,cells:50000,spans:100000,domain_cells:100000}).unwrap();
+        let body=volume.body.expect(volume.reason);
+        let r=[0.5_f64,1.25];let length=8.;let slope=(r[1]-r[0])/length;
+        let k2=1.-slope*slope;let h=[r[0]*(1.-slope),r[1]*(1.+slope)];
+        let expected=std::f64::consts::PI*(length*k2*k2*(r[0]*r[0]+r[0]*r[1]+r[1]*r[1])/3.
+            +h[0]*h[0]*(r[0]-h[0]/3.)+h[1]*h[1]*(r[1]-h[1]/3.));
+        let bounds=body.volume();
+        assert!(bounds[0]<=expected && expected<=bounds[1],"{expected} outside {bounds:?}");
+        assert!(bounds[0]>0. && bounds[1]-bounds[0]<=0.25);
+        assert!(body.reverse_orientation());
+        assert_eq!(body.geometry().contacts().pairs.len(),120);
+        let transferred=crate::source_body_model::convert(&body,1e-7).unwrap();
+        assert_eq!(transferred.bodies.len(),1);assert!(transferred.shells[0].closed);
+        assert_eq!(transferred.faces.len(),model.faces.len());
+        assert_eq!(transferred.edges.iter().filter(|e|e.degenerate).count(),body.geometry().shell().poles().len());
+        let (step,_,_)=crate::export_step_v6(&transferred).unwrap();
+        if let Some(path)=std::env::var_os("CAD_PROJECTIVE_CAPPED_STEP_OUTPUT") {std::fs::write(path,&step).unwrap();}
+        let (imported,_,_)=crate::import_step_v6(&step).unwrap();
+        crate::source_body_model::assert_step_identity(&transferred,&imported);
+        let body_definition=body.definition().unwrap();
+        let exchange=crate::source_exchange_step::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits{
+            root_checks:10000,mapping_cells:100000,replay_mapping_per_use:10000,exact_work:100000000,driver_cells:10000,spans:100000,endpoints:10000},1000000).unwrap().expect("Projective capped source STEP preparation");
+        assert!(exchange.endpoint_error_upper<=1e-7);
+        assert_eq!(exchange.faces,model.faces.len());
+        assert_eq!(exchange.edges,body.geometry().shell().edges().len()+body.geometry().shell().poles().len());
+        assert_eq!(body.definition().unwrap(),body_definition);
+        if let Some(path)=std::env::var_os("CAD_PROJECTIVE_CAPPED_SOURCE_STEP_OUTPUT") {std::fs::write(path,&exchange.text).unwrap();}
+        let body_bytes=value_codec::encode_binary(&body_definition).unwrap();
+        let restored_body=crate::source_projective_body_restore::restore(value_codec::decode_binary(&body_bytes).unwrap(),
+            crate::source_projective_body_restore::Limits{
+                shell:crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000},
+                embedding:geometry_limits(),
+                volume:crate::source_volume::Limits{axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,cells:50000,spans:100000,domain_cells:100000}}).unwrap();
+        let recovered=restored_body.body().expect(restored_body.reason());
+        assert_eq!(recovered.definition().unwrap(),body_definition);
+        assert_eq!(recovered.volume(),body.volume());
+        assert_eq!(recovered.geometry().shell().vertices(),body.geometry().shell().vertices());
+        assert_eq!(crate::source_body_model::convert(recovered,1e-7).unwrap(),transferred);
+        for admitted in [&body,recovered] {
+            let mut tangent_joins=0;
+            for (index,edge) in admitted.geometry().shell().edges().iter().enumerate() {
+                let degrees=edge.uses().each_ref().map(|u|u.fragment().surface().degree_u);
+                if degrees[0]==degrees[1] {continue;}
+                let proof=admitted.qualify_edge_tangency_synchronized(index,
+                    crate::source_seam_tangency::Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
+                assert!(proof.report.seam.is_some(),"{}",proof.report.reason);
+                assert_eq!(proof.report.accepted_cells,1);tangent_joins+=1;
+            }
+            assert_eq!(tangent_joins,8);
+            assert!(admitted.qualify_edge_tangency_synchronized(usize::MAX,
+                crate::source_seam_tangency::Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).is_err());
+        }
+
+        let mut bad=definition.clone();let point=bad["poles"][0]["point"][0].as_f64().unwrap();
+        bad["poles"][0]["point"][0]=value_codec::json!(point+1e-12);
+        assert!(crate::source_projective_shell_restore::restore(bad,
+            &crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000}).unwrap().shell.is_none());
+    }
+    #[test]
+    fn cylinder_straight_shared_edge_has_owned_paired_contact() {
+        let model=crate::analytic::cylinder(10.,30.).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        for faces in [[0,1],[1,0]] {
+            let r=crate::source_fiber_contact::certify_with_linear_chart(&shell,faces,100000000,100000,100000,100000).unwrap();
+            eprintln!("cylinder fiber {faces:?}: {} boundary {:?} work={} spans={} drivers={} linear={}",r.reason,r.uncertain_boundary,r.exact_work,r.spans,r.driver_cells,r.linear_cells);
+            assert!(r.exact_work<=100000000 && r.spans<=100000 && r.driver_cells<=100000 && r.linear_cells<=100000);
+            let p=crate::source_paired_fiber_contact::certify(&shell,faces,100000000,100000).unwrap();
+            eprintln!("cylinder paired {faces:?}: {}",p.reason);
+            let certificate=p.certificate.expect(p.reason);
+            assert_eq!(certificate.faces(),faces);
+            assert!(!certificate.edges().is_empty());
+            assert!(p.exact_work<=100000000 && p.driver_cells<=100000);
+        }
+        let admitted=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap();
+        assert!(admitted.geometry.is_some(),"{} pair {:?}",admitted.reason,admitted.next_pair);
+    }
+    #[test]
+    fn partial_canonical_carrier_replays_a_body_and_keeps_owned_chord_maps() {
+        use value_codec::{Serialize,json};
+        for case in 0..3 {
+        let smooth=case!=0;
+        let model=if case==2 { crate::analytic::cylinder(10.,30.).unwrap() } else if smooth {
+            let points=[[0.,0.],[5.,0.],[10.,0.],[10.,20.],[0.,20.]];
+            let curves=(0..points.len()).map(|i|nurbs_core::curve::Curve::from_polyline(
+                vec![points[i].to_vec(),points[(i+1)%points.len()].to_vec()]).unwrap()).collect();
+            crate::prism::extrude(&[curves],0.,30.).unwrap()
+        }else{crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap()};
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        if smooth {
+            let baseline=prepare(&model,limits()).unwrap().shell.unwrap();
+            let baseline=crate::source_shell_geometry::qualify(baseline,geometry_limits()).unwrap();
+            assert!(baseline.geometry.is_some(),"unmodified split-side prism: {} pair {:?}",baseline.reason,baseline.next_pair);
+        }
+        let index=if case==2 {shell.edges().iter().position(|e|e.world().degree==1 && e.world().control_points.len()==2).unwrap()}else if smooth {shell.edges().iter().position(|e|e.world().degree==1 &&
+            e.world().control_points.iter().all(|p|p[0]==5. && p[1]==0.)).expect("shared coplanar side seam")}else{0};
+        let original=&shell.edges()[index];
+        let addresses=shell.uses()[index];let faces=addresses.map(|a|a.face);
+        let mut world=original.world().clone();
+        assert_eq!(world.degree,1);assert_eq!(world.control_points.len(),2);
+        let old=world.control_points.clone();
+        for k in 0..3 {
+            world.control_points[0][k]=2.*old[0][k]-old[1][k];
+            world.control_points[1][k]=2.*old[1][k]-old[0][k];
+        }
+        let ranges=crate::source_seam_tangency::ranges(original).map(|ends|ends.map(|r|
+            [r[0]+r[1],3.*r[1]]));
+        let mut definition=shell.definition().unwrap();
+        definition["pairs"][index]["edge"]["world"]=world.to_value();
+        let planes=[None::<[[f64;3];3]>;2];let candidates=[[None::<[f64;2]>;2];2];
+        definition["pairs"][index]["edge"]["recipe"]=json!({"kind":"mapped","ranges":ranges,
+            "planes":planes,"candidates":candidates});
+        let replay=crate::source_shell_restore::restore(definition,&crate::source_shell_restore::Limits {
+            regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:100000,
+        }).unwrap();
+        let shell=replay.shell.expect(replay.reason);
+        assert!(!shell.edges()[index].covers_complete_canonical_source());
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap();
+        let geometry=geometry.geometry.unwrap_or_else(||panic!("{} pair {:?}",geometry.reason,geometry.next_pair));
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap();
+        let body=volume.body.expect(volume.reason);
+        let shared=crate::source_shared_chord_map::prepare_for_chords(&body,faces,100).unwrap().unwrap();
+        assert_eq!(shared.edge(),index);
+        assert!(crate::source_shared_chord_map::prepare(&body,faces,100).unwrap().is_none());
+        let axes=shared.fixed_axes();let fixed=shared.fixed_values();let ends=shared.free_endpoints();
+        let rectangles=std::array::from_fn(|side|std::array::from_fn(|axis|if axis==axes[side] {
+            [fixed[side];2]
+        }else{[ends[side][0]*0.5+ends[side][1]*0.5;2]}));
+        for side in 0..2 {
+            let canonical=shared.canonical_bounds(side,rectangles[side]).unwrap();
+            assert!(canonical[0]<=0.5 && 0.5<=canonical[1]);
+        }
+        assert_eq!(shared.tangent_bounds(rectangles,0).unwrap(),(None,0));
+        let mut outside=rectangles[0];outside[1-axes[0]]=[1e10;2];
+        assert!(shared.canonical_bounds(0,outside).is_err());
+        let (tangent,spent)=shared.tangent_bounds(rectangles,100).unwrap();
+        assert!(spent>0);let tangent=tangent.unwrap();
+        for k in 0..3 {
+            let exact=3.*(old[1][k]-old[0][k]);
+            assert!(tangent[k][0]<=exact && exact<=tangent[k][1]);
+        }
+        let expected_volume=if case==2 {3000.*std::f64::consts::PI}else{6000.};
+        assert!(body.volume()[0]<=expected_volume && expected_volume<=body.volume()[1]);
+        let specs=[crate::source_profile_body::FaceSpec {face:faces[0],anchor:[0,0]}];
+        let proposed=crate::source_profile_body::prepare(&body,&specs,crate::source_profile_body::Limits {
+            controls:100,fragments:100,position_tolerance:1e-8,
+        }).unwrap();
+        let proposal=proposed.proposal.expect(proposed.reason);
+        let sharp=proposal.qualify_edge_interval(index,[0.4,0.6],1e-6,100,1000).unwrap();
+        assert_eq!(sharp.angular.aligned,Some(smooth));assert_eq!(sharp.seam.is_some(),smooth);
+        if let Some(seam)=&sharp.seam {assert_eq!(seam.edge(),index);assert!(std::ptr::eq(seam.proposal(),&proposal));}
+        let outside=proposal.qualify_edge_interval(index,[0.,1.],1e-6,100,1000).unwrap();
+        assert_eq!(outside.angular.reason,"profile-seam-carrier-unproven");
+        assert!(outside.seam.is_none());
+        let axis=1-axes[0];let source=shared.surfaces()[0];
+        let high=if axes[0]==0 {fixed[0]==source.knots_u[source.control_points.len()]}
+            else{fixed[0]==source.knots_v[source.control_points[0].len()]};
+        let parameter=(ends[0][0]+ends[0][1])*0.5;
+        let cut=proposal.cut_endpoint(faces[0],axis,parameter,high,index,100).unwrap();
+        let cut=cut.endpoint.expect(cut.reason);
+        let q=cut.canonical_bounds();assert!(q[0]<=0.5 && 0.5<=q[1]);
+        let stopped=proposal.cut_endpoint(faces[0],axis,parameter,high,index,0).unwrap();
+        assert!(stopped.endpoint.is_none());assert_eq!(stopped.spans,0);
+
+        let report_variable = if case==2 { "CAD_PARTIAL_CARRIER_CYLINDER_REPORT_PATH" } else if smooth { "CAD_PARTIAL_CARRIER_SMOOTH_REPORT_PATH" } else { "CAD_PARTIAL_CARRIER_BODY_REPORT_PATH" };
+        if let Some(path)=std::env::var_os(report_variable) {
+            let report=json!({"definition":body.definition().unwrap(),"faces":faces,"edge":shared.edge(),
+                "rectangles":rectangles,"tangent":tangent,"spans":spent,"volume":body.volume(),
+                "partialCanonicalSource":true,"wholeWallQualified":false,"smoothControl":smooth,
+                "cutCanonicalBounds":q,"sharpSeamAligned":sharp.angular.aligned,
+                "sharpSeamReason":sharp.angular.reason,"outsideSeamReason":outside.angular.reason});
+            std::fs::write(path,value_codec::to_string_pretty(&report).unwrap()).unwrap();
+        }
         }
     }
     #[test]
@@ -459,6 +744,511 @@ mod tests {
     }
 
     #[test]
+    fn retained_profile_recipe_replays_native_admission() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let work=||crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7};
+        let original=crate::source_profile_body::prepare(&body,
+            &[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]}],work()).unwrap().proposal.unwrap();
+        let recipe=original.definition().unwrap();
+        let rebuilt=crate::source_profile_body::restore(&body,recipe.clone(),work()).unwrap().proposal.unwrap();
+        assert_eq!(rebuilt.definition().unwrap(),recipe);
+        assert!(std::ptr::eq(rebuilt.original_body(),&body));
+        let limited=crate::source_profile_body::restore(&body,recipe.clone(),
+            crate::source_profile_body::Limits{controls:0,fragments:0,position_tolerance:1e-7}).unwrap();
+        assert!(limited.proposal.is_none());
+        for field in ["originalBody","profiles","positionTolerance","version","kind"] {
+            let mut changed=recipe.clone();changed[field]=value_codec::Value::Null;
+            assert!(crate::source_profile_body::restore(&body,changed,work()).is_err(),"{field}");
+        }
+        let mut forged=recipe.clone();forged["profiles"][0]["face"]=value_codec::json!(9999);
+        assert!(crate::source_profile_body::restore(&body,forged,work()).is_err());
+        let mut forged=recipe.clone();forged["certificate"]=value_codec::json!({"complete":true});
+        let limited=crate::source_profile_body::restore(&body,forged,
+            crate::source_profile_body::Limits{controls:0,fragments:0,position_tolerance:1e-7}).unwrap();
+        assert!(limited.proposal.is_none());
+        let a=rebuilt.cut_endpoint(0,0,0.75,true,1,16).unwrap().endpoint.unwrap();
+        let b=rebuilt.cut_endpoint(0,0,0.9,true,1,16).unwrap().endpoint.unwrap();
+        let pa=a.split_source_use(100).unwrap().partition.unwrap();
+        let pb=b.split_source_use(100).unwrap().partition.unwrap();
+        let seam=rebuilt.qualify_root_ended_seam([&pa,&pb],1e-6,100000,100000).unwrap().seam.unwrap();
+        let seam_recipe=seam.definition().unwrap();
+        let replay_work=||crate::source_profile_body::RootSeamReplayLimits{
+            cut_spans:32,mapping_cells:200,max_sine_squared:1e-6,angular_cells:100000,seam_spans:100000};
+        let replay=crate::source_profile_body::restore_root_ended_seam(&rebuilt,seam_recipe.clone(),replay_work()).unwrap();
+        let replayed=replay.seam.expect(replay.reason);
+        assert_eq!(replayed.definition().unwrap(),seam_recipe);
+        assert_eq!(replayed.restricted().canonical_interval(),seam.restricted().canonical_interval());
+        assert!(std::ptr::eq(replayed.restricted().proposal(),&rebuilt));
+        let mut zero=replay_work();zero.cut_spans=0;
+        assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,seam_recipe.clone(),zero).unwrap().seam.is_none());
+        let mut zero=replay_work();zero.mapping_cells=0;
+        assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,seam_recipe.clone(),zero).unwrap().seam.is_none());
+        for field in ["proposal","ends","version","kind"] {
+            let mut changed=seam_recipe.clone();changed[field]=value_codec::Value::Null;
+            assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,changed,replay_work()).is_err(),"{field}");
+        }
+        let contour_replay=crate::source_profile_body::restore_incident_contours(&rebuilt,seam_recipe.clone(),
+            replay_work(),100,100000000,100000).unwrap();
+        let replayed_contours=contour_replay.assembly.expect(contour_replay.reason);
+        let original_contours=seam.propose_incident_contours(100).unwrap().proposal.unwrap();
+        for (actual,expected) in replayed_contours.contours.contours().iter().zip(original_contours.contours()) {
+            assert_eq!(actual.face(),expected.face());assert_eq!(actual.middle(),expected.middle());
+            for (wire,expected_wire) in actual.loops().iter().zip(expected.loops()) {
+                assert_eq!(wire.len(),expected_wire.len());
+                for (fragment,expected_fragment) in wire.iter().zip(expected_wire) {
+                    assert_eq!(fragment.definition(),expected_fragment.definition());
+                }
+                assert!((0..wire.len()).all(|i|wire[i].joins(&wire[(i+1)%wire.len()])));
+            }
+        }
+        let original_edge=seam.qualify_incident_edge(100000000,100000).unwrap().edge.unwrap();
+        assert_eq!(replayed_contours.edge.definition(),original_edge.definition());
+        assert!(crate::source_profile_body::restore_incident_contours(&rebuilt,seam_recipe.clone(),
+            replay_work(),0,100000000,100000).unwrap().assembly.is_none());
+        assert!(crate::source_profile_body::restore_incident_contours(&rebuilt,seam_recipe.clone(),
+            replay_work(),100,1,1).unwrap().assembly.is_none());
+        let mut duplicate=seam_recipe.clone();duplicate["ends"][1]=duplicate["ends"][0].clone();
+        assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,duplicate,replay_work()).unwrap().seam.is_none());
+        let mut mismatched=seam_recipe.clone();mismatched["ends"][1]["highFreeEnd"]=value_codec::json!(false);
+        assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,mismatched,replay_work()).unwrap().seam.is_none());
+        let mut forged=seam_recipe.clone();forged["certificate"]=value_codec::json!({"complete":true});
+        let mut zero=replay_work();zero.seam_spans=0;
+        assert!(crate::source_profile_body::restore_root_ended_seam(&rebuilt,forged,zero).unwrap().seam.is_none());
+        let mut bounds=a.definition();bounds["worldBounds"]=value_codec::json!([[999.,999.],[999.,999.],[999.,999.]]);
+        let fresh=crate::source_profile_body::restore_cut_endpoint(&rebuilt,bounds,16).unwrap().endpoint.unwrap();
+        assert_eq!(fresh.world_bounds(),a.world_bounds());
+        let bridge_recipe=value_codec::json!({"version":1,"kind":"exact-profile-section-bridge",
+            "proposal":recipe,"sections":[{"face":0,"axis":0,"parameter":0.75},
+            {"face":0,"axis":0,"parameter":0.9}],"scales":[0.9-0.75,0.9-0.75]});
+        let restored_bridge=crate::source_profile_body::restore_section_bridge(&rebuilt,bridge_recipe.clone()).unwrap();
+        let authored=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            original.profile(0).unwrap().section(0,0.75).unwrap(),
+            original.profile(0).unwrap().section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
+        let left_a=rebuilt.cut_endpoint(0,0,0.75,false,0,16).unwrap().endpoint.unwrap();
+        let left_b=rebuilt.cut_endpoint(0,0,0.9,false,0,16).unwrap().endpoint.unwrap();
+        let left_pa=left_a.split_source_use(100).unwrap().partition.unwrap();
+        let left_pb=left_b.split_source_use(100).unwrap().partition.unwrap();
+        let left=rebuilt.qualify_root_ended_seam([&left_pa,&left_pb],1e-6,100000,100000).unwrap().seam.unwrap();
+        let constrained=restored_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+        let left_side=left.qualify_transition_side(&constrained,1000,1000).unwrap().side.unwrap();
+        let right_side=seam.qualify_transition_side(&constrained,1000,1000).unwrap().side.unwrap();
+        let boundary=crate::source_profile_body::propose_transition_boundary([&left_side,&right_side]).unwrap();
+        let boundary_recipe=boundary.definition().unwrap();
+        let boundary_work=||crate::source_profile_body::TransitionBoundaryReplayLimits{
+            seam:replay_work(),controls:1000,side_cells:1000,side_spans:1000};
+        let replay=crate::source_profile_body::with_restored_transition_boundary(&rebuilt,boundary_recipe.clone(),
+            boundary_work(),|fresh| {
+                assert_eq!(fresh.definition().unwrap(),boundary_recipe);
+                for edge in 0..4 {
+                    assert_eq!(fresh.enclose_edge(edge,[0.,1.],100).unwrap(),boundary.enclose_edge(edge,[0.,1.],100).unwrap());
+                }
+                for high in [false,true] {
+                    assert!(fresh.replay_section_contours(high,0,200,100).unwrap().section.is_none());
+                    assert!(fresh.replay_section_contours(high,32,0,100).unwrap().section.is_none());
+                    assert!(fresh.replay_section_contours(high,32,200,0).unwrap().section.is_none());
+                    let section=fresh.replay_section_contours(high,32,200,100).unwrap();
+                    let section=section.section.expect(section.reason);
+                    assert!(std::ptr::eq(section.boundary(),fresh));
+                    let joined=section.qualify_join(1000,1000,10000).unwrap();
+                    assert!(joined.join.is_some(),"{}",joined.reason);
+                    let exterior=section.qualify_exterior(1000,1000).unwrap();
+                    let exterior=exterior.region.expect(exterior.reason);
+                    let retained=exterior.qualify_face(1,16,256,2048,12288).unwrap();
+                    assert!(retained.face.is_some(),"{}",retained.reason);
+                    assert!(exterior.qualify_face(1,16,255,2048,12288).unwrap().face.is_none());
+                }
+                let jet=restored_bridge.derivative_bounds([0.5;2],[0.5;2],8).unwrap().0.unwrap();
+                let vectors=jet.map(|r|r.map(|b|b[0]*0.5+b[1]*0.5));
+                let determinant=vectors[0][0]*vectors[1][1]-vectors[1][0]*vectors[0][1];
+                let projection=[[vectors[1][1]/determinant,-vectors[1][0]/determinant,0.],
+                    [-vectors[0][1]/determinant,vectors[0][0]/determinant,0.]];
+                // The candidate matrix grants nothing: complete interval coverage below does.
+                let face=fresh.qualify_face_from_rails(projection,1000,2000,100000).unwrap();
+                assert!(face.face.is_some(),"{}",face.reason);
+                assert!(face.interior.as_ref().unwrap().complete_regular);
+                assert!(fresh.qualify_face_from_rails(projection,1000,0,0).unwrap().face.is_none());
+                let sections=[fresh.replay_section_contours(false,32,200,100).unwrap().section.unwrap(),
+                    fresh.replay_section_contours(true,32,200,100).unwrap().section.unwrap()];
+                let exteriors=sections.each_ref().map(|s|s.qualify_exterior(1000,1000).unwrap().region.unwrap());
+                let retained=exteriors.each_ref().map(|e|e.qualify_face(1,16,256,2048,12288).unwrap().face.unwrap());
+                let face=face.face.unwrap();
+                let rails=face.qualify_rail_incidence(100000000,100000,100).unwrap().incidence.unwrap();
+                let patch=rails.qualify_sections([&exteriors[0],&exteriors[1]]).unwrap().patch.unwrap();
+                assert!(patch.qualify_outer_edges([&retained[0],&retained[1]],1,1).unwrap().assembly.is_none());
+                let outer=patch.qualify_outer_edges([&retained[0],&retained[1]],100000000,100000).unwrap().assembly.unwrap();
+                assert_eq!(outer.edges().len(),4);assert_eq!(outer.retained_factored(),[None,Some(1)]);
+                assert!(outer.assemble_shell(0).unwrap().shell.is_none());
+                let assembled=outer.assemble_shell(1000).unwrap();
+                let shell=assembled.shell.expect(assembled.reason);
+                assert_eq!(shell.faces().len(),29);assert_eq!(shell.components(),1);
+                assert!(outer.assemble_shell(assembled.uses-1).unwrap().shell.is_none());
+                for pair in shell.pairs() {
+                    assert_ne!(pair.uses()[0],pair.uses()[1]);
+                }
+                let region=face.qualify_profile_xy_region(1e-8,20000000,10000).unwrap().certificate.unwrap();
+                let audit_limits=crate::source_profile_body::ContactAuditLimits{cells:16384,cells_per_pair:8,
+                    controls_per_enclosure:1000,spans:100000,domain_cells:100000,domain_cells_per_pair:256,
+                    exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};
+                let contacts=shell.inspect_reconstructed_contacts(audit_limits,&region,10000,256,32).unwrap();
+                assert_eq!(contacts.pairs().len(),406);
+                assert!(std::ptr::eq(contacts.owners(),shell.faces()));
+                let (cells,spans,domains,work,drivers)=contacts.work();
+                assert!(cells<=audit_limits.cells && spans<=audit_limits.spans && domains<=audit_limits.domain_cells
+                    && work<=audit_limits.exact_work && drivers<=audit_limits.driver_cells);
+                eprintln!("restored contact pipeline pending={} work={:?}",contacts.pending_pairs(),contacts.work());
+                assert_eq!(shell.qualify_embedding(&contacts).is_some(),contacts.pending_pairs()==0);
+                assert_eq!(contacts.pending_pairs(),0,"restored fixture must requalify all contacts");
+                let geometry=shell.qualify_embedding(&contacts).unwrap();
+                let volume_limits=|cells|crate::source_profile_body::ExpressionVolumeLimits {
+                    axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,controls_per_enclosure:1000,
+                    cells,spans:200000,domain_cells:100000,domain_cells_per_rectangle:256};
+                assert!(geometry.qualify_volume(volume_limits(0)).unwrap().certificate.is_none());
+                let volume=geometry.qualify_volume(volume_limits(32768)).unwrap();
+                let proof=volume.certificate.expect(volume.report.reason);
+                assert!(std::ptr::eq(proof.geometry(),&geometry));
+                let bounds=proof.positive_bounds();
+                assert!(bounds[0]>0. && bounds[1]-bounds[0]<=20.);
+                eprintln!("restored volume bounds={bounds:?} cells={} spans={}",volume.report.cells,volume.report.spans);
+                if let Ok(path)=std::env::var("BREP_RESTORED_VOLUME_PATH") {
+                    std::fs::write(path,value_codec::json!({"complete":volume.report.complete,
+                        "signedBounds":proof.signed_bounds(),"positiveBounds":bounds,
+                        "cells":volume.report.cells,"spans":volume.report.spans,"domainCells":volume.report.domain_cells,
+                        "reason":volume.report.reason}).to_string()).unwrap();
+                }
+
+                if let Ok(path)=std::env::var("BREP_RESTORED_CONTACT_PATH") {
+                    std::fs::write(path,contacts.diagnostics().to_string()).unwrap();
+                }
+                Ok(fresh.corners().iter().map(|p|p.definition()).collect::<Vec<_>>())
+            }).unwrap();
+        assert!(replay.result.is_some());
+        let jets=restored_bridge.derivative_bounds([0.5;2],[0.5;2],8).unwrap().0.unwrap();
+        let vectors=jets.map(|r|r.map(|b|b[0]*0.5+b[1]*0.5));
+        let determinant=vectors[0][0]*vectors[1][1]-vectors[1][0]*vectors[0][1];
+        let projection=[[vectors[1][1]/determinant,-vectors[1][0]/determinant,0.],
+            [-vectors[0][1]/determinant,vectors[0][0]/determinant,0.]];
+        let shell_work=||crate::source_profile_body::ShellReplayLimits{
+            boundary:boundary_work(),projection,cut_spans_per_section:32,mapping_cells_per_section:200,
+            fragments_per_section:100,controls:1000,join_cells:1000,join_spans:10000,exterior_drivers:1000,
+            collapsed_ends:[1,1],subdivisions:16,quotient_cells:256,retained_cells:2048,retained_spans:12288,
+            transition_cells:2000,transition_spans:100000,exact_work_per_rail:100000000,
+            drivers_per_rail:100000,fragments_per_rail:100,outer_exact_work:100000000,outer_drivers:100000,shell_uses:1000};
+        if let Ok(path)=std::env::var("BREP_EXPRESSION_REPLAY_REQUEST_PATH") {
+            let request=value_codec::json!({"op":"cad_expression_shell_restore",
+                "proposalDefinition":rebuilt.definition().unwrap(),"boundaryDefinition":boundary_recipe,
+                "profileLimits":{"controls":1000,"fragments":100,"positionTolerance":1e-7},
+                "sourceLimits":{"shell":{"exactWork":100000000,"driverCells":100000,"regions":{
+                    "region":{"pairs":10000,"regionCells":10000,"domainCells":10000,"agreementCells":10000},
+                    "searchCells":100000,"pointChecks":100000,"mappingCells":100000,"driverCells":100000,
+                    "membershipCells":100000,"controls":100000,"windingCells":100000,"steps":64}},
+                    "embedding":{"toleranceUv":1e-8,"corners":10000,"spans":100000,"linearCells":100000,
+                        "exactWork":100000000,"driverCells":100000,"pairs":{"pairs":10000,"cells":10000,
+                            "domainCells":100000,"cellsPerPair":32,"domainCellsPerPair":512}},
+                    "volume":{"axis":2,"origin":0.,"absoluteError":20.,"toleranceUv":1e-8,
+                        "cells":100000,"spans":100000,"domainCells":1000000}},
+                "shellLimits":{"boundary":{"seam":{"cutSpans":32,"mappingCells":200,"maxSineSquared":1e-6,
+                        "angularCells":100000,"seamSpans":100000},"controls":1000,"sideCells":1000,"sideSpans":1000},
+                    "projection":projection,"cutSpansPerSection":32,"mappingCellsPerSection":200,"fragmentsPerSection":100,
+                    "controls":1000,"joinCells":1000,"joinSpans":10000,"exteriorDrivers":1000,"collapsedEnds":[1,1],
+                    "subdivisions":16,"quotientCells":256,"retainedCells":2048,"retainedSpans":12288,
+                    "transitionCells":2000,"transitionSpans":100000,"exactWorkPerRail":100000000,
+                    "driversPerRail":100000,"fragmentsPerRail":100,"outerExactWork":100000000,
+                    "outerDrivers":100000,"shellUses":1000}});
+            std::fs::write(path,request.to_string()).unwrap();
+        }
+        let single_call=crate::source_profile_body::with_restored_expression_shell(&rebuilt,boundary_recipe.clone(),
+            shell_work(),|shell| {
+                let mut ids=std::collections::BTreeSet::new();
+                for (face,f) in shell.faces().iter().enumerate() {for (wire,w) in f.loops().iter().enumerate() {
+                    for edge in 0..w.len() {
+                        let a=crate::source_shell_incidence::Address{face,wire,edge};
+                        let next=crate::source_shell_incidence::Address{edge:(edge+1)%w.len(),..a};
+                        ids.insert(shell.boundary_vertex(a,0).unwrap());
+                        assert_eq!(shell.boundary_vertex(a,1),shell.boundary_vertex(next,0));
+                        assert!(shell.boundary_vertex(a,2).is_none());
+                    }
+                }}
+                let boundary_mesh=shell.prepare_source_boundary_mesh(crate::source_shared_edge::BoundaryMeshLimits {
+                    max_deviation_mm:0.05,cells:4096,spans:100000,max_depth:24}).unwrap();
+                assert_eq!(boundary_mesh.partitions.len(),shell.pairs().len());
+                assert!(boundary_mesh.cells<=4096 && boundary_mesh.spans<=100000);
+                for partition in &boundary_mesh.partitions {
+                    let a=shell.pairs()[partition.pair].uses()[0];
+                    assert_eq!(partition.endpoints,[shell.boundary_vertex(a,0).unwrap(),shell.boundary_vertex(a,1).unwrap()]);
+                    if let Some(mesh)=&partition.mesh {for segment in &mesh.segments {assert!(segment.deviation_upper_mm<=0.05);}}
+                }
+                assert_eq!(boundary_mesh.partitions.iter().filter(|p|p.mesh.is_none()).count(),0);
+                assert_eq!(boundary_mesh.partitions.iter().filter(|p|p.native_chart_uses==[false,true]).count(),2);
+                for partition in &boundary_mesh.partitions {
+                    let pair=&shell.pairs()[partition.pair];
+                    if let crate::source_profile_body::ShellPairKind::Section(end) = pair.kind() {
+                        let mesh=partition.mesh.as_ref().unwrap();
+                        let charts=partition.shell_uv.as_ref().unwrap();
+                        assert_eq!(charts.len(),mesh.vertices.len());
+                        for (uv,vertex) in charts.iter().zip(&mesh.vertices) {
+                            assert_eq!(uv[1][1],[end as f64;2]);
+                            let (position,_)=shell.enclose_support(pair.uses()[1].face,uv[1],1000,1000)?;
+                            let position=position.expect("section transition enclosure");
+                            for axis in 0..3 {assert!(position[axis][0]<=vertex.world[axis][1] && vertex.world[axis][0]<=position[axis][1]);}
+                        }
+                    }
+                    if let crate::source_profile_body::ShellPairKind::Rail(_) = pair.kind() {
+                        let mapped=partition.shell_uv.as_ref().unwrap();
+                        let mesh=partition.mesh.as_ref().unwrap();
+                        assert_eq!(mapped.len(),mesh.vertices.len());
+                        for (uv,vertex) in mapped.iter().zip(&mesh.vertices) {
+                            assert!(uv[0][1][0]>=0. && uv[0][1][1]<=1.);
+                            let (position,_)=shell.enclose_support(pair.uses()[0].face,uv[0],1000,1000)?;
+                            let position=position.expect("transition rail UV enclosure");
+                            for axis in 0..3 {assert!(position[axis][0]<=vertex.world[axis][1] && vertex.world[axis][0]<=position[axis][1]);}
+                        }
+                        let b=pair.uses()[1];
+                        let ids=[shell.boundary_vertex(b,0).unwrap(),shell.boundary_vertex(b,1).unwrap()];
+                        assert!(partition.mesh_endpoints==ids || partition.mesh_endpoints==[ids[1],ids[0]]);
+                    } else {assert_eq!(partition.mesh_endpoints,partition.endpoints);}
+                }
+                let graph=shell.prepare_boundary_graph(crate::source_shared_edge::BoundaryMeshLimits {
+                    max_deviation_mm:0.05,cells:4096,spans:100000,max_depth:24})?;
+                assert!(graph.vertices.len()>=shell.vertices());
+                assert!(graph.vertices[..shell.vertices()].iter().all(|v|v.point.is_some()));
+                let loops=shell.order_boundary_loops(&graph);
+                assert_eq!(loops.len(),shell.faces().iter().map(|f|f.loops().len()).sum::<usize>());
+                assert!(loops.iter().any(|l|l.pending.is_empty()));
+                for loop_ in loops.iter().filter(|l|l.pending.is_empty()) {
+                    let ends=|s:&crate::source_profile_body::BoundaryLoopSegment| {
+                        let v=graph.segments[s.segment].vertices;if s.reversed {[v[1],v[0]]}else{v}
+                    };
+                    for i in 0..loop_.segments.len(){assert_eq!(ends(&loop_.segments[i])[1],ends(&loop_.segments[(i+1)%loop_.segments.len()])[0]);}
+                }
+                let candidates=shell.propose_boundary_face_triangles(&graph);
+                let mut bounded=0;
+                for triangle in candidates.triangles.iter().take(25) {
+                    let (error,spent)=shell.bound_candidate_triangle(triangle,&graph,1000,1000)?;
+                    assert!(spent<=1000);
+                    if let Some(error)=error {assert!(error.is_finite() && error>=0.);bounded+=1;}
+                    assert!(shell.bound_candidate_triangle(triangle,&graph,1000,0)?.0.is_none());
+                    assert_eq!(shell.bound_candidate_triangle_rectangle_center(triangle,&graph,1000,0)?,(None,0));
+                    assert_eq!(shell.bound_candidate_triangle_partitioned(triangle,&graph,1000,0)?,(None,0));
+                }
+                assert!(bounded>0);
+                let incidence_report=candidates.inspect_incidence();
+                assert_eq!(incidence_report.orientation_conflicts,0);
+                assert_eq!(incidence_report.duplicate_triangles,0);
+                assert_eq!(incidence_report.degenerate_triangles,0);
+                eprintln!("candidate topology triangles={} pendingFaces={} openEdges={} nonmanifoldEdges={} invalidVertexLinks={}",
+                    candidates.triangles.len(),candidates.pending.len(),incidence_report.open_edges,
+                    incidence_report.nonmanifold_edges,incidence_report.invalid_vertex_links);
+                assert!(!candidates.triangles.is_empty());
+                let admitted_faces=candidates.triangles.iter().map(|t|t.face).collect::<std::collections::BTreeSet<_>>();
+                let pending_faces=candidates.pending.iter().map(|p|p.face).collect::<std::collections::BTreeSet<_>>();
+                assert!(admitted_faces.is_disjoint(&pending_faces));
+                assert_eq!(admitted_faces.len()+pending_faces.len(),shell.faces().len());
+                for &face in &admitted_faces {
+                    let mut incidence=std::collections::BTreeMap::new();
+                    for t in candidates.triangles.iter().filter(|t|t.face==face) {
+                        assert!(t.vertices.iter().all(|&id|graph.vertices[id].point.is_some()));
+                        for i in 0..3 {let a=t.vertices[i];let b=t.vertices[(i+1)%3];*incidence.entry((a.min(b),a.max(b))).or_insert(0usize)+=1;}
+                    }
+                    for loop_ in loops.iter().filter(|l|l.face==face) {for constraint in &loop_.segments {
+                        let [a,b]=graph.segments[constraint.segment].vertices;
+                        assert_eq!(incidence.get(&(a.min(b),a.max(b))),Some(&1));
+                    }}
+                }
+                assert!(!graph.segments.is_empty());
+                for segment in &graph.segments {
+                    assert!(segment.deviation_upper_mm<=0.05);
+                    assert!(segment.vertices.iter().all(|&v|graph.vertices[v].point.is_some()));
+                }
+                assert!(graph.pending.iter().all(|p|p.reason!="boundary-shared-endpoint-enclosure-conflict"));
+                assert_eq!(ids.len(),shell.vertices());
+                for pair in shell.pairs() {let [a,b]=pair.uses();
+                    assert_eq!(shell.boundary_vertex(a,0),shell.boundary_vertex(b,1));
+                    assert_eq!(shell.boundary_vertex(a,1),shell.boundary_vertex(b,0));
+                }
+                for &pole in shell.poles() {assert_eq!(shell.boundary_vertex(pole,0),shell.boundary_vertex(pole,1));}
+                let mut refinement_graph=graph;
+                let before_disabled=refinement_graph.vertices.len();
+                let disabled_candidates=shell.propose_boundary_face_triangles(&refinement_graph);
+                let disabled_count=disabled_candidates.triangles.len();
+                let disabled=shell.bisect_candidate_deviation_edges(&mut refinement_graph,disabled_candidates,100,1000,10000,0.05,0)?;
+                assert_eq!((disabled.splits,disabled.spans,disabled.deviation_queries),(0,0,0));
+                assert_eq!(disabled.candidates.triangles.len(),disabled_count);
+                assert_eq!(refinement_graph.vertices.len(),before_disabled);
+                assert!(disabled.candidates.inspect_incidence().closed_oriented());
+                let disabled_trim=shell.bisect_candidate_trimmed_edges(&mut refinement_graph,disabled.candidates,crate::source_profile_body::AdaptiveInteriorLimits {
+                    max_splits:100,controls:1000,spans:10000,spans_per_query:0,target_mm:0.05,
+                    trim_cells:10000,trim_cells_per_query:64,tolerance_uv:1e-8})?;
+                assert_eq!((disabled_trim.splits,disabled_trim.spans,disabled_trim.deviation_queries,disabled_trim.trim_queries,disabled_trim.trim_cells),(0,0,0,0,0));
+                assert_eq!(refinement_graph.vertices.len(),before_disabled);
+                assert!(disabled_trim.candidates.inspect_incidence().closed_oriented());
+                let interior_splits=std::env::var("CAD_BOUNDARY_INTERIOR_SPLITS").ok()
+                    .map(|v|v.parse::<usize>().expect("finite native split count")).unwrap_or(32);
+                let trim_adaptive=std::env::var("CAD_BOUNDARY_TRIM_ADAPTIVE").is_ok();
+                let adaptive=trim_adaptive || std::env::var("CAD_BOUNDARY_ADAPTIVE").is_ok();
+                let bisection=if trim_adaptive {shell.bisect_candidate_trimmed_edges(&mut refinement_graph,candidates,crate::source_profile_body::AdaptiveInteriorLimits {
+                    max_splits:interior_splits,controls:1000,spans:100000,spans_per_query:64,target_mm:0.05,
+                    trim_cells:100000,trim_cells_per_query:64,tolerance_uv:1e-8})?} else if adaptive {shell.bisect_candidate_deviation_edges(&mut refinement_graph,candidates,interior_splits,1000,100000,0.05,64)?}
+                    else {shell.bisect_candidate_interior_edges(&mut refinement_graph,candidates,interior_splits,1000,10000)?};
+                if adaptive {assert!(bisection.splits<=interior_splits);}else{assert_eq!(bisection.splits,interior_splits);}
+                assert!(bisection.spans<=if adaptive {100000}else{10000});
+                assert!(bisection.trim_cells<=100000);
+                assert!(bisection.candidates.inspect_incidence().closed_oriented());
+
+                let extended_refinement=std::env::var("CAD_TRIANGLE_REFINEMENT_EXTENDED").is_ok();
+                let candidates=bisection.candidates;
+                let mut transition_budget_probes=Vec::new();
+                if std::env::var("CAD_TRANSITION_BOUND_PROBES").is_ok() {
+                    for triangle in candidates.triangles.iter().filter(|t|shell.faces()[t.face].kind()==crate::source_profile_body::ShellFaceKind::Transition).take(3) {
+                        for budget in [64,128,256,512] {
+                            let (bound,spent)=shell.bound_candidate_triangle(triangle,&refinement_graph,1000,budget)?;
+                            assert!(spent<=budget);
+                            if let Some(bound)=bound {assert!(bound.is_finite() && bound>=0.);}
+                            transition_budget_probes.push(value_codec::json!({"face":triangle.face,"vertices":triangle.vertices,"uv":triangle.uv,"spansPerQuery":budget,"spent":spent,"deviationUpperMm":bound}));
+                            let (center_bound,center_spent)=shell.bound_candidate_triangle_rectangle_center(triangle,&refinement_graph,1000,budget)?;
+                            assert!(center_spent<=budget);
+                            if let Some(bound)=center_bound {assert!(bound.is_finite() && bound>=0.);}
+                            transition_budget_probes.push(value_codec::json!({"anchor":"rectangle-center","face":triangle.face,"vertices":triangle.vertices,"uv":triangle.uv,"spansPerQuery":budget,"spent":center_spent,"deviationUpperMm":center_bound}));
+                            let (partition_bound,partition_spent)=shell.bound_candidate_triangle_partitioned(triangle,&refinement_graph,1000,budget)?;
+                            assert!(partition_spent<=budget);
+                            if let Some(bound)=partition_bound {assert!(bound.is_finite() && bound>=0.);}
+                            transition_budget_probes.push(value_codec::json!({"anchor":"rectangle-partition","face":triangle.face,"vertices":triangle.vertices,"uv":triangle.uv,"spansPerQuery":budget,"spent":partition_spent,"deviationUpperMm":partition_bound}));
+                        }
+                    }
+                    assert!(!transition_budget_probes.is_empty());
+                }
+                let vertices_before=refinement_graph.vertices.len();
+                let mut no_query=shell.refine_face_candidates(&mut refinement_graph,&candidates,crate::source_profile_body::TriangleRefinementLimits {
+                    max_deviation_mm:0.05,cells:100,spans:10000,spans_per_query:0,controls:1000,domain_cells:10000,
+                    domain_cells_per_triangle:64,tolerance_uv:1e-8,max_depth:4})?;
+                let no_regional=shell.qualify_pending_transition_regions(&refinement_graph,&mut no_query,0)?;
+                assert_eq!((no_regional.spans,no_regional.queries,no_regional.accepted),(0,0,0));
+                assert!(no_query.accepted.is_empty());
+                assert_eq!(no_query.pending.len(),candidates.triangles.len());
+                assert_eq!((no_query.cells,no_query.spans,no_query.domain_cells,no_query.split_triangles,no_query.initial_checked),(0,0,0,0,0));
+                assert_eq!(refinement_graph.vertices.len(),vertices_before);
+                assert_eq!(no_query.trim_inherited,0);
+                assert_eq!(no_query.initial_domain_cells,0);
+                assert_eq!(no_query.trim_cache_hits,0);
+                assert_eq!((no_query.trim_triangle_queries,no_query.trim_triangle_proven),(0,0));
+                assert_eq!((no_query.contour_enclosure_queries,no_query.contour_enclosure_cache_hits),(0,0));
+                assert!(no_query.numeric_failures.is_empty());
+                assert!(no_query.inspect_leaf_incidence().closed_oriented());
+                let mut refinement=shell.refine_face_candidates(&mut refinement_graph,&candidates,crate::source_profile_body::TriangleRefinementLimits {
+                    max_deviation_mm:0.05,cells:if extended_refinement {8192}else{64},spans:if extended_refinement {100000}else{10000},spans_per_query:64,controls:1000,domain_cells:if extended_refinement {100000}else{10000},
+                    domain_cells_per_triangle:if extended_refinement {128}else{64},tolerance_uv:1e-8,max_depth:if extended_refinement {12}else{4}})?;
+                let mut transition_point_probes=Vec::new();
+                if std::env::var("CAD_TRANSITION_POINT_PROBES").is_ok() {
+                    let probe_limit=std::env::var("CAD_TRANSITION_POINT_PROBE_LIMIT").ok().map(|v|v.parse::<usize>().expect("bounded diagnostic probe limit")).unwrap_or(16);
+                    assert!((1..=16).contains(&probe_limit));
+                    for pending in refinement.pending.iter().filter(|p|shell.faces()[p.triangle.face].kind()==crate::source_profile_body::ShellFaceKind::Transition).take(probe_limit) {
+                        let triangle=&pending.triangle;
+                        let query=std::array::from_fn(|k|triangle.uv[0][k]*0.5+triangle.uv[1][k]*0.5);
+                        let (disabled,spent)=shell.candidate_point_deviation_lower(triangle,&refinement_graph,query,1000,0)?;
+                        assert_eq!((disabled,spent),(None,0));
+                        let (lower,spent)=shell.candidate_point_deviation_lower(triangle,&refinement_graph,query,1000,64)?;
+                        assert!(spent<=64);
+                        if let Some(lower)=lower {assert!(lower.is_finite() && lower>=0.);}
+                        transition_point_probes.push(value_codec::json!({"face":triangle.face,"vertices":triangle.vertices,"uv":triangle.uv,"queryUv":query,"deviationLowerMm":lower,"spent":spent,"scope":"Point correspondence to affine mesh plane; material membership and whole-triangle admission independent"}));
+                        for depth in [1,2,3] {
+                            let budget=if depth==1 {512}else if depth==2 {2048}else{8192};
+                            let (upper,used)=shell.bound_candidate_triangle_partition_depth(triangle,&refinement_graph,1000,budget,depth)?;
+                            assert!(used<=budget);
+                            if let Some(upper)=upper { assert!(upper.is_finite() && upper>=0.); }
+                            let (target_bound,target_used)=shell.bound_candidate_triangle_to_target(triangle,&refinement_graph,1000,budget,depth,0.05)?;
+                            assert!(target_used<=used);
+                            let (tight,tight_used)=shell.bound_candidate_triangle_to_target(triangle,&refinement_graph,1000,budget,depth,1e-6)?;
+                            assert!(tight.is_none());
+                            assert!(tight_used<=used);
+                            assert!(shell.bound_candidate_triangle_to_target(triangle,&refinement_graph,1000,0,0,0.05).is_err());
+                            if upper.is_some_and(|value|value<=0.05) {assert_eq!((target_bound,target_used),(upper,used));}
+                            else { assert!(target_bound.is_none()); }
+                            assert!(shell.bound_candidate_triangle_to_target(triangle,&refinement_graph,1000,0,depth,f64::NAN).is_err());
+                            assert_eq!(shell.bound_candidate_triangle_to_target(triangle,&refinement_graph,1000,0,depth,0.05)?,(None,0));
+                            transition_point_probes.push(value_codec::json!({"face":triangle.face,"vertices":triangle.vertices,"uv":triangle.uv,"partitionDepth":depth,"deviationUpperMm":upper,"spent":used,"targetUpperMm":target_bound,"targetSpent":target_used,"tightTargetSpent":tight_used}));
+                        }
+                    }
+                    assert!(!transition_point_probes.is_empty());
+                }
+                let regional=if let Ok(value)=std::env::var("CAD_REGIONAL_TRANSITION_BUDGET") {
+                    let budget=value.parse::<usize>().expect("bounded regional transition budget");
+                    let result=shell.qualify_pending_transition_regions(&refinement_graph,&mut refinement,budget)?;
+                    assert!(result.spans<=result.max_spans);
+                    Some(value_codec::json!({"maxSpans":result.max_spans,"spans":result.spans,"queries":result.queries,"accepted":result.accepted}))
+                } else {None};
+                assert!(refinement.cells<=if extended_refinement {8192}else{64});
+                assert!(refinement.initial_checked<=candidates.triangles.len());
+                assert!(refinement.trim_triangle_proven<=refinement.trim_triangle_queries);
+                assert!(refinement.initial_domain_cells<=refinement.domain_cells);
+                assert!(refinement.trim_triangle_queries<=refinement.cells);
+                if refinement.initial_checked<candidates.triangles.len() {assert_eq!(refinement.split_triangles,0);}
+                assert!(refinement.spans<=if extended_refinement {100000}else{10000});
+                assert!(refinement.domain_cells<=if extended_refinement {100000}else{10000});
+                assert!(!refinement.accepted.is_empty() || !refinement.pending.is_empty());
+                assert_eq!(refinement.accepted.len()+refinement.pending.len(),refinement.initial_triangles+2*refinement.split_triangles);
+                assert!(refinement.inspect_leaf_incidence().closed_oriented());
+                assert_eq!(refinement.numeric_failures.len(),refinement.pending.iter().filter(|p|p.reason=="triangle-support-numeric-unproven" || p.reason=="triangle-midpoint-numeric-unproven").count());
+                assert!(refinement.numeric_failures.iter().all(|p|p.code=="NURBS_NUMERIC_ERROR" && p.uv.iter().flatten().all(|v|v.is_finite())));
+                for t in &refinement.accepted {assert!(t.deviation_upper_mm<=0.05);}
+                if let Ok(path)=std::env::var("CAD_BOUNDARY_TRIANGLE_REPORT") {
+                    let report=value_codec::json!({"version":1,"fixture":"annular-root-ended-expression",
+                        "targetDeviationMm":0.05,"solidQualified":false,
+                        "refinementLimits":{"maxDeviationMm":refinement.limits.max_deviation_mm,"cells":refinement.limits.cells,"spans":refinement.limits.spans,"spansPerQuery":refinement.limits.spans_per_query,"controls":refinement.limits.controls,"domainCells":refinement.limits.domain_cells,"domainCellsPerTriangle":refinement.limits.domain_cells_per_triangle,"toleranceUv":refinement.limits.tolerance_uv,"maxDepth":refinement.limits.max_depth},
+                        "transitionBudgetProbes":transition_budget_probes,
+                        "transitionPointProbes":transition_point_probes,
+                        "regionalTransitionLimits":regional.as_ref().map(|work|value_codec::json!({"maxSpans":work["maxSpans"].clone(),"spansPerQuery":2048,"partitionDepth":2,"earlyUnproven":true,"strictTriangleSeparation":true})),
+                        "regionalTransitionWork":regional,
+                        "faceKinds":shell.faces().iter().enumerate().map(|(face,support)|value_codec::json!({"face":face,"kind":format!("{:?}",support.kind())})).collect::<Vec<_>>(),
+                        "interiorBisection":{"splits":bisection.splits,"spans":bisection.spans,"refused":bisection.refused,"adaptive":adaptive,"deviationQueries":bisection.deviation_queries,"deviationUnproven":bisection.deviation_unproven,"trimAdaptive":trim_adaptive,"trimQueries":bisection.trim_queries,"trimCells":bisection.trim_cells,"trimUnproven":bisection.trim_unproven},
+                        "candidate":{"triangles":candidates.triangles.len(),"pendingFaces":candidates.pending.iter().map(|p|
+                            value_codec::json!({"face":p.face,"reason":p.reason})).collect::<Vec<_>>(),
+                            "openEdges":incidence_report.open_edges,"nonmanifoldEdges":incidence_report.nonmanifold_edges,
+                            "orientationConflicts":incidence_report.orientation_conflicts,"invalidVertexLinks":incidence_report.invalid_vertex_links},
+                        "boundaryPending":refinement_graph.pending.iter().map(|p|value_codec::json!({"pair":p.pair,"reason":p.reason})).collect::<Vec<_>>(),
+                        "refinement":{"initialTriangles":refinement.initial_triangles,"initialChecked":refinement.initial_checked,"initialDomainCells":refinement.initial_domain_cells,"trimInherited":refinement.trim_inherited,"trimCacheHits":refinement.trim_cache_hits,"trimTriangleQueries":refinement.trim_triangle_queries,"trimTriangleProven":refinement.trim_triangle_proven,"contourEnclosureQueries":refinement.contour_enclosure_queries,"contourEnclosureCacheHits":refinement.contour_enclosure_cache_hits,"numericFailures":refinement.numeric_failures.iter().map(|p|value_codec::json!({"face":p.face,"vertices":p.vertices,"uv":p.uv,"stage":p.stage,"code":p.code,"message":p.message})).collect::<Vec<_>>(),"splits":refinement.split_triangles,"leafIncidenceClosed":refinement.inspect_leaf_incidence().closed_oriented(),"cells":refinement.cells,"spans":refinement.spans,"domainCells":refinement.domain_cells,
+                            "accepted":refinement.accepted.len(),"pending":refinement.pending.iter().map(|p|
+                                value_codec::json!({"face":p.triangle.face,"vertices":p.triangle.vertices,"uv":p.triangle.uv,"reason":p.reason})).collect::<Vec<_>>()}});
+                    std::fs::write(path,report.to_string()).unwrap();
+                }
+
+                Ok((shell.faces().len(),shell.components(),shell.pairs().len()))
+            }).unwrap();
+        assert_eq!(single_call.result.map(|(faces,components,_)|(faces,components)),Some((29,1)));
+        let mut no_work=shell_work();no_work.boundary.controls=0;
+        assert!(crate::source_profile_body::with_restored_expression_shell(&rebuilt,boundary_recipe.clone(),no_work,
+            |_|->nurbs_core::Result<()> {panic!("no recipe proof must not invoke shell inspection")}).unwrap().result.is_none());
+        let mut excessive=shell_work();excessive.shell_uses=usize::MAX;
+        assert!(crate::source_profile_body::with_restored_expression_shell(&rebuilt,boundary_recipe.clone(),excessive,
+            |_|Ok(())).is_err());
+
+        let mut zero=boundary_work();zero.controls=0;
+        let no_call=crate::source_profile_body::with_restored_transition_boundary(&rebuilt,boundary_recipe.clone(),zero,
+            |_|->nurbs_core::Result<()> {panic!("incomplete owners must not reach inspection")}).unwrap();
+        assert!(no_call.result.is_none());
+        let mut invalid_boundary=boundary_recipe.clone();invalid_boundary["sides"][1]=invalid_boundary["sides"][0].clone();
+        assert!(crate::source_profile_body::with_restored_transition_boundary(&rebuilt,invalid_boundary,boundary_work(),
+            |_|Ok(())).is_err());
+        assert_eq!(restored_bridge.enclose([0.,1.],[0.,1.],100).unwrap(),authored.enclose([0.,1.],[0.,1.],100).unwrap());
+        assert!(restored_bridge.constrain_original_rails(1000).unwrap().0.is_some());
+        for field in ["proposal","sections","scales","version","kind"] {
+            let mut changed=bridge_recipe.clone();changed[field]=value_codec::Value::Null;
+            assert!(crate::source_profile_body::restore_section_bridge(&rebuilt,changed).is_err(),"{field}");
+        }
+        let mut changed=bridge_recipe.clone();changed["sections"][0]["face"]=value_codec::json!(5);
+        assert!(crate::source_profile_body::restore_section_bridge(&rebuilt,changed).is_err());
+        let mut changed=bridge_recipe.clone();changed["scales"]=value_codec::json!([0.,0.]);
+        assert!(crate::source_profile_body::restore_section_bridge(&rebuilt,changed).is_err());
+        for uv in [[0.75,0.25],[0.9,0.75]] {
+            assert_eq!(original.profile(0).unwrap().enclose([[uv[0];2],[uv[1];2]],100).unwrap(),
+                rebuilt.profile(0).unwrap().enclose([[uv[0];2],[uv[1];2]],100).unwrap());
+        }
+    }
+
+    #[test]
     fn annular_corrected_expression_coefficient_radius_cell() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -475,6 +1265,17 @@ mod tests {
         let bridge=bridge.constrain_original_rails(1000).unwrap().0.unwrap();
         let authored=crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
         let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
+        // Rounded evaluations only define the ray; coefficient isolation proves its roots.
+        let u=0.75*0.5+0.9*0.5;
+        let center=centers.evaluate(u).unwrap().point;
+        let target=profile.source().evaluate(u,0.5).unwrap().point;
+        let origin=[center[0],center[1],center[2]];
+        let direction=std::array::from_fn(|k|target[k]-origin[k]);
+        let line=bridge.inspect_line_intersections([[0.,1.];2],origin,direction,1e-5,1000,100000,100000000).unwrap();
+        let roots=line.intersections.expect("annular coefficient line enclosure");
+        eprintln!("annular coefficient roots {:?}",roots);
+        assert!(roots.unresolved.is_empty(),"annular line roots remain unresolved");
+        assert_eq!(roots.roots.len(),1);
         let report=bridge.inspect_radius_coefficients(&centers,&law,[[0.75,0.9];2],[[0.,1.];2],100000,100000000).unwrap();
         eprintln!("annular coefficient radius reason={} error={:?} residual={:?} spans={} work={}",
             report.reason,report.error_upper,report.squared_residual,report.spans,report.coefficient_work);
@@ -482,10 +1283,31 @@ mod tests {
         assert!(report.error_upper.unwrap()<=1e-4,"whole annular radius exceeds requested tolerance");
         assert!(report.squared_residual.is_some());
         assert!(report.spans<=100000 && report.coefficient_work<=100000000);
+        // The correlated coefficient proof must remain tied to the supplied
+        // law: changing its radius cannot reuse the successful original bound.
+        let mut changed_law=law.clone();
+        for point in &mut changed_law.control_points {point[0]+=0.25;}
+        let changed=bridge.inspect_radius_coefficients(&centers,&changed_law,
+            [[0.75,0.9];2],[[0.,1.];2],100000,100000000).unwrap();
+        assert!(changed.error_upper.map_or(true,|error|error>1e-4),
+            "a changed radius law must not pass the original tolerance");
+        assert!(changed.error_lower.unwrap()>1e-4,
+            "the changed law must have a certified radial mismatch");
+        assert!(report.error_lower.unwrap()<=report.error_upper.unwrap());
+        for (spans,work) in [(0,100000000),(100000,0)] {
+            let unproven=bridge.inspect_radius_coefficients(&centers,&changed_law,
+                [[0.75,0.9];2],[[0.,1.];2],spans,work).unwrap();
+            assert!(unproven.error_lower.is_none() && unproven.error_upper.is_none(),
+                "exhausted work cannot establish a radial mismatch");
+        }
+        assert!(changed.spans<=100000 && changed.coefficient_work<=100000000);
         if let Ok(path)=std::env::var("BREP_COEFFICIENT_RADIUS_PATH") {
             std::fs::write(path,value_codec::json!({"domain":[[0.,1.],[0.,1.]],"lawDomains":[[0.75,0.9],[0.75,0.9]],
                 "errorUpper":report.error_upper,"squaredResidual":report.squared_residual,
-                "spans":report.spans,"coefficientWork":report.coefficient_work,"reason":report.reason}).to_string()).unwrap();
+                "spans":report.spans,"coefficientWork":report.coefficient_work,"reason":report.reason,
+                "changedLaw":{"radiusDeltaMm":0.25,"errorUpper":changed.error_upper,
+                    "errorLower":changed.error_lower,"spans":changed.spans,"coefficientWork":changed.coefficient_work,
+                    "reason":changed.reason,"passesTolerance":false}}).to_string()).unwrap();
         }
     }
 
@@ -557,8 +1379,43 @@ mod tests {
 
     #[test]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
+        restricted_profile_seam_control(false,false);
+    }
+    #[test]
+    fn partial_rational_multispan_carrier_transfers_owned_transition_contact() {
+        restricted_profile_seam_control(true,false);
+    }
+    #[test]
+    fn partial_rational_transition_has_owned_oriented_volume() {
+        restricted_profile_seam_control(true,true);
+    }
+    fn restricted_profile_seam_control(partial_carrier:bool,volume_only:bool) {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let mut shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        if partial_carrier {
+            use value_codec::Serialize;
+            let index=shell.uses().iter().position(|uses|uses.iter().all(|a|[0,5].contains(&a.face))).expect("retained paired contact edge");
+            let edge=&shell.edges()[index];
+            let mut world=edge.world().clone();
+            let degree=world.degree;assert_eq!(world.control_points.len(),degree+1);
+            let domain=world.domain();assert_eq!(domain,[0.,1.]);
+            let first=world.control_points[0].clone();let last=world.control_points[degree].clone();
+            let first_weight=world.weights[0];let last_weight=world.weights[degree];
+            // Keep the original rational Bezier span literally unchanged.
+            // Constant outer spans avoid rounding new homogeneous quotients.
+            for _ in 0..degree {world.control_points.insert(0,first.clone());world.weights.insert(0,first_weight);world.control_points.push(last.clone());world.weights.push(last_weight);}
+            world.knots=std::iter::repeat_n(-1.,degree+1).chain(std::iter::repeat_n(0.,degree)).chain(std::iter::repeat_n(1.,degree)).chain(std::iter::repeat_n(2.,degree+1)).collect();
+            let ranges=crate::source_seam_tangency::ranges(edge).map(|ends|ends.map(|r|[r[0]+r[1],3.*r[1]]));
+            let mut definition=shell.definition().unwrap();
+            definition["pairs"][index]["edge"]["world"]=world.to_value();
+            let planes=[None::<[[f64;3];3]>;2];let candidates=[[None::<[f64;2]>;2];2];
+            definition["pairs"][index]["edge"]["recipe"]=value_codec::json!({"kind":"mapped","ranges":ranges,"planes":planes,"candidates":candidates});
+            let replay=crate::source_shell_restore::restore(definition,&crate::source_shell_restore::Limits {
+                regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:100000,
+            }).unwrap();
+            shell=replay.shell.expect(replay.reason);
+            assert!(!shell.edges()[index].covers_complete_canonical_source());
+        }
         let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
         let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
             axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
@@ -885,6 +1742,16 @@ mod tests {
             "whole XY transition injectivity must be qualified");
         let xy_owned=boundary.qualify_face_from_rails(xy_projection,1000,2000,100000).unwrap();
         let xy_face=xy_owned.face.expect("fresh owned XY transition admission");
+        let support_join=xy_face.qualify_support_tangency(1000,10000,100000).unwrap();
+        assert!(support_join.certificate.is_some(),"{}",support_join.reason);
+        assert_eq!(support_join.boundaries.len(),4);
+        assert!(support_join.boundaries.iter().all(|r|r.complete_regular && r.pending.is_empty()));
+        assert!(std::ptr::eq(support_join.certificate.unwrap().face(),&xy_face));
+        assert!(support_join.cells<=10000 && support_join.spans<=100000);
+        for (controls,cells,spans) in [(0,10000,100000),(1000,0,100000),(1000,10000,0),(1000,1,1)] {
+            assert!(xy_face.qualify_support_tangency(controls,cells,spans).unwrap().certificate.is_none());
+        }
+
         let wrong_centers=nurbs_core::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
             control_points:vec![vec![0.,0.,0.];2],weights:vec![1.;2],periodic:false};
         let wrong_radius=nurbs_core::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
@@ -998,6 +1865,52 @@ mod tests {
         let assembled=outer.assemble_shell(1000).unwrap();
         eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
         let expression=assembled.shell.expect(assembled.reason);
+        let neighbor_join=expression.qualify_transition_neighbor_tangency(1e-6,1000,10000,100000).unwrap();
+        assert!(neighbor_join.certificate.is_some(),"{}",neighbor_join.reason);
+        assert!(neighbor_join.cells<=10000 && neighbor_join.spans<=100000);
+        assert!(neighbor_join.cells>0 && neighbor_join.spans>0);
+        let neighbor_certificate=neighbor_join.certificate.unwrap();
+        assert!(std::ptr::eq(neighbor_certificate.shell(),&expression));
+        assert!(neighbor_certificate.upper_sine_squared().iter().all(|v|*v<=1e-6));
+        assert_eq!(&neighbor_certificate.upper_sine_squared()[..2],&[0.,0.]);
+        assert!(expression.qualify_transition_neighbor_tangency(1e-6,1000,0,0).unwrap().certificate.is_none());
+        assert!(expression.qualify_transition_neighbor_tangency(f64::NAN,1000,10000,100000).is_err());
+        let limited_neighbor=expression.qualify_transition_neighbor_tangency(1e-6,1000,1,1).unwrap();
+        assert!(limited_neighbor.certificate.is_none());
+        assert!(limited_neighbor.cells<=1 && limited_neighbor.spans<=1);
+        assert!(expression.qualify_transition_neighbor_tangency(1e-6,0,10000,100000).unwrap().certificate.is_none());
+
+
+        for face in 0..expression.faces().len() {
+            let (derivatives,spent)=expression.enclose_support_derivatives(face,expression.support_domain(face).unwrap(),1000,0).unwrap();
+            let (normal,normal_spent)=expression.enclose_support_normals(face,expression.support_domain(face).unwrap(),1000,0).unwrap();
+            assert!(normal.is_none() && normal_spent==0,"zero normal budget stays unproven on every expression face");
+            assert_eq!(expression.enclose_support_normal_directions(face,expression.support_domain(face).unwrap(),1000,0).unwrap(),(None,0));
+            if matches!(expression.faces()[face].kind(),crate::source_profile_body::ShellFaceKind::Retained(_)) {
+                let domain=expression.support_domain(face).unwrap();
+                assert_eq!(expression.enclose_support_normal_directions(face,domain,1000,100).unwrap(),
+                    expression.enclose_support_normals(face,domain,1000,100).unwrap(),
+                    "a pole-touching retained domain must keep actual-normal uncertainty");
+            }
+            assert_eq!(expression.inspect_support_trim_outside(face,expression.support_domain(face).unwrap(),1e-5,0).unwrap(),(None,0));
+            assert!(derivatives.is_none() && spent==0);
+        }
+
+        let zero_line=expression.inspect_line_support_roots([1000.;3],[1.,0.,0.],1e-5,1000,0,100000,100000000).unwrap();
+        assert!(zero_line.roots.is_empty());
+        assert_eq!(zero_line.pending.len(),expression.faces().len());
+        let outside_line=expression.inspect_line_support_roots([1000.;3],[1.,0.,0.],1e-5,1000,1000,100000,100000000).unwrap();
+        assert!(outside_line.roots.is_empty() && outside_line.pending.is_empty());
+        assert!(outside_line.spans<=100000 && outside_line.cells<=1000);
+        let trimmed_line=expression.inspect_trimmed_line_roots([0.,0.,3.],[30.,0.,0.],1e-5,
+            1000,10000,100000,100000000,100000).unwrap();
+        assert!(!trimmed_line.roots.is_empty() || !trimmed_line.pending.is_empty());
+        assert!(trimmed_line.cells<=10000 && trimmed_line.spans<=100000
+            && trimmed_line.coefficient_work<=100000000 && trimmed_line.domain_cells<=100000);
+        assert!(trimmed_line.roots.windows(2).all(|r|r[0].1.parameter[1]<r[1].1.parameter[0]));
+        eprintln!("expression trimmed line roots={} pending={} cells={} spans={} coefficientWork={} domainCells={}",
+            trimmed_line.roots.len(),trimmed_line.pending.len(),trimmed_line.cells,trimmed_line.spans,
+            trimmed_line.coefficient_work,trimmed_line.domain_cells);
         let outside_segment=expression.inspect_segment_supports([1000.;3],[1.,0.,0.],0.01,1000,1000,10000).unwrap();
         assert!(outside_segment.boundary_excluded);
         assert!(outside_segment.candidates.is_empty() && outside_segment.pending.is_empty());
@@ -1730,11 +2643,174 @@ mod tests {
             }
         }
         eprintln!("transition material XY plane audit pending={} work={} spans={}",resumed.pending_pairs(),resumed.work().3,resumed.work().1);
+        if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {
+            std::fs::write(path,resumed.diagnostics().to_string()).unwrap();
+        }
         assert_eq!(resumed.complete_cross_face_contacts(),resumed.pending_pairs()==0);
+        assert!(resumed.complete_cross_face_contacts(),
+            "Transition acceptance requires every cross-face contact: {} pairs remain",resumed.pending_pairs());
         if resumed.complete_cross_face_contacts() {
             let geometry=expression.qualify_embedding(&resumed).expect("complete owned chart/contact embedding");
             assert!(std::ptr::eq(geometry.shell(),&expression));
             assert!(std::ptr::eq(geometry.contacts(),&resumed));
+            if volume_only {
+                let qualification=geometry.qualify_volume(crate::source_profile_body::ExpressionVolumeLimits {
+                    axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,
+                    controls_per_enclosure:1000,cells:32768,spans:200000,domain_cells:100000,domain_cells_per_rectangle:256,
+                }).unwrap();
+                let certificate=qualification.certificate.expect(qualification.report.reason);
+                assert!(std::ptr::eq(certificate.geometry(),&geometry));
+                let bounds=certificate.positive_bounds();assert!(bounds[0]>0. && bounds[0]<=bounds[1]);
+                assert!(bounds[1]-bounds[0]<=20.);
+                if let Some(path)=std::env::var_os("CAD_PARTIAL_RATIONAL_VOLUME_REPORT_PATH") {
+                    let r=&qualification.report;
+                    let report=value_codec::json!({"kind":"partial-rational-transition-oriented-volume","complete":r.complete,
+                        "signedBounds":certificate.signed_bounds(),"positiveBounds":bounds,"reverseOrientation":certificate.reverse_orientation(),
+                        "cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"reason":r.reason,
+                        "crossFacePairs":resumed.pairs().len(),"pendingPairs":resumed.pending_pairs(),"wholeWallQualified":false});
+                    std::fs::write(path,report.to_string()).unwrap();
+                }
+                return;
+            }
+            let wall=geometry.qualify_minimum_aligned_chords(1.,1e-4,0.05,1000,0,100000).unwrap();
+            assert!(wall.certificate.is_none(),"exhausted coverage cannot admit a minimum");
+            let wall=wall.report;
+            assert_eq!(wall.pending.len(),wall.budget_pending+wall.enclosure_pending+wall.resolution_pending);
+            eprintln!("expression wall pending reasons budget={} enclosure={} resolution={}",
+                wall.budget_pending,wall.enclosure_pending,wall.resolution_pending);
+            assert!(!wall.complete && wall.cells==0 && wall.spans==0);
+            assert_eq!(wall.total_pairs,expression.faces().len()*(expression.faces().len()+1)/2);
+            assert_eq!(wall.pending.len(),wall.total_pairs);
+            for face in 0..expression.faces().len() {assert!(wall.pending.iter().any(|p|p.faces==[face,face]));}
+            let wall_cells=std::env::var("BREP_EXPRESSION_WALL_CELLS").ok()
+                .map(|v|v.parse::<usize>().expect("wall cell budget must be an integer"))
+                .unwrap_or(wall.total_pairs);
+            assert!(wall_cells>=wall.total_pairs && wall_cells<=100000);
+            let trim_cells=std::env::var("BREP_EXPRESSION_WALL_TRIM_CELLS").ok()
+                .map(|v|v.parse::<usize>().expect("trim budget must be an integer")).unwrap_or(0);
+            let wall_spans=std::env::var("BREP_EXPRESSION_WALL_SPANS").ok()
+                .map(|v|v.parse::<usize>().expect("wall span budget must be an integer"))
+                .unwrap_or(1000000);
+            assert!((100000..=1000000).contains(&wall_spans));
+            let wall=geometry.qualify_trimmed_minimum_aligned_chords(1.,1e-4,0.05,1000,wall_cells,wall_spans,trim_cells).unwrap();
+            assert!(wall.report.spans<=wall_spans && wall.report.cells<=wall_cells);
+            assert!(wall.report.domain_cells<=trim_cells);
+            assert_eq!(wall.certificate.is_some(),wall.report.complete);
+            if let Some(proof)=&wall.certificate {
+                assert!(std::ptr::eq(proof.geometry(),&geometry));
+                assert_eq!(proof.minimum_mm(),1.);
+                assert_eq!(proof.max_sine_squared(),1e-4);
+            }
+            let wall=wall.report;
+            assert_eq!(wall.spans,wall.intrinsic_spans+wall.profile_transition_spans
+                +wall.span_stages.position+wall.span_stages.normal+wall.span_stages.shared_corner
+                +wall.span_stages.original_pair+wall.span_stages.retained_pair+wall.span_stages.corrected_pair,
+                "all span work must be attributed exactly once");
+            eprintln!("expression whole-wall initial={} total={} pending={} cells={} spans={} distanceExcluded={} angleExcluded={} planarExcluded={} intrinsicExcluded={} cacheHits={}",
+                wall.initial_pairs_checked,wall.total_pairs,wall.pending.len(),wall.cells,wall.spans,wall.distance_excluded,wall.angle_excluded,
+                wall.planar_excluded,wall.intrinsic_excluded,wall.cache_hits);
+            assert_eq!(wall.pending.len(),wall.budget_pending+wall.enclosure_pending+wall.resolution_pending,
+                "every unresolved product needs one pending reason");
+            for (reason,count) in [
+                (crate::source_profile_body::ExpressionWallPendingReason::Budget,wall.budget_pending),
+                (crate::source_profile_body::ExpressionWallPendingReason::Enclosure,wall.enclosure_pending),
+                (crate::source_profile_body::ExpressionWallPendingReason::Resolution,wall.resolution_pending)] {
+                assert_eq!(wall.pending.iter().filter(|p|p.pending_reason==Some(reason)).count(),count);
+            }
+            eprintln!("expression refined wall pending reasons budget={} enclosure={} resolution={}",
+                wall.budget_pending,wall.enclosure_pending,wall.resolution_pending);
+            if let Ok(path)=std::env::var("BREP_EXPRESSION_WALL_REPORT_PATH") {
+                assert!(wall.pending.iter().all(|p|p.pending_reason.is_some()));
+                let report=value_codec::Serialize::to_value(&wall);
+                let request=value_codec::json!({
+                    "kind":"expression-wall-native-request", "partialCarrier":partial_carrier,
+                    "minimumMm":1., "maxSineSquared":1e-4, "toleranceUv":0.05,
+                    "controls":1000, "cells":wall_cells, "spans":wall_spans,
+                    "domainCells":trim_cells,
+                    "scope":"endpoint-normal-aligned-chords"
+                });
+                // Keep the wire report unchanged while making every budget
+                // explicit for future comparisons of native qualification runs.
+                let output=std::path::Path::new(&path);
+                if let Some(parent)=output.parent().filter(|p|!p.as_os_str().is_empty()) {
+                    std::fs::create_dir_all(parent).expect("create wall report output directory");
+                }
+                std::fs::write(format!("{path}.request.json"),value_codec::to_string(&request).unwrap()).unwrap();
+                std::fs::write(path,value_codec::to_string(&report).unwrap()).unwrap();
+            }
+            assert!(wall.profile_transition_checked<=wall.cells);
+            assert!(wall.profile_transition_excluded<=wall.profile_transition_checked);
+            assert!(wall.profile_transition_excluded<=wall.angle_excluded);
+            assert!(wall.profile_transition_spans<=wall.spans);
+            assert_eq!(wall.initial_pairs_checked,wall.total_pairs,"visit every original pair before refinement");
+            assert!(wall.planar_excluded>0,"exact planar self/coplanar products must be excluded");
+            assert!(wall.cache_hits>0,"reuse paid rectangles only within this owner-bound audit");
+            assert!(wall.plane_controls<=expression.faces().len()*1000);
+
+            assert_eq!(wall.complete,wall.pending.is_empty(),"coverage cannot hide pending rectangles");
+            if wall_cells==wall.total_pairs {
+                assert!(!wall.complete,"the initial-pair budget cannot cover all refinements");
+            }
+
+
+            let material_qualification=geometry.qualify_material_line([-30.,2.,3.],[60.,0.,0.],1e-5,
+                1000,10000,200000,100000000,100000).unwrap();
+            let material=material_qualification.report;
+            assert_eq!(material_qualification.certificate.is_some(),material.intervals.is_some());
+            if let Some(certificate)=material_qualification.certificate {
+                assert!(std::ptr::eq(certificate.geometry(),&geometry));
+                assert_eq!(certificate.origin(),[-30.,2.,3.]);assert_eq!(certificate.direction(),[60.,0.,0.]);
+                assert_eq!(certificate.intervals().len(),material.intervals.as_ref().unwrap().len());
+                let lengths=certificate.lengths_mm().unwrap();
+                assert_eq!(lengths.len(),certificate.intervals().len());
+                assert!(lengths.iter().all(|d|d[0]>0. && d[0]<=d[1] && d[1].is_finite()));
+                let strict=certificate.inspect_endpoint_normals(1e-4,1000,10000).unwrap();
+                assert!(!strict.complete,"oblique chords must not qualify at strict normal tolerance");
+                assert_eq!(strict.normals.len(),certificate.intervals().len());
+                let no_normals=certificate.inspect_endpoint_normals(1e-4,1000,0).unwrap();
+                assert!(!no_normals.complete && no_normals.spans==0);
+                assert!(no_normals.normals.iter().flatten().all(|r|r.is_none()));
+                let partial_normals=certificate.inspect_endpoint_normals(1e-4,1000,1).unwrap();
+                assert!(!partial_normals.complete && partial_normals.spans<=1);
+
+                eprintln!("expression material lengths={:?} strictNormalsComplete={} normalSpans={} angles={:?}",
+                    lengths,strict.complete,strict.spans,strict.normals.iter().map(|pair|pair.iter().map(|r|
+                        r.as_ref().and_then(|r|r.sine_squared_interval)).collect::<Vec<_>>()).collect::<Vec<_>>());
+
+            }
+            eprintln!("expression material line reason={} intervals={:?} roots={} pending={} spans={}",
+                material.reason,material.intervals.as_ref().map(|v|v.len()),material.boundary.roots.len(),
+                material.boundary.pending.len(),material.boundary.spans);
+            assert!(material.boundary.spans<=200000 && material.boundary.cells<=10000
+                && material.boundary.domain_cells<=100000);
+            if let Ok(path)=std::env::var("BREP_EXPRESSION_MATERIAL_LINE_PATH") {
+                let root_json=|face:usize,root:&nurbs_core::ray_surface::Root|value_codec::json!({
+                    "face":face,"uv":root.uv,"parameter":root.parameter});
+                let roots=material.boundary.roots.iter().map(|(face,root)|root_json(*face,root)).collect::<Vec<_>>();
+                let pending=material.boundary.pending.iter().map(|(face,uv)|value_codec::json!({"face":face,"uv":uv})).collect::<Vec<_>>();
+                let intervals=material.intervals.as_ref().map(|v|v.iter().map(|i|value_codec::json!({
+                    "entry":root_json(i.entry.0,&i.entry.1),"exit":root_json(i.exit.0,&i.exit.1)})).collect::<Vec<_>>());
+                std::fs::write(path,value_codec::json!({"origin":[-30.,2.,3.],"direction":[60.,0.,0.],
+                    "reason":material.reason,"roots":roots,"pending":pending,"intervals":intervals,
+                    "cells":material.boundary.cells,"spans":material.boundary.spans,
+                    "coefficientWork":material.boundary.coefficient_work,"domainCells":material.boundary.domain_cells}).to_string()).unwrap();
+            }
+            let intervals=material.intervals.as_ref().expect("complete owned outside-seeded material line");
+            assert!(!intervals.is_empty());
+            for interval in intervals {assert!(interval.entry.1.parameter[1]<interval.exit.1.parameter[0]);}
+            let refused_line=geometry.inspect_material_line([-30.,2.,3.],[60.,0.,0.],1e-5,
+                1000,0,200000,100000000,100000).unwrap();
+            assert!(refused_line.intervals.is_none());
+            let radial=geometry.qualify_material_line([-30.,-6.,3.],[60.,12.,0.],1e-5,
+                1000,10000,200000,100000000,100000).unwrap();
+            let radial=radial.certificate.expect("outside-seeded radial material intervals");
+            let radial_normals=radial.inspect_endpoint_normals(1e-4,1000,10000).unwrap();
+            eprintln!("expression radial lengths={:?} normalComplete={} angles={:?}",radial.lengths_mm().unwrap(),
+                radial_normals.complete,radial_normals.normals.iter().map(|pair|pair.iter().map(|r|
+                    r.as_ref().and_then(|r|r.sine_squared_interval)).collect::<Vec<_>>()).collect::<Vec<_>>());
+            assert!(radial_normals.complete,"radial material intervals require both endpoint normals");
+
+
             let volume_limits=|cells|crate::source_profile_body::ExpressionVolumeLimits {
                 axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,
                 controls_per_enclosure:1000,cells,spans:200000,domain_cells:100000,domain_cells_per_rectangle:256,
@@ -2123,6 +3199,30 @@ mod tests {
         let report=proposal.qualify_edge(1,100,1e-6,1,1).unwrap();
         assert!(report.seam.is_none());assert_eq!(report.reason,"profile-path-work-limit");
         assert!(!report.angular.unwrap().pending.is_empty());
+    }
+    #[test]
+    fn actual_original_neighbor_angles_ignore_proposed_neighbor_profile() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let specs=[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]},
+            crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
+        let work=||crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7};
+        let single=crate::source_profile_body::prepare(&body,&specs[..1],work()).unwrap().proposal.unwrap();
+        let both=crate::source_profile_body::prepare(&body,&specs,work()).unwrap().proposal.unwrap();
+        assert!(single.profile(5).is_none() && both.profile(5).is_some());
+        let baseline=single.inspect_original_neighbor_interval(0,5,5,1e-6,50000,100000,[0.,1.]).unwrap();
+        let actual=both.inspect_original_neighbor_interval(0,5,5,1e-6,50000,100000,[0.,1.]).unwrap();
+        assert_eq!(baseline.aligned,Some(true));
+        assert_eq!(actual.aligned,baseline.aligned);
+        assert_eq!(actual.upper_sine_squared,baseline.upper_sine_squared);
+        assert_eq!(actual.cells,baseline.cells);assert_eq!(actual.spans,baseline.spans);
+        assert!(actual.pending.is_empty() && baseline.pending.is_empty());
+        assert!(both.inspect_original_neighbor_interval(0,0,5,1e-6,50000,100000,[0.,1.]).is_err());
+        assert!(both.inspect_original_neighbor_interval(0,1,5,1e-6,50000,100000,[0.,1.]).is_err());
     }
     #[test]
     fn admitted_annular_body_checks_original_radius_patches() {

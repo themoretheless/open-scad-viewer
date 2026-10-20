@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "cause": "Floating command guidance intercepted Apply button clicks",
+  "fix": "Guidance occupies its own layout row",
+  "single_mouse_click_closes_command": true,
+  "max_vertex_delta_error_mm": 0,
+  "topology_ids_preserved": true
+}

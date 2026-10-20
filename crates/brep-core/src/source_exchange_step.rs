@@ -21,8 +21,8 @@ fn trim(w: &mut Writer, curve: usize, t: [f64; 2]) -> usize {
 }
 /// Native authority comes only from a private Body, original recipes and fresh
 /// endpoint/trim gates. Original curves and surfaces are emitted unchanged.
-pub fn prepare(
-    body: &crate::source_volume::Body,
+pub fn prepare<E: endpoints::ExchangeCarrier>(
+    body: &crate::source_volume::Body<E>,
     tolerance_mm: f64,
     limits: endpoints::Limits,
     max_trim_work: usize,
@@ -72,11 +72,11 @@ pub fn prepare(
             let address = shell.uses()[index][slot];
             usages.insert(
                 (address.face, address.wire, address.edge),
-                (index, edge.reversed()[slot]),
+                (index, edge.restriction_reversed(slot)),
             );
-            let source = emit_curve_source(&mut w, edge.uses()[slot].curve());
+            let source = emit_curve_source(&mut w, edge.fragment(slot).curve());
             let mut t = numeric.uses()[slot];
-            if edge.reversed()[slot] {
+            if edge.restriction_reversed(slot) {
                 t.reverse();
             }
             let pc = trim(&mut w, source, t);
@@ -91,7 +91,7 @@ pub fn prepare(
         ));
         let address = shell.uses()[index][0];
         let mut ids = shell.vertices()[address.face][address.wire][address.edge];
-        if edge.reversed()[0] {
+        if edge.restriction_reversed(0) {
             ids.reverse();
         }
         edge_entities.push(w.emit(format!(

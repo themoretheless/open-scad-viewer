@@ -1,7 +1,7 @@
 //! Complete-rectangle normal/line angle bounds, including both sides of knots.
 pub use crate::surface_boundary_secant::{OriginalBoundarySecant,boundary_secant_bounds,OriginalBoundaryDirection,boundary_secant_direction_bounds};
 pub use crate::surface_weight_profile::{WeightProfile,ProfileDirection,ProfileBoundary,ProfilePathReport,ProfilePoleLimits,ProfilePoleNormal,ProfilePoleCover,ProfileSection,ProfileEndTransition,ProfileTransitionRail,TransitionRegularityReport,qualify_weight_profile};
-pub use crate::profile_section_bridge::{ProfileSectionBridge,ProfileBridgeRail,RailConstrainedBridge};
+pub use crate::profile_section_bridge::{ProfileSectionBridge,ProfileBridgeRail,RailConstrainedBridge,ProfileBridgeChordCoverage};
 use crate::{check, distance_bounds::Interval as I, surface::Surface, Result};
 
 #[derive(Debug)]
@@ -368,10 +368,16 @@ pub(crate) fn jacobian_on(
         [s.knots_u[u], s.knots_u[u + 1]],
         [s.knots_v[v], s.knots_v[v + 1]],
     ];
-    let net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
     let origin = s.evaluate_validated(domain[0][0]*0.5+domain[0][1]*0.5,
         domain[1][0]*0.5+domain[1][1]*0.5)?.point;
-    jacobian_net_on(net, [p,q], span, domain, &origin)
+    // Translate original controls before homogeneous multiplication/extraction.
+    // The finite origin is only a numerical reference; interval subtraction
+    // encloses the exact translated expression and its unchanged derivatives.
+    let net = crate::curve_surface_composition::surface_net_on_with_weights_centered(
+        s,indices,span,|i,j|Ok(I::point(s.weights[i][j])),
+        std::array::from_fn(|k|origin[k]),
+    )?;
+    jacobian_net_on(net, [p,q], span, domain, &[0.;3])
 }
 /// Any finite translation cancels from the quotient derivative. The supplied
 /// homogeneous coefficients must describe the actual surface being qualified.
@@ -465,9 +471,16 @@ fn jet_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Jet
         [s.knots_u[u], s.knots_u[u + 1]],
         [s.knots_v[v], s.knots_v[v + 1]],
     ];
-    let net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
     let origin = &s.control_points[u - degrees[0]][v - degrees[1]];
-    jet_net_on(net,degrees,span,domain,origin)
+    let net = crate::curve_surface_composition::surface_net_on_with_weights_centered(
+        s,indices,span,|i,j|Ok(I::point(s.weights[i][j])),
+        std::array::from_fn(|k|origin[k]),
+    )?;
+    let mut jet=jet_net_on(net,degrees,span,domain,&[0.;3])?;
+    // Derivatives are translation-invariant, but callers still receive the
+    // actual original world-position enclosure.
+    for k in 0..3 {jet.point[k]=jet.point[k].add(I::point(origin[k]))?;}
+    Ok(jet)
 }
 pub(crate) fn jet_net_on(mut net: Net, degrees:[usize;2], span:[[f64;2];2],
     domain:[[f64;2];2], origin:&[f64]) -> Result<JetBounds> {
@@ -767,7 +780,7 @@ pub fn inspect(
 ) -> Result<Report> {
     validate_input(s, domain, direction, max_sine_squared, max_spans)?;
     let (components, spans) = normal_bounds_validated(s, domain, max_spans)?;
-    let mut out = Report {
+    let out = Report {
         aligned: None,
         sine_squared_interval: None,
         normal_components: components,
@@ -777,6 +790,20 @@ pub fn inspect(
     let Some(hull) = components else {
         return Ok(out);
     };
+    let mut report=inspect_normal_enclosure(hull,direction,max_sine_squared)?;
+    report.spans=spans;
+    Ok(report)
+}
+
+/// Angle bounds from a caller-proven normal enclosure. This algebraic report
+/// does not admit a surface, material chord or thickness certificate.
+pub fn inspect_normal_enclosure(hull:[[f64;2];3],direction:[f64;3],max_sine_squared:f64)->Result<Report> {
+    check(hull.iter().all(|r|r.iter().all(|x|x.is_finite()) && r[0]<=r[1])
+        && direction.iter().all(|x|x.is_finite()) && direction.iter().any(|x|*x!=0.)
+        && max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+        "Choose finite normal enclosures, nonzero direction and angle tolerance below one")?;
+    let mut out=Report {aligned:None,sine_squared_interval:None,normal_components:Some(hull),spans:0,
+        reason:"normal-unresolved"};
     if hull.iter().all(|r| r[0] <= 0. && r[1] >= 0.) {
         out.reason = "normal-unresolved";
         return Ok(out);
@@ -1118,7 +1145,8 @@ pub(crate) fn inspect_pair_bounds(
 
 /// Exclude every chord in two point enclosures from the required endpoint
 /// normal angle. Callers must bind these enclosures to their original domains.
-/// Overlap, zero direction and numeric uncertainty never exclude a chord.
+/// Coordinate overlap alone never excludes a chord. Incompatible endpoint
+/// normal cones can exclude all nonzero directions despite such overlap.
 pub fn endpoint_chord_excluded(
     points: [[[f64; 2]; 3]; 2],
     normals: [Option<[[f64; 2]; 3]>; 2],
@@ -1128,6 +1156,22 @@ pub fn endpoint_chord_excluded(
         && points.iter().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1])
         && normals.iter().flatten().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1]),
         "Finite original point enclosures and endpoint angular tolerance")?;
+    if max_sine_squared < 0.5 {
+        if let [Some(a),Some(b)] = normals {
+            // Two unoriented normals within alpha of one line must lie within
+            // 2*alpha of each other; sin^2(2*alpha)=4*s*(1-s).
+            let s=I::point(max_sine_squared);
+            let threshold=I::point(4.).mul(s)?.mul(I::point(1.).sub(s)?)?.hi;
+            if threshold < 1. {
+                match inspect_pair_bounds([a,b],threshold) {
+                    Ok(report) if report.aligned==Some(false)=>return Ok(true),
+                    Ok(_)=>{},
+                    Err(error) if error.code=="NURBS_NUMERIC_ERROR"=>{},
+                    Err(error)=>return Err(error),
+                }
+            }
+        }
+    }
     let mut chord=[[0.;2];3];
     for k in 0..3 {
         let difference=I::new(points[1][k][0],points[1][k][1])?
@@ -1147,6 +1191,49 @@ pub fn endpoint_chord_excluded(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn original_rational_cylinder_normals_preserve_far_translation_and_scale() {
+        let w=std::f64::consts::FRAC_1_SQRT_2;
+        for scale in [1e-3,1.,1e3] {
+            for shift in [0.,1e6] {
+                let s=crate::surface::Surface {
+                    degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],
+                    knots_v:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:[0.,1.].into_iter().map(|x|
+                        [[x,1.,0.],[x,1.,1.],[x,0.,1.]].into_iter().map(|p|
+                            vec![shift+scale*p[0],-2.*shift+scale*p[1],3.*shift+scale*p[2]]).collect()).collect(),
+                    weights:vec![vec![1.,w,1.];2],periodic_u:false,periodic_v:false,
+                };
+                let (normal,spent)=super::normal_bounds(&s,[[0.1,0.11],[0.1,0.11]],1).unwrap();
+                let normal=normal.unwrap();assert_eq!(spent,1);
+                assert!(normal[0][0]<=0. && normal[0][1]>=0.);
+                assert!(normal[0][1]-normal[0][0]<1e-6*scale*scale,
+                    "original cylinder axial normal scale={scale} shift={shift} bounds={normal:?}");
+                assert!(normal[1][1]<0. && normal[2][1]<0.,
+                    "nonzero transverse normal directions must survive translation");
+                let jet=super::jet_on(&s,[1,2],[[0.1,0.11],[0.1,0.11]]).unwrap();
+                for derivative in jet.second {
+                    assert!(derivative[0].lo<=0. && derivative[0].hi>=0.
+                        && derivative[0].hi-derivative[0].lo<0.1*scale,
+                        "original axial second partial scale={scale} shift={shift} bounds={derivative:?}");
+                }
+                let point=s.evaluate_validated(0.105,0.105).unwrap().point;
+                for k in 0..3 {assert!(jet.point[k].lo<=point[k] && point[k]<=jet.point[k].hi,
+                    "centering must retain the original world position");}
+            }
+        }
+    }
+    #[test]
+    fn incompatible_endpoint_normals_exclude_overlapping_chord_boxes() {
+        let boxes=[[[-1.,1.];3];2];
+        let x=Some([[1.,1.],[0.,0.],[0.,0.]]);
+        let y=Some([[0.,0.],[1.,1.],[0.,0.]]);
+        assert!(super::endpoint_chord_excluded(boxes,[x,y],1e-4).unwrap());
+        assert!(super::endpoint_chord_excluded(boxes,[y,x],1e-4).unwrap());
+        assert!(!super::endpoint_chord_excluded(boxes,[x,y],0.5).unwrap());
+        assert!(!super::endpoint_chord_excluded(boxes,[x,x],1e-4).unwrap());
+        assert!(!super::endpoint_chord_excluded(boxes,[x,Some([[-1.,1.];3])],1e-4).unwrap());
+    }
     #[test]
     fn endpoint_chord_requires_continuous_direction_exclusion() {
         use super::endpoint_chord_excluded as excluded;

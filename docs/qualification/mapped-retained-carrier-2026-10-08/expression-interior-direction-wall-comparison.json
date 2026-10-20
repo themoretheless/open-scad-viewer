@@ -1,0 +1,171 @@
+{
+  "scope": "original-retained-transition-support-products",
+  "complete": false,
+  "query": {
+    "minimum_mm": 1.0,
+    "max_sine_squared": 0.0001,
+    "tolerance_uv": 0.05
+  },
+  "before_pending_domains": 4443,
+  "after_pending_domains": 4337,
+  "before_spans": 80688,
+  "after_spans": 81990,
+  "resolved_pairs": [],
+  "new_pending_pairs": [],
+  "changed_pairs": [
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "before_domains": 414,
+      "after_domains": 406,
+      "delta": -8
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "before_domains": 32,
+      "after_domains": 20,
+      "delta": -12
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "before_domains": 90,
+      "after_domains": 56,
+      "delta": -34
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "before_domains": 88,
+      "after_domains": 84,
+      "delta": -4
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "before_domains": 32,
+      "after_domains": 20,
+      "delta": -12
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "before_domains": 28,
+      "after_domains": 18,
+      "delta": -10
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "before_domains": 32,
+      "after_domains": 16,
+      "delta": -16
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "before_domains": 64,
+      "after_domains": 44,
+      "delta": -20
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "before_domains": 56,
+      "after_domains": 34,
+      "delta": -22
+    },
+    {
+      "faces": [
+        6,
+        27
+      ],
+      "before_domains": 48,
+      "after_domains": 30,
+      "delta": -18
+    },
+    {
+      "faces": [
+        16,
+        16
+      ],
+      "before_domains": 101,
+      "after_domains": 116,
+      "delta": 15
+    },
+    {
+      "faces": [
+        17,
+        17
+      ],
+      "before_domains": 100,
+      "after_domains": 128,
+      "delta": 28
+    },
+    {
+      "faces": [
+        20,
+        20
+      ],
+      "before_domains": 88,
+      "after_domains": 116,
+      "delta": 28
+    },
+    {
+      "faces": [
+        21,
+        21
+      ],
+      "before_domains": 100,
+      "after_domains": 107,
+      "delta": 7
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "before_domains": 38,
+      "after_domains": 26,
+      "delta": -12
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "before_domains": 32,
+      "after_domains": 20,
+      "delta": -12
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "before_domains": 272,
+      "after_domains": 268,
+      "delta": -4
+    }
+  ],
+  "interpretation": "Domain counts depend on adaptive subdivision; fewer pending cells do not establish a physical wall minimum or a resolved source pair."
+}

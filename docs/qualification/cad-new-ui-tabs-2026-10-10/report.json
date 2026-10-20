@@ -1,0 +1,53 @@
+{
+  "passed": true,
+  "scope": "Production new UI, actual two browser tabs on isolated origin 5296; external storage notification, local edit conflict, JSON backup, load saved version, Undo, Redo and reload. No process-crash or general geometry qualification.",
+  "wasmSha256": "ffb7c3ba14d85c5e5872f2b5bebe17dba49da81bef48c27b26ec27ab69983eaf",
+  "localBranch": "cube + wedge",
+  "sharedBranch": "two cubes",
+  "exactLocalUndo": true,
+  "exactSharedRedoReload": true,
+  "consoleErrors": [],
+  "stages": [
+    {
+      "stage": "local",
+      "sha256": "40de5bcd403ef13fea7d35fdd6bc146bd1326f91099732229a094b0fee00dc5a",
+      "bodyIds": [
+        "a30443e4-ea1f-4b22-be2f-19649bdf69cc",
+        "78117761-5dbc-4ecf-9438-2666b49da316"
+      ]
+    },
+    {
+      "stage": "shared",
+      "sha256": "b24837888edc2795813ac5ac5b84025edab5379ebdf42748bbc7b6e598ca4638",
+      "bodyIds": [
+        "a30443e4-ea1f-4b22-be2f-19649bdf69cc",
+        "5e54bfff-6bcc-4ac1-bc0d-986c8ca26ffc"
+      ]
+    },
+    {
+      "stage": "undo-local",
+      "sha256": "40de5bcd403ef13fea7d35fdd6bc146bd1326f91099732229a094b0fee00dc5a",
+      "bodyIds": [
+        "a30443e4-ea1f-4b22-be2f-19649bdf69cc",
+        "78117761-5dbc-4ecf-9438-2666b49da316"
+      ]
+    },
+    {
+      "stage": "redo-shared",
+      "sha256": "b24837888edc2795813ac5ac5b84025edab5379ebdf42748bbc7b6e598ca4638",
+      "bodyIds": [
+        "a30443e4-ea1f-4b22-be2f-19649bdf69cc",
+        "5e54bfff-6bcc-4ac1-bc0d-986c8ca26ffc"
+      ]
+    },
+    {
+      "stage": "reloaded-shared",
+      "sha256": "b24837888edc2795813ac5ac5b84025edab5379ebdf42748bbc7b6e598ca4638",
+      "bodyIds": [
+        "a30443e4-ea1f-4b22-be2f-19649bdf69cc",
+        "5e54bfff-6bcc-4ac1-bc0d-986c8ca26ffc"
+      ]
+    }
+  ],
+  "screenshot": "/tmp/cad-new-ui-tabs-reloaded-20261010.png"
+}

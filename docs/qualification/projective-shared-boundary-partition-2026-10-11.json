@@ -1,0 +1,33 @@
+{
+  "scope": "Root-ended rational-linear parameter correspondence, common boundary samples and chord-error partition on the analytical parabola fixture; not shell/Model admission",
+  "publishedWasmChanged": false,
+  "files": {
+    "source_projective_use.rs": "f5c01a9670ff88c64faeffdc4c9e9d8142c5abc8f49d5b68e6f45fba649e9f62",
+    "source_projective_edge.rs": "56857706f32668a18cfbdc19af40ec82ce921f40ed07e080895f63f09ea69ca2",
+    "source_shared_edge_sample.rs": "8c0ae819bf2b8a671077cddd667cdc4c7e03f0da16da07ccc22018a365e1dc35",
+    "source_shared_edge_endpoint.rs": "45c347599be6b3a0ad853886a424406e2b5e64062cd367847a7d48db99272178",
+    "source_shared_edge_mesh.rs": "fd59ff5ce47b14b41e6d547c7d53a46495afdbf8a2101b7e728639bb38c78599",
+    "source_seam_tangency.rs": "c36efc042b091a2d90837dd5743035cfb22f44e1f33d4a3358046362ce5d40d2"
+  },
+  "tests": {
+    "projectiveIntegration": {
+      "passed": true,
+      "log": "/tmp/source-projective-partition-uv-oracle-20261011.log"
+    },
+    "sharedEdgeRegression": {
+      "passed": 12,
+      "log": "/tmp/source-projective-partition-regression-20261011.log"
+    },
+    "mappedEdgeRegression": {
+      "passed": 9,
+      "log": "/tmp/source-projective-mesh-mapped-regression-20261011.log"
+    }
+  },
+  "remaining": [
+    "shell incidence integration",
+    "face clipping and vertex-link verification",
+    "closed embedded material body",
+    "whole-wall/radius/self-intersection qualification",
+    "WASM/worker/UI publication"
+  ]
+}

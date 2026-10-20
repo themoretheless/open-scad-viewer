@@ -1,0 +1,15 @@
+{
+  "schema": "compiled-wasm-snapshot/1",
+  "sourceManifest": "docs/qualification/mapped-retained-carrier-2026-10-08/source-fixed-point-cache-native-inputs-2026-10-11.json",
+  "sourceManifestSha256": "53a2b3b28821b9a8c8b662d0752b1275152d2455a0d929c1644b34b307e0cc1b",
+  "allInputHashesMatch": true,
+  "inputFiles": 1812,
+  "rawPath": "/Users/themoretheless/.codex/tmp/source-fixed-point-cache-wasm-stage-2026-10-11/geometry-kernel.raw.wasm",
+  "rawSha256": "46612ed8682805f24945e6b834e5f15775e65e04857261e31f23624d973c4e72",
+  "rawBytes": 16390436,
+  "workerQualified": false,
+  "publicUpdated": false,
+  "scope": "Diagnostic raw compile omitted canonical strip/remap flags; not eligible for packaging or performance comparison",
+  "canonicalBuild": false,
+  "optimization": "intentionally canceled before output: owned optimizer 33801, session 56224 exit 1"
+}

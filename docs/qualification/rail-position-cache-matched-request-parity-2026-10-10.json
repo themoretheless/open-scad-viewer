@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "sameResponseRequest": true,
+  "allNonWallResponseFieldsExact": true,
+  "pendingProductsExact": true,
+  "pendingCount": 4081,
+  "spansBefore": 18899,
+  "spansAfter": 17759,
+  "spansSaved": 1140,
+  "spanReductionPercent": 6.032065188634319,
+  "oldWorkerReport": "docs/qualification/query-order-aligned-profile-worker-2026-10-10/expression-inspection-worker-report.json",
+  "oldWasmSha256": "a3902e6ed3541b67463f1839f278668be4de9b9085cf2e09da6cd6e281555be8",
+  "newNativeReplay": "docs/qualification/mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-native-2026-10-10.json",
+  "newRequestSha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+  "scope": "Previous published WASM versus new native source at exactly equal response request; coverage and other report fields remain exact. Different runtimes and machine load prevent elapsed-time speedup inference. No whole-wall thickness admission."
+}

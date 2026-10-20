@@ -1,0 +1,31 @@
+{
+  "schema": "expression-contact-regions-ui/1",
+  "passed": true,
+  "tests": {
+    "files": 3,
+    "passed": 67,
+    "failed": 0,
+    "log": "/tmp/expression-contact-region-ui-retry-20261011.log",
+    "sha256": "6d8813fbbb1277034ee435f22c6874abff10727765c8604786d00b87492754a0"
+  },
+  "vueTsc": {
+    "exitCode": 0,
+    "log": "/tmp/expression-contact-region-types-20261011.log"
+  },
+  "files": [
+    {
+      "path": "src/components/ExpressionShellCheck.vue",
+      "sha256": "363d8ed99fa223fbb1c729214f43f3f67c0f666ab6220c187aec6e66f824e25e"
+    },
+    {
+      "path": "tests/expressionRadiusPanel.test.ts",
+      "sha256": "926a3ad960aaade8b0c549c4458e5d164803b0318261ba3af008c7de8e6a91cc"
+    },
+    {
+      "path": "tests/expressionInspectionFocus.test.ts",
+      "sha256": "4f2f488a6583bdca7ddaa8c59d147483cc42bf7b43f39de50b9bcdac08ec7e22"
+    }
+  ],
+  "scope": "Pending contact UI: per-region UV interval selection, explicit unverified versus confirmed self-intersection distinction, transition display limits, inactive highlight disabled, selection reset and invalid-region handling. Component/controller tests only; no new geometric proof or real-browser panel qualification.",
+  "initialTestFailure": "Custom renderer input v-model stores value on element, not props; assertion repaired. Failed run preserved at /tmp/expression-contact-region-ui-20261011.log."
+}

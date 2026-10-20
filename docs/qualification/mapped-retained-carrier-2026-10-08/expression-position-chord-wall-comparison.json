@@ -1,0 +1,17 @@
+{
+  "pending_identical": false,
+  "before": {
+    "spans": 40711,
+    "budget_pending": 4287,
+    "profile_transition_checked": 1090,
+    "profile_transition_excluded": 20,
+    "profile_transition_spans": 1305
+  },
+  "after": {
+    "spans": 41796,
+    "budget_pending": 4257,
+    "profile_transition_checked": 1087,
+    "profile_transition_excluded": 35,
+    "profile_transition_spans": 2374
+  }
+}

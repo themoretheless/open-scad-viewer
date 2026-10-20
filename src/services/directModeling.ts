@@ -1,3 +1,4 @@
+import {packHistoryText,unpackHistoryText,sweepHistoryTextPool,type HistoryText} from './historyText'
 import {qualifySourceBodyRecord,type SourceBodyRecord} from './sourceBodyArchive'
 import {validCurveOffsetRegion} from './curveOffsetRegion'
 import {validCurveOffsetConstruction} from './curveOffsetConstruction'
@@ -261,9 +262,12 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
 }
 
 /** Inactive snapshots retain compact text only; at most one current state owns geometry. */
-interface DirectSnapshot { characters: number; text: string }
+type DirectSnapshot = HistoryText
 export class DirectHistory {
   private restoreGeneration = 0
+  private textPool = new Map<string,string>()
+  private snapshot(text:string):DirectSnapshot { return packHistoryText(text,this.textPool) }
+  private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
   private current: DirectSnapshot & {document?:DirectDocument}
@@ -271,24 +275,25 @@ export class DirectHistory {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
     const validatedText = serializeDirectDocument(validated)
-    this.current = { document: validated, characters: validatedText.length, text: validatedText }
+    this.current = { ...this.snapshot(validatedText), document: validated }
   }
   private get currentDocument():DirectDocument {
-    return this.current.document ??= parseDirectDocument(this.current.text)
+    return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current))
   }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
   ensureBlenderProjectId(): string {
     if(this.currentDocument.blenderProjectId)return this.currentDocument.blenderProjectId
     const id=crypto.randomUUID()
     const stamp=(snapshot:DirectSnapshot):DirectSnapshot=>{
-      const document=JSON.parse(snapshot.text) as DirectDocument
+      const document=JSON.parse(unpackHistoryText(snapshot)) as DirectDocument
       if(document.blenderProjectId)return snapshot
       document.blenderProjectId=id
       const text=stringifyMeshJson(document)
-      return {text,characters:text.length}
+      return this.snapshot(text)
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
     this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
+    this.sweep()
     return id
   }
   get document() { return clone(this.currentDocument) }
@@ -296,16 +301,16 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
-    const d=this.current.document??JSON.parse(this.current.text) as DirectDocument
+    const d=this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
     return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
-  get snapshotKey() { return this.current.text }
+  get snapshotKey() { return unpackHistoryText(this.current) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   get storageStats() {
     return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:this.current.document?1:0,
-      retainedCharacters:this.current.characters+[...this.past,...this.future].reduce((sum,snapshot)=>sum+snapshot.characters,0)}
+      retainedCharacters:this.sweep()}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
     this.commitValidated(parseDirectDocument(stringifyMeshJson(document)),validateChange)
@@ -320,35 +325,35 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= (this.current.document??JSON.parse(this.current.text) as DirectDocument).blenderProjectId
+    next.blenderProjectId ??= (this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument).blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     validateChange?.(clone(next))
     if(this.current!==base)throw Error('History changed during commit validation.')
     const nextText = serializeDirectDocument(next)
-    if (nextText.length === this.current.characters && nextText === this.current.text) return
-    this.past.push({text:this.current.text,characters:this.current.characters})
-    // The existing bound counts serialized characters, not actual heap bytes.
-    // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
-    let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0)
+    if (nextText.length === this.current.characters && nextText === unpackHistoryText(this.current)) return
+    this.past.push({chunks:this.current.chunks,characters:this.current.characters})
+    this.current = { ...this.snapshot(nextText), document: next }; this.future = []
+    // Count unique retained text, including the current snapshot. Keep at least
+    // one undo state even when a single document exceeds the storage budget.
+    let retained = this.sweep()
     while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
-      retained -= this.past.shift()!.characters
+      this.past.shift(); retained = this.sweep()
     }
-    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []
   }
   undo() {
     const d = this.past.at(-1)
     if (d) {
-      const document=parseDirectDocument(d.text)
-      this.past.pop();this.future.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      const document=parseDirectDocument(unpackHistoryText(d))
+      this.past.pop();this.future.push({chunks:this.current.chunks,characters:this.current.characters});this.current={...d,document}
     }
     return this.document
   }
   redo() {
     const d = this.future.at(-1)
     if (d) {
-      const document=parseDirectDocument(d.text)
-      this.future.pop();this.past.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      const document=parseDirectDocument(unpackHistoryText(d))
+      this.future.pop();this.past.push({chunks:this.current.chunks,characters:this.current.characters});this.current={...d,document}
     }
     return this.document
   }
@@ -359,7 +364,7 @@ export class DirectHistory {
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
     const document=clone(loaded),text=serializeDirectDocument(document)
-    this.current={document,text,characters:text.length};this.past=[];this.future=[]
+    this.current={...this.snapshot(text),document};this.past=[];this.future=[];this.sweep()
     return true
   }
   cancelRestore() { this.restoreGeneration++ }
@@ -370,14 +375,14 @@ export class DirectHistory {
     const from=direction==='undo'?this.past:this.future,to=direction==='undo'?this.future:this.past
     const snapshot=from.at(-1)
     if(!snapshot)return false
-    const loaded=await load(snapshot.text)
+    const loaded=await load(unpackHistoryText(snapshot))
     if(generation!==this.restoreGeneration||this.current!==base||from.at(-1)!==snapshot)return false
     // A response for another snapshot cannot move the stacks. Geometry validation
     // belongs to the loader; re-parsing here would block the main thread again.
-    if(serializeDirectDocument(loaded)!==snapshot.text)throw Error('History restore returned a different document.')
+    if(serializeDirectDocument(loaded)!==unpackHistoryText(snapshot))throw Error('History restore returned a different document.')
     // Retain the already validated immutable snapshot; materialize a private copy
     // only if a synchronous history consumer asks for geometry later.
-    from.pop();to.push({text:base.text,characters:base.characters})
+    from.pop();to.push({chunks:base.chunks,characters:base.characters})
     this.current={...snapshot}
     return true
   }

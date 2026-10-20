@@ -1,0 +1,25 @@
+{
+  "samePendingDomainsAndReasons": true,
+  "sameCoverageAndExclusionCounters": true,
+  "beforeSpans": 38693,
+  "afterSpans": 35238,
+  "savedSpans": 3455,
+  "reductionFraction": 0.08929263691106915,
+  "beforeStages": {
+    "corrected_pair": 2684,
+    "normal": 3098,
+    "original_pair": 8870,
+    "position": 1904,
+    "retained_pair": 12341,
+    "shared_corner": 6952
+  },
+  "afterStages": {
+    "corrected_pair": 2684,
+    "normal": 3098,
+    "original_pair": 5415,
+    "position": 1904,
+    "retained_pair": 12341,
+    "shared_corner": 6952
+  },
+  "wholeWallQualified": false
+}

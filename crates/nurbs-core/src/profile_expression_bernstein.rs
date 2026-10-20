@@ -1,8 +1,8 @@
 //! Correlated homogeneous coefficients of the exact rail-corrected expression.
 //! Local single-span recipes only. No rounded replacement Surface is created.
 use crate::{
-    bernstein_interpolation, check, distance_bounds::Interval as I,
-    profile_section_bridge::RailConstrainedBridge, Result,
+    Result, bernstein_interpolation, check, distance_bounds::Interval as I,
+    profile_section_bridge::RailConstrainedBridge,
 };
 type Net = Vec<Vec<[I; 4]>>;
 fn single_span(knots: &[f64], degree: usize, count: usize, domain: [f64; 2]) -> Option<usize> {
@@ -98,11 +98,69 @@ fn law_coefficients(
 pub struct CoefficientRadiusBound {
     pub squared_residual: Option<[f64; 2]>,
     pub error_upper: Option<f64>,
+    /// Whole-cell lower bound on absolute radial error; zero is inconclusive.
+    pub error_lower: Option<f64>,
+    pub spans: usize,
+    pub coefficient_work: usize,
+    pub reason: &'static str,
+}
+pub struct CoefficientLineReport {
+    pub intersections: Option<crate::ray_surface::Report>,
     pub spans: usize,
     pub coefficient_work: usize,
     pub reason: &'static str,
 }
 impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
+    /// Isolate roots of the actual corrected expression, without a rounded
+    /// replacement Surface. UV trim and material crossing parity are separate.
+    pub fn inspect_line_intersections(
+        &self,
+        domain: [[f64; 2]; 2],
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        cells: usize,
+        spans: usize,
+        coefficient_work: usize,
+    ) -> Result<CoefficientLineReport> {
+        check(
+            origin.iter().chain(&direction).all(|v| v.is_finite())
+                && direction.iter().any(|v| *v != 0.)
+                && tolerance_uv.is_finite()
+                && tolerance_uv > 0.
+                && cells <= 100000,
+            "Choose a finite line and bounded expression root work",
+        )?;
+        let (net, spans, coefficient_work) =
+            self.homogeneous_coefficients(domain, spans, coefficient_work)?;
+        let Some(net) = net else {
+            return Ok(CoefficientLineReport {
+                intersections: None,
+                spans,
+                coefficient_work,
+                reason: "expression-line-coefficients-unresolved",
+            });
+        };
+        let roots = crate::ray_surface::intersections_coefficients(
+            &net,
+            domain,
+            origin,
+            direction,
+            tolerance_uv,
+            cells,
+        )?;
+        let reason = if roots.complete {
+            "expression-line-roots-isolated"
+        } else {
+            "expression-line-roots-unresolved"
+        };
+        Ok(CoefficientLineReport {
+            intersections: Some(roots),
+            spans,
+            coefficient_work,
+            reason,
+        })
+    }
     pub fn inspect_radius_coefficients(
         &self,
         centers: &crate::curve::Curve,
@@ -124,6 +182,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         let mut out = CoefficientRadiusBound {
             squared_residual: None,
             error_upper: None,
+            error_lower: None,
             spans,
             coefficient_work: work,
             reason: "expression-radius-coefficients-unresolved",
@@ -183,6 +242,19 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         if let Some((residual, error)) = bound {
             out.squared_residual = Some(residual);
             out.error_upper = Some(error);
+            if radius.iter().all(|h| h[2].lo > 0.) {
+                let radius_upper = radius.iter().map(|h| h[0].div(h[2]).map(|r| r.hi))
+                    .collect::<Result<Vec<_>>>()?.into_iter().fold(0., f64::max);
+                let minimum = if residual[0] > 0. { residual[0] }
+                    else if residual[1] < 0. { -residual[1] } else { 0. };
+                // |S-C| <= r + error_upper, hence |S-C|+r <= 2*r_upper+error_upper.
+                // Divide the signed residual's minimum magnitude outward.
+                let denominator = I::point(2.).mul(I::point(radius_upper))?
+                    .add(I::point(error))?.hi;
+                out.error_lower = Some(if minimum > 0. && denominator > 0. {
+                    I::point(minimum).div(I::point(denominator))?.lo.max(0.)
+                } else { 0. });
+            }
             out.reason = "expression-radius-coefficient-bound";
         }
         Ok(out)
@@ -347,6 +419,22 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unsupported_line_degree_does_not_hide_invalid_queries() {
+        let s = crate::surface::Surface {
+            degree_u:17,degree_v:1,
+            knots_u:[vec![0.;18],vec![1.;18]].concat(),knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..18).map(|i|vec![vec![i as f64,0.,0.],vec![i as f64,1.,0.]]).collect(),
+            weights:vec![vec![1.;2];18],periodic_u:false,periodic_v:false,
+        };
+        let p = crate::normal_alignment::qualify_weight_profile(&s,[0,0],100).unwrap().0.unwrap();
+        let query = |domain,direction| p.inspect_line_intersections(domain,[0.;3],direction,1e-5,100,100,10000);
+        assert!(query([[0.,1.];2],[0.;3]).is_err());
+        assert!(query([[-1.,1.],[0.,1.]],[0.,0.,1.]).is_err());
+        let valid = query([[0.,1.];2],[0.,0.,1.]).unwrap();
+        assert!(valid.intersections.is_none());
+        assert_eq!(valid.reason,"profile-line-degree-limit");
+    }
     fn evaluate(mut values: Vec<[I; 4]>, t: f64) -> [I; 4] {
         let q = I::point(1.).sub(I::point(t)).unwrap();
         while values.len() > 1 {
@@ -364,6 +452,32 @@ mod tests {
                 .collect();
         }
         values[0]
+    }
+    #[test]
+    fn radial_lower_bounds_enclose_exact_cylinder_error_at_multiple_scales() {
+        for scale in [1e-50,1.,1e8] {
+            let w=std::f64::consts::FRAC_1_SQRT_2;
+            let surface=crate::surface::Surface {
+                degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+                control_points:[0.,scale].into_iter().map(|x|vec![vec![x,scale,0.],vec![x,scale,scale],vec![x,0.,scale]]).collect(),
+                weights:vec![vec![1.,w,1.];2],periodic_u:false,periodic_v:false,
+            };
+            let profile=crate::normal_alignment::qualify_weight_profile(&surface,[0,0],6).unwrap().0.unwrap();
+            let bridge=crate::normal_alignment::ProfileSectionBridge::new(
+                profile.section(0,0.).unwrap(),profile.section(0,1.).unwrap(),[1.;2]).unwrap();
+            let bridge=bridge.constrain_original_rails(100).unwrap().0.unwrap();
+            let centers=crate::curve::Curve {degree:1,knots:vec![0.,0.,1.,1.],
+                control_points:vec![vec![0.,0.,0.],vec![scale,0.,0.]],weights:vec![1.;2],periodic:false};
+            for factor in [0.,1.,1.25] {
+                let radius=crate::curve::Curve {degree:1,knots:vec![0.,0.,1.,1.],
+                    control_points:vec![vec![scale*factor,0.];2],weights:vec![1.;2],periodic:false};
+                let report=bridge.inspect_radius_coefficients(&centers,&radius,[[0.,1.];2],[[0.,1.];2],100000,100000000).unwrap();
+                let exact=scale*(1.-factor).abs();
+                let lower=report.error_lower.unwrap();let upper=report.error_upper.unwrap();
+                assert!(lower<=exact && exact<=upper,"scale={scale} factor={factor}: {lower} <= {exact} <= {upper}");
+                if factor!=1. {assert!(lower>0.);}
+            }
+        }
     }
     #[test]
     fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
@@ -385,6 +499,61 @@ mod tests {
             .unwrap()
             .0
             .unwrap();
+        let mut multiple = surface.clone();
+        multiple.knots_u = vec![0., 0., 0.5, 1., 1.];
+        multiple.control_points = [0., 0.5, 1.]
+            .into_iter()
+            .map(|x| vec![vec![x, 1., 0.], vec![x, 1., 1.], vec![x, 0., 1.]])
+            .collect();
+        multiple.weights = vec![vec![1., w, 1.]; 3];
+        let multi = crate::normal_alignment::qualify_weight_profile(&multiple, [0, 0], 9)
+            .unwrap()
+            .0
+            .unwrap();
+        let at_knot = multi
+            .inspect_line_intersections(
+                [[0., 1.]; 2],
+                [0.5, 0., 0.],
+                [0., 1., 1.],
+                1e-5,
+                1000,
+                10,
+                100000,
+            )
+            .unwrap()
+            .intersections
+            .unwrap();
+        assert!(!at_knot.complete && !at_knot.unresolved.is_empty());
+        assert!(at_knot.roots.is_empty());
+        let limited = multi
+            .inspect_line_intersections(
+                [[0., 1.]; 2],
+                [0.75, 0., 0.],
+                [0., 1., 1.],
+                1e-5,
+                1000,
+                1,
+                100000,
+            )
+            .unwrap();
+        assert_eq!(limited.spans, 1);
+        let limited = limited.intersections.unwrap();
+        assert!(!limited.complete && limited.unresolved.iter().any(|uv| uv[0] == [0.5, 1.]));
+        let multi = multi
+            .inspect_line_intersections(
+                [[0., 1.]; 2],
+                [0.25, 0., 0.],
+                [0., 1., 1.],
+                1e-5,
+                1000,
+                10,
+                100000,
+            )
+            .unwrap();
+        assert_eq!(multi.spans, 2);
+        let multi = multi.intersections.unwrap();
+        assert!(multi.complete && multi.roots.len() == 1);
+        assert!(multi.roots[0].uv[0][0] <= 0.25 && multi.roots[0].uv[0][1] >= 0.25);
         let bridge = crate::normal_alignment::ProfileSectionBridge::new(
             profile.section(0, 0.).unwrap(),
             profile.section(0, 1.).unwrap(),
@@ -392,21 +561,80 @@ mod tests {
         )
         .unwrap();
         let corrected = bridge.constrain_original_rails(100).unwrap().0.unwrap();
-        assert!(corrected
-            .homogeneous_coefficients([[0., 1.]; 2], 0, 1000000)
-            .unwrap()
-            .0
-            .is_none());
-        assert!(corrected
-            .homogeneous_coefficients([[0., 1.]; 2], 100000, 0)
-            .unwrap()
-            .0
-            .is_none());
+        let endpoints=[[[0.,1.],[0.1,0.2]],[[0.,1.],[0.8,0.9]]];
+        assert_eq!(corrected.inspect_self_chord_pair(endpoints,1e-4,0).unwrap(),(None,0));
+        assert!(corrected.inspect_self_chord_pair(endpoints,1e-4,10000).unwrap().0.is_some());
+        assert_eq!(corrected.inspect_self_chords([[0.,1.];2],1e-4,0).unwrap(),(None,0));
+        assert!(corrected.inspect_self_chords([[0.,1.],[0.2,0.3]],1e-4,10000).unwrap().0.is_some());
+        assert!(corrected.inspect_self_chords([[0.,1.],[-0.1,0.3]],1e-4,0).is_err());
+        let retained = profile
+            .inspect_line_intersections(
+                [[0.25, 0.75], [0., 1.]],
+                [0.5, 0., 0.],
+                [0., 1., 1.],
+                1e-5,
+                1000,
+                100,
+                100000,
+            )
+            .unwrap();
+        let retained = retained.intersections.unwrap();
+        assert!(retained.complete && retained.roots.len() == 1);
+        assert!(retained.roots[0].uv[0][0] <= 0.5 && retained.roots[0].uv[0][1] >= 0.5);
+        assert!(
+            profile
+                .inspect_line_intersections(
+                    [[0.25, 0.75], [0., 1.]],
+                    [0.5, 0., 0.],
+                    [0., 1., 1.],
+                    1e-5,
+                    1000,
+                    0,
+                    100000
+                )
+                .unwrap()
+                .intersections
+                .unwrap()
+                .unresolved
+                .len()
+                == 1
+        );
+
+        assert!(
+            corrected
+                .homogeneous_coefficients([[0., 1.]; 2], 0, 1000000)
+                .unwrap()
+                .0
+                .is_none()
+        );
+        assert!(
+            corrected
+                .homogeneous_coefficients([[0., 1.]; 2], 100000, 0)
+                .unwrap()
+                .0
+                .is_none()
+        );
         let (net, spans, work) = corrected
             .homogeneous_coefficients([[0., 1.]; 2], 100000, 1000000)
             .unwrap();
         let net = net.unwrap();
         assert!(spans <= 100000 && work <= 1000000);
+        let line = corrected
+            .inspect_line_intersections(
+                [[0., 1.]; 2],
+                [0.5, 0., 0.],
+                [0., 1., 1.],
+                1e-5,
+                1000,
+                100000,
+                100000000,
+            )
+            .unwrap();
+        let roots = line.intersections.unwrap();
+        assert!(roots.complete, "{}", line.reason);
+        assert_eq!(roots.roots.len(), 1);
+        let expected = (1. + 2. * w) / (2. + 2. * w);
+        assert!(roots.roots[0].parameter[0] <= expected && roots.roots[0].parameter[1] >= expected);
         let center_law = crate::curve::Curve {
             degree: 1,
             knots: vec![2., 2., 4., 4.],
@@ -433,18 +661,20 @@ mod tests {
             .unwrap();
         assert!(whole.error_upper.unwrap() < 1e-6);
         assert!(whole.spans <= 100000 && whole.coefficient_work <= 100000000);
-        assert!(corrected
-            .inspect_radius_coefficients(
-                &center_law,
-                &radius_law,
-                [[2.5, 3.5], [3.25, 6.75]],
-                [[0., 1.]; 2],
-                0,
-                100000000
-            )
-            .unwrap()
-            .error_upper
-            .is_none());
+        assert!(
+            corrected
+                .inspect_radius_coefficients(
+                    &center_law,
+                    &radius_law,
+                    [[2.5, 3.5], [3.25, 6.75]],
+                    [[0., 1.]; 2],
+                    0,
+                    100000000
+                )
+                .unwrap()
+                .error_upper
+                .is_none()
+        );
         let centers = vec![
             vec![I::point(0.), I::point(0.), I::point(0.), I::point(1.)],
             vec![I::point(1.), I::point(0.), I::point(0.), I::point(1.)],
@@ -480,18 +710,20 @@ mod tests {
         .unwrap()
         .unwrap();
         assert!(mismatch.0[0] <= -3. && mismatch.0[1] >= -3. && mismatch.0[1] < 0.);
-        assert!(crate::moving_radius::bound_coefficient_nets(
-            &net,
-            &centers,
-            &radius,
-            1,
-            1.,
-            &mut 0,
-            0,
-            &mut reason
-        )
-        .unwrap()
-        .is_none());
+        assert!(
+            crate::moving_radius::bound_coefficient_nets(
+                &net,
+                &centers,
+                &radius,
+                1,
+                1.,
+                &mut 0,
+                0,
+                &mut reason
+            )
+            .unwrap()
+            .is_none()
+        );
         assert_eq!([net.len(), net[0].len()], [6, 5]);
         for free in [0.1, 0.3, 0.7, 0.9] {
             for across in [0.2, 0.5, 0.8] {
@@ -517,5 +749,121 @@ mod tests {
                 }
             }
         }
+    }
+}
+
+impl crate::surface_weight_profile::WeightProfile<'_> {
+    /// Isolate on the original exact separable-weight recipe, including a
+    /// restricted retained rectangle. Multiple knot spans remain explicit.
+    pub fn inspect_line_intersections(
+        &self,
+        domain: [[f64; 2]; 2],
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_spans: usize,
+        max_work: usize,
+    ) -> Result<CoefficientLineReport> {
+        let s = self.source();
+        check(
+            domain
+                .iter()
+                .all(|d| d.iter().all(|x| x.is_finite()) && d[0] < d[1])
+                && origin.iter().chain(&direction).all(|x| x.is_finite())
+                && direction.iter().any(|x| *x != 0.)
+                && tolerance_uv.is_finite()
+                && tolerance_uv > 0.
+                && max_cells <= 100000
+                && max_spans <= 1000000
+                && max_work <= 100000000,
+            "Choose bounded profile line isolation parameters",
+        )?;
+        let knots = [&s.knots_u, &s.knots_v];
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        check(
+            (0..2).all(|k| {
+                domain[k][0] >= knots[k][degrees[k]] && domain[k][1] <= knots[k][counts[k]]
+            }),
+            "Keep profile isolation in the natural domain",
+        )?;
+        if s.degree_u > 16 || s.degree_v > 16 {
+            return Ok(CoefficientLineReport {
+                intersections: None,
+                spans: 0,
+                coefficient_work: 0,
+                reason: "profile-line-degree-limit",
+            });
+        }
+        let work = (s.degree_u + 1)
+            .saturating_mul(s.degree_v + 1)
+            .saturating_mul(4);
+        let mut spans_used = 0;
+        let mut work_used = 0;
+        let mut report = crate::ray_surface::Report {
+            roots: Vec::new(),
+            unresolved: Vec::new(),
+            cells: 0,
+            complete: false,
+        };
+        for u in s.degree_u..counts[0] {
+            for v in s.degree_v..counts[1] {
+                let rect = [
+                    [
+                        domain[0][0].max(knots[0][u]),
+                        domain[0][1].min(knots[0][u + 1]),
+                    ],
+                    [
+                        domain[1][0].max(knots[1][v]),
+                        domain[1][1].min(knots[1][v + 1]),
+                    ],
+                ];
+                if rect.iter().any(|d| d[0] >= d[1]) {
+                    continue;
+                }
+                if spans_used == max_spans
+                    || work > max_work - work_used
+                    || report.cells == max_cells
+                {
+                    report.unresolved.push(rect);
+                    continue;
+                }
+                let raw = self.homogeneous_on([u, v], rect)?;
+                spans_used += 1;
+                work_used += work;
+                let net = raw
+                    .into_iter()
+                    .map(|row| {
+                        row.into_iter()
+                            .map(|p| p.map(|x| I { lo: x.lo, hi: x.hi }))
+                            .collect()
+                    })
+                    .collect::<Vec<Vec<_>>>();
+                let isolated = crate::ray_surface::intersections_coefficients(
+                    &net,
+                    rect,
+                    origin,
+                    direction,
+                    tolerance_uv,
+                    max_cells - report.cells,
+                )?;
+                report.cells += isolated.cells;
+                report.roots.extend(isolated.roots);
+                report.unresolved.extend(isolated.unresolved);
+            }
+        }
+        report.complete = report.unresolved.is_empty();
+        let reason = if report.complete {
+            "profile-line-roots-isolated"
+        } else {
+            "profile-line-roots-unresolved"
+        };
+        Ok(CoefficientLineReport {
+            intersections: Some(report),
+            spans: spans_used,
+            coefficient_work: work_used,
+            reason,
+        })
     }
 }

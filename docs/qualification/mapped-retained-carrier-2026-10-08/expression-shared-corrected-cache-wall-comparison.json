@@ -1,0 +1,15 @@
+{
+  "pending_identical": true,
+  "before": {
+    "spans": 129039,
+    "cache_hits": 44138,
+    "budget_pending": 4287,
+    "profile_transition_spans": 3379
+  },
+  "after": {
+    "spans": 40711,
+    "cache_hits": 45586,
+    "budget_pending": 4287,
+    "profile_transition_spans": 1305
+  }
+}

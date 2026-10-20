@@ -1,0 +1,233 @@
+{
+  "schema": "fresh-cad-parts-step/1",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "toleranceMm": 1e-05,
+  "relativeVolumeTolerance": 1e-07,
+  "parts": [
+    {
+      "name": "bracket-source",
+      "file": "bracket-source.step",
+      "sha256": "effeb0fa7d62cf58f082144b6235b7a18d91caee753503f17095206aad8308fe",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 6500,
+        "solids": 1
+      }
+    },
+    {
+      "name": "bracket-edited-rounded",
+      "file": "bracket-edited-rounded.step",
+      "sha256": "943d1749699aad04c95be55ef67993b7b64da3d83dea23a60d81b8decc45c694",
+      "expected": {
+        "boundsMm": [
+          [
+            3,
+            -2,
+            1
+          ],
+          [
+            43,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 6495.707963267949,
+        "solids": 1
+      }
+    },
+    {
+      "name": "flange-source",
+      "file": "flange-source.step",
+      "sha256": "2831a600c9522878f4f430b40bb7a4ad6a5238aa9481d792ffe76afc7c38348f",
+      "expected": {
+        "boundsMm": [
+          [
+            -20,
+            -20,
+            0
+          ],
+          [
+            20,
+            20,
+            6
+          ]
+        ],
+        "volumeMm3": 7068.583470577035,
+        "solids": 1
+      }
+    },
+    {
+      "name": "flange-edited-rounded",
+      "file": "flange-edited-rounded.step",
+      "sha256": "ca5a75b8cdeda831e9acf196cb620c65b81bfc9aa96d7642516080c27f582dd7",
+      "expected": {
+        "boundsMm": [
+          [
+            -17,
+            -22,
+            1
+          ],
+          [
+            23,
+            18,
+            7
+          ]
+        ],
+        "volumeMm3": 7041.916993999775,
+        "solids": 1
+      }
+    },
+    {
+      "name": "enclosure-source",
+      "file": "enclosure-source.step",
+      "sha256": "e04cf2a8da6ea08993f01f9ed2c2305d94df3d13fc8b3173927fae0ec80df8e3",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ],
+        "volumeMm3": 7152,
+        "solids": 1
+      }
+    },
+    {
+      "name": "enclosure-edited-rounded",
+      "file": "enclosure-edited-rounded.step",
+      "sha256": "6ee2638110051c3c235009a86997032ea752f3e73a6c050535d1042cf242d1ab",
+      "expected": {
+        "boundsMm": [
+          [
+            3,
+            -2,
+            1
+          ],
+          [
+            43,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 7147.707963267949,
+        "solids": 1
+      }
+    }
+  ],
+  "chains": [
+    {
+      "part": "bracket",
+      "operations": [
+        "profile extrusion",
+        "translate",
+        "exact fillet",
+        "STEP export",
+        "Undo twice",
+        "Redo twice",
+        "JSON restore"
+      ],
+      "selectedBrepEdges": [
+        13
+      ],
+      "capability": "exact-simple-prism-convex-edge-fillet/1",
+      "identityPreserved": true,
+      "historyRoundTripExact": true,
+      "documentRoundTripExact": true
+    },
+    {
+      "part": "flange",
+      "operations": [
+        "profile extrusion",
+        "translate",
+        "exact fillet",
+        "STEP export",
+        "Undo twice",
+        "Redo twice",
+        "JSON restore"
+      ],
+      "selectedBrepEdges": [
+        1,
+        4,
+        7,
+        10
+      ],
+      "capability": "exact-annular-circular-edge-fillet/1",
+      "identityPreserved": true,
+      "historyRoundTripExact": true,
+      "documentRoundTripExact": true
+    },
+    {
+      "part": "enclosure",
+      "operations": [
+        "box Boolean difference",
+        "translate",
+        "exact fillet",
+        "STEP export",
+        "Undo twice",
+        "Redo twice",
+        "JSON restore"
+      ],
+      "selectedBrepEdges": [
+        0,
+        9
+      ],
+      "capability": "exact-layered-prism-edge-fillet/1",
+      "identityPreserved": true,
+      "historyRoundTripExact": true,
+      "documentRoundTripExact": true
+    }
+  ],
+  "independentStepQualified": true,
+  "browserQualified": false,
+  "scope": "Fresh native controlled-class chains, two commits per part; JSON restore is not browser reload. Independent STEP checks required.",
+  "independentStepReport": {
+    "file": "occt-report.json",
+    "sha256": "5acb91a80d4ae1af65ca0d1cac476e78d4e4d156fb70672136dfaadbea3ac70d",
+    "oracle": "OpenCascade via cadquery-ocp",
+    "version": "8.0.1.0.0"
+  },
+  "scriptSha256": "cd3e4f17be7be93c03d586af75a888603ffd6346bc70dfdec4a5a21075bb7cbb",
+  "explicitScriptTypeCheck": "passed",
+  "independentDimensionsQualified": true,
+  "independentDimensionReport": {
+    "file": "dimension-report.json",
+    "sha256": "5e380ac743d57a71b05bde94b7470bcfac6d33e600e027670e5b5f17c4f0ea7e",
+    "gauges": 24,
+    "scope": "Declared cross sections only: web/wall/bottom thickness, cavity, bore, axial size and radius-1 sections. Not whole-wall or full seam certification."
+  },
+  "stepIdentitySetsPreserved": true,
+  "stepExactRepresentationBindingsQualified": false,
+  "stepChartEquivalenceQualified": true,
+  "stepBindingReport": "identity-report.json",
+  "stepChartDifferences": "chart-differences.json",
+  "stepOrientedIncidenceQualified": true,
+  "stepOrientedIncidenceReport": {
+    "file": "oriented-incidence-report.json",
+    "sha256": "f4e9cae337e0a3858b78795668214aba9bf364d4fc27266dc3e011015ffd8d20",
+    "scope": "Exact vertices/edges and oriented face-loop-edge incidence; surface interior and UV pullback equivalence remain unqualified."
+  },
+  "stepChartEquivalenceScope": "These 63 faces: exact surface maps on owned domains, trim UV deviation <= 1e-14, exact edges and oriented incidence. No generic NURBS equivalence.",
+  "stepChartMapReport": {
+    "file": "chart-map-incidence-report.json",
+    "sha256": "682772f03c7b5d65b7c92945b0355758bbab35eb83189a2d39128160179577df",
+    "faces": 63,
+    "maxTrimUvDeviationUpperBound": 4.1633363423443376e-17
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "expression-wall-max-budget-2026-10-10.json": {
+    "metrics": {
+      "angle_excluded": 12691,
+      "budget_pending": 30555,
+      "cache_hits": 515391,
+      "cells": 66200,
+      "complete": false,
+      "distance_excluded": 3485,
+      "domain_cells": 1000000,
+      "enclosure_pending": 0,
+      "initial_pairs_checked": 435,
+      "intrinsic_excluded": 894,
+      "max_sine_squared": 0.0001,
+      "method": "expression-support-aligned-chord-coverage",
+      "minimum_mm": 1.0,
+      "planar_excluded": 42,
+      "plane_controls": 207,
+      "profile_transition_checked": 12736,
+      "profile_transition_excluded": 3560,
+      "profile_transition_spans": 6268,
+      "resolution_pending": 0,
+      "scope": "original-retained-transition-support-products",
+      "spans": 1000000,
+      "symmetry_reused": 1004,
+      "tolerance_uv": 0.05,
+      "total_pairs": 435,
+      "trim_excluded": 426
+    },
+    "pendingCount": 30555,
+    "pendingFacePairCount": 46,
+    "topPendingFacePairs": [
+      {
+        "faces": [
+          28,
+          28
+        ],
+        "count": 10417
+      },
+      {
+        "faces": [
+          0,
+          0
+        ],
+        "count": 4172
+      },
+      {
+        "faces": [
+          27,
+          27
+        ],
+        "count": 4142
+      },
+      {
+        "faces": [
+          27,
+          28
+        ],
+        "count": 2886
+      },
+      {
+        "faces": [
+          10,
+          10
+        ],
+        "count": 2438
+      },
+      {
+        "faces": [
+          5,
+          5
+        ],
+        "count": 1874
+      },
+      {
+        "faces": [
+          0,
+          28
+        ],
+        "count": 1754
+      },
+      {
+        "faces": [
+          2,
+          28
+        ],
+        "count": 768
+      },
+      {
+        "faces": [
+          10,
+          12
+        ],
+        "count": 172
+      },
+      {
+        "faces": [
+          0,
+          5
+        ],
+        "count": 168
+      }
+    ]
+  },
+  "expression-wall-contained-cache-2026-10-10.json": {
+    "metrics": {
+      "angle_excluded": 12691,
+      "budget_pending": 30557,
+      "cache_hits": 515646,
+      "cells": 66202,
+      "complete": false,
+      "distance_excluded": 3485,
+      "domain_cells": 1000000,
+      "enclosure_pending": 0,
+      "initial_pairs_checked": 435,
+      "intrinsic_excluded": 894,
+      "max_sine_squared": 0.0001,
+      "method": "expression-support-aligned-chord-coverage",
+      "minimum_mm": 1.0,
+      "planar_excluded": 42,
+      "plane_controls": 207,
+      "profile_transition_checked": 12736,
+      "profile_transition_excluded": 3560,
+      "profile_transition_spans": 6268,
+      "resolution_pending": 0,
+      "scope": "original-retained-transition-support-products",
+      "spans": 1000000,
+      "symmetry_reused": 1004,
+      "tolerance_uv": 0.05,
+      "total_pairs": 435,
+      "trim_excluded": 426
+    },
+    "pendingCount": 30557,
+    "pendingFacePairCount": 46,
+    "topPendingFacePairs": [
+      {
+        "faces": [
+          28,
+          28
+        ],
+        "count": 10419
+      },
+      {
+        "faces": [
+          0,
+          0
+        ],
+        "count": 4172
+      },
+      {
+        "faces": [
+          27,
+          27
+        ],
+        "count": 4142
+      },
+      {
+        "faces": [
+          27,
+          28
+        ],
+        "count": 2886
+      },
+      {
+        "faces": [
+          10,
+          10
+        ],
+        "count": 2438
+      },
+      {
+        "faces": [
+          5,
+          5
+        ],
+        "count": 1874
+      },
+      {
+        "faces": [
+          0,
+          28
+        ],
+        "count": 1754
+      },
+      {
+        "faces": [
+          2,
+          28
+        ],
+        "count": 768
+      },
+      {
+        "faces": [
+          10,
+          12
+        ],
+        "count": 172
+      },
+      {
+        "faces": [
+          0,
+          5
+        ],
+        "count": 168
+      }
+    ]
+  },
+  "conclusion": "No meaningful coverage improvement from intrinsic containment cache alone. Same global work limits and geometric tolerances; debug/release elapsed times not compared. Pending leaf counts do not measure area coverage.",
+  "containedCacheSourceSHA256": "2adebe6ba7fd747722034ed533faf998f083a890a6c98242a869950e344f696e"
+}

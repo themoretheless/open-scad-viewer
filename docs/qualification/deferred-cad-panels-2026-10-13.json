@@ -1,0 +1,26 @@
+{
+  "schema": "cad-deferred-ui-panels/1",
+  "beforeDirectModelerBytes": 511234,
+  "afterDirectModelerBytes": 443750,
+  "directModelerBudgetBytes": 445772,
+  "deferred": [
+    "ExpressionShellCheck",
+    "ProfileBridgeCheck",
+    "VrControls",
+    "SketchDimensionPanel",
+    "SceneVirtualList",
+    "CadDimensionOverlay",
+    "SourceBodyFailureNotice"
+  ],
+  "browser": {
+    "passed": true,
+    "report": "output/projective-integration-20261013/lazy-panels-browser/report.json",
+    "scope": "Projective cuboid display, wall diagnostics, cancel, stale reply, Retry and reload in current production build"
+  },
+  "remainingBuildFailure": {
+    "artifact": "geometry-kernel-bytes",
+    "bytes": 4424120,
+    "budget": 4056098
+  },
+  "sourceGeometryChanged": false
+}

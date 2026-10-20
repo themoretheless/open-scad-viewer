@@ -1,3 +1,6 @@
+import {inspectProfileBridgeChords} from './nurbsProfileBridgeChords'
+import {inspectExpressionShell} from './expressionShellInspection'
+import {restoreExpressionShell} from './expressionShell'
 import {restoreSourceBody} from './sourceBody'
 import {qualifyNurbsOffsetContacts} from './nurbsOffsetContactQualification'
 import {fitNurbsOffsetEnvelope} from './nurbsOffsetEnvelopeFit'
@@ -57,6 +60,9 @@ import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidRequest,type MainSo
 
 async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
+    case 'profileBridgeChords':return inspectProfileBridgeChords(job.options)
+    case 'expressionShellInspect':return inspectExpressionShell(job.options)
+    case 'expressionShellRestore':return restoreExpressionShell(job.options)
     case 'sourceBodyRestore':return restoreSourceBody(job.options)
     case 'sketchSnaps':return sketchSnapGeometry([job.sketch])
     case 'bodySnaps':return bodySnapGeometry(job.body)

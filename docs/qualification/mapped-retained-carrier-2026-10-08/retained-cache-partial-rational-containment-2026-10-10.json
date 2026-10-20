@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "beforeRegions": 6436,
+      "afterRegions": 7307,
+      "beforeRawParameterVolume": {
+        "numerator": 14481,
+        "denominator": 262144,
+        "value": 0.055240631103515625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3393,
+        "denominator": 65536,
+        "value": 0.0517730712890625
+      }
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "beforeRegions": 3184,
+      "afterRegions": 3180,
+      "beforeRawParameterVolume": {
+        "numerator": 199,
+        "denominator": 4096,
+        "value": 0.048583984375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 795,
+        "denominator": 16384,
+        "value": 0.04852294921875
+      }
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "beforeRegions": 17057,
+      "afterRegions": 19690,
+      "beforeRawParameterVolume": {
+        "numerator": 2609,
+        "denominator": 8192,
+        "value": 0.3184814453125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 9845,
+        "denominator": 32768,
+        "value": 0.300445556640625
+      }
+    }
+  ],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "sha256": {
+    "docs/qualification/mapped-retained-carrier-2026-10-08/partial-rational-wall-max-work-2026-10-10.json": "e04500af9a37840d01eb34208e1c7dfff05f20bb7af49a42034a32d158d15a4d",
+    "docs/qualification/mapped-retained-carrier-2026-10-08/retained-cache-partial-rational-wall-max-2026-10-10.json": "8e46e8b48c8981dcf89011ee786fb6d7929dc6f11b41a2a9e89791231ce70043"
+  }
+}

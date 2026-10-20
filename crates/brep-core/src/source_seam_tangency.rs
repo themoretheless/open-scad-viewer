@@ -1,5 +1,5 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
-//! from a privately admitted SharedEdge; angular bounds cover original charts.
+//! from privately qualified native edge types; angular bounds cover original charts.
 use crate::source_shared_edge::SharedEdge;
 use nurbs_core::{interval_eval::Interval as I, Error, Result};
 pub struct Limits {
@@ -8,13 +8,13 @@ pub struct Limits {
     pub curve_spans: usize,
     pub normal_spans: usize,
 }
-pub struct Seam {
-    edge: SharedEdge,
+pub struct Seam<E = SharedEdge> {
+    edge: E,
     max_sine_squared: f64,
     bound: [f64; 2],
 }
-impl Seam {
-    pub fn edge(&self) -> &SharedEdge {
+impl<E> Seam<E> {
+    pub fn edge(&self) -> &E {
         &self.edge
     }
     pub fn tolerance(&self) -> f64 {
@@ -24,14 +24,44 @@ impl Seam {
         self.bound
     }
 }
-pub struct Report {
-    pub seam: Option<Seam>,
+pub struct Report<E = SharedEdge> {
+    pub seam: Option<Seam<E>>,
     pub cells: usize,
     pub curve_spans: usize,
     pub normal_spans: usize,
     pub accepted_cells: usize,
     pub uncertain_canonical: Option<[f64; 2]>,
     pub reason: &'static str,
+}
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for crate::source_shared_edge::SharedEdge {}
+    impl Sealed for crate::source_projective_edge::Edge {}
+}
+/// Only freshly qualified native shared-edge types can supply seam ownership.
+pub trait Carrier: Clone + sealed::Sealed {
+    fn world(&self)->&nurbs_core::curve::Curve;
+    fn fragment(&self,side:usize)->&crate::source_boundary_fragment::Fragment;
+    fn map_parameter(&self,side:usize,parameter:I)->Result<I>;
+    fn inverse_parameter(&self,side:usize,canonical:I)->Result<I>;
+    fn literal_endpoints(&self)->bool;
+}
+impl Carrier for SharedEdge {
+    fn world(&self)->&nurbs_core::curve::Curve {SharedEdge::world(self)}
+    fn fragment(&self,side:usize)->&crate::source_boundary_fragment::Fragment {&self.uses()[side]}
+    fn map_parameter(&self,side:usize,parameter:I)->Result<I> {map(self,side,parameter)}
+    fn inverse_parameter(&self,side:usize,canonical:I)->Result<I> {inverse(self,side,canonical)}
+    fn literal_endpoints(&self)->bool {self.ranges().is_none()}
+}
+impl Carrier for crate::source_projective_edge::Edge {
+    fn world(&self)->&nurbs_core::curve::Curve {crate::source_projective_edge::Edge::world(self)}
+    fn fragment(&self,side:usize)->&crate::source_boundary_fragment::Fragment {self.uses()[side].fragment()}
+    fn map_parameter(&self,side:usize,parameter:I)->Result<I> {self.uses()[side].map_normalized(parameter)}
+    fn inverse_parameter(&self,side:usize,canonical:I)->Result<I> {
+        let d=self.fragment(side).curve().domain();
+        self.uses()[side].inverse_normalized_unclipped(canonical)?.intersect(d[0],d[1])
+    }
+    fn literal_endpoints(&self)->bool {false}
 }
 pub(crate) fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
     edge.ranges().unwrap_or_else(|| {
@@ -58,14 +88,16 @@ pub(crate) fn map(edge: &SharedEdge, side: usize, parameter: I) -> Result<I> {
     first.add(normalized.mul(last.sub(first)?)?)
 }
 pub(crate) fn inverse(edge: &SharedEdge, side: usize, canonical: I) -> Result<I> {
+    let d=edge.uses()[side].curve().domain();
+    inverse_unclipped(edge,side,canonical)?.intersect(d[0],d[1])
+}
+pub(crate) fn inverse_unclipped(edge: &SharedEdge, side: usize, canonical: I) -> Result<I> {
     let d = edge.uses()[side].curve().domain();
     let range = ranges(edge)[side];
     let first = I::point(range[0][0]).div(I::point(range[0][1]))?;
     let last = I::point(range[1][0]).div(I::point(range[1][1]))?;
     let normalized = canonical.sub(first)?.div_signed(last.sub(first)?)?;
-    I::point(d[0])
-        .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
-        .intersect(d[0], d[1])
+    I::point(d[0]).add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)
 }
 #[derive(Debug)]
 pub struct EndpointLimits {
@@ -141,31 +173,73 @@ pub fn inspect_endpoint_limits(
     }
     Ok(out)
 }
+/// Exact common-parameter descriptions from private source composition.
+pub trait SynchronizedCarrier:Carrier {
+    fn synchronized_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])>;
+}
+impl SynchronizedCarrier for SharedEdge {
+    fn synchronized_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {
+        if self.ranges().is_some() {return None;}
+        let f=&self.uses()[side];Some((f.curve(),self.reversed()[side]^f.reversed(),[1.,1.]))
+    }
+}
+impl SynchronizedCarrier for crate::source_projective_edge::Edge {
+    fn synchronized_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {
+        let u=&self.uses()[side];let r=u.range();let weights=u.weights();
+        let endpoint=|q:[f64;2]|q[0]==0. || q[0]==q[1];
+        if !r.into_iter().all(endpoint) {return None;}
+        Some((u.fragment().curve(),u.reversed()^u.fragment().reversed(),weights))
+    }
+}
+pub struct SynchronizedReport<E=SharedEdge> {
+    pub report:Report<E>,
+    pub polynomial_work:usize,
+    pub synchronized_reason:&'static str,
+}
+/// Fresh shared-parameter polynomial angle bound, followed by the existing
+/// conservative interval path when the supported representation is insufficient.
+/// Polynomial work has a separate explicit budget; original roots are retained.
+pub fn qualify_with_synchronized_boundaries<E:SynchronizedCarrier>(edge:&E,limits:Limits,max_work:usize)->Result<SynchronizedReport<E>> {
+    validate_limits(&limits)?;
+    if !(1..=1000000).contains(&max_work) {return Err(Error::new("BREP_SOURCE_SEAM_TANGENCY","Bound synchronized polynomial work"));}
+    let mut work=0;let mut reason="synchronized-source-map-unsupported";
+    if let (Some((a,ar,aw)),Some((b,br,bw)))=(edge.synchronized_curve(0),edge.synchronized_curve(1)) {
+        if limits.curve_spans>=2 && limits.normal_spans>=2 {
+            let proof=nurbs_core::synchronized_boundary_normals::inspect_projective([edge.fragment(0).surface(),edge.fragment(1).surface()],[a,b],[ar,br],[aw,bw],limits.max_sine_squared,max_work)?;
+            work=proof.work;reason=proof.reason;
+            if let Some(aligned)=proof.aligned {
+                let bounds=proof.sine_squared_bounds.unwrap();
+                let report=Report{seam:aligned.then(||Seam{edge:edge.clone(),max_sine_squared:limits.max_sine_squared,bound:bounds}),
+                    cells:1,curve_spans:2,normal_spans:2,accepted_cells:usize::from(aligned),uncertain_canonical:None,
+                    reason:if aligned {"source-seam-synchronized-tangent-planes-qualified"}else{"source-seam-angular-envelope-oblique"}};
+                return Ok(SynchronizedReport{report,polynomial_work:work,synchronized_reason:reason});
+            }
+        }
+    }
+    Ok(SynchronizedReport{report:qualify(edge,limits)?,polynomial_work:work,synchronized_reason:reason})
+}
+fn validate_limits(limits:&Limits)->Result<()> {
+    if !limits.max_sine_squared.is_finite() || !(0. ..1.).contains(&limits.max_sine_squared)
+        || !(1..=100000).contains(&limits.cells) || !(1..=100000).contains(&limits.curve_spans)
+        || !(1..=100000).contains(&limits.normal_spans) {
+        return Err(Error::new("BREP_SOURCE_SEAM_TANGENCY","Choose finite angular tolerance and bounded seam work"));
+    }Ok(())
+}
 /// Every accepted interval bounds all corresponding normal pairs, including
 /// endpoint root enclosures and both incident original knot sides. Antiparallel
 /// normals are compatible tangent planes; orientation is checked by the shell.
 /// This certifies tolerance-based G1 only, not curvature/G2 or fillet radius.
-pub fn qualify(edge: &SharedEdge, limits: Limits) -> Result<Report> {
-    if !limits.max_sine_squared.is_finite()
-        || !(0. ..1.).contains(&limits.max_sine_squared)
-        || !(1..=100000).contains(&limits.cells)
-        || !(1..=100000).contains(&limits.curve_spans)
-        || !(1..=100000).contains(&limits.normal_spans)
-    {
-        return Err(Error::new(
-            "BREP_SOURCE_SEAM_TANGENCY",
-            "Choose finite angular tolerance and bounded seam work",
-        ));
-    }
-    let ends = edge.uses()[0].parameter_bounds();
+pub fn qualify<E: Carrier>(edge: &E, limits: Limits) -> Result<Report<E>> {
+    validate_limits(&limits)?;
+    let ends = edge.fragment(0).parameter_bounds();
     let lo = ends.iter().map(|r| r[0]).fold(f64::INFINITY, f64::min);
     let hi = ends.iter().map(|r| r[1]).fold(f64::NEG_INFINITY, f64::max);
-    let coverage = map(edge, 0, I::new(lo, hi)?)?.intersect(0., 1.)?;
+    let coverage = edge.map_parameter(0, I::new(lo, hi)?)?.intersect(0., 1.)?;
     let mut queue = vec![[coverage.lo, coverage.hi]];
     // Only literal full-carrier endpoints have exact canonical representatives.
     // Root enclosures and affine ranges retain whole-interval qualification.
-    if edge.ranges().is_none()
-        && edge.uses().iter().all(|f| f.parameter_bounds().iter().all(|r| r[0] == r[1]))
+    if edge.literal_endpoints()
+        && (0..2).all(|side| edge.fragment(side).parameter_bounds().iter().all(|r| r[0] == r[1]))
     {
         queue.push([coverage.hi, coverage.hi]);
         queue.push([coverage.lo, coverage.lo]);
@@ -188,9 +262,9 @@ pub fn qualify(edge: &SharedEdge, limits: Limits) -> Result<Report> {
         out.cells += 1;
         let mut rectangles = [[[0.; 2]; 2]; 2];
         for side in 0..2 {
-            let fragment = &edge.uses()[side];
+            let fragment = edge.fragment(side);
             let c = fragment.curve();
-            let t = inverse(edge, side, I::new(q[0], q[1])?)?;
+            let t = edge.inverse_parameter(side, I::new(q[0], q[1])?)?;
             let count = (c.degree..c.control_points.len())
                 .filter(|&i| {
                     c.knots[i] < c.knots[i + 1] && c.knots[i] <= t.hi && c.knots[i + 1] >= t.lo
@@ -214,7 +288,7 @@ pub fn qualify(edge: &SharedEdge, limits: Limits) -> Result<Report> {
             }
         }
         let r = nurbs_core::normal_alignment::inspect_pair(
-            [edge.uses()[0].surface(), edge.uses()[1].surface()],
+            [edge.fragment(0).surface(), edge.fragment(1).surface()],
             rectangles,
             limits.max_sine_squared,
             limits.normal_spans - out.normal_spans,
@@ -260,6 +334,69 @@ mod tests {
     use super::*;
     use crate::source_boundary_fragment::{Endpoint, Fragment, Role};
     use nurbs_core::{curve::Curve, surface::Surface};
+    #[test]
+    fn projective_rational_shared_boundary_tangency_survives_original_definition_replay() {
+        let make=|zs:[f64;2],factors:[f64;3]|Surface {
+            degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+            control_points:zs.into_iter().map(|z|vec![vec![1.,0.,z],vec![1.,1.,z],vec![0.,1.,z]]).collect(),
+            weights:vec![factors.to_vec();2],periodic_u:false,periodic_v:false,
+        };
+        // Dyadic weights keep the authored projective composition exact.
+        // A general rational arc is sufficient; no conic recognition is used.
+        let a=make([0.,1.],[1.,0.5,1.]);
+        let b=make([1.,2.],[1.,1.,4.]);
+        let pa=Curve::from_polyline(vec![vec![1.,0.],vec![1.,1.]]).unwrap();
+        let pb=Curve::from_polyline(vec![vec![0.,0.],vec![0.,1.]]).unwrap();
+        let world=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:a.control_points[1].clone(),weights:a.weights[1].clone(),periodic:false};
+        let fa=Fragment::new(&a,&pa,Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap();
+        let fb=Fragment::new(&b,&pb,Endpoint::Parameter(1.),Endpoint::Parameter(0.)).unwrap();
+        let ranges=[[[0.,1.],[1.,1.]];2];
+        let r=crate::source_projective_edge::qualify(&world,[&fa,&fb],ranges,[[1.,1.],[1.,2.]],
+            [None;2],[[None;2];2],100000000,10000).unwrap();
+        let edge=r.edge.expect(r.reason);
+        let definition=edge.definition();
+        let encoded=value_codec::encode_binary(&definition).unwrap();
+        let restored=crate::source_projective_edge::restore(value_codec::decode_binary(&encoded).unwrap(),10000,100000000,10000).unwrap();
+        let restored=restored.edge.expect(restored.reason);
+        assert_eq!(restored.definition(),definition);
+        for source in [&edge,&restored] {
+            let proof=qualify_with_synchronized_boundaries(source,
+                Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
+            assert_eq!(proof.report.reason,"source-seam-synchronized-tangent-planes-qualified");
+            assert!(proof.polynomial_work>0 && proof.polynomial_work<=100000);
+            let seam=proof.report.seam.unwrap();
+            assert_eq!(seam.edge().definition(),definition);
+            assert!(seam.sine_squared_bounds()[1]<=1e-10);
+        }
+        let cutter_a=Curve::from_polyline(vec![vec![-1.,0.5],vec![2.,0.5]]).unwrap();
+        let cutter_b=Curve::from_polyline(vec![vec![-1.,0.],vec![2.,1.]]).unwrap();
+        let root_a=crate::source_contact_point::qualify(&a,&pa,&cutter_a,[[0.4,0.6],[0.6,0.75]],10000).unwrap();
+        let root_a=root_a.point.expect(root_a.reason);
+        let root_b=crate::source_contact_point::qualify(&b,&pb,&cutter_b,[[0.3,0.4],[0.3,0.4]],10000).unwrap();
+        let root_b=root_b.point.expect(root_b.reason);
+        let trimmed_a=Fragment::new(&a,&pa,Endpoint::Parameter(0.),Endpoint::Crossing{point:root_a,role:Role::Boundary}).unwrap();
+        let trimmed_b=Fragment::new(&b,&pb,Endpoint::Crossing{point:root_b,role:Role::Boundary},Endpoint::Parameter(0.)).unwrap();
+        // q=1/2 lies on x=y. The second original parameter is 1/3,
+        // so a rounded binary64 candidate must not identify the root.
+        let root_plane=[[0.,0.,0.],[1.,1.,0.],[0.,0.,1.]];
+        let trimmed=crate::source_projective_edge::qualify(&world,[&trimmed_a,&trimmed_b],ranges,[[1.,1.],[1.,2.]],
+            [None,Some(root_plane)],[[None;2];2],100000000,10000).unwrap();
+        let trimmed=trimmed.edge.expect(trimmed.reason);
+        let trimmed_definition=trimmed.definition();
+        let restored=crate::source_projective_edge::restore(trimmed_definition.clone(),10000,100000000,10000).unwrap();
+        let restored=restored.edge.expect(restored.reason);
+        assert_eq!(restored.definition(),trimmed_definition);
+        for source in [&trimmed,&restored] {
+            let proof=qualify_with_synchronized_boundaries(source,
+                Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
+            assert!(proof.report.seam.is_some());
+        }
+        let mut wrong=definition;
+        wrong["uses"][1]["weights"]=value_codec::json!([1.,1.]);
+        assert!(crate::source_projective_edge::restore(wrong,10000,100000000,10000).unwrap().edge.is_none());
+    }
+
     fn limits() -> Limits {
         Limits {
             max_sine_squared: 1e-3,
@@ -392,6 +529,43 @@ mod tests {
         let r = qualify(&shared(true), limits()).unwrap();
         assert!(r.seam.is_none());
         assert!(r.uncertain_canonical.is_some());
+    }
+    #[test]
+    fn matching_endpoint_planes_do_not_admit_an_interior_crease() {
+        // z = 2 * amplitude * u * (1-u) * v: the seam and endpoint
+        // tangent planes coincide, but the tangent plane tilts inside it.
+        for amplitude in [0.1, 1., 10.] {
+            let a = Surface {
+                degree_u: 2, degree_v: 1,
+                knots_u: vec![0., 0., 0., 1., 1., 1.],
+                knots_v: vec![0., 0., 1., 1.],
+                control_points: (0..3).map(|i| (0..2).map(|j|
+                    vec![i as f64 * 0.5, j as f64, 0.]).collect()).collect(),
+                weights: vec![vec![1.; 2]; 3],
+                periodic_u: false, periodic_v: false,
+            };
+            let mut b = a.clone();
+            b.control_points[1][1][2] = amplitude;
+            let pc = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
+            let carrier = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
+            let fa = Fragment::new(&a, &pc, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).unwrap();
+            let fb = Fragment::new(&b, &pc, Endpoint::Parameter(1.), Endpoint::Parameter(0.)).unwrap();
+            let edge = crate::source_shared_edge::qualify(&carrier, [&fa, &fb], [false, false], 100_000_000)
+                .unwrap().edge.unwrap();
+            for endpoint in [0., 1.] {
+                let point = [[endpoint, endpoint], [0., 0.]];
+                let aligned = nurbs_core::normal_alignment::inspect_pair(
+                    [&a, &b], [point, point], 1e-3, 1000).unwrap();
+                assert_eq!(aligned.aligned, Some(true));
+            }
+            let midpoint = [[0.5, 0.5], [0., 0.]];
+            let tilted = nurbs_core::normal_alignment::inspect_pair(
+                [&a, &b], [midpoint, midpoint], 1e-3, 1000).unwrap();
+            assert_eq!(tilted.aligned, Some(false));
+            let report = qualify(&edge, limits()).unwrap();
+            assert!(report.seam.is_none(), "Interior crease admitted: {amplitude}");
+            assert!(report.uncertain_canonical.is_some());
+        }
     }
     #[test]
     fn rational_root_ends_keep_their_source_definitions() {
