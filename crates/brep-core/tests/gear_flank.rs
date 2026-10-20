@@ -63,8 +63,12 @@ fn gear_variants_keep_closed_incidence_after_flank_qualification() {
         assert!(geometry.flank_deviation <= 1e-6);
         assert!(geometry.flank_stored_parameters_rounding_certified);
         // Machin/Taylor parameter boxes now include the full GearSpec
-        // derivation. Root topology and stored helical-wall rounding are separate.
+        // derivation. Root and whole-profile topology remain separate.
         assert!(geometry.flank_rounding_certified);
+        assert!(geometry.sweep_rounding_certified);
+        assert!(geometry.sweep_deviation <= 1e-4);
+        assert!(geometry.profile_error_upper.unwrap() <= 1e-6);
+        assert!(geometry.ideal_wall_error_upper.unwrap() <= 1.01e-4);
         for edge in 0..model.edges.len() {
             assert_eq!(
                 model

@@ -1,0 +1,134 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-16T19:32:35.240Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.",
+  "nativeCancelProbe": true,
+  "nativeRunningCancelProbe": true,
+  "unbudgetedSourceMode": false,
+  "geometryWasmSha256": "ece7fd219f014745243cb8871f63bceb89ad96c0dc42d1cdef6c2daf89d7fab6",
+  "artifactProvenance": {
+    "sha256": "ece7fd219f014745243cb8871f63bceb89ad96c0dc42d1cdef6c2daf89d7fab6",
+    "byteLength": 11801337,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-DyXcokVJ.js"
+    ],
+    "workerModuleProvenance": [
+      {
+        "entry": "geometry.worker-DyXcokVJ.js",
+        "modules": [
+          "assets/geometry.worker-DyXcokVJ.js",
+          "assets/rolldown-runtime-mLt-WK_h.js",
+          "assets/rushGraphNurbsCompiler-CuyAS7N_.js",
+          "assets/meshTopology-BYXCi_c3.js",
+          "assets/openScadTextRuntime-B_QKhAbm.js",
+          "assets/rushFrontend-CW4BjLRk.js",
+          "assets/exactSolidRuntime-BEij4reA.js",
+          "assets/worker-wasm-packing-C4RfKZQj.js",
+          "assets/language-kernel-bytes-DLyuBJkA.js",
+          "assets/geometry-kernel-bytes-N2sqAQi1.js",
+          "assets/harfbuzz-bytes-MSK2w4Yx.js",
+          "assets/wasm-brotli-bytes-Bmmsw5O9.js"
+        ],
+        "matchedModules": [
+          "assets/meshTopology-BYXCi_c3.js"
+        ],
+        "unresolvedDynamicImports": 0
+      }
+    ]
+  },
+  "appSourceSha256": "d16b0643c28565dff203721f8b5fe29f2f71889b8f33c4d4d0330e4ba9202e49",
+  "distIndexSha256": "9e8fe36b5efb25f49658a2fc698f046ddcd56b492e103e11406d1b79bb76d8db",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "gpuAdapter": {
+        "vendor": "google",
+        "architecture": "swiftshader",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Закрыть боковую панель', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" data-v-b58166d5=\"\" class=\"dock-close\" title=\"Закрыть боковую панель\" aria-label=\"Закрыть боковую панель\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div role=\"alert\" class=\"no-gpu\" data-v-b58166d5=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div role=\"alert\" class=\"no-gpu\" data-v-b58166d5=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div role=\"alert\" class=\"no-gpu\" data-v-b58166d5=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+      "bodyText": "sweep-matrix.r\nSolid\nMesh\n⚠ Черновик не сохранён\nПоиск действий\nCtrl K\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n4\n5\n6\n▾\n7\n8\n9\n10\n11\n12\n13\n14\n// @rush/1\n// Closed spatial C1 Bishop transport with nonzero holonomy.\nprofile = circle_curve(center: [1mm,0,0],normal: [0,1,1],radius: 0.05mm)\nhole = circle_curve(center: [1mm,0,0],normal: [0,-1,-1],radius: 0.02mm)\npath = nurbs_curve(degree: 3, knots: [0,0,0,0,0.25,0.25,0.25,0.5,0.5,0.5,0.75,0.75,0.75,1,1,1,1],control_points: [[1mm,0mm,0mm],[1mm,0.25mm,0.25mm],[0.25mm,1mm,1.25mm],[0mm,1mm,1mm],[-0.25mm,1mm,0.75mm],[-1mm,0.25mm,-0.25mm],[-1mm,0mm,0mm],[-1mm,-0.25mm,0.25mm],[-0.25mm,-1.125mm,0.75mm],[0mm,-1mm,0.5mm],[0.25mm,-0.875mm,0.25mm],[1mm,-0.25mm,-0.25mm],[1mm,0mm,0mm]],weights: [1,1,1,1,1,1,1,1,1,1,1,1,1])\nshow brep_progressive_sweep([[profile],[hole]],path,\n scale: {degree: 2,knots: [0,0,0,1,1,1],values: [1.1,1.2,1.1],weights: [1,2,1]},\n twist: {degree: 2,knots: [0,0,0,1,1,1],values: [7.16197243913529deg,11.459155902616464deg,7.16197243913529deg],weights: [1,2,1]},\n axis_scale: {degree: 2,knots: [0,0,0,1,1,1],values: [[1,1.25,0.75],[1.2,1.1,0.8],[1,1.25,0.75]],weights: [1,2,1]},\n center_law: {degree: 2,knots: [0,0,0,1,1,1],values: [[0.01mm,-0.02mm,0.03mm],[0.02mm,0mm,0.01mm],[0.01mm,-0.02mm,0.03mm]],weights: [1,2,1]},\n normal: [1,0,0],orientation: \"rmf\",rmf_transport_steps: 4096,error_max_cells: 100000,error_max_products: 1000000,spacing: \"parameter\",initial_sections: 129,max_sections: 129,length_tolerance: 0.0001mm,length_max_cells: 100000,max_deviation: 0.25mm,\n circle_correction_tolerance: 0.000000001mm,circle_correction_quantum: 0.0000000000009094947017729282mm,circle_correction_max_work: 1000000\n).brep_tessellate(segments: 2)\n\n\nОбъекты 1\nТреугольники 4 096\nОбъём 0,07\nПлощадь 3,94\nГотово · 970 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 0,07867 mm · G1/G2 сохранённого профиля: ✓ / ✓ (1024) · station-швы: C0\nFailed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists.\nПовторить запуск 3D\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n4 096 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nCPU · SVG\nManifold\n↶\n↷\nМышь\nИнструменты\nСоздать\nВыбрано: 0\n?\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nImage Trace\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб\nWebGPU отключён. Работа продолжена на CPU; можно сохранить проект.\n×"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "auto",
+  "selection": {
+    "startAt": null,
+    "fullInventory": [
+      "1440:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "d16b0643c28565dff203721f8b5fe29f2f71889b8f33c4d4d0330e4ba9202e49",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "d0dabdd91f97f063d80c75dda7923edf29ecfefdb49d7658ba2e2d43f41203ba",
+    "src/services/nurbsMiterOwnedBoundary.ts": "49ddaf3bc8d52808bb6145cb51f152ea3c4c2896630d8ca16b5f943d073ccc66",
+    "crates/brep-core/src/sweep_miter_owned.rs": "18047f304c3cb23c5fdbf04faf9c63a71aed680463e4c67279a49d742c8be033",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "2d241fc22df6402901689ef9f035fcb2fc30634c4ea64f4bc408b241b738c89d",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0eb093f47c20fe1bbf5eec49b7abc7feb792d44d08b8e830659cf6e7bdbeb576",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/endpoint_jets.rs": "135d591c132d388d3e75bef488a672d528181b8db07334575419c91d61c85a18",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "e50ad8e48bb782d46f5a21f2ad48ca19713af0946255d60653fcba5d632a7cb8",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "0735cf878360f6a682308eb366b4398e8934e40238deacdfbf9dcaa8820ccd1d",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "3367a492955feb1fe398d4de9028d9d9b140e9a7288fc87996dd12b1d6f82e7b",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "8d589872e9c3ca56b797fdde258b6a84b4842cba6c21b58d01854c9907c8077a",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "f325df369aba3653ddb079a4a229d5bb09bf4b844e38e84de5ce03bf3c6f5bba",
+    "src/generated/geometry-kernels/bytes.ts": "2841aacd8d255cfdd88b2f42630b9a1ae677b1ef4fea6c2ac75776fba2d00dc8",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "d3e2e35d3ec86af6ba2f921b7c0fa848748f19170bdd0779f507dd4d06559a87",
+    "scripts/worker-wasm-fingerprint.mjs": "960ca4a0600b9d8f2dd963071bdea77bff94b2a207ade42827dccfca1363d224",
+    "scripts/sweep-native-cancel-probe.mjs": "35af9a73575121ba015e4458cd6234148a2254c835e1d5fc62ca6c01ba5b407b",
+    "scripts/sweep-body-matrix-sources.mjs": "44fea9d6821b944aad209847283a863d6439abf261bd682a879fba54a06a12a0",
+    "scripts/corrected-c2-sources.mjs": "544dca5d66840336e9f96741b3a0d033930cc612e0f7a6a06e8e362a8b110f85",
+    "crates/geometry-bridge/src/brep.rs": "bd6fa094313a71f74ea38a023134181d24c74130465e031a235c41af8413f563",
+    "crates/brep-core/src/face_contact_groups.rs": "0c44f471a5938e51cdb0d07a3bb462df3d2dde82b99dab9ebc5af558927bf978",
+    "crates/brep-core/src/face_contacts.rs": "8f6e0745e310d15e79c0b4c4633373fb34827a141510e35717a38b314b38a34f",
+    "crates/brep-core/src/boundary_embedding.rs": "c80d3ec4eab50c1df128bc601b1b5746df4202d81c409710473729eae0d19dda",
+    "crates/brep-core/src/sweep_cap_contacts.rs": "b914d79e75a5ff57758556cf86c145c134db78eaf1b97ce3d9d15143027ee861",
+    "crates/brep-core/src/shell_nesting.rs": "78a446067366beb6fb811c55291ad8678f583e7f7f37deb23c7d08b02931309d",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "fa0771cd50b57d22684f7005c11ad3f04ab6cc87941b8558cdff8f9c857eb64e",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/corrected_regular.rs": "c1931a0d33066c25f87bf0c2297785232dc8c08aff1ac213d8ed120e7a8597e7",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_pose.rs": "99074d8cb2dc68963f5dc3c0936843c342ca89bcc64af3d78f03bb4166bd967c",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/profile_domain.rs": "bb19058dcb98446d6f81ff78dc55bb1b68a379bb8f5eb31f224ac27bc64abdf6",
+    "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/frenet_path_values.rs": "5d1ecba191affcac4e31e890ca1c676dfde407b16ca40dc946447fe5b92a68c1"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

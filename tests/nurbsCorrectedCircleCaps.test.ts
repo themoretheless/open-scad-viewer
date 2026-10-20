@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -16,7 +17,7 @@ it.each([
  const built=await buildOwnNurbsAsync(graph,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing corrected circular hollow body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.01})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.faces.slice(-2).map((f:any)=>f.holes.length)).toEqual([1,1])
  const stored=JSON.stringify(model)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
@@ -36,7 +37,7 @@ it('qualifies the valid 65-station oblique corrected native cancellation workloa
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing 65-station corrected oblique body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.01})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.faces).toHaveLength(514)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
   allFacesInjective:true,allPairsClassified:true,nextPair:null})

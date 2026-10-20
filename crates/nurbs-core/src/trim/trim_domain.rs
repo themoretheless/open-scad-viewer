@@ -73,7 +73,7 @@ pub enum ClassificationReason {
     BoundaryBand,
     PrecisionLimit,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Classification {
     pub location: Location,
     pub winding: Option<i32>,

@@ -246,3 +246,342 @@ Leading basis coefficient вычисляется по исходным clamped k
 `inspect_weighted_winding` проверяет dictionary indices, коэффициенты и полноту loop uses, затем вызывает continuous periodic winding classifier. Query допускает до 256 expanded curves; assembly сохраняет общий max_edges 1..512. Пустая точно сокращённая цепочка имеет winding 0 и не требует image queries. Неполный бюджет не публикует graph. Общая регуляризация произвольно пересекающихся контуров в owned faces не утверждается.
 
 Проверка 2026-10-14: **80 различных профильных тестов прошли** без default features, offline/locked (41 periodic_trim, 22 periodic_trim_contacts, 11 periodic_trim_support, 6 periodic_trim_weighted). Новые случаи: три совпадающих rational boundaries в одной dictionary curve с winding 3; exact opposite cancellation в пустую цепочку; отрицательная net кратность с исходным reverse encoding; perimeter multiplicity 2 с независимым polygon/image oracle; forged loop counts/indices и budget refusal; точное сокращение при domain [0.1,1.1], где предварительно округлённый a+b нарушает knot reflection. Хеши periodic_trim sources и четырёх trim test files совпали со снимком.
+
+## Равная кривизна: точная общая продольная проекция
+
+`contact/common_projection.rs` различает single-Bezier ветви с одинаковыми
+ориентированными весами и точной общей проекцией всех контролей на ведущий луч.
+Нормализованные односторонние координаты учитывают incoming reversal и не
+зависят от исходного knot domain. Первая ненулевая продольная производная
+положительна, поэтому общая проекция строго монотонна в достаточно малой
+окрестности вершины. Порядок нормальных координат при равном параметре тем самым
+задаёт порядок при равной продольной координате.
+
+Первый различающийся нормальный коэффициент находится по исходным контролям:
+каждый dot/cross использует точную сумму восьми binary64 произведений, без
+предварительно округлённого вычитания, нормализации или оценки корней. Одинаковые
+germs не получают искусственного порядка. Для каждой соседней пары после
+сортировки отдельно проверяется правильный строгий порядок, включая cyclic wrap.
+Если общая проекция/веса не совпадают, прежние достаточные проверки остаются
+обязательными; более общий равный leading coefficient всё ещё может быть unproven.
+
+Проверка 2026-10-15: **84 профильных теста прошли** (42 periodic_trim,
+25 periodic_trim_contacts, 11 periodic_trim_support, 6 periodic_trim_weighted).
+Три новых теста проверяют одинаковую кривизну и различный кубический член,
+рациональные веса, domain [0.1,1.1], входящие/исходящие ветви, поворот, масштаб
+1e-200, перестановку edges, отказ на совпадающих germs/недостаточном бюджете и
+изменённой продольной функции. Это локальный порядок ориентированных цепочек;
+общая регуляризация в owned faces и нативный статус NURBS-0173 не утверждаются.
+[Evidence](../qualification/nurbs-periodic-common-projection-2026-10-15/native-tests.json).
+
+## Общая проекция многопролётных B-spline ветвей
+
+`contact/common_projection.rs` теперь проверяет исходные endpoint spans без
+преобразования в отдельные Bezier-кривые. Для каждой пары проверяются точные
+пропорции первых p knot gaps в ориентированных односторонних координатах и
+первых p+1 весов. Сравнения gap ratios используют восемь исходных произведений,
+weight ratios — два; вычитания, деления и отражённые knots не округляются заранее.
+Это доказывает тождество нормализованного локального базиса и рационального
+знаменателя с точностью до общего положительного множителя.
+
+Все активные controls должны иметь одинаковую точную проекцию на ведущий луч.
+Первый различающийся normal control определяет знак первого ненулевого члена
+разности: соответствующая clamped B-spline basis function имеет положительный
+leading coefficient. Общая продольная координата строго монотонна в достаточно
+малой окрестности endpoint, поэтому это также порядок при общей продольной
+координате. Вычисление производных и поиск радиуса не требуются.
+
+Проверка 2026-10-15: **87 профильных тестов прошли** (42 periodic_trim,
+28 periodic_trim_contacts, 11 periodic_trim_support, 6 periodic_trim_weighted),
+оба ядра компилируются для WASM. Новые проверки покрывают многопролётные ветви,
+независимый scale параметров и общий scale весов, входящие/исходящие ветви,
+точный линейный поворот, перестановку рёбер и knot gaps 1e-200, где обычные
+произведения обращаются в ноль. Независимый de Boor evaluator проверяет позиции
+без вычисления переполняющихся производных. Ранее unresolved соседние binary64
+коэффициенты теперь имеют точный порядок при общем базисе; изменение продольной
+функции или нормализованного knot basis при сохранённой начальной кривизне
+по-прежнему даёт отказ.
+
+Это локальный порядок ветвей ориентированной цепочки. Несопоставимые базисы,
+общая нелинейная перепараметризация, совпадающие germs и общая регуляризация
+owned faces остаются отдельными обязательствами. NURBS-0173 остаётся planned;
+каталог **195/200**, без изменения критерия готовности.
+[Evidence](../qualification/nurbs-periodic-bspline-germs-2026-10-15/native-tests.json).
+
+## Nonlinear source-family homotopies (2026-10-16)
+
+`verify_projective_curve_correspondence` proves an exact complete normalized
+parameter bijection between rational Bezier curves, including unequal degrees
+and reversed traversal. The map is `phi(t)=alpha*t/(beta*(1-t)+alpha*t)` with
+positive original finite `alpha,beta`. Exact expansion arithmetic reweights the
+original homogeneous Bernstein coefficients; every coefficient of the rational
+cross product must vanish. Neither sampled proximity nor a rounded fitted curve
+is identity authority. Unsupported precision/work returns no qualified owner.
+
+`verify_projective_partition_homotopy` additionally qualifies every saved seam
+piece under the restriction of the SAME original map. Original source interval
+endpoints must correspond exactly. Local projective factors come from exact
+expressions in the original endpoint/domain leaves, never a rounded inverse.
+Both copies must have identical paired tile translations and candidate functions
+under the restricted map. Their entire straight-line source/candidate homotopy
+then has identical images at every homotopy time. Private receipts own the actual
+source curves and saved partitions; replay checks data and charged work again.
+
+`verify_projective_coherent_anchor_winding` admits these separately typed receipts
+alongside the unchanged exact normalized-function proof. All supplied receipts
+are freshly checked under one shared exact-predicate budget before representative
+isotopy and the actual full-source winding query. A two-copy nonlinear quartic
+fixture has representative winding1 and original winding2; a saved candidate
+mutation cannot reuse that receipt. Reversed multi-piece seam maps, one-ULP
+endpoint changes, unsynchronized weights, changed tiles, omitted intervals and
+insufficient shared work have separate regressions.
+
+Current source-family maps require complete nonperiodic rational Bezier source
+definitions and paired Bezier candidate pieces (at most256). General nonlinear
+multi-span source maps and inter-wire contact regularization remain open;
+NURBS-0173 is not promoted. Distinct-image embedding and actual surface-face
+qualification remain separate from this correspondence proof.
+
+`assemble_projective_coherent_weighted_chart` now carries these separately typed
+receipts into raw candidate graph compaction. A nonlinear pair merges only when
+its actual source indices, paired original piece indices and retained raw curve
+values bind to the replayed receipt. The representative is an unchanged actual
+candidate, with all original contributions and integer multiplicity retained.
+The nonlinear quartic fixture stores one edge with coefficient2 and both source
+references. Its reversed counterpart cancels exactly to an empty graph with
+winding0 and both signed cancellation contributions. Connector edges continue
+to use exact normalized-function identity. Owned B-rep regions/surface faces for
+these nonlinear aliases retain the separate source-proof admission path described below.
+
+
+`brep_core::profile_certificate::regularize_projective_coherent_periodic_winding`
+now retains a private projective source-proof kind, owned homotopy receipts and
+the shared exact-work allowance alongside original curves/partitions. Every
+source replay selects the same actual proof path before checking grouping,
+weighted graph, cycle/region bindings and nonzero-fill normalization. Existing
+actual-support binding and owned-face assembly reuse that source owner.
+
+A quartic original seam contour has `u_A-4=3t(t-3/4)(t-1)`. Its nonlinear alias
+uses weights `[1,3,9,27,81]`; the exact global map sends alias seam parameter1/2
+to original3/4. On the unchanged closed square-tube support, both copies produce
+two owned faces and one shared artificial shore, with complete continuous
+boundary agreement and fresh source/face replay. Global spatial embedding is
+still separate. A whole closed edge without an explicit partition is still
+refused by owned-face assembly. Mutating the proof kind, removing receipts or
+exhausting their shared work cannot inherit an owned source certificate.
+
+## Original multi-span projective bases (2026-10-16)
+
+The projective source proof now also accepts complete original clamped continuous
+B-spline definitions with corresponding degree/control net and knot multiplicity.
+It checks the global map at every ORIGINAL knot and checks the exact weight law
+`wB_i ∝ wA_i * product(D(kB_{i+1}), ..., D(kB_{i+p}))`, with
+`D(t)=beta*(Bhi-t)+alpha*(t-Blo)`. The Cox-de Boor recurrence gives the matching
+basis factor divided by the COMMON positive `D(t)^p`; that denominator cancels
+from the rational curve. Reversal uses the original reversed pole/knot order,
+without materializing a rounded reflected source knot vector. Other equivalent
+representations remain unresolved rather than being classified as different.
+
+Independent exact positive exponent gauges normalize source knot units, map
+factors and denominator products before multiplication. They change only proof
+arithmetic, never original source arrays. Exact power-of-two source domains near
+`2^-500` and `2^-700` qualify. A nonbinary domain rescaling whose actual stored
+knots were rounded does not inherit the ideal phase relation. One-ULP pole,
+weight and knot changes are rejected. Raw predicates support degree32; the
+public Curve validator currently admits degree1..25 and at most256 poles.
+Tests include degree25, C0/C1/C2 bases, independent domain/weight gauges,
+reversed traversal, positions and the independent derivative chain rule.
+
+Anchor transfer now supplements Cartesian boxes with original-control support
+bounds in the existing16 directions. It restricts the ORIGINAL homogeneous
+Bernstein controls, divides by positive pole-weight enclosures and adds the
+actual origin/translation with outward rounding. The union of source/candidate
+projection intervals contains the entire straight-line homotopy. Every anchor
+image must separate in some direction; construction/comparison work shares
+`max_checks`. A diagonal triangle now qualifies, while a genuine anchor crossing
+during translation and an exhausted shared budget remain unqualified.
+
+A nonlinear three-span original triangle reaches three unchanged canonical
+candidate edges, each with coefficient2 and both original source references.
+The existing owned-region/actual-support pipeline produces one face with three
+edges and three vertices on the unchanged original plane. This does not add a
+new catalog figure: NURBS-0173 stays planned because general nonlinear source
+representations and inter-wire contact regularization remain open.
+
+## Exact preservation of original functions after partition (2026-10-16)
+
+`verify_exact_partition_identity` owns the original UV Curve and every actual
+candidate piece, and proves `source(u)=piece(u)+translation` on the complete
+original natural interval. Pieces may have different degree, knot vectors and
+positive rational weights. Every common ORIGINAL source/candidate knot cell is
+compared in exact homogeneous Bernstein arithmetic. Subinterval extraction uses
+formal de Boor blossoms of the original control/weight/knot leaves: denominator
+products are cleared at each row, and all active blossoms are normalized under
+one COMMON exact positive gauge. Independently rounded Cartesian extraction is
+never identity authority. No midpoint, sampled error or preview flag is used.
+
+Every original interval must occur exactly once in order. The original and
+candidate functions must be continuous with nonempty natural end cells;
+periodic basis evaluation is not admitted by this finite-source owner. Raw
+predicates allow degree32; public Curve input limits remain unchanged. Work is
+shared across all piece proofs. Fresh owner replay checks actual source/piece
+coefficients, translations and the charged-work census.
+
+Tests cover a C1 quadratic source represented by two cubic pieces, sub-knot-cell
+cuts, unequal positive rational weights, exact translations, nonclamped sources
+with valid end cells, missing intervals, one-ULP damage, insufficient work,
+cancellation and deadlines. Empty end cells cannot inherit an open-interval
+identity. The certificate concerns FUNCTION preservation; chart/tile validity,
+periodic closure, contact ownership, regularization and physical faces remain
+separate. It can transfer a separately validated candidate contact arrangement to the
+original functions, but cannot make an incomplete contact census complete.
+
+
+## Exact original-function endpoint contacts (2026-10-16)
+
+`assemble_exact_source_chart` retains original B-spline restriction identities
+under one shared source-predicate work allowance, exact actual tile relations,
+clamped candidate endpoint interpretation, positive-weight chart hulls, complete
+lifted closure and zero total source homology. Original and candidate anchor
+winding calibration remains independently computed. The weighted dictionary
+preserves signed original contributions and stores geometric contact rays once.
+`ExactSourceChart::reverify` reconstructs identities, calibration, graph, angular
+endpoint ownership and charged source work from the private actual input snapshots.
+Endpoint ownership alone does not prove a complete interior contact census.
+
+`brep_core::profile_certificate::regularize_exact_periodic_contacts` is a separate
+source-owned path for endpoint-touching components. Every component receives an
+independent complete original rational profile/nonzero-fill certificate. Every
+pair of component wires additionally needs an exact separating positive-weight
+control hull plane: strict separation, or weak separation with every complete
+span nonflat against the common plane on both sides. Positive Bernstein basis
+then excludes contact anywhere in an open span and proves disjoint filled
+interiors. A bounded set of eight integer normal directions proposes planes;
+exact rational comparisons, rather than sampled geometry, authorize them.
+
+This path admits polynomial and rational nonlinear endpoint contacts, reversed
+fill and repeated source multiplicity. It refuses nesting, crossing/overlapping
+interiors, flat shared boundaries and hulls without an admitted separator. It
+owns UV regions and does not yet publish physical supporting-surface faces.
+Existing strict isotopy and separated-wire regularization retain their contracts.
+NURBS-0173 remains planned until general correspondence/contact coverage is met.
+
+## Точное нелинейное совпадение образов (2026-10-16)
+
+`verify_curve_clock_correspondence` доказывает тождество B(s)=A(clock(s))
+по исходным рациональным коэффициентам. Положительные веса и упорядоченные
+контрольные значения clock обеспечивают непрерывное строго монотонное покрытие
+полного интервала A, включая обратное направление. Нулевая производная на конце
+допустима. Сейчас A и clock — clamped Bezier степени не выше 8; произвольные
+B-spline maps этим доказательством не объявляются поддержанными.
+
+`assemble_clock_mapped_source_chart` применяет это доказательство к фактическим
+рёбрам исходного exact-partition графа. Кратность, знаки и ссылки на исходные
+сегменты сохраняются. Проверка портов после объединения не заменяет полный поиск
+внутренних контактов.
+
+В B-rep `regularize_clock_mapped_periodic_winding` независимо проверяет итоговые
+области ненулевого заполнения. `bind_clock_mapped_regions_to_surface` сохраняет
+исходную поверхность и проверяет её домен, отклонение и заявленные швы. Метод
+`correspondence()` каждый раз выдаёт заново проверенный отчёт. Это ещё не
+сертификат вложенности поверхности, пространственных границ или сшитых граней.
+
+Проверено точное совпадение кубической петли с кривой шестой степени при clock=t²,
+компактные две границы вместо четырёх с кратностью 2, обратное направление,
+взаимное уничтожение и отказ после изменения коэффициента на один шаг f64.
+Артефакты: `docs/qualification/nurbs-nonlinear-clock-images-2026-10-16/`.
+Статус каталога остаётся 198/200.
+
+## Грани для исходного нелинейного соответствия
+
+`assemble_clock_mapped_surface_faces` теперь создаёт `OwnedClockMappedFaces`
+на исходной поверхности. Сборщик общих физических проверок используется вместе
+с существующим coherent-путём; исходные виды доказательств остаются отдельными.
+Проверяются полная инъективность и ранг каждого chart-региона, непрерывный lift
+границ, происхождение и противоположный обход соединителей шва, связи в вершинах
+и полное соответствие сохранённых рёбер поверхности.
+
+`reverify()` восстанавливает результат из исходных данных и сравнивает модель,
+домены, рёбра шва и все поля отчётов физических проверок. `verify_model()`
+сравнивает переданную сохранённую модель с заново построенной. Проверены
+плоская и билинейная изогнутая поверхности для нелинейного t²-совпадения,
+один общий шов двух граней, неверный ранг, исчерпание бюджета и повреждённые
+результаты проверок. Глобальная вложенность нескольких граней и замкнутый
+объём остаются отдельными требованиями.
+
+Артефакты: `docs/qualification/nurbs-nonlinear-clock-faces-2026-10-16/`.
+NURBS-0173 остаётся planned: общие контакты контуров и произвольные
+не-Bezier соответствия ещё не завершены.
+
+## Многопролётные исходные соответствия и пространственные границы
+
+`regularize_multispan_periodic_winding` связывает exact-source chart с существующим
+точным `MultispanAgreementCertificate`. Для каждого запрошенного совпадения
+проверяется ориентированное покрытие всех исходных рациональных ячеек. Параметр
+узла другой кривой не округляется и не обязан быть рациональным. Кратность,
+противоположные обходы и исходные ссылки сохраняются в общем weighted-графе.
+
+`compact_image_alias_candidates` в NURBS-ядре выполняет только предложенное
+объединение и структурную проверку графа. Его результат сам по себе не доказывает
+совпадение или топологию. Владелец B-rep использует его только после независимой
+проверки сохранённых соответствий на фактических кривых исходного chart.
+
+`bind_multispan_regions_to_surface` и `assemble_multispan_periodic_surface_faces`
+применяют проверки исходной поверхности и общие физические требования к новому
+виду доказательства. Проверен пример исходных кубической и шестой степени
+B-spline-кривых с clock=t² и различными узлами: узел 5/8 имеет иррациональный
+прообраз во второй кривой. Результат — одна область с кратностью 2 и доказанная
+граница на билинейной изогнутой поверхности. Обратное соответствие полностью
+уничтожает противоположные границы. Повреждение источника, сертификата или
+сохранённой модели отвергается.
+
+Построение lift теперь предлагает составные пространственные кривые и для
+рациональных многопролётных UV-профилей степени выше 1. Извлечение и объединение
+контрольных данных остаётся предложением: окончательная непрерывная проверка
+всегда использует неизменённые исходный UV-профиль и поверхность. Отдельно
+проверены квадратичный рациональный профиль с доменом [2,6] и отказ при неполном
+бюджете или повреждении коэффициента пространственной кривой.
+
+`max_work` ограничивает исходные partition-предикаты; алгебраические проверки
+изображений имеют отдельные ограничения на ячейки, глубину, шаги и 64 пары.
+Глобальный единый бюджет этих стадий не заявляется. Общие контакты нескольких
+контуров и неподтверждённые семейства обходов пока остаются незавершёнными.
+Артефакты: `docs/qualification/nurbs-multispan-image-regions-2026-10-16/`.
+
+## Контакты, точное заполнение и поправка границ (2026-10-16)
+
+`certify_point_winding` / `verify_point_winding` проверяют число обходов исходных
+рациональных кривых вокруг отдельной точки. Учитываются все исходные knot-ячейки,
+полный Sturm census пересечений луча, точные знаки в алгебраических корнях,
+касания и стационарные корни, правила однократного учёта концов сегментов.
+Точки на исходном контуре отвергаются. `weighted_winding` сохраняет целые
+положительные и отрицательные коэффициенты каждого исходного контура.
+Самопересечения и совпадающие контуры не запрещают такую проверку числа обходов.
+
+`regularize_linear_winding_arrangement` строит точные области ненулевого
+заполнения при пересечениях, совпадениях, самопересечениях и контактах в вершинах.
+Принимаются исходные NURBS, для которых на каждой точной рациональной ячейке
+доказаны коллинеарность и полный монотонный обход прямолинейного образа.
+Высокая степень и рациональная нелинейная параметризация допускаются.
+Криволинейный образ не заменяется хордой; даже отклонение на один минимальный
+шаг f64 вызывает отказ. Результат содержит точные рациональные вершины,
+включая координаты с знаменателем 3; округлённая сетка или 3D-грань не заявляются.
+
+`regularize_linear_periodic_contacts` связывает эти области с исходным
+exact-source chart и итоговым графом периодических границ. Проверены обычное
+и знаковое заполнение пересекающихся контуров, отрицательные острова, отверстия,
+обе доли самопересечения, совпадения и касания в вершинах. Этот прямолинейный
+путь не заменяет незавершённую обработку общих криволинейных контактов.
+
+Исправлена ошибка новых clock/multispan-путей: промежуточный
+`calibration.raw_graph` ещё не содержит поправку кратности на периметре.
+`ExactSourceChart.materialized_graph()` теперь сохраняет и повторно проверяет
+фактический итоговый граф после этой поправки. Объединение изображений использует
+его; индексы alias относятся к нему. Промежуточный raw-граф остаётся диагностикой.
+Регрессия с положительным и отрицательным offset подтверждает заполнение углов
+периодической области вместо ложного центрального отверстия.
+
+Артефакты: `docs/qualification/nurbs-contact-winding-2026-10-16/`.
+Статус остаётся 198/200: для NURBS-0173 ещё нужны общие криволинейные event nodes,
+порядок ветвей, связь разрезанных сегментов с исходными кривыми и доказанная
+топология областей и граней.

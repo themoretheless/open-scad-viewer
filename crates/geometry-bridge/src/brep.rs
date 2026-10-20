@@ -3,6 +3,8 @@ use super::*;
 use std::collections::BTreeMap;
 #[path="brep_cusp_sampling.rs"]
 mod cusp_sampling;
+#[path="brep_planar_slivers.rs"]
+mod planar_slivers;
 
 pub struct Tessellation {
     /// Exact shell ownership from tessellation traversal, one entry per triangle.
@@ -494,6 +496,8 @@ impl EdgeSamplingRegistry {
         use_: &brep_core::FaceUse,
         mut built: FaceMesh,
         face_ids: &mut Vec<usize>,
+        model_tolerance_mm: f64,
+        allow_preview_retriangulation: bool,
     ) -> Result<()> {
         let mut remap = Vec::with_capacity(built.uv.len());
         for (uv, shared) in built.uv.iter().zip(&built.shared) {
@@ -516,6 +520,12 @@ impl EdgeSamplingRegistry {
                 let p = &self.mesh.positions[3*i..3*i+3]; [p[0],p[1],p[2]]
             }).collect();
             repair_collinear_triangles(&mut built, &points);
+        }
+        if allow_preview_retriangulation && is_affine_plane(&face.surface, model_tolerance_mm) {
+            let points: Vec<[f64;3]> = remap.iter().map(|&i| {
+                let p = &self.mesh.positions[3*i..3*i+3]; [p[0],p[1],p[2]]
+            }).collect();
+            planar_slivers::repair(&mut built, &points);
         }
         for triangle in built.triangles {
             let mut mapped = triangle.map(|i| remap[i]);
@@ -780,7 +790,9 @@ fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freeform_note:Free
     };
     for ((shell, use_), built) in shell_uses.into_iter().zip(built_faces) {
         let face = &model.faces[use_.face];
-        registry.append(face, use_, built, &mut face_ids)?;
+        // Both certified schedules disable reduced preview rulings. Keep their
+        // triangulation and deviation contracts unchanged as well.
+        registry.append(face, use_, built, &mut face_ids, model.tolerance_mm, reduce_linear_rulings)?;
         closed_triangles.resize(face_ids.len(), shell.closed);
     }
     registry.verify_boundary_uses(model, &face_ids)?;
@@ -1397,6 +1409,22 @@ mod registry_tests {
     use super::*;
     use std::collections::BTreeSet;
 
+    #[test]
+    fn rotated_concave_holed_boolean_retains_closed_mesh() {
+        let text=include_str!("../tests/fixtures/rotated-concave-holed-intersection.json");
+        let v:value_codec::Value=value_codec::from_str(text).unwrap();
+        let model:brep_core::Model=value_codec::from_value(v).unwrap();
+        // The unreduced schedule used by certified entry points must retain
+        // its previous refusal; this display repair cannot grant a certificate.
+        assert!(nurbs_with_schedule(&model,2,FreeformTessNote::SampledUncertified,false).is_err());
+        for segments in [1,2,4,8,16,32] {
+            let result=nurbs(&model,segments).unwrap();
+            let report=result.built.mesh.inspect().unwrap();
+            assert!(report.closed); assert_eq!(report.degenerate_triangles,0);
+            assert_eq!(report.non_manifold_edges,0); assert_eq!(report.orientation_conflicts,0);
+            assert!((report.signed_volume_mm3-23.).abs()<1e-6);
+        }
+    }
     fn empty_model() -> brep_core::Model {
         brep_core::Model(
             brep_topology::Model {

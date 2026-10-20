@@ -8,11 +8,17 @@ pub mod export_prepare;
 pub mod mesh_export;
 pub mod model_3mf;
 pub mod package_3mf;
-pub use dxf::{export_dxf_mesh, export_dxf_polylines, import_dxf_polylines};
+pub use dxf::{
+    DxfArc2D, DxfCircle2D, export_dxf_drawing, export_dxf_mesh, export_dxf_polylines,
+    import_dxf_3dfaces, import_dxf_polylines,
+};
 pub use math_core::{Error, Result};
 use math_core::{cross, norm, sub};
 pub use mesh_export::{export, export_print_mesh};
 pub use mesh_topology::MeshView;
+pub use model_3mf::{
+    ThreeMfBeam, ThreeMfMaterial, export_beam_lattice_3mf, import_beam_lattice_3mf,
+};
 use std::fmt::Write;
 fn error(message: impl Into<String>) -> Error {
     Error::new("MESH_IO_INVALID_INPUT", message)

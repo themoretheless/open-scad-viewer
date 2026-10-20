@@ -44,6 +44,7 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
     let mut parents = Vec::new();
     let mut parent_ids = Vec::new();
     let mut next_parent_id = 0usize;
+    let mut exact_parents = Vec::new();
     let mut work = 0;
     for wire in wires {
         if wire.is_empty() {
@@ -57,9 +58,21 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                 return Err(refused("Authored boundary is open"));
             }
             if c.control_points.iter().all(|p| p == &c.control_points[0]) {
+                exact_parents.push(None);
                 continue;
             }
+            let exact = if c.degree > 3 {
+                super::boolean_ops::checked_cuts(c,c,true)
+            } else {
+                None
+            };
             let mut cuts = c.domain().to_vec();
+            if let Some(r) = &exact {
+                for p in &r.0 { cuts.extend(*p); }
+                cuts.extend(&r.1);
+            }
+            exact_parents.push(exact);
+
             // One injective coordinate suffices. Splitting every coordinate
             // extremum rounds otherwise exact tangent/implicit identities.
             // Stationary roots on the chosen coordinate still split zero jets.
@@ -78,9 +91,19 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
             let axes = injective_axis.map_or_else(|| vec![0, 1], |k| vec![k]);
             for k in axes {
                 cuts.extend(
-                    nurbs_core::intersection::planar_scalar::stationary(c, k)?.ok_or_else(
-                        || refused("Authored stationary parameter completeness is unresolved"),
-                    )?,
+                    match nurbs_core::intersection::planar_scalar::stationary(c, k)? {
+                        Some(roots) => roots,
+                        None if c.degree > 3
+                            && crate::profile_certificate::nonstationary_span(c, k)? =>
+                        {
+                            Vec::new()
+                        }
+                        None => {
+                            return Err(refused(
+                                "Authored stationary parameter completeness is unresolved",
+                            ));
+                        }
+                    },
                 );
             }
             super::coincidence_ops::coalesce(c, &mut cuts, tolerance, &mut work)?;
@@ -156,6 +179,35 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
             work += 1;
             if work > 8192 {
                 return Err(refused("Bézier normalization pair budget exceeded"));
+            }
+            if parent_ids[i] == parent_ids[j] && exact_parents[parent_ids[i]].is_some() {
+                continue;
+            }
+            let mut duplicate = false;
+            for reverse in [false, true] {
+                let d = curves[j].domain();
+                let domain = if reverse { [d[1], d[0]] } else { d };
+                if crate::profile_certificate::certify_nonlinear_curve_agreement(
+                    &curves[i],
+                    &curves[j],
+                    curves[i].domain(),
+                    domain,
+                )
+                .is_ok()
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if duplicate {
+                let old = aliases[j];
+                let new = aliases[i];
+                for alias in &mut aliases {
+                    if *alias == old {
+                        *alias = new;
+                    }
+                }
+                continue;
             }
             use nurbs_core::intersection::planar_scalar::Relation;
             if parent_ids[i] == parent_ids[j]
@@ -248,6 +300,10 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                 None,
             )?;
             if !report.report.unresolved.is_empty() {
+                if let Some((events,_))=super::boolean_ops::checked_cuts(&curves[i],&curves[j],false){
+                    for p in events{cuts[i].push(p[0]);cuts[j].push(p[1]);}
+                    continue;
+                }
                 return Err(refused(&format!(
                     "Self-intersection normalization is unresolved for spans {i} and {j}"
                 )));
@@ -323,8 +379,22 @@ pub fn normalize(wires: &[Vec<Curve>], tolerance: f64) -> Result<Vec<Vec<Curve>>
                     } else {
                         other.clone()
                     };
-                    if nurbs_core::intersection::planar_coincidence::agreement(&piece, &b)?
-                        .is_some_and(|e| e <= limit)
+                    if crate::profile_certificate::certify_curve_agreement(
+                        &piece,
+                        &b,
+                        piece.domain(),
+                        b.domain(),
+                    )
+                    .is_ok()
+                        || crate::profile_certificate::certify_nonlinear_curve_agreement(
+                            &piece,
+                            &b,
+                            piece.domain(),
+                            b.domain(),
+                        )
+                        .is_ok()
+                        || nurbs_core::intersection::planar_coincidence::agreement(&piece, &b)?
+                            .is_some_and(|e| e <= limit)
                     {
                         duplicate = Some(j);
                         break;

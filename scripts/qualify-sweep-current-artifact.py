@@ -70,7 +70,9 @@ def sources():
             continue
         assert digest(stage / name) == expected.get(name, sha), f'Source changed: {name}'
     for name, sha in expected.items():
-        assert name.startswith('scripts/'), 'Only explicit qualification source overrides allowed'
+        # QA-only contract repairs are hash-bound separately from the native
+        # and application source used to build this exact artifact.
+        assert name.startswith(('scripts/', 'tests/')), 'Only explicit qualification/test overrides allowed'
         assert digest(stage / name) == sha
     binding = {'frozenSourceLedgerSha256': digest(ledger_path),
                'qaOverrideLedgerSha256': digest(override_path),

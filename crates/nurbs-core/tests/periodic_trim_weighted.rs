@@ -282,3 +282,27 @@ fn opposite_cancellation_does_not_round_the_parameter_knot_reflection() {
     coverage(&g);
     assert!(g.edges.is_empty());
 }
+
+#[test]
+fn projective_weight_aliases_and_reverse_cancellation_are_order_independent() {
+    let a = circle();
+    let mut b = a.clone();
+    for w in &mut b.weights {
+        *w *= 2.;
+    }
+    let reverse = b.reverse().unwrap();
+    for sources in [
+        vec![a.clone(), b.clone(), reverse.clone()],
+        vec![b.clone(), reverse.clone(), a.clone()],
+        vec![reverse.clone(), a.clone(), b.clone()],
+        vec![a.clone(), reverse, b],
+    ] {
+        let result = assemble(&sources);
+        assert!(result.winding_preserved, "{result:?}");
+        let graph = result.graph.unwrap();
+        coverage(&graph);
+        assert_eq!(graph.edges.len(), 1);
+        assert_eq!(graph.edges[0].coefficient, 1);
+        assert_eq!(winding(&graph, [0.375, 0.5]), 1);
+    }
+}

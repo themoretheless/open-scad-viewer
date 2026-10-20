@@ -31,6 +31,69 @@ impl GpuElement for u32 {
     }
 }
 
+/// Copy the sealed scalar wire format into an owned, correctly aligned Vec.
+/// An explicit byte copy avoids context-dependent scalar-loop codegen on LE.
+pub(crate) fn decode_elements<T: GpuElement>(bytes: &[u8]) -> Vec<T> {
+    #[cfg(target_endian = "little")]
+    {
+        const { assert!(std::mem::size_of::<T>() == 4) };
+        let len = bytes.len() / 4;
+        let mut out = Vec::<T>::with_capacity(len);
+        // SAFETY: the sealed types are f32/u32, four bytes with every bit
+        // pattern valid. The fresh allocation has T alignment and capacity;
+        // a byte copy needs no source alignment. The initialized source cannot
+        // overlap this new allocation. Expose elements only after initializing
+        // all their bytes; ignore incomplete trailing words as the scalar path did.
+        unsafe {
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), out.as_mut_ptr().cast::<u8>(), len * 4);
+            out.set_len(len);
+        }
+        out
+    }
+    #[cfg(not(target_endian = "little"))]
+    bytes
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|v| T::from_bytes(*v))
+        .collect()
+}
+
+#[cfg(test)]
+mod decode_tests {
+    use super::decode_elements;
+
+    #[test]
+    fn bulk_decode_owns_aligned_storage_and_preserves_unaligned_source_bits() {
+        let mut bits = vec![
+            0,
+            0x8000_0000,
+            1,
+            u32::MAX,
+            0x7f80_0000,
+            0x7fa0_1234,
+            0x7fc0_1234,
+        ];
+        let mut state = 0xa390_31d5u32;
+        for _ in 0..1021 {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            bits.push(state);
+        }
+        let mut raw = vec![0x55];
+        raw.extend(bits.iter().flat_map(|v| v.to_le_bytes()));
+        raw.extend([0x11, 0x22, 0x33]);
+        let floats = decode_elements::<f32>(&raw[1..]);
+        let words = decode_elements::<u32>(&raw[1..]);
+        raw.fill(0);
+        assert_eq!(words, bits);
+        assert_eq!(floats.iter().map(|v| v.to_bits()).collect::<Vec<_>>(), bits);
+        assert!(decode_elements::<f32>(&[]).is_empty());
+        assert!(decode_elements::<u32>(&[1, 2, 3]).is_empty());
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Allocation {
     pub buffer: gpu_compute::GpuBuffer,

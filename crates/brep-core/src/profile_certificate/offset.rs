@@ -1,0 +1,534 @@
+//! Pointwise normal-offset approximation of a regular stored planar curve.
+//! Exact Bernstein/rational boxes and integer square-root enclosures prove the
+//! entire interval, including output rounding. No sampled error claim is used.
+//! This scope does not assert a filled-region offset, joins or solid validity.
+use super::*;
+use num_bigint::BigInt;
+use num_traits::{Signed, ToPrimitive};
+const MAX_SEGMENTS: usize = 2048;
+#[derive(Clone, Debug, PartialEq)]
+pub struct OffsetCurveCertificate {
+    pub version: u32,
+    pub source: String,
+    pub parameters: Vec<f64>,
+    pub points: Vec<[f64; 2]>,
+}
+#[derive(Clone, Debug)]
+pub struct VerifiedOffsetCurve {
+    segments: usize,
+    maximum_deviation_mm: f64,
+}
+impl VerifiedOffsetCurve {
+    pub fn segments(&self) -> usize {
+        self.segments
+    }
+    pub fn maximum_deviation_mm(&self) -> f64 {
+        self.maximum_deviation_mm
+    }
+}
+impl OffsetCurveCertificate {
+    pub fn curves(&self) -> Result<Vec<Curve>> {
+        self.points
+            .windows(2)
+            .map(|p| Curve::from_polyline(vec![p[0].to_vec(), p[1].to_vec()]))
+            .collect()
+    }
+}
+#[derive(Clone)]
+pub(super) struct Range {
+    pub(super) lo: Q,
+    pub(super) hi: Q,
+}
+impl Range {
+    pub(super) fn hull(mut v: impl Iterator<Item = Q>) -> Self {
+        let first = v.next().unwrap();
+        let mut lo = first.clone();
+        let mut hi = first;
+        for val in v {
+            if val < lo {
+                lo = val;
+            } else if val > hi {
+                hi = val;
+            }
+        }
+        Self { lo, hi }
+    }
+    pub(super) fn mul(&self, b: &Self) -> Self {
+        Self::hull(
+            [
+                &self.lo * &b.lo,
+                &self.lo * &b.hi,
+                &self.hi * &b.lo,
+                &self.hi * &b.hi,
+            ]
+            .into_iter(),
+        )
+    }
+    pub(super) fn square(&self) -> Self {
+        Self {
+            lo: if self.lo <= Q::zero() && self.hi >= Q::zero() {
+                Q::zero()
+            } else {
+                self.lo.pow(2).min(self.hi.pow(2))
+            },
+            hi: self.lo.pow(2).max(self.hi.pow(2)),
+        }
+    }
+    pub(super) fn max_abs(&self) -> Q {
+        self.lo.abs().max(self.hi.abs())
+    }
+}
+pub(super) fn sqrt_bound(q: &Q, up: bool) -> Q {
+    let denominator = BigInt::one() << 128usize;
+    let n = (q.numer() * &denominator * &denominator) / q.denom();
+    if n.is_zero() {
+        return if up && !q.is_zero() {
+            Q::new(1.into(), denominator)
+        } else {
+            Q::zero()
+        };
+    }
+    let mut x = BigInt::one() << ((n.bits() + 1) / 2) as usize;
+    loop {
+        let y = (&x + &n / &x) / 2;
+        if y >= x {
+            break;
+        }
+        x = y;
+    }
+    if up && Q::new(&x * &x, &denominator * &denominator) < *q {
+        x += 1;
+    }
+    Q::new(x, denominator)
+}
+fn source(curve: &Curve, distance: f64, deviation: f64) -> Result<String> {
+    let bits = source_bits(&[vec![curve.clone()]], 1e-7)?;
+    if !distance.is_finite()
+        || distance.abs() > 1e6
+        || !deviation.is_finite()
+        || !(1e-9..=10.).contains(&deviation)
+    {
+        return Err(refused(
+            "Invalid certified normal-offset distance or deviation",
+        ));
+    }
+    // Check exact seam continuity as well as numeric periodic storage validity.
+    // A normal is not invented at a corner or a singular endpoint.
+    let [start, end] = curve.domain();
+    let mut breaks: Vec<_> = curve
+        .knots
+        .iter()
+        .copied()
+        .filter(|k| *k >= start && *k <= end)
+        .collect();
+    breaks.dedup();
+    let mut nets = Vec::new();
+    for pair in breaks.windows(2) {
+        nets.push(extraction::interval(
+            curve,
+            &Q::from_float(pair[0]).unwrap(),
+            &Q::from_float(pair[1]).unwrap(),
+        )?);
+    }
+    let count = if curve.periodic {
+        nets.len()
+    } else {
+        nets.len().saturating_sub(1)
+    };
+    for i in 0..count {
+        let a = &nets[i];
+        let b = &nets[(i + 1) % nets.len()];
+        let p = a.last().unwrap();
+        let q = &b[0];
+        if &p[0] * &q[2] != &q[0] * &p[2] || &p[1] * &q[2] != &q[1] * &p[2] {
+            return Err(refused("Normal offset source has an inexact seam"));
+        }
+        if distance != 0. {
+            let x = arithmetic::tangent_numerators(a).map(|v| v.last().unwrap().clone());
+            let y = arithmetic::tangent_numerators(b).map(|v| v[0].clone());
+            if &x[0] * &y[1] != &x[1] * &y[0] || &x[0] * &y[0] + &x[1] * &y[1] <= Q::zero() {
+                return Err(refused(
+                    "Normal offset source has a corner or singular seam",
+                ));
+            }
+        }
+    }
+    Ok(format!(
+        "normal-offset-v1/{:016x}/{:016x}/{bits}",
+        distance.to_bits(),
+        deviation.to_bits()
+    ))
+}
+pub(super) fn bound(
+    net: &[[Q; 3]],
+    a: [f64; 2],
+    b: [f64; 2],
+    distance: f64,
+    deviation: f64,
+) -> Result<bool> {
+    let n = net.len() - 1;
+    let normals = if distance == 0. {
+        None
+    } else {
+        let tangent = arithmetic::tangent_numerators(net).map(|p| Range::hull(p.into_iter()));
+        let squares = tangent.clone().map(|r| r.square());
+        let lo = sqrt_bound(&(&squares[0].lo + &squares[1].lo), false);
+        let hi = sqrt_bound(&(&squares[0].hi + &squares[1].hi), true);
+        if lo <= Q::zero() {
+            return Ok(false);
+        }
+        let reciprocal = Range {
+            lo: Q::one() / hi,
+            hi: Q::one() / lo,
+        };
+        Some([
+            Range {
+                lo: -&tangent[1].hi,
+                hi: -&tangent[1].lo,
+            }
+            .mul(&reciprocal),
+            tangent[0].mul(&reciprocal),
+        ])
+    };
+    let mut error = Q::zero();
+    for axis in 0..2 {
+        let left = Q::from_float(a[axis]).ok_or_else(|| refused("Nonfinite offset output"))?;
+        let right = Q::from_float(b[axis]).ok_or_else(|| refused("Nonfinite offset output"))?;
+        let mut r = Range::hull((0..=n + 1).map(|i| {
+            let t = Q::new(i.into(), (n + 1).into());
+            let u = &Q::one() - &t;
+            let h = if i <= n {
+                &u * &net[i][axis]
+            } else {
+                Q::zero()
+            } + if i > 0 {
+                &t * &net[i - 1][axis]
+            } else {
+                Q::zero()
+            };
+            let w = if i <= n { &u * &net[i][2] } else { Q::zero() }
+                + if i > 0 {
+                    &t * &net[i - 1][2]
+                } else {
+                    Q::zero()
+                };
+            let line = if i <= n {
+                &u * &net[i][2] * &left
+            } else {
+                Q::zero()
+            } + if i > 0 {
+                &t * &net[i - 1][2] * &right
+            } else {
+                Q::zero()
+            };
+            (h - line) / w
+        }));
+        if let Some(normals) = &normals {
+            let d = Q::from_float(distance).unwrap();
+            let shift = normals[axis].mul(&Range {
+                lo: d.clone(),
+                hi: d,
+            });
+            r.lo += shift.lo;
+            r.hi += shift.hi;
+        }
+        error += r.max_abs().pow(2);
+    }
+    Ok(error <= Q::from_float(deviation).unwrap().pow(2))
+}
+pub(super) fn endpoint(net: &[[Q; 3]], end: bool, distance: f64) -> Result<[f64; 2]> {
+    let index = if end { net.len() - 1 } else { 0 };
+    let p = &net[index];
+    let mut point = std::array::from_fn(|k| (&p[k] / &p[2]).to_f64().unwrap_or(f64::NAN));
+    if distance != 0. {
+        let jets = arithmetic::tangent_numerators(net);
+        let tangent = jets.map(|v| {
+            v[if end { v.len() - 1 } else { 0 }]
+                .to_f64()
+                .unwrap_or(f64::NAN)
+        });
+        let length = tangent[0].hypot(tangent[1]);
+        if !length.is_finite() || length == 0. {
+            return Err(refused("Normal offset has a singular endpoint tangent"));
+        }
+        point[0] -= distance * tangent[1] / length;
+        point[1] += distance * tangent[0] / length;
+    }
+    if point.iter().any(|v| !v.is_finite()) {
+        return Err(refused("Normal offset output exceeds numeric range"));
+    }
+    Ok(point)
+}
+pub fn certify_offset_curve(
+    curve: &Curve,
+    distance: f64,
+    deviation: f64,
+) -> Result<OffsetCurveCertificate> {
+    let source = source(curve, distance, deviation)?;
+    let [start, end] = curve.domain();
+    let mut breaks: Vec<_> = curve
+        .knots
+        .iter()
+        .copied()
+        .filter(|k| *k >= start && *k <= end)
+        .collect();
+    breaks.dedup();
+    if breaks.len() > MAX_SEGMENTS + 1 {
+        return Err(refused("Normal offset knot budget exceeded"));
+    }
+    let mut stack = Vec::new();
+    for pair in breaks.windows(2).rev() {
+        let a = Q::from_float(pair[0]).unwrap();
+        let b = Q::from_float(pair[1]).unwrap();
+        stack.push((pair[0], pair[1], extraction::interval(curve, &a, &b)?, 0u8));
+    }
+    let first = endpoint(&stack.last().unwrap().2, false, distance)?;
+    let mut c = OffsetCurveCertificate {
+        version: 1,
+        source,
+        parameters: vec![start],
+        points: vec![first],
+    };
+    let mut work = 0;
+    while let Some((a, b, net, depth)) = stack.pop() {
+        work += 1;
+        if work > 8192 || c.points.len() > MAX_SEGMENTS {
+            return Err(refused("Normal offset subdivision budget exhausted"));
+        }
+        let last = *c.points.last().unwrap();
+        let right = endpoint(&net, true, distance)?;
+        if bound(&net, last, right, distance, deviation)? {
+            c.parameters.push(b);
+            c.points.push(right);
+            continue;
+        }
+        let mid = a * 0.5 + b * 0.5;
+        if depth >= 24 || !(a < mid && mid < b) {
+            return Err(refused("Normal offset error bound remains unproved"));
+        }
+        let q = Q::from_float(mid).unwrap();
+        let l = extraction::interval(curve, &Q::from_float(a).unwrap(), &q)?;
+        let r = extraction::interval(curve, &q, &Q::from_float(b).unwrap())?;
+        stack.push((mid, b, r, depth + 1));
+        stack.push((a, mid, l, depth + 1));
+    }
+    verify_offset_curve(curve, distance, deviation, &c)?;
+    Ok(c)
+}
+pub fn verify_offset_curve(
+    curve: &Curve,
+    distance: f64,
+    deviation: f64,
+    c: &OffsetCurveCertificate,
+) -> Result<VerifiedOffsetCurve> {
+    if c.version != 1
+        || c.source != source(curve, distance, deviation)?
+        || c.points.len() < 2
+        || c.points.len() > MAX_SEGMENTS + 1
+        || c.parameters.len() != c.points.len()
+    {
+        return Err(refused(
+            "Normal offset certificate source, schema or census mismatch",
+        ));
+    }
+    let domain = curve.domain();
+    if c.parameters[0].to_bits() != domain[0].to_bits()
+        || c.parameters.last().unwrap().to_bits() != domain[1].to_bits()
+    {
+        return Err(refused("Normal offset certificate omits source domain"));
+    }
+    for (i, pair) in c.parameters.windows(2).enumerate() {
+        if pair.iter().any(|p| !p.is_finite()) || pair[0] >= pair[1] {
+            return Err(refused(
+                "Normal offset parameter partition is not increasing",
+            ));
+        }
+        let net = extraction::interval(
+            curve,
+            &Q::from_float(pair[0]).unwrap(),
+            &Q::from_float(pair[1]).unwrap(),
+        )?;
+        if !bound(&net, c.points[i], c.points[i + 1], distance, deviation)? {
+            return Err(refused("Normal offset pointwise error claim is false"));
+        }
+    }
+    Ok(VerifiedOffsetCurve {
+        segments: c.points.len() - 1,
+        maximum_deviation_mm: deviation,
+    })
+}
+/// One-sided cell producer. The enclosing wire checker binds and reconstructs
+/// the original cell; no floating-point re-fit of the source is admitted.
+pub(super) fn produce_cell(
+    curve: &Curve,
+    a: f64,
+    b: f64,
+    distance: f64,
+    deviation: f64,
+) -> Result<(Vec<f64>, Vec<[f64; 2]>)> {
+    let net = extraction::interval(
+        curve,
+        &Q::from_float(a).unwrap(),
+        &Q::from_float(b).unwrap(),
+    )?;
+    let mut points = vec![endpoint(&net, false, distance)?];
+    let mut parameters = vec![a];
+    let mut stack = vec![(a, b, net, 0u8)];
+    let mut work = 0;
+    while let Some((a, b, net, depth)) = stack.pop() {
+        work += 1;
+        if work > 8192 || points.len() > MAX_SEGMENTS {
+            return Err(refused("Offset wire cell subdivision budget exhausted"));
+        }
+        let right = endpoint(&net, true, distance)?;
+        if bound(&net, *points.last().unwrap(), right, distance, deviation)? {
+            points.push(right);
+            parameters.push(b);
+            continue;
+        }
+        let mid = a * 0.5 + b * 0.5;
+        if depth >= 24 || !(a < mid && mid < b) {
+            return Err(refused("Offset wire cell bound remains unproved"));
+        }
+        let q = Q::from_float(mid).unwrap();
+        stack.push((
+            mid,
+            b,
+            extraction::interval(curve, &q, &Q::from_float(b).unwrap())?,
+            depth + 1,
+        ));
+        stack.push((
+            a,
+            mid,
+            extraction::interval(curve, &Q::from_float(a).unwrap(), &q)?,
+            depth + 1,
+        ));
+    }
+    Ok((parameters, points))
+}
+#[cfg(feature = "codec")]
+mod serialization {
+    use super::*;
+    use value_codec::{Deserialize, Serialize, Value, error, json};
+    impl Serialize for OffsetCurveCertificate {
+        fn to_value(&self) -> Value {
+            json!({"version":self.version,"source":self.source,"parameters":self.parameters,"points":self.points,"scope":"represented-normal-offset-curve-approximation"})
+        }
+    }
+    impl<'de> Deserialize<'de> for OffsetCurveCertificate {
+        fn from_value(v: Value) -> value_codec::Result<Self> {
+            let keys = ["version", "source", "parameters", "points", "scope"];
+            let o = v
+                .as_object()
+                .ok_or_else(|| error("Expected normal-offset certificate"))?;
+            if o.len() != keys.len()
+                || keys.iter().any(|k| !o.contains_key(*k))
+                || v["scope"].as_str() != Some("represented-normal-offset-curve-approximation")
+                || v["source"].as_str().is_none_or(|s| s.len() > 65700)
+                || ["points", "parameters"]
+                    .iter()
+                    .any(|k| v[*k].as_array().is_none_or(|a| a.len() > MAX_SEGMENTS + 1))
+            {
+                return Err(error("Normal offset certificate schema or size mismatch"));
+            }
+            Ok(Self {
+                version: Deserialize::from_value(v["version"].clone())?,
+                source: Deserialize::from_value(v["source"].clone())?,
+                parameters: Deserialize::from_value(v["parameters"].clone())?,
+                points: Deserialize::from_value(v["points"].clone())?,
+            })
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rational_quartic_and_periodic_cubic_offsets_are_checked_without_source_fitting() {
+        let quartic = Curve {
+            degree: 4,
+            knots: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+            control_points: vec![
+                vec![0., 0.],
+                vec![2., 0.],
+                vec![4., 1.],
+                vec![6., 3.],
+                vec![8., 4.],
+            ],
+            weights: vec![1., 2., 3., 2., 1.],
+            periodic: false,
+        };
+        let periodic = Curve {
+            degree: 3,
+            knots: (0..=10).map(f64::from).collect(),
+            control_points: vec![
+                vec![0., 0.],
+                vec![8., 0.],
+                vec![8., 8.],
+                vec![0., 8.],
+                vec![0., 0.],
+                vec![8., 0.],
+                vec![8., 8.],
+            ],
+            weights: vec![1.; 7],
+            periodic: true,
+        };
+        for curve in [quartic, periodic] {
+            let before = curve.clone();
+            let c = certify_offset_curve(&curve, 0.5, 0.05).unwrap();
+            verify_offset_curve(&curve, 0.5, 0.05, &c).unwrap();
+            assert_eq!(curve, before);
+            let mut bad = c.clone();
+            bad.parameters[1] = bad.parameters[0];
+            assert!(verify_offset_curve(&curve, 0.5, 0.05, &bad).is_err());
+            #[cfg(feature = "codec")]
+            {
+                let mut v = value_codec::to_value(&c).unwrap();
+                v["solidValid"] = value_codec::Value::Bool(true);
+                assert!(value_codec::from_value::<OffsetCurveCertificate>(v).is_err());
+            }
+        }
+    }
+    #[test]
+    fn normal_offset_proof_checks_complete_curve_and_output_rounding() {
+        let curve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![5., 0.], vec![10., 5.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        for distance in [-1., 0., 1.] {
+            let c = certify_offset_curve(&curve, distance, 0.05).unwrap();
+            verify_offset_curve(&curve, distance, 0.05, &c).unwrap();
+            let mut bad = c.clone();
+            bad.points[1][0] += 1.;
+            assert!(verify_offset_curve(&curve, distance, 0.05, &bad).is_err());
+            let mut bad = c.clone();
+            bad.parameters.remove(1);
+            assert!(verify_offset_curve(&curve, distance, 0.05, &bad).is_err());
+            assert!(verify_offset_curve(&curve, distance, 0.01, &c).is_err());
+            #[cfg(feature = "codec")]
+            {
+                let s = value_codec::to_string(&c).unwrap();
+                let decoded: OffsetCurveCertificate = value_codec::from_str(&s).unwrap();
+                verify_offset_curve(&curve, distance, 0.05, &decoded).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn singular_normal_is_refused_instead_of_claiming_an_offset() {
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0., 0.], vec![0., 0.], vec![1., 1.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        assert!(certify_offset_curve(&c, 1., 0.01).is_err());
+        certify_offset_curve(&c, 0., 0.01).unwrap();
+        let corner = Curve::from_polyline(vec![vec![0., 0.], vec![2., 0.], vec![2., 2.]]).unwrap();
+        assert!(certify_offset_curve(&corner, 1., 0.01).is_err());
+        certify_offset_curve(&corner, 0., 0.01).unwrap();
+    }
+}

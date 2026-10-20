@@ -2,6 +2,7 @@ import {closedFrenetStationSources} from './closed-frenet-station-sources.mjs'
 import {closedCorrectedRegularBodySources,correctedRegularBodySources,sweepBodyBoundarySources} from './sweep-body-matrix-sources.mjs'
 import {spatialRmfProfileG2BodySources} from './spatial-rmf-profile-g2-sources.mjs'
 import {stationFrameSources} from './station-frame-matrix-sources.mjs'
+import {correctedC2BodySources} from './corrected-c2-sources.mjs'
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
@@ -28,7 +29,8 @@ const stationFrameMatrixMode=process.argv.includes('--station-frame-matrix')
 const progressiveStationMatrixMode=process.argv.includes('--progressive-station-matrix')||stationFrameMatrixMode||closedFrenetStationMatrixMode||periodicFixedNormalStationMatrixMode
 const surfaceMode=process.argv.includes('--surface')
 const profileG2BodyMatrixMode=process.argv.includes('--profile-g2-body-matrix')
-const bodyBoundaryMode=process.argv.includes('--body-boundary')||profileG2BodyMatrixMode
+const correctedC2BodyMatrixMode=process.argv.includes('--corrected-c2-body-matrix')
+const bodyBoundaryMode=process.argv.includes('--body-boundary')||profileG2BodyMatrixMode||correctedC2BodyMatrixMode
 const boundedFixedRefusalMode=process.argv.includes('--bounded-fixed-refusal')
 assert.ok(!boundedFixedRefusalMode||bodyBoundaryMode,'Bounded Fixed refusal requires body-boundary mode')
 const sourceDirectory=path.resolve(process.argv.find(a=>a.startsWith('--source-directory='))?.slice('--source-directory='.length)??'examples/rush')
@@ -73,7 +75,7 @@ const reconstructedSources=[
 ]
 for(const file of reconstructedSources)assert.equal(sources.filter(source=>source===file).length,surfaceMode||bodyBoundaryMode||progressiveStationMatrixMode?0:1,'Reconstructed source must occur exactly once in the miter inventory')
 const lawSourcePattern=profileG2LawMatrixMode?/^miter-laws-(open|closed)-[a-z-]+-profile-g2\.r$/:/^miter-laws-(open|closed)-[a-z-]+\.r$/
-const selectedSources=(periodicFixedNormalStationMatrixMode?periodicFixedNormalStationSources:closedFrenetStationMatrixMode?closedFrenetStationSources:stationFrameMatrixMode?stationFrameSources:boundedFixedRefusalMode?['closed-arc-length-fixed-folded-body-boundary.r']:reconstructedMatrixMode?reconstructedSources:lawMatrixMode?(await readdir(sourceDirectory)).filter(file=>lawSourcePattern.test(file)).sort():sources).filter(file=>!filter||file===filter)
+const selectedSources=(correctedC2BodyMatrixMode?correctedC2BodySources:periodicFixedNormalStationMatrixMode?periodicFixedNormalStationSources:closedFrenetStationMatrixMode?closedFrenetStationSources:stationFrameMatrixMode?stationFrameSources:boundedFixedRefusalMode?['closed-arc-length-fixed-folded-body-boundary.r']:reconstructedMatrixMode?reconstructedSources:lawMatrixMode?(await readdir(sourceDirectory)).filter(file=>lawSourcePattern.test(file)).sort():sources).filter(file=>!filter||file===filter)
 if(lawMatrixMode&&!filter){
  const expected=[false,true].flatMap(closed=>Array.from({length:8},(_,bits)=>{
   const laws=[bits&1?'affine':null,bits&2?'authored':null,bits&4?'guide':null].filter(Boolean).join('-')||'plain'
@@ -82,6 +84,7 @@ if(lawMatrixMode&&!filter){
  assert.deepEqual(selectedSources,expected,'Complete law matrix requires each open/closed affine/authored/guide combination exactly once')
 }
 if(profileG2BodyMatrixMode&&!filter)assert.deepEqual(selectedSources,[...spatialRmfProfileG2BodySources],'Complete corrected spatial body inventory requires all eleven original companions')
+if(correctedC2BodyMatrixMode&&!filter)assert.deepEqual(selectedSources,[...correctedC2BodySources],'Supplemental C2 matrix requires both spacings with automatic and explicitly corrected caps')
 sources.splice(0,sources.length,...selectedSources)
 assert.ok(sources.length,'Unknown mode filter')
 const viewports=[{width:1440,height:1000},{width:600,height:1000}].filter(v=>!widthFilter||v.width===widthFilter)
@@ -127,7 +130,7 @@ report.sourceHashes = Object.fromEntries(await Promise.all([
  'src/services/nurbsSectionProjection.ts','src/services/nurbsCircleSectionRepair.ts',
  'src/services/miterBodyLayout.ts','src/services/sweepBoundaryCertificate.ts',
  'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
- 'scripts/check-sweep-miter-matrix-browser.mjs','scripts/worker-wasm-fingerprint.mjs','scripts/sweep-native-cancel-probe.mjs','scripts/sweep-body-matrix-sources.mjs',
+ 'scripts/check-sweep-miter-matrix-browser.mjs','scripts/worker-wasm-fingerprint.mjs','scripts/sweep-native-cancel-probe.mjs','scripts/sweep-body-matrix-sources.mjs','scripts/corrected-c2-sources.mjs',
  'crates/geometry-bridge/src/brep.rs',
  'crates/brep-core/src/face_contact_groups.rs','crates/brep-core/src/face_contacts.rs',
  'crates/brep-core/src/boundary_embedding.rs','crates/brep-core/src/sweep_cap_contacts.rs',
@@ -537,7 +540,9 @@ try {
      // Their independently qualified 65-station requests retain the valid
      // error budget and produce certified 256/258-face Solids.
      const busySource=progressiveStationMatrixMode?source+'\n// Observe the original progressive station geometry in a new revision.\n':bodyBoundaryMode
-      ?file==='periodic-corrected-frenet-nonplanar-body-boundary.r'
+      ?correctedC2BodyMatrixMode
+       ?source.replace(/initial_sections:\s*3\b/, 'initial_sections: 65')
+       :file==='periodic-corrected-frenet-nonplanar-body-boundary.r'
        // The proved periodic grid fits the original aggregate work ceiling.
        ?source.replace(/initial_sections:\s*5\b/, 'initial_sections: 33')
        :correctedRegularBodySources.includes(file)&&file.includes('hollow')
@@ -593,7 +598,9 @@ try {
     entry.assertions.push({case:buildAction==='cancel'?'native-build-cancel-restoration':'native-build-source-change-restoration',status:'passed'})
     }
     for(const action of ['cancel','source-change']){
-     const exactSource=bodyBoundaryMode&&['arc-length-curved-frenet-body-boundary.r','arc-length-curved-fixed-normal-body-boundary.r','arc-length-curved-fixed-body-boundary.r'].includes(file)
+     const exactSource=correctedC2BodyMatrixMode
+      ?source.replace(/initial_sections:\s*3\b/, 'initial_sections: 65')
+      :bodyBoundaryMode&&['arc-length-curved-frenet-body-boundary.r','arc-length-curved-fixed-normal-body-boundary.r','arc-length-curved-fixed-body-boundary.r'].includes(file)
       // Keep the original maximum of 17; make the real cancellation workload
       // start there so its warm native Solid request remains observable.
       ?source.replace('initial_sections: 3,max_sections: 17','initial_sections: 17,max_sections: 17')

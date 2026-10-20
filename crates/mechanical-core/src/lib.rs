@@ -8,8 +8,15 @@ pub use profiles::{
     gear_profile, planetary_profiles,
 };
 pub use standard_parts::{
-    MetricFastenerSpec, RackOptions, TimingPulleyOptions, hex_nut_profile, involute_rack_profile,
-    iso_metric_fastener, timing_pulley_profile,
+    BearingFitClass, BearingFitReport, BevelGearOptions, BevelGearReport, DiscSpringOptions,
+    DiscSpringReport, HeatSetInsertSpec, HelicalGearOptions, HelicalGearReport,
+    HelicalSpringOptions, HelicalSpringReport, KeywaySpec, MetricFastenerSpec, ORingGrooveSpec,
+    PulleyStandard, RackOptions, RetainingRingGrooveSpec, SprocketOptions, TimingPulleyOptions,
+    WormDriveOptions, WormDriveReport, bevel_gear_params, disc_spring_load, heat_set_insert_spec,
+    helical_gear_params, helical_spring_analysis, hex_nut_profile, involute_rack_profile,
+    iso_metric_fastener, iso286_shaft_housing_fit, o_ring_groove_spec, retaining_ring_groove,
+    roller_chain_sprocket, shaft_keyway_din6885, timing_pulley_profile, timing_pulley_standard,
+    worm_drive_params,
 };
 pub use threads::{ThreadGeometry, ThreadOptions, thread_mesh, thread_radius_at};
 pub type Point = [f64; 2];

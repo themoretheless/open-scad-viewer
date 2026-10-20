@@ -158,8 +158,8 @@ impl GpuMatcher {
         }
         let rows = da.len() as u32;
         let cols = db.len() as u32;
-        let packed_a = pack_descriptors(da);
-        let packed_b = pack_descriptors(db);
+        let packed_a = gpu_compute::f32_le_bytes(da.as_flattened());
+        let packed_b = gpu_compute::f32_le_bytes(db.as_flattened());
         self.ensure_buffers(da.len(), db.len());
         let row_bytes = (rows as u64) * 12;
         let col_bytes = (cols as u64) * 8;
@@ -214,32 +214,41 @@ impl GpuMatcher {
 
         // The shared transport releases each mapping before returning, so these
         // staging allocations can be reused by the next call without unmapping.
-        let rows_raw =
-            super::try_read_buffer(&self.device, &buffers.read_rows, row_bytes as usize)?;
-        let cols_raw =
-            super::try_read_buffer(&self.device, &buffers.read_cols, col_bytes as usize)?;
-
-        let rows_out_vec = rows_raw
-            .chunks_exact(12)
-            .map(|c| RowBest {
-                j: match u32::from_ne_bytes(c[0..4].try_into().unwrap()) {
-                    u32::MAX => usize::MAX,
-                    raw => raw as usize,
-                },
-                d1: f32::from_ne_bytes(c[4..8].try_into().unwrap()),
-                d2: f32::from_ne_bytes(c[8..12].try_into().unwrap()),
-            })
-            .collect();
-        let cols_out_vec = cols_raw
-            .chunks_exact(8)
-            .map(|c| ColBest {
-                i: match u32::from_ne_bytes(c[0..4].try_into().unwrap()) {
-                    u32::MAX => usize::MAX,
-                    raw => raw as usize,
-                },
-                d1: f32::from_ne_bytes(c[4..8].try_into().unwrap()),
-            })
-            .collect();
+        let rows_out_vec = gpu_compute::try_read_buffer_with(
+            &self.device,
+            &buffers.read_rows,
+            row_bytes as usize,
+            |bytes| {
+                bytes
+                    .chunks_exact(12)
+                    .map(|c| RowBest {
+                        j: match u32::from_le_bytes(c[0..4].try_into().unwrap()) {
+                            u32::MAX => usize::MAX,
+                            raw => raw as usize,
+                        },
+                        d1: f32::from_le_bytes(c[4..8].try_into().unwrap()),
+                        d2: f32::from_le_bytes(c[8..12].try_into().unwrap()),
+                    })
+                    .collect()
+            },
+        )?;
+        let cols_out_vec = gpu_compute::try_read_buffer_with(
+            &self.device,
+            &buffers.read_cols,
+            col_bytes as usize,
+            |bytes| {
+                bytes
+                    .chunks_exact(8)
+                    .map(|c| ColBest {
+                        i: match u32::from_le_bytes(c[0..4].try_into().unwrap()) {
+                            u32::MAX => usize::MAX,
+                            raw => raw as usize,
+                        },
+                        d1: f32::from_le_bytes(c[4..8].try_into().unwrap()),
+                    })
+                    .collect()
+            },
+        )?;
         Ok((rows_out_vec, cols_out_vec))
     }
 
@@ -335,11 +344,6 @@ impl GpuMatcher {
             bind,
         });
     }
-}
-
-fn pack_descriptors(data: &[[f32; 128]]) -> Vec<u8> {
-    let flat: Vec<f32> = data.iter().flatten().copied().collect();
-    super::pack_f32(&flat)
 }
 
 thread_local! {

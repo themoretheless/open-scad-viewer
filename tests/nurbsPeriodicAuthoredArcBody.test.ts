@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -13,9 +14,9 @@ it.each(sources)('qualifies periodic authored arc original error and fresh retai
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing periodic authored body')
- const boundary=JSON.parse(built.nativeGeometry.geometryJson).sweepBodyBoundaryEvidence
+ const boundary=readNativeGeometryData(built.nativeGeometry).sweepBodyBoundaryEvidence
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry),JSON.stringify({file,boundary})).toMatchObject({continuousBound:true,withinBudget:true,budget:.5})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry,stored=JSON.stringify(model)
+ const model=readNativeGeometryData(built.nativeGeometry).geometry,stored=JSON.stringify(model)
  const mesh=tessellateNurbsBrep(model,4)
  expect(mesh.indices.length/3).toBeLessThanOrEqual(20000)
  expect(new Set(mesh.faceIds).size).toBe(model.faces.length)

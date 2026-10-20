@@ -94,15 +94,7 @@ impl ComputeRuntime {
     /// Allocates zero-initialized storage without constructing or uploading a
     /// host-side zero vector. wgpu initializes new buffers before first use.
     pub fn zeros<T: GpuElement>(&self, len: usize) -> Result<GpuArray<T>, ComputeError> {
-        let bytes = (len as u64).saturating_mul(4).max(4);
-        let limits = &self.context.limits;
-        let limit = limits
-            .max_buffer_size
-            .min(limits.max_storage_buffer_binding_size as u64)
-            .min(u64::from(u32::MAX) * 4);
-        if bytes > limit {
-            return Err(ComputeError::TooLarge { bytes, limit });
-        }
+        let bytes = self.array_bytes(len)?;
         let buffer = gpu_compute::GpuBuffer::new(
             &self.context,
             bytes,
@@ -113,10 +105,70 @@ impl ComputeRuntime {
         Ok(GpuArray::new(buffer, self.owner.clone(), len as u32))
     }
 
+    fn array_bytes(&self, len: usize) -> Result<u64, ComputeError> {
+        let bytes = (len as u64).saturating_mul(4).max(4);
+        let limits = &self.context.limits;
+        let limit = limits
+            .max_buffer_size
+            .min(limits.max_storage_buffer_binding_size as u64)
+            .min(u64::from(u32::MAX) * 4);
+        if bytes > limit {
+            return Err(ComputeError::TooLarge { bytes, limit });
+        }
+        Ok(bytes)
+    }
+
+    fn upload_initialized<T: GpuElement>(
+        &self,
+        len: usize,
+        initialize: impl FnOnce(wgpu::WriteOnly<'_, [u8]>),
+    ) -> Result<GpuArray<T>, ComputeError> {
+        let bytes = self.array_bytes(len)?;
+        let buffer = gpu_compute::GpuBuffer::new_initialized(
+            &self.context,
+            bytes,
+            wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            |mapping| initialize(mapping.into_slice(..len * 4)),
+        )?;
+        Ok(GpuArray::new(buffer, self.owner.clone(), len as u32))
+    }
+
     pub fn upload<T: GpuElement>(&self, values: &[T]) -> Result<GpuArray<T>, ComputeError> {
-        let array = self.zeros(values.len())?;
-        self.write(&array, 0, values)?;
-        Ok(array)
+        self.upload_initialized(values.len(), |mut mapping| {
+            #[cfg(target_endian = "little")]
+            {
+                // SAFETY: GpuElement is sealed to four-byte f32/u32 POD types.
+                let bytes = unsafe {
+                    std::slice::from_raw_parts(
+                        values.as_ptr().cast::<u8>(),
+                        std::mem::size_of_val(values),
+                    )
+                };
+                mapping.copy_from_slice(bytes);
+            }
+            #[cfg(not(target_endian = "little"))]
+            mapping
+                .into_chunks::<4>()
+                .0
+                .write_iter(values.iter().map(|value| value.to_bytes()));
+        })
+    }
+
+    /// Generate values directly in fresh mapped storage without a temporary
+    /// Vec. On Apple Silicon Metal this is the final shared GPU allocation.
+    pub fn upload_generated<T: GpuElement>(
+        &self,
+        len: usize,
+        mut value_at: impl FnMut(usize) -> T,
+    ) -> Result<GpuArray<T>, ComputeError> {
+        self.upload_initialized(len, |mapping| {
+            mapping
+                .into_chunks::<4>()
+                .0
+                .write_iter((0..len).map(|index| value_at(index).to_bytes()));
+        })
     }
 
     /// Appends a validated readback to a caller-owned encoder. After submitting
@@ -210,6 +262,30 @@ impl ComputeRuntime {
             runtime: self,
             batch: ComputeBatch::new(),
         }
+    }
+
+    /// Generate an update directly in queue staging, avoiding a temporary Vec.
+    /// Bounds/ownership are checked before invoking the generator. Ordering is
+    /// identical to `write`; this never waits for or maps the destination.
+    /// A generator panic can schedule a partial update, as with write_buffer_with.
+    pub fn write_generated<T: GpuElement>(
+        &self,
+        array: &GpuArray<T>,
+        offset: usize,
+        len: usize,
+        mut value_at: impl FnMut(usize) -> T,
+    ) -> Result<(), ComputeError> {
+        self.check(array)?;
+        if offset.checked_add(len).is_none_or(|end| end > array.len()) {
+            return Err(ComputeError::OutOfBounds);
+        }
+        gpu_compute::write_buffer_words(
+            &self.queue,
+            array.buffer(),
+            offset as u64 * 4,
+            (0..len).map(|i| value_at(i).to_bytes()),
+        )?;
+        Ok(())
     }
 
     pub(crate) fn dot_kernel(&self) -> Result<&crate::FusedSumKernel, ComputeError> {

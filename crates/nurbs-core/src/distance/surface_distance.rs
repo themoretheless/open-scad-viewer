@@ -7,6 +7,8 @@ use crate::{Result, check, resource, surface::Surface};
 #[cfg(feature = "codec")]
 mod serialization;
 mod bezier_restriction;
+#[cfg(test)]
+mod shared_patch_tests;
 pub(crate) fn complete_bernstein_span(degree: usize, knots: &[f64], span: usize) -> bool {
     bezier_restriction::is_complete_span(degree, knots, span)
 }
@@ -572,6 +574,17 @@ pub fn rectangle_bounds(s: &Surface, domain: [[f64; 2]; 2]) -> Result<Vec<[f64; 
 pub(crate) fn rectangle_control_gap(a: &Surface, b: &Surface, domains: [[[f64; 2]; 2]; 2]) -> Result<Option<f64>> {
     Ok(rectangle_control_query(a, b, domains)?.map(|(gap, _)| gap))
 }
+/// Validate actual source surfaces and parameter rectangles before requesting
+/// a sufficient outward control-enclosure separation bound. A positive gap
+/// proves complete image separation; None or zero remains unresolved.
+pub fn verify_rectangle_separation_gap(a:&Surface,b:&Surface,domains:[[[f64;2];2];2])->Result<Option<f64>> {
+    for (surface,domain) in [a,b].into_iter().zip(domains) {
+        surface.validate()?;
+        let natural=[[surface.knots_u[surface.degree_u],surface.knots_u[surface.control_points.len()]],[surface.knots_v[surface.degree_v],surface.knots_v[surface.control_points[0].len()]]];
+        check((0..2).all(|axis|domain[axis].iter().all(|v|v.is_finite()) && natural[axis][0]<=domain[axis][0] && domain[axis][0]<=domain[axis][1] && domain[axis][1]<=natural[axis][1]),"Separation rectangle must lie in its actual source domain")?;
+    }
+    rectangle_control_gap(a,b,domains)
+}
 // A midpoint projection only proposes a subdivision direction. It never
 // certifies separation, rejects a contact, or removes any parameter cell.
 fn projected_split_proposal(a: &Patch, b: &Patch, surfaces: [&Surface; 2]) -> [f64; 4] {
@@ -602,6 +615,27 @@ fn projected_split_proposal(a: &Patch, b: &Patch, surfaces: [&Surface; 2]) -> [f
         }
     }
     if scores.iter().any(|x| !x.is_finite()) { [0.; 4] } else { scores }
+}
+// Fixed integer normals use only -1,0,1. Sign reversal and multiplication
+// by one are exact in binary64; zero terms contribute exactly zero. Round
+// only actual sums outward instead of widening exact identities first.
+fn integer_projection(p: &Patch, n: [i32;3]) -> Result<Interval> {
+    let mut lo=f64::INFINITY;let mut hi=f64::NEG_INFINITY;
+    for c in &p.controls {
+        let mut value: Option<Interval>=None;
+        for k in 0..3 {
+            let term=match n[k] {
+                0=>continue,
+                1=>c[k],
+                -1=>Interval {lo:-c[k].hi,hi:-c[k].lo},
+                _=>unreachable!(),
+            };
+            value=Some(match value {None=>term,Some(sum)=>sum.add(term)?});
+        }
+        let value=value.unwrap_or(Interval::point(0.));
+        lo=lo.min(value.lo);hi=hi.max(value.hi);
+    }
+    Interval::new(lo,hi)
 }
 pub(crate) fn rectangle_control_query(
     a: &Surface,
@@ -640,22 +674,9 @@ pub(crate) fn rectangle_control_query(
                     continue;
                 }
                 let n = [x, y, z];
-                let project = |p: &Patch| -> Result<Interval> {
-                    let mut lo = f64::INFINITY;
-                    let mut hi = f64::NEG_INFINITY;
-                    for c in &p.controls {
-                        let mut value = Interval::point(0.);
-                        for k in 0..3 {
-                            value = value.add(c[k].mul(Interval::point(n[k] as f64))?)?;
-                        }
-                        lo = lo.min(value.lo);
-                        hi = hi.max(value.hi);
-                    }
-                    Interval::new(lo, hi)
-                };
-                let gap = box_distance(&[project(&pa)?], &[project(&pb)?])?.0;
+                let gap = box_distance(&[integer_projection(&pa,n)?], &[integer_projection(&pb,n)?])?.0;
                 if gap > 0. {
-                    let norm = (n.iter().map(|v| (*v as f64).powi(2)).sum::<f64>())
+                    let norm = ((n[0]*n[0]+n[1]*n[1]+n[2]*n[2]) as f64)
                         .sqrt()
                         .next_up();
                     return Ok(Some(((gap / norm).next_down().max(0.), [0.; 4])));
@@ -676,6 +697,29 @@ pub(crate) struct PreparedControlSurface<'a> {
 impl<'a> PreparedControlSurface<'a> {
     pub(crate) fn new(source: &'a Surface) -> Self {
         Self { source, entries: Default::default(), controls: 0 }
+    }
+    /// Reuse the exact original enclosure used by an oblique control query.
+    /// A single complete clamped span makes this identical to rectangle_bounds:
+    /// same restriction arithmetic, control order and extrema. Other charts
+    /// retain the general multi-span union, including boundary knot behavior.
+    pub(crate) fn single_span_bounds(&mut self, domain: [[f64; 2]; 2]) -> Result<Option<Vec<Interval>>> {
+        let s = self.source;
+        let span = [s.degree_u, s.degree_v];
+        if s.control_points.len() != s.degree_u + 1
+            || s.control_points[0].len() != s.degree_v + 1
+            || s.control_points.len().saturating_mul(s.control_points[0].len()) > 64
+            || !complete_bernstein_span(s.degree_u, &s.knots_u, span[0])
+            || !complete_bernstein_span(s.degree_v, &s.knots_v, span[1])
+            || !(0..2).all(|k| {
+                let knots = if k == 0 { &s.knots_u } else { &s.knots_v };
+                domain[k].iter().all(|x| x.is_finite())
+                    && domain[k][0] >= knots[span[k]]
+                    && domain[k][1] <= knots[span[k] + 1]
+                    && domain[k][0] <= domain[k][1]
+            }) {
+            return Ok(None);
+        }
+        Ok(Some(self.patch(span, domain)?.bounds.clone()))
     }
     fn patch(&mut self, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<&Patch> {
         let key = [domain[0][0].to_bits(), domain[0][1].to_bits(), domain[1][0].to_bits(), domain[1][1].to_bits()];
@@ -735,22 +779,9 @@ pub(crate) fn rectangle_control_query_prepared(
                     continue;
                 }
                 let n = [x, y, z];
-                let project = |p: &Patch| -> Result<Interval> {
-                    let mut lo = f64::INFINITY;
-                    let mut hi = f64::NEG_INFINITY;
-                    for c in &p.controls {
-                        let mut value = Interval::point(0.);
-                        for k in 0..3 {
-                            value = value.add(c[k].mul(Interval::point(n[k] as f64))?)?;
-                        }
-                        lo = lo.min(value.lo);
-                        hi = hi.max(value.hi);
-                    }
-                    Interval::new(lo, hi)
-                };
-                let gap = box_distance(&[project(&pa)?], &[project(&pb)?])?.0;
+                let gap = box_distance(&[integer_projection(&pa,n)?], &[integer_projection(&pb,n)?])?.0;
                 if gap > 0. {
-                    let norm = (n.iter().map(|v| (*v as f64).powi(2)).sum::<f64>())
+                    let norm = ((n[0]*n[0]+n[1]*n[1]+n[2]*n[2]) as f64)
                         .sqrt()
                         .next_up();
                     return Ok(Some(((gap / norm).next_down().max(0.), [0.; 4])));
@@ -765,6 +796,23 @@ pub(crate) fn rectangle_control_query_prepared(
 mod tests {
     use super::*;
 
+    #[test]
+    fn integer_projection_keeps_exact_axes_and_encloses_all_corner_sums() {
+        let source=plane(0.);let mut p=Patch::new(&source,[1,1],[[0.,1.];2]).unwrap();
+        let coordinates=[Interval::new(-2.,3.).unwrap(),Interval::new(4.,8.).unwrap(),Interval::new(-16.,-8.).unwrap()];
+        p.controls=vec![coordinates.to_vec()];
+        for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+            let n=[x,y,z];let bound=integer_projection(&p,n).unwrap();
+            for corner in 0..8 {
+                let exact=(0..3).map(|k|if corner&(1<<k)==0 {coordinates[k].lo*n[k] as f64}
+                    else {coordinates[k].hi*n[k] as f64}).sum::<f64>();
+                assert!(bound.lo<=exact&&exact<=bound.hi);
+            }
+        }}}
+        p.controls[0][0]=Interval::new(-f64::MAX,f64::MAX).unwrap();
+        assert_eq!(integer_projection(&p,[1,0,0]).unwrap(),p.controls[0][0]);
+        assert_eq!(integer_projection(&p,[-1,0,0]).unwrap(),p.controls[0][0]);
+    }
     #[test]
     fn immutable_control_patch_cache_matches_original_query_bits_after_eviction() {
         let mut a = plane(0.);

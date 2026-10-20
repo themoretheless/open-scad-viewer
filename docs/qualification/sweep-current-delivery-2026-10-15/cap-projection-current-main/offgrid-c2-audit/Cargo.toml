@@ -1,0 +1,7 @@
+[package]
+name = "sweep-c2-offgrid-audit"
+version = "0.0.0"
+edition = "2024"
+[workspace]
+[dependencies]
+nurbs-core = { path = "/private/tmp/osv-sweep-cap-projection-current-main-source-final-20261015/crates/nurbs-core", default-features = false }

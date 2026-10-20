@@ -115,6 +115,26 @@ pub fn project(c: &Curve, s: &Surface, limits: Limits) -> Result<Report> {
             return Ok(out);
         }
         out.agreement = Some(proof);
+        // Roundoff at an original chart edge may put an affine proposal pole
+        // just outside its domain. Clipping is another geometry proposal only:
+        // the entire ORIGINAL spatial curve must still pass the fresh lift.
+        let d=domains(s);
+        let mut bounded=p.clone();
+        for pole in &mut bounded.control_points {
+            for k in 0..2 {pole[k]=pole[k].clamp(d[k][0],d[k][1]);}
+        }
+        if bounded!=p && out.agreement_cells<limits.agreement_cells {
+            let proof=curve_surface_agreement::verify(c,&bounded,s,false,limits.tolerance,
+                (limits.agreement_cells-out.agreement_cells).min(100000))?;
+            out.agreement_cells+=proof.cells;
+            if proof.status==Status::WithinTolerance {
+                out.within_tolerance=true;
+                out.pcurve=Some(bounded);
+                out.agreement=Some(proof);
+                return Ok(out);
+            }
+            out.agreement=Some(proof);
+        }
     }
     let d = domains(s);
     let [a, b] = c.domain();

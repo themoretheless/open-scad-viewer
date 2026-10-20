@@ -9,6 +9,7 @@ use crate::{
     numeric, resource,
 };
 use std::{cmp::Ordering, collections::{BinaryHeap,BTreeMap}};
+mod division_partition;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopReason {
@@ -488,7 +489,8 @@ pub fn divide_by_length(
         (1..=1024).contains(&segments),
         "Arc division needs 1..1024 segments",
     )?;
-    let (total,partition) = measure_partition(curve, curve.domain(), tolerance / 8., max_cells)?;
+    let shared_partition = division_partition::get(curve, tolerance / 8., max_cells)?;
+    let (total,partition) = shared_partition.as_ref();
     let mut cells = total.cells;
     let mut points = Vec::new();
     let mut prefix_cache=BTreeMap::new();
@@ -533,7 +535,7 @@ pub fn divide_by_length(
             point.stop_reason = StopReason::Tolerance;
             point
         } else {
-            invert_with_prefix_cache(curve,target,&total,tolerance,max_cells-cells,&mut prefix_cache,&partition)?
+            invert_with_prefix_cache(curve,target,total,tolerance,max_cells-cells,&mut prefix_cache,partition)?
         };
         cells += point.cells;
         let accepted = point.within_tolerance;
@@ -547,7 +549,7 @@ pub fn divide_by_length(
         points.len() == segments + 1 && points.iter().all(|p| p.within_tolerance);
     Ok(DivisionReport {
         points,
-        total,
+        total: total.clone(),
         cells,
         within_tolerance,
         stop_reason: if within_tolerance {

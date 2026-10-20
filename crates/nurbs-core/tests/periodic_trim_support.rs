@@ -108,7 +108,7 @@ fn surface_flags_do_not_replace_exact_seam_or_chart_proof() {
 fn tolerance_qualified_uv_is_not_automatically_world_qualified() {
     let s = tube();
     let c = Curve::from_polyline(vec![vec![3.5, 0.5], vec![4.25, 0.5]]).unwrap();
-    let p = periodic_trim::split_approximated(
+    let mut p = periodic_trim::split_approximated(
         &c,
         [[0., 4.], [0., 1.]],
         1e-8,
@@ -121,6 +121,20 @@ fn tolerance_qualified_uv_is_not_automatically_world_qualified() {
     .unwrap()
     .partition
     .unwrap();
+    // Preserve a genuinely nonzero, UV-qualified saved deviation. An exact
+    // unchanged partition can now satisfy this strict world bound through
+    // correlated original-parameter evidence and must not be falsely refused.
+    for piece in &mut p.pieces {
+        for point in &mut piece.curve.control_points {
+            point[1] += 1e-6;
+        }
+    }
+    assert_eq!(
+        periodic_trim::verify_partition(&c, &p, 0.001, 30000)
+            .unwrap()
+            .status,
+        periodic_trim::AdmissionStatus::WithinTolerance
+    );
     let mut strict = limits();
     strict.tolerance_world = 1e-14;
     let r = periodic_trim::verify_surface_correspondence(
@@ -133,13 +147,11 @@ fn tolerance_qualified_uv_is_not_automatically_world_qualified() {
     )
     .unwrap();
     assert!(!r.within_world_tolerance);
-    assert_eq!(r.reason, Some("world-tolerance-unproven"));
-    assert!(
-        r.error_upper.is_finite()
-            && r.admissions
-                .iter()
-                .all(|a| a.status == periodic_trim::AdmissionStatus::WithinTolerance)
-    );
+    assert!(matches!(
+        r.reason,
+        Some("world-tolerance-unproven" | "supporting-uv-deviation-unproven")
+    ));
+    assert!(r.error_upper > strict.tolerance_world);
 }
 #[test]
 fn support_rejects_forged_tiles_nonwrapped_translation_and_rectangle_budget() {
@@ -469,7 +481,7 @@ fn combined_admission_never_publishes_graph_after_surface_or_uv_failure() {
 #[test]
 fn combined_world_tolerance_failure_stops_before_uv_publication() {
     let c = closed_trim(4.25);
-    let p = periodic_trim::split_approximated(
+    let mut p = periodic_trim::split_approximated(
         &c,
         [[0., 4.], [0., 1.]],
         1e-8,
@@ -482,6 +494,20 @@ fn combined_world_tolerance_failure_stops_before_uv_publication() {
     .unwrap()
     .partition
     .unwrap();
+    // Preserve a genuinely nonzero, UV-qualified saved deviation. An exact
+    // unchanged partition can now satisfy this strict world bound through
+    // correlated original-parameter evidence and must not be falsely refused.
+    for piece in &mut p.pieces {
+        for point in &mut piece.curve.control_points {
+            point[1] += 1e-6;
+        }
+    }
+    assert_eq!(
+        periodic_trim::verify_partition(&c, &p, 0.001, 30000)
+            .unwrap()
+            .status,
+        periodic_trim::AdmissionStatus::WithinTolerance
+    );
     let mut strict = combined_limits(true);
     strict.correspondence.tolerance_world = 1e-14;
     let r = periodic_trim::assemble_on_surface(
@@ -496,5 +522,142 @@ fn combined_world_tolerance_failure_stops_before_uv_publication() {
     .unwrap();
     assert_eq!(r.status, periodic_trim::SurfaceChartStatus::SurfaceUnproven);
     assert_eq!(r.reason, Some("world-tolerance-unproven"));
-    assert!(r.support.error_upper.is_finite() && r.graph().is_none() && r.uv.is_none());
+    assert!(r.support.error_upper > strict.correspondence.tolerance_world);
+    assert!(r.graph().is_none() && r.uv.is_none());
+}
+
+#[test]
+fn approximate_weighted_chart_retains_original_isotopy_and_candidate_winding() {
+    let source = closed_trim(4.25);
+    let partition = periodic_trim::split_approximated(
+        &source,
+        [[0., 4.], [0., 1.]],
+        1e-8,
+        0.01,
+        16,
+        32,
+        10000,
+        30000,
+    )
+    .unwrap()
+    .partition
+    .unwrap();
+    let periodic_trim::SurfaceUvLimits::Approximate(limits) = combined_limits(true).uv else {
+        panic!()
+    };
+    let result = periodic_trim::assemble_approximated_weighted_chart(
+        &[source],
+        &[partition],
+        [[0., 4.], [0., 1.]],
+        [3.75, 0.5],
+        limits,
+    )
+    .unwrap();
+    assert!(result.candidate_winding_preserved, "{result:?}");
+    assert!(result.transfer.winding.is_some());
+    let graph = result.graph.unwrap();
+    assert_eq!(graph.loops.len(), 2);
+    for (q, w) in [([3.75, 0.5], 1), ([0.125, 0.5], 1), ([1., 0.5], 0)] {
+        assert_eq!(
+            periodic_trim::inspect_weighted_winding(
+                &graph,
+                [[0., 4.], [0., 1.]],
+                q,
+                1e-8,
+                256,
+                30000
+            )
+            .unwrap()
+            .winding,
+            Some(w)
+        );
+    }
+}
+#[test]
+fn approximate_weighted_chart_does_not_bypass_source_topology_or_budget() {
+    let source = closed_trim(4.25);
+    let mut partition = periodic_trim::split_approximated(
+        &source,
+        [[0., 4.], [0., 1.]],
+        1e-8,
+        0.01,
+        16,
+        32,
+        10000,
+        30000,
+    )
+    .unwrap()
+    .partition
+    .unwrap();
+    let periodic_trim::SurfaceUvLimits::Approximate(limits) = combined_limits(true).uv else {
+        panic!()
+    };
+    partition.pieces[0].translation[0] += 0.125;
+    let r = periodic_trim::assemble_approximated_weighted_chart(
+        &[source.clone()],
+        &[partition],
+        [[0., 4.], [0., 1.]],
+        [3.75, 0.5],
+        limits,
+    );
+    assert!(r.is_err() || !r.unwrap().candidate_winding_preserved);
+    let p = periodic_trim::split_approximated(
+        &source,
+        [[0., 4.], [0., 1.]],
+        1e-8,
+        0.01,
+        16,
+        32,
+        10000,
+        30000,
+    )
+    .unwrap()
+    .partition
+    .unwrap();
+    let mut low = limits;
+    low.isotopy.max_pairs = 1;
+    let r = periodic_trim::assemble_approximated_weighted_chart(
+        &[source],
+        &[p],
+        [[0., 4.], [0., 1.]],
+        [3.75, 0.5],
+        low,
+    )
+    .unwrap();
+    assert!(!r.candidate_winding_preserved && r.graph.is_none());
+}
+
+#[test]
+fn closed_support_seams_allow_exact_weight_gauges_but_not_nearly_matching_ratios() {
+    let (source, partition) = exact_partition();
+    let mut s = tube();
+    let n = s.weights.len();
+    for w in &mut s.weights[n - 1] {
+        *w *= 2.;
+    }
+    let r = periodic_trim::verify_surface_correspondence(
+        &s,
+        &[source.clone()],
+        &[partition.clone()],
+        [[0., 4.], [0., 1.]],
+        [true, false],
+        limits(),
+    )
+    .unwrap();
+    assert!(r.within_world_tolerance, "{r:?}");
+    assert_eq!(
+        r.seams[0],
+        Some(periodic_trim::SurfaceSeamProof::ClampedBoundaryIdentity)
+    );
+    s.weights[n - 1][1] = s.weights[n - 1][1].next_up();
+    let r = periodic_trim::verify_surface_correspondence(
+        &s,
+        &[source],
+        &[partition],
+        [[0., 4.], [0., 1.]],
+        [true, false],
+        limits(),
+    )
+    .unwrap();
+    assert!(!r.within_world_tolerance && r.seams[0].is_none());
 }

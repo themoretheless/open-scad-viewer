@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {circleNurbsCurve,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/services/nurbsCurve'
@@ -55,7 +56,7 @@ it('carries independent G1 and unproved G2 through joint-mode Rush, viewport evi
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  expect(built.report.construction?.[node.id]).toMatchObject({authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,profileSmoothness:{profileG1Certified:true,g1Method:'exact-projective-audit',profile:{exactG1G2Certified:false}},volume:{solidGeometryCertified:true}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG1Certified:true,profileG2Certified:false,continuousBound:true,solidGeometryCertified:true})
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 
@@ -71,7 +72,7 @@ it('certifies every closed joint-mode profile seam within the declared aggregate
  expect(report.profileSmoothness).toMatchObject({maxWork:2000000,profile:{certifiedOrder:2,exactG1G2Certified:true},profileG1Certified:true,capContinuity:'absent',stationContinuity:'C0'})
  expect(report.profileSmoothness.edgeIds).toHaveLength(128)
  expect(report.profileSmoothness.exactWork).toBeGreaterThan(0)
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry
  const cutoff=inspectMiterProfileSmoothness(model,[],report.profileSmoothness.exactWork-1)
  expect(cutoff.profile.exactG1G2Certified).toBe(false)
  expect(report.profileSmoothness.exactWork).toBeLessThanOrEqual(2000000)

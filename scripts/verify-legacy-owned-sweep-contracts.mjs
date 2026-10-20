@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto'
 import {resolve} from 'node:path'
 import {checkCompleteBoundaryContract} from './sweep-complete-boundary-contracts.mjs'
 import {bindStepOracle} from './sweep-step-oracle-binding.mjs'
+import {legacyCapRefusals,checkLegacyCapRefusal} from './sweep-legacy-cap-refusal-contracts.mjs'
 
 const [directory]=process.argv.slice(2)
 assert.ok(directory,'Usage: legacy-owned STEP directory')
@@ -33,7 +34,7 @@ const cases=manifest.cases.map(item=>{
  const external=oracle.cases.find(c=>c.file===item.file)
  assert.equal(external?.passed,true);assert.equal(external.stepSha256,item.sha256)
  // E never promotes a globally refused raw body to a Solid.
- if(['open-spatial-hollow-miter.step','affine-oblique-hollow-miter.step'].includes(item.file))assert.equal(item.nativeVolume.solidGeometryCertified,false)
+ if(legacyCapRefusals.has(item.file))checkLegacyCapRefusal(item)
  else assert.equal(item.nativeVolume.solidGeometryCertified,true)
  const bad=structuredClone(item)
  bad.construction.boundaryCertificate.continuousBound=!bad.construction.boundaryCertificate.continuousBound

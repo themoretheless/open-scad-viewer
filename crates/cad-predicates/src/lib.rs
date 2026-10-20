@@ -7,6 +7,12 @@
 mod arithmetic;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
+mod bspline_restriction_identity;
+pub use bspline_restriction_identity::*;
+mod bspline_projective_correspondence;
+pub use bspline_projective_correspondence::*;
+mod bezier_projective_correspondence;
+pub use bezier_projective_correspondence::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;

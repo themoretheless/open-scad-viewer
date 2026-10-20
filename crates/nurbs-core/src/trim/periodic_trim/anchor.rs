@@ -4,13 +4,58 @@ use super::{
     verify_isotopy,
 };
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I};
+fn directional_hulls(source: &Curve, candidate: &super::Piece, domain: [f64; 2]) -> Result<Vec<I>> {
+    let projected = |curve: &Curve, translation: [f64; 2]| -> Result<Vec<I>> {
+        let span = (curve.degree..curve.control_points.len())
+            .find(|&k| {
+                curve.knots[k] < curve.knots[k + 1]
+                    && curve.knots[k] <= domain[0]
+                    && domain[1] <= curve.knots[k + 1]
+            })
+            .ok_or_else(|| crate::input("Anchor projection lacks its original knot cell"))?;
+        let net =
+            crate::curve_distance::restricted_controls(curve, span, I::new(domain[0], domain[1])?)?;
+        super::isotopy::ISOTOPY_DIRECTIONS
+            .iter()
+            .map(|normal| {
+                let origin = &curve.control_points[span - curve.degree];
+                let offset = (0..2).try_fold(I::point(0.), |v, a| {
+                    v.add(
+                        I::point(origin[a])
+                            .add(I::point(translation[a]))?
+                            .mul(I::point(normal[a]))?,
+                    )
+                })?;
+                let mut lo = f64::INFINITY;
+                let mut hi = f64::NEG_INFINITY;
+                for pole in &net {
+                    let value = pole[0]
+                        .mul(I::point(normal[0]))?
+                        .add(pole[1].mul(I::point(normal[1]))?)?
+                        .div(pole[2])?
+                        .add(offset)?;
+                    lo = lo.min(value.lo);
+                    hi = hi.max(value.hi);
+                }
+                I::new(lo, hi)
+            })
+            .collect()
+    };
+    let a = projected(source, [0.; 2])?;
+    let b = projected(&candidate.curve, candidate.translation)?;
+    a.iter()
+        .zip(b)
+        .map(|(a, b)| I::new(a.lo.min(b.lo), a.hi.max(b.hi)))
+        .collect()
+}
 #[derive(Clone, Copy, Debug)]
 pub struct AnchorLimits {
     pub isotopy: IsotopyLimits,
     pub tolerance_uv: f64,
     pub max_images: usize,
     pub max_cells: usize,
-    /// Shared cell/image enclosure comparisons, including inconclusive ones.
+    /// Shared cell/image enclosure comparisons, including inconclusive ones,
+    /// and additional original-control enclosure constructions.
     pub max_checks: usize,
 }
 #[derive(Clone, Debug)]
@@ -64,6 +109,7 @@ pub fn verify_anchor_winding(
         return Ok(out);
     }
     for cell in &out.isotopy.cells {
+        let mut projected = None;
         let mut ranges = [[0i32; 2]; 2];
         for a in 0..2 {
             let q = I::new(cell.hull[a][0], cell.hull[a][1])?
@@ -90,8 +136,43 @@ pub fn verify_anchor_winding(
                     separated |= q.hi < cell.hull[a][0] || cell.hull[a][1] < q.lo;
                 }
                 if !separated {
-                    out.reason = Some("anchor-homotopy-clearance-unproven");
-                    return Ok(out);
+                    if projected.is_none() {
+                        if limits.max_checks - out.checks < 2 {
+                            out.reason = Some("anchor-check-budget");
+                            return Ok(out);
+                        }
+                        out.checks += 2;
+                        projected = Some(directional_hulls(
+                            &sources[cell.loop_index],
+                            &partitions[cell.loop_index].pieces[cell.piece_index],
+                            cell.domain,
+                        )?);
+                    }
+                    let image = [
+                        I::point(anchor[0]).add(periods[0].mul(I::point(u as f64))?)?,
+                        I::point(anchor[1]).add(periods[1].mul(I::point(v as f64))?)?,
+                    ];
+                    for (normal, hull) in super::isotopy::ISOTOPY_DIRECTIONS
+                        .iter()
+                        .zip(projected.as_ref().unwrap())
+                    {
+                        if out.checks == limits.max_checks {
+                            out.reason = Some("anchor-check-budget");
+                            return Ok(out);
+                        }
+                        out.checks += 1;
+                        let q = image[0]
+                            .mul(I::point(normal[0]))?
+                            .add(image[1].mul(I::point(normal[1]))?)?;
+                        if q.hi < hull.lo || hull.hi < q.lo {
+                            separated = true;
+                            break;
+                        }
+                    }
+                    if !separated {
+                        out.reason = Some("anchor-homotopy-clearance-unproven");
+                        return Ok(out);
+                    }
                 }
             }
         }

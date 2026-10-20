@@ -407,6 +407,7 @@ fn basis_funs<S: Scalar>(degree: usize, knots: &[f64], span: usize, u: &S) -> Ve
 }
 
 /// Horner evaluation of `Σ coefficients[i]·x^i` in any scalar algebra.
+#[allow(dead_code)]
 pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
     let mut acc = S::constant(*coefficients.last().unwrap_or(&0.));
     for c in coefficients.iter().rev().skip(1) {

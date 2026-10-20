@@ -2,6 +2,12 @@
 //! Matches source parametric jets in real arithmetic under an explicit affine
 //! U correspondence. Rounding, regularity and global injectivity are separate.
 use crate::{Result,check,numeric,curve::Curve,surface::Surface};
+#[path="surface_blend/traces.rs"]
+mod traces;
+pub use traces::{Trace,TraceReport,g2_traces};
+#[path="surface_blend/plane_trace.rs"]
+mod plane_trace;
+pub use plane_trace::g2_to_plane_trace;
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum Boundary { UStart, UEnd, VStart, VEnd }
 impl Boundary {
@@ -24,7 +30,7 @@ pub struct Report {
     /// This is not a rounding-inclusive continuity or regularity certificate.
     pub real_arithmetic_order:Order,
 }
-fn canonical(s:&Surface,b:Boundary)->Result<Surface> {
+pub(crate) fn canonical(s:&Surface,b:Boundary)->Result<Surface> {
     s.validate()?;
     if !b.along_u() {return Ok(s.clone());}
     let nu=s.control_points.len();let nv=s.control_points[0].len();
@@ -36,10 +42,15 @@ fn canonical(s:&Surface,b:Boundary)->Result<Surface> {
 /// and [Hz,0,0]. Their unit weights allow exact-real basis alignment without
 /// treating Cartesian vector fields with different rational denominators as
 /// if they shared the boundary's denominator.
-fn fields(s:&Surface,end:bool,gain:f64,reverse:bool,order:usize)->Result<Vec<Curve>> {
+pub(crate) fn fields(s:&Surface,end:bool,gain:f64,reverse:bool,order:usize)->Result<Vec<Curve>> {
     s.validate()?;
     let nv=s.control_points[0].len();
     let v=if end {s.knots_v[nv]} else {s.knots_v[s.degree_v]};
+    fields_at(s,v,gain,reverse,order)
+}
+pub(crate) fn fields_at(s:&Surface,v:f64,gain:f64,reverse:bool,order:usize)->Result<Vec<Curve>> {
+    s.validate()?;
+    let nv=s.control_points[0].len();
     let basis=crate::curve::basis(s.degree_v,&s.knots_v,nv,v,s.periodic_v)?;
     let derivatives=[basis.basis,basis.d1,basis.d2];
     let scale=s.weights.iter().flatten().copied().fold(0_f64,f64::max);
@@ -73,10 +84,14 @@ fn build(a:&Surface,b:&Surface,o:Options,order:Order)->Result<Report> {
     let q=if order==Order::C1 {1} else {2};
     let mut input=fields(&a,ae,if ae {o.gains[0]} else {-o.gains[0]},o.reverse_u[0],q)?;
     input.extend(fields(&b,be,if be {-o.gains[1]} else {o.gains[1]},o.reverse_u[1],q)?);
+    build_fields(input,order,o.max_patches)
+}
+fn build_fields(input:Vec<Curve>,order:Order,max_patches:usize)->Result<Report> {
+    let q=if order==Order::C1 {1} else {2};
     let aligned=crate::sections::compatible(&input)?;
     let pieces=aligned.iter().map(Curve::decompose).collect::<Result<Vec<_>>>()?;
     let count=pieces[0].len();
-    check(count<=o.max_patches,"Blend patch budget exceeded")?;
+    check(count<=max_patches,"Blend patch budget exceeded")?;
     check(pieces.iter().all(|p|p.len()==count),"Blend aligned fields have inconsistent span counts")?;
     let vdegree=if q==1 {3} else {5};let mut patches=Vec::with_capacity(count);
     let knots_v:Vec<f64>=std::iter::repeat_n(0.,vdegree+1).chain(std::iter::repeat_n(1.,vdegree+1)).collect();

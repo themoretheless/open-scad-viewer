@@ -1,0 +1,578 @@
+--- a/crates/nurbs-core/src/intersection/ss_intersection.rs
++++ b/crates/nurbs-core/src/intersection/ss_intersection.rs
+@@ -755,3 +755,5 @@
+ }
+ 
+ pub use fiber_coverage::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryNode,FiberDiscoveryResult,QualifiedDiscoveredFiberAtlas,discover_fiber_box,discover_fiber_surfaces,DiscoveredComponentLimits,OriginalFiberPointConnection,QualifiedDiscoveredFiberComponents,DiscoveredFiberComponentsResult,connect_discovered_fiber_atlas};
++
++pub use fiber_coverage::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
+--- a/crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs
++++ b/crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs
+@@ -708,3 +708,6 @@
+ pub use discovery::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryNode,FiberDiscoveryResult,QualifiedDiscoveredFiberAtlas,discover_fiber_box,discover_fiber_surfaces};
+ mod discovered_components;
+ pub use discovered_components::{DiscoveredComponentLimits,OriginalFiberPointConnection,QualifiedDiscoveredFiberComponents,DiscoveredFiberComponentsResult,connect_discovered_fiber_atlas};
++
++mod physical_branches;
++pub use physical_branches::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -782,3 +782,5 @@
+ pub use span_intersections::{OriginalPeriodicChartStrictPatch,OwnedPeriodicChartStrictPatches,PeriodicChartStrictPatchLimits,own_periodic_chart_strict_patches};
+ 
+ pub use span_intersections::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
++
++pub use span_intersections::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+--- a/crates/brep-core/src/profile_certificate/span_intersections.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections.rs
+@@ -748,3 +748,5 @@
+ pub use translated::{OriginalPeriodicChartStrictPatch,OwnedPeriodicChartStrictPatches,PeriodicChartStrictPatchLimits,own_periodic_chart_strict_patches};
+ 
+ pub use translated::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
++
++pub use translated::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
+@@ -472,3 +472,6 @@
+ 
+ mod periodic_chart_boundary_loops;
+ pub use periodic_chart_boundary_loops::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
++
++mod periodic_chart_loop_winding;
++pub use periodic_chart_loop_winding::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_winding.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_winding.rs
+@@ -162,12 +162,20 @@
+             .walks()
+             .get(cycle)
+             .ok_or_else(|| refused("Unknown exact chart winding cycle"))?;
++        self.query_edges(walk, point)
++    }
++    // Only sibling source-owned loop decompositions may select these edges.
++    pub(super) fn query_edges(&self, walk: &[usize], point: &[Q; 2]) -> Result<Option<i64>> {
+         if walk.len() > self.limits.max_query_edges {
+             return Err(refused("Complete chart cycle ray census exceeds allowance"));
+         }
+         let mut total = 0i64;
+         for &edge in walk {
+-            let value = match &self.prepared[edge] {
++            let value = match self
++                .prepared
++                .get(edge)
++                .ok_or_else(|| refused("Unknown original winding edge"))?
++            {
+                 Prepared::Source {
+                     net,
+                     domain,
+--- a/crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/physical_branches.rs
++++ b/crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/physical_branches.rs
+@@ -0,0 +1,245 @@
++//! Physical embedded open arcs for common-coordinate discovered components.
++//! General mixed-coordinate/closed branches and periodic identifications refuse.
++use super::*;
++use std::sync::Arc;
++
++#[derive(Clone, Copy, Debug)]
++pub struct PhysicalFiberBranchLimits {
++    pub max_branches: usize,
++    pub max_injectivity_spans_per_surface: usize,
++    pub injectivity_refinement_depth: usize,
++    pub max_rectangles_per_endpoint: usize,
++}
++impl Default for PhysicalFiberBranchLimits {
++    fn default() -> Self {
++        Self {
++            max_branches: 1024,
++            max_injectivity_spans_per_surface: 10000,
++            injectivity_refinement_depth: 2,
++            max_rectangles_per_endpoint: 10000,
++        }
++    }
++}
++#[derive(Clone, Debug, PartialEq)]
++pub struct OriginalPhysicalFiberBranch {
++    pub component: usize,
++    pub free_axis: FiberAxis,
++    pub domain: [f64; 2],
++    pub charts: Vec<usize>,
++    pub vertices: [usize; 2],
++}
++/// An exact procedural trim: F=S1-S2=0 on the owned branch, projected to
++/// the indicated ORIGINAL surface UV. This is not a fitted NURBS pcurve.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct OriginalPhysicalFiberTrim {
++    pub branch: usize,
++    pub surface: usize,
++}
++#[derive(Clone, Debug)]
++pub struct OriginalPhysicalFiberVertex {
++    branch: usize,
++    end: usize,
++    chart: usize,
++    point: QualifiedFiber,
++}
++impl OriginalPhysicalFiberVertex {
++    pub fn branch(&self) -> usize {
++        self.branch
++    }
++    pub fn end(&self) -> usize {
++        self.end
++    }
++    pub fn chart(&self) -> usize {
++        self.chart
++    }
++    /// Exact root selector at a singleton ORIGINAL free coordinate. Its
++    /// enclosure is not an authored or snapped world endpoint.
++    pub fn point(&self) -> &QualifiedFiber {
++        &self.point
++    }
++}
++#[derive(Clone, Debug)]
++pub struct QualifiedPhysicalFiberBranches {
++    owner: Arc<QualifiedDiscoveredFiberComponents>,
++    limits: PhysicalFiberBranchLimits,
++    branches: Vec<OriginalPhysicalFiberBranch>,
++    vertices: Vec<OriginalPhysicalFiberVertex>,
++    trims: Vec<OriginalPhysicalFiberTrim>,
++}
++fn build(
++    owner: Arc<QualifiedDiscoveredFiberComponents>,
++    limits: PhysicalFiberBranchLimits,
++) -> Result<QualifiedPhysicalFiberBranches> {
++    check(
++        (1..=65536).contains(&limits.max_branches)
++            && (1..=100000).contains(&limits.max_injectivity_spans_per_surface)
++            && limits.injectivity_refinement_depth <= 6
++            && (1..=100000).contains(&limits.max_rectangles_per_endpoint),
++        "Invalid physical branch proof allowances",
++    )?;
++    owner.reverify()?;
++    check(
++        owner.components().len() <= limits.max_branches,
++        "Complete physical branch census exceeds allowance",
++    )?;
++    let mut out = QualifiedPhysicalFiberBranches {
++        owner,
++        limits,
++        branches: vec![],
++        vertices: vec![],
++        trims: vec![],
++    };
++    if out.owner.components().is_empty() {
++        return Ok(out);
++    }
++    let atlas = out.owner.owner();
++    let domain = atlas.domain();
++    for (surface, uv) in [
++        (atlas.source().first(), [domain[0], domain[1]]),
++        (atlas.source().second(), [domain[2], domain[3]]),
++    ] {
++        let proof = crate::surface_injectivity::certify_on_refined(
++            surface,
++            uv,
++            limits.max_injectivity_spans_per_surface,
++            limits.injectivity_refinement_depth,
++        )?;
++        check(
++            proof.proven,
++            "Both complete original support rectangles need one global injectivity proof",
++        )?;
++    }
++    for (component, indices) in out.owner.components().iter().enumerate() {
++        let first = *indices
++            .first()
++            .ok_or_else(|| crate::input("Empty original root component"))?;
++        let axis = atlas.fibers()[first].free_axis();
++        let free = axis.index();
++        let mut intervals = Vec::with_capacity(indices.len());
++        for &i in indices {
++            let f = &atlas.fibers()[i];
++            check(
++                f.free_axis() == axis,
++                "Mixed-coordinate component needs a full branch transition census",
++            )?;
++            check(
++                (0..4)
++                    .all(|k| domain[k][0] <= f.domain()[k][0] && f.domain()[k][1] <= domain[k][1]),
++                "Physical branch chart extends outside the proved original support rectangles",
++            )?;
++            let d = f.domain()[free];
++            check(
++                d[0] < d[1],
++                "Physical arc requires a nondegenerate free interval",
++            )?;
++            intervals.push((d, i));
++        }
++        intervals.sort_by(|a, b| a.0[0].total_cmp(&b.0[0]).then(a.1.cmp(&b.1)));
++        let low = intervals[0].0[0];
++        let mut high = intervals[0].0[1];
++        let start = intervals[0].1;
++        let mut finish = start;
++        for &(d, i) in &intervals[1..] {
++            check(
++                d[0] <= high,
++                "Original branch free-coordinate cover has a gap",
++            )?;
++            if d[1] > high {
++                high = d[1];
++                finish = i;
++            }
++        }
++        // All charts are compact continuous unique-root graphs in the SAME
++        // coordinate. The replayed connection forest glues actual common
++        // roots. Equality on any nonempty overlap is closed and relatively
++        // open by local uniqueness and continuity, hence the graphs glue on
++        // the entire common interval. Induction along that forest produces
++        // one graph over [low,high], not a nerve-derived loop/branch degree.
++        // Both support injections make the parameter-root -> world map
++        // injective: equal world points force both UV pairs equal. Compactness
++        // then gives an embedded physical arc, and distinct parameter
++        // components remain physically disjoint. No C1 claim across knots.
++        let vertices = [out.vertices.len(), out.vertices.len() + 1];
++        for (end, (chart, parameter)) in [(start, low), (finish, high)].into_iter().enumerate() {
++            let mut box4 = atlas.fibers()[chart].domain();
++            box4[free] = [parameter; 2];
++            let point = atlas
++                .source()
++                .certify(
++                    box4,
++                    axis,
++                    FiberLimits {
++                        max_rectangles: limits.max_rectangles_per_endpoint,
++                        preconditioner: None,
++                    },
++                )?
++                .into_fiber()
++                .ok_or_else(|| {
++                    crate::input("Original physical arc endpoint root remains unproved")
++                })?;
++            out.vertices.push(OriginalPhysicalFiberVertex {
++                branch: component,
++                end,
++                chart,
++                point,
++            });
++        }
++        out.branches.push(OriginalPhysicalFiberBranch {
++            component,
++            free_axis: axis,
++            domain: [low, high],
++            charts: indices.clone(),
++            vertices,
++        });
++        for surface in 0..2 {
++            out.trims.push(OriginalPhysicalFiberTrim {
++                branch: component,
++                surface,
++            });
++        }
++    }
++    Ok(out)
++}
++impl QualifiedPhysicalFiberBranches {
++    pub fn owner(&self) -> &Arc<QualifiedDiscoveredFiberComponents> {
++        &self.owner
++    }
++    pub fn branches(&self) -> &[OriginalPhysicalFiberBranch] {
++        &self.branches
++    }
++    pub fn vertices(&self) -> &[OriginalPhysicalFiberVertex] {
++        &self.vertices
++    }
++    pub fn trims(&self) -> &[OriginalPhysicalFiberTrim] {
++        &self.trims
++    }
++    /// Complete with respect to the original requested atlas domain only.
++    pub fn covers_entire_surfaces(&self) -> bool {
++        self.owner.owner().covers_entire_surfaces()
++    }
++    pub fn reverify(&self) -> Result<()> {
++        let fresh = build(self.owner.clone(), self.limits)?;
++        check(
++            fresh.branches == self.branches
++                && fresh.trims == self.trims
++                && fresh.vertices.len() == self.vertices.len()
++                && fresh.vertices.iter().zip(&self.vertices).all(|(a, b)| {
++                    a.branch == b.branch
++                        && a.end == b.end
++                        && a.chart == b.chart
++                        && a.point.source().first() == b.point.source().first()
++                        && a.point.source().second() == b.point.source().second()
++                        && a.point.domain() == b.point.domain()
++                        && a.point.free_axis() == b.point.free_axis()
++                        && a.point.report() == b.point.report()
++                }),
++            "Original physical branch, endpoint or trim ownership changed",
++        )
++    }
++}
++pub fn assemble_physical_fiber_branches(
++    owner: Arc<QualifiedDiscoveredFiberComponents>,
++    limits: PhysicalFiberBranchLimits,
++) -> Result<QualifiedPhysicalFiberBranches> {
++    build(owner, limits)
++}
+--- a/crates/nurbs-core/tests/ss_physical_branches.rs
++++ b/crates/nurbs-core/tests/ss_physical_branches.rs
+@@ -0,0 +1,90 @@
++use nurbs_core::ss_intersection::{self as ss, FiberSources};
++use std::sync::Arc;
++#[path = "support/ss_discovered_sources.rs"]
++mod fixture;
++#[path = "support/ss_mixed_fiber.rs"]
++mod mixed;
++fn components(s: &FiberSources) -> Arc<ss::QualifiedDiscoveredFiberComponents> {
++    let atlas = ss::discover_fiber_surfaces(s, Default::default())
++        .unwrap()
++        .into_atlas()
++        .expect("complete atlas");
++    Arc::new(
++        ss::connect_discovered_fiber_atlas(Arc::new(atlas), Default::default())
++            .unwrap()
++            .into_components()
++            .expect("complete parameter components"),
++    )
++}
++#[test]
++fn actual_two_roots_publish_disjoint_world_arcs_and_both_original_trim_projections() {
++    let c = components(&fixture::sources(&[0.1875, -0.3125, 0.1875], 0.));
++    let o = ss::assemble_physical_fiber_branches(c.clone(), Default::default()).unwrap();
++    assert!(o.covers_entire_surfaces());
++    assert_eq!(o.branches().len(), 2);
++    assert_eq!(o.vertices().len(), 4);
++    assert_eq!(o.trims().len(), 4);
++    for (i, b) in o.branches().iter().enumerate() {
++        assert_eq!(b.domain, [0., 1.]);
++        for end in 0..2 {
++            let v = &o.vertices()[b.vertices[end]];
++            assert_eq!(v.branch(), i);
++            assert_eq!(v.end(), end);
++            let free = match b.free_axis {
++                ss::FiberAxis::FirstU => 0,
++                ss::FiberAxis::FirstV => 1,
++                ss::FiberAxis::SecondU => 2,
++                ss::FiberAxis::SecondV => 3,
++            };
++            assert_eq!(v.point().domain()[free], [b.domain[end]; 2]);
++            v.point().reverify().unwrap();
++        }
++        assert_eq!(o.trims()[2 * i].surface, 0);
++        assert_eq!(o.trims()[2 * i + 1].surface, 1);
++    }
++    o.reverify().unwrap();
++    assert!(
++        ss::assemble_physical_fiber_branches(
++            c,
++            ss::PhysicalFiberBranchLimits {
++                max_branches: 1,
++                ..Default::default()
++            }
++        )
++        .is_err()
++    );
++}
++#[test]
++fn nonlinear_original_world_arc_is_not_replaced_by_a_sampled_polyline() {
++    let o = ss::assemble_physical_fiber_branches(components(&mixed::sources()), Default::default())
++        .unwrap();
++    assert_eq!(o.branches().len(), 1);
++    assert_eq!(o.trims().len(), 2);
++    assert!(o.branches()[0].charts.len() > 1);
++    o.reverify().unwrap();
++}
++#[test]
++fn folded_support_parameter_component_never_becomes_an_embedded_physical_arc() {
++    let s = fixture::sources(&[-0.25, 0.75], 0.);
++    let mut a = s.first().clone();
++    a.degree_u = 2;
++    a.knots_u = vec![0., 0., 0., 1., 1., 1.];
++    a.control_points = [0.25, 0.5, 0.25]
++        .map(|x| vec![vec![x, 0., -0.25], vec![x, 1., 0.75]])
++        .to_vec();
++    a.weights = vec![vec![1.; 2]; 3];
++    let folded = FiberSources::new(&a, s.second()).unwrap();
++    let c = components(&folded);
++    assert_eq!(c.components().len(), 1);
++    assert!(ss::assemble_physical_fiber_branches(c, Default::default()).is_err());
++}
++#[test]
++fn original_empty_intersection_has_no_physical_vertices_or_trim_uses() {
++    let o = ss::assemble_physical_fiber_branches(
++        components(&fixture::sources(&[-0.25, 0.75], 2.)),
++        Default::default(),
++    )
++    .unwrap();
++    assert!(o.branches().is_empty() && o.vertices().is_empty() && o.trims().is_empty());
++    o.reverify().unwrap();
++}
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_loop_winding.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_loop_winding.rs
+@@ -0,0 +1,168 @@
++//! Exact winding of decomposed ORIGINAL chart edges; no patch authority.
++use super::*;
++use crate::profile_certificate::algebraic_intersections::decode_ratio;
++use std::sync::Arc;
++
++#[derive(Clone, Debug)]
++pub struct OwnedPeriodicChartLoopWinding {
++    owner: Arc<OwnedPeriodicChartBoundaryLoops>,
++    winding: OwnedPeriodicChartWinding,
++    limits: PeriodicChartWindingLimits,
++}
++impl OwnedPeriodicChartLoopWinding {
++    pub fn owner(&self) -> &Arc<OwnedPeriodicChartBoundaryLoops> {
++        &self.owner
++    }
++    /// None proves contact with this original-edge loop. No period reduction.
++    pub fn winding(&self, boundary: usize, point: &[ExactRatio; 2]) -> Result<Option<i64>> {
++        let boundary = self
++            .owner
++            .loops()
++            .get(boundary)
++            .ok_or_else(|| refused("Unknown original chart boundary loop"))?;
++        self.winding.query_edges(
++            &boundary.edges,
++            &[decode_ratio(&point[0])?, decode_ratio(&point[1])?],
++        )
++    }
++    /// Complete loop vector; errors never become an exterior or boundary label.
++    pub fn windings(&self, point: &[ExactRatio; 2]) -> Result<Option<Vec<i64>>> {
++        if self.owner.edge_locations().len() > self.limits.max_query_edges {
++            return Err(refused("Complete decomposed loop query exceeds allowance"));
++        }
++        let p = [decode_ratio(&point[0])?, decode_ratio(&point[1])?];
++        let mut values = Vec::with_capacity(self.owner.loops().len());
++        for boundary in self.owner.loops() {
++            let Some(v) = self.winding.query_edges(&boundary.edges, &p)? else {
++                return Ok(None);
++            };
++            values.push(v);
++        }
++        Ok(Some(values))
++    }
++    pub fn material(&self, point: &[ExactRatio; 2]) -> Result<Option<bool>> {
++        let Some(values) = self.windings(point)? else {
++            return Ok(None);
++        };
++        let total = values.into_iter().try_fold(0i64, |a, b| {
++            a.checked_add(b)
++                .ok_or_else(|| refused("Decomposed chart winding overflow"))
++        })?;
++        match total {
++            0 => Ok(Some(false)),
++            1 => Ok(Some(true)),
++            _ => Err(refused(
++                "Decomposed loops do not yield a regularized material characteristic",
++            )),
++        }
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let _replay = super::periodic_replay::scope();
++        if !Arc::ptr_eq(self.owner.owner(), self.winding.owner()) {
++            return Err(refused(
++                "Loop winding belongs to another original chart owner",
++            ));
++        }
++        self.owner.reverify_source()?;
++        self.winding.reverify_source()
++    }
++}
++pub fn own_periodic_chart_loop_winding(
++    owner: Arc<OwnedPeriodicChartBoundaryLoops>,
++    limits: PeriodicChartWindingLimits,
++) -> Result<OwnedPeriodicChartLoopWinding> {
++    let _replay = super::periodic_replay::scope();
++    owner.reverify_source()?;
++    let winding = own_periodic_chart_winding(owner.owner().clone(), limits)?;
++    Ok(OwnedPeriodicChartLoopWinding {
++        owner,
++        winding,
++        limits,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn q(x: i32, y: i32, denominator: i32) -> [ExactRatio; 2] {
++        [x, y].map(|v| {
++            crate::profile_certificate::algebraic_intersections::ratio(&Q::new(
++                v.into(),
++                denominator.into(),
++            ))
++        })
++    }
++    fn check(original: OwnedPeriodicChartWinding, queries: Vec<([ExactRatio; 2], Option<bool>)>) {
++        let loops = Arc::new(
++            own_periodic_chart_boundary_loops(original.owner().clone(), Default::default())
++                .unwrap(),
++        );
++        let o = own_periodic_chart_loop_winding(loops.clone(), Default::default()).unwrap();
++        assert_eq!(o.owner().loops().len(), 2);
++        for (p, expected) in queries {
++            assert_eq!(o.material(&p).unwrap(), expected);
++            assert_eq!(o.material(&p).unwrap(), original.material(&p).unwrap());
++            if let Some(values) = o.windings(&p).unwrap() {
++                let old = original.windings(&p).unwrap().unwrap();
++                for (walk, &value) in old.iter().enumerate() {
++                    let total: i64 = o
++                        .owner()
++                        .loops()
++                        .iter()
++                        .zip(&values)
++                        .filter(|(l, _)| l.source_walk == walk)
++                        .map(|(_, v)| *v)
++                        .sum();
++                    assert_eq!(total, value);
++                }
++            }
++        }
++        assert!(o.winding(usize::MAX, &q(1, 1, 4)).is_err());
++        assert!(
++            o.material(&[["2".into(), "4".into()], ["1".into(), "4".into()]])
++                .is_err()
++        );
++        let low = own_periodic_chart_loop_winding(
++            loops,
++            PeriodicChartWindingLimits {
++                max_query_edges: 1,
++                ..Default::default()
++            },
++        )
++        .unwrap();
++        assert!(low.material(&q(1, 1, 4)).is_err());
++        o.reverify_source().unwrap();
++    }
++    #[test]
++    fn actual_touching_components_preserve_each_original_cycle_winding() {
++        let w = super::super::periodic_chart_cycles::actual_fan_tests::build(
++            super::super::periodic_support_regions::tests::discs(true),
++            2,
++        );
++        check(
++            w,
++            vec![
++                (q(2, 2, 8), Some(true)),
++                (q(6, 6, 8), Some(true)),
++                (q(2, 6, 8), Some(false)),
++                (q(4, 4, 8), None),
++            ],
++        );
++    }
++    #[test]
++    fn actual_tangent_hole_keeps_negative_inner_loop_and_boundary_contacts() {
++        let w = super::super::periodic_chart_cycles::actual_fan_tests::build(
++            super::super::periodic_support_material::tests::tangent_hole(),
++            1,
++        );
++        check(
++            w,
++            vec![
++                (q(2, 1, 4), Some(false)),
++                (q(0, 2, 4), None),
++                (q(-4, 1, 4), Some(false)),
++                (q(2, 0, 4), None),
++            ],
++        );
++    }
++}

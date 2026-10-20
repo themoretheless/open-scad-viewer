@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {miterLawMatrixModes,miterLawMatrixSmoothSource} from '../scripts/miter-law-matrix-sources'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -15,7 +16,7 @@ it.each(miterLawMatrixModes)('proves retained profile G2 for explicitly repaired
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,boundaryErrorWithinBudget:true,
   solidGeometryCertified:true,profileG1Certified:true,profileG2Certified:true,stationContinuity:'C0'})
  if(!built.nativeGeometry)throw Error('Missing repaired joint-law body')
- const volume=inspectProgressiveSweepSolidAdmission(built.nativeGeometry,JSON.parse(built.nativeGeometry.geometryJson).geometry)!
+ const volume=inspectProgressiveSweepSolidAdmission(built.nativeGeometry,readNativeGeometryData(built.nativeGeometry).geometry)!
  expect(volume).toMatchObject({solidGeometryCertified:true,allFacesInjective:true,allPairsClassified:true})
  expect(volume.orientations.every(o=>o.outward===o.expectedOutward)).toBe(true)
  expect(JSON.stringify(document)).toBe(before)

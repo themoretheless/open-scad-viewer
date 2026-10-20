@@ -124,6 +124,115 @@ pub fn inspect_boundary_correspondence(
             .all(|r| r.status == Status::WithinTolerance);
     Ok(out)
 }
+/// Continuous evidence on explicitly retained original subranges. No trimmed
+/// curve, inverse map, isolated-root certificate or topology is manufactured.
+#[derive(Clone, Debug)]
+pub struct BoundarySubranges {
+    /// Oriented source edge, source pcurve, oriented target edge, target pcurve.
+    /// Fractions refer to each complete original parameter domain.
+    pub nodes: Vec<[f64; 4]>,
+    /// Source edge/source lift, source edge/target lift, target edge/target lift.
+    pub agreements: Vec<CorrespondenceReport>,
+    pub cells: usize,
+    pub within_tolerance: bool,
+    /// Bound between the two original 3D edges along the supplied relation.
+    /// This is a tolerance result, not exact equality or root identification.
+    pub edge_pair_distance_upper: Option<f64>,
+}
+
+/// Verify corresponding portions without rounded extraction or reverse knots.
+/// Both source fractions increase; target fractions follow the opposite shell
+/// traversal. Every coordinate is independently retained, so nonidentical
+/// edge/pcurve parameterizations do not get silently replaced by an identity.
+/// All three continuous checks share one work ledger. An incomplete check never
+/// returns admission. Boundary selection, root isolation and sewing are separate.
+pub fn inspect_boundary_subranges(
+    models: &[Model],
+    addresses: [BoundaryAddress; 2],
+    nodes: &[[f64; 4]],
+    max_cells: usize,
+) -> Result<BoundarySubranges> {
+    if addresses[0].model == addresses[1].model
+        || !(1..=1000000).contains(&max_cells)
+        || !(2..=1025).contains(&nodes.len())
+    {
+        return Err(invalid());
+    }
+    let (sm, sc, sf, sr) = select(models, addresses[0])?;
+    let (tm, tc, tf, tr) = select(models, addresses[1])?;
+    let target_increases = sr != tr;
+    if sm.tolerance_mm != tm.tolerance_mm
+        || !nodes
+            .iter()
+            .flatten()
+            .all(|t| t.is_finite() && (0. ..=1.).contains(t))
+        || !nodes.windows(2).all(|w| {
+            (0..4).all(|k| w[0][k] != w[1][k] && (w[1][k] > w[0][k]) == (k < 2 || target_increases))
+        })
+    {
+        return Err(invalid());
+    }
+    let maps: [Vec<[f64; 2]>; 3] = [
+        nodes.iter().map(|n| [n[0], n[1]]).collect(),
+        nodes.iter().map(|n| [n[0], n[3]]).collect(),
+        nodes.iter().map(|n| [n[2], n[3]]).collect(),
+    ];
+    let mut out = BoundarySubranges {
+        nodes: nodes.to_vec(),
+        agreements: vec![],
+        cells: 0,
+        within_tolerance: false,
+        edge_pair_distance_upper: None,
+    };
+    for (i, (model, coedge, pcurve, surface)) in [
+        (sm, sc, &sc.pcurve, &sf.surface),
+        (sm, sc, &tc.pcurve, &tf.surface),
+        (tm, tc, &tc.pcurve, &tf.surface),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        if out.cells == max_cells {
+            break;
+        }
+        let proof = curve_surface_agreement::verify_oriented_correspondence(
+            &model.edges[coedge.edge].curve,
+            pcurve,
+            surface,
+            &maps[i],
+            coedge.reversed,
+            sm.tolerance_mm,
+            (max_cells - out.cells).min(100000),
+        )?;
+        out.cells += proof.cells;
+        let admitted = proof.status == Status::WithinTolerance;
+        out.agreements.push(proof);
+        if !admitted {
+            break;
+        }
+    }
+    out.within_tolerance = out.agreements.len() == 3
+        && out
+            .agreements
+            .iter()
+            .all(|p| p.status == Status::WithinTolerance);
+    if out.within_tolerance {
+        if let (Some(a), Some(b)) = (
+            out.agreements[1].distance_upper,
+            out.agreements[2].distance_upper,
+        ) {
+            // Outward sum, including underflow and final binary64 rounding.
+            let sum = a + b;
+            let upper = if sum == 0. { 0. } else { sum.next_up() };
+            if upper.is_finite() {
+                out.edge_pair_distance_upper = Some(upper);
+            }
+        }
+        out.within_tolerance &= out.edge_pair_distance_upper.is_some();
+    }
+    Ok(out)
+}
+
 fn natural(c: &nurbs_core::curve::Curve, t: f64) -> f64 {
     let [a, b] = c.domain();
     if t == 0. {

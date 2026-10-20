@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -15,7 +16,7 @@ it('owns original direct circle correction through Rush, viewport and fresh Soli
   volume:{solidGeometryCertified:true}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,boundaryErrorWithinBudget:true,profileG2Certified:true})
  if(!built.nativeGeometry)throw Error('Missing native direct miter body')
- expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,JSON.parse(built.nativeGeometry.geometryJson).geometry))
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,readNativeGeometryData(built.nativeGeometry).geometry))
   .toMatchObject({solidGeometryCertified:true,allFacesInjective:true,allPairsClassified:true})
  expect(JSON.stringify(document)).toBe(before)
  await expect(buildOwnNurbsAsync(compileRushFrontend(source.replace('circle_correction_max_work: 1000000','circle_correction_max_work: 0')).document,{action:'build'})).rejects.toThrow()
@@ -31,7 +32,7 @@ it.each([
   .replace('.brep_tessellate(4)',`.transform(matrix: ${matrix}).brep_tessellate(4)`)
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing placed native direct miter body')
- const data=JSON.parse(built.nativeGeometry.geometryJson)
+ const data=readNativeGeometryData(built.nativeGeometry)
  expect(data.sweepMiterReplay.source).toMatchObject({direct:true,maxDeviation:.01,circleCorrection:{tolerance:1e-9}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,boundaryErrorWithinBudget:true,solidGeometryCertified:true})
  const volume=inspectProgressiveSweepSolidAdmission(built.nativeGeometry,data.geometry)!

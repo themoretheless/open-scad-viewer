@@ -121,16 +121,21 @@ it('proves retained boundary embedding with independent unresolved budget eviden
  expect(report.pairs).toHaveLength(15)
  expect(report.caps.map(c=>c.face)).toEqual([4,5])
  const exhausted=inspectSweepEmbedding(model,[4,5],{...budgets,capBudgets:{...budgets.capBudgets,maxExactWork:0}})
- expect(exhausted.boundaryEmbeddingCertified).toBe(false)
+ // The cap shortcut can refuse while the independent full-face audit succeeds.
+ expect(exhausted).toMatchObject({boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true,nextPair:null})
  expect(exhausted.caps.every(c=>!c.capCertified)).toBe(true)
- expect(exhausted.pairs.filter(p=>p.reason==='pair-unresolved')).toHaveLength(8)
+ expect(exhausted.pairs.filter(p=>p.reason==='pair-unresolved')).toHaveLength(0)
+ expect(exhausted.individualPairs+exhausted.groupedPairs).toBe(exhausted.totalPairs)
+ expect(inspectSweepEmbedding(model,[4,5],{...budgets,maxExactWork:1}).boundaryEmbeddingCertified).toBe(false)
  const prefix=inspectSweepEmbedding(model,[4,5],{...budgets,maxPairs:1})
  expect(prefix.boundaryEmbeddingCertified).toBe(false)
  expect(prefix.pairs).toHaveLength(1)
  expect(prefix.nextPair).not.toBeNull()
  expect(()=>inspectSweepEmbedding(model,[4,4],budgets)).toThrow()
  const withoutCaps=inspectSweepEmbedding(model,[],budgets)
- expect(withoutCaps).toMatchObject({boundaryEmbeddingCertified:false,solidGeometryCertified:false})
+ expect(withoutCaps).toMatchObject({boundaryEmbeddingCertified:true,solidGeometryCertified:false,
+  allFacesInjective:true,allPairsClassified:true,nextPair:null})
+ expect(withoutCaps.individualPairs+withoutCaps.groupedPairs).toBe(withoutCaps.totalPairs)
  expect(withoutCaps.caps).toEqual([])
  expect(model).toEqual(before)
 })
@@ -150,7 +155,12 @@ it('retains volume stage evidence and refuses reversed material orientation',()=
  const wrong=inspectSweepVolume(inward,[4,5],volume)
  expect(wrong).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:true,
   orientations:[{shell:0,expectedOutward:true,outward:false}]})
- const noBoundary=inspectSweepVolume(model,[4,5],{...volume,capBudgets:{...volume.capBudgets,maxExactWork:0}})
+ const capFallback=inspectSweepVolume(model,[4,5],{...volume,capBudgets:{...volume.capBudgets,maxExactWork:0}})
+ expect(capFallback).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,
+  allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true},
+  orientations:[{shell:0,expectedOutward:true,outward:true}]})
+ expect(capFallback.boundary!.caps.every(cap=>!cap.capCertified)).toBe(true)
+ const noBoundary=inspectSweepVolume(model,[4,5],{...volume,maxExactWork:1,capBudgets:{...volume.capBudgets,maxExactWork:0}})
  expect(noBoundary).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false,nesting:null})
  expect(noBoundary.orientations.every(s=>s.attempts===0&&s.outward===null)).toBe(true)
  expect(model).toEqual(before)

@@ -1,0 +1,13 @@
+# Original gear arc radial error
+
+`nurbs_core::radial_bounds::curve_radius_error` checks the original positive rational Bezier curve against an independently justified interval of nominal radii. It returns the continuous original radius range, a bound on abs(norm(C(u)-origin)-r) for every original parameter and every supplied nominal radius, and an inclusive-rounding flag. Two-dimensional controls are lifted to Z=0; three-dimensional curves are measured in three dimensions.
+
+The existing homogeneous Bernstein-product radius owner is reused. The curve is embedded as a constant-V rational surface with the exact original controls, weights and U knots, so the image is unchanged. Product coefficients bound the squared distance, outward division and bracketed square roots enclose the radius, and interval subtraction encloses the radius-family error. Neither fitted curves, sampled circle recognition nor platform hypot is used as evidence.
+
+Unsupported multi-span/degree layouts or denominator precision limits return None. Invalid/nonfinite input, nonpositive nominal-radius boxes and invalid origins return errors. The existing owner accepts degrees through eight. Bounds concern the represented real rational curve; later caller evaluation rounding is separate. The proof says nothing about angular placement, winding or injectivity.
+
+`brep_core::gear::profile_with_report` checks every actual saved degree-two arc after canonical endpoint ownership and internal reversal. Original construction indices identify tooth-tip/root arcs, outer rim and bore; no sampled-radius classification grants authority. Tip/root nominal boxes come from the full module/tooth/clearance derivation. Rim width and bore division are also outward enclosed. All arcs must obtain a bound; unsupported/refused proofs leave the report explicitly unqualified.
+
+`arc_radius_error_upper` contains the full-profile maximum radial error. `arc_radius_rounding_certified` is true only if every arc succeeds within the existing 1e-6 flank budget. This includes canonical endpoint edits. It does not bound angular placement or the below-base transition lines, and does not qualify an embedded solid.
+
+Independent tests cover rational arcs at tiny/unit/large scale, nominal radius uncertainty, modified endpoints, nonplanar curves, unsupported full-circle chains and invalid boxes. Gear tests check every saved arc against independent radius samples for 3/8/20-tooth external profiles, a bore and a 40-tooth internal profile, together with exact joins and independent small-profile certificates. Remaining gear work includes nominal angular/line correspondence and scalable whole-profile/solid admission. Native count remains 189/200.

@@ -102,17 +102,15 @@ impl GpuNearestNeighbor {
             // Uniform layout matches nearest_neighbor.wgsl's `Params`: two counts
             // padded to a 16-byte uniform buffer.
             let params = pack_u32(&[query_count as u32, target_count as u32, 0, 0]);
-            let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
-            let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
 
             let buffers = self.buffers.borrow();
             let b = buffers.as_ref().expect("ensure_buffers was just called");
             self.queue.write_buffer(&b.params, 0, &params);
-            if !flat_q.is_empty() {
-                self.queue.write_buffer(&b.queries, 0, &pack_f32(&flat_q));
+            if !queries.is_empty() {
+                write_points(&self.queue, &b.queries, queries)?;
             }
-            if !flat_t.is_empty() {
-                self.queue.write_buffer(&b.targets, 0, &pack_f32(&flat_t));
+            if !targets.is_empty() {
+                write_points(&self.queue, &b.targets, targets)?;
             }
             if query_count == 0 {
                 return Ok(Vec::new());
@@ -139,15 +137,19 @@ impl GpuNearestNeighbor {
             indices.submitted(submission.clone());
             distances.submitted(submission);
             let timeout = std::time::Duration::from_secs(30);
-            let raw_index = indices.wait(timeout)?;
-            let raw_dist = distances.wait(timeout)?;
-            raw_index
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .zip(raw_dist.as_chunks::<4>().0.iter())
-                .map(|(index, dist)| (u32::from_le_bytes(*index), f32::from_le_bytes(*dist) as f64))
-                .collect()
+            indices.wait_with(timeout, |raw_index| {
+                distances.wait_with(timeout, |raw_dist| {
+                    raw_index
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .zip(raw_dist.as_chunks::<4>().0.iter())
+                        .map(|(index, dist)| {
+                            (u32::from_le_bytes(*index), f32::from_le_bytes(*dist) as f64)
+                        })
+                        .collect()
+                })
+            })??
         })
     }
 }
@@ -263,16 +265,12 @@ impl GpuChamfer {
             let target_count = targets.len();
             let partial_count = self.kernel.workgroup_count(query_count as u32) as usize;
             self.ensure_buffers(query_count, target_count, partial_count);
-            let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
-            let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
             let params = pack_u32(&[query_count as u32, target_count as u32, 0, 0]);
             let buffers = self.buffers.borrow();
             let buffers = buffers.as_ref().expect("ensure_buffers was just called");
             self.queue.write_buffer(&buffers.params, 0, &params);
-            self.queue
-                .write_buffer(&buffers.queries, 0, &pack_f32(&flat_q));
-            self.queue
-                .write_buffer(&buffers.targets, 0, &pack_f32(&flat_t));
+            write_points(&self.queue, &buffers.queries, queries)?;
+            write_points(&self.queue, &buffers.targets, targets)?;
             self.kernel.dispatch_bind_group(
                 &self.device,
                 &self.queue,
@@ -412,15 +410,13 @@ impl GpuNearestTwo {
         Ok({
             let query_count = queries.len();
             let target_count = targets.len();
-            let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
-            let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
             self.ensure_buffers(query_count, target_count);
             let buffers = self.buffers.borrow();
             let b = buffers.as_ref().expect("ensure_buffers was just called");
             let params = pack_u32(&[query_count as u32, target_count as u32, 0, 0]);
             self.queue.write_buffer(&b.params, 0, &params);
-            self.queue.write_buffer(&b.queries, 0, &pack_f32(&flat_q));
-            self.queue.write_buffer(&b.targets, 0, &pack_f32(&flat_t));
+            write_points(&self.queue, &b.queries, queries)?;
+            write_points(&self.queue, &b.targets, targets)?;
             self.kernel.dispatch_bind_group(
                 &self.device,
                 &self.queue,
@@ -541,15 +537,13 @@ impl GpuNearestFour {
         Ok({
             let query_count = queries.len();
             let target_count = targets.len();
-            let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
-            let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
             self.ensure_buffers(query_count, target_count);
             let buffers = self.buffers.borrow();
             let b = buffers.as_ref().expect("ensure_buffers was just called");
             let params = pack_u32(&[query_count as u32, target_count as u32, 0, 0]);
             self.queue.write_buffer(&b.params, 0, &params);
-            self.queue.write_buffer(&b.queries, 0, &pack_f32(&flat_q));
-            self.queue.write_buffer(&b.targets, 0, &pack_f32(&flat_t));
+            write_points(&self.queue, &b.queries, queries)?;
+            write_points(&self.queue, &b.targets, targets)?;
             self.kernel.dispatch_bind_group(
                 &self.device,
                 &self.queue,

@@ -34,14 +34,14 @@ impl<T: GpuElement> Readback<T> {
         self.bytes.cancel();
     }
     pub fn try_read(&mut self) -> Result<Option<Vec<T>>, ComputeError> {
-        Ok(self.bytes.try_read()?.map(decode::<T>))
+        Ok(self.bytes.try_read_with(decode::<T>)?)
     }
     /// Waits without taking ownership of the ticket. On timeout, the pending
     /// result can be retried with `wait_mut` or polled with `try_read`.
     /// Successful reads consume the result exactly once.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn wait_mut(&mut self, timeout: Duration) -> Result<Vec<T>, ComputeError> {
-        Ok(decode(self.bytes.wait(timeout)?))
+        Ok(self.bytes.wait_with(timeout, decode::<T>)?)
     }
 
     /// Consumes the ticket, including on timeout. Use `wait_mut` to retain a
@@ -113,11 +113,6 @@ mod tests {
         ));
     }
 }
-fn decode<T: GpuElement>(bytes: Vec<u8>) -> Vec<T> {
-    bytes
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|bytes| T::from_bytes(*bytes))
-        .collect()
+fn decode<T: GpuElement>(bytes: &[u8]) -> Vec<T> {
+    crate::array::decode_elements(bytes)
 }

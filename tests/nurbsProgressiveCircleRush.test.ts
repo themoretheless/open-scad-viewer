@@ -6,13 +6,14 @@ import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 
 it.each(spatialRmfProfileG2BodySources)('qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: %s',async file=>{
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing corrected spatial body')
- const data=JSON.parse(built.nativeGeometry.geometryJson),model=data.geometry
+ const data=readNativeGeometryData(built.nativeGeometry),model=data.geometry
  const boundary=data.sweepBodyBoundaryEvidence
  expect(boundary.profileCorrectionErrorUpper).toBeGreaterThan(0)
  expect(boundary.profileCorrectionErrorUpper).toBeLessThanOrEqual(1e-9)

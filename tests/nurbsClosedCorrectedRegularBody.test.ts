@@ -6,6 +6,7 @@ import {tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 
 const sources=[
  'arc-length-periodic-corrected-frenet-nonplanar-body-boundary.r','periodic-corrected-frenet-nonplanar-body-boundary.r',
@@ -18,9 +19,10 @@ it.each(sources)('qualifies closed corrected original error and fresh retained S
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing closed corrected regular body')
- const boundary=JSON.parse(built.nativeGeometry.geometryJson).sweepBodyBoundaryEvidence
+ const data=readNativeGeometryData(built.nativeGeometry)
+ const boundary=data.sweepBodyBoundaryEvidence
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry),JSON.stringify({file,boundary})).toMatchObject({continuousBound:true,withinBudget:true,budget:.05})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry,stored=JSON.stringify(model)
+ const model=data.geometry,stored=JSON.stringify(model)
  const mesh=tessellateNurbsBrep(model,4)
  expect(mesh.indices.length/3).toBeLessThanOrEqual(20000)
  expect(new Set(mesh.faceIds).size).toBe(model.faces.length)

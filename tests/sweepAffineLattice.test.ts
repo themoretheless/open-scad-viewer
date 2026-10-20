@@ -2,6 +2,8 @@ import {expect,it} from 'vitest'
 import {circleNurbsCurve} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/services/nurbsCurve'
 import {createProgressiveMiterBrepProfileBody,reconstructCertifiedMiterStations,transformCertifiedMiterBody} from '../src/services/geometry/brep'
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const shear=[[1,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,1]]
 const options={quantum:2**-40,maxWork:100000,maxDeviation:1e-9}
@@ -118,18 +120,26 @@ it.each(['miter-periodic-moving-axis-guide-affine-hollow.r','miter-periodic-movi
  expect(auditedProfiles.every(r=>r.profileSmoothness.profileG1Certified)).toBe(true)
  expect(auditedProfiles.every(r=>r.profileSmoothness.profile.exactG1G2Certified)).toBe(true)
  expect(auditedProfiles.every(r=>r.profileSmoothness.stationContinuity==='C0')).toBe(true)
- const actualModel=JSON.parse(transformedBody.nativeGeometry!.geometryJson).geometry
+ const actualModel=readNativeGeometryData(transformedBody.nativeGeometry!).geometry
  expect(inspectProgressiveSweepSolidAdmission(transformedBody.nativeGeometry!,actualModel).solidGeometryCertified).toBe(true)
  const changed=structuredClone(actualModel)
  changed.faces[0].surface.controlPoints[0][0][0]+=.125
  expect(()=>inspectProgressiveSweepSolidAdmission(transformedBody.nativeGeometry!,changed)).toThrow(/final model differs/)
- const replay=JSON.parse(transformedBody.nativeGeometry!.geometryJson)
+ const replay=structuredClone(readNativeGeometryData(transformedBody.nativeGeometry!))
  expect(replay.sweepMiterReplay.followingPlacements).toHaveLength(1)
  replay.sweepMiterReplay.matrix[0][0]=-1
- expect(()=>inspectProgressiveSweepSolidAdmission({...transformedBody.nativeGeometry!,geometryJson:JSON.stringify(replay)},actualModel)).toThrow(/final model differs|replay Solid|binding/)
+ const tampered={...transformedBody.nativeGeometry!,geometryJson:JSON.stringify(replay)}
+ expect(isNativeGeometryArtifact(tampered)).toBe(false)
+ // Exercise the public integrity boundary for the changed receipt; actual
+ // model mutation and native replay binding are checked separately above.
+ const {ownNurbsDisplayMesh}=await import('../src/services/rushFrontendScene')
+ const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const carrier=ownNurbsDisplayMesh(transformedBody.mesh!,'entity:native/integrity-check',transformedBody.nativeGeometry!).mesh
+ expect(isNativeGeometryArtifact(carrier.nativeGeometry)).toBe(true)
+ expect(()=>sceneMeshesToSolidDocument([{...carrier,nativeGeometry:tampered}])).toThrow(/Invalid native B-rep snapshot/)
 
  const original=buildOwnNurbs(compileRushFrontend(text).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
- expect(inspectProgressiveSweepSolidAdmission(original.nativeGeometry!,JSON.parse(original.nativeGeometry!.geometryJson).geometry).solidGeometryCertified).toBe(true)
+ expect(inspectProgressiveSweepSolidAdmission(original.nativeGeometry!,readNativeGeometryData(original.nativeGeometry!).geometry).solidGeometryCertified).toBe(true)
  expect(graph).toEqual(before)
 })
 
@@ -142,7 +152,7 @@ it('admits reflected automatic periodic caps with exact off-lattice native arith
  const reflected=source.replace('.brep_tessellate(4)', '.transform(matrix: [[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]).brep_tessellate(4)')
  const graph=compileRushFrontend(reflected).document,before=structuredClone(graph)
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
- expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,JSON.parse(built.nativeGeometry!.geometryJson).geometry).solidGeometryCertified).toBe(true)
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,readNativeGeometryData(built.nativeGeometry!).geometry).solidGeometryCertified).toBe(true)
  const reports=Object.values(built.report.construction!) as any[]
  expect(reports.some(r=>r.placement?.reason==='exact-binary-axis-permutation'&&r.placement.arithmeticErrorUpper===0&&r.boundaryCertificate.continuousBound&&r.volume.solidGeometryCertified)).toBe(true)
  expect(graph).toEqual(before)

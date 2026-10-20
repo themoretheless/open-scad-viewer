@@ -78,6 +78,8 @@ pub enum PathRole {
     Inset,
     Hatch,
     SolidSkin,
+    Bridge,
+    Support,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -87,6 +89,10 @@ pub enum InfillPattern {
     Grid,
     Triangles,
     Concentric,
+    Honeycomb,
+    Gyroid,
+    HilbertCurve,
+    ArchimedeanChords,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -457,7 +463,248 @@ fn generate_infill(
             }
             Ok(paths)
         }
+        InfillPattern::Honeycomb => {
+            let mut paths = Vec::new();
+            for angle in [
+                0.0,
+                std::f64::consts::FRAC_PI_3,
+                -std::f64::consts::FRAC_PI_3,
+            ] {
+                let spans = hatch_angled(remaining, spacing * 1.5, angle, role, budget)?;
+                for span in spans {
+                    if span.points.len() == 2 {
+                        let [a, b] = [span.points[0], span.points[1]];
+                        let dx = b[0] - a[0];
+                        let dy = b[1] - a[1];
+                        let len = dx.hypot(dy);
+                        let step_len = (spacing * 0.5).max(0.2);
+                        let steps = ((len / step_len).ceil() as usize).clamp(1, 512);
+                        let (nx, ny) = if len > 1e-12 {
+                            (-dy / len, dx / len)
+                        } else {
+                            (0.0, 0.0)
+                        };
+                        let amp = spacing * 0.25;
+                        let mut pts = Vec::with_capacity(steps + 1);
+                        for i in 0..=steps {
+                            let t = i as f64 / steps as f64;
+                            let offset = if i % 2 == 0 { -amp } else { amp };
+                            let px = a[0] + t * dx + offset * nx;
+                            let py = a[1] + t * dy + offset * ny;
+                            if point_in_rings(remaining, [px, py]) {
+                                pts.push([px, py]);
+                            }
+                        }
+                        if pts.len() >= 2 {
+                            budget.points(pts.len())?;
+                            paths.push(Toolpath {
+                                role,
+                                points: pts,
+                                closed: false,
+                            });
+                        }
+                    }
+                }
+            }
+            Ok(paths)
+        }
+        InfillPattern::Gyroid => {
+            let spans = hatch_angled(remaining, spacing, 0.0, role, budget)?;
+            let mut paths = Vec::with_capacity(spans.len());
+            let k = std::f64::consts::TAU / (spacing * 2.0).max(0.5);
+            let amp = spacing * 0.35;
+            for (row_idx, span) in spans.into_iter().enumerate() {
+                if span.points.len() == 2 {
+                    let [a, b] = [span.points[0], span.points[1]];
+                    let dx = b[0] - a[0];
+                    let dy = b[1] - a[1];
+                    let len = dx.hypot(dy);
+                    let steps = ((len / (spacing * 0.25).max(0.2)).ceil() as usize).clamp(2, 512);
+                    let phase = if row_idx % 2 == 0 {
+                        0.0
+                    } else {
+                        std::f64::consts::PI
+                    };
+                    let mut pts = Vec::with_capacity(steps + 1);
+                    for i in 0..=steps {
+                        let t = i as f64 / steps as f64;
+                        let x = a[0] + t * dx;
+                        let y = a[1] + t * dy + amp * (x * k + phase).sin();
+                        if point_in_rings(remaining, [x, y]) {
+                            pts.push([x, y]);
+                        }
+                    }
+                    if pts.len() >= 2 {
+                        budget.points(pts.len())?;
+                        paths.push(Toolpath {
+                            role,
+                            points: pts,
+                            closed: false,
+                        });
+                    }
+                }
+            }
+            Ok(paths)
+        }
+        InfillPattern::HilbertCurve => generate_hilbert_infill(remaining, spacing, role, budget),
+        InfillPattern::ArchimedeanChords => {
+            generate_archimedean_infill(remaining, spacing, role, budget)
+        }
     }
+}
+
+fn point_in_rings(rings: &Rings, p: [f64; 2]) -> bool {
+    let mut winding = 0i32;
+    for ring in rings {
+        for i in 0..ring.len() {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            if a[1] <= p[1] {
+                if b[1] > p[1]
+                    && (b[0] - a[0]) * (p[1] - a[1]) - (p[0] - a[0]) * (b[1] - a[1]) > 0.0
+                {
+                    winding += 1;
+                }
+            } else if b[1] <= p[1]
+                && (b[0] - a[0]) * (p[1] - a[1]) - (p[0] - a[0]) * (b[1] - a[1]) < 0.0
+            {
+                winding -= 1;
+            }
+        }
+    }
+    winding != 0
+}
+
+fn hilbert_d2xy(n: usize, mut d: usize) -> (usize, usize) {
+    let (mut x, mut y) = (0usize, 0usize);
+    let mut s = 1usize;
+    while s < n {
+        let rx = 1 & (d / 2);
+        let ry = 1 & (d ^ rx);
+        if ry == 0 {
+            if rx == 1 {
+                x = s - 1 - x;
+                y = s - 1 - y;
+            }
+            std::mem::swap(&mut x, &mut y);
+        }
+        x += s * rx;
+        y += s * ry;
+        d /= 4;
+        s *= 2;
+    }
+    (x, y)
+}
+
+fn generate_hilbert_infill(
+    remaining: &Rings,
+    spacing: f64,
+    role: PathRole,
+    budget: &mut Budget,
+) -> Result<Vec<Toolpath>> {
+    if remaining.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (mut min_x, mut min_y) = (f64::INFINITY, f64::INFINITY);
+    let (mut max_x, mut max_y) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
+    for &[x, y] in remaining.iter().flatten() {
+        min_x = min_x.min(x);
+        min_y = min_y.min(y);
+        max_x = max_x.max(x);
+        max_y = max_y.max(y);
+    }
+    let extent = (max_x - min_x).max(max_y - min_y);
+    if extent <= 1e-6 {
+        return Ok(Vec::new());
+    }
+    let target_cells = ((extent / spacing).ceil() as usize).clamp(2, 64);
+    let n = target_cells.next_power_of_two().clamp(2, 64);
+    let total = n * n;
+    budget.work(total * point_count(remaining).max(1))?;
+    let step = extent / n as f64;
+    let mut paths = Vec::new();
+    let mut current = Vec::new();
+    for d in 0..total {
+        let (hx, hy) = hilbert_d2xy(n, d);
+        let pt = [min_x + (hx as f64 + 0.5) * step, min_y + (hy as f64 + 0.5) * step];
+        if point_in_rings(remaining, pt) {
+            current.push(pt);
+        } else if current.len() >= 2 {
+            budget.points(current.len())?;
+            paths.push(Toolpath {
+                role,
+                points: std::mem::take(&mut current),
+                closed: false,
+            });
+        } else {
+            current.clear();
+        }
+    }
+    if current.len() >= 2 {
+        budget.points(current.len())?;
+        paths.push(Toolpath {
+            role,
+            points: current,
+            closed: false,
+        });
+    }
+    Ok(paths)
+}
+
+fn generate_archimedean_infill(
+    remaining: &Rings,
+    spacing: f64,
+    role: PathRole,
+    budget: &mut Budget,
+) -> Result<Vec<Toolpath>> {
+    if remaining.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (mut min_x, mut min_y) = (f64::INFINITY, f64::INFINITY);
+    let (mut max_x, mut max_y) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
+    for &[x, y] in remaining.iter().flatten() {
+        min_x = min_x.min(x);
+        min_y = min_y.min(y);
+        max_x = max_x.max(x);
+        max_y = max_y.max(y);
+    }
+    let cx = 0.5 * (min_x + max_x);
+    let cy = 0.5 * (min_y + max_y);
+    let max_r = (0.5 * (max_x - min_x)).hypot(0.5 * (max_y - min_y));
+    let turns = (max_r / spacing).ceil().clamp(1.0, 256.0);
+    let steps = (turns as usize * 36).clamp(36, 8192);
+    budget.work(steps * point_count(remaining).max(1))?;
+    let b = spacing / std::f64::consts::TAU;
+    let max_theta = turns * std::f64::consts::TAU;
+    let mut paths = Vec::new();
+    let mut current = Vec::new();
+    for i in 0..=steps {
+        let theta = max_theta * (i as f64 / steps as f64);
+        let r = b * theta;
+        let (s, c) = theta.sin_cos();
+        let pt = [cx + r * c, cy + r * s];
+        if point_in_rings(remaining, pt) {
+            current.push(pt);
+        } else if current.len() >= 2 {
+            budget.points(current.len())?;
+            paths.push(Toolpath {
+                role,
+                points: std::mem::take(&mut current),
+                closed: false,
+            });
+        } else {
+            current.clear();
+        }
+    }
+    if current.len() >= 2 {
+        budget.points(current.len())?;
+        paths.push(Toolpath {
+            role,
+            points: current,
+            closed: false,
+        });
+    }
+    Ok(paths)
 }
 
 /// Offset contours and hatch one already-computed layer section. Contours use
@@ -1025,11 +1272,25 @@ mod tests {
             plan_layer_with_pattern(&section, &settings, InfillPattern::Triangles, false).unwrap();
         let conc =
             plan_layer_with_pattern(&section, &settings, InfillPattern::Concentric, false).unwrap();
+        let hex =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::Honeycomb, false).unwrap();
+        let gyroid =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::Gyroid, false).unwrap();
+        let hilbert =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::HilbertCurve, false)
+                .unwrap();
+        let arch =
+            plan_layer_with_pattern(&section, &settings, InfillPattern::ArchimedeanChords, false)
+                .unwrap();
         let skin =
             plan_layer_with_pattern(&section, &settings, InfillPattern::Rectilinear, true).unwrap();
 
         assert!(grid.paths.len() > rect.paths.len());
         assert!(tri.paths.len() > grid.paths.len());
+        assert!(!hex.paths.is_empty());
+        assert!(!gyroid.paths.is_empty());
+        assert!(!hilbert.paths.is_empty());
+        assert!(!arch.paths.is_empty());
         assert!(conc
             .paths
             .iter()
@@ -1040,4 +1301,299 @@ mod tests {
             .iter()
             .any(|p| p.role == PathRole::SolidSkin && !p.closed));
     }
+
+    #[test]
+    fn adaptive_heights_and_skin_support_detection_work() {
+        let cfg = VariableLayerConfig::default();
+        // Steep vertical wall (|n_z| = 0) -> max_layer_height_mm, shallow dome (|n_z| -> 1) -> min_layer_height_mm
+        let heights = schedule_adaptive_heights(0.0, 2.0, &cfg, |z| if z < 1.0 { 0.0 } else { 0.95 })
+            .unwrap();
+        assert!(heights.len() >= 8);
+        let step_steep = heights[1] - heights[0];
+        let step_shallow = heights[heights.len() - 1] - heights[heights.len() - 2];
+        assert!(step_steep > step_shallow);
+
+        // Two-layer overhanging L-shape: layer 0 is [0..10]x[0..10], layer 1 is [0..20]x[0..10]
+        let sections = vec![
+            LayerSection {
+                z_mm: 0.2,
+                contours: vec![vec![[0., 0.], [10., 0.], [10., 10.], [0., 10.]]],
+            },
+            LayerSection {
+                z_mm: 0.4,
+                contours: vec![vec![[0., 0.], [20., 0.], [20., 10.], [0., 10.]]],
+            },
+        ];
+        let settings = ToolpathSettings::default();
+        let support_cfg = SupportConfig {
+            overhang_offset_mm: 1.0,
+            support_spacing_mm: 2.0,
+        };
+        let planned = plan_layers_with_skins_and_supports(
+            &sections,
+            &settings,
+            InfillPattern::Grid,
+            Some(&support_cfg),
+        )
+        .unwrap();
+        assert_eq!(planned.len(), 2);
+        // Layer 0 should contain Support paths under the [10..20]x[0..10] overhang of layer 1
+        assert!(planned[0].paths.iter().any(|p| p.role == PathRole::Support));
+        // Layer 1 has an unsupported bridge region [10..20]x[0..10]
+        assert!(planned[1].paths.iter().any(|p| p.role == PathRole::Bridge));
+    }
+}
+
+/// Configuration for curvature / surface-normal adaptive layer thickness.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VariableLayerConfig {
+    pub min_layer_height_mm: f64,
+    pub max_layer_height_mm: f64,
+}
+
+impl Default for VariableLayerConfig {
+    fn default() -> Self {
+        Self {
+            min_layer_height_mm: 0.08,
+            max_layer_height_mm: 0.28,
+        }
+    }
+}
+
+/// Computes an adaptive sequence of Z sample heights in `[z_min, z_max)` driven by
+/// `max_abs_normal_z(z)` ($\max |n_z| \in [0, 1]$ on the slice contour):
+/// vertical walls ($|n_z| \approx 0$) use `max_layer_height_mm`, while shallow / horizontal
+/// slopes ($|n_z| \to 1$) smoothly step down to `min_layer_height_mm`.
+pub fn schedule_adaptive_heights<F>(
+    z_min: f64,
+    z_max: f64,
+    config: &VariableLayerConfig,
+    mut max_abs_normal_z: F,
+) -> Result<Vec<f64>>
+where
+    F: FnMut(f64) -> f64,
+{
+    if !valid_coordinate(z_min)
+        || !valid_coordinate(z_max)
+        || z_max <= z_min
+        || !config.min_layer_height_mm.is_finite()
+        || !config.max_layer_height_mm.is_finite()
+        || config.min_layer_height_mm < gcode_core::COORDINATE_RESOLUTION_MM
+        || config.max_layer_height_mm < config.min_layer_height_mm
+    {
+        return Err(invalid(
+            "TOOLPATH_INVALID_RANGE",
+            "Invalid adaptive layer height range or settings",
+        ));
+    }
+    let mut heights = Vec::new();
+    let mut z = z_min;
+    for _ in 0..MAX_LAYERS {
+        if z >= z_max {
+            break;
+        }
+        heights.push(z);
+        let nz = max_abs_normal_z(z).abs().clamp(0.0, 1.0);
+        let dz = config.max_layer_height_mm
+            - nz * (config.max_layer_height_mm - config.min_layer_height_mm);
+        let next_z = z + dz.max(config.min_layer_height_mm);
+        if !next_z.is_finite() || next_z <= z {
+            return Err(invalid(
+                "TOOLPATH_INVALID_RANGE",
+                "Adaptive layer height did not advance Z",
+            ));
+        }
+        z = next_z;
+    }
+    if z < z_max && heights.len() >= MAX_LAYERS {
+        return Err(invalid(
+            "TOOLPATH_LAYER_LIMIT",
+            "Adaptive layer schedule exceeded 2048 layers",
+        ));
+    }
+    Ok(heights)
+}
+
+/// Configuration for automatic overhang and support toolpath generation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SupportConfig {
+    /// Horizontal expansion threshold beyond which upper-layer material is considered an overhang.
+    pub overhang_offset_mm: f64,
+    /// Line spacing for support hatching.
+    pub support_spacing_mm: f64,
+}
+
+impl Default for SupportConfig {
+    fn default() -> Self {
+        Self {
+            overhang_offset_mm: 0.4,
+            support_spacing_mm: 2.5,
+        }
+    }
+}
+
+/// Plans a stack of layers with automatic Top/Bottom Solid Skin detection ($Z_i \setminus Z_{i\pm 1}$),
+/// Bridge infill on unsupported regions ($Z_i \setminus Z_{i-1}$), and optional Support hatching
+/// projected down from upper overhangs onto lower layers.
+pub fn plan_layers_with_skins_and_supports(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    support: Option<&SupportConfig>,
+) -> Result<Vec<ToolpathLayer>> {
+    require_settings(settings)?;
+    if sections.len() > MAX_LAYERS {
+        return Err(invalid(
+            "TOOLPATH_LAYER_LIMIT",
+            "Toolpath plan exceeded 2048 layers",
+        ));
+    }
+    let mut budget = Budget::default();
+    let mut normalized = Vec::with_capacity(sections.len());
+    for sec in sections {
+        require_section(sec, &mut budget)?;
+        budget.arrangement(point_count(&sec.contours))?;
+        let norm = rings::nonzero(&sec.contours)?;
+        budget.points(point_count(&norm))?;
+        normalized.push(norm);
+    }
+
+    // Downward projection of overhanging regions for support generation
+    let mut support_regions: Vec<Rings> = vec![Vec::new(); sections.len()];
+    if let Some(sup) = support {
+        if !sup.overhang_offset_mm.is_finite()
+            || sup.overhang_offset_mm < 0.0
+            || !sup.support_spacing_mm.is_finite()
+            || sup.support_spacing_mm < gcode_core::COORDINATE_RESOLUTION_MM
+        {
+            return Err(invalid(
+                "TOOLPATH_INVALID_SETTINGS",
+                "Invalid support configuration",
+            ));
+        }
+        let mut accumulated_overhang: Rings = Vec::new();
+        for i in (0..sections.len()).rev() {
+            if !accumulated_overhang.is_empty() {
+                let free_support =
+                    rings::planar(&accumulated_overhang, &normalized[i], "difference")?;
+                support_regions[i] = free_support.clone();
+                accumulated_overhang = free_support;
+            }
+            if i > 0 && !normalized[i].is_empty() {
+                let unsupported = rings::planar(&normalized[i], &normalized[i - 1], "difference")?;
+                let significant = if sup.overhang_offset_mm > 1e-6 {
+                    inset_rings(&unsupported, sup.overhang_offset_mm * 0.5, &mut budget)?
+                } else {
+                    unsupported
+                };
+                if !significant.is_empty() {
+                    accumulated_overhang = if accumulated_overhang.is_empty() {
+                        significant
+                    } else {
+                        rings::planar(&accumulated_overhang, &significant, "union")?
+                    };
+                }
+            }
+        }
+    }
+
+    let mut out_layers = Vec::with_capacity(sections.len());
+    for i in 0..sections.len() {
+        let source = &normalized[i];
+        let mut paths = Vec::new();
+        for wall in 0..settings.wall_count {
+            let inset = (wall as f64 + 0.5) * settings.line_width_mm;
+            let offset = inset_rings(source, inset, &mut budget)?;
+            let role = if wall == 0 {
+                PathRole::Outline
+            } else {
+                PathRole::Inset
+            };
+            for ring in &offset {
+                budget.points(ring.len())?;
+                paths.push(path_from_ring(role, ring, true));
+            }
+            if offset.is_empty() {
+                break;
+            }
+        }
+        let interior = inset_rings(
+            source,
+            settings.wall_count as f64 * settings.line_width_mm,
+            &mut budget,
+        )?;
+        if !interior.is_empty() {
+            let bridge_region = if i > 0 && !normalized[i - 1].is_empty() {
+                rings::planar(&interior, &normalized[i - 1], "difference")?
+            } else {
+                Vec::new()
+            };
+            if !bridge_region.is_empty() {
+                paths.extend(hatch_angled(
+                    &bridge_region,
+                    settings.line_width_mm,
+                    0.0,
+                    PathRole::Bridge,
+                    &mut budget,
+                )?);
+            }
+            let supported_interior = if bridge_region.is_empty() {
+                interior
+            } else {
+                rings::planar(&interior, &bridge_region, "difference")?
+            };
+            if !supported_interior.is_empty() {
+                let is_bottom = i == 0 || normalized[i - 1].is_empty();
+                let is_top = i + 1 == sections.len() || normalized[i + 1].is_empty();
+                if is_bottom || is_top {
+                    paths.extend(hatch_angled(
+                        &supported_interior,
+                        settings.line_width_mm,
+                        std::f64::consts::FRAC_PI_4,
+                        PathRole::SolidSkin,
+                        &mut budget,
+                    )?);
+                } else {
+                    let top_skin_region =
+                        rings::planar(&supported_interior, &normalized[i + 1], "difference")?;
+                    let sparse_region =
+                        rings::planar(&supported_interior, &top_skin_region, "difference")?;
+                    if !top_skin_region.is_empty() {
+                        paths.extend(hatch_angled(
+                            &top_skin_region,
+                            settings.line_width_mm,
+                            std::f64::consts::FRAC_PI_4,
+                            PathRole::SolidSkin,
+                            &mut budget,
+                        )?);
+                    }
+                    if !sparse_region.is_empty() {
+                        paths.extend(generate_infill(
+                            &sparse_region,
+                            settings.infill_spacing_mm,
+                            pattern,
+                            PathRole::Hatch,
+                            &mut budget,
+                        )?);
+                    }
+                }
+            }
+        }
+        if let Some(sup) = support
+            && !support_regions[i].is_empty()
+        {
+            paths.extend(hatch_angled(
+                &support_regions[i],
+                sup.support_spacing_mm,
+                0.0,
+                PathRole::Support,
+                &mut budget,
+            )?);
+        }
+        out_layers.push(ToolpathLayer {
+            z_mm: sections[i].z_mm,
+            paths,
+        });
+    }
+    Ok(out_layers)
 }

@@ -35,7 +35,7 @@ fn crossing_does_not_become_a_false_simplicity_proof() {
     assert!(r.pairs.iter().any(|p| !p.proven));
 }
 #[test]
-fn closure_and_unsupported_segment_proofs_have_distinct_outcomes() {
+fn closure_and_backtracking_segment_proofs_have_distinct_outcomes() {
     let mut c = polygon(&[[0., 0.], [4., 0.], [4., 4.], [0., 4.]]);
     c[0].control_points[0][0] = 1.;
     assert_eq!(
@@ -46,6 +46,17 @@ fn closure_and_unsupported_segment_proofs_have_distinct_outcomes() {
     );
     let mut c = polygon(&[[0., 0.], [4., 0.], [4., 4.], [0., 4.]]);
     c[0] = c[0].insert(0.5, 1).unwrap();
+    // Inserting a knot preserves the original ordered line. The native
+    // multispan monotonicity proof now admits this exact geometry.
+    assert_eq!(
+        trim_simplicity::inspect(&c, 1e-6, 6, 4096)
+            .unwrap()
+            .outcome(),
+        Outcome::ProvenSimple
+    );
+    // Preserve its endpoints but make the interior traverse past the end
+    // and return: closure is still exact, injectivity cannot be certified.
+    c[0].control_points[1][0] = 5.;
     assert_eq!(
         trim_simplicity::inspect(&c, 1e-6, 6, 4096)
             .unwrap()

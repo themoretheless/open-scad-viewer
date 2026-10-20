@@ -7,6 +7,8 @@ use nurbs_core::{
     progressive_miter,
 };
 use value_codec::json;
+use std::rc::Rc;
+mod source_body_cache;
 fn budget(v: &Value) -> Result<Budget> {
     Ok(Budget {
         quantum: field(v, "quantum")?,
@@ -229,6 +231,12 @@ fn construct_body_with<T>(
     finish: impl FnOnce(&Request<'_>, &Limits, bool, Option<[bool; 2]>) -> Result<T>,
 ) -> Result<T> {
     let original = parse_original(v, allow_unbudgeted_direct)?;
+    finish_original_with(original, finish)
+}
+fn finish_original_with<T>(
+    original: OriginalRequest,
+    finish: impl FnOnce(&Request<'_>, &Limits, bool, Option<[bool; 2]>) -> Result<T>,
+) -> Result<T> {
     let request = Request {
         loops: &original.loops,
         points: &original.points,
@@ -253,8 +261,16 @@ fn construct_body_with<T>(
         original.cap_endpoints,
     )
 }
-fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
-    construct_body_with(v, false, |request, limits, direct, cap_endpoints| {
+fn construct_body(v: Value) -> Result<Rc<sweep_miter_owned::BoundaryBody>> {
+    // Validate every request, including forbidden transferred evidence, before
+    // looking up private constructor-owned geometry. All source limits belong
+    // to the exact key. Only the transport operation label is irrelevant.
+    let original = parse_original(v.clone(), false)?;
+    let key = source_body_cache::key(v);
+    if let Some(body) = key.as_deref().and_then(source_body_cache::get) {
+        return Ok(body);
+    }
+    let body = Rc::new(finish_original_with(original, |request, limits, direct, cap_endpoints| {
         if direct {
             sweep_miter_owned::construct_direct(
                 &sweep_miter_owned::DirectRequest {
@@ -276,7 +292,11 @@ fn construct_body(v: Value) -> Result<sweep_miter_owned::BoundaryBody> {
         } else {
             sweep_miter_owned::construct(request, limits)
         }
-    })
+    })?);
+    if let Some(key) = key {
+        source_body_cache::insert(key, body.clone());
+    }
+    Ok(body)
 }
 pub fn construct(v: Value) -> Result<Value> {
     let direct = optional_field::<bool>(&v, "direct")?.unwrap_or(false);

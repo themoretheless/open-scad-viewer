@@ -4,21 +4,25 @@
 //! The tooth outline is authored per tooth as exact rational arcs (tip and
 //! root circles), radial lines below the base circle, and involute flanks
 //! approximated by quintic Hermite spans with an analytic real-arithmetic
-//! remainder at most `FLANK_FIT`. Binary64 rounding is not certified. Each outline
+//! remainder at most `FLANK_FIT`. The report separately records inclusive
+//! flank bounds against stored parameters and the complete nominal spec. Each outline
 //! curve becomes one wall face: a ruled surface for a spur gear, or for a
 //! helical gear a quintic Hermite sweep with a continuous real-arithmetic
-//! remainder at most `SWEEP_FIT`; binary64 rounding is not certified.
+//! remainder at most `SWEEP_FIT`; the report flags inclusive saved-wall and
+//! nominal twist bounds separately from ideal profile accuracy.
 //! A herringbone gear is two mirrored helical halves sharing the mid-plane
 //! outline. Caps are planar faces bounded by the outline and its rotated
 //! image, with affine pcurves. All edges are iso-curves of the wall
 //! surfaces, so the body is self-consistent to the kernel tolerance; the
 //! stated fit bounds describe how far the surfaces sit from the ideal
 //! involute helicoid, which no polynomial surface represents exactly.
+//! Line/arc endpoints are canonicalized to exact shared ownership; their
+//! continuous displacement is reported, while all certified flank poles remain.
 use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::f64::consts::{PI, TAU};
 
-/// Requested real-arithmetic Hermite remainder; excludes binary64 rounding.
+/// Accepted flank deviation budget; report flags identify the certified scope.
 const FLANK_FIT: f64 = 1e-6;
 /// Largest deviation of a lofted helical wall from the exact helical sweep.
 const SWEEP_FIT: f64 = 1e-4;
@@ -86,11 +90,28 @@ pub struct GearGeometry {
     /// Inclusive curve bound is certified against the stored derived radius
     /// and placement angles. This does not certify GearSpec parameter derivation.
     pub flank_stored_parameters_rounding_certified: bool,
-    /// Continuous real-arithmetic remainder for the helical walls (zero for spur).
-    /// Binary64 rounding is excluded.
+    /// Continuous wall error. If sweep_rounding_certified, includes saved-net
+    /// rounding and nominal GearSpec twist derivation, relative to the saved
+    /// profile. Flank/root profile error remains separate.
     pub sweep_deviation: f64,
     pub sweep_rounding_certified: bool,
     pub face_count: usize,
+    /// Continuous bound on canonical endpoint adjustment of lines/arcs.
+    /// Certified involute poles are retained exactly. Does not prove embedding.
+    pub profile_join_adjustment_upper: f64,
+    /// Full original arc radial deviation, including nominal radius derivation
+    /// and canonical joins. Does not bound angular placement or radial lines.
+    pub arc_radius_error_upper: Option<f64>,
+    pub arc_radius_rounding_certified: bool,
+    /// Continuous same-parameter error of saved arcs and radial transition lines
+    /// against nominal GearSpec components. Includes angular/radius derivation.
+    pub transition_error_upper: Option<f64>,
+    pub transition_rounding_certified: bool,
+    /// Continuous componentwise two-sided profile error versus the nominal
+    /// sharp GearSpec profile, only when every flank/arc/line is admitted.
+    pub profile_error_upper: Option<f64>,
+    /// Profile error plus saved-wall/nominal-twist error. No solid embedding claim.
+    pub ideal_wall_error_upper: Option<f64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -177,9 +198,9 @@ fn involute(
     sign: f64,
     half: &dyn Fn(f64) -> f64,
 ) -> Result<(Curve, f64)> {
-    let angle=center+sign*half(base);
-    let (curve,certificate)=involute_flank(base,t0,t1,angle,-sign)?;
-    Ok((curve,certificate.error_upper))
+    let angle = center + sign * half(base);
+    let (curve, certificate) = involute_flank(base, t0, t1, angle, -sign)?;
+    Ok((curve, certificate.error_upper))
 }
 
 /// Build a quintic involute flank and certify the actual stored poles and
@@ -189,30 +210,46 @@ fn involute(
 /// Reflection is +/-1. Angles must be within -8..8; at most 32 controls are
 /// retained, and the inclusive geometric error must be <= 1e-6.
 pub fn involute_flank(
-    base:f64,t0:f64,t1:f64,angle:f64,reflection:f64,
-)->Result<(Curve,nurbs_core::involute::QuinticCertificate)> {
-    if !angle.is_finite() || angle.abs()>8. || !(reflection==1. || reflection== -1.) {
+    base: f64,
+    t0: f64,
+    t1: f64,
+    angle: f64,
+    reflection: f64,
+) -> Result<(Curve, nurbs_core::involute::QuinticCertificate)> {
+    if !angle.is_finite() || angle.abs() > 8. || !(reflection == 1. || reflection == -1.) {
         return Err(invalid("Flank needs a bounded angle and reflection +/-1"));
     }
     // Reserve half of the requested allowance for stored pole/knot placement.
-    let approximation=nurbs_core::involute::approximate_quintic(
-        [0.;3],base,t0.min(t1),t0.max(t1),FLANK_FIT*0.5)?;
-    let mut curve=approximation.curve;
-    if curve.control_points.len()>32 {
-        return Err(invalid("Gear flank needs more than 32 controls at the requested tolerance"));
+    let approximation = nurbs_core::involute::approximate_quintic(
+        [0.; 3],
+        base,
+        t0.min(t1),
+        t0.max(t1),
+        FLANK_FIT * 0.5,
+    )?;
+    let mut curve = approximation.curve;
+    if curve.control_points.len() > 32 {
+        return Err(invalid(
+            "Gear flank needs more than 32 controls at the requested tolerance",
+        ));
     }
-    let (sin,cos)=angle.sin_cos();
+    let (sin, cos) = angle.sin_cos();
     for point in &mut curve.control_points {
-        let (x,y)=(point[0],reflection*point[1]);
-        *point=vec![cos*x-sin*y,sin*x+cos*y];
+        let (x, y) = (point[0], reflection * point[1]);
+        *point = vec![cos * x - sin * y, sin * x + cos * y];
     }
-    if t1<t0 {curve=curve.reverse()?;}
-    let certificate=nurbs_core::involute::certify_quintic_placed(
-        &curve,[0.;3],base,t0,t1,angle,reflection)?;
-    if certificate.error_upper>FLANK_FIT {
-        return Err(invalid("Stored flank exceeds the rounding-inclusive error allowance"));
+    if t1 < t0 {
+        curve = curve.reverse()?;
     }
-    Ok((curve,certificate))
+    let certificate = nurbs_core::involute::certify_quintic_placed(
+        &curve, [0.; 3], base, t0, t1, angle, reflection,
+    )?;
+    if certificate.error_upper > FLANK_FIT {
+        return Err(invalid(
+            "Stored flank exceeds the rounding-inclusive error allowance",
+        ));
+    }
+    Ok((curve, certificate))
 }
 
 fn reverse2(c: &Curve) -> Curve {
@@ -226,9 +263,25 @@ fn reverse2(c: &Curve) -> Curve {
 
 /// Closed loops of the outline (each a connected CCW or CW chain of 2D
 /// curves, material on the left), the geometry report, and the fit.
-fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
-    if ![spec.module,spec.pressure_angle_deg,spec.height,spec.helix_angle_deg,spec.bore,spec.rim_width,spec.clearance,spec.backlash].iter().all(|x|x.is_finite()) {
-        return Err(invalid("Gear dimensions, angles and allowances must be finite"));
+/// Original planar closed profile, with exact endpoint ownership and unchanged
+/// certified involute poles. Returns candidate geometry, not an embedding proof.
+pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
+    if ![
+        spec.module,
+        spec.pressure_angle_deg,
+        spec.height,
+        spec.helix_angle_deg,
+        spec.bore,
+        spec.rim_width,
+        spec.clearance,
+        spec.backlash,
+    ]
+    .iter()
+    .all(|x| x.is_finite())
+    {
+        return Err(invalid(
+            "Gear dimensions, angles and allowances must be finite",
+        ));
     }
     let teeth = spec.teeth as f64;
     if !(3..=256).contains(&spec.teeth) {
@@ -319,9 +372,17 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
     let t0 = ((start / base).powi(2) - 1.).max(0.).sqrt();
     let t1 = ((high / base).powi(2) - 1.).max(0.).sqrt();
     let mut flank_deviation: f64 = 0.;
-    let ideal=nurbs_core::involute::derive_gear_parameter_bounds(spec.module,spec.teeth,spec.pressure_angle_deg,spec.clearance,spec.backlash,spec.internal).ok();
-    let mut full_flank_certified=ideal.is_some();
-    let mut full_flank_deviation=0_f64;
+    let ideal = nurbs_core::involute::derive_gear_parameter_bounds(
+        spec.module,
+        spec.teeth,
+        spec.pressure_angle_deg,
+        spec.clearance,
+        spec.backlash,
+        spec.internal,
+    )
+    .ok();
+    let mut full_flank_certified = ideal.is_some();
+    let mut full_flank_deviation = 0_f64;
     // One tooth outline, counter-clockwise, starting at the low radius on
     // the leading side.
     let mut tooth: Vec<Curve> = Vec::new();
@@ -336,16 +397,60 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
         let (rising, d1) = involute(base, t0, t1, center, -1., &half)?;
         let (falling, d2) = involute(base, t1, t0, center, 1., &half)?;
         flank_deviation = flank_deviation.max(d1).max(d2);
-        if let Some(ideal)=&ideal {
-            use nurbs_core::distance_bounds::Interval as I;
-            let step=I::new(ideal.tooth_step[0],ideal.tooth_step[1])?;
-            let nominal_center=step.mul(I::point(i as f64+if spec.internal{0.5}else{0.}))?;
-            let half=I::new(ideal.half_base_angle[0],ideal.half_base_angle[1])?;
-            for (curve,from,to,sign) in [(&rising,ideal.roll_start,ideal.roll_end,-1.),(&falling,ideal.roll_end,ideal.roll_start,1.)] {
-                let angle=nominal_center.add(half.mul(I::point(sign))?)?;
-                match nurbs_core::involute::certify_quintic_parameter_box(curve,[0.;3],ideal.base_radius,from,to,[angle.lo,angle.hi],-sign) {
-                    Ok(certificate)=>{full_flank_deviation=full_flank_deviation.max(certificate.error_upper);full_flank_certified &= certificate.error_upper<=FLANK_FIT;}
-                    Err(_)=>full_flank_certified=false,
+        if spec.internal {
+            // The hole reverses each flank a second time. Recheck the actual
+            // saved reverse knots rather than assuming subtraction is exact.
+            for (curve, from, to, sign) in [(&rising, t1, t0, -1.), (&falling, t0, t1, 1.)] {
+                let saved = reverse2(curve);
+                let proof = nurbs_core::involute::certify_quintic_placed(
+                    &saved,
+                    [0.; 3],
+                    base,
+                    from,
+                    to,
+                    center + sign * half(base),
+                    -sign,
+                )?;
+                if proof.error_upper > FLANK_FIT {
+                    return Err(invalid(
+                        "Reversed internal flank exceeds the inclusive allowance",
+                    ));
+                }
+                flank_deviation = flank_deviation.max(proof.error_upper);
+            }
+        }
+        if let Some(ideal) = &ideal {
+            use nurbs_core::interval_eval::Interval as I;
+            let step = I::new(ideal.tooth_step[0], ideal.tooth_step[1])?;
+            let nominal_center =
+                step.mul(I::point(i as f64 + if spec.internal { 0.5 } else { 0. }))?;
+            let half = I::new(ideal.half_base_angle[0], ideal.half_base_angle[1])?;
+            for (curve, from, to, sign) in [
+                (&rising, ideal.roll_start, ideal.roll_end, -1.),
+                (&falling, ideal.roll_end, ideal.roll_start, 1.),
+            ] {
+                let angle = nominal_center.add(half.mul(I::point(sign))?)?;
+                let reversed = spec.internal.then(|| reverse2(curve));
+                let curve = reversed.as_ref().unwrap_or(curve);
+                let (from, to) = if spec.internal {
+                    (to, from)
+                } else {
+                    (from, to)
+                };
+                match nurbs_core::involute::certify_quintic_parameter_box(
+                    curve,
+                    [0.; 3],
+                    ideal.base_radius,
+                    from,
+                    to,
+                    [angle.lo, angle.hi],
+                    -sign,
+                ) {
+                    Ok(certificate) => {
+                        full_flank_deviation = full_flank_deviation.max(certificate.error_upper);
+                        full_flank_certified &= certificate.error_upper <= FLANK_FIT;
+                    }
+                    Err(_) => full_flank_certified = false,
                 }
             }
         }
@@ -383,7 +488,23 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
             loops.push(hole);
         }
     }
-    if full_flank_certified {flank_deviation=flank_deviation.max(full_flank_deviation);}
+    let profile_join_adjustment_upper = profile_join::close(&mut loops, 1e-7)?;
+    let arc_radius_error_upper = ideal
+        .as_ref()
+        .and_then(|bounds| arc_radius::certify(spec, &loops, bounds, start > low + 1e-12).ok());
+    let arc_radius_rounding_certified = arc_radius_error_upper.is_some_and(|e| e <= FLANK_FIT);
+    let transition_error_upper = ideal.as_ref().and_then(|bounds| {
+        profile_parameter::certify(spec, &loops, bounds, start > low + 1e-12).ok()
+    });
+    let transition_rounding_certified = transition_error_upper.is_some_and(|e| e <= FLANK_FIT);
+    if full_flank_certified {
+        flank_deviation = flank_deviation.max(full_flank_deviation);
+    }
+    let profile_error_upper = if full_flank_certified && transition_rounding_certified {
+        transition_error_upper.map(|e| e.max(flank_deviation))
+    } else {
+        None
+    };
     let geometry = GearGeometry {
         pitch_radius: pitch,
         base_radius: base,
@@ -396,6 +517,13 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
         sweep_deviation: 0.,
         sweep_rounding_certified: false,
         face_count: 0,
+        profile_join_adjustment_upper,
+        arc_radius_error_upper,
+        arc_radius_rounding_certified,
+        transition_error_upper,
+        transition_rounding_certified,
+        profile_error_upper,
+        ideal_wall_error_upper: None,
     };
     Ok((loops, geometry))
 }
@@ -426,12 +554,34 @@ fn lift(c: &Curve, z: f64) -> Curve {
 /// Wall surface of one outline curve between `z0` and `z1`, rotated by
 /// `twist` radians over the height: ruled for zero twist, else quintic
 /// endpoint-Hermite spans with an ideal continuous bound at most SWEEP_FIT.
-fn wall(c: &Curve, z0: f64, z1: f64, theta0: f64, twist: f64) -> Result<(Surface, f64)> {
+fn wall(
+    c: &Curve,
+    z0: f64,
+    z1: f64,
+    theta0: f64,
+    twist: f64,
+    nominal: Option<([f64; 2], [f64; 2])>,
+) -> Result<(Surface, f64, bool)> {
+    let source = lift(c, z0);
     let approximation =
-        nurbs_core::helical_sweep::approximate(&lift(c, z0), z1 - z0, theta0, twist, SWEEP_FIT)?;
+        nurbs_core::helical_sweep::approximate(&source, z1 - z0, theta0, twist, SWEEP_FIT)?;
+    if let Some((start, turn)) = nominal {
+        if let Ok(certificate) = nurbs_core::helical_sweep::certify_stored(
+            &source,
+            &approximation.surface,
+            [z1 - z0; 2],
+            start,
+            turn,
+        ) {
+            if certificate.error_upper <= SWEEP_FIT {
+                return Ok((approximation.surface, certificate.error_upper, true));
+            }
+        }
+    }
     Ok((
         approximation.surface,
         approximation.real_arithmetic_error_estimate,
+        false,
     ))
 }
 
@@ -495,7 +645,7 @@ fn unit_line(a: [f64; 2], b: [f64; 2]) -> Curve {
 
 /// Builds the gear solid. Returns the model and its geometry report.
 pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
-    let (loops, mut geometry) = outline(spec)?;
+    let (loops, mut geometry) = profile_with_report(spec)?;
     let beta = spec.helix_angle_deg.to_radians();
     let total_twist = spec.height * beta.tan() / geometry.pitch_radius;
     // Axial layers: (z0, z1, theta0, twist).
@@ -514,6 +664,14 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
     let mut faces: Vec<Face> = Vec::new();
     let mut uses: Vec<FaceUse> = Vec::new();
     let mut sweep_deviation: f64 = 0.;
+    let nominal_twist = nurbs_core::involute::derive_gear_twist_bounds(
+        spec.module,
+        spec.teeth,
+        spec.height,
+        spec.helix_angle_deg,
+    )
+    .ok();
+    let mut sweep_rounding_certified = nominal_twist.is_some();
     // Per level (layer boundaries) and per loop: the level edges (one per
     // outline curve) and the level vertices (one per curve start).
     let level_z: Vec<f64> = std::iter::once(layers[0].0)
@@ -563,7 +721,24 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             let mut vertical: Vec<usize> = Vec::with_capacity(n);
             let mut surfaces: Vec<Surface> = Vec::with_capacity(n);
             for c in outline_loop {
-                let (surface, dev) = wall(c, z0, z1, theta0, twist)?;
+                let nominal = nominal_twist
+                    .map(|total| -> Result<_> {
+                        use nurbs_core::interval_eval::Interval as I;
+                        let t = I::new(total[0], total[1])?;
+                        if layers.len() == 2 {
+                            let half = t.div(I::point(2.))?;
+                            if layer == 0 {
+                                Ok(([0.; 2], [half.lo, half.hi]))
+                            } else {
+                                Ok(([half.lo, half.hi], [-half.hi, -half.lo]))
+                            }
+                        } else {
+                            Ok(([0.; 2], [t.lo, t.hi]))
+                        }
+                    })
+                    .transpose()?;
+                let (surface, dev, certified) = wall(c, z0, z1, theta0, twist, nominal)?;
+                sweep_rounding_certified &= certified;
                 sweep_deviation = sweep_deviation.max(dev);
                 surfaces.push(surface);
             }
@@ -653,6 +828,17 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
         });
     }
     geometry.sweep_deviation = sweep_deviation;
+    geometry.sweep_rounding_certified = sweep_rounding_certified;
+    geometry.ideal_wall_error_upper = if sweep_rounding_certified {
+        if let Some(profile) = geometry.profile_error_upper {
+            use nurbs_core::interval_eval::Interval as I;
+            Some(I::point(profile).add(I::point(sweep_deviation))?.hi)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     geometry.face_count = faces.len();
     let mut model = Model(
         brep_topology::Model {
@@ -736,7 +922,7 @@ mod tests {
         assert_eq!(geometry.face_count, 20 * 6 + 2);
         assert!(geometry.flank_deviation <= FLANK_FIT);
         assert!(geometry.flank_rounding_certified);
-        assert_eq!(geometry.sweep_deviation, 0.);
+        assert!(geometry.sweep_deviation <= SWEEP_FIT);
         // The volume lies between the root and tip cylinders and close to
         // the pitch cylinder (teeth fill about half the band).
         let v = volume(&model);
@@ -762,7 +948,7 @@ mod tests {
             let (model, geometry) = gear_with_report(&spec).unwrap();
             assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
             assert!(geometry.sweep_deviation > 0. && geometry.sweep_deviation <= SWEEP_FIT);
-            assert!(!geometry.sweep_rounding_certified);
+            assert!(geometry.sweep_rounding_certified);
             let expected_faces = (16 * 6 + 8) * if herringbone { 2 } else { 1 } + 2;
             assert_eq!(geometry.face_count, expected_faces);
             let spur = gear(&GearSpec {
@@ -834,3 +1020,31 @@ mod tests {
         );
     }
 }
+
+#[path = "gear_profile_join.rs"]
+mod profile_join;
+
+#[path = "gear_arc_radius.rs"]
+mod arc_radius;
+
+#[path = "gear_profile_parameter.rs"]
+mod profile_parameter;
+
+#[path = "gear_profile_embedding.rs"]
+mod profile_embedding;
+pub use profile_embedding::{
+    ProfileEmbeddingCertificate, ProfileEmbeddingLimits, ProfileVerifiedGear, VerifiedGearProfile,
+    certify_grouped_profile_embedding, certify_profile_embedding, gear_with_verified_profile,
+    verify_profile_embedding,
+};
+
+#[path = "bevel_profile.rs"]
+mod bevel_profile;
+pub use bevel_profile::{
+    VerifiedBevelProfile, certify_bevel_profile, verify_bevel_profile_projection,
+};
+
+#[path = "bevel_body.rs"]
+mod bevel_body;
+pub use bevel_body::{BevelBodyCandidate, bevel_body_candidate};
+pub use bevel_body::{BevelBuildLimits, ProfileVerifiedBevelGear, bevel_with_verified_profile};

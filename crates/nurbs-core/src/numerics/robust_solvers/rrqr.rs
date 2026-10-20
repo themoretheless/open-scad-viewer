@@ -331,6 +331,6 @@ mod tests {
         assert_eq!(f.diagnostics.rank, 1);
         let x = f.solve_least_squares(&b).unwrap();
         assert!(approx_eq(x[0] + 2. * x[1], 3., 1e-9), "{x:?}");
-        assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+        assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
     }
 }

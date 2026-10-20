@@ -26,3 +26,5 @@ pub mod toroidal_spiral;
 pub mod trochoid;
 
 pub mod radial_cam;
+
+pub mod worm;

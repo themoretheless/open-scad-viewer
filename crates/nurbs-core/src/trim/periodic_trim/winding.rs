@@ -12,14 +12,14 @@ pub enum PeriodicWindingReason {
     ClassificationUnresolved,
     WindingOverflow,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ImageWinding {
     pub tile: [i32; 2],
     /// Outward enclosure of point + tile * exact authored chart period.
     pub query: [[f64; 2]; 2],
     pub classification: Classification,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PeriodicWindingReport {
     /// Full integer sum only after every potentially contributing image.
     pub winding: Option<i32>,

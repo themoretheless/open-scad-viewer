@@ -235,3 +235,27 @@ pub(super) fn graph_plane(a: &Surface, b: &Surface) -> Option<(Vec<C>, CoverageP
 pub(crate) fn rectangle_chart(s:&Surface)->Option<([usize;2],usize,[f64;2],[f64;2])> {
     let r=rect(s)?;Some((r.axes,r.fixed,r.origin,r.end))
 }
+
+/// Rounded pcurve proposal for the single transverse intersection of literal
+/// rectangular charts. Unlike `reduce`, this grants NO SS coverage, parameter
+/// identity or topology authority. The actual lifted curve needs fresh original
+/// support agreement, including any owned endpoint edits.
+pub fn rectangular_trace_proposal(a: &Surface, b: &Surface) -> Option<[[[f64; 2]; 2]; 2]> {
+    a.validate().ok()?;
+    b.validate().ok()?;
+    if a.control_points[0][0].len()!=3 || b.control_points[0][0].len()!=3 {return None;}
+    let (ar,br)=(rect(a)?,rect(b)?);
+    if ar.fixed==br.fixed {return None;}
+    let (ha,hb)=(hull(a),hull(b));
+    let bounds:[[f64;2];3]=std::array::from_fn(|k|[ha[k][0].max(hb[k][0]),ha[k][1].min(hb[k][1])]);
+    if bounds.iter().any(|r| r[0]>r[1]) || bounds.iter().filter(|r|r[0]<r[1]).count()!=1 {return None;}
+    let ends:[ [f64;3];2]=std::array::from_fn(|end| std::array::from_fn(|k|bounds[k][end]));
+    let inverse=|r:&Rect,s:&Surface| {
+        let d=surface_domain(s);
+        ends.map(|p|std::array::from_fn(|k| {
+            d[k][0]+(d[k][1]-d[k][0])*(p[r.axes[k]]-r.origin[k])/(r.end[k]-r.origin[k])
+        }))
+    };
+    let result=[inverse(&ar,a),inverse(&br,b)];
+    result.iter().flatten().flatten().all(|v|v.is_finite()).then_some(result)
+}

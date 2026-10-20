@@ -1,4 +1,7 @@
-import { GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
+import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from '../src/core/currentRuntimeGeometryEvidence'
+import { compileRushGraph } from '../src/services/rushGraph'
+import { RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT } from '../src/mcp/rushGraphPreview'
+import { CURRENT_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -154,6 +157,7 @@ describe('OpenSCAD MCP server', () => {
       'openscad_compare',
       'openscad_customize',
       'openscad_customize_model',
+      'openscad_direct_transaction',
       'openscad_export',
       'openscad_get_model',
       'openscad_independent_check',
@@ -165,7 +169,7 @@ describe('OpenSCAD MCP server', () => {
       'openscad_official_export',
       'openscad_official_status',
       'openscad_save_model',
-    ])
+    ].sort())
     const tools = new Map(listed.tools.map(tool => [tool.name, tool]))
     expect(tools.get('openscad_analyze')?.annotations).toMatchObject({
       readOnlyHint: false,
@@ -219,6 +223,14 @@ describe('OpenSCAD MCP server', () => {
       mimeType: 'text/x-openscad',
     })])
 
+    // Discovery uses a short readiness probe; a cold module may truthfully be
+    // unavailable. Exercise the existing initialization admission before
+    // asserting an available provider; keep both product deadlines unchanged.
+    const warm = await request('tools/call', {
+      name: 'openscad_check', arguments: { source: 'cube(1);', quality: 'full' },
+    }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    expect(warm.isError).not.toBe(true)
+    expect(warm.structuredContent.analysis.volume).toBeCloseTo(1, 8)
     const capabilities = await request('resources/read', {
       uri: 'openscad://capabilities',
     }) as { contents: Array<{ text: string }> }
@@ -295,7 +307,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'mesh',
           availability: 'available',
-          manifest_resource_uri: 'openscad://engines/mesh/capabilities/own-rust-node-v1',
+          manifest_resource_uri: `openscad://engines/mesh/capabilities/${CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh}`,
         },
         { engine_class: 'brep', availability: 'available' },
       ],
@@ -311,7 +323,7 @@ describe('OpenSCAD MCP server', () => {
       permanent: true,
       input_contract: 'semantic-program-required',
       semantic_program_version: 'semantic-program-contract-v1',
-      capability_manifest_version: 'brep-closed-v1',
+      capability_manifest_version: CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep,
       manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
       capabilities: expect.arrayContaining(['geometry.brep', 'csg.boolean']),
       planned_capabilities: [],
@@ -320,8 +332,8 @@ describe('OpenSCAD MCP server', () => {
       deployment: 'node-mcp',
       qualification: {
         status: 'qualified',
-        record_id: 'docs/qualification/brep-closed-matrix-v1.json',
-        corpus_version: 'brep-closed-matrix-v1',
+        record_id: CURRENT_RUNTIME_GEOMETRY_EVIDENCE.recordId,
+        corpus_version: CURRENT_RUNTIME_GEOMETRY_EVIDENCE.corpusVersion,
         target: 'browser-worker/node-mcp',
       },
       dependency: {
@@ -400,7 +412,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'mesh',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].kernelFingerprint,
+          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
           browser_mcp_status: 'qualification-pending',
           mcp_target: 'node-wasm-disposable-worker',
           mcp_isolation: 'in-process-serialized',
@@ -411,7 +423,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'brep',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v1'].kernelFingerprint,
+          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep].kernelFingerprint,
           browser_mcp_status: 'qualification-pending',
           mcp_provider_manifest_isolation: 'in-process-serialized',
           mcp_host_isolation: 'disposable-worker-per-job',
@@ -976,8 +988,8 @@ describe('OpenSCAD MCP server', () => {
       arguments: { source, quality: 'full' },
     }) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
     expect(current.structuredContent.analysis.execution).toMatchObject({
-      capability_manifest_version: 'own-rust-node-v1',
-      manifest_digest: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest,
+      capability_manifest_version: CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh,
+      manifest_digest: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
       evidence: 'runtime',
     })
 
@@ -1188,7 +1200,7 @@ describe('Mechanical generators over MCP',()=>{
     const resource=await request('resources/read',{uri:'openscad://language/rush-mechanical'}) as {contents:Array<{text:string}>}
     expect(JSON.parse(resource.contents[0].text).examples.thread).toBeTruthy()
     for(const kind of ['gear','planetary_gears','thread']) {
-      const response=await request('tools/call',{name:'rush_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
+      const response=await request('tools/call',{name:'rush_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number;triangleCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
       expect(response.isError,JSON.stringify(response.structuredContent).slice(0,500)).not.toBe(true)
       expect(response.structuredContent.analysis.volume).toBeGreaterThan(0)
       expect(response.content.filter(c=>c.type==='image'), `${kind}: ${JSON.stringify({
@@ -1200,8 +1212,10 @@ describe('Mechanical generators over MCP',()=>{
       const primaryHash = Reflect.get(response.structuredContent, 'document_sha256')
       const previewHash = Reflect.get(response.structuredContent, 'preview_document_sha256')
       expect(previewHash).toMatch(/^[a-f0-9]{64}$/)
-      if (kind === 'planetary_gears') expect(previewHash).not.toBe(primaryHash)
-      else expect(previewHash).toBe(primaryHash)
+      const expectedPreview = response.structuredContent.analysis.triangleCount > RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT
+        ? compileRushGraph({ ...(response.structuredContent.document as Record<string, unknown>), segments: 12 }).document_sha256
+        : primaryHash
+      expect(previewHash).toBe(expectedPreview)
       if(kind==='planetary_gears')expect(response.structuredContent.mechanical_parts).toHaveLength(5)
       const exported=await request('tools/call',{name:'rush_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
       expect(exported.isError).not.toBe(true)

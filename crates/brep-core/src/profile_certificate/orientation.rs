@@ -5,17 +5,23 @@ use super::*;
 use num_bigint::BigInt;
 use num_traits::Signed;
 #[derive(Clone)]
-struct Range {
-    lo: Q,
-    hi: Q,
+pub(super) struct Range {
+    pub lo: Q,
+    pub hi: Q,
 }
 impl Range {
-    fn hull(values: impl Iterator<Item = Q>) -> Self {
-        let v: Vec<_> = values.collect();
-        Self {
-            lo: v.iter().min().unwrap().clone(),
-            hi: v.iter().max().unwrap().clone(),
+    fn hull(mut values: impl Iterator<Item = Q>) -> Self {
+        let first = values.next().unwrap();
+        let mut lo = first.clone();
+        let mut hi = first;
+        for v in values {
+            if v < lo {
+                lo = v;
+            } else if v > hi {
+                hi = v;
+            }
         }
+        Self { lo, hi }
     }
     fn mul(&self, b: &Self) -> Self {
         Self::hull(
@@ -61,45 +67,29 @@ fn green(net: &[[Q; 3]]) -> Result<Range> {
         .map(|k| Range::hull(net.windows(2).map(|p| (&p[1][k] - &p[0][k]) * &n)))
         .collect();
     let cross = h[0].mul(&d[1]).sub(&h[1].mul(&d[0]));
-    let half = Q::new(1.into(), 2.into());
-    let reciprocal = Range {
-        lo: &half / (&h[2].hi * &h[2].hi),
-        hi: &half / (&h[2].lo * &h[2].lo),
-    };
-    let r = cross.mul(&reciprocal);
+    let bound = cross.lo.abs().max(cross.hi.abs());
+    let (lo, hi) = arithmetic::rational_area_bounds(net, bound)?;
     Ok(Range {
-        lo: dyadic(&r.lo, false),
-        hi: dyadic(&r.hi, true),
+        lo: dyadic(&lo, false),
+        hi: dyadic(&hi, true),
     })
 }
-pub(super) fn check(loops: &[Vec<Curve>], depth: u8) -> Result<Vec<i8>> {
-    let rational = loops
+pub(super) fn bounds(loops: &[Vec<Curve>], depth: u8) -> Result<Vec<Range>> {
+    let extracted = extraction::nets(loops)?;
+    let rational = extracted
         .iter()
-        .flatten()
-        .filter(|c| c.weights.iter().any(|w| *w != c.weights[0]))
+        .filter(|(_, net)| net.iter().any(|h| h[2] != net[0][2]))
         .count();
     if depth > 12 || rational * (1usize << depth) > 8192 {
         return Err(refused("Exact Green orientation exceeds its work budget"));
     }
-    let mut signs = Vec::new();
-    for wire in loops {
+    let mut ranges = Vec::new();
+    for (wire_index, wire) in loops.iter().enumerate() {
         let origin = std::array::from_fn(|k| Q::from_float(wire[0].control_points[0][k]).unwrap());
         let (mut lo, mut hi) = (Q::zero(), Q::zero());
-        for c in wire {
-            let mut net: Vec<[Q; 3]> = c
-                .control_points
-                .iter()
-                .zip(&c.weights)
-                .map(|(p, w)| {
-                    let w = Q::from_float(*w).unwrap();
-                    [
-                        Q::from_float(p[0]).unwrap() * &w,
-                        Q::from_float(p[1]).unwrap() * &w,
-                        w,
-                    ]
-                })
-                .collect();
-            if c.weights.iter().all(|w| *w == c.weights[0]) || c.degree == 1 {
+        for (_, source_net) in extracted.iter().filter(|(w, _)| *w == wire_index) {
+            let mut net = source_net.clone();
+            if net.iter().all(|h| h[2] == net[0][2]) || net.len() == 2 {
                 let area = arithmetic::polynomial_area(&net, &origin);
                 lo += &area;
                 hi += area;
@@ -125,13 +115,22 @@ pub(super) fn check(loops: &[Vec<Curve>], depth: u8) -> Result<Vec<i8>> {
                 }
             }
         }
-        if lo > Q::zero() {
-            signs.push(1);
-        } else if hi < Q::zero() {
-            signs.push(-1);
-        } else {
-            return Err(refused("Exact Green orientation interval contains zero"));
-        }
+        ranges.push(Range { lo, hi });
     }
-    Ok(signs)
+    Ok(ranges)
+}
+
+pub(super) fn check(loops: &[Vec<Curve>], depth: u8) -> Result<Vec<i8>> {
+    bounds(loops, depth)?
+        .into_iter()
+        .map(|r| {
+            if r.lo > Q::zero() {
+                Ok(1)
+            } else if r.hi < Q::zero() {
+                Ok(-1)
+            } else {
+                Err(refused("Exact Green orientation interval contains zero"))
+            }
+        })
+        .collect()
 }

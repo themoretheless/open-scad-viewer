@@ -88,21 +88,25 @@ impl RgbaReadback {
     pub(crate) fn submitted(&mut self, index: wgpu::SubmissionIndex) {
         self.bytes.submitted(index);
     }
-    fn unpack(&self, bytes: Vec<u8>) -> Vec<u8> {
-        let mut rgba = Vec::with_capacity(self.width as usize * self.height as usize * 4);
-        for row in bytes.chunks_exact(self.row_bytes as usize) {
-            rgba.extend_from_slice(&row[..self.width as usize * 4]);
-        }
-        rgba
-    }
     pub fn try_read(&mut self) -> Result<Option<Vec<u8>>, ReadbackError> {
-        Ok(self.bytes.try_read()?.map(|bytes| self.unpack(bytes)))
+        let (width, height, row_bytes) = (self.width, self.height, self.row_bytes);
+        self.bytes
+            .try_read_with(|bytes| unpack(bytes, width, height, row_bytes))
     }
     pub fn cancel(&mut self) {
         self.bytes.cancel();
     }
     pub fn wait(mut self, timeout: Duration) -> Result<Vec<u8>, ReadbackError> {
-        let bytes = self.bytes.wait(timeout)?;
-        Ok(self.unpack(bytes))
+        let (width, height, row_bytes) = (self.width, self.height, self.row_bytes);
+        self.bytes
+            .wait_with(timeout, |bytes| unpack(bytes, width, height, row_bytes))
     }
+}
+
+fn unpack(bytes: &[u8], width: u32, height: u32, row_bytes: u32) -> Vec<u8> {
+    let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
+    for row in bytes.chunks_exact(row_bytes as usize) {
+        rgba.extend_from_slice(&row[..width as usize * 4]);
+    }
+    rgba
 }

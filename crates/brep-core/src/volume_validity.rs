@@ -171,6 +171,7 @@ fn complete_after_boundary(model:&Model,tolerance_uv:f64,limits:Limits,boundary:
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 fn frozen_inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
     caps:Option<(&[usize],crate::sweep_cap_contacts::Budgets)>,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     if !(1..=1000000).contains(&limits.orientation_cells)

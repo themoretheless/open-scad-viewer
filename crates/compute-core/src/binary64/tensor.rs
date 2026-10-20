@@ -159,18 +159,15 @@ impl TensorF64Backend for ComputeRuntime {
             }
             .into());
         }
-        let tensor = self.zero_f64(shape)?;
-        let words: Vec<u32> = values
-            .iter()
-            .flat_map(|value| {
-                let bits = value.to_bits();
-                [bits as u32, (bits >> 32) as u32]
-            })
-            .collect();
-        if !words.is_empty() {
-            self.write(&tensor.words, 0, &words)?;
-        }
-        Ok(tensor)
+        let words = self.upload_generated(word_count(&shape)?, |i| {
+            // Empty tensors retain the same two-word zero allocation as before.
+            let bits = values.get(i / 2).map_or(0, |value| value.to_bits());
+            (bits >> ((i % 2) * 32)) as u32
+        })?;
+        Ok(GpuF64Tensor {
+            words,
+            layout: Layout::contiguous(shape)?,
+        })
     }
     fn read_f64(&self, input: &GpuF64Tensor) -> Result<Vec<f64>> {
         self.check_f64(input)?;
@@ -178,15 +175,26 @@ impl TensorF64Backend for ComputeRuntime {
             return Ok(Vec::new());
         }
         let dense = self.materialize_f64(input)?;
-        let words = self
-            .read(&dense.words.prefix(input.shape().numel() * 2)?)?
-            .wait(Duration::from_secs(30))?;
-        Ok(words
-            .as_chunks::<2>()
-            .0
-            .iter()
-            .map(|w| f64::from_bits(u64::from(w[0]) | (u64::from(w[1]) << 32)))
-            .collect())
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let mut bytes = gpu_compute::ByteReadback::copy_buffer(
+            &self.device,
+            &mut encoder,
+            dense.words.buffer(),
+            0,
+            input.shape().numel() as u64 * 8,
+        )
+        .map_err(crate::ComputeError::from)?;
+        bytes.submitted(self.queue.submit([encoder.finish()]));
+        Ok(bytes
+            .wait_with(Duration::from_secs(30), |bytes| {
+                bytes
+                    .as_chunks::<8>()
+                    .0
+                    .iter()
+                    .map(|v| f64::from_le_bytes(*v))
+                    .collect()
+            })
+            .map_err(crate::ComputeError::from)?)
     }
     fn materialize_f64(&self, input: &GpuF64Tensor) -> Result<GpuF64Tensor> {
         self.check_f64(input)?;

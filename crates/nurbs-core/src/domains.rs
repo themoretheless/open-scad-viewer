@@ -48,12 +48,14 @@ pub mod curves {
     pub use crate::curve_chain;
     pub use crate::rack;
     pub use crate::thread;
+    pub use crate::worm;
     pub use crate::formula;
     pub use crate::curve_reconstruction;
 }
 
 /// Existing modules for surfaces.
 pub mod surfaces {
+    pub use crate::worm_wheel;
     pub use crate::wave_surface;
     pub use crate::superellipsoid;
     pub use crate::optical_shapes;
@@ -119,7 +121,11 @@ pub mod joining {
     pub use crate::surface_join;
     pub use crate::surface_g1;
     pub use crate::surface_g2;
+    pub use crate::surface_g2_pcurves;
+    pub use crate::surface_g1_pcurves;
     pub use crate::surface_blend;
+    pub use crate::corner_blend;
+    pub use crate::radius_transition;
     pub use crate::circle_transition;
     pub use crate::ellipse_transition;
     pub use crate::circle_rectangle_transition;
@@ -138,6 +144,8 @@ pub mod offsets {
 
 /// Existing modules for queries.
 pub mod queries {
+    pub use crate::curve_secant_trace;
+    pub use crate::surface_normal_trace;
     pub use crate::curve_differential;
     pub use crate::surface_differential;
     pub use crate::curve_measure;
@@ -152,6 +160,7 @@ pub mod queries {
     pub use crate::ss_intersection;
     pub use crate::surface_measure;
     pub use crate::surface_shape_operator;
+    pub use crate::surface_coordinate_flow;
     pub use crate::surface_contact;
     pub use crate::surface_contact_search;
     pub use crate::parallel_sections;
@@ -163,6 +172,7 @@ pub mod queries {
     pub use crate::analysis;
     pub use crate::distance;
     pub use crate::surface_occlusion;
+    pub use crate::surface_collar;
 }
 
 /// Existing modules for parameterization.
@@ -206,6 +216,7 @@ pub mod validation {
     pub use crate::certificates;
     pub use crate::retained_wall_coefficients;
     pub use crate::retained_wall_domain_certificate;
+    pub use crate::skin_radius;
 }
 
 /// Existing modules for meshing.

@@ -5,7 +5,7 @@ pub(crate) type Jets = [[[I; 3]; 4]; 4];
 // Restriction encloses the same original homogeneous Bernstein polynomial.
 // Jets remain derivatives in the restricted unit coordinates; the stable
 // route differentiates a full original span before evaluating its query.
-fn original_span_net(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Net> {
+pub(crate) fn original_span_net(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Net> {
     match crate::curve_surface_composition::surface_net_on_bernstein(s, span, domain)? {
         Some(net) => Ok(net),
         None => crate::curve_surface_composition::surface_net_on(s, span, domain),
@@ -137,11 +137,20 @@ fn quotient(h: [[[I; 4]; 4]; 4], max_order: usize) -> Result<Jets> {
 }
 
 fn evaluate_bernstein(mut points: Vec<[I; 4]>, t: I) -> Result<[I; 4]> {
+    crate::check(!points.is_empty() && t.lo >= 0. && t.hi <= 1.,
+        "Bernstein jet evaluation needs nonempty coefficients and a unit fraction")?;
     let beta = I::point(1.).sub(t)?.intersect(0., 1.)?;
     for count in (1..points.len()).rev() {
         for i in 0..count {
             for k in 0..4 {
-                points[i][k] = points[i][k].mul(beta)?.add(points[i + 1][k].mul(t)?)?;
+                // t is an original-span fraction in [0,1]. Each de Casteljau
+                // step is a convex combination even though interval t and
+                // 1-t are evaluated independently. Preserve that correlation
+                // before the next tensor axis: a constant row must not widen.
+                let a = points[i][k];
+                let b = points[i + 1][k];
+                points[i][k] = a.mul(beta)?.add(b.mul(t)?)?
+                    .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
             }
         }
     }
@@ -158,7 +167,7 @@ pub(crate) fn calculate_partial_stable(
 ) -> Result<Jets> {
     calculate_partial_stable_up_to(s, span, domain, corner, 3)
 }
-fn calculate_partial_stable_up_to(
+pub(crate) fn calculate_partial_stable_up_to(
     s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2],
     corner: [Option<usize>; 2], max_order: usize,
 ) -> Result<Jets> {
@@ -558,6 +567,30 @@ mod bernstein_consumer_tests {
                     assert_eq!([x.lo.to_bits(),x.hi.to_bits()],[y.lo.to_bits(),y.hi.to_bits()]);
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod convex_evaluation_tests {
+    use super::*;
+    #[test]
+    fn full_interval_constant_bernstein_rows_remain_exactly_constant() {
+        let value=[2.,-3.,0.,1.].map(I::point);
+        let result=evaluate_bernstein(vec![value;6],I::new(0.,1.).unwrap()).unwrap();
+        for k in 0..4 {assert_eq!([result[k].lo,result[k].hi],[value[k].lo,value[k].hi]);}
+        assert!(evaluate_bernstein(vec![value;2],I::new(-0.1,0.5).unwrap()).is_err());
+    }
+    #[test]
+    fn nonconstant_rows_enclose_the_polynomial_on_each_restricted_interval() {
+        let points=[0.,1.,4.].map(|x|[I::point(x);4]).to_vec();
+        for range in [[0.,1.],[0.,0.25],[0.25,0.75],[0.75,1.]] {
+            let result=evaluate_bernstein(points.clone(),I::new(range[0],range[1]).unwrap()).unwrap();
+            for t in [range[0],(range[0]+range[1])*0.5,range[1]] {
+                let exact=2.*t+2.*t*t;
+                assert!(result.iter().all(|b|b.lo<=exact&&exact<=b.hi));
+            }
+            assert!(result.iter().all(|b|0.<=b.lo&&b.hi<=4.));
         }
     }
 }

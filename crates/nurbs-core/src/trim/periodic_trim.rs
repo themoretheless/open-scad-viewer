@@ -5,8 +5,21 @@ mod approximate_chart;
 pub use approximate_chart::{
     ApproximateChartAssembly, ApproximateChartLimits, assemble_approximated_chart,
 };
+mod clock;
+pub use clock::{CurveClockCorrespondence, verify_curve_clock_correspondence};
+mod exact_chart;
+pub use exact_chart::{ExactSourceChart, assemble_exact_source_chart, ClockAliasSpec, ClockMappedSourceChart, assemble_clock_mapped_source_chart};
+mod exact_partition;
+pub use exact_partition::{ExactPartitionIdentity, verify_exact_partition_identity};
 mod anchor;
+mod coherent;
 pub use anchor::{AnchorLimits, AnchorTransfer, verify_anchor_winding};
+pub use coherent::{
+    CoherentAnchorTransfer, ProjectiveCoherentAnchorTransfer, ProjectiveCurveCorrespondence,
+    ProjectivePartitionHomotopy, verify_coherent_anchor_winding,
+    verify_projective_coherent_anchor_winding, verify_projective_curve_correspondence,
+    verify_projective_partition_homotopy,
+};
 mod contact;
 pub use contact::{
     ContactOwnership, ContactOwnershipReport, ContactPort, PoweredBendCoefficient,
@@ -21,15 +34,17 @@ pub use surface_chart::{
     SurfaceUvLimits, assemble_on_surface,
 };
 mod support;
+pub(crate) use support::seam as supporting_seam_identity;
 pub use support::{
     SurfaceCorrespondence, SurfaceCorrespondenceLimits, SurfaceSeamProof,
-    verify_surface_correspondence,
+    verify_surface_correspondence, verify_surface_seam_identity,
 };
 mod isotopy;
 mod weighted;
-pub use weighted::{
-    WeightedChartAssembly, WeightedChartEdge, WeightedChartGraph, WeightedSource,
-    assemble_weighted_periodic_chart, inspect_weighted_winding,
+pub use weighted::{CandidateImageAlias, compact_image_alias_candidates, ProjectiveCoherentWeightedChartAssembly, assemble_projective_coherent_weighted_chart,
+    ApproximateWeightedChartAssembly, CoherentWeightedChartAssembly, WeightedChartAssembly,
+    WeightedChartEdge, WeightedChartGraph, WeightedSource, assemble_approximated_weighted_chart,
+    assemble_coherent_weighted_chart, assemble_weighted_periodic_chart, inspect_weighted_winding,
 };
 mod winding;
 pub use chart::{
@@ -42,7 +57,7 @@ pub use isotopy::{
 pub use winding::{
     ImageWinding, PeriodicWindingReason, PeriodicWindingReport, inspect_periodic_winding,
 };
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Piece {
     pub source_domain: [f64; 2],
     /// Original lifted UV = local UV + translation, in real arithmetic.
@@ -50,7 +65,7 @@ pub struct Piece {
     pub tile: [i32; 2],
     pub curve: Curve,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Report {
     pub pieces: Vec<Piece>,
     /// Sufficient continuous chart containment of the materialized candidates.
@@ -356,6 +371,10 @@ pub fn verify_partition(
             });
         }
         work += 1;
+        if let Ok(upper)=crate::curve_deviation::translated_cell_upper(
+            source,a,&partition.pieces[index].curve,b,range,&partition.pieces[index].translation) {
+            if upper<=tolerance {error_upper=error_upper.max(upper);continue;}
+        }
         let t = I::new(range[0], range[1])?;
         let original = crate::curve_distance::enclosure(source, a, t)?;
         let piece = &partition.pieces[index];

@@ -56,3 +56,22 @@ fn invalid_public_laws_do_not_panic_and_builder_failures_are_explicit() {
     let failed=f::rolling_ball_fillet(&a,&parallel,1.,&FilletOptions::default()).unwrap();
     assert!(failed.surface.is_none()&&failed.failure.is_some());
 }
+
+#[test]
+fn station_authored_radii_survive_trace_domain_changes_with_whole_skin_proof(){
+    let (a,b)=supports();
+    let o=FilletOptions::default();
+    let report=f::linear_at_stations(&a,&b,1,[4.,12.],[0.7,1.3],&o).unwrap();
+    println!("proposal converged={} iterations={} residual={} law={:?} failure={:?}",report.converged,report.iterations,report.station_residual_estimate_mm,report.normalized_law,report.fillet.failure);
+    assert!(report.converged && report.iterations<=8);
+    assert!(report.authored_endpoint_error_upper_mm<1e-12);
+    let field=report.radius_field;
+    assert!((field[1]*4.+field[3]-0.7).abs()<1e-12);
+    assert!((field[1]*12.+field[3]-1.3).abs()<1e-12);
+    let mut cx=field;cx[3]+=2.;let mut cz=field;cz[3]+=4.;
+    let proof=nurbs_core::skin_radius::inspect_affine_field(report.fillet.surface.as_ref().unwrap(),[cx,[0.,1.,0.,0.],cz],field,1e-7,2000000).unwrap();
+    println!("station target proposals={} residual={} full_skin={:?}",report.iterations,report.station_residual_estimate_mm,proof.radial_error_upper_mm);
+    assert!(proof.within_tolerance);
+    assert!(f::linear_at_stations(&a,&b,1,[12.,4.],[0.7,1.3],&o).is_err());
+    assert!(f::linear_at_stations(&a,&b,3,[4.,12.],[0.7,1.3],&o).is_err());
+}

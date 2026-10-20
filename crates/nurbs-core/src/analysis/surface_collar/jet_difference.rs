@@ -1,0 +1,851 @@
+//! Coupled rational jet residuals against freshly recomposed ORIGINAL controls.
+use super::*;
+#[derive(Clone, Copy)]
+struct Coupled {
+    base: I,
+    delta: I,
+}
+impl Coupled {
+    fn zero() -> Self {
+        Self {
+            base: I::point(0.),
+            delta: I::point(0.),
+        }
+    }
+    fn add(self, b: Self, w: &mut Work) -> Result<Self> {
+        w.charge(2)?;
+        Ok(Self {
+            base: self.base.add(b.base)?,
+            delta: self.delta.add(b.delta)?,
+        })
+    }
+    fn sub(self, b: Self, w: &mut Work) -> Result<Self> {
+        w.charge(2)?;
+        Ok(Self {
+            base: self.base.sub(b.base)?,
+            delta: self.delta.sub(b.delta)?,
+        })
+    }
+    fn mul(self, b: Self, w: &mut Work) -> Result<Self> {
+        w.charge(6)?;
+        Ok(Self {
+            base: self.base.mul(b.base)?,
+            delta: self
+                .base
+                .mul(b.delta)?
+                .add(b.base.mul(self.delta)?)?
+                .add(self.delta.mul(b.delta)?)?,
+        })
+    }
+    fn div(self, b: Self, w: &mut Work) -> Result<Self> {
+        w.charge(7)?;
+        Ok(Self {
+            base: self.base.div(b.base)?,
+            delta: self
+                .delta
+                .mul(b.base)?
+                .sub(self.base.mul(b.delta)?)?
+                .div(b.base.mul(b.base.add(b.delta)?)?)?,
+        })
+    }
+    fn scale(self, k: f64, w: &mut Work) -> Result<Self> {
+        self.mul(
+            Self {
+                base: I::point(k),
+                delta: I::point(0.),
+            },
+            w,
+        )
+    }
+}
+fn choose(n: usize, k: usize) -> f64 {
+    match (n, k) {
+        (2, 1) => 2.,
+        _ => 1.,
+    }
+}
+fn difference(p: &Poly, axis: usize, w: &mut Work) -> Result<Poly> {
+    let degree = if axis == 0 {
+        p.len() - 1
+    } else {
+        p[0].len() - 1
+    };
+    if degree == 0 {
+        return Ok(vec![vec![I::point(0.)]]);
+    }
+    let (nu, nv) = if axis == 0 {
+        (p.len() - 1, p[0].len())
+    } else {
+        (p.len(), p[0].len() - 1)
+    };
+    let mut out = vec![vec![I::point(0.); nv]; nu];
+    for i in 0..nu {
+        for j in 0..nv {
+            w.charge(2)?;
+            out[i][j] = (if axis == 0 { p[i + 1][j] } else { p[i][j + 1] })
+                .sub(p[i][j])?
+                .mul(I::point(degree as f64))?;
+        }
+    }
+    Ok(out)
+}
+fn split(p: &[I], t: I, w: &mut Work) -> Result<(Vec<I>, Vec<I>)> {
+    let mut row = p.to_vec();
+    let mut left = vec![row[0]];
+    let mut right = vec![*row.last().unwrap()];
+    w.charge(1)?;
+    let complement = I::point(1.).sub(t)?;
+    while row.len() > 1 {
+        let mut next = Vec::with_capacity(row.len() - 1);
+        for pair in row.windows(2) {
+            w.charge(3)?;
+            next.push(pair[0].mul(complement)?.add(pair[1].mul(t)?)?);
+        }
+        left.push(next[0]);
+        right.push(*next.last().unwrap());
+        row = next;
+    }
+    right.reverse();
+    Ok((left, right))
+}
+fn restrict(p: &[I], range: [f64; 2], w: &mut Work) -> Result<Vec<I>> {
+    // Literal Bernstein endpoint identity, including differentiated polynomials.
+    if range == [0., 0.] {
+        return Ok(vec![p[0]]);
+    }
+    if range == [1., 1.] {
+        return Ok(vec![*p.last().unwrap()]);
+    }
+    if range == [0., 1.] {
+        return Ok(p.to_vec());
+    }
+    if range[0] == range[1] {
+        let (left, _) = split(p, I::point(range[0]), w)?;
+        return Ok(vec![*left.last().unwrap()]);
+    }
+    let mut out = if range[1] == 1. {
+        p.to_vec()
+    } else {
+        split(p, I::point(range[1]), w)?.0
+    };
+    if range[0] > 0. {
+        w.charge(1)?;
+        out = split(&out, I::point(range[0]).div(I::point(range[1]))?, w)?.1;
+    }
+    Ok(out)
+}
+fn enclose(p: &Poly, range: [[f64; 2]; 2], w: &mut Work) -> Result<I> {
+    // Evaluate the fixed transverse endpoint BEFORE restricting the other
+    // axis. Tensor-product evaluation commutes; unused columns need no work.
+    if range[1] == [0., 0.] || range[1] == [1., 1.] {
+        let column = if range[1] == [0., 0.] {
+            0
+        } else {
+            p[0].len() - 1
+        };
+        let values = restrict(
+            &p.iter().map(|row| row[column]).collect::<Vec<_>>(),
+            range[0],
+            w,
+        )?;
+        return I::new(
+            values.iter().map(|x| x.lo).fold(f64::INFINITY, f64::min),
+            values
+                .iter()
+                .map(|x| x.hi)
+                .fold(f64::NEG_INFINITY, f64::max),
+        );
+    }
+    let columns = (0..p[0].len())
+        .map(|j| restrict(&p.iter().map(|r| r[j]).collect::<Vec<_>>(), range[0], w))
+        .collect::<Result<Vec<_>>>()?;
+    let mut lower = f64::INFINITY;
+    let mut upper = f64::NEG_INFINITY;
+    for i in 0..columns[0].len() {
+        let row = columns.iter().map(|c| c[i]).collect::<Vec<_>>();
+        for x in restrict(&row, range[1], w)? {
+            lower = lower.min(x.lo);
+            upper = upper.max(x.hi);
+        }
+    }
+    I::new(lower, upper)
+}
+pub struct JetReport {
+    /// Cartesian derivative residual norm, in normalized collar parameters.
+    /// Slots of total order >2 are uninspected, not zero.
+    pub error_upper: [[Option<f64>; 3]; 3],
+    pub coefficient_work: usize,
+    jets: [[[Coupled; 3]; 3]; 3],
+}
+/// Recompute the exact-composition coefficient enclosures from original source
+/// and pcurve, then bound jet differences to the ACTUAL candidate. No earlier
+/// constructor report authorizes this proof. Clamped Bernstein charts are aligned by outward degree elevation; this is not yet a G2, radius, ownership or solid certificate.
+pub fn inspect_jets(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    parameter: [[f64; 2]; 2],
+    max_work: usize,
+) -> Result<JetReport> {
+    let prepared = prepare(source, pcurve, direction, candidate, max_work)?;
+    let mut work = Work {
+        used: prepared.work,
+        max: max_work,
+    };
+    evaluate(&prepared, parameter, &mut work)
+}
+struct Prepared {
+    derivatives: Vec<(usize, usize, Vec<(Poly, Poly)>)>,
+    work: usize,
+}
+fn elevate_net(net: &Poly, du: usize, dv: usize, w: &mut Work) -> Result<Poly> {
+    fn line(p: &[I], degree: usize, w: &mut Work) -> Result<Vec<I>> {
+        let mut out = p.to_vec();
+        while out.len() <= degree {
+            let n = out.len();
+            let mut next = vec![out[0]; n + 1];
+            next[n] = out[n - 1];
+            for i in 1..n {
+                w.charge(5)?;
+                let t = I::point(i as f64).div(I::point(n as f64))?;
+                next[i] = out[i - 1].mul(t)?.add(out[i].mul(I::point(1.).sub(t)?)?)?;
+            }
+            out = next;
+        }
+        Ok(out)
+    }
+    let rows = net
+        .iter()
+        .map(|row| line(row, dv, w))
+        .collect::<Result<Vec<_>>>()?;
+    let mut out = vec![vec![I::point(0.); dv + 1]; du + 1];
+    for j in 0..=dv {
+        let column = line(&rows.iter().map(|row| row[j]).collect::<Vec<_>>(), du, w)?;
+        for i in 0..=du {
+            out[i][j] = column[i];
+        }
+    }
+    Ok(out)
+}
+fn prepare(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    max_work: usize,
+) -> Result<Prepared> {
+    prepare_frame(source, pcurve, direction, candidate, max_work, 1.)
+}
+fn prepare_frame(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    max_work: usize,
+    cross_gain: f64,
+) -> Result<Prepared> {
+    candidate.validate()?;
+    // Common translation is an exact change of proof coordinates. Keep its
+    // subtraction outward-rounded instead of modifying stored control nets.
+    let origin = std::array::from_fn(|k| source.control_points[0][0][k]);
+    let fresh = compose_at_origin(source, pcurve, direction, max_work, origin)?;
+    if candidate.periodic_u
+        || candidate.periodic_v
+        || candidate.degree_u > 16
+        || candidate.degree_v > 16
+        || !super::bezier(
+            &candidate.knots_u,
+            candidate.degree_u,
+            candidate.control_points.len(),
+        )
+        || !super::bezier(
+            &candidate.knots_v,
+            candidate.degree_v,
+            candidate.control_points[0].len(),
+        )
+        || candidate.control_points[0][0].len() != 3
+    {
+        return Err(refused(
+            "Candidate jets need a bounded unit Bernstein chart",
+        ));
+    }
+    let mut w = Work {
+        used: fresh.coefficient_work,
+        max: max_work,
+    };
+    let mut actual = vec![
+        vec![
+            vec![I::point(0.); candidate.control_points[0].len()];
+            candidate.control_points.len()
+        ];
+        4
+    ];
+    let mut target = fresh.lift;
+    // A positive constant homogeneous gauge changes neither the candidate's
+    // positions nor its Cartesian jets. Align it only inside the proof; never
+    // rewrite caller-owned weights or assume the remaining coefficients match.
+    w.charge(1)?;
+    let gauge = (target[3][0][0].lo * 0.5 + target[3][0][0].hi * 0.5) / candidate.weights[0][0];
+    if !gauge.is_finite() || gauge <= 0. {
+        return Err(refused("Candidate proof gauge is not finite and positive"));
+    }
+    let mut weights = vec![vec![I::point(0.); candidate.weights[0].len()]; candidate.weights.len()];
+    for (i, row) in weights.iter_mut().enumerate() {
+        for (j, weight) in row.iter_mut().enumerate() {
+            *weight = if gauge == 1. {
+                I::point(candidate.weights[i][j])
+            } else {
+                w.charge(1)?;
+                match crate::exact_curve_segments::exact_mul(candidate.weights[i][j], gauge) {
+                    Some(value) => I::point(value),
+                    None => I::point(candidate.weights[i][j]).mul(I::point(gauge))?,
+                }
+            };
+        }
+    }
+    for k in 0..4 {
+        for i in 0..actual[k].len() {
+            for j in 0..actual[k][i].len() {
+                actual[k][i][j] = if k == 3 {
+                    weights[i][j]
+                } else {
+                    w.charge(1)?;
+                    let point = I::point(candidate.control_points[i][j][k]);
+                    let centered = if origin[k] == 0. {
+                        point
+                    } else {
+                        w.charge(1)?;
+                        point.sub(I::point(origin[k]))?
+                    };
+                    centered.mul(weights[i][j])?
+                };
+            }
+        }
+    }
+    let degree_u = candidate.degree_u.max(fresh.degree);
+    let degree_v = candidate.degree_v.max(fresh.sum);
+    for k in 0..4 {
+        target[k] = elevate_net(&target[k], degree_u, degree_v, &mut w)?;
+        actual[k] = elevate_net(&actual[k], degree_u, degree_v, &mut w)?;
+    }
+    let mut residual = actual.clone();
+    for k in 0..4 {
+        for i in 0..actual[k].len() {
+            for j in 0..actual[k][i].len() {
+                w.charge(1)?;
+                residual[k][i][j] = target[k][i][j].sub(actual[k][i][j])?;
+            }
+        }
+    }
+    let mut derivatives = Vec::with_capacity(6);
+    for order in 0..=2 {
+        for a in 0..=order {
+            let b = order - a;
+            let factor = if cross_gain == 1. {
+                I::point(1.)
+            } else {
+                match b {
+                    0 => I::point(1.),
+                    1 => I::point(cross_gain),
+                    _ => match crate::exact_curve_segments::exact_mul(cross_gain, cross_gain) {
+                        Some(value) => I::point(value),
+                        None => {
+                            w.charge(1)?;
+                            I::point(cross_gain).mul(I::point(cross_gain))?
+                        }
+                    },
+                }
+            };
+            let mut row = Vec::with_capacity(4);
+            for k in 0..4 {
+                let mut base = actual[k].clone();
+                let mut delta = if cross_gain != 1. {
+                    target[k].clone()
+                } else {
+                    residual[k].clone()
+                };
+                for axis in std::iter::repeat_n(0, a).chain(std::iter::repeat_n(1, b)) {
+                    base = difference(&base, axis, &mut w)?;
+                    delta = difference(&delta, axis, &mut w)?;
+                }
+                if cross_gain != 1. {
+                    for i in 0..base.len() {
+                        for j in 0..base[i].len() {
+                            if factor.lo != 1. || factor.hi != 1. {
+                                w.charge(1)?;
+                                base[i][j] = base[i][j].mul(factor)?;
+                            }
+                            w.charge(1)?;
+                            delta[i][j] = delta[i][j].sub(base[i][j])?;
+                        }
+                    }
+                }
+                row.push((base, delta));
+            }
+            derivatives.push((a, b, row));
+        }
+    }
+    Ok(Prepared {
+        derivatives,
+        work: w.used,
+    })
+}
+fn evaluate(prepared: &Prepared, parameter: [[f64; 2]; 2], w: &mut Work) -> Result<JetReport> {
+    if parameter
+        .iter()
+        .any(|r| !r[0].is_finite() || !r[1].is_finite() || r[0] < 0. || r[0] > r[1] || r[1] > 1.)
+    {
+        return Err(refused(
+            "Jet comparison needs a normalized original collar rectangle",
+        ));
+    }
+    let mut h = [[[Coupled::zero(); 4]; 3]; 3];
+    for (a, b, row) in &prepared.derivatives {
+        for (k, (base, delta)) in row.iter().enumerate() {
+            h[*a][*b][k] = Coupled {
+                base: enclose(base, parameter, w)?,
+                delta: enclose(delta, parameter, w)?,
+            };
+        }
+    }
+    let mut cartesian = [[[Coupled::zero(); 3]; 3]; 3];
+    let mut upper = [[None; 3]; 3];
+    for order in 0..=2 {
+        for a in 0..=order {
+            let b = order - a;
+            let mut squared = I::point(0.);
+            for k in 0..3 {
+                let mut value = h[a][b][k];
+                for i in 0..=a {
+                    for j in 0..=b {
+                        if i + j > 0 {
+                            let term = h[i][j][3]
+                                .mul(cartesian[a - i][b - j][k], w)?
+                                .scale(choose(a, i) * choose(b, j), w)?;
+                            value = value.sub(term, w)?;
+                        }
+                    }
+                }
+                value = value.div(h[0][0][3], w)?;
+                cartesian[a][b][k] = value;
+                let error = value.delta.lo.abs().max(value.delta.hi.abs());
+                w.charge(2)?;
+                squared = squared.add(I::point(error).mul(I::point(error))?)?;
+            }
+            upper[a][b] = Some(squared.hi.sqrt().next_up());
+        }
+    }
+    Ok(JetReport {
+        error_upper: upper,
+        coefficient_work: w.used,
+        jets: cartesian,
+    })
+}
+
+fn norm(values: &[I], w: &mut Work) -> Result<I> {
+    let mut lo = I::point(0.);
+    let mut hi = I::point(0.);
+    for &x in values {
+        let lower = if x.lo <= 0. && x.hi >= 0. {
+            0.
+        } else {
+            x.lo.abs().min(x.hi.abs())
+        };
+        let upper = x.lo.abs().max(x.hi.abs());
+        w.charge(4)?;
+        lo = lo.add(I::point(lower).mul(I::point(lower))?)?;
+        hi = hi.add(I::point(upper).mul(I::point(upper))?)?;
+    }
+    I::new(
+        lo.lo.max(0.).sqrt().next_down().max(0.),
+        hi.hi.sqrt().next_up(),
+    )
+}
+fn cross(a: [Coupled; 3], b: [Coupled; 3], w: &mut Work) -> Result<[Coupled; 3]> {
+    Ok([
+        a[1].mul(b[2], w)?.sub(a[2].mul(b[1], w)?, w)?,
+        a[2].mul(b[0], w)?.sub(a[0].mul(b[2], w)?, w)?,
+        a[0].mul(b[1], w)?.sub(a[1].mul(b[0], w)?, w)?,
+    ])
+}
+fn dot(a: [Coupled; 3], b: [Coupled; 3], w: &mut Work) -> Result<Coupled> {
+    (0..3).try_fold(Coupled::zero(), |sum, k| sum.add(a[k].mul(b[k], w)?, w))
+}
+/// Geometric fields of exact original composition and actual stored candidate
+/// remain coupled throughout normalization and reciprocal tangent operations.
+fn shape(j: &[[[Coupled; 3]; 3]; 3], w: &mut Work) -> Result<Option<(Vec<Coupled>, Vec<Coupled>)>> {
+    let (u, v) = (j[1][0], j[0][1]);
+    let mut n = cross(u, v, w)?;
+    let mut squared = dot(n, n, w)?;
+    let base = norm(&n.map(|x| x.base), w)?;
+    if base.lo <= 0. {
+        return Ok(None);
+    }
+    w.charge(2)?;
+    squared.base = I::new(
+        (base.lo * base.lo).next_down().max(0.),
+        (base.hi * base.hi).next_up(),
+    )?;
+    let target = squared.base.add(squared.delta)?;
+    if target.lo <= 0. {
+        return Ok(None);
+    }
+    let target_root = I::new(target.lo.sqrt().next_down(), target.hi.sqrt().next_up())?;
+    w.charge(2)?;
+    let area = Coupled {
+        base,
+        delta: squared.delta.div(base.add(target_root)?)?,
+    };
+    for x in &mut n {
+        *x = x.div(area, w)?;
+        x.base = x.base.intersect(-1., 1.)?;
+    }
+    let mut dual = [cross(v, n, w)?, cross(n, u, w)?];
+    for row in &mut dual {
+        for x in row {
+            *x = x.div(area, w)?;
+        }
+    }
+    let second = [
+        [dot(n, j[2][0], w)?, dot(n, j[1][1], w)?],
+        [dot(n, j[1][1], w)?, dot(n, j[0][2], w)?],
+    ];
+    let mut tensor = Vec::with_capacity(9);
+    for a in 0..3 {
+        for b in 0..3 {
+            let mut value = Coupled::zero();
+            for r in 0..2 {
+                for s in 0..2 {
+                    value = value.add(dual[r][a].mul(second[r][s], w)?.mul(dual[s][b], w)?, w)?;
+                }
+            }
+            tensor.push(value);
+        }
+    }
+    Ok(Some((n.to_vec(), tensor)))
+}
+pub struct G2Report {
+    pub decision: crate::surface_join::Decision,
+    pub orientation: Option<crate::surface_g2::Orientation>,
+    /// Whole-seam upper bounds exist only after complete admission.
+    pub upper: Option<[f64; 3]>,
+    pub witness_parameter: Option<f64>,
+    pub cells: usize,
+    pub coefficient_work: usize,
+}
+/// Fresh original-coefficient G2 proof for an actual collar in the composed
+/// basis. Exact original composition is correlated with candidate jets, not
+/// replaced by a rounded proxy. No prior receipt or surface tag is trusted.
+/// The result covers the entire V=0 seam, not radius laws, trims or a solid.
+pub fn inspect_g2(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_work: usize,
+) -> Result<G2Report> {
+    inspect_g2_frame(
+        source, pcurve, direction, candidate, tolerances, max_cells, max_work, 1.,
+    )
+}
+/// Compare the actual candidate V=0 seam with its transverse jet frame reversed.
+/// Source direction still enters the original retained chart; no source point
+/// outside that chart is evaluated. Odd transverse derivatives change sign
+/// only inside the original-coefficient proof. Stored geometry is unchanged.
+pub fn inspect_g2_opposite_cross(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_work: usize,
+) -> Result<G2Report> {
+    inspect_g2_frame(
+        source, pcurve, direction, candidate, tolerances, max_cells, max_work, -1.,
+    )
+}
+/// Compare a V=0 seam in the signed affine transverse frame v=gain*s.
+/// Every order-b transverse jet is multiplied by the exact-real gain^b
+/// with outward coefficient arithmetic. No candidate/source controls change;
+/// only the seam is evaluated, so no extrapolated point grants authority.
+pub fn inspect_g2_cross_frame(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    cross_gain: f64,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_work: usize,
+) -> Result<G2Report> {
+    inspect_g2_frame(
+        source, pcurve, direction, candidate, tolerances, max_cells, max_work, cross_gain,
+    )
+}
+fn inspect_g2_frame(
+    source: &Surface,
+    pcurve: &Curve,
+    direction: [f64; 2],
+    candidate: &Surface,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_work: usize,
+    cross_gain: f64,
+) -> Result<G2Report> {
+    use crate::surface_join::Decision;
+    source.validate()?;
+    pcurve.validate()?;
+    candidate.validate()?;
+    if pcurve.control_points[0].len() != 2
+        || direction.iter().any(|x| !x.is_finite())
+        || !cross_gain.is_finite()
+        || cross_gain == 0.
+        || !(1..=100000).contains(&max_cells)
+        || !(1..=2000000).contains(&max_work)
+        || tolerances.iter().any(|x| !x.is_finite() || *x < 0.)
+        || tolerances[0] == 0.
+        || tolerances[1] > 2.
+    {
+        return Err(refused(
+            "Need finite collar G2 tolerances and unchanged bounded work",
+        ));
+    }
+    let mut report = G2Report {
+        decision: Decision::Unresolved,
+        orientation: None,
+        upper: None,
+        witness_parameter: None,
+        cells: 0,
+        coefficient_work: 0,
+    };
+    if max_work <= 5 {
+        report.coefficient_work = max_work;
+        return Ok(report);
+    }
+    report.coefficient_work = 5;
+    let first = &pcurve.control_points[0];
+    let last = pcurve.control_points.last().unwrap();
+    let determinant = I::point(last[0])
+        .sub(I::point(first[0]))?
+        .mul(I::point(direction[1]))?
+        .sub(
+            I::point(last[1])
+                .sub(I::point(first[1]))?
+                .mul(I::point(direction[0]))?,
+        )?;
+    let orientation = if determinant.lo > 0. {
+        crate::surface_g2::Orientation::Same
+    } else if determinant.hi < 0. {
+        crate::surface_g2::Orientation::Opposite
+    } else {
+        return Ok(report);
+    };
+    let prepared = match prepare_frame(
+        source,
+        pcurve,
+        direction,
+        candidate,
+        max_work - 5,
+        cross_gain,
+    ) {
+        Ok(prepared) => prepared,
+        Err(error) if error.code == "NURBS_SURFACE_COLLAR_WORK_LIMIT" => {
+            report.coefficient_work = max_work;
+            return Ok(report);
+        }
+        Err(error) => return Err(error),
+    };
+    report.coefficient_work += prepared.work;
+    let mut pending = vec![[0., 1.]];
+    let mut upper = [0_f64; 3];
+    while let Some(range) = pending.pop() {
+        if report.cells == max_cells || report.coefficient_work == max_work {
+            return Ok(report);
+        }
+        let mut admitted = false;
+        for point in [false, true] {
+            if report.cells == max_cells || report.coefficient_work == max_work {
+                return Ok(report);
+            }
+            let middle = range[0] * 0.5 + range[1] * 0.5;
+            let parameter = if point {
+                [[middle, middle], [0., 0.]]
+            } else {
+                [range, [0., 0.]]
+            };
+            let mut work = Work {
+                used: report.coefficient_work,
+                max: max_work,
+            };
+            report.cells += 1;
+            let evidence = match evaluate(&prepared, parameter, &mut work) {
+                Ok(evidence) => evidence,
+                Err(error) if error.code == "NURBS_SURFACE_COLLAR_WORK_LIMIT" => {
+                    report.coefficient_work = max_work;
+                    return Ok(report);
+                }
+                Err(error) => return Err(error),
+            };
+            let fields = match shape(&evidence.jets, &mut work) {
+                Ok(fields) => fields,
+                Err(error) if error.code == "NURBS_SURFACE_COLLAR_WORK_LIMIT" => {
+                    report.coefficient_work = max_work;
+                    return Ok(report);
+                }
+                Err(error) => return Err(error),
+            };
+            let bounds_result = (|| -> Result<_> {
+                Ok(if let Some((normal, tensor)) = fields {
+                    let position = norm(&evidence.jets[0][0].map(|x| x.delta), &mut work)?;
+                    let same = [
+                        norm(
+                            &normal.iter().map(|x| x.delta).collect::<Vec<_>>(),
+                            &mut work,
+                        )?,
+                        norm(
+                            &tensor.iter().map(|x| x.delta).collect::<Vec<_>>(),
+                            &mut work,
+                        )?,
+                    ];
+                    let mut opposite = Vec::new();
+                    for field in [&normal, &tensor] {
+                        let residual = field
+                            .iter()
+                            .map(|x| {
+                                work.charge(2)?;
+                                x.delta.add(x.base.mul(I::point(2.))?)
+                            })
+                            .collect::<Result<Vec<_>>>()?;
+                        opposite.push(norm(&residual, &mut work)?);
+                    }
+                    Some((position, same, opposite))
+                } else {
+                    None
+                })
+            })();
+            let bounds = match bounds_result {
+                Ok(bounds) => bounds,
+                Err(error) if error.code == "NURBS_SURFACE_COLLAR_WORK_LIMIT" => {
+                    report.coefficient_work = max_work;
+                    return Ok(report);
+                }
+                Err(error) => return Err(error),
+            };
+            report.coefficient_work = work.used;
+            if let Some((position, same, opposite)) = bounds {
+                if !point
+                    && position.hi <= tolerances[0]
+                    && same[0].hi <= tolerances[1]
+                    && same[1].hi <= tolerances[2]
+                {
+                    for (i, value) in [position.hi, same[0].hi, same[1].hi]
+                        .into_iter()
+                        .enumerate()
+                    {
+                        upper[i] = upper[i].max(value);
+                    }
+                    admitted = true;
+                    break;
+                }
+                if point
+                    && (position.lo > tolerances[0]
+                        || ((same[0].lo > tolerances[1] || same[1].lo > tolerances[2])
+                            && (opposite[0].lo > tolerances[1] || opposite[1].lo > tolerances[2])))
+                {
+                    report.decision = Decision::CorrespondenceExceedsTolerance;
+                    report.witness_parameter = Some(middle);
+                    return Ok(report);
+                }
+            }
+        }
+        if !admitted {
+            let middle = range[0] * 0.5 + range[1] * 0.5;
+            if !(range[0] < middle && middle < range[1]) {
+                return Ok(report);
+            }
+            pending.push([middle, range[1]]);
+            pending.push([range[0], middle]);
+        }
+    }
+    report.decision = Decision::WithinTolerance;
+    report.orientation = Some(if cross_gain < 0. {
+        match orientation {
+            crate::surface_g2::Orientation::Same => crate::surface_g2::Orientation::Opposite,
+            crate::surface_g2::Orientation::Opposite => crate::surface_g2::Orientation::Same,
+        }
+    } else {
+        orientation
+    });
+    report.upper = Some(upper);
+    Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn differentiated_tensor_endpoints_cover_an_independent_monomial() {
+        let mut work = Work {
+            used: 0,
+            max: 10000,
+        };
+        let mut polynomial = vec![vec![I::point(0.); 4]; 3];
+        polynomial[2][3] = I::point(1.);
+        // d_u d_v(u² v³)=6u v². Differentiation must precede endpoint
+        // restriction; the V=1 edge is 6u, while V=0 is identically zero.
+        let du = difference(&polynomial, 0, &mut work).unwrap();
+        let mixed = difference(&du, 1, &mut work).unwrap();
+        let zero = enclose(&mixed, [[0.25, 0.75], [0., 0.]], &mut work).unwrap();
+        assert!(zero.contains(0.) && zero.lo.abs().max(zero.hi.abs()) < 1e-12);
+        let end = enclose(&mixed, [[0.25, 0.75], [1., 1.]], &mut work).unwrap();
+        assert!(end.contains(1.5) && end.contains(4.5) && end.hi - end.lo < 3. + 1e-12);
+    }
+    #[test]
+    fn coupled_products_and_quotients_cover_independent_rational_residuals() {
+        let mut work = Work {
+            used: 0,
+            max: 10000,
+        };
+        let a = Coupled {
+            base: I::point(1.25),
+            delta: I::point(1. / 32.),
+        };
+        let b = Coupled {
+            base: I::point(0.75),
+            delta: I::point(-1. / 16.),
+        };
+        let product = a.mul(b, &mut work).unwrap();
+        // Target product is 451/512, base is 480/512; the mixed
+        // delta_a*delta_b term is required to contain -29/512.
+        assert!(product.delta.contains(-29. / 512.));
+        let ratio = a.div(b, &mut work).unwrap();
+        // Target ratio is 41/22, base is 5/3, residual is 13/66.
+        assert!(ratio.base.contains(5. / 3.));
+        assert!(ratio.delta.contains(13. / 66.));
+    }
+    #[test]
+    fn paired_shape_detects_independent_monge_curvature_with_unchanged_first_jets() {
+        let mut work = Work {
+            used: 0,
+            max: 10000,
+        };
+        let mut jets = [[[Coupled::zero(); 3]; 3]; 3];
+        jets[1][0][0].base = I::point(1.);
+        jets[0][1][1].base = I::point(1.);
+        // Candidate is a plane; original composition is z=u²/16.
+        // At the origin both positions and normals agree, B_xx=1/8.
+        jets[2][0][2].delta = I::point(0.125);
+        let (normal, tensor) = shape(&jets, &mut work).unwrap().unwrap();
+        for x in normal {
+            assert!(x.delta.contains(0.));
+        }
+        for (i, x) in tensor.iter().enumerate() {
+            assert!(x.delta.contains(if i == 0 { 0.125 } else { 0. }));
+        }
+        assert!(tensor[0].delta.lo > 0.124999 && tensor[0].delta.hi < 0.125001);
+    }
+}

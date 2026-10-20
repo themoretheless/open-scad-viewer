@@ -67,22 +67,24 @@ it('composes a transformed reflected profile extrusion with a native closed cyli
   mass(body, 20 * Math.PI, [7, -3, 2])
 })
 
-it('distinguishes admitted 3D affine solids from circular 2D profile admission', async () => {
+it('admits affine 3D solids and elliptical 2D profiles with analytic mass checks', async () => {
   const body = await solid(`multmatrix([[-2,1,0,7],[0,3,0,-4],[0,0,.5,2],[0,0,0,1]])
     linear_extrude(height=4,center=true) circle(3);`)
   mass(body, 108 * Math.PI, [7, -4, 2])
   const polygon = await solid(`linear_extrude(height=4,center=true)
     translate([7,-4]) scale([2,3]) rotate(37) mirror([1,2]) square([2,1],center=true);`)
   mass(polygon, 48, [7, -4, 0])
-  await expect(solid('linear_extrude(height=4) scale([2,3]) rotate(37) circle(3);'))
-    .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' } })
+  mass(await solid('linear_extrude(height=4) scale([2,3]) rotate(37) circle(3);'),216*Math.PI,[0,0,2])
 })
 
-it('refuses implicit 3D projection and unsupported curve bases instead of dropping coordinates', async () => {
+it('refuses implicit 3D projection and retains elevated multi-span curve bases', async () => {
   const planar3d = { ...circle(), controlPoints: circle().controlPoints.map(p => [...p, 0]) }
   expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D/)
   expect(() => extrudeBrepCurves([[planar3d]], 0, 2)).toThrow(/2D/)
-  expect(() => validateBrepProfile([[elevateNurbsCurve(circle(), 3)]])).toThrow(/line|quadratic|circular/i)
+  const elevated=elevateNurbsCurve(circle(),3),profile=validateBrepProfile([[elevated]])
+  expect(profile.loops[0][0]).toEqual(elevated)
+  expect(profile.areaMm2).toBeCloseTo(9*Math.PI,8)
+  mass(extrudeBrepCurves(profile.loops,0,2),18*Math.PI,[0,0,1])
   expect(() => lower('linear_extrude(height=2) multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,1],[0,0,0,1]]) square(2);'))
     .toThrow(/must preserve the XY plane/)
   await expect(solid('linear_extrude(height=2) projection() cube(1);'))
@@ -97,9 +99,8 @@ it('retains XY matrix profile transforms with independent area, volume and centr
     multmatrix([[0,2,0,7],[2,0,0,-4],[0,0,1,0],[0,0,0,1]])
       difference(){circle(3);circle(1);}`)
   mass(ring, 96 * Math.PI, [7, -4, 0])
-  await expect(solid(`linear_extrude(height=2)
-    multmatrix([[1,.1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) circle(3);`))
-    .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' } })
+  mass(await solid(`linear_extrude(height=2)
+    multmatrix([[1,.1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) circle(3);`),18*Math.PI,[0,0,1])
   expect(() => lowerOpenSCADToSemanticProgram('multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) square(2);'))
     .toThrow(/multmatrix currently supports 3D children only/)
 })

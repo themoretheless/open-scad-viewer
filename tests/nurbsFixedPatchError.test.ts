@@ -33,7 +33,11 @@ it.each(['fixed','fixed_normal','frenet'] as const)('owns original %s arc-length
   {normal:[1,0,0],orientation,spacing:'arc_length',initialSections:3,maxSections:3,maxDeviation:1},3)
  expect(level.report).toMatchObject({continuousBound:true,roundingCertified:true,errorCertificateReason:null})
  expect(level.report.continuousErrorUpper).toBeGreaterThanOrEqual(0)
- if(orientation==='fixed')expect(level.report).toMatchObject({accepted:true})
+ // Both straight-path frames have the same exact translational image.
+ if(orientation==='fixed'||orientation==='fixed_normal'){
+  expect(level.report).toMatchObject({accepted:true})
+  expect(level.report.continuousErrorUpper).toBeLessThanOrEqual(1)
+ }
  else {expect(level.report.continuousErrorUpper).toBeGreaterThan(1);expect(level.report.accepted).toBe(false)}
 })
 

@@ -1,3 +1,4 @@
+import {createG2RunoutSurface} from './geometricG2'
 import {executeDirectTransaction} from './directTransactions'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
@@ -57,6 +58,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'curveDisplay':return sampleSolidNurbsCurve(job.curve)
     case 'profileDisplay':return retainedProfileDisplay(job.profile)
     case 'surfaceMesh':return tessellateSolidNurbsSurface(job.item)
+    case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
     case 'surfaceBoundary':return measureSurfaceBoundaries(job.a,job.b,job.options)
     case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans)
     case 'faceContacts':return inspectFaceContacts(job.model,job.toleranceUv,job.limits)
@@ -79,6 +81,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
+    case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
     case 'boolean':return applySolidBoolean(job.document,job.options)
     case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
     case 'animationSample':return (await import('./assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
@@ -116,7 +119,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
 }
 
 const VALID_MAIN_SOLID_JOB_KINDS = new Set<string>([
-  'solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','rushGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','animationSample','animationFrames','drawingPdf','drawingSheets','transaction','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid',
+  'g2RunoutSurface','solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','rushGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','minkowski3d','animationSample','animationFrames','drawingPdf','drawingSheets','transaction','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid',
 ])
 
 export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {

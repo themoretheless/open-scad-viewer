@@ -21,18 +21,50 @@ pub(super) fn lift(c: &Curve) -> Curve {
     }
     c
 }
-fn same(a: &Curve, b: &Curve) -> Option<bool> {
-    if a.degree != b.degree || a.weights != b.weights {
-        return None;
+/// Complete checked event census, projected to numerical trim parameters only.
+/// This does not certify the rounded trims or the resulting solid.
+pub(super) fn checked_cuts(a: &Curve,b: &Curve,self_pair:bool)->Option<(Vec<[f64;2]>,Vec<f64>)>{
+    use crate::profile_certificate as proof;
+    if let Ok(c)=proof::certify_curve_intersections(a,b,self_pair)
+        && let Ok(r)=proof::verify_curve_intersections(a,b,&c){
+        return Some((r.events().to_vec(),r.singular_parameters().to_vec()));
     }
-    if a.control_points == b.control_points {
-        return Some(true);
+    let c=proof::certify_algebraic_intersections(a,b,self_pair,1e-14).ok()?;
+    let r=proof::verify_algebraic_intersections(a,b,&c).ok()?;
+    let midpoint=|p:[f64;2]|p[0]+(p[1]-p[0])*0.5;
+    Some((r.events().iter().map(|p|[midpoint(p[0]),midpoint(p[1])]).collect(),
+        r.singular_parameters().iter().map(|p|midpoint(*p)).collect()))
+}
+fn same(a: &Curve, b: &Curve, tolerance:f64) -> Option<bool> {
+    if a.degree == b.degree && a.weights == b.weights {
+        if a.control_points == b.control_points {
+            return Some(true);
+        }
+        if a.control_points.iter().eq(b.control_points.iter().rev()) {
+            return Some(false);
+        }
     }
-    if a.control_points.iter().eq(b.control_points.iter().rev()) {
-        return Some(false);
+    for reverse in [false, true] {
+        let d = b.domain();
+        let domain = if reverse { [d[1], d[0]] } else { d };
+        if crate::profile_certificate::certify_curve_agreement(a, b, a.domain(), domain).is_ok()
+            || crate::profile_certificate::certify_nonlinear_curve_agreement(
+                a,
+                b,
+                a.domain(),
+                domain,
+            )
+            .is_ok()
+        {
+            return Some(!reverse);
+        }
+        let endpoints=if reverse{a.control_points.first()==b.control_points.last()&&a.control_points.last()==b.control_points.first()}else{a.control_points.first()==b.control_points.first()&&a.control_points.last()==b.control_points.last()};
+        if endpoints&&super::injective(a,tolerance)&&super::injective(b,tolerance)
+            &&crate::profile_certificate::certify_curve_image_agreement(a,b,a.domain(),domain).is_ok(){return Some(!reverse);}
     }
     None
 }
+
 fn contains(loops: &[Vec<Curve>], p: [f64; 2], tol: f64) -> Result<bool> {
     let mut inside = false;
     for wire in loops {
@@ -63,7 +95,7 @@ pub fn boolean(
     let mut work = 0;
     for (i, ca) in av.iter().enumerate() {
         for (j, cb) in bv.iter().enumerate() {
-            if let Some(forward) = same(ca, cb) {
+            if let Some(forward) = same(ca, cb, tolerance) {
                 let old = aliases[av.len() + j];
                 let new = aliases[i];
                 for alias in &mut aliases {
@@ -145,13 +177,17 @@ pub fn boolean(
             }
             let report = intersect_curve_curve_report(&lift(ca), &lift(cb), None)?;
             if !report.report.unresolved.is_empty() {
+                if let Some((events,_))=checked_cuts(ca,cb,false){
+                    for p in events{cuts[i].push(p[0]);cuts[av.len()+j].push(p[1]);}
+                    continue;
+                }
                 return Err(refused("Bézier Boolean intersection is unresolved"));
             }
             for event in report.report.components {
                 if event.kind == CurveCurveComponentKind::Overlap {
                     let x = ca.trim(event.first_interval[0], event.first_interval[1])?;
                     let y = cb.trim(event.second_interval[0], event.second_interval[1])?;
-                    let forward = same(&x, &y)
+                    let forward = same(&x, &y, tolerance)
                         .or_else(|| {
                             // Interval intersection proposes an overlap; retained
                             // polynomial Bernstein coefficients independently admit it.
@@ -271,8 +307,22 @@ pub fn boolean(
                         .map(|v| v.abs())
                         .fold(1., f64::max);
                     let limit = (4096. * f64::EPSILON * scale).min(tolerance * 0.001);
-                    if nurbs_core::intersection::planar_coincidence::agreement(c, &piece)?
-                        .is_some_and(|e| e <= limit)
+                    if crate::profile_certificate::certify_curve_agreement(
+                        c,
+                        &piece,
+                        c.domain(),
+                        piece.domain(),
+                    )
+                    .is_ok()
+                        || crate::profile_certificate::certify_nonlinear_curve_agreement(
+                            c,
+                            &piece,
+                            c.domain(),
+                            piece.domain(),
+                        )
+                        .is_ok()
+                        || nurbs_core::intersection::planar_coincidence::agreement(c, &piece)?
+                            .is_some_and(|e| e <= limit)
                     {
                         coincident_piece = true;
                         break;
@@ -489,4 +539,13 @@ pub(super) fn assemble(
         super::classify_components(&loops, tolerance)?;
     }
     Ok(loops)
+}
+
+#[cfg(test)]mod algebraic_cuts_tests{
+    use super::*;
+    #[test]fn nondyadic_fallback_returns_complete_numerical_cuts(){
+        let a=Curve{degree:4,knots:[vec![0.;5],vec![1.;5]].concat(),control_points:vec![vec![0.,1.],vec![1.,-1.],vec![2.,1.],vec![3.,-1.],vec![4.,1.]],weights:vec![1.;5],periodic:false};
+        let b=crate::sketch::polygon_wire(vec![[0.,0.25],[4.,0.25],[4.,1.]]).unwrap().remove(0);
+        let r=checked_cuts(&a,&b,false).unwrap();assert_eq!(r.0.len(),2);
+    }
 }

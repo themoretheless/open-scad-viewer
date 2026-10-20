@@ -835,7 +835,15 @@ pub fn validate(loops: &[Vec<Curve>], tolerance: f64) -> Result<()> {
 /// This admits the analytic carrier independently of closed-loop topology.
 pub fn span_green_area(curve: &Curve, origin: [f64; 2], tolerance: f64) -> Result<f64> {
     curve.validate()?;
-    Ok(Span::from_curve(curve.clone(), 0, tolerance, origin)?.area([0., 0.]))
+    if curve.control_points.iter().any(|p|p.len()!=2) { return Err(invalid("Planar trims must be 2D curves")); }
+    let d=curve.domain();
+    let mut knots:Vec<_>=curve.knots.iter().copied().filter(|v|*v>=d[0]&&*v<=d[1]).collect();
+    knots.dedup();
+    if knots.len()>MAX_SPANS+1 { return Err(limit()); }
+    knots.windows(2).try_fold(0.,|sum,p| {
+        let piece=curve.trim(p[0],p[1])?;
+        Ok(sum+Span::from_curve(piece,0,tolerance,origin)?.area([0.,0.]))
+    })
 }
 /// Exact-carrier Green area, with floating-point arithmetic and retained arcs.
 pub fn signed_area(curves: &[Curve], tolerance: f64) -> Result<f64> {

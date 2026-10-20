@@ -55,11 +55,15 @@ pub struct Patches {
     pub axial_extent: [f64; 2],
     pub rounding_certified: bool,
 }
-/// Sweep a sharp, truncated 60-degree profile with phase breakpoints
-/// [0,1/16,3/8,5/8,15/16,1]. No cutter/root fillet or standard tolerance class.
-/// Each integer turn is split into four quarter sweeps, five profile segments.
-/// Adjacent starts are shifted by one pitch in Z. End planes are not trimmed.
-pub fn patches(spec: Spec) -> Result<Patches> {
+#[derive(Clone, Copy)]
+struct Parameters {
+    crest: f64,
+    root: f64,
+    lead: f64,
+    maximum_z: f64,
+    quarter_angle: f64,
+}
+fn parameters(spec: Spec) -> Result<Parameters> {
     require_finite_f64(spec.diameter, "thread_diameter")?;
     require_finite_f64(spec.pitch, "thread_pitch")?;
     require_finite_f64(spec.clearance, "thread_clearance")?;
@@ -92,6 +96,27 @@ pub fn patches(spec: Spec) -> Result<Patches> {
     )?;
     let direction = if spec.hand == Hand::Right { 1. } else { -1. };
     let quarter_angle = direction * std::f64::consts::FRAC_PI_2;
+    Ok(Parameters {
+        crest,
+        root,
+        lead,
+        maximum_z,
+        quarter_angle,
+    })
+}
+/// Sweep a sharp, truncated 60-degree profile with phase breakpoints
+/// [0,1/16,3/8,5/8,15/16,1]. No cutter/root fillet or standard tolerance class.
+/// Each integer turn is split into four quarter sweeps, five profile segments.
+/// Adjacent starts are shifted by one pitch in Z. End planes are not trimmed.
+/// Use patches_certified for inclusive nominal error bounds.
+pub fn patches(spec: Spec) -> Result<Patches> {
+    let Parameters {
+        crest,
+        root,
+        lead,
+        maximum_z,
+        quarter_angle,
+    } = parameters(spec)?;
     let phases = [0., 1. / 16., 3. / 8., 5. / 8., 15. / 16., 1.];
     let radii = [crest, crest, root, root, crest, crest];
     let mut out = Vec::with_capacity(20 * spec.starts * spec.turns);
@@ -191,6 +216,17 @@ pub fn trim_candidates(
     z_bounds: [f64; 2],
     axial_tolerance: f64,
 ) -> Result<TrimCandidates> {
+    let source = patches(spec)?;
+    trim_patch_candidates(source.patches, source.lead, z_bounds, axial_tolerance)
+}
+/// Affine slab clipping of the supplied original screw-patch geometry. This
+/// does not certify its nominal construction history or complete source census.
+pub fn trim_patch_candidates(
+    source: Vec<Patch>,
+    lead: f64,
+    z_bounds: [f64; 2],
+    axial_tolerance: f64,
+) -> Result<TrimCandidates> {
     use crate::distance_bounds::Interval as I;
     check(
         z_bounds.iter().all(|x| x.is_finite())
@@ -199,12 +235,16 @@ pub fn trim_candidates(
             && axial_tolerance > 0.,
         "Thread trim requires increasing finite Z limits and positive axial tolerance",
     )?;
-    let source = patches(spec)?;
+    check(
+        !source.is_empty() && source.len() <= 2560 && lead.is_finite() && lead / 4. > 0.,
+        "Screw clipping requires 1..2560 original patches and a positive lead",
+    )?;
     let mut candidates = Vec::new();
     let mut excluded = Vec::new();
     let mut unresolved = Vec::new();
-    for patch in source.patches {
+    for patch in source {
         let s = &patch.surface;
+        s.validate()?;
         // Positive rational weights bound the complete stored surface by its
         // original control hull, independently of clipping or sampled vertices.
         let lo = s
@@ -230,7 +270,7 @@ pub fn trim_candidates(
 
         let gamma = s.control_points[0][0][2];
         let alpha = s.control_points[1][0][2] - gamma;
-        let beta = source.lead / 4.;
+        let beta = lead / 4.;
         let enclosure = |p: [f64; 2]| -> Result<I> {
             I::point(gamma)
                 .add(I::point(alpha).mul(I::point(p[0]))?)?
@@ -346,21 +386,7 @@ pub fn trim_candidates(
         // Positive U/V bases partition unity. An affine field has the same
         // B-spline coefficients at Greville coordinates. Bounding every stored
         // coefficient difference therefore covers all UV, not just vertices.
-        let mut error = 0_f64;
-        for row in 0..2 {
-            for j in 0..s.control_points[row].len() {
-                let mut sum = I::point(0.);
-                for &k in &s.knots_v[j + 1..=j + s.degree_v] {
-                    sum = sum.add(I::point(k))?;
-                }
-                let greville = sum.div(I::point(s.degree_v as f64))?;
-                let expected = I::point(gamma)
-                    .add(I::point(alpha).mul(I::point(row as f64))?)?
-                    .add(I::point(beta).mul(greville)?)?;
-                let delta = I::point(s.control_points[row][j][2]).sub(expected)?;
-                error = error.max(delta.lo.abs().max(delta.hi.abs()));
-            }
-        }
+        let error = coverage::affine_deviation(s, [gamma, alpha, beta])?;
         let mut lo = f64::INFINITY;
         let mut hi = f64::NEG_INFINITY;
         for &p in &polygon {
@@ -618,24 +644,39 @@ impl TrimCandidate {
             let edge_pcurve = Curve::from_polyline(vec![pair[0].clone(), pair[1].clone()])?;
             let mut natural = None;
             for fixed in 0..2 {
-                let varying = 1-fixed;
-                if pair[0][fixed] == pair[1][fixed] && [0.,1.].contains(&pair[0][fixed])
-                    && pair[0][varying] != pair[1][varying] {
-                    let axis = if fixed == 0 { crate::surface::Axis::U } else { crate::surface::Axis::V };
-                    let mut c = self.patch.surface.iso(axis,pair[0][fixed])?;
+                let varying = 1 - fixed;
+                if pair[0][fixed] == pair[1][fixed]
+                    && [0., 1.].contains(&pair[0][fixed])
+                    && pair[0][varying] != pair[1][varying]
+                {
+                    let axis = if fixed == 0 {
+                        crate::surface::Axis::U
+                    } else {
+                        crate::surface::Axis::V
+                    };
+                    let mut c = self.patch.surface.iso(axis, pair[0][fixed])?;
                     let lo = pair[0][varying].min(pair[1][varying]);
                     let hi = pair[0][varying].max(pair[1][varying]);
                     if lo != 0. || hi != 1. {
-                        c = c.trim(lo,hi)?;
-                        let [a,b] = c.domain();
-                        c.knots = c.knots.iter().map(|&t| (t-a)/(b-a)).collect();
+                        c = c.trim(lo, hi)?;
+                        let [a, b] = c.domain();
+                        c.knots = c.knots.iter().map(|&t| (t - a) / (b - a)).collect();
                     }
-                    natural = Some(if pair[0][varying] > pair[1][varying] { c.reverse()? } else { c });
+                    natural = Some(if pair[0][varying] > pair[1][varying] {
+                        c.reverse()?
+                    } else {
+                        c
+                    });
                 }
             }
             let composed = if natural.is_none() {
-                crate::curve_surface_composition::trace_candidate(&edge_pcurve,&self.patch.surface)?
-            } else { None };
+                crate::curve_surface_composition::trace_candidate(
+                    &edge_pcurve,
+                    &self.patch.surface,
+                )?
+            } else {
+                None
+            };
             let mut spans = 1;
             // Span-doubling refinement loop; `max_spans` bounds the total
             // doublings to ≤ 8, and the unified guard pins the stage budget.
@@ -645,26 +686,53 @@ impl TrimCandidate {
                 let mut points = Vec::with_capacity(spans + 1);
                 for i in 0..=spans {
                     let t = i as f64 / spans as f64;
-                    let uv = if i == 0 { pair[0].clone() } else if i == spans { pair[1].clone() }
-                        else { edge_pcurve.evaluate(t)?.point };
+                    let uv = if i == 0 {
+                        pair[0].clone()
+                    } else if i == spans {
+                        pair[1].clone()
+                    } else {
+                        edge_pcurve.evaluate(t)?.point
+                    };
                     let endpoint = |knots: &[f64], degree: usize, count: usize, t: f64| {
-                        if t == knots[degree] && knots[..=degree].iter().all(|&k| k == t) { Some(0) }
-                        else if t == knots[count] && knots[knots.len()-degree-1..].iter().all(|&k| k == t) { Some(count-1) }
-                        else { None }
+                        if t == knots[degree] && knots[..=degree].iter().all(|&k| k == t) {
+                            Some(0)
+                        } else if t == knots[count]
+                            && knots[knots.len() - degree - 1..].iter().all(|&k| k == t)
+                        {
+                            Some(count - 1)
+                        } else {
+                            None
+                        }
                     };
                     let s = &self.patch.surface;
-                    let corner = (if s.periodic_u { None } else { endpoint(&s.knots_u,s.degree_u,s.control_points.len(),uv[0]) },
-                        if s.periodic_v { None } else { endpoint(&s.knots_v,s.degree_v,s.control_points[0].len(),uv[1]) });
-                    points.push(if let (Some(u),Some(v)) = corner {
+                    let corner = (
+                        if s.periodic_u {
+                            None
+                        } else {
+                            endpoint(&s.knots_u, s.degree_u, s.control_points.len(), uv[0])
+                        },
+                        if s.periodic_v {
+                            None
+                        } else {
+                            endpoint(&s.knots_v, s.degree_v, s.control_points[0].len(), uv[1])
+                        },
+                    );
+                    points.push(if let (Some(u), Some(v)) = corner {
                         s.control_points[u][v].clone()
-                    } else { s.evaluate(uv[0],uv[1])?.point.to_vec() });
+                    } else {
+                        s.evaluate(uv[0], uv[1])?.point.to_vec()
+                    });
                 }
                 let curve = if let Some(c) = &natural {
                     let mut c = c.clone();
                     // Rounded knot insertion is qualified below. Use the same
                     // authored vertex values as the adjacent polygon edges.
-                    let full = (pair[0][0] == pair[1][0] && [0.,1.].contains(&pair[0][1]) && [0.,1.].contains(&pair[1][1]))
-                        || (pair[0][1] == pair[1][1] && [0.,1.].contains(&pair[0][0]) && [0.,1.].contains(&pair[1][0]));
+                    let full = (pair[0][0] == pair[1][0]
+                        && [0., 1.].contains(&pair[0][1])
+                        && [0., 1.].contains(&pair[1][1]))
+                        || (pair[0][1] == pair[1][1]
+                            && [0., 1.].contains(&pair[0][0])
+                            && [0., 1.].contains(&pair[1][0]));
                     if !full {
                         c.control_points[0] = points[0].clone();
                         *c.control_points.last_mut().unwrap() = points.last().unwrap().clone();
@@ -676,7 +744,9 @@ impl TrimCandidate {
                     c.control_points[0] = points[0].clone();
                     *c.control_points.last_mut().unwrap() = points.last().unwrap().clone();
                     c
-                } else { Curve::from_polyline(points)? };
+                } else {
+                    Curve::from_polyline(points)?
+                };
                 let remaining = max_verification_cells - used;
                 let agreement = if remaining == 0 {
                     Report {
@@ -879,3 +949,13 @@ mod guard_tests {
         }
     }
 }
+
+#[path = "thread/certificate.rs"]
+mod certificate;
+pub use certificate::{ThreadCertificate, certify_patches, patches_certified};
+
+#[path = "thread/coverage.rs"]
+mod coverage;
+pub use coverage::{TrimCoverageCertificate, certify_trim_candidates};
+
+pub use coverage::certify_patch_trim_coverage;

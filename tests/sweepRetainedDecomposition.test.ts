@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
 import {expect,it} from 'vitest'
 import type {NurbsCurve} from '../src/services/nurbsCurve'
@@ -14,7 +15,7 @@ it('binds periodic hollow profiles with joint authored frame, guide and affine l
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,boundaryCertificate:{withinBudget:true}})
- expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
+ expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
  expect(graph).toEqual(before)
 })
 it.each([
@@ -59,7 +60,7 @@ it('covers exactly closed periodic hollow profiles through the complete boundary
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({continuousBound:true,boundaryCertificate:{withinBudget:true}})
- expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
+ expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
 })
 it('covers an unclamped hollow source through retained walls, filled caps and the complete boundary certificate',async()=>{
  const outer:NurbsCurve={degree:2,knots:Array.from({length:9},(_,i)=>i),controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],weights:Array(6).fill(1),periodic:false}
@@ -80,7 +81,7 @@ it('covers an unclamped hollow source through retained walls, filled caps and th
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({continuousBound:true,boundaryCertificate:{withinBudget:true}})
- expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
+ expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
 })
 it('binds low-multiplicity source spans to actual ruled walls and refuses incomplete coverage',()=>{
  const ring=(z:number):NurbsCurve=>({degree:2,knots:[0,0,0,.25,.5,.75,1,1,1],controlPoints:[[1,0,z],[1,1,z],[-1,1,z],[-1,-1,z],[1,-1,z],[1,0,z]],weights:[1,1,1,1,1,1],periodic:false})
@@ -216,7 +217,7 @@ it('certifies filled caps and admits the original moving-axis periodic Rush fixt
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,boundaryCertificate:{withinBudget:true},sectionCorrection:{reason:'automatic-bounded-cap-planarity'}})
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
  expect(graph).toEqual(before)
 })
@@ -245,7 +246,7 @@ it('certifies the moving-axis periodic Rush body with explicit authored-plane ca
  expect(node).toHaveProperty('initial_steps',1)
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({steps:16,continuousBound:true,boundaryCertificate:{withinBudget:true}})
- expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,JSON.parse(built.nativeGeometry!.geometryJson).geometry)).toMatchObject({solidGeometryCertified:true})
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,readNativeGeometryData(built.nativeGeometry!).geometry)).toMatchObject({solidGeometryCertified:true})
  expect(graph).toEqual(before)
 })
 

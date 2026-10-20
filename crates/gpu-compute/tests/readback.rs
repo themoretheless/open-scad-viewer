@@ -78,6 +78,82 @@ fn staging_is_unmapped_after_success_and_after_cancel() {
         try_read_buffer(&c.device, &buffer, 16),
         Err(ReadbackError::MissingUsage)
     ));
-    assert!(!c.subgroup_report().supported); // Default device enables no optional features.
-    assert!(c.enabled_features().is_empty());
+    assert!(!c.subgroup_report().supported); // Subgroups remain opt-in.
+    assert!((c.enabled_features() - wgpu::Features::MAPPABLE_PRIMARY_BUFFERS).is_empty());
+}
+
+#[test]
+fn mapped_consumers_unmap_on_success_and_unwind_and_consume_once() {
+    let Some(c) = context() else { return };
+    let buffer = source(&c);
+    let staging = c.device.create_buffer(&wgpu::BufferDescriptor {
+        label: None,
+        size: 16,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = c.device.create_command_encoder(&Default::default());
+    encoder.copy_buffer_to_buffer(&buffer, 0, &staging, 0, 16);
+    let mut ticket = ByteReadback::map_on_submit(&c.device, &encoder, &staging, 16).unwrap();
+    assert_eq!(
+        ticket
+            .try_read_with(|_| panic!("not submitted"))
+            .unwrap_err(),
+        ReadbackError::NotSubmitted
+    );
+    ticket.submitted(c.queue.submit([encoder.finish()]));
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ticket.wait_with(Duration::from_secs(5), |_| -> () {
+            panic!("consumer panic")
+        });
+    }));
+    assert!(caught.is_err());
+    assert_eq!(
+        ticket.try_read_with(|_| panic!("consumed")).unwrap_err(),
+        ReadbackError::Consumed
+    );
+    // A panic must release both the view and mapping, permitting reuse.
+    let sum = gpu_compute::try_read_buffer_with(&c.device, &staging, 16, |bytes| {
+        bytes.iter().copied().map(u32::from).sum::<u32>()
+    })
+    .unwrap();
+    assert_eq!(sum, 136);
+    assert_eq!(
+        try_read_buffer(&c.device, &staging, 16).unwrap(),
+        (1..=16).collect::<Vec<u8>>()
+    );
+}
+
+#[test]
+fn mapped_consumer_empty_cancelled_and_pending_states_do_not_lose_results() {
+    let Some(c) = context() else { return };
+    let buffer = source(&c);
+    let mut encoder = c.device.create_command_encoder(&Default::default());
+    let mut empty = ByteReadback::copy_buffer(&c.device, &mut encoder, &buffer, 0, 0).unwrap();
+    let mut cancelled = ByteReadback::copy_buffer(&c.device, &mut encoder, &buffer, 0, 4).unwrap();
+    let mut pending = ByteReadback::copy_buffer(&c.device, &mut encoder, &buffer, 4, 8).unwrap();
+    cancelled.cancel();
+    assert_eq!(
+        cancelled
+            .try_read_with(|_| panic!("cancelled"))
+            .unwrap_err(),
+        ReadbackError::Cancelled
+    );
+    let completed = c.queue.submit([]);
+    c.device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+    pending.submitted(completed);
+    assert_eq!(
+        pending.wait_with(Duration::ZERO, |_| panic!("pending")),
+        Err(ReadbackError::Timeout)
+    );
+    let index = c.queue.submit([encoder.finish()]);
+    empty.submitted(index.clone());
+    pending.submitted(index);
+    assert_eq!(empty.try_read_with(|bytes| bytes.len()).unwrap(), Some(0));
+    assert_eq!(
+        pending
+            .wait_with(Duration::from_secs(5), |bytes| bytes.to_vec())
+            .unwrap(),
+        [5, 6, 7, 8, 9, 10, 11, 12]
+    );
 }

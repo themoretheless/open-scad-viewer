@@ -6,6 +6,7 @@ use crate::{
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceSeamProof {
+    /// Identical boundary parameter functions, including exact weight gauges.
     ClampedBoundaryIdentity,
     PeriodicStorageIdentity,
 }
@@ -28,7 +29,18 @@ pub struct SurfaceCorrespondence {
     pub error_upper: f64,
     pub reason: Option<&'static str>,
 }
-fn seam(surface: &Surface, axis: usize) -> Option<SurfaceSeamProof> {
+/// Validate the actual source surface before proving a sufficient exact C0
+/// identity of both authored-parameter boundary functions. None means this
+/// proof is unavailable, not a sampled or approximate seam verdict.
+pub fn verify_surface_seam_identity(
+    surface: &Surface,
+    axis: usize,
+) -> Result<Option<SurfaceSeamProof>> {
+    surface.validate()?;
+    check(axis < 2, "Surface seam axis must be zero or one")?;
+    Ok(seam(surface, axis))
+}
+pub(crate) fn seam(surface: &Surface, axis: usize) -> Option<SurfaceSeamProof> {
     let (degree, knots, n, periodic) = if axis == 0 {
         (
             surface.degree_u,
@@ -66,13 +78,27 @@ fn seam(surface: &Surface, axis: usize) -> Option<SurfaceSeamProof> {
     }
     let same = if axis == 0 {
         surface.control_points[0] == surface.control_points[n - 1]
-            && surface.weights[0] == surface.weights[n - 1]
+            && surface.weights[0]
+                .iter()
+                .zip(&surface.weights[n - 1])
+                .all(|(&x, &y)| {
+                    crate::exact_products::sum_sign(&[
+                        (x, surface.weights[n - 1][0]),
+                        (-y, surface.weights[0][0]),
+                    ]) == std::cmp::Ordering::Equal
+                })
     } else {
         surface
             .control_points
             .iter()
             .zip(&surface.weights)
-            .all(|(p, w)| p[0] == p[n - 1] && w[0] == w[n - 1])
+            .all(|(p, w)| {
+                p[0] == p[n - 1]
+                    && crate::exact_products::sum_sign(&[
+                        (w[0], surface.weights[0][n - 1]),
+                        (-w[n - 1], surface.weights[0][0]),
+                    ]) == std::cmp::Ordering::Equal
+            })
     };
     same.then_some(SurfaceSeamProof::ClampedBoundaryIdentity)
 }
@@ -139,6 +165,22 @@ pub fn verify_surface_correspondence(
             }
         }
     }
+    let bounds = surface_parameter_bounds::inspect(surface, limits.max_rectangles)?;
+    let [lu, lv] = bounds.derivative_norm_upper_bounds;
+    let scale = I::point(lu).add(I::point(lv))?.hi;
+    // Subdivision target only; final outward world bound decides admission.
+    let target = if scale > 0. {
+        limits
+            .tolerance_uv
+            .min(limits.tolerance_world / scale * 0.99)
+    } else {
+        limits.tolerance_uv
+    };
+    let target = if target.is_finite() && target > 0. {
+        target
+    } else {
+        limits.tolerance_uv
+    };
     let mut uv_error = 0_f64;
     for (source, partition) in sources.iter().zip(partitions) {
         source.validate()?;
@@ -192,7 +234,7 @@ pub fn verify_surface_correspondence(
         let admission = verify_partition(
             source,
             partition,
-            limits.tolerance_uv,
+            target,
             limits.max_deviation_cells - out.deviation_cells,
         )?;
         out.deviation_cells += admission.work;
@@ -200,12 +242,14 @@ pub fn verify_surface_correspondence(
         uv_error = uv_error.max(admission.error_upper);
         out.admissions.push(admission);
         if !admitted {
-            out.reason = Some("supporting-uv-deviation-unproven");
+            out.reason = Some(if target < limits.tolerance_uv {
+                "world-tolerance-unproven"
+            } else {
+                "supporting-uv-deviation-unproven"
+            });
             return Ok(out);
         }
     }
-    let bounds = surface_parameter_bounds::inspect(surface, limits.max_rectangles)?;
-    let [lu, lv] = bounds.derivative_norm_upper_bounds;
     // Each coordinate error is bounded by the Euclidean UV error. This sum
     // bound remains valid across finitely many exact C0 periodic seams.
     out.error_upper = I::point(lu).add(I::point(lv))?.mul(I::point(uv_error))?.hi;

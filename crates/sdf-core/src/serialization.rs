@@ -136,6 +136,21 @@ impl value_codec::Serialize for Field {
                 origin,
                 period,
                 thickness,
+            }
+            | Self::Neovius {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Lidinoid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchoenIWP {
+                origin,
+                period,
+                thickness,
             } => {
                 let mut object = value_codec::Map::new();
                 object.insert("origin".into(), value_codec::Serialize::to_value(origin));
@@ -147,7 +162,10 @@ impl value_codec::Serialize for Field {
                 let kind = match self {
                     Self::Gyroid { .. } => "gyroid",
                     Self::SchwarzP { .. } => "schwarz_p",
-                    _ => "diamond",
+                    Self::Diamond { .. } => "diamond",
+                    Self::Neovius { .. } => "neovius",
+                    Self::Lidinoid { .. } => "lidinoid",
+                    _ => "schoen_iwp",
                 };
                 object.insert("kind".into(), value_codec::Value::String(kind.into()));
                 value_codec::Value::Object(object)
@@ -209,6 +227,21 @@ impl value_codec::Serialize for Field {
                 );
                 value_codec::Value::Object(object)
             }
+            Self::ChamferUnion { a, b, radius }
+            | Self::ChamferIntersection { a, b, radius }
+            | Self::ChamferDifference { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                let kind = match self {
+                    Self::ChamferUnion { .. } => "chamfer_union",
+                    Self::ChamferIntersection { .. } => "chamfer_intersection",
+                    _ => "chamfer_difference",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Offset { input, distance } => {
                 let mut object = value_codec::Map::new();
                 object.insert("input".into(), value_codec::Serialize::to_value(input));
@@ -217,6 +250,32 @@ impl value_codec::Serialize for Field {
                     value_codec::Serialize::to_value(distance),
                 );
                 object.insert("kind".into(), value_codec::Value::String("offset".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Onion { input, thickness } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert(
+                    "thickness".into(),
+                    value_codec::Serialize::to_value(thickness),
+                );
+                object.insert("kind".into(), value_codec::Value::String("onion".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Elongate {
+                input,
+                half_extents,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert(
+                    "half_extents".into(),
+                    value_codec::Serialize::to_value(half_extents),
+                );
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("elongate".into()),
+                );
                 value_codec::Value::Object(object)
             }
             Self::Translate { input, vector } => {
@@ -388,7 +447,7 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                     half_height,
                 })
             }
-            "gyroid" | "schwarz_p" | "diamond" => {
+            "gyroid" | "schwarz_p" | "diamond" | "neovius" | "lidinoid" | "schoen_iwp" => {
                 let kind = value["kind"].as_str().unwrap_or("gyroid").to_owned();
                 let mut object = value
                     .as_object()
@@ -420,7 +479,22 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                         period,
                         thickness,
                     },
-                    _ => Self::Diamond {
+                    "diamond" => Self::Diamond {
+                        origin,
+                        period,
+                        thickness,
+                    },
+                    "neovius" => Self::Neovius {
+                        origin,
+                        period,
+                        thickness,
+                    },
+                    "lidinoid" => Self::Lidinoid {
+                        origin,
+                        period,
+                        thickness,
+                    },
+                    _ => Self::SchoenIWP {
                         origin,
                         period,
                         thickness,
@@ -544,6 +618,33 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                 )?;
                 Ok(Self::SmoothUnion { a, b, radius })
             }
+            "chamfer_union" | "chamfer_intersection" | "chamfer_difference" => {
+                let kind = value["kind"].as_str().unwrap_or("chamfer_union").to_owned();
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let a: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                Ok(match kind.as_str() {
+                    "chamfer_union" => Self::ChamferUnion { a, b, radius },
+                    "chamfer_intersection" => Self::ChamferIntersection { a, b, radius },
+                    _ => Self::ChamferDifference { a, b, radius },
+                })
+            }
             "offset" => {
                 let mut object = value
                     .as_object()
@@ -560,6 +661,43 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                         .ok_or_else(|| value_codec::error("Missing field distance"))?,
                 )?;
                 Ok(Self::Offset { input, distance })
+            }
+            "onion" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let input: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("input")
+                        .ok_or_else(|| value_codec::error("Missing field input"))?,
+                )?;
+                let thickness: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("thickness")
+                        .ok_or_else(|| value_codec::error("Missing field thickness"))?,
+                )?;
+                Ok(Self::Onion { input, thickness })
+            }
+            "elongate" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let input: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("input")
+                        .ok_or_else(|| value_codec::error("Missing field input"))?,
+                )?;
+                let half_extents: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("half_extents")
+                        .ok_or_else(|| value_codec::error("Missing field half_extents"))?,
+                )?;
+                Ok(Self::Elongate {
+                    input,
+                    half_extents,
+                })
             }
             "translate" => {
                 let mut object = value

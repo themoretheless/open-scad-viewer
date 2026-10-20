@@ -69,15 +69,16 @@ impl GpuContext {
 
     /// Creates a device with pass-boundary timestamp queries enabled. An
     /// unsupported adapter is an explicit error; host timing is never used as
-    /// a substitute. The default `new` still enables no optional features.
+    /// a substitute. The default `new` does not enable timestamps or subgroups.
     pub fn with_timestamps() -> Result<Self, GpuContextError> {
         Self::with_features(wgpu::Features::TIMESTAMP_QUERY)
     }
 
     /// Creates a device with explicitly requested optional features. Missing
     /// adapter support is an error; features are never silently dropped or
-    /// enabled by the default constructor. For example, native subgroup timing
-    /// requests `SUBGROUP | TIMESTAMP_QUERY`.
+    /// enabled implicitly, except MAPPABLE_PRIMARY_BUFFERS on Apple Silicon
+    /// Metal, where it permits initialization in shared CPU/GPU memory.
+    /// For example, native subgroup timing requests `SUBGROUP | TIMESTAMP_QUERY`.
     pub fn with_features(required_features: wgpu::Features) -> Result<Self, GpuContextError> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -95,6 +96,12 @@ impl GpuContext {
         let backend = info.backend;
         let features = adapter.features();
         validate_features(features, required_features)?;
+        let required_features = required_features
+            | if apple_shared_memory(backend, features) {
+                wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
+            } else {
+                wgpu::Features::empty()
+            };
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("gpu-compute"),
             required_features,
@@ -140,6 +147,14 @@ impl GpuContext {
             max_size: self.subgroup_max_size,
         }
     }
+}
+
+/// Restrict the shared upload policy to the unified-memory Metal backend.
+/// Other native backends may advertise mapping but have discrete GPU memory.
+pub(crate) fn apple_shared_memory(backend: wgpu::Backend, features: wgpu::Features) -> bool {
+    cfg!(all(target_os = "macos", target_arch = "aarch64"))
+        && backend == wgpu::Backend::Metal
+        && features.contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
 }
 
 fn validate_features(

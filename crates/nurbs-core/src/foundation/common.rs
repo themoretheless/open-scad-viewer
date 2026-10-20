@@ -1021,10 +1021,12 @@ pub(super) fn budget_controls(count: usize) -> Result<()> {
 
 // Outward arithmetic for the coefficients of Xa*Wb-Xb*Wa.
 
+#[allow(dead_code)]
 pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     [next_down(a[0] + b[0]), next_up(a[1] + b[1])]
 }
 
+#[allow(dead_code)]
 pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     let v = [a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1]];
     [
@@ -1033,6 +1035,7 @@ pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     ]
 }
 
+#[allow(dead_code)]
 pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
     let k = k.min(n - k);
     let mut x = [1., 1.];
@@ -1046,6 +1049,7 @@ pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
     x
 }
 
+#[allow(dead_code)]
 pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
     let n = rebuild_mul(rebuild_binomial(p, i), rebuild_binomial(q, j));
     let d = rebuild_binomial(p + q, i + j);

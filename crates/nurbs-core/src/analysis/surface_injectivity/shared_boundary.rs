@@ -24,8 +24,17 @@ fn eligible(s: &Surface) -> bool {
                     && knots[p] < knots[p + 1]
             })
 }
+// Reuse the same original Bernstein restriction already used by section
+// Jacobians. General B-splines retain their original blossom fallback.
+fn restricted_net(s: &Surface,domain: [[f64;2];2]) -> Result<Vec<Vec<[I;4]>>> {
+    let span=[s.degree_u,s.degree_v];
+    match crate::curve_surface_composition::surface_net_on_bernstein(s,span,domain)? {
+        Some(net)=>Ok(net),
+        None=>crate::curve_surface_composition::surface_net_on(s,span,domain),
+    }
+}
 fn points(s: &Surface, domain: [[f64; 2]; 2]) -> Result<Vec<[I; 3]>> {
-    crate::curve_surface_composition::surface_net_on(s, [s.degree_u, s.degree_v], domain)?
+    restricted_net(s,domain)?
         .into_iter()
         .flatten()
         .map(|h| Ok([h[0].div(h[3])?, h[1].div(h[3])?, h[2].div(h[3])?]))
@@ -269,7 +278,7 @@ fn joined_jacobian(s: &Surface, domain: [[f64; 2]; 2], end: bool) -> Result<[[I;
     }
     let boundary = if end { s.degree_u } else { 0 };
     let mut net =
-        crate::curve_surface_composition::surface_net_on(s, [s.degree_u, s.degree_v], domain)?;
+        restricted_net(s,domain)?;
     let origin = &s.control_points[boundary][0];
     for row in &mut net {
         for h in row {

@@ -22,7 +22,7 @@ from OCP.GProp import GProp_GProps
 from OCP.BRepGProp import BRepGProp
 from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.BRep import BRep_Tool
-from OCP.TopAbs import TopAbs_FACE, TopAbs_SOLID
+from OCP.TopAbs import TopAbs_FACE, TopAbs_SOLID, TopAbs_EDGE, TopAbs_VERTEX
 from OCP.TopExp import TopExp_Explorer
 from OCP.TopoDS import TopoDS
 from OCP.TopLoc import TopLoc_Location
@@ -37,6 +37,19 @@ def count_shapes(shape, kind):
         count += 1
         explorer.Next()
     return count
+
+
+def count_unique_shapes(shape, kind):
+    # IsSame compares native topology plus location and ignores face-use
+    # orientation. Explorer counts alone duplicate the two uses of each edge.
+    # This also works with OCP versions that do not bind IndexedMapOfShape.
+    explorer, unique = TopExp_Explorer(shape, kind), []
+    while explorer.More():
+        current = explorer.Current()
+        if not any(current.IsSame(other) for other in unique):
+            unique.append(current)
+        explorer.Next()
+    return len(unique)
 
 
 def triangles(shape):
@@ -91,9 +104,18 @@ def main(directory, make_preview=True):
         volume_error = abs(volume - part['expected']['volumeMm3'])
         solids = count_shapes(shape, TopAbs_SOLID)
         passed = valid and solids == part['expected'].get('solids', 1) and error <= manifest['toleranceMm'] and volume_error <= max(1e-6, abs(part['expected']['volumeMm3']) * manifest['relativeVolumeTolerance'])
+        edges = count_unique_shapes(shape, TopAbs_EDGE)
+        vertices = count_unique_shapes(shape, TopAbs_VERTEX)
+        topology_expected = {key: part['expected'][key] for key in ('edges', 'vertices')
+                             if key in part['expected']}
+        topology_passed = (all(actual == topology_expected[key]
+                               for key, actual in [('edges', edges), ('vertices', vertices)]
+                               if key in topology_expected) if topology_expected else None)
+        passed = passed and topology_passed is not False
         faces = triangles(shape)
         row = dict(name=part['name'], stepSha256=digest, valid=valid, solids=solids,
-                   faces=count_shapes(shape, TopAbs_FACE), boundsMm=bounds, volumeMm3=volume,
+                   faces=count_shapes(shape, TopAbs_FACE), uniqueEdges=edges, uniqueVertices=vertices,
+                   topologyPassed=topology_passed, topologyExpectations=topology_expected, boundsMm=bounds, volumeMm3=volume,
                    maxBoundsErrorMm=error, volumeErrorMm3=volume_error, passed=passed,
                    previewTriangles=len(faces))
         rows.append(row)
@@ -123,7 +145,7 @@ def main(directory, make_preview=True):
         plt.close(fig)
     report = dict(schema='cad-roadmap-occt/1', oracle='OpenCascade via cadquery-ocp',
                   version=importlib.metadata.version('cadquery-ocp'),
-                  scope='Independent STEP read, solid validity, exact bounding box, volume and OCCT tessellation. Does not certify all STEP inputs.',
+                  scope='Independent STEP read, solid validity, optional unique topology counts, exact bounding box, volume and OCCT tessellation. Does not certify all STEP inputs.',
                   previewProduced=make_preview,
                   passed=all(row['passed'] for row in rows), parts=rows)
     (directory / 'occt-report.json').write_text(json.dumps(report, indent=2) + '\n')

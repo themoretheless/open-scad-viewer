@@ -20,7 +20,7 @@ mod area_ops;
 /// Keep the specialized line/circle arrangement where it applies; route
 /// polynomial quadratics, general conics and rational cubics to this kernel.
 pub fn requires_general(curve: &Curve, tolerance: f64) -> bool {
-    curve.degree == 3 || (curve.degree == 2 &&
+    curve.degree >= 3 || (curve.degree == 2 &&
         crate::planar_trim::span_green_area(curve, [0.,0.], tolerance).is_err())
 }
 fn refused(message: &str) -> Error {
@@ -28,7 +28,7 @@ fn refused(message: &str) -> Error {
 }
 fn controls(curve: &Curve) -> Result<Vec<[f64; 2]>> {
     curve.validate()?;
-    if ![1, 2, 3].contains(&curve.degree)
+    if !(1..=8).contains(&curve.degree)
         || curve.control_points.len() != curve.degree + 1
         || curve
             .control_points
@@ -43,7 +43,7 @@ fn controls(curve: &Curve) -> Result<Vec<[f64; 2]>> {
             .any(|t| *t != curve.domain()[1])
     {
         return Err(refused(
-            "Bézier admission requires clamped positive-weight planar spans of degree 1..3",
+            "Bézier admission requires clamped positive-weight planar spans of degree 1..8",
         ));
     }
     Ok(curve.control_points.iter().map(|p| [p[0], p[1]]).collect())
@@ -209,9 +209,9 @@ pub fn signed_area(wire: &[Curve], tolerance: f64) -> Result<f64> {
     Ok(area)
 }
 pub fn validate_single_wire(wire: &[Curve], tolerance: f64) -> Result<f64> {
-    if wire.len() < 3 || wire.len() > MAX_CURVES || !tolerance.is_finite() || tolerance <= 0. {
+    if wire.len() < 2 || wire.len() > MAX_CURVES || !tolerance.is_finite() || tolerance <= 0. {
         return Err(refused(
-            "Bézier extrusion requires 3–128 spans and a positive tolerance",
+            "Bézier extrusion requires 2–128 spans and a positive tolerance",
         ));
     }
     let points = wire.iter().map(controls).collect::<Result<Vec<_>>>()?;
@@ -224,6 +224,11 @@ pub fn validate_single_wire(wire: &[Curve], tolerance: f64) -> Result<f64> {
         if *p.last().unwrap() != points[(i + 1) % points.len()][0] {
             return Err(refused("Bézier boundary endpoints must join exactly"));
         }
+    }
+    if wire.len()==2 {
+        let contact=crate::profile_certificate::certify_endpoint_contacts(&wire[0],&wire[1])?;
+        if contact.common_endpoints!=2 {return Err(refused("Two-span boundary needs exactly its two endpoint contacts"));}
+        return signed_area(wire,tolerance);
     }
     for i in 0..wire.len() {
         for j in i + 1..wire.len() {

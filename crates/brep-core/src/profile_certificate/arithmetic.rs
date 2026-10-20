@@ -1,10 +1,88 @@
-//! Independent exact rational derivative sign check (degree at most five).
+//! Independent exact rational derivative sign check (source degree at most eight).
 //! In particular an even stationary zero is not rejected or sampled away.
 use super::*;
 use num_traits::Signed;
-type Poly = Vec<Q>;
+pub(super) type Poly = Vec<Q>;
+fn bernstein_product(a: &[Q], b: &[Q]) -> Vec<Q> {
+    let (n, m) = (a.len() - 1, b.len() - 1);
+    let cn: Vec<i64> = (0..=n).map(|i| choose(n, i)).collect();
+    let cm: Vec<i64> = (0..=m).map(|j| choose(m, j)).collect();
+    let cnm: Vec<i64> = (0..=n + m).map(|k| choose(n + m, k)).collect();
+    let mut out = vec![Q::zero(); n + m + 1];
+    for i in 0..=n {
+        if a[i].is_zero() {
+            continue;
+        }
+        let cni = cn[i];
+        for j in 0..=m {
+            if !b[j].is_zero() {
+                out[i + j] += &a[i]
+                    * &b[j]
+                    * Q::new((cni * cm[j]).into(), cnm[i + j].into());
+            }
+        }
+    }
+    out
+}
+pub(super) fn tangent_numerators(net: &[[Q; 3]]) -> [Vec<Q>; 2] {
+    let degree = Q::from_integer((net.len() - 1).into());
+    let h: [Vec<Q>; 3] = std::array::from_fn(|k| net.iter().map(|p| p[k].clone()).collect());
+    let d: [Vec<Q>; 3] = std::array::from_fn(|k| {
+        h[k].windows(2)
+            .map(|p| (&p[1] - &p[0]) * &degree)
+            .collect()
+    });
+    std::array::from_fn(|k| {
+        bernstein_product(&d[k], &h[2])
+            .into_iter()
+            .zip(bernstein_product(&h[k], &d[2]))
+            .map(|(a, b)| a - b)
+            .collect()
+    })
+}
+pub(super) fn no_stationary(net: &[[Q; 3]], axis: usize) -> bool {
+    let jets = tangent_numerators(net);
+    let d = &jets[axis];
+    d.iter().any(|q| !q.is_zero())
+        && (d.iter().all(|q| q >= &Q::zero()) || d.iter().all(|q| q <= &Q::zero()))
+}
 mod algebraic;
+pub(super) mod surface_expression;
+pub(super) mod ray_winding;
+pub(super) mod event_coordinates;
+pub(super) mod parameter_order;
+pub(super) mod branch_germ;
+pub(super) mod branch_neighbourhood;
+pub(super) mod branch_slice;
+pub(super) mod carrier_sides;
+pub(super) mod selected_winding;
+pub(super) mod selected_clearance;
+pub(super) mod shore_carrier;
+pub(super) mod chart_coverage;
+pub(super) mod bivariate;
+pub(super) mod algebraic_events;
+pub(super) mod shore_events;
+pub(super) mod algebraic_point_pullback;
 pub(super) use algebraic::endpoint_only;
+pub(super) use bivariate::{
+    endpoint_census, fiber, fiber_gcd, intersection_polynomials, nonlinear_relation,
+    rational_roots, resultant, roots_accounted, verify_relation,
+};
+
+pub(super) fn projectively_equal(a: &[[Q; 3]], b: &[[Q; 3]]) -> Result<bool> {
+    let aw = power(a, 2);
+    let bw = power(b, 2);
+    for axis in 0..2 {
+        let difference = sub(
+            &product(&power(a, axis), &bw),
+            &product(&power(b, axis), &aw),
+        );
+        if !difference.is_empty() {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
 fn trim(mut p: Poly) -> Poly {
     while p.last().is_some_and(Zero::is_zero) {
         p.pop();
@@ -18,19 +96,23 @@ fn choose(n: usize, k: usize) -> i64 {
     }
     v
 }
-fn power(net: &[[Q; 3]], axis: usize) -> Poly {
+pub(super) fn power(net: &[[Q; 3]], axis: usize) -> Poly {
     let n = net.len() - 1;
     let mut p = vec![Q::zero(); n + 1];
     for i in 0..=n {
+        if net[i][axis].is_zero() {
+            continue;
+        }
+        let cni = choose(n, i);
         for (k, value) in p.iter_mut().enumerate().skip(i) {
             let sign = if (k - i) % 2 == 0 { 1 } else { -1 };
             *value += &net[i][axis]
-                * Q::from_integer((sign * choose(n, i) * choose(n - i, k - i)).into());
+                * Q::from_integer((sign * cni * choose(n - i, k - i)).into());
         }
     }
     trim(p)
 }
-fn derivative(p: &[Q]) -> Poly {
+pub(super) fn derivative(p: &[Q]) -> Poly {
     trim(
         p.iter()
             .enumerate()
@@ -39,19 +121,24 @@ fn derivative(p: &[Q]) -> Poly {
             .collect(),
     )
 }
-fn product(a: &[Q], b: &[Q]) -> Poly {
+pub(super) fn product(a: &[Q], b: &[Q]) -> Poly {
     if a.is_empty() || b.is_empty() {
         return Vec::new();
     }
     let mut out = vec![Q::zero(); a.len() + b.len() - 1];
     for (i, x) in a.iter().enumerate() {
+        if x.is_zero() {
+            continue;
+        }
         for (j, y) in b.iter().enumerate() {
-            out[i + j] += x * y;
+            if !y.is_zero() {
+                out[i + j] += x * y;
+            }
         }
     }
     trim(out)
 }
-fn sub(a: &[Q], b: &[Q]) -> Poly {
+pub(super) fn sub(a: &[Q], b: &[Q]) -> Poly {
     let mut out = a.to_vec();
     out.resize(a.len().max(b.len()), Q::zero());
     for (i, x) in b.iter().enumerate() {
@@ -63,11 +150,12 @@ fn divide(a: &[Q], b: &[Q]) -> Result<(Poly, Poly)> {
     if b.is_empty() {
         return Err(refused("Exact certificate polynomial division by zero"));
     }
+    let b_last = b.last().unwrap();
     let mut r = trim(a.to_vec());
     let mut q = vec![Q::zero(); a.len().saturating_sub(b.len()) + 1];
     while r.len() >= b.len() {
         let k = r.len() - b.len();
-        let x = r.last().unwrap() / b.last().unwrap();
+        let x = r.last().unwrap() / b_last;
         q[k] = x.clone();
         for (i, y) in b.iter().enumerate() {
             r[k + i] -= &x * y;
@@ -83,14 +171,14 @@ fn divide(a: &[Q], b: &[Q]) -> Result<(Poly, Poly)> {
     }
     Ok((trim(q), r))
 }
-fn quotient(a: &[Q], b: &[Q]) -> Result<Poly> {
+pub(super) fn quotient(a: &[Q], b: &[Q]) -> Result<Poly> {
     let (q, r) = divide(a, b)?;
     if !r.is_empty() {
         return Err(refused("Nonexact certificate polynomial quotient"));
     }
     Ok(q)
 }
-fn gcd(a: &[Q], b: &[Q]) -> Result<Poly> {
+pub(super) fn gcd(a: &[Q], b: &[Q]) -> Result<Poly> {
     let (mut a, mut b) = (a.to_vec(), b.to_vec());
     while !b.is_empty() {
         let r = divide(&a, &b)?.1;
@@ -104,7 +192,7 @@ fn gcd(a: &[Q], b: &[Q]) -> Result<Poly> {
     }
     Ok(a)
 }
-fn at(p: &[Q], x: &Q) -> Q {
+pub(super) fn at(p: &[Q], x: &Q) -> Q {
     p.iter().rev().fold(Q::zero(), |v, c| v * x + c)
 }
 fn variation(chain: &[Poly], x: &Q) -> usize {
@@ -168,6 +256,58 @@ pub(super) fn polynomial_area(net: &[[Q; 3]], origin: &[Q; 2]) -> Q {
     })
 }
 
+/// Integrate an exact polynomial approximation to 1/W² and enclose its
+/// infinite geometric-series tail. This is a whole-interval proof, not sampled
+/// quadrature. Subdivision rapidly tightens rho for ill-conditioned weights.
+pub(super) fn rational_area_bounds(net: &[[Q; 3]], numerator_bound: Q) -> Result<(Q, Q)> {
+    let minimum = net.iter().map(|p| &p[2]).min().unwrap();
+    let maximum = net.iter().map(|p| &p[2]).max().unwrap();
+    if minimum <= &Q::zero() {
+        return Err(refused("Exact area weight is not positive"));
+    }
+    let two = Q::from_integer(2.into());
+    let middle = (minimum + maximum) / &two;
+    let rho = (maximum - minimum) / (maximum + minimum);
+    let x = power(net, 0);
+    let y = power(net, 1);
+    let numerator = sub(&product(&x, &derivative(&y)), &product(&y, &derivative(&x)));
+    let mut r = power(net, 2);
+    r[0] -= &middle;
+    for c in &mut r {
+        *c /= &middle;
+    }
+    let mut term = numerator;
+    let mut center = Q::zero();
+    const ORDER: usize = 8;
+    for k in 0..=ORDER {
+        if term
+            .iter()
+            .any(|c| c.numer().bits() > 131072 || c.denom().bits() > 131072)
+        {
+            return Err(refused("Exact area series arithmetic budget exhausted"));
+        }
+        let integral = term.iter().enumerate().fold(Q::zero(), |s, (i, c)| {
+            s + c / Q::from_integer((i + 1).into())
+        });
+        let signed = if k % 2 == 0 {
+            (k + 1) as i64
+        } else {
+            -((k + 1) as i64)
+        };
+        center += integral * Q::from_integer(signed.into());
+        if k < ORDER {
+            term = product(&term, &r);
+        }
+    }
+    let scale = two * &middle * &middle;
+    center /= &scale;
+    let tail = rho.pow((ORDER + 1) as i32)
+        * (Q::from_integer((ORDER + 2).into()) - Q::from_integer((ORDER + 1).into()) * &rho)
+        / (&Q::one() - &rho).pow(2);
+    let error = numerator_bound * tail / scale;
+    Ok((&center - &error, center + error))
+}
+
 pub(super) fn monotone(net: &[[Q; 3]], axis: usize) -> Result<bool> {
     let x = power(net, axis);
     let w = power(net, 2);
@@ -193,7 +333,7 @@ pub(super) fn monotone(net: &[[Q; 3]], axis: usize) -> Result<bool> {
         w = y;
         g = quotient(&g, &w)?;
         multiplicity += 1;
-        if multiplicity > 7 {
+        if multiplicity > 2 * (net.len() - 1) + 1 {
             return Err(refused("Exact certificate multiplicity budget exhausted"));
         }
     }

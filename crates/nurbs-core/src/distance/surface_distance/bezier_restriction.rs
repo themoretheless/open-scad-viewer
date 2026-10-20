@@ -31,6 +31,13 @@ pub(super) fn restrict(controls: &[[I;4]], span: [f64;2], domain: [f64;2], weigh
     if domain[1]==span[0] { return Ok(vec![controls[0]]); }
     let hi=I::point(domain[1]).sub(I::point(span[0]))?;
     let width=I::point(span[1]).sub(I::point(span[0]))?;
+    // With the original upper endpoint, the first left subdivision is the
+    // identity. Restrict the original coefficients directly on [lo, span.hi].
+    // No rounded parameter or extra interval arithmetic is needed at alpha=1.
+    if domain[1]==span[1] {
+        let lo=I::point(domain[0]).sub(I::point(span[0]))?;
+        return Ok(split(controls,lo.div(width)?.intersect(0.,1.)?,weights)?.1);
+    }
     let (left,_)=split(controls,hi.div(width)?.intersect(0.,1.)?,weights)?;
     if domain[0]==domain[1] { return Ok(vec![*left.last().unwrap()]); }
     if domain[0]==span[0] { return Ok(left); }
@@ -74,4 +81,54 @@ mod tests {
         assert!(!is_complete_span(2,&[0.,0.,0.,0.5,1.,1.,1.],2));
         assert!(!is_complete_span(2,&[0.,0.,0.,0.5,1.,1.,1.],3));
     }
+    #[test]
+    fn upper_endpoint_restriction_encloses_exact_dyadic_bernstein_coefficients() {
+        fn choose(n: usize,k: usize)->i128 {
+            if k>n { return 0; }
+            (0..k).fold(1,|v,j|v*(n-j) as i128/(j+1) as i128)
+        }
+        // B_i^n restricted to [m/8,1] has coefficient k equal to
+        // C(n-k,i-k) (m/8)^(i-k) (1-m/8)^(n-i), or zero for i<k.
+        // Through degree 13 these integer dyadic numerators are exact in f64.
+        for n in 0..=13 {
+            for i in 0..=n {
+                let c=(0..=n).map(|j|[I::point(if j==i {1.}else{0.}),
+                    I::point(0.),I::point(0.),I::point(1.)]).collect::<Vec<_>>();
+                for m in 1_i128..8 {
+                    let out=restrict(&c,[-3.,5.],[-3.+m as f64,5.],[1.,1.]).unwrap();
+                    assert_eq!(out.len(),n+1);
+                    for (k,h) in out.iter().enumerate() {
+                        let exact=if i<k {0.}else{
+                            let numerator=choose(n-k,i-k)*m.pow((i-k) as u32)
+                                *(8-m).pow((n-i) as u32);
+                            numerator as f64 / 8_i128.pow((n-k) as u32) as f64
+                        };
+                        assert!(h[0].lo<=exact && exact<=h[0].hi,
+                            "n={n} i={i} k={k} m={m}: {:?}, {exact}",h[0]);
+                        assert!(h[3].lo<=1. && h[3].hi>=1.);
+                    }
+                }
+            }
+        }
+    }
+    #[test]
+    fn upper_endpoint_restriction_is_no_wider_than_redundant_identity_split() {
+        for degree in [1,2,3,8,13] {
+            let controls=(0..=degree).map(|i|[
+                I::new(i as f64-7.25,i as f64-7.).unwrap(),
+                I::point(i as f64/16.),I::point(0.),I::new(0.5,1.).unwrap()
+            ]).collect::<Vec<_>>();
+            let span=[-3.,5.];let width=I::point(5.).sub(I::point(-3.)).unwrap();
+            let (old_left,_)=split(&controls,width.div(width).unwrap().intersect(0.,1.).unwrap(),[0.5,1.]).unwrap();
+            for endpoint in [-2.,0.,1.,4.] {
+                let alpha=I::point(endpoint).sub(I::point(-3.)).unwrap().div(width).unwrap().intersect(0.,1.).unwrap();
+                let old=split(&old_left,alpha,[0.5,1.]).unwrap().1;
+                let new=restrict(&controls,span,[endpoint,5.],[0.5,1.]).unwrap();
+                for (a,b) in new.iter().zip(old) {for axis in 0..4 {
+                    assert!(a[axis].lo>=b[axis].lo && a[axis].hi<=b[axis].hi);
+                }}
+            }
+        }
+    }
+
 }

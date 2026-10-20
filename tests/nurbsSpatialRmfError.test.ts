@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {callNurbsRust} from '../src/services/geometry/nurbs'
 import {bezierNurbsCurve} from '../src/services/nurbsConstructors'
@@ -152,7 +153,7 @@ it.each(['closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r','closed-s
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:file.includes('hollow')?2:4,subdivisionLevels:0}})
  if(!('nativeGeometry' in built))throw Error('Missing retained spatial RMF body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:file.startsWith('closed-rational-nonuniform-')?.4:.25})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  const faces=file.startsWith('open-')&&file.includes('hollow')?1010:file.startsWith('open-')?514:512
  expect(model.faces).toHaveLength(faces)
  if(file.startsWith('open-')&&file.includes('hollow'))expect(model.faces.slice(-2).map((f:{holes:unknown[]})=>f.holes.length)).toEqual([1,1])
@@ -185,7 +186,7 @@ it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!('nativeGeometry' in built))throw Error('Missing retained hollow spatial RMF body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.25})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  const holes=file.includes('multiple-holes')?3:1
  expect(model.faces).toHaveLength(1024)
  expect(model.shells).toHaveLength(holes+1)

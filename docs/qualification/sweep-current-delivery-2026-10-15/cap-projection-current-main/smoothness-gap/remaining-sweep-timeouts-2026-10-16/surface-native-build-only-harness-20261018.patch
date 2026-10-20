@@ -1,0 +1,85 @@
+--- /private/tmp/osv-sweep-common-source-v11-20261018/scripts/check-sweep-miter-matrix-browser.mjs
++++ /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/sweep-current-delivery-2026-10-15/cap-projection-current-main/smoothness-gap/remaining-sweep-timeouts-2026-10-16/check-v11-surface-native-build-matrix-20261018.mjs
+@@ -1,16 +1,16 @@
+-import {closedFrenetStationSources} from './closed-frenet-station-sources.mjs'
+-import {closedCorrectedRegularBodySources,correctedRegularBodySources,sweepBodyBoundarySources} from './sweep-body-matrix-sources.mjs'
+-import {spatialRmfProfileG2BodySources} from './spatial-rmf-profile-g2-sources.mjs'
+-import {stationFrameSources} from './station-frame-matrix-sources.mjs'
+-import {correctedC2BodySources} from './corrected-c2-sources.mjs'
++import {closedFrenetStationSources} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/closed-frenet-station-sources.mjs'
++import {closedCorrectedRegularBodySources,correctedRegularBodySources,sweepBodyBoundarySources} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/sweep-body-matrix-sources.mjs'
++import {spatialRmfProfileG2BodySources} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/spatial-rmf-profile-g2-sources.mjs'
++import {stationFrameSources} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/station-frame-matrix-sources.mjs'
++import {correctedC2BodySources} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/corrected-c2-sources.mjs'
+ import assert from 'node:assert/strict'
+ import {createHash} from 'node:crypto'
+ import {createServer} from 'node:http'
+ import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises'
+ import path from 'node:path'
+-import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
+-import {createNativeCancelProbe} from './sweep-native-cancel-probe.mjs'
+-import {traceWorkerWasmFingerprint} from './worker-wasm-fingerprint.mjs'
++import {loadQualificationPlaywrightPackage} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/qualificationPlaywrightPackage.mjs'
++import {createNativeCancelProbe} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/sweep-native-cancel-probe.mjs'
++import {traceWorkerWasmFingerprint} from 'file:///private/tmp/osv-sweep-common-source-v11-20261018/scripts/worker-wasm-fingerprint.mjs'
+ 
+ const dist=path.resolve(process.argv.find(a=>a.startsWith('--dist-directory='))?.slice('--dist-directory='.length)??'dist')
+ const output=path.resolve(process.argv[2]??'docs/qualification/sweep-ui-matrix-2026-10-03')
+@@ -28,6 +28,7 @@
+ const stationFrameMatrixMode=process.argv.includes('--station-frame-matrix')
+ const progressiveStationMatrixMode=process.argv.includes('--progressive-station-matrix')||stationFrameMatrixMode||closedFrenetStationMatrixMode||periodicFixedNormalStationMatrixMode
+ const surfaceMode=process.argv.includes('--surface')
++const surfaceNativeBuildOnly=process.argv.includes('--surface-native-build-only')
+ const profileG2BodyMatrixMode=process.argv.includes('--profile-g2-body-matrix')
+ const correctedC2BodyMatrixMode=process.argv.includes('--corrected-c2-body-matrix')
+ const bodyBoundaryMode=process.argv.includes('--body-boundary')||profileG2BodyMatrixMode||correctedC2BodyMatrixMode
+@@ -48,6 +49,7 @@
+ assert.ok(['auto','metal','swiftshader'].includes(gpuBackend),'Unknown requested GPU backend')
+ const evidenceOnly=process.argv.includes('--evidence-only')
+ assert.ok(!evidenceOnly||surfaceMode&&!headed,'Evidence-only requires a headless surface run')
++assert.ok(surfaceNativeBuildOnly&&surfaceMode&&nativeRunningCancel&&!headed&&!evidenceOnly,'Supplement requires actual running native Surface builds and headless full rendering')
+ const sources=(progressiveStationMatrixMode?['oblique-rmf-annular-body-station-g2.r','straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r']:bodyBoundaryMode?(profileG2BodyMatrixMode?[...spatialRmfProfileG2BodySources]:[...sweepBodyBoundarySources]):surfaceMode?['closed-g1-arc-length-fixed-progressive-sweep.r','closed-antipodal-spatial-rmf-progressive-sweep.r','closed-spatial-rmf-affine-certified.r','closed-conic-direction-frame-c1-progressive-sweep.r','closed-arc-length-guided-frame-c2-progressive-sweep.r','closed-arc-length-guided-source-bound-progressive-sweep.r','closed-planar-guided-frame-c2-progressive-sweep.r','closed-planar-path-frame-c2-progressive-sweep.r','corrected-frenet-sweep.r','corrected-frenet-antiparallel-progressive-sweep.r','authored-closed-cartesian-c2-progressive-sweep.r','authored-closed-nonclamped-c2-progressive-sweep.r','mixed-knots-curved-frenet-progressive-sweep.r','authored-closed-piecewise-c2-progressive-sweep.r','decomposed-profile-g1-progressive-sweep.r','decomposed-profile-g2-progressive-sweep.r','closed-authored-arc-length-progressive-sweep.r','closed-authored-source-bound-progressive-sweep.r','authored-closed-projective-c2-progressive-sweep.r','authored-closed-multispan-c2-progressive-sweep.r','authored-closed-c2-progressive-sweep.r','nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-planar-rmf-progressive-sweep.r','arc-length-curved-contact-progressive-sweep.r','arc-length-curved-guided-progressive-sweep.r','arc-length-curved-frenet-progressive-sweep.r','arc-length-curved-fixed-normal-progressive-sweep.r','arc-length-curved-fixed-progressive-sweep.r','arc-length-curved-authored-progressive-sweep.r','arc-length-authored-progressive-sweep.r','arc-length-guided-progressive-sweep.r','arc-length-progressive-sweep.r','arc-length-affine-progressive-sweep.r','planar-rmf-progressive-sweep.r','oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','authored-progressive-sweep.r','fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','guided-progressive-sweep.r','contact-progressive-sweep.r','closed-guided-progressive-sweep.r','closed-contact-progressive-sweep.r','closed-fixed-progressive-sweep.r','closed-arc-length-fixed-progressive-sweep.r','periodic-arc-length-fixed-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','closed-fixed-normal-full-turn-progressive-sweep.r','closed-planar-rmf-full-turn-progressive-sweep.r','closed-frenet-progressive-sweep.r']:[
+  'sharp-profile-nonuniform-station-g2-miter.r',
+  'direct-miter-circle-owned-boundary.r',
+@@ -155,6 +157,7 @@
+ const gpuArgs=gpuBackend==='metal'?['--use-angle=metal','--enable-features=WebGPU']
+  :gpuBackend==='swiftshader'?['--use-webgpu-adapter=swiftshader']:[]
+ const browser=await playwright.chromium.launch({headless:!headed,args:['--enable-unsafe-webgpu',...gpuArgs]})
++report.supplementalHarness={kind:'surface-native-build-only',runnerSha256:sha(await readFile(new URL(import.meta.url))),originalRunnerSha256:'d3e2e35d3ec86af6ba2f921b7c0fa848748f19170bdd0779f507dd4d06559a87',scope:'Native Surface build cancellation and source replacement only; native Solid is inapplicable and existing Surface Solid refusal controls remain.'}
+ report.browser=browser.version()
+ report.headed=headed
+ try {
+@@ -528,7 +531,7 @@
+    await save()
+    await page.screenshot({path:path.join(directory,'preview.png'),fullPage:true})
+    if(nativeCancel){
+-    assert.ok(!surfaceMode,'Native cancellation probe requires a retained body source')
++    assert.ok(!surfaceMode||surfaceNativeBuildOnly,'Native Surface builds require the explicit supplement')
+     for(const buildAction of ['cancel','source-change']){
+     const probe=await createNativeCancelProbe(browser,wasm)
+     try {
+@@ -539,7 +542,7 @@
+      // These authored fixtures finish tiny-budget requests too quickly.
+      // Their independently qualified 65-station requests retain the valid
+      // error budget and produce certified 256/258-face Solids.
+-     const busySource=progressiveStationMatrixMode?source+'\n// Observe the original progressive station geometry in a new revision.\n':bodyBoundaryMode
++     const busySource=surfaceNativeBuildOnly?source+'\n// Observe original native surface work in a new revision.\n':progressiveStationMatrixMode?source+'\n// Observe the original progressive station geometry in a new revision.\n':bodyBoundaryMode
+       ?correctedC2BodyMatrixMode
+        ?source.replace(/initial_sections:\s*3\b/, 'initial_sections: 65')
+        :file==='periodic-corrected-frenet-nonplanar-body-boundary.r'
+@@ -591,13 +594,14 @@
+      await page.waitForFunction(()=>!document.body.innerText.includes('Отменить сборку'))
+      assert.equal(await page.getByTestId('sweep-body-final-evidence').count(),0)
+      assert.equal(await page.getByTestId('sweep-final-evidence').count(),0)
++     if(surfaceNativeBuildOnly)assert.equal(await page.getByTestId('sweep-patch-final-evidence').count(),0,'Native surface cancellation must clear final patch certificate presentation')
+      entry.assertions.push({case:buildAction==='cancel'?'native-build-cancellation':'native-build-source-change',status:'passed',sourceSha256:sha(busySource),nativeStack,observationToCancelInitiationMs,terminateCalledAfterMs,workerDestroyedAfterMs,
+       scope:nativeRunningCancel?'Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included':'Actual geometry abi_request paused by Debugger; Worker destruction, not unconstrained latency'})
+     }finally{await probe.close()}
+     await load(source);await build();await assertBuilt()
+     entry.assertions.push({case:buildAction==='cancel'?'native-build-cancel-restoration':'native-build-source-change-restoration',status:'passed'})
+     }
+-    for(const action of ['cancel','source-change']){
++    if(!surfaceNativeBuildOnly)for(const action of ['cancel','source-change']){
+      const exactSource=correctedC2BodyMatrixMode
+       ?source.replace(/initial_sections:\s*3\b/, 'initial_sections: 65')
+       :bodyBoundaryMode&&['arc-length-curved-frenet-body-boundary.r','arc-length-curved-fixed-normal-body-boundary.r','arc-length-curved-fixed-body-boundary.r'].includes(file)

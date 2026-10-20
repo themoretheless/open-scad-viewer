@@ -267,6 +267,193 @@ pub fn anchor(mut pose: [f32; 16]) -> [f32; 16] {
     pose
 }
 
+/// 3D point-to-point measurement in XR space with true millimeter conversion.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VrMeasurement {
+    pub point_a: [f32; 3],
+    pub point_b: [f32; 3],
+    pub delta_m: [f32; 3],
+    pub distance_m: f32,
+    pub cad_distance_mm: f64,
+}
+
+/// Computes Euclidean distance and axis deltas between two picked XR points.
+/// `scene_scale_m_per_mm` converts VR meters back into CAD millimeters (use `0.001` for `TrueScaleMmToMeters`).
+pub fn measure_vr_distance(
+    point_a: [f32; 3],
+    point_b: [f32; 3],
+    scene_scale_m_per_mm: f64,
+) -> Option<VrMeasurement> {
+    if !point_a
+        .iter()
+        .chain(point_b.iter())
+        .all(|v| v.is_finite())
+        || !scene_scale_m_per_mm.is_finite()
+        || scene_scale_m_per_mm <= 0.0
+    {
+        return None;
+    }
+    let dx = point_b[0] - point_a[0];
+    let dy = point_b[1] - point_a[1];
+    let dz = point_b[2] - point_a[2];
+    let dist_m = (dx * dx + dy * dy + dz * dz).sqrt();
+    Some(VrMeasurement {
+        point_a,
+        point_b,
+        delta_m: [dx, dy, dz],
+        distance_m: dist_m,
+        cad_distance_mm: (dist_m as f64) / scene_scale_m_per_mm,
+    })
+}
+
+/// Computes the angle in degrees ($[0, 180]$) at `vertex` between rays to `point_a` and `point_b`.
+pub fn measure_angle_deg(point_a: [f32; 3], vertex: [f32; 3], point_b: [f32; 3]) -> Option<f32> {
+    let u = [
+        point_a[0] - vertex[0],
+        point_a[1] - vertex[1],
+        point_a[2] - vertex[2],
+    ];
+    let v = [
+        point_b[0] - vertex[0],
+        point_b[1] - vertex[1],
+        point_b[2] - vertex[2],
+    ];
+    let lu = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
+    let lv = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if !lu.is_finite() || !lv.is_finite() || lu <= 1e-7 || lv <= 1e-7 {
+        return None;
+    }
+    let cos_a = ((u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (lu * lv)).clamp(-1.0, 1.0);
+    Some(cos_a.acos().to_degrees())
+}
+
+/// Clips a VR scene against a section plane `plane = [nx, ny, nz, d]`, keeping triangles whose
+/// centroid satisfies $n_x x + n_y y + n_z z + d \le 0$.
+pub fn clip_scene_by_plane(scene: &[PreparedMesh], plane: [f32; 4]) -> Vec<PreparedMesh> {
+    if !plane.iter().all(|v| v.is_finite()) {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(scene.len());
+    for mesh in scene {
+        let mut kept_indices = Vec::new();
+        for tri in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (
+                (tri[0] as usize) * 3,
+                (tri[1] as usize) * 3,
+                (tri[2] as usize) * 3,
+            );
+            if i0 + 2 >= mesh.positions.len()
+                || i1 + 2 >= mesh.positions.len()
+                || i2 + 2 >= mesh.positions.len()
+            {
+                continue;
+            }
+            let cx = (mesh.positions[i0] + mesh.positions[i1] + mesh.positions[i2]) / 3.0;
+            let cy =
+                (mesh.positions[i0 + 1] + mesh.positions[i1 + 1] + mesh.positions[i2 + 1]) / 3.0;
+            let cz =
+                (mesh.positions[i0 + 2] + mesh.positions[i1 + 2] + mesh.positions[i2 + 2]) / 3.0;
+            let signed_dist = plane[0] * cx + plane[1] * cy + plane[2] * cz + plane[3];
+            if signed_dist <= 0.0 {
+                kept_indices.extend_from_slice(tri);
+            }
+        }
+        if !kept_indices.is_empty() {
+            out.push(PreparedMesh {
+                positions: mesh.positions.clone(),
+                indices: kept_indices,
+                color: mesh.color,
+            });
+        }
+    }
+    out
+}
+
+/// Generates an interactive exploded VR assembly view by translating each mesh radially outward
+/// from the overall scene centroid by `explosion_factor` ($\ge 0$).
+pub fn vr_exploded_view(scene: &[PreparedMesh], explosion_factor: f32) -> Vec<PreparedMesh> {
+    if scene.is_empty() || !explosion_factor.is_finite() || explosion_factor <= 0.0 {
+        return scene
+            .iter()
+            .map(|m| PreparedMesh {
+                positions: m.positions.clone(),
+                indices: m.indices.clone(),
+                color: m.color,
+            })
+            .collect();
+    }
+    let mut part_centers = Vec::with_capacity(scene.len());
+    let mut global_sum = [0.0_f64; 3];
+    let mut total_verts = 0usize;
+    for mesh in scene {
+        let mut sum = [0.0_f64; 3];
+        let v_count = mesh.positions.len() / 3;
+        for p in mesh.positions.chunks_exact(3) {
+            sum[0] += p[0] as f64;
+            sum[1] += p[1] as f64;
+            sum[2] += p[2] as f64;
+        }
+        global_sum[0] += sum[0];
+        global_sum[1] += sum[1];
+        global_sum[2] += sum[2];
+        total_verts += v_count;
+        if v_count > 0 {
+            part_centers.push([
+                (sum[0] / v_count as f64) as f32,
+                (sum[1] / v_count as f64) as f32,
+                (sum[2] / v_count as f64) as f32,
+            ]);
+        } else {
+            part_centers.push([0.0; 3]);
+        }
+    }
+    let gc = if total_verts > 0 {
+        [
+            (global_sum[0] / total_verts as f64) as f32,
+            (global_sum[1] / total_verts as f64) as f32,
+            (global_sum[2] / total_verts as f64) as f32,
+        ]
+    } else {
+        [0.0; 3]
+    };
+    scene
+        .iter()
+        .zip(part_centers)
+        .map(|(mesh, pc)| {
+            let offset = [
+                (pc[0] - gc[0]) * explosion_factor,
+                (pc[1] - gc[1]) * explosion_factor,
+                (pc[2] - gc[2]) * explosion_factor,
+            ];
+            let mut positions = mesh.positions.clone();
+            for p in positions.chunks_exact_mut(3) {
+                p[0] += offset[0];
+                p[1] += offset[1];
+                p[2] += offset[2];
+            }
+            PreparedMesh {
+                positions,
+                indices: mesh.indices.clone(),
+                color: mesh.color,
+            }
+        })
+        .collect()
+}
+
+/// Computes an ergonomic grab/turntable anchor point (`[x, y, z]` in meters) at `distance_m`
+/// in front of the viewer pose and `vertical_drop_m` below eye level.
+pub fn compute_ergonomic_grab_anchor(
+    head_pose: [f32; 16],
+    distance_m: f32,
+    vertical_drop_m: f32,
+) -> [f32; 3] {
+    [
+        head_pose[12] - head_pose[8] * distance_m,
+        head_pose[13] - head_pose[9] * distance_m - vertical_drop_m,
+        head_pose[14] - head_pose[10] * distance_m,
+    ]
+}
+
 // Compact little-endian transport, shared by native tests and the WASM host.
 // Input: mesh count; each mesh: vertex-float count, index count, matrix16,
 // color4, interleaved vertices, indices. Output: total byte length, mesh count;
@@ -443,4 +630,30 @@ mod tests {
         assert_eq!(hit.triangle_index, 0);
         assert!((hit.distance_m - 1.0).abs() < 1e-5);
     }
+
+    #[test]
+    fn vr_measurements_section_clip_and_exploded_view() {
+        let m = measure_vr_distance([0.0, 0.0, 0.0], [0.03, 0.04, 0.0], 0.001).unwrap();
+        assert!((m.distance_m - 0.05).abs() < 1e-6);
+        assert!((m.cad_distance_mm - 50.0).abs() < 1e-4);
+
+        let deg = measure_angle_deg([1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]).unwrap();
+        assert!((deg - 90.0).abs() < 1e-5);
+
+        let scene = prepare_scene(vec![mesh(0.), mesh(200.)]).unwrap();
+        let clipped = clip_scene_by_plane(&scene, [1.0, 0.0, 0.0, 0.0]);
+        assert_eq!(clipped.len(), 1);
+
+        let exploded = vr_exploded_view(&scene, 0.5);
+        assert!(exploded[1].positions[0] > scene[1].positions[0]);
+        assert!(exploded[0].positions[0] < scene[0].positions[0]);
+
+        let pose = [
+            1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 1.6, 0., 1.,
+        ];
+        let grab = compute_ergonomic_grab_anchor(pose, 0.55, 0.25);
+        assert!((grab[1] - 1.35).abs() < 1e-5);
+        assert!((grab[2] + 0.55).abs() < 1e-5);
+    }
 }
+

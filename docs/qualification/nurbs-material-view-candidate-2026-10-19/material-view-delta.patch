@@ -1,0 +1,404 @@
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_relative_winding.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_relative_winding.rs
+@@ -187,6 +187,264 @@
+     o.deltas = d;
+     Ok(o)
+ }
++
++/// A batch-local, source-verified census. No caller can construct its prepared data.
++/// Ordinary returned certificates still replay through the independent legacy path.
++pub(super) struct RelativeWindingView {
++    owner: Arc<OwnedPeriodicWireJumps>,
++    limits: ParameterOrderLimits,
++    chart: [[Q; 2]; 2],
++    periods: [Q; 2],
++    wrapped: [bool; 2],
++    source_wire: Vec<Option<(usize, bool)>>,
++    sources: Vec<usize>,
++    wire_count: usize,
++    prepared: Vec<(
++        Vec<[Q; 3]>,
++        [Q; 2],
++        [arithmetic::branch_neighbourhood::ParameterValue; 2],
++    )>,
++}
++impl RelativeWindingView {
++    pub(super) fn new(
++        owner: Arc<OwnedPeriodicWireJumps>,
++        limits: ParameterOrderLimits,
++    ) -> Result<Self> {
++        if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
++            return Err(refused("Invalid batch winding parameter allowance"));
++        }
++        owner.reverify_source()?;
++        let graph = owner.owner().owner();
++        let cover = graph.owner().owner().pieces();
++        let wires = graph.seam_contacts().embedding().wires();
++        let mut source_wire = vec![None; cover.sources().len()];
++        for (wire, uses) in wires.source_uses().iter().enumerate() {
++            for u in uses {
++                if source_wire[u.source].replace((wire, u.reversed)).is_some() {
++                    return Err(refused(
++                        "Relative winding source occurs in multiple authored wires",
++                    ));
++                }
++            }
++        }
++        let original = cover
++            .sources()
++            .iter()
++            .map(cells)
++            .collect::<Result<Vec<_>>>()?;
++        let mut prepared = Vec::new();
++        for p in cover.pieces() {
++            let cell = &original[p.source][p.cell];
++            let shift = [
++                decode_ratio(&p.translation[0])?,
++                decode_ratio(&p.translation[1])?,
++            ];
++            let net = cell
++                .net
++                .iter()
++                .map(|v| {
++                    [
++                        &v[0] + &shift[0] * &v[2],
++                        &v[1] + &shift[1] * &v[2],
++                        v[2].clone(),
++                    ]
++                })
++                .collect::<Vec<_>>();
++            let bound = |i: usize| -> Result<arithmetic::branch_neighbourhood::ParameterValue> {
++                let p = &cover.cuts()[p.source][p.cuts[i]].value;
++                Ok(arithmetic::branch_neighbourhood::ParameterValue {
++                    primitive: decode_polynomial(&p.primitive)?,
++                    value: decode_polynomial(&p.parameter)?,
++                    interval: [decode_ratio(&p.interval[0])?, decode_ratio(&p.interval[1])?],
++                })
++            };
++            prepared.push((net, cell.domain.clone(), [bound(0)?, bound(1)?]));
++        }
++
++        let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
++        let periods = chart.clone().map(|d| d[1].clone() - &d[0]);
++        let wrapped = cover.wrapped();
++        let sources = cover.pieces().iter().map(|p| p.source).collect();
++        let wire_count = wires.wires().len();
++        Ok(Self {
++            owner,
++            limits,
++            chart,
++            periods,
++            wrapped,
++            source_wire,
++            sources,
++            wire_count,
++            prepared,
++        })
++    }
++    pub(super) fn query(
++        &self,
++        path: &[[ExactRatio; 2]],
++        max_work: usize,
++    ) -> Result<OwnedPeriodicRelativeWinding> {
++        if !(2..=4096).contains(&path.len())
++            || !(1..=1000000).contains(&max_work)
++            || (path.len() - 1)
++                .checked_mul(self.prepared.len())
++                .is_none_or(|n| n > max_work)
++        {
++            return Err(refused(
++                "Complete batch winding crossing census exceeds allowance",
++            ));
++        }
++        let decoded = path
++            .iter()
++            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
++            .collect::<Result<Vec<_>>>()?;
++        for p in &decoded {
++            for axis in 0..2 {
++                if p[axis] <= self.chart[axis][0] || p[axis] >= self.chart[axis][1] {
++                    return Err(refused(
++                        "Relative winding path must stay strictly inside the original chart",
++                    ));
++                }
++            }
++        }
++        let (crossings, deltas) = self.compute(&decoded)?;
++        Ok(OwnedPeriodicRelativeWinding {
++            owner: self.owner.clone(),
++            path: path.to_vec(),
++            limits: self.limits,
++            max_work,
++            crossings,
++            deltas,
++        })
++    }
++    /// Closed geometry clearance against ALL authored pieces, even zero-weight
++    /// operands. This does not itself assign a material value to a shore point.
++    pub(super) fn clear(&self, endpoints: &[[ExactRatio; 2]; 2], max_work: usize) -> Result<bool> {
++        use num_traits::ToPrimitive;
++        if !(1..=1000000).contains(&max_work) {
++            return Err(refused("Invalid all-source clearance work allowance"));
++        }
++        let points = endpoints
++            .iter()
++            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
++            .collect::<Result<Vec<_>>>()?;
++        for p in &points {
++            for axis in 0..2 {
++                if p[axis] < self.chart[axis][0] || p[axis] > self.chart[axis][1] {
++                    return Err(refused(
++                        "All-source clearance leg escaped the closed original chart",
++                    ));
++                }
++            }
++        }
++        let ranges: [[BigInt; 2]; 2] = std::array::from_fn(|axis| {
++            if self.wrapped[axis] {
++                let lo = points[0][axis].clone().min(points[1][axis].clone());
++                let hi = points[0][axis].clone().max(points[1][axis].clone());
++                [
++                    ((lo - &self.chart[axis][1]) / &self.periods[axis])
++                        .ceil()
++                        .to_integer(),
++                    ((hi - &self.chart[axis][0]) / &self.periods[axis])
++                        .floor()
++                        .to_integer(),
++                ]
++            } else {
++                [BigInt::from(0), BigInt::from(0)]
++            }
++        });
++        let mut required = self.prepared.len();
++        for r in &ranges {
++            let count = (&r[1] - &r[0] + BigInt::from(1))
++                .to_usize()
++                .filter(|n| *n > 0)
++                .ok_or_else(|| refused("All-source lattice count exceeds allowance"))?;
++            required = required
++                .checked_mul(count)
++                .ok_or_else(|| refused("All-source lattice count overflow"))?;
++        }
++        if required > max_work {
++            return Err(refused(
++                "Complete all-source clearance census exceeds allowance",
++            ));
++        }
++        for (net, domain, bounds) in &self.prepared {
++            let mut u = ranges[0][0].clone();
++            while u <= ranges[0][1] {
++                let mut v = ranges[1][0].clone();
++                while v <= ranges[1][1] {
++                    let shift = [
++                        Q::from_integer(u.clone()) * &self.periods[0],
++                        Q::from_integer(v.clone()) * &self.periods[1],
++                    ];
++                    let translated = net
++                        .iter()
++                        .map(|p| {
++                            [
++                                &p[0] + &shift[0] * &p[2],
++                                &p[1] + &shift[1] * &p[2],
++                                p[2].clone(),
++                            ]
++                        })
++                        .collect::<Vec<_>>();
++                    if !arithmetic::selected_clearance::clear(
++                        &translated,
++                        domain,
++                        bounds,
++                        &[points[0].clone(), points[1].clone()],
++                        self.limits.max_refinements,
++                        self.limits.max_resultant_size,
++                    )? {
++                        return Ok(false);
++                    }
++                    v += BigInt::from(1);
++                }
++                u += BigInt::from(1);
++            }
++        }
++        Ok(true)
++    }
++    fn compute(&self, path: &[[Q; 2]]) -> Result<(Vec<OriginalPeriodicPathCrossing>, Vec<String>)> {
++        let mut totals = vec![BigInt::from(0); self.wire_count];
++        let mut crossings = Vec::new();
++        for (segment, points) in path.windows(2).enumerate() {
++            for (piece, source) in self.sources.iter().enumerate() {
++                let (wire, reversed) = self.source_wire[*source]
++                    .ok_or_else(|| refused("Relative winding has no authored wire"))?;
++                let (net, domain, bounds) = &self.prepared[piece];
++                let value = arithmetic::selected_winding::segment(
++                    net,
++                    domain,
++                    bounds,
++                    &[points[0].clone(), points[1].clone()],
++                    self.limits.max_refinements,
++                    self.limits.max_resultant_size,
++                )?
++                .ok_or_else(|| {
++                    refused("Relative winding path vertex lies on an original selected source")
++                })?;
++                let delta = if reversed {
++                    value
++                        .checked_neg()
++                        .ok_or_else(|| refused("Relative winding sign overflow"))?
++                } else {
++                    value
++                };
++                totals[wire] += BigInt::from(delta);
++                crossings.push(OriginalPeriodicPathCrossing {
++                    segment,
++                    piece,
++                    source: *source,
++                    wire,
++                    delta,
++                });
++            }
++        }
++        Ok((
++            crossings,
++            totals.into_iter().map(|v| v.to_string()).collect(),
++        ))
++    }
++}
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -221,6 +479,34 @@
+         )
+         .unwrap();
+         assert_eq!(o.deltas(), &["2", "-1"]);
++        let view =
++            RelativeWindingView::new(owner.clone(), ParameterOrderLimits::default()).unwrap();
++        for points in [path.clone(), [path[1].clone(), path[0].clone()]] {
++            let batched = view.query(&points, 100).unwrap();
++            let independent = own_periodic_relative_winding(
++                owner.clone(),
++                &points,
++                ParameterOrderLimits::default(),
++                100,
++            )
++            .unwrap();
++            assert_eq!(batched.crossings(), independent.crossings());
++            assert_eq!(batched.deltas(), independent.deltas());
++            batched.reverify_source().unwrap();
++        }
++        assert!(view.query(&path, 1).is_err());
++        assert!(!view.clear(&path, 100).unwrap());
++        assert!(view.clear(&[p("0", "1/4"), p("1/2", "1/4")], 100).unwrap());
++        assert!(!view.clear(&[p("0", "1/2"), p("1/2", "1/4")], 100).unwrap());
++        assert!(view.clear(&path, 1).is_err());
++        assert!(view.clear(&[p("-1", "1/4"), path[0].clone()], 100).is_err());
++
++        assert!(view.query(&[p("0", "1/4"), path[1].clone()], 100).is_err());
++        assert!(
++            view.query(&[path[0].clone(), p("1/2", "1/2")], 100)
++                .is_err()
++        );
++
+         o.reverify_source().unwrap();
+         let reversed = own_periodic_relative_winding(
+             owner.clone(),
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_material.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_material.rs
+@@ -263,6 +263,75 @@
+     o.inside = i;
+     o.selected = s;
+     Ok(o)
++}
++
++/// Immutable batch-local replay authority; callers cannot supply cached deltas.
++pub(super) struct MaterialView {
++    rule: Arc<OwnedPeriodicMaterialRule>,
++    winding: super::periodic_relative_winding::RelativeWindingView,
++}
++impl MaterialView {
++    pub(super) fn new(
++        rule: Arc<OwnedPeriodicMaterialRule>,
++        limits: ParameterOrderLimits,
++    ) -> Result<Self> {
++        rule.reverify_source()?;
++        let winding = super::periodic_relative_winding::RelativeWindingView::new(
++            rule.base.owner().clone(),
++            limits,
++        )?;
++        Ok(Self { rule, winding })
++    }
++    pub(super) fn sample(
++        &self,
++        path: &[[ExactRatio; 2]],
++        max_work: usize,
++    ) -> Result<OwnedPeriodicMaterialSample> {
++        let query = Arc::new(self.winding.query(path, max_work)?);
++        for axis in 0..2 {
++            if decode_ratio(&self.rule.base.path()[0][axis])?
++                != decode_ratio(&query.path()[0][axis])?
++            {
++                return Err(refused(
++                    "Material path does not start at the declared base point",
++                ));
++            }
++        }
++        let (windings, inside, selected) = self.labels(&query)?;
++        Ok(OwnedPeriodicMaterialSample {
++            rule: self.rule.clone(),
++            query,
++            windings,
++            inside,
++            selected,
++        })
++    }
++    fn labels(
++        &self,
++        query: &OwnedPeriodicRelativeWinding,
++    ) -> Result<(Vec<String>, Vec<bool>, bool)> {
++        let rule = &self.rule;
++        let delta = query
++            .deltas()
++            .iter()
++            .map(|v| integer(v))
++            .collect::<Result<Vec<_>>>()?;
++        let mut windings = Vec::new();
++        let mut inside = Vec::new();
++        for p in &rule.operands {
++            if p.wire_weights.len() != delta.len() {
++                return Err(refused("Material query lost original wire columns"));
++            }
++            let mut value = integer(&p.base_winding)?;
++            for (weight, d) in p.wire_weights.iter().zip(&delta) {
++                value += BigInt::from(*weight) * d;
++            }
++            inside.push(filled(&value, p.fill));
++            windings.push(value.to_string());
++        }
++        let selected = evaluate(&rule.program, &inside)?;
++        Ok((windings, inside, selected))
++    }
+ }
+ #[cfg(test)]
+ mod tests {
+@@ -394,6 +463,23 @@
+         assert_eq!(upper.windings(), &["1", "0"]);
+         assert!(upper.selected());
+         upper.reverify_source().unwrap();
++        let batch = MaterialView::new(rule.clone(), ParameterOrderLimits::default()).unwrap();
++        for y in ["1/8", "1/2", "7/8"] {
++            let sample = batch.sample(&[a.clone(), point("1/2", y)], 100).unwrap();
++            let independent = own_periodic_material_sample(rule.clone(), query(y)).unwrap();
++            assert_eq!(sample.windings(), independent.windings());
++            assert_eq!(sample.operand_inside(), independent.operand_inside());
++            assert_eq!(sample.selected(), independent.selected());
++            sample.reverify_source().unwrap();
++        }
++        assert!(
++            batch
++                .sample(&[point("1/2", "1/2"), point("1/2", "7/8")], 100)
++                .is_err()
++        );
++        assert!(batch.sample(&[a.clone(), point("0", "1/2")], 100).is_err());
++        assert!(batch.sample(&[a.clone(), point("1/2", "1/2")], 1).is_err());
++
+         let band = Arc::new(
+             own_periodic_material_rule(
+                 base.clone(),

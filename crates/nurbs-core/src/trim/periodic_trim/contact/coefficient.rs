@@ -4,7 +4,7 @@ use crate::{
     curve::Curve,
     distance_bounds::{Interval as I, box_distance},
 };
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PoweredBendCoefficient {
     /// The reduced denominator of m/k, also of the angular radial exponent.
     pub power: usize,

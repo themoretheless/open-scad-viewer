@@ -5,10 +5,12 @@
 //! surfaces: seed pairs come from sampling [`super::surface_offset::offset`]
 //! results, then a least-norm Newton predictor-corrector marches the exact
 //! implicit offset map `A(u,v) + r·sa·nA − B(s,t) − r·sb·nB = 0` with a
-//! curvature-adaptive step. Cross sections are exact rational circular arcs
-//! (rolling-ball / variable / chordal), G2 quintic Bézier sections, or
+//! curvature-adaptive step. Cross sections are rational circular proposals with original coordinate-plane
+//! contact constraints (rolling-ball / variable / chordal), G2 quintic Bézier sections, or
 //! tangent cubic hold-line sections, skinned by
-//! [`crate::natural_loft::interpolate`].
+//! [`crate::natural_loft::interpolate`]. Variable G2 proposals on curved supports
+//! use bounded quintic station interpolation with matched UV proposals. Neither
+//! interpolation method certifies contact, radius or whole-seam G2.
 //!
 //! Graceful failure: geometric breakdowns never panic and never abort with a
 //! bare error; they return a [`FilletReport`] whose `failure` field carries
@@ -20,10 +22,12 @@ use crate::{
     foundation::guards::{Budget, require_finite_at, require_finite_f64, require_finite_point},
     natural_loft,
     offset::surface_offset::{offset, offset_validity},
-    primitives,
     surface::Surface,
 };
 use math_core::{dot, norm};
+mod station_hermite;
+mod station_radius;
+pub use station_radius::{StationRadiusReport, linear_at_stations};
 
 /// Seed sampling grid side per offset surface.
 const SEED_GRID: usize = 9;
@@ -362,6 +366,9 @@ pub struct FilletFailure {
 
 /// Fillet outcome: a built surface, or a detailed failure, plus evidence.
 pub struct FilletReport {
+    /// Authored UV contact proposals using the same station interpolation as the skin.
+    /// These are unqualified until the original-support lifts pass.
+    pub contact_pcurves: Option<[Curve; 2]>,
     /// The fillet surface (`None` iff `failure` is set).
     pub surface: Option<Surface>,
     pub failure: Option<FilletFailure>,
@@ -372,8 +379,8 @@ pub struct FilletReport {
     /// Non-fatal diagnostics: reachability excess, polish fallbacks, etc.
     pub warnings: Vec<String>,
     /// Sampled estimate of the skin's deviation from the true pipe of radius
-    /// `r(t)` around the spine (sections themselves are exact by construction;
-    /// this measures only the inter-section skin).
+    /// `r(t)` around the spine. Section and inter-section radius accuracy require
+    /// an independent whole-skin coefficient proof.
     pub skin_deviation_estimate: f64,
     /// True when the spine closed into a loop and was cut at the seed.
     pub closed_spine: bool,
@@ -383,6 +390,7 @@ impl FilletReport {
     fn failed(reason: FailureReason, t: Option<f64>, detail: impl Into<String>, warnings: Vec<String>) -> Self {
         Self {
             surface: None,
+            contact_pcurves: None,
             failure: Some(FilletFailure { reason, t, detail: detail.into() }),
             spine: Vec::new(),
             radius_range: [0.; 2],
@@ -823,46 +831,60 @@ fn stations(
     n: usize,
     law: &RadiusLaw,
 ) -> Result<Vec<SpineSample>> {
+    (0..n)
+        .map(|k| station_at(m, points, k as f64 / (n - 1) as f64, law))
+        .collect()
+}
+
+fn station_at(
+    m: &Marcher<'_>,
+    points: &[RawPoint],
+    t: f64,
+    law: &RadiusLaw,
+) -> Result<SpineSample> {
     let length = points.last().map(|p| p.s).unwrap_or(0.);
-    let mut out = Vec::with_capacity(n);
     let mut span = 0;
-    for k in 0..n {
-        let t = k as f64 / (n - 1) as f64;
-        let target = t * length;
-        while span + 1 < points.len() && points[span + 1].s < target {
-            span += 1;
-        }
-        let (p0, p1) = (&points[span], &points[(span + 1).min(points.len() - 1)]);
-        let w = if p1.s > p0.s { ((target - p0.s) / (p1.s - p0.s)).clamp(0., 1.) } else { 0. };
-        let mut x = [0.; 4];
-        for i in 0..4 {
-            x[i] = p0.x[i] + w * (p1.x[i] - p0.x[i]);
-        }
-        let r = law.evaluate(t);
-        let (x, center, ca, cb) = match m.refine(x, r)? {
-            Some((rx, rc)) if m.inside(&rx) => {
-                let ca = point_normal(m.a, rx[0], rx[1])?.map(|(p, _)| p).unwrap_or(p0.contact_a);
-                let cb = point_normal(m.b, rx[2], rx[3])?.map(|(p, _)| p).unwrap_or(p0.contact_b);
-                (rx, rc, ca, cb)
-            }
-            _ => (
-                x,
-                add(p0.center, scale(sub(p1.center, p0.center), w)),
-                add(p0.contact_a, scale(sub(p1.contact_a, p0.contact_a), w)),
-                add(p0.contact_b, scale(sub(p1.contact_b, p0.contact_b), w)),
-            ),
-        };
-        out.push(SpineSample {
-            t,
-            center,
-            contact_a: ca,
-            contact_b: cb,
-            radius: r,
-            uv_a: [x[0], x[1]],
-            uv_b: [x[2], x[3]],
-        });
+    let target = t * length;
+    while span + 1 < points.len() && points[span + 1].s < target {
+        span += 1;
     }
-    Ok(out)
+    let (p0, p1) = (&points[span], &points[(span + 1).min(points.len() - 1)]);
+    let w = if p1.s > p0.s {
+        ((target - p0.s) / (p1.s - p0.s)).clamp(0., 1.)
+    } else {
+        0.
+    };
+    let mut x = [0.; 4];
+    for i in 0..4 {
+        x[i] = p0.x[i] + w * (p1.x[i] - p0.x[i]);
+    }
+    let r = law.evaluate(t);
+    let (x, center, ca, cb) = match m.refine(x, r)? {
+        Some((rx, rc)) if m.inside(&rx) => {
+            let ca = point_normal(m.a, rx[0], rx[1])?
+                .map(|(p, _)| p)
+                .unwrap_or(p0.contact_a);
+            let cb = point_normal(m.b, rx[2], rx[3])?
+                .map(|(p, _)| p)
+                .unwrap_or(p0.contact_b);
+            (rx, rc, ca, cb)
+        }
+        _ => (
+            x,
+            add(p0.center, scale(sub(p1.center, p0.center), w)),
+            add(p0.contact_a, scale(sub(p1.contact_a, p0.contact_a), w)),
+            add(p0.contact_b, scale(sub(p1.contact_b, p0.contact_b), w)),
+        ),
+    };
+    Ok(SpineSample {
+        t,
+        center,
+        contact_a: ca,
+        contact_b: cb,
+        radius: r,
+        uv_a: [x[0], x[1]],
+        uv_b: [x[2], x[3]],
+    })
 }
 
 /// Exact rational circular arc section from contact A to contact B.
@@ -880,14 +902,26 @@ fn arc_section(sample: &SpineSample) -> Result<std::result::Result<Curve, Failur
     let Some(v_hat) = unit(perp) else {
         return Ok(Err(FailureReason::SectionSelfIntersection));
     };
-    match primitives::ellipse_arc(
-        sample.center,
-        a_vec,
-        scale(v_hat, sample.radius),
-        0.,
-        phi.to_degrees(),
-    ) {
-        Ok(c) => Ok(Ok(c)),
+    // Use one coherent two-arc parameterization across all stations. Choosing
+    // one/two arcs at 90 degrees makes tiny angular roundoff change the rational
+    // parameter map; lofting those mismatched maps deforms even a cylinder.
+    let weight = (phi * 0.25).cos();
+    let mut points = Vec::with_capacity(5);
+    for i in 0..5 {
+        let angle = phi * i as f64 * 0.25;
+        let radius = if i % 2 == 0 { sample.radius } else { sample.radius / weight };
+        let radial = add(scale(a_hat, angle.cos()), scale(v_hat, angle.sin()));
+        points.push(add(sample.center, scale(radial, radius)).to_vec());
+    }
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.],
+        control_points: points,
+        weights: vec![1., weight, 1., weight, 1.],
+        periodic: false,
+    };
+    match curve.validate() {
+        Ok(()) => Ok(Ok(curve)),
         Err(_) => Ok(Err(FailureReason::AssemblyFailed)),
     }
 }
@@ -980,27 +1014,44 @@ fn assemble(
 ) -> Result<(Surface, f64)> {
     let params: Vec<f64> = stations_s.to_vec();
     let surface = natural_loft::interpolate(&sections, &params)?;
+    let deviation = estimate_skin_deviation(&surface, spine, stations_s)?;
+    Ok((surface, deviation))
+}
+
+fn estimate_skin_deviation(
+    surface: &Surface,
+    spine: &[SpineSample],
+    stations_s: &[f64],
+) -> Result<f64> {
+    let params = stations_s;
     // Deviation estimate: mid-span samples against the spine chord.
     let mut deviation = 0_f64;
     let (du, dv) = domain(&surface);
     for k in 0..spine.len().saturating_sub(1) {
         let v_mid = (stations_s[k] + stations_s[k + 1]) * 0.5;
-        let v = dv[0] + (dv[1] - dv[0]) * (v_mid - params[0]) / (params[params.len() - 1] - params[0]);
+        let v =
+            dv[0] + (dv[1] - dv[0]) * (v_mid - params[0]) / (params[params.len() - 1] - params[0]);
         let r_mid = (spine[k].radius + spine[k + 1].radius) * 0.5;
         for &u_frac in &[0.25, 0.5, 0.75] {
             let u = du[0] + (du[1] - du[0]) * u_frac;
-            let Ok(e) = surface.evaluate(u, v) else { continue };
+            let Ok(e) = surface.evaluate(u, v) else {
+                continue;
+            };
             let p = e.point;
             let c0 = spine[k].center;
             let c1 = spine[k + 1].center;
             let axis = sub(c1, c0);
             let len2 = dot(axis, axis);
-            let w = if len2 > 1e-300 { (dot(sub(p, c0), axis) / len2).clamp(0., 1.) } else { 0. };
+            let w = if len2 > 1e-300 {
+                (dot(sub(p, c0), axis) / len2).clamp(0., 1.)
+            } else {
+                0.
+            };
             let nearest = add(c0, scale(axis, w));
             deviation = deviation.max((norm(sub(p, nearest)) - r_mid).abs());
         }
     }
-    Ok((surface, deviation))
+    Ok(deviation)
 }
 
 /// Shared tail: stations, section construction, skinning, report assembly.
@@ -1051,7 +1102,7 @@ fn build_report(
             SectionKind::Arc => arc_section(sample)?,
             SectionKind::G2 => g2_section(m, sample)?,
         };
-        let curve = match built {
+        let mut curve = match built {
             Ok(c) => c,
             Err(reason) => {
                 return Ok(FilletReport::failed(
@@ -1062,15 +1113,45 @@ fn build_report(
                 ));
             }
         };
+        if section_kind==SectionKind::Arc {
+            let last=curve.control_points.len()-1;
+            curve.control_points[0]=sample.contact_a.to_vec();
+            curve.control_points[last]=sample.contact_b.to_vec();
+            // Impose authored coordinate-plane contact constraints on the
+            // proposal. This is literal source geometry, not a near-plane fit.
+            // Fresh contact, radius and tangency proofs still admit the skin.
+            for (support,indices) in [(m.a,[0,1]),(m.b,[last,last-1])] {
+                for coordinate in 0..3 {
+                    let value=support.control_points[0][0][coordinate];
+                    if support.control_points.iter().flatten().all(|p|p[coordinate]==value) {
+                        for i in indices {curve.control_points[i][coordinate]=value;}
+                    }
+                }
+            }
+        }
         // Result boundary: no section with non-finite control points leaves.
         for p in &curve.control_points {
             crate::foundation::guards::require_finite_slice(p, "section_control_points")?;
         }
         sections.push(curve);
     }
-    match assemble(sections, &spine, &stations_s) {
+    let mut contact_pcurves = None;
+    let mut spine = spine;
+    let assembled = if section_kind == SectionKind::G2 && !closed && !matches!(law, RadiusLaw::Constant(_))
+        && !(station_hermite::affine_chart(m.a) && station_hermite::affine_chart(m.b)) {
+        station_hermite::build(m, raw, law, n).and_then(|(surface, pcurves, refined)| {
+            contact_pcurves = Some(pcurves);
+            spine = refined;
+            let deviation = estimate_skin_deviation(&surface, &spine, &stations_s)?;
+            Ok((surface, deviation))
+        })
+    } else {
+        assemble(sections, &spine, &stations_s)
+    };
+    match assembled {
         Ok((surface, deviation)) => Ok(FilletReport {
             surface: Some(surface),
+            contact_pcurves,
             failure: None,
             spine,
             radius_range,
@@ -1143,9 +1224,24 @@ pub fn variable_radius_fillet(
     law: RadiusLaw,
     options: &FilletOptions,
 ) -> Result<FilletReport> {
+    variable_radius_sections(a,b,law,options,SectionKind::Arc)
+}
+/// Variable nominal rolling-ball radii with quintic endpoint-G2 section
+/// proposals. Skinning, spline-law positivity, whole-seam G2 and the actual
+/// skin radius are separate qualifications; sampled stations grant none of them.
+pub fn variable_g2_fillet(
+    a: &Surface, b: &Surface, law: RadiusLaw, options: &FilletOptions,
+) -> Result<FilletReport> {
+    variable_radius_sections(a,b,law,options,SectionKind::G2)
+}
+fn variable_radius_sections(
+    a: &Surface, b: &Surface, law: RadiusLaw, options: &FilletOptions, kind: SectionKind,
+) -> Result<FilletReport> {
     law.validate()?;
     let (m, sa, sb) = prepare(a, b, options)?;
-    let [r_min, r_max, r_mean] = law.sampled_range();
+    let [r_min, r_max, r_mean] = if let RadiusLaw::Constant(r)=&law {
+        if kind==SectionKind::G2 {[*r;3]} else {law.sampled_range()}
+    } else {law.sampled_range()};
     let minimum = minimum_radius(a, b, m.tol);
     if r_min < minimum {
         return Ok(FilletReport::failed(
@@ -1170,6 +1266,7 @@ pub fn variable_radius_fillet(
         if let Some(failure) = polish_with_law(&m, &mut raw, &law, &mut warnings)? {
             return Ok(FilletReport {
                 surface: None,
+                contact_pcurves: None,
                 failure: Some(failure),
                 spine: Vec::new(),
                 radius_range: [0.; 2],
@@ -1179,7 +1276,7 @@ pub fn variable_radius_fillet(
             });
         }
     }
-    build_report(&m, &raw, &law, options, warnings, closed, SectionKind::Arc)
+    build_report(&m, &raw, &law, options, warnings, closed, kind)
 }
 
 /// Chordal fillet: the chord `chord` between the two contact points is fixed;
@@ -1258,38 +1355,15 @@ pub fn chordal_fillet(
 
 /// G2 fillet: same rolling-ball spine, but each section is a quintic Bézier
 /// with position, tangent and curvature matched to both support normal
-/// sections at the contacts (true curvature continuity across the contact
-/// curves, unlike the G1 rolling ball).
+/// sections at the sampled contacts. Complete skinned-seam G2 still requires
+/// independent original-surface qualification over the whole contact curve.
 pub fn g2_fillet(
     a: &Surface,
     b: &Surface,
     radius: f64,
     options: &FilletOptions,
 ) -> Result<FilletReport> {
-    require_finite_f64(radius, "radius")?;
-    check(radius > 0., "G2 fillet radius must be positive")?;
-    let (m, sa, sb) = prepare(a, b, options)?;
-    let minimum = minimum_radius(a, b, m.tol);
-    if radius < minimum {
-        return Ok(FilletReport::failed(
-            FailureReason::RadiusBelowMinimum { radius, minimum },
-            None,
-            format!("radius {radius:.3e} below the numerical minimum {minimum:.3e}"),
-            Vec::new(),
-        ));
-    }
-    let warnings = reachability_warnings(a, b, sa, sb, radius);
-    let law = RadiusLaw::Constant(radius);
-    let (raw, seed, closed) = trace_spine(&m, radius, options.max_march_steps)?;
-    if seed.is_none() {
-        return Ok(FilletReport::failed(
-            FailureReason::SeedNotFound,
-            None,
-            "no converging intersection of the two offset surfaces",
-            warnings,
-        ));
-    }
-    build_report(&m, &raw, &law, options, warnings, closed, SectionKind::G2)
+    variable_g2_fillet(a,b,RadiusLaw::Constant(radius),options)
 }
 
 /// Arc-length resampling of a polyline into `n` uniform stations.
@@ -1454,6 +1528,7 @@ pub fn hold_line_fillet(
     match natural_loft::interpolate(&sections, &params) {
         Ok(surface) => Ok(FilletReport {
             surface: Some(surface),
+            contact_pcurves: None,
             failure: None,
             spine,
             radius_range: [0.; 2],

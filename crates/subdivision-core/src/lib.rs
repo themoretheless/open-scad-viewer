@@ -970,3 +970,312 @@ impl Cage {
         Ok(cage)
     }
 }
+
+/// Exact bicubic uniform B-spline patch extracted from a regular interior Catmull–Clark quad face.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BicubicPatch {
+    pub face_index: usize,
+    pub control_points: [[Point; 4]; 4],
+}
+
+impl BicubicPatch {
+    /// Evaluates the bicubic uniform B-spline patch at parameter $(u, v) \in [0, 1]^2$.
+    pub fn evaluate(&self, u: f64, v: f64) -> Point {
+        let basis = |t: f64| -> [f64; 4] {
+            let t2 = t * t;
+            let t3 = t2 * t;
+            let omt = 1.0 - t;
+            [
+                omt * omt * omt / 6.0,
+                (3.0 * t3 - 6.0 * t2 + 4.0) / 6.0,
+                (-3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0) / 6.0,
+                t3 / 6.0,
+            ]
+        };
+        let bu = basis(u.clamp(0.0, 1.0));
+        let bv = basis(v.clamp(0.0, 1.0));
+        let mut p = [0.0; 3];
+        for (i, &wu) in bu.iter().enumerate() {
+            for (j, &wv) in bv.iter().enumerate() {
+                let w = wu * wv;
+                for k in 0..3 {
+                    p[k] += w * self.control_points[i][j][k];
+                }
+            }
+        }
+        p
+    }
+}
+
+impl Cage {
+    /// Computes exact Catmull–Clark limit positions for all vertices without infinite subdivision.
+    /// Applies one Catmull–Clark topological refinement step (so all faces are quads and every
+    /// original vertex is surrounded by quads) followed by the exact Halstead–Kass–DeRose limit
+    /// stencil:
+    /// - Interior vertex of valence $n$: $v^\infty = \frac{n^2 P + 4 \sum_i E_i + \sum_i F_i}{n(n + 5)}$,
+    ///   where $E_i$ are neighbor vertices and $F_i$ are opposite diagonal corners of incident quads.
+    /// - Boundary vertex: $v^\infty = \frac{4 P + B_0 + B_1}{6}$.
+    pub fn evaluate_limit_points(&self) -> Result<Vec<Point>> {
+        self.validate()?;
+        let refined = self.subdivide_validated(1)?.cage;
+        let edges = refined.build_edges();
+        let mut adjacency = vec![Vec::new(); refined.vertices.len()];
+        for entry in &edges {
+            adjacency[entry.0.0].push(entry);
+            adjacency[entry.0.1].push(entry);
+        }
+        let mut out = Vec::with_capacity(self.vertices.len());
+        for v in 0..self.vertices.len() {
+            let p = refined.vertices[v];
+            let adjacent = &adjacency[v];
+            let boundary: Vec<_> = adjacent
+                .iter()
+                .filter(|(_, u)| u.len() == 1)
+                .map(|((a, b), _)| refined.vertices[if *a == v { *b } else { *a }])
+                .collect();
+            if boundary.len() == 2 {
+                out.push(std::array::from_fn(|k| {
+                    (4.0 * p[k] + boundary[0][k] + boundary[1][k]) / 6.0
+                }));
+            } else {
+                let faces: FxHashSet<_> = adjacent
+                    .iter()
+                    .flat_map(|(_, u)| u.iter().map(|(f, _)| *f))
+                    .collect();
+                let n = adjacent.len() as f64;
+                let mut sum_e = [0.0; 3];
+                for &(&(a, b), _) in adjacent {
+                    let nb = refined.vertices[if a == v { b } else { a }];
+                    for k in 0..3 {
+                        sum_e[k] += nb[k];
+                    }
+                }
+                let mut sum_f = [0.0; 3];
+                for &fi in &faces {
+                    let qf = &refined.faces[fi];
+                    let pos = qf.iter().position(|&x| x == v).unwrap();
+                    let opp = refined.vertices[qf[(pos + 2) % qf.len()]];
+                    for k in 0..3 {
+                        sum_f[k] += opp[k];
+                    }
+                }
+                let denom = n * (n + 5.0);
+                out.push(std::array::from_fn(|k| {
+                    (n * n * p[k] + 4.0 * sum_e[k] + sum_f[k]) / denom
+                }));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Computes normalized limit surface normals at all control vertices.
+    pub fn evaluate_limit_normals(&self) -> Result<Vec<Point>> {
+        let limit_cage = Cage {
+            vertices: self.evaluate_limit_points()?,
+            faces: self.faces.clone(),
+        };
+        Ok(limit_cage.sculpt_target()?.normals)
+    }
+
+    /// Extracts exact $4 \times 4$ bicubic B-spline control grids (`BicubicPatch`) for all
+    /// regular interior quad faces (where all 4 vertices are interior and have valence 4,
+    /// and all 8 surrounding faces are quads).
+    pub fn to_nurbs_patches(&self) -> Result<Vec<BicubicPatch>> {
+        let edges = self.topology()?;
+        let mut vert_faces = vec![Vec::new(); self.vertices.len()];
+        for (fi, f) in self.faces.iter().enumerate() {
+            for &v in f {
+                vert_faces[v].push(fi);
+            }
+        }
+        let mut is_boundary_vert = vec![false; self.vertices.len()];
+        for (&(a, b), uses) in &edges {
+            if uses.len() == 1 {
+                is_boundary_vert[a] = true;
+                is_boundary_vert[b] = true;
+            }
+        }
+        let opp_face = |fi: usize, a: usize, b: usize| -> Option<usize> {
+            let uses = edges.get(&edge(a, b))?;
+            if uses.len() != 2 {
+                return None;
+            }
+            Some(if uses[0].0 == fi { uses[1].0 } else { uses[0].0 })
+        };
+        // Given a quad face `f_idx` that shares edge `(u, v)`, returns `(opp_u, opp_v)` where
+        // `opp_u` is adjacent to `u` and `opp_v` is adjacent to `v` in `f_idx`.
+        let quad_opposite_edge = |f_idx: usize, u: usize, v: usize| -> Option<(usize, usize)> {
+            let f = &self.faces[f_idx];
+            if f.len() != 4 {
+                return None;
+            }
+            let pos_u = f.iter().position(|&x| x == u)?;
+            if f[(pos_u + 1) % 4] == v {
+                // f = [u, v, opp_v, opp_u]
+                Some((f[(pos_u + 3) % 4], f[(pos_u + 2) % 4]))
+            } else if f[(pos_u + 3) % 4] == v {
+                // f = [u, opp_u, opp_v, v]
+                Some((f[(pos_u + 1) % 4], f[(pos_u + 2) % 4]))
+            } else {
+                None
+            }
+        };
+
+        let mut patches = Vec::new();
+        for (fi, f) in self.faces.iter().enumerate() {
+            if f.len() != 4 {
+                continue;
+            }
+            let [v0, v1, v2, v3] = [f[0], f[1], f[2], f[3]];
+            if [v0, v1, v2, v3]
+                .iter()
+                .any(|&v| is_boundary_vert[v] || vert_faces[v].len() != 4)
+            {
+                continue;
+            }
+            let (Some(f_bottom), Some(f_right), Some(f_top), Some(f_left)) = (
+                opp_face(fi, v0, v1),
+                opp_face(fi, v1, v2),
+                opp_face(fi, v2, v3),
+                opp_face(fi, v3, v0),
+            ) else {
+                continue;
+            };
+            let (
+                Some((b0, b1)),
+                Some((r1, r2)),
+                Some((t2, t3)),
+                Some((l3, l0)),
+            ) = (
+                quad_opposite_edge(f_bottom, v0, v1),
+                quad_opposite_edge(f_right, v1, v2),
+                quad_opposite_edge(f_top, v2, v3),
+                quad_opposite_edge(f_left, v3, v0),
+            ) else {
+                continue;
+            };
+
+            let corner_diag = |v_center: usize, n_a: usize, n_b: usize| -> Option<usize> {
+                let diag_face = *vert_faces[v_center].iter().find(|&&cand| {
+                    cand != fi
+                        && cand != f_bottom
+                        && cand != f_right
+                        && cand != f_top
+                        && cand != f_left
+                        && self.faces[cand].contains(&n_a)
+                        && self.faces[cand].contains(&n_b)
+                })?;
+                if self.faces[diag_face].len() != 4 {
+                    return None;
+                }
+                self.faces[diag_face]
+                    .iter()
+                    .copied()
+                    .find(|&x| x != v_center && x != n_a && x != n_b)
+            };
+
+            let (Some(c00), Some(c30), Some(c33), Some(c03)) = (
+                corner_diag(v0, b0, l0),
+                corner_diag(v1, b1, r1),
+                corner_diag(v2, r2, t2),
+                corner_diag(v3, t3, l3),
+            ) else {
+                continue;
+            };
+
+            let pt = |idx: usize| self.vertices[idx];
+            patches.push(BicubicPatch {
+                face_index: fi,
+                control_points: [
+                    [pt(c00), pt(l0), pt(l3), pt(c03)],
+                    [pt(b0), pt(v0), pt(v3), pt(t3)],
+                    [pt(b1), pt(v1), pt(v2), pt(t2)],
+                    [pt(c30), pt(r1), pt(r2), pt(c33)],
+                ],
+            });
+        }
+        Ok(patches)
+    }
+}
+
+#[cfg(test)]
+mod limit_and_nurbs_tests {
+    use super::*;
+
+    #[test]
+    fn evaluate_limit_points_matches_converged_catmull_clark_refinement() {
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let exact_limit = cage.evaluate_limit_points().unwrap();
+        let refined = cage.subdivide(5).unwrap();
+        for (i, &p_inf) in exact_limit.iter().enumerate() {
+            let p_sub = refined.cage.vertices[i];
+            for k in 0..3 {
+                assert!(
+                    (p_inf[k] - p_sub[k]).abs() < 1e-3,
+                    "vertex {i} axis {k}: exact={} vs refined={}",
+                    p_inf[k],
+                    p_sub[k]
+                );
+            }
+        }
+        let normals = cage.evaluate_limit_normals().unwrap();
+        assert_eq!(normals.len(), 8);
+        for (p, n) in exact_limit.iter().zip(&normals) {
+            let radial = math_core::sub(*p, [1., 1., 1.]);
+            assert!(math_core::dot(*n, radial) > 0.8);
+            assert!((math_core::norm(*n) - 1.0).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn to_nurbs_patches_extracts_bicubic_patch_matching_limit_points() {
+        // 3x3 grid of quads (16 vertices, 9 quad faces); center face (index 4) is regular interior valence-4.
+        let mut vertices = Vec::new();
+        for y in 0..4 {
+            for x in 0..4 {
+                let z = if (x == 1 || x == 2) && (y == 1 || y == 2) {
+                    1.0
+                } else {
+                    0.0
+                };
+                vertices.push([x as f64, y as f64, z]);
+            }
+        }
+        let mut faces = Vec::new();
+        for y in 0..3 {
+            for x in 0..3 {
+                let i0 = y * 4 + x;
+                faces.push(vec![i0, i0 + 1, i0 + 5, i0 + 4]);
+            }
+        }
+        let cage = Cage { vertices, faces };
+        let patches = cage.to_nurbs_patches().unwrap();
+        assert_eq!(patches.len(), 1);
+        assert_eq!(patches[0].face_index, 4);
+
+        let limit_pts = cage.evaluate_limit_points().unwrap();
+        // Corners of the center face (face 4 has vertices [5, 6, 10, 9]) must match patch(u, v) at {0,1}x{0,1}
+        let corners = [
+            (0.0, 0.0, 5),
+            (1.0, 0.0, 6),
+            (1.0, 1.0, 10),
+            (0.0, 1.0, 9),
+        ];
+        for (u, v, vi) in corners {
+            let eval = patches[0].evaluate(u, v);
+            let lim = limit_pts[vi];
+            for k in 0..3 {
+                assert!(
+                    (eval[k] - lim[k]).abs() < 1e-12,
+                    "corner ({u},{v}) mismatch: {:?} vs {:?}",
+                    eval,
+                    lim
+                );
+            }
+        }
+    }
+}

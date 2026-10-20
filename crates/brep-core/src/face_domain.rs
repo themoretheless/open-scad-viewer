@@ -3,6 +3,8 @@
 use crate::{Error, Model, Result};
 use nurbs_core::trim_domain::{Classification, TrimDomain};
 
+mod rectangle_closure;
+
 pub struct FaceDomain {
     pub(crate) region: TrimDomain,
     natural: [[f64; 2]; 2],
@@ -10,6 +12,13 @@ pub struct FaceDomain {
     rectangle_closure: Option<[[f64; 2]; 2]>,
 }
 impl FaceDomain {
+    pub(crate) fn contains_natural_rectangle(&self, r: [[f64;2];2]) -> bool {
+        (0..2).all(|k| r[k][0].is_finite() && r[k][1].is_finite()
+            && self.natural[k][0] <= r[k][0] && r[k][0] <= r[k][1] && r[k][1] <= self.natural[k][1])
+    }
+    pub(crate) fn literal_rectangle(&self)->Option<[[f64;2];2]> {
+        self.rectangle_closure.filter(|r|self.contains_closed_rectangle(*r))
+    }
     pub fn new(model: &Model, face_index: usize, tolerance_uv: f64) -> Result<Self> {
         let face = model.faces.get(face_index).ok_or_else(|| {
             Error::new(
@@ -45,49 +54,8 @@ impl FaceDomain {
                     .map(|p| [[p[0][0], p[0][1]], [p[1][0], p[1][1]]])
             })
             .collect();
-        let rectangle_closure = if loops.len() == 1
-            && loops[0].len() == 4
-            && loops[0].iter().all(|c| {
-                c.degree == 1
-                    && c.control_points.len() == 2
-                    && !c.periodic
-                    && c.knots[..2].iter().all(|t| *t == c.domain()[0])
-                    && c.knots[2..].iter().all(|t| *t == c.domain()[1])
-                    && c.control_points.iter().all(|p| p.len() == 2)
-            }) {
-            let corners: Vec<_> = loops[0]
-                .iter()
-                .map(|c| [c.control_points[0][0], c.control_points[0][1]])
-                .collect();
-            let bounds: [[f64; 2]; 2] = std::array::from_fn(|k| {
-                [
-                    corners.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min),
-                    corners
-                        .iter()
-                        .map(|p| p[k])
-                        .fold(f64::NEG_INFINITY, f64::max),
-                ]
-            });
-            if (0..2).all(|k| bounds[k][0] < bounds[k][1])
-                && corners.iter().enumerate().all(|(i, p)| {
-                    (0..2).all(|k| p[k] == bounds[k][0] || p[k] == bounds[k][1])
-                        && corners.iter().take(i).all(|q| q != p)
-                })
-                && loops[0]
-                    .iter()
-                    .enumerate()
-                    .all(|(i, c)| c.control_points[1][..] == corners[(i + 1) % 4][..])
-                && loops[0].iter().all(|c| {
-                    (0..2)
-                        .filter(|k| c.control_points[0][*k] == c.control_points[1][*k])
-                        .count()
-                        == 1
-                })
-            {
-                Some(bounds)
-            } else {
-                None
-            }
+        let rectangle_closure = if loops.len() == 1 {
+            rectangle_closure::inspect(&loops[0])
         } else {
             None
         };
@@ -98,7 +66,7 @@ impl FaceDomain {
             natural,
         })
     }
-    /// Exact closed-set membership for an authored four-sided rectangular
+    /// Exact closed-set membership for an authored, possibly subdivided rectangular
     /// outer loop without holes. This does not enlarge a general trim band.
     pub fn contains_closed_rectangle(&self, rectangle: [[f64; 2]; 2]) -> bool {
         self.rectangle_closure.is_some_and(|bounds| {

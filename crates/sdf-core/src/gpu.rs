@@ -4,7 +4,7 @@
 use crate::Grid;
 use crate::flat::FlatField;
 use compute_core::gpu_compute::wgpu;
-use compute_core::gpu_compute::{BackendReport, GpuContext, pack_f32, pack_u32};
+use compute_core::gpu_compute::{BackendReport, GpuContext, f32_le_bytes, pack_u32, u32_le_bytes};
 use compute_core::{Binding, Kernel, read_f32};
 use wgpu::{BindGroup, Buffer, BufferUsages, Device};
 
@@ -189,10 +189,10 @@ impl GpuSdf {
             let step = (grid.max[i] - grid.min[i]) / grid.cells[i] as f64;
             params.extend_from_slice(&(step as f32).to_le_bytes());
         }
-        let kinds = pack_u32(&flat.kinds);
-        let node_params = pack_f32(&flat.params);
-        let aux = pack_u32(&flat.aux);
-        let tris = pack_f32(&flat.triangles);
+        let kinds = u32_le_bytes(&flat.kinds);
+        let node_params = f32_le_bytes(&flat.params);
+        let aux = u32_le_bytes(&flat.aux);
+        let tris = f32_le_bytes(&flat.triangles);
         self.ensure_buffers(
             flat.kinds.len(),
             flat.params.len(),

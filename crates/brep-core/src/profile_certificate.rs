@@ -10,9 +10,103 @@ use crate::{Curve, Error, Result};
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 
+mod agreement;
+pub use agreement::{
+    ProjectiveCurveAgreementCertificate, certify_projective_curve_agreement,
+    verify_projective_curve_agreement,
+};
+mod algebraic_intersections;
 mod arithmetic;
+mod intersections;
+pub use algebraic_intersections::{ExactRatio, ExactPolynomial,
+    AlgebraicFactorWitness, AlgebraicIntersectionCertificate, AlgebraicRootWitness,
+    VerifiedAlgebraicIntersections, certify_algebraic_intersections,
+    verify_algebraic_intersections,
+};
+mod multispan;
+mod image_agreement;
+pub use image_agreement::{CurveImageCertificate,ImageCoverageWitness,ImageRelationWitness,VerifiedCurveImage,certify_curve_image_agreement,verify_curve_image_agreement};
+mod span_intersections;
+mod branches;
+pub use branches::{ParameterBranchDecomposition,BranchCut,BranchSlab};
+pub(crate) use branches::critical_samples;
+pub(crate) fn exact_polynomial_nonnegative(p:&[Q])->Result<bool>{
+    if arithmetic::at(p,&Q::zero())<Q::zero()||arithmetic::at(p,&Q::one())<Q::zero(){return Ok(false)}
+    Ok(critical_samples(&[p.to_vec()])?.iter().all(|x|arithmetic::at(p,x)>=Q::zero()))
+}
+pub use span_intersections::{OwnedOriginalPeriodicEmbedding, own_original_periodic_embedding, OriginalPeriodicSourceUse, OriginalPeriodicWireUse, OriginalPeriodicJoinKind, OriginalPeriodicWireJoin, OriginalPeriodicWire, OwnedOriginalPeriodicWires, own_original_periodic_wires, OriginalPeriodicPieceCoverage, OwnedOriginalPeriodicSurface, bind_original_periodic_pieces_to_surface, OriginalPeriodicEvent, OriginalPeriodicShoreCell, OriginalPeriodicCutOrigin, OriginalPeriodicCut, OriginalPeriodicPiece, OriginalPeriodicTransition, OriginalPeriodicPoint, OwnedOriginalPeriodicPieces, own_original_periodic_pieces, OriginalChartCutOrigin, OriginalChartCut, OriginalChartRegion, OriginalChartInterval, OwnedOriginalChartIntervals, own_original_chart_intervals, OriginalChartShoreEvent, OriginalChartShoreCell, OwnedOriginalChartEvents, own_original_chart_events, OwnedOriginalUnifiedRegions, own_original_unified_regions, OwnedOriginalUnifiedBoundaryWinding, own_original_unified_boundary_winding, OwnedOriginalUnifiedFilled, own_original_unified_filled, OwnedOriginalUnifiedSides, own_original_unified_sides, own_original_unified_sides_automatically, OwnedOriginalUnifiedCycles, own_original_unified_cycles, OwnedOriginalUnifiedRotation, own_original_unified_rotation, OriginalUnifiedPort, OwnedOriginalUnifiedPorts, own_original_unified_ports, OriginalUnifiedVertex, OriginalUnifiedEdgeCarrier, OriginalUnifiedEdge, OriginalUnifiedIncidence, OwnedOriginalUnifiedGraph, own_original_unified_graph, OriginalSourceParameter, OriginalSourceCutOrigin, OriginalSourceCut, OriginalSourceCommonUse, OriginalUnifiedCarrier, OwnedOriginalSourceCarriers, own_original_source_carriers, OriginalCommonPartitionRef, OriginalCommonEdgeUse, OriginalCommonEdge, OwnedOriginalCommonDictionary, own_original_common_dictionary, OriginalCommonCutOrigin, OriginalCommonCut, OriginalCommonContributor, OriginalCommonSegment, OwnedOriginalCommonPartition, own_original_common_partition, OriginalCommonClipOrigin, OriginalCommonClipBoundary, OriginalCommonClip, OwnedOriginalCommonClips, own_original_common_clips, OriginalPointPreimage, OwnedOriginalPointPullback, own_original_point_pullback, OriginalPairCutOrigin, OriginalPairCut, OwnedOriginalPairCuts, own_original_pair_cuts, OriginalOverlapContactRef, OwnedOriginalOverlapPartition, own_original_overlap_partition, OriginalOverlapSplit, OriginalOverlapContact, OwnedOriginalOverlapContacts, own_original_overlap_contacts, OriginalOverlapComponent, OwnedOriginalOverlapComponents, own_original_overlap_components, OriginalPhysicalVertex, OriginalPhysicalTrace, OriginalPhysicalEdgeUse, OriginalPhysicalEdge, OriginalPhysicalFacePatch, OriginalPhysicalFace, OwnedOriginalPhysicalFaces, OriginalPhysicalFaceLimits, own_original_physical_faces, assemble_original_physical_faces, OwnedOriginalGlobalChartEmbedding, own_original_global_chart_embedding, OriginalAtlasPairLimits, OriginalAtlasPairProof, OriginalAtlasPair, OwnedOriginalAtlasPairs, own_original_atlas_pairs, OriginalInjectiveAtlasLimits, OriginalInjectiveChart, OwnedOriginalInjectiveChartAtlas, own_original_injective_chart_atlas, OriginalSurfaceRegularityRecord, OwnedOriginalRegularTrimSurface, own_original_regular_trim_surface, OriginalChartCoverageCell, OwnedOriginalTrimChartCoverage, own_original_trim_chart_coverage, OriginalQuotientCoedge, OriginalQuotientEdge, OriginalQuotientVertexLink, OwnedOriginalPeriodicTopology, own_original_periodic_topology, OwnedOriginalSurfaceSeams, bind_original_seams_to_surface, OriginalSeamUse, OwnedOriginalSeamDictionary, own_original_seam_dictionary, OriginalShoreMembership, OwnedOriginalShoreMembership, classify_original_shore_carrier, OwnedOriginalShorePair, own_original_shore_pair, OwnedOriginalShoreCarrier, own_original_shore_carrier, OriginalChartVertexLimits, OwnedOriginalChartVertices, own_original_chart_vertices, assemble_original_filled_regions, OriginalFilledRegion, OwnedOriginalFilledRegions, own_original_filled_regions, OwnedOriginalBoundaryWinding, own_original_boundary_winding, OriginalBoundaryAssemblyLimits, own_original_carrier_sides_automatically, assemble_original_filled_boundaries, OwnedOriginalFilledBoundaries, own_original_filled_boundaries, OwnedOriginalCarrierSides, own_original_carrier_sides, OwnedOriginalCarrierCycles, own_original_carrier_cycles, OriginalCarrierVertex, OriginalCarrierIncidence, OwnedOriginalCarrierGraph, own_original_carrier_graph, OriginalCarrierCut, OriginalAtomicCarrier, OwnedOriginalCarriers, own_original_carriers, BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, OwnedBranchNeighbourhood, own_branch_neighbourhood, ContactPortOrderLimits, OriginalContactPort, OwnedContactPortOrder, own_original_contact_port_order, try_own_event_branch, LeadingBranchRay, OwnedEventBranch, own_event_branch, ContactAtlasLimits, ContactOccurrence, SourceContactParameter, OriginalContactAtlas, assemble_original_contact_atlas, EventParameterRef, ParameterOrderLimits, QualifiedParameterOrder, compare_event_parameters, AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes, SpanPairCertificate,SpanIntersectionCertificate,VerifiedSpanIntersections,VerifiedCurveOverlap,certify_span_intersections,verify_span_intersections};
+pub use span_intersections::{VerifiedParameterLocus,VerifiedBranchGraph};
+mod nonlinear;
+pub use agreement::{
+    CurveAgreementCertificate, VerifiedCurveAgreement, certify_curve_agreement,
+    verify_curve_agreement,
+};
+pub use intersections::{
+    CurveIntersectionCertificate, VerifiedCurveIntersections, certify_curve_intersections,
+    verify_curve_intersections,
+};
+pub use multispan::{
+    MultispanAgreementCertificate, SpanAgreementWitness, certify_multispan_agreement,
+    verify_multispan_agreement,
+};
+pub use nonlinear::{
+    NonlinearCurveAgreementCertificate, certify_nonlinear_curve_agreement,
+    verify_nonlinear_curve_agreement,
+};
+mod contact;
+mod extraction;
+mod measure;
+mod offset;
+mod offset_regions;
+mod minkowski;
+pub use minkowski::{MinkowskiRegionCertificate,VerifiedMinkowskiRegion,ExactRegionRings,certify_minkowski_sum,certify_minkowski_disk_offset,verify_minkowski_region};
+mod offset_wire;
+pub use contact::{
+    EndpointContactCertificate, VerifiedEndpointContacts, certify_endpoint_contacts,
+    verify_endpoint_contacts,
+};
+pub use offset::{
+    OffsetCurveCertificate, VerifiedOffsetCurve, certify_offset_curve, verify_offset_curve,
+};
+pub use offset_regions::{
+    OffsetRegionCertificate, VerifiedOffsetRegions, certify_offset_regions, verify_offset_regions,
+};
+pub use offset_wire::{
+    OffsetWireCertificate, OffsetWirePart, VerifiedOffsetWire, certify_offset_wire,
+    verify_offset_wire,
+};
+
+pub(crate) fn nonstationary_span(c: &Curve, axis: usize) -> Result<bool> {
+    source_bits(&[vec![c.clone()]], 1e-7)?;
+    if axis > 1 || c.control_points.len() != c.degree + 1 {
+        return Ok(false);
+    }
+    let nets = extraction::nets(&[vec![c.clone()]])?;
+    Ok(nets.len() == 1 && arithmetic::no_stationary(&nets[0].1, axis))
+}
+pub use measure::{
+    ExactAreaInterval, ProfileMeasureCertificate, VerifiedMeasuredProfile, certify_measure,
+    verify_measure,
+};
+#[cfg(test)]
+mod extended_tests;
+#[cfg(test)]
+mod measure_tests;
 mod orientation;
 mod producer;
+mod winding;
+mod point_winding;
+pub(crate) mod topology_prisms;
+mod linear_arrangement;
+pub use linear_arrangement::{LinearWindingArrangement, regularize_linear_winding_arrangement};
+pub use point_winding::{certify_rational_point_winding, verify_rational_point_winding, PointWindingCertificate, VerifiedPointWinding, RayCellWitness, RayRootWitness, certify_point_winding, verify_point_winding};
+pub use winding::{LinearPeriodicContactRegions, regularize_linear_periodic_contacts, MultispanSurfaceRegions, OwnedMultispanPeriodicFaces, bind_multispan_regions_to_surface, assemble_multispan_periodic_surface_faces, MultispanChartAlias, MultispanPeriodicRegions, regularize_multispan_periodic_winding, OwnedClockMappedFaces, assemble_clock_mapped_surface_faces, ClockMappedSurfaceRegions, bind_clock_mapped_regions_to_surface, ClockMappedPeriodicRegions, regularize_clock_mapped_periodic_winding, ExactPeriodicContactRegions, regularize_exact_periodic_contacts,OwnedPeriodicFaces, PeriodicFaceLimits, assemble_periodic_surface_faces};
+pub use winding::{
+    ApproximatePeriodicWindingRegions, CoherentPeriodicWindingRegions, PeriodicWindingRegions,
+    SurfacePeriodicRegions, WindingComponent, WindingRegularization,
+    bind_periodic_regions_to_surface, regularize_approximated_periodic_winding,
+    regularize_projective_coherent_periodic_winding, regularize_coherent_periodic_winding, regularize_nonzero_winding, regularize_periodic_winding,
+};
 #[cfg(feature = "codec")]
 mod serialization;
 pub use producer::certify;
@@ -32,7 +126,8 @@ pub struct ProfileCertificate {
     /// One independently checked strictly monotone coordinate per exact piece.
     pub monotone_axes: Vec<u8>,
     /// Complete lexicographic unordered-pair census; missing entries fail.
-    /// 0/1 = coordinate normal; 2+8*i+j = normal of combined-hull pole edge i,j.
+    /// 0/1 = coordinate normal; 2+8*i+j = legacy combined-hull edge normal.
+    /// 256+32*i+j covers the larger nets of degree 4..8. 65535 is algebraic.
     pub separating_normals: Vec<u16>,
     pub orientation: Vec<i8>,
     pub nesting_depth: Vec<usize>,
@@ -69,7 +164,7 @@ fn source_bits(loops: &[Vec<Curve>], tolerance: f64) -> Result<String> {
     if !tolerance.is_finite()
         || tolerance <= 0.
         || loops.len() > 32
-        || loops.iter().any(|w| w.len() < 2)
+        || loops.iter().any(Vec::is_empty)
         || loops.iter().map(Vec::len).sum::<usize>() > MAX_SPANS
     {
         return Err(refused(
@@ -85,17 +180,13 @@ fn source_bits(loops: &[Vec<Curve>], tolerance: f64) -> Result<String> {
         write!(out, "/w{}", wire.len()).unwrap();
         for c in wire {
             c.validate()?;
-            if c.periodic
-                || !(1..=3).contains(&c.degree)
-                || c.control_points.len() != c.degree + 1
+            if !(1..=8).contains(&c.degree)
                 || c.control_points
                     .iter()
                     .any(|p| p.len() != 2 || p.iter().any(|x| x.abs() > 1e6))
-                || c.knots[..=c.degree].iter().any(|t| *t != c.domain()[0])
-                || c.knots[c.degree + 1..].iter().any(|t| *t != c.domain()[1])
             {
                 return Err(refused(
-                    "Certificate requires clamped positive-weight planar spans of degree 1..3",
+                    "Certificate requires positive-weight planar curves of degree 1..8",
                 ));
             }
             write!(
@@ -115,6 +206,9 @@ fn source_bits(loops: &[Vec<Curve>], tolerance: f64) -> Result<String> {
                 .chain(&c.knots)
             {
                 write!(out, "/{:016x}", x.to_bits()).unwrap();
+            }
+            if out.len() > 65536 {
+                return Err(refused("Certificate exact source exceeds its size budget"));
             }
         }
     }
@@ -136,14 +230,16 @@ impl Piece {
 
 fn split(net: &[[Q; 3]]) -> (Vec<[Q; 3]>, Vec<[Q; 3]>) {
     let mut level = net.to_vec();
-    let mut left = vec![level[0].clone()];
-    let mut right = vec![level.last().unwrap().clone()];
+    let mut left = Vec::with_capacity(net.len());
+    let mut right = Vec::with_capacity(net.len());
+    left.push(level[0].clone());
+    right.push(level.last().unwrap().clone());
     let two = Q::from_integer(2.into());
     while level.len() > 1 {
-        level = level
-            .windows(2)
-            .map(|p| std::array::from_fn(|k| (&p[0][k] + &p[1][k]) / &two))
-            .collect();
+        for i in 0..level.len() - 1 {
+            level[i] = std::array::from_fn(|k| (&level[i][k] + &level[i + 1][k]) / &two);
+        }
+        level.pop();
         left.push(level[0].clone());
         right.push(level.last().unwrap().clone());
     }
@@ -152,41 +248,30 @@ fn split(net: &[[Q; 3]]) -> (Vec<[Q; 3]>, Vec<[Q; 3]>) {
 }
 
 fn pieces(loops: &[Vec<Curve>], depth: u8) -> Result<Vec<Piece>> {
-    if depth > MAX_DEPTH
-        || loops.iter().map(Vec::len).sum::<usize>() * (1usize << depth) > MAX_PIECES
-    {
+    if depth > MAX_DEPTH {
         return Err(refused(
             "Exact subdivision certificate exceeds its piece budget",
         ));
     }
-    let mut out = Vec::new();
-    for (wire, curves) in loops.iter().enumerate() {
-        for c in curves {
-            let net: Vec<[Q; 3]> = c
-                .control_points
-                .iter()
-                .zip(&c.weights)
-                .map(|(p, w)| {
-                    let w = Q::from_float(*w).unwrap();
-                    [
-                        Q::from_float(p[0]).unwrap() * &w,
-                        Q::from_float(p[1]).unwrap() * &w,
-                        w,
-                    ]
+    let source_nets = extraction::nets(loops)?;
+    if source_nets.len() * (1usize << depth) > MAX_PIECES {
+        return Err(refused(
+            "Exact subdivision certificate exceeds its piece budget",
+        ));
+    }
+    let mut out = Vec::with_capacity(source_nets.len() * (1usize << depth));
+    for (wire, net) in source_nets {
+        let mut nets = vec![net];
+        for _ in 0..depth {
+            nets = nets
+                .into_iter()
+                .flat_map(|n| {
+                    let (a, b) = split(&n);
+                    [a, b]
                 })
                 .collect();
-            let mut nets = vec![net];
-            for _ in 0..depth {
-                nets = nets
-                    .into_iter()
-                    .flat_map(|n| {
-                        let (a, b) = split(&n);
-                        [a, b]
-                    })
-                    .collect();
-            }
-            out.extend(nets.into_iter().map(|n| Piece::from_net(wire, n)));
         }
+        out.extend(nets.into_iter().map(|n| Piece::from_net(wire, n)));
     }
     // These are exact rational equalities, including joins across source spans.
     for w in 0..loops.len() {
@@ -205,14 +290,43 @@ fn normal(a: &Piece, b: &Piece, witness: u16) -> Option<[Q; 2]> {
         0 => Some([Q::one(), Q::zero()]),
         1 => Some([Q::zero(), Q::one()]),
         _ => {
-            let i = ((witness - 2) / 8) as usize;
-            let j = ((witness - 2) % 8) as usize;
-            let points: Vec<_> = a.points.iter().chain(&b.points).collect();
-            let (p, q) = (*points.get(i)?, *points.get(j)?);
+            // Preserve legacy cubic codes 2..65. Higher-degree nets use a
+            // disjoint 32-wide table; unused/invalid codes are refused.
+            let (i, j) = if (2..66).contains(&witness) {
+                (((witness - 2) / 8) as usize, ((witness - 2) % 8) as usize)
+            } else if (256..1280).contains(&witness) {
+                (
+                    ((witness - 256) / 32) as usize,
+                    ((witness - 256) % 32) as usize,
+                )
+            } else {
+                return None;
+            };
+            let get = |idx: usize| -> Option<&[Q; 2]> {
+                if idx < a.points.len() {
+                    a.points.get(idx)
+                } else {
+                    b.points.get(idx - a.points.len())
+                }
+            };
+            let (p, q) = (get(i)?, get(j)?);
             let n = [&p[1] - &q[1], &q[0] - &p[0]];
             (!n.iter().all(Zero::is_zero)).then_some(n)
         }
     }
+}
+
+fn normal_candidates(a: &Piece, b: &Piece) -> impl Iterator<Item = u16> {
+    let count = a.points.len() + b.points.len();
+    (0..2).chain((0..count).flat_map(move |i| {
+        (i + 1..count).map(move |j| {
+            if count <= 8 {
+                2 + 8 * i as u16 + j as u16
+            } else {
+                256 + 32 * i as u16 + j as u16
+            }
+        })
+    }))
 }
 
 fn adjacent(p: &[Piece], i: usize, j: usize) -> bool {
@@ -247,7 +361,7 @@ fn separated(a: &Piece, b: &Piece, n: &[Q; 2], shared: bool) -> bool {
             .flat_map(|p| be.iter().map(move |q| (*p, *q)))
             .filter(|(p, q)| p == q)
             .count();
-        if common != 1 {
+        if common == 0 || common > 2 {
             return false;
         }
         let flat_a = x.iter().all(|q| q == hi);
@@ -279,6 +393,33 @@ fn separated(a: &Piece, b: &Piece, n: &[Q; 2], shared: bool) -> bool {
 fn cross(a: &[Q; 2], b: &[Q; 2], p: &[Q; 2]) -> Q {
     (&b[0] - &a[0]) * (&p[1] - &a[1]) - (&b[1] - &a[1]) * (&p[0] - &a[0])
 }
+fn polygon_winding(poly: &[&[Q; 2]], point: &[Q; 2]) -> Result<i32> {
+    let mut winding = 0i32;
+    for i in 0..poly.len() {
+        let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
+        let c = cross(a, b, point);
+        if c.is_zero()
+            && (*(&a[0]).min(&b[0]) <= point[0]
+                && point[0] <= *(&a[0]).max(&b[0]))
+            && (*(&a[1]).min(&b[1]) <= point[1]
+                && point[1] <= *(&a[1]).max(&b[1]))
+        {
+            return Err(refused(
+                "Certificate nesting query lies on a polygon boundary",
+            ));
+        }
+        if a[1] <= point[1] && point[1] < b[1] && c > Q::zero() {
+            winding += 1;
+        }
+        if b[1] <= point[1] && point[1] < a[1] && c < Q::zero() {
+            winding -= 1;
+        }
+    }
+    if winding.abs() > 1 {
+        return Err(refused("Certificate polygon is not simple"));
+    }
+    Ok(winding)
+}
 fn polygon_claims(pieces: &[Piece], count: usize) -> Result<(Vec<i8>, Vec<usize>)> {
     let rings: Vec<Vec<_>> = (0..count)
         .map(|w| {
@@ -289,8 +430,8 @@ fn polygon_claims(pieces: &[Piece], count: usize) -> Result<(Vec<i8>, Vec<usize>
                 .collect()
         })
         .collect();
-    let mut signs = Vec::new();
-    let mut depths = Vec::new();
+    let mut signs = Vec::with_capacity(count);
+    let mut depths = Vec::with_capacity(count);
     for (w, ring) in rings.iter().enumerate() {
         let area = (0..ring.len()).fold(Q::zero(), |s, i| {
             let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
@@ -309,30 +450,7 @@ fn polygon_claims(pieces: &[Piece], count: usize) -> Result<(Vec<i8>, Vec<usize>
             if other == w {
                 continue;
             }
-            let mut winding = 0i32;
-            for i in 0..poly.len() {
-                let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
-                let c = cross(a, b, point);
-                if c.is_zero()
-                    && (a[0].clone().min(b[0].clone()) <= point[0]
-                        && point[0] <= a[0].clone().max(b[0].clone()))
-                    && (a[1].clone().min(b[1].clone()) <= point[1]
-                        && point[1] <= a[1].clone().max(b[1].clone()))
-                {
-                    return Err(refused(
-                        "Certificate nesting query lies on a polygon boundary",
-                    ));
-                }
-                if a[1] <= point[1] && point[1] < b[1] && c > Q::zero() {
-                    winding += 1;
-                }
-                if b[1] <= point[1] && point[1] < a[1] && c < Q::zero() {
-                    winding -= 1;
-                }
-            }
-            if winding.abs() > 1 {
-                return Err(refused("Certificate polygon is not simple"));
-            }
+            let winding = polygon_winding(poly, point)?;
             depth += usize::from(winding != 0);
         }
         depths.push(depth);
@@ -348,6 +466,23 @@ pub fn verify(
     tolerance: f64,
     c: &ProfileCertificate,
 ) -> Result<VerifiedProfile> {
+    let (verified, orientation) = verify_geometry(loops, tolerance, c)?;
+    if orientation
+        .iter()
+        .zip(verified.nesting_depth())
+        .any(|(s, d)| (*s == 1) != (*d % 2 == 0))
+    {
+        return Err(refused(
+            "Certificate orientation or material-left nesting claim is false",
+        ));
+    }
+    Ok(verified)
+}
+fn verify_geometry(
+    loops: &[Vec<Curve>],
+    tolerance: f64,
+    c: &ProfileCertificate,
+) -> Result<(VerifiedProfile, Vec<i8>)> {
     if c.version != VERSION || c.source != source_bits(loops, tolerance)? {
         return Err(refused(
             "Certificate version or exact source bits do not match",
@@ -377,6 +512,13 @@ pub fn verify(
                     return Err(refused("Certificate algebraic separation claim is false"));
                 }
                 algebraic = true;
+            } else if c.separating_normals[pair] == u16::MAX - 1 {
+                if p[i].wire != p[j].wire
+                    || !arithmetic::endpoint_census(&p[i].net, &p[j].net, adjacent(&p, i, j))?
+                {
+                    return Err(refused("General algebraic endpoint census is false"));
+                }
+                algebraic = true;
             } else {
                 let n = normal(&p[i], &p[j], c.separating_normals[pair])
                     .ok_or_else(|| refused("Invalid separator witness"))?;
@@ -395,22 +537,19 @@ pub fn verify(
             "Algebraic contacts require a separate exact orientation proof",
         ));
     }
-    if c.orientation != orientation
-        || c.nesting_depth != nesting_depth
-        || orientation
-            .iter()
-            .zip(&nesting_depth)
-            .any(|(s, d)| (*s == 1) != (*d % 2 == 0))
-    {
+    if c.orientation != orientation || c.nesting_depth != nesting_depth {
         return Err(refused(
             "Certificate orientation or material-left nesting claim is false",
         ));
     }
-    Ok(VerifiedProfile {
-        spans: loops.iter().map(Vec::len).sum(),
-        pieces: p.len(),
-        nesting_depth,
-    })
+    Ok((
+        VerifiedProfile {
+            spans: p.len() / (1usize << c.subdivision_depth),
+            pieces: p.len(),
+            nesting_depth,
+        },
+        orientation,
+    ))
 }
 
 #[cfg(test)]
@@ -570,3 +709,90 @@ mod tests {
         }
     }
 }
+
+pub use span_intersections::{OwnedTranslatedSpanIntersections, own_translated_span_intersections};
+
+pub use span_intersections::{OriginalPieceEventLocation, OriginalPieceEvent, OwnedPeriodicPairEvents, own_periodic_pair_events};
+
+pub use span_intersections::{OriginalPeriodicCommonClip, OwnedPeriodicCommonClips, own_periodic_common_clips};
+
+pub use span_intersections::{OriginalPeriodicArrangementOrigin, OriginalPeriodicArrangementCut, OriginalPeriodicArrangementUse, OriginalPeriodicArrangementInterval, OwnedPeriodicArrangementCuts, own_periodic_arrangement_cuts};
+
+pub use span_intersections::{OriginalPeriodicAlignedOrigin, OriginalPeriodicAlignedCut, OriginalPeriodicIntervalBinding, OriginalPeriodicIntervalAlias, OwnedPeriodicAlignedIntervals, own_periodic_aligned_intervals};
+
+pub use span_intersections::{OriginalPeriodicChartCutRef, OriginalPeriodicChartRelationOrigin, OriginalPeriodicChartRelation, OriginalPeriodicChartIncidence, OriginalPeriodicChartVertex, OriginalPeriodicChartCarrier, OriginalPeriodicChartEdge, OwnedPeriodicChartGraph, own_periodic_chart_graph};
+
+pub use span_intersections::own_periodic_pair_events_translated;
+
+pub use span_intersections::{OriginalPeriodicSeamNode, OriginalPeriodicSeamPair, OwnedPeriodicSeamContacts, own_periodic_seam_contacts};
+
+pub use span_intersections::own_periodic_quotient_arrangement_cuts;
+
+pub use span_intersections::{OwnedPeriodicQuotientGraph, own_periodic_quotient_graph};
+
+pub use span_intersections::{OriginalPeriodicVertexChartUse, OriginalPeriodicVertexChart, OwnedPeriodicVertexCharts, own_periodic_vertex_charts};
+
+pub use span_intersections::{OriginalPeriodicPort, OwnedPeriodicPorts, own_periodic_ports};
+
+pub use span_intersections::{OriginalPeriodicTangentWitness, OwnedPeriodicRotation, own_periodic_rotation};
+
+pub use span_intersections::{OwnedPeriodicCycles, own_periodic_cycles};
+
+pub use span_intersections::{OriginalPeriodicBoundaryPart, OriginalPeriodicBoundaryWalk, OwnedPeriodicBoundaryLifts, own_periodic_boundary_lifts};
+
+pub use span_intersections::{OriginalPeriodicWireContribution, OriginalPeriodicWireJump, OriginalPeriodicEdgeJump, OriginalPeriodicBalanceTerm, OriginalPeriodicVertexBalance, OriginalPeriodicWireFlux, OwnedPeriodicWireJumps, own_periodic_wire_jumps};
+
+pub use span_intersections::{OriginalPeriodicPathCrossing, OwnedPeriodicRelativeWinding, own_periodic_relative_winding};
+
+pub use span_intersections::{OriginalPeriodicFillRule, OriginalPeriodicOperand, OriginalPeriodicBooleanOp, OriginalPeriodicOperandPeriods, OwnedPeriodicMaterialRule, OwnedPeriodicMaterialSample, own_periodic_material_rule, own_periodic_material_sample};
+
+pub use span_intersections::{OwnedPeriodicChartSideProbes, OwnedPeriodicMaterialSides, own_periodic_chart_side_probes, own_periodic_material_sides};
+
+pub use span_intersections::{OriginalPeriodicSelectedEdge, OwnedPeriodicBoundarySelection, own_periodic_boundary_selection};
+
+pub use span_intersections::{OwnedPeriodicSideProbes, OriginalPeriodicSideView, own_periodic_physical_side_probes};
+
+pub use span_intersections::{OriginalPeriodicMaterialSector, OwnedPeriodicMaterialCycles, own_periodic_material_cycles};
+
+pub use span_intersections::{OwnedPeriodicMaterialLifts, own_periodic_material_lifts};
+
+pub use span_intersections::{OriginalPeriodicSupportWireRole, OriginalNaturalBoundaryCurve, OriginalPeriodicNaturalBoundary, OwnedPeriodicSupportBoundaries, own_periodic_support_boundaries};
+
+pub use span_intersections::{OriginalPeriodicNaturalCarrier, OwnedPeriodicSupportSideProbes, own_periodic_support_side_probes, OwnedPeriodicSupportMaterialRule, own_periodic_support_material_rule, OwnedPeriodicSupportSides, own_periodic_support_sides, OwnedPeriodicSupportSelection, own_periodic_support_selection};
+
+pub use span_intersections::{OriginalPeriodicSupportVertex, OriginalPeriodicSupportSector, OwnedPeriodicSupportCycles, own_periodic_support_cycles, OwnedPeriodicSupportLifts, own_periodic_support_lifts};
+
+pub use span_intersections::{OwnedPeriodicSupportPath, own_periodic_support_path};
+
+pub use span_intersections::{OriginalPeriodicCochainTerm, OriginalPeriodicSeparatingCochain, OriginalPeriodicRegionProbe, OwnedPeriodicSupportSignatures, own_periodic_support_signatures, OriginalPeriodicMaterialComponent, OwnedPeriodicSupportRegions, own_periodic_support_regions};
+
+pub use span_intersections::{PeriodicRegionSearchLimits, PeriodicRegionSearchStop, PeriodicRegionSearchReport, construct_periodic_support_regions};
+pub use span_intersections::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OriginalPeriodicSurfaceTraceEndpoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
+
+pub use span_intersections::{OriginalPeriodicSurfaceEndpointUse, OriginalPeriodicSurfaceBoundaryFan, OriginalPeriodicSurfaceIncidenceVertex, OriginalPeriodicSurfaceIncidenceEdge, OriginalPeriodicSurfaceIncidenceLoop, OwnedPeriodicSupportIncidence, own_periodic_support_incidence};
+
+pub use span_intersections::{PeriodicSourceChartCopyLimits, OriginalPeriodicSourceChartCopy, OriginalPeriodicSourceChartWorldPoint, OwnedPeriodicSourceChartCopies, own_periodic_source_chart_copies};
+
+pub use span_intersections::{OriginalPeriodicNativeChartCorner, OriginalPeriodicNativeCornerVertex, OwnedPeriodicNativeChartCorners, own_periodic_native_chart_corners};
+
+pub use span_intersections::{OriginalPeriodicNativeShoreRole, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShore, PeriodicNativeShoreLimits, OwnedPeriodicNativeChartShores, own_periodic_native_chart_shores};
+
+pub use span_intersections::{OriginalPeriodicShoreSampleOrigin, OriginalPeriodicShoreMaterialSample, PeriodicShoreMaterialSampleLimits, OwnedPeriodicShoreMaterialSamples, own_periodic_shore_material_samples};
+
+pub use span_intersections::{OriginalPeriodicShoreContactKind, OriginalPeriodicShoreContact, PeriodicShoreMaterialIntervalLimits, OwnedPeriodicShoreMaterialIntervals, own_periodic_shore_material_intervals};
+
+pub use span_intersections::{OriginalPeriodicChartVertexKey, OriginalPeriodicChartCycleVertex, OriginalPeriodicChartCycleEdgeKind, OriginalPeriodicChartCycleEdge, PeriodicChartCycleLimits, OwnedPeriodicChartCycles, own_periodic_chart_cycles};
+
+pub use span_intersections::{PeriodicChartWindingLimits, OwnedPeriodicChartWinding, own_periodic_chart_winding, construct_periodic_chart_winding};
+
+pub use span_intersections::{OriginalPeriodicChartCycleSides,OwnedPeriodicChartCycleSides,PeriodicChartCycleOrientation,PeriodicChartCycleSideLimits,own_periodic_chart_cycle_sides};
+
+pub use span_intersections::{OriginalPeriodicChartStrictPatch,OwnedPeriodicChartStrictPatches,PeriodicChartStrictPatchLimits,own_periodic_chart_strict_patches};
+
+pub use span_intersections::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
+
+pub use span_intersections::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+
+pub use span_intersections::{PeriodicChartFanPatchLimits, OwnedPeriodicChartFanPatches, own_periodic_chart_fan_patches};
+
+pub use span_intersections::{PeriodicSewnFaceLimits, OriginalPeriodicSewnVertex, OriginalPeriodicSewnEdge, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnFace, OwnedPeriodicSewnFaces, own_periodic_sewn_faces};

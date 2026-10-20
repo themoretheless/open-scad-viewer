@@ -8,7 +8,7 @@
 use crate::pipeline::RasterPipelines;
 use crate::shaders::MORPH_VERTEX_STRIDE;
 use crate::uniform::{SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, SceneUniform, shadow_light_vp};
-use gpu_compute::{GpuContext, pack_f32, wgpu};
+use gpu_compute::{GpuContext, f32_le_bytes, wgpu};
 
 pub use crate::resources::{
     DrawEdges, DrawMesh, InstancePool, InstancedGeometry, LineBatch, OverlayBatch,
@@ -108,7 +108,7 @@ impl Rasterizer {
             .slice(..)
             .get_mapped_range_mut()
             .expect("mapped grid quad")
-            .copy_from_slice(&pack_f32(&[
+            .copy_from_slice(&f32_le_bytes(&[
                 -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
             ]));
         grid_quad.unmap();
@@ -228,7 +228,7 @@ impl Rasterizer {
         if !unchanged {
             self.context
                 .queue
-                .write_buffer(&self.scene_buffer, 0, &pack_f32(&floats));
+                .write_buffer(&self.scene_buffer, 0, &f32_le_bytes(&floats));
             self.last_scene_floats = Some(floats);
         }
         self.section_enabled = scene.options[0] > 0.5;

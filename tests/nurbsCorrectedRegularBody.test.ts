@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {correctedRegularBodySources} from '../scripts/sweep-body-matrix-sources.mjs'
@@ -14,7 +15,7 @@ it.each(correctedRegularBodySources)('preserves corrected regular whole-body pro
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing native corrected regular body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.05})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  const stored=JSON.stringify(model),caps=[model.faces.length-2,model.faces.length-1]
  const mesh=tessellateNurbsBrep(model,4)
  expect(mesh.indices.length/3).toBeLessThanOrEqual(20000)

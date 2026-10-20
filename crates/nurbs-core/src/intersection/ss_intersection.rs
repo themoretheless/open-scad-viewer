@@ -4,6 +4,8 @@
 //! rectilinear reductions carry explicit coverage proofs. Other reductions and
 //! continuation return candidates, not a missed-branch or topology certificate.
 //! Owned branch/trim graph authority remains a separate unproved obligation.
+//! Uniform original-source Krawczyk fibers qualify local parameter graphs;
+//! they do not themselves authorize complete surface/surface coverage.
 use crate::foundation::guards::{Budget, require_finite_point};
 use crate::intersection::{
     ContactClass, MAX_BOXES, MAX_SPANS, UnresolvedReason, admit_surface, coedge_trim, context,
@@ -44,7 +46,23 @@ pub use report::{
 };
 
 mod rectilinear;
+mod fiber;
+mod fiber_coverage;
+pub use fiber_coverage::{
+    FiberTraceBuildLimits, FiberTraceBuild, construct_fiber_trace,
+    FiberWorldTraceLimits, FiberWorldTraceResult, QualifiedFiberWorldTrace, qualify_fiber_world_trace,
+    FiberBridgeSpec, FiberSeparation, QualifiedFiberComponents, FiberComponentsResult, connect_mixed_fiber_cover,
+    FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation, qualify_fiber_transition,
+    MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
+    cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
+    CoverageLimits, FiberAtlasCoverageResult, FiberCoverageKind, FiberCoverageNode,
+    FiberCoverageReport, FiberCoverageResult, FiberCoverageStatus, QualifiedFiberAtlasCoverage,
+    QualifiedFiberCoverage, cover_fiber_atlas_box, cover_fiber_atlas_surfaces,
+    cover_fiber_box, cover_fiber_surfaces,
+};
+pub use fiber::{FiberOperator, FiberAxis, FiberLimits, FiberReport, FiberSources, FiberStatus, FiberResult, QualifiedFiber, FiberContraction};
 pub(crate) use rectilinear::rectangle_chart;
+pub use rectilinear::rectangular_trace_proposal;
 
 const TRANSVERSE_SINE: f64 = 1e-8;
 const MAX_CONTINUATION: usize = 512;
@@ -735,3 +753,13 @@ mod guard_tests {
         assert!(err.contains("ssi_marching"));
     }
 }
+
+pub use fiber_coverage::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryNode,FiberDiscoveryResult,QualifiedDiscoveredFiberAtlas,discover_fiber_box,discover_fiber_surfaces,DiscoveredComponentLimits,OriginalFiberPointConnection,QualifiedDiscoveredFiberComponents,DiscoveredFiberComponentsResult,connect_discovered_fiber_atlas};
+
+pub use fiber_coverage::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
+
+mod quadratic_graph;
+pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, OriginalGraphSSPoint, OriginalGraphSSVertex, OriginalGraphSSEdgeGeometry, OriginalGraphSSEdge, OriginalGraphSSBranch, OriginalGraphSSTrim, OriginalGraphSSStation, QualifiedQuadraticGraphSS, qualify_quadratic_graph_ss};
+
+mod qualified_dispatch;
+pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};

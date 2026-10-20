@@ -161,3 +161,25 @@ fn full_natural_thread_edges_retain_surface_definitions_and_exact_identity() {
         assert_eq!(report.outcome, cad_predicates::BezierIdentity::Equal);
     }
 }
+
+#[test]
+fn multispan_thread_diagonals_keep_compact_degree_six_polynomial_storage(){
+    use nurbs_core::thread::{self,Spec,Hand};
+    for hand in [Hand::Right,Hand::Left] {
+        let trims=thread::trim_candidates(Spec{turns:2,hand,..Spec::default()},[1.13,1.87],1e-3).unwrap();
+        let mut diagonal=0;
+        for c in &trims.candidates {
+            let mapped=c.mapped_edges(1e-12,1e-3,128,100000).unwrap();
+            assert!(mapped.all_edges_within_tolerance);
+            for edge in mapped.edges {
+                let p=&edge.pcurve.control_points;
+                if p[0][0]!=p[1][0] && p[0][1]!=p[1][1] {
+                    diagonal+=1;assert_eq!(edge.curve.degree,6);
+                    assert!(edge.curve.control_points.len()<=13);
+                    assert!(edge.curve.weights.iter().all(|w|*w==1.));
+                }
+            }
+        }
+        assert!(diagonal>0);
+    }
+}

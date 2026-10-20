@@ -15,6 +15,7 @@ type V = [f64; 3];
 type StationCache = std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<
     (usize, usize, usize, u64), (Vec<f64>, Option<f64>)>>>;
 mod authored_error;
+mod original_level_cache;
 mod arc_guide;
 mod contact_anchor;
 mod source_plane;
@@ -1298,6 +1299,15 @@ impl MultiSweep<'_> {
             count >= self.options.initial_sections && count <= self.options.max_sections,
             "Preview section count outside configured sweep budget",
         )?;
+        let key = original_level_cache::key(self, count);
+        if let Some(level) = key.as_ref().and_then(|k| original_level_cache::get(k)) {
+            return Ok(level);
+        }
+        let level = self.preview_uncached(count)?;
+        if let Some(key) = key { original_level_cache::put(key, &level); }
+        Ok(level)
+    }
+    fn preview_uncached(&self, count: usize) -> Result<MultiLevel> {
         let mut patches = Vec::new();
         let mut ranges = Vec::new();
         let mut report: Option<LevelReport> = None;

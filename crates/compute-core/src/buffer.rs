@@ -1,32 +1,33 @@
 use wgpu::{Buffer, Device, Queue};
 
-#[cfg(target_endian = "little")]
-fn cast_f32_bytes(data: &[f32]) -> &[u8] {
-    // SAFETY: f32 has no padding or uninitialized bytes, and u8 has alignment 1.
-    unsafe { std::slice::from_raw_parts(data.as_ptr().cast::<u8>(), std::mem::size_of_val(data)) }
+/// Uploads f32 values into fresh storage, directly mapped on Apple Silicon.
+pub fn storage_f32(device: &Device, _queue: &Queue, data: &[f32]) -> Buffer {
+    let bytes = gpu_compute::f32_le_bytes(data);
+    initialized(device, "compute storage f32", &bytes, 4, storage_usage())
 }
 
-#[cfg(target_endian = "little")]
-fn cast_u32_bytes(data: &[u32]) -> &[u8] {
-    // SAFETY: u32 has no padding or uninitialized bytes, and u8 has alignment 1.
-    unsafe { std::slice::from_raw_parts(data.as_ptr().cast::<u8>(), std::mem::size_of_val(data)) }
+fn storage_usage() -> wgpu::BufferUsages {
+    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC
 }
 
-/// Uploads `data` as a storage buffer (STORAGE | COPY_DST).
-pub fn storage_f32(device: &Device, queue: &Queue, data: &[f32]) -> Buffer {
-    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("compute storage f32"),
-        size: (data.len() * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-        mapped_at_creation: false,
-    });
-    #[cfg(target_endian = "little")]
-    queue.write_buffer(&buffer, 0, cast_f32_bytes(data));
-    #[cfg(not(target_endian = "little"))]
-    queue.write_buffer(&buffer, 0, &gpu_compute::pack_f32(data));
-    buffer
+fn initialized(
+    device: &Device,
+    label: &str,
+    bytes: &[u8],
+    minimum_size: usize,
+    usage: wgpu::BufferUsages,
+) -> Buffer {
+    gpu_compute::create_buffer_initialized(
+        device,
+        &wgpu::BufferDescriptor {
+            label: Some(label),
+            size: bytes.len().max(minimum_size) as u64,
+            usage,
+            mapped_at_creation: true,
+        },
+        |mapping| mapping.into_slice(..bytes.len()).copy_from_slice(bytes),
+    )
+    .expect("GPU buffer initialization failed")
 }
 
 /// Zero-initialized f32 storage buffer (read_write outputs).
@@ -42,52 +43,38 @@ pub fn storage_f32_zeroed(device: &Device, _queue: &Queue, len: usize) -> Buffer
 }
 
 /// Same packing for u32 payloads (indices, counters).
-pub fn storage_u32(device: &Device, queue: &Queue, data: &[u32]) -> Buffer {
-    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("compute storage u32"),
-        size: (data.len() * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-        mapped_at_creation: false,
-    });
-    #[cfg(target_endian = "little")]
-    queue.write_buffer(&buffer, 0, cast_u32_bytes(data));
-    #[cfg(not(target_endian = "little"))]
-    queue.write_buffer(&buffer, 0, &gpu_compute::pack_u32(data));
-    buffer
+pub fn storage_u32(device: &Device, _queue: &Queue, data: &[u32]) -> Buffer {
+    let bytes = gpu_compute::u32_le_bytes(data);
+    initialized(device, "compute storage u32", &bytes, 4, storage_usage())
 }
 
 /// Uniform buffer from raw float payloads (callers pack structs with
 /// [`gpu_compute::pack_f32`] semantics: 16-byte alignment is the caller's job).
-pub fn uniform_f32(device: &Device, queue: &Queue, floats: &[f32]) -> Buffer {
-    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("compute uniform"),
-        size: (floats.len() * 4).max(16) as u64,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-    #[cfg(target_endian = "little")]
-    queue.write_buffer(&buffer, 0, cast_f32_bytes(floats));
-    #[cfg(not(target_endian = "little"))]
-    queue.write_buffer(&buffer, 0, &gpu_compute::pack_f32(floats));
-    buffer
+pub fn uniform_f32(device: &Device, _queue: &Queue, floats: &[f32]) -> Buffer {
+    let bytes = gpu_compute::f32_le_bytes(floats);
+    initialized(
+        device,
+        "compute uniform",
+        &bytes,
+        16,
+        wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    )
 }
 
-/// Copies `buffer[0..size]` into a MAP_READ staging buffer and maps it.
-/// Storage buffers cannot hold MAP_READ (wgpu restricts it to COPY_DST
-/// companions), so readback goes through an explicit copy.
-fn readback(
+/// Snapshot readback through staging. The copy preserves independent results
+/// when the source is reused while earlier readback tickets remain pending.
+fn readback<R>(
     device: &Device,
     queue: &Queue,
     buffer: &Buffer,
     size: usize,
-) -> Result<Vec<u8>, gpu_compute::ReadbackError> {
+    consume: impl FnOnce(&[u8]) -> R,
+) -> Result<R, gpu_compute::ReadbackError> {
     let mut encoder = device.create_command_encoder(&Default::default());
     let mut ticket =
         gpu_compute::ByteReadback::copy_buffer(device, &mut encoder, buffer, 0, size as u64)?;
     ticket.submitted(queue.submit([encoder.finish()]));
-    ticket.wait(std::time::Duration::from_secs(30))
+    ticket.wait_with(std::time::Duration::from_secs(30), consume)
 }
 
 pub fn try_read_f32(
@@ -96,41 +83,32 @@ pub fn try_read_f32(
     buffer: &Buffer,
     count: usize,
 ) -> Result<Vec<f32>, gpu_compute::ReadbackError> {
-    let bytes = readback(
+    readback(
         device,
         queue,
         buffer,
         count
             .checked_mul(4)
             .ok_or(gpu_compute::ReadbackError::InvalidRange)?,
-    )?;
-    let chunks = bytes.as_chunks::<4>().0;
-    let mut out = Vec::with_capacity(chunks.len());
-    for chunk in chunks {
-        out.push(f32::from_le_bytes(*chunk));
-    }
-    Ok(out)
+        crate::array::decode_elements::<f32>,
+    )
 }
+
 pub fn try_read_u32(
     device: &Device,
     queue: &Queue,
     buffer: &Buffer,
     count: usize,
 ) -> Result<Vec<u32>, gpu_compute::ReadbackError> {
-    let bytes = readback(
+    readback(
         device,
         queue,
         buffer,
         count
             .checked_mul(4)
             .ok_or(gpu_compute::ReadbackError::InvalidRange)?,
-    )?;
-    let chunks = bytes.as_chunks::<4>().0;
-    let mut out = Vec::with_capacity(chunks.len());
-    for chunk in chunks {
-        out.push(u32::from_le_bytes(*chunk));
-    }
-    Ok(out)
+        crate::array::decode_elements::<u32>,
+    )
 }
 
 /// Compatibility convenience: panics on transport failure, never fabricates an

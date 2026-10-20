@@ -132,10 +132,12 @@ pub(crate) use crate::offset::diagnostics as curve_offset_diagnostics;
 pub use crate::offset::curve_offset_join;
 pub use crate::offset::curve_offset_wire;
 pub use crate::analysis::curve_surface_agreement;
+pub use crate::analysis::surface_collar;
 pub(crate) use crate::analysis::curve_surface_composition;
 pub mod intersection;
 use numerics::periodic_chart;
 pub use crate::analysis::radial_bounds;
+pub use crate::analysis::skin_radius;
 pub use crate::analysis::ray_surface;
 pub use crate::intersection::ss_intersection;
 pub use crate::core::surface;
@@ -148,6 +150,8 @@ pub use crate::join::surface_join;
 pub use crate::join::surface_g1;
 pub use crate::join::surface_g2;
 pub use crate::analysis::surface_shape_operator;
+pub use crate::analysis::surface_normal_trace;
+pub use crate::analysis::curve_secant_trace;
 pub use crate::editing::surface_edit;
 pub use crate::intersection::surface_contact;
 pub use crate::intersection::surface_contact_search;
@@ -201,6 +205,7 @@ pub use crate::sweeps::helical_sweep;
 pub use crate::construct::curves::rack;
 
 pub use crate::construct::curves::thread;
+pub use crate::construct::curves::worm;
 
 use numerics::exact_products;
 
@@ -234,6 +239,9 @@ pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
 
 pub use crate::join::surface_blend;
+pub use crate::join::radius_transition;
+#[path = "join/corner_blend.rs"]
+pub mod corner_blend;
 
 pub use crate::construct::surfaces::bellows;
 
@@ -242,3 +250,13 @@ pub use crate::construct::surfaces::sphere_envelope;
 pub use crate::intersection::parallel_sections;
 
 pub use crate::offset::machining as planar_toolpath;
+
+#[path = "join/surface_g2_pcurves.rs"]
+pub mod surface_g2_pcurves;
+#[path = "join/surface_g1_pcurves.rs"]
+pub mod surface_g1_pcurves;
+
+#[path = "analysis/surface_coordinate_flow.rs"]
+pub mod surface_coordinate_flow;
+
+pub use crate::construct::surfaces::worm_wheel;

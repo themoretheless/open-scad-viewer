@@ -982,4 +982,6 @@ mod planar_curve_curve;
 pub use planar_curve_curve::{CertifiedCurveCrossing, CertifiedCurveIntersection, intersect_curve_curve_certified_report};
 #[path = "intersection/certified_curve_plane.rs"]
 mod certified_curve_plane;
+#[path = "intersection/certified_curve_surface.rs"]
+pub mod certified_curve_surface;
 pub use certified_curve_plane::{CertifiedPlaneCrossing, CertifiedCurvePlaneIntersection, intersect_curve_plane_certified_report};

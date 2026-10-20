@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -13,7 +14,7 @@ it('owns antipodal holonomy error and independently audits retained hollow Solid
  if(!('nativeGeometry' in built))throw Error('Missing antipodal retained body')
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  expect(evidence).toMatchObject({continuousBound:true,withinBudget:true,budget:1})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.faces).toHaveLength(512)
  expect(model.shells).toHaveLength(2)
  expect(model.bodies[0].innerShells).toEqual([1])

@@ -53,6 +53,7 @@ mod cad_lattice;
 mod cad_local_mesh_tools;
 mod cad_mesh_planes;
 mod cad_mesh_topology;
+mod cad_minkowski3d;
 mod cad_miter_layout;
 mod cad_miter_owned;
 mod cad_path;
@@ -72,6 +73,7 @@ mod cad_split;
 mod cad_surface_diagnostics;
 mod cad_sweep_smoothness;
 mod cad_geometric_g2;
+mod cad_runout;
 mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
@@ -590,6 +592,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "minkowski_3d_certify" | "minkowski_3d_verify" | "minkowski_nurbs_certify" | "minkowski_nurbs_verify" | "nurbs_source_atlas_certify" | "nurbs_source_atlas_verify" => cad_minkowski3d::dispatch(v),
         "native_geometry_snapshot_pack" => native_snapshot::pack(v),
         "native_geometry_snapshot_unpack" => native_snapshot::unpack(v),
         "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
@@ -653,6 +656,35 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_signed_area"
         | "brep_profile_display"
         | "brep_profile_certify"
+        | "brep_profile_certify_measure"
+        | "brep_curve_certify_agreement"
+        | "brep_curve_certify_image_agreement"
+        | "brep_curve_verify_image_agreement_certificate"
+        | "brep_profile_minkowski_sum"
+        | "brep_profile_minkowski_offset"
+        | "brep_profile_verify_minkowski_certificate"
+        | "brep_curve_certify_span_intersections"
+        | "brep_curve_verify_span_intersections_certificate"
+        | "brep_curve_certify_algebraic_intersections"
+        | "brep_curve_verify_algebraic_intersections_certificate"
+        | "brep_curve_certify_multispan_agreement"
+        | "brep_curve_verify_multispan_agreement_certificate"
+        | "brep_profile_offset_regions_certified"
+        | "brep_profile_verify_offset_regions_certificate"
+        | "brep_curve_certify_nonlinear_agreement"
+        | "brep_curve_verify_nonlinear_agreement_certificate"
+        | "brep_curve_certify_intersections"
+        | "brep_curve_verify_intersections_certificate"
+        | "brep_profile_offset_wire_certified"
+        | "brep_profile_verify_offset_wire_certificate"
+        | "brep_curve_certify_projective_agreement"
+        | "brep_curve_verify_projective_agreement_certificate"
+        | "brep_curve_certify_endpoint_contacts"
+        | "brep_curve_verify_endpoint_contacts_certificate"
+        | "brep_curve_offset_certified"
+        | "brep_curve_verify_offset_certificate"
+        | "brep_curve_verify_agreement_certificate"
+        | "brep_profile_verify_measure_certificate"
         | "brep_profile_verify_certificate" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "svg_color_trace" => {
@@ -1258,6 +1290,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "brep_miter_wall_preview" => cad_miter_layout::preview(v),
         "brep_closed_patch_network" => cad_geometric_g2::create_closed_patch_network(v),
         "brep_g2_surface_bridge" => cad_geometric_g2::create_surface_bridge(v),
+        "brep_g2_runout_surface" => cad_runout::create(v),
         "brep_geometric_g2_audit" => cad_geometric_g2::diagnose(v),
         "brep_g2_annular_cylinder" => cad_geometric_g2::create_annular_cylinder(v),
         "brep_miter_profile_smoothness_audit" => cad_sweep_smoothness::diagnose(v, true),

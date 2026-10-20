@@ -4,7 +4,134 @@
 
 Нативная готовность требует типизированного Rust API, независимых геометрических проверок, отказов на некорректных данных и описанных ограничений. WASM, TypeScript, Rush и редактор не являются условиями нативной готовности. Приближённая операция обязана явно различать выборочную оценку, непрерывную границу ошибки и учёт округления.
 
-Текущее состояние каталога: 189 реализованных возможностей (79 integrated + 110 native), 11 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+Текущее состояние каталога: 198 реализованных возможностей (79 integrated + 119 native), 2 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+
+## Specific-root world error and local trace construction, 2026-10-16
+
+**198/200**, unchanged. Native Rust now binds actual NURBS world/UV coefficients
+to a specific original intersection root with continuous world-error bounds.
+It retains and replays actual R/scales/q and complete source Jacobian bounds,
+monotone full-interval clocks and all agreement cells. A curve on both supports
+but on the wrong root is refused. Original multiple knot spans, reverse clocks,
+genuine piecewise curvature and rotated/second-support frames pass. Adaptive
+local construction publishes a chain only after complete interval admission.
+Latest full libraries **1384 NURBS +63 predicates**, **46 SS integration tests**,
+both-crate WASM, formatting and API/catalog checks pass. Global atlas discovery,
+physical branch graphs and source-bound trim topology remain open; NURBS-0030
+stays planned. [Evidence](../qualification/nurbs-fiber-world-error-2026-10-16/native-tests.json).
+
+## Original parameter-root component census, 2026-10-16
+
+**198/200**, unchanged. Rust now owns connected components of the complete
+original parameter root set: fresh mixed-chart coverage, source-qualified bridges
+and a complete separation census between different chart groups. An omitted
+bridge refuses instead of creating a false extra component. Coverage and bridge
+work share one bounded allowance; all stored component/separation/transition
+receipts are independently replayed. Latest full libraries **1382 NURBS +63
+predicates**, **34 SS integrations**, both-crate WASM and API/catalog checks pass.
+Physical world branches, world traces, periodic quotients and trims remain open;
+NURBS-0030 stays planned. [Evidence](../qualification/nurbs-fiber-components-2026-10-16/native-tests.json).
+
+## Original mixed-axis local transitions, 2026-10-16
+
+**198/200**, unchanged. Rust now qualifies whole original-root bridges between
+charts using different free parameters, including a nonlinear reverse coordinate
+map. Source replay, bridge and endpoint work share one allowance; private replay
+rejects damaged geometry/context, orientation, endpoint receipts and charged work.
+Closed natural endpoint cells must be valid before original fiber admission.
+Latest full native libraries **1380 NURBS +63 exact predicates**, **31 SS
+integration tests**, both-crate WASM, formatting and API/catalog checks pass.
+Global component/world-trace/trim ownership remains open, so NURBS-0030 stays
+planned. [Evidence](../qualification/nurbs-fiber-transitions-2026-10-16/native-tests.json).
+
+## Broad native verification, 2026-10-16
+
+Full three-crate command completed: **3523 passed, 0 failed, 3 explicit diagnostic/timing skips**, across219 result suites including doctests. All three former Boolean failures pass. This broad binary snapshot predates the additive mixed-axis module; that path additionally passes latest fullNURBS1379/predicates63,28uniqueSS integration tests andboth-crateWASM. Native catalog remains198/200; general physical SS branch/trace/trim ownership and general periodic correspondence/contacts are still planned. [Full evidence](../qualification/nurbs-exact-contacts-2026-10-16/native-tests.json).
+
+## Mixed-axis original surface root covers, 2026-10-16
+
+**198/200**, unchanged. Native Rust now owns complete closed parameter-product
+covers using overlapping original Krawczyk fibers with different free axes and
+intervals. Actual original exclusions cover every remaining cell; shared faces
+are retained and all source replay/exclusion work is charged under one budget.
+An essential mixed-axis bridge on a curved analytic intersection passes; removing
+that bridge or a distinct branch refuses coverage. Latest full NURBS library
+**1379**, exact predicates **63**, current SS integrations **28 unique** and
+both-crate WASM checks pass. Physical chart transitions, branch/world-trace/trim
+ownership remain open, so NURBS-0030 stays planned.
+[Evidence](../qualification/nurbs-mixed-fiber-cover-2026-10-16/native-tests.json).
+
+## Exact original nonlinear endpoint contacts, 2026-10-16
+
+**198/200**, unchanged. A distinct typed Rust chart owner now transfers exact
+original source restrictions through weighted flow and endpoint angular ownership.
+B-rep admits endpoint-touching polynomial/rational components after independent
+complete profile certification and exact inter-wire half-plane separation.
+Arbitrary nonlinear correspondence, general contacts and physical face ownership
+for this new path remain open; NURBS-0173 stays planned. Current verification
+artifacts: [exact-contact checkpoint](../qualification/nurbs-exact-contacts-2026-10-16/CONTINUE.md).
+
+## Exact affine/reverse coherent families, 2026-10-16
+
+**195/200**, unchanged. Normalized original knot/control/weight identities now qualify affine and reversed source/candidate families without rounded parameter transforms. Signed original source roles are replayed independently; dictionary merging/cancellation and candidate UV regions preserve actual original weighted winding. **119 focused checks pass**, plus WASM compilation, including negative-domain seam cancellation, shifted/scaled domains, non-affine refusals and underflow/one-ULP exact comparisons. Nonlinear correspondence, contacts and supporting-surface faces remain open; NURBS-0173 is still planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-coherent-affine-reverse-2026-10-16/native-tests.json).
+
+## Coherent weighted charts and candidate regions, 2026-10-16
+
+**195/200**, unchanged. Genuine copy-coherent source evidence now drives weighted chart construction and exact candidate-region ownership, preserving full original multiplicity without casting quotient embedding into full-copy embedding. All three classification stages share one allowance. Exact positive weight gauges merge without changing geometry; reverse cancellation remains correct under input permutations. **155 focused Rust checks pass**, plus WASM compilation. Nonuniform nested multiplicities retain a filled outer instead of a false quotient hole. Reversed whole-source homotopies, general contacts and supporting-surface faces remain open; NURBS-0173 is still planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-coherent-weighted-chart-2026-10-16/native-tests.json).
+
+## Coherent coincident-source anchor proof, 2026-10-16
+
+**195/200**, unchanged. A separate typed copy-coherence proof now groups exact same-parameter source/candidate rational functions, including independently proportional positive weights. It verifies the distinct-function quotient isotopy and queries actual full original winding under a shared classification allowance; the quotient embedding is never relabelled as a full-copy embedding. **93 core periodic checks pass**, plus WASM compilation. Nonuniform group multiplicity is covered by a case with quotient winding 0 and original winding 1. Typed integration into weighted charts, reversed aliases, general contacts and supporting-surface faces remain open, so NURBS-0173 is still planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-coherent-anchor-2026-10-16/native-tests.json).
+
+## Tolerance-qualified periodic candidate regions, 2026-10-16
+
+**195/200**, unchanged. Approximate weighted-chart admission retains the complete original isotopy, periodic-image separation and original anchor winding proof, then feeds exact candidate-region ownership. Immutable source replay rejects stale original/query winding integers and incomplete topology; pointwise source/candidate boundary equality is explicitly not claimed. The older unweighted angular-ownership policy remains unchanged. **136 focused Rust checks pass**, plus WASM compilation. Coherent coincident-source isotopy, general contacts and owned supporting-surface faces remain open; NURBS-0173 is still planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-periodic-weighted-approx-2026-10-16/native-tests.json).
+
+## Original periodic chart-to-region admission, 2026-10-16
+
+**195/200**, unchanged. The typed Rust periodic-region constructor now recomputes original weighted-chart admission before exact integer cycle compression and nonzero-fill region ownership. Complete contribution/cancellation and dictionary-flow censuses preserve all original source roles; immutable provenance links region wires back to original dictionary edges and cycles. **39 native checks pass**, including repeated rational boundaries, opposite cancellation, negative fill, duplicated seam crossings, stale-source replay and budget failures; both crates compile for WASM. Approximate combined admission, general contacts and supporting-surface face topology remain open, so NURBS-0173 is still planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-periodic-winding-regions-2026-10-15/native-tests.json).
+
+## Original winding region regularization, 2026-10-15
+
+**195/200**, unchanged. Exact signed winding normalization now removes redundant material-internal borders and assigns holes/material islands for separated original NURBS cycles. Immutable components retain original curves or exact parameter-negated reversals; every output receives a fresh material-left profile proof. The ordinary public profile admission policy remains strict. **45 native checks pass**, including replay/source tampering, compact rational ellipses, cubic non-dyadic reversals, cap/thread regressions and four gear profile checks; both crates compile for WASM. Inter-wire contacts and owned supporting-surface faces remain open, so NURBS-0173 is still planned. [Contract](nurbs-winding-region-regularization.md), [evidence](../qualification/nurbs-winding-regularization-2026-10-15/native-tests.json).
+
+## Periodic endpoint B-spline germ ordering, 2026-10-15
+
+**195/200**, unchanged. Exact common-projection contact ordering now supports clamped multispan B-spline endpoint bases, independent affine knot scales and global rational-weight scales. Adjacent binary64 bend coefficients admit exact ordering without disjoint floating intervals. Three new tests and the full **87-test periodic regression set** pass, as does WASM compilation. General unmatched germs and owned-face regularization remain open; NURBS-0173 is not promoted. [Contract](nurbs-periodic-trim.md), [evidence](../qualification/nurbs-periodic-bspline-germs-2026-10-15/native-tests.json).
+
+## Finite external and internal threads, 2026-10-15
+
+**195/200**: 79 integrated + 116 native, **5 planned** remain. Strict Rust constructors now bind every retained original wall to nominal rounding-inclusive bounds and complete affine clipping/UV isotopy. Compact degree-six traces preserve curved boundaries; exact disk/annular cap profiles and final continuous G0 checks admit closed body candidates. **20 core and 28 B-rep focused tests pass**, including default-precision left-handed threads and the older cap regressions. Both crates compile for WASM. Global solid geometry and a combined ideal finite-body error are explicitly unqualified. [Contract](nurbs-finite-thread-certificates.md), [evidence](../qualification/nurbs-thread-source-2026-10-15/native-tests.json).
+
+Full native regression after the cap fix: **1861 core + 1214 B-rep tests passed**, plus two doctests; zero failures and three explicitly ignored B-rep diagnostics. Unrelated modules changed during the full run, so its result describes the compiled snapshot. The current thread/cap and periodic sources subsequently passed **132 focused checks**; qualification records the source hashes and separate logs.
+
+## Four native gear families with verified original profiles, 2026-10-15
+
+**193/200**: 79 integrated + 114 native, **7 planned** remain. Spur, signed helical, mirrored herringbone and internal-ring constructors now have a strict typed Rust API with complete modular original-profile embedding, independent exact winding/nesting, source-to-model binding and inclusive nominal profile/wall bounds. The 3- and 256-tooth boundaries, default 20-tooth profile, bore, internal 40-tooth ring, witness/source forgery and proof limits pass seven focused integration tests. Both crates compile for WASM. Global cap/wall embedding and complete owned-solid admission remain separate qualifications; the returned object explicitly reports `solid_geometry_certified == false`. This uses the existing native-constructor criterion, not a new fully-qualified-solid claim. [Contract](nurbs-gear-modular-profile.md), [evidence](../qualification/nurbs-gear-native-193-2026-10-15/native-tests.json).
+
+## Complete nominal sharp-profile accuracy, 2026-10-15
+
+Saved arcs now include angular/radius/weight uncertainty; below-base lines have complete endpoint-family bounds. Reports aggregate every admitted flank, arc and line into `profile_error_upper`, then add the saved-wall/nominal-twist bound for `ideal_wall_error_upper`. The shared Taylor owner avoids interval dependency with a midpoint/Lipschitz enclosure. **25 focused checks passed**, plus WASM compilation. Larger/internal profile embedding and whole-solid admission remain unfinished, so the native milestone remains **189/200**. [Contract](nurbs-gear-full-profile-accuracy.md), [evidence](../qualification/nurbs-gear-full-profile-accuracy-2026-10-15/native-tests.json).
+
+## Continuous original gear arc radii, 2026-10-15
+
+All saved tip/root, bore and outer-rim arcs now receive independent continuous radial bounds including nominal radius derivation and canonical endpoint changes. The typed curve API reuses the existing original homogeneous Bernstein-product owner. **15 focused checks passed**, plus WASM compilation. This proves radial accuracy, not nominal angular/line correspondence or a general embedded solid. Native count remains **189/200**. [Contract](nurbs-gear-arc-radial-bounds.md), [evidence](../qualification/nurbs-gear-arc-radius-2026-10-15/native-tests.json).
+
+## Exact gear profile endpoint ownership, 2026-10-15
+
+Line/arc joins and full-wire/hole seams now share identical saved endpoints while every certified involute pole is retained. The report includes an outward continuous adjustment bound. Internal reverse knots are independently requalified. Exact original-profile certificates pass for 3 and 8 teeth. **12 focused checks passed**, and WASM compilation passes. General larger/internal profile qualification and nominal root geometry remain unfinished, so the native count remains **189/200**. [Contract](nurbs-gear-exact-profile-joins.md), [evidence](../qualification/nurbs-gear-profile-joins-2026-10-15/native-tests.json).
+
+## Inclusive saved helical walls, 2026-10-15
+
+The original rational-profile helical sweep now has an independent outward saved-net certificate covering original V knots, saved poles, parameter boxes and the continuous interpolation remainder. Gear walls use nominal twist derivation boxes, including signed angles and herringbone halves. **22 focused tests passed**, and both crates compile for WASM. [Contract](nurbs-helical-saved-net-certificate.md), [evidence](../qualification/nurbs-helical-inclusive-2026-10-15/native-tests.json). Root/profile embedding remains unfinished, so the count remains **189/200**.
+
+## Native regression qualification, 2026-10-15
+
+Full Rust baseline: **1823 core tests + 1135 B-rep tests passed**, zero failures, three explicitly ignored B-rep tests. The nominal gear refactor subsequently passed 15 focused checks (these overlap the baseline and are not added as unique tests). Both crates pass WASM target compilation; this is not a packaged browser/editor/STEP runtime qualification. The catalog/API checks and focused formatting/diff checks pass. [Evidence](../qualification/nurbs-native-189-2026-10-15/verification.json). **189/200** remains the honest native count; eleven planned items are not promoted by candidate generation alone.
+
+## Nominal gear flank parameter bounds, 2026-10-15
+
+The full GearSpec module, degree-pressure, backlash and clearance derivation now has outward parameter boxes and a continuous saved-quintic family certificate. Per-gear flags distinguish admitted nominal bounds from stored-parameter-only bounds. Gear catalog status stays planned pending root/profile topology and saved helical-wall rounding. **189/200**, unchanged. [Contract](nurbs-gear-parameter-certification.md).
 
 ## Rational patch skins with sampled thickness assurance, 2026-10-15
 
@@ -273,9 +400,9 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0085 | рейка | native |
 | NURBS-0086 | коническая шестерня | planned |
 | NURBS-0087 | червяк | planned |
-| NURBS-0088 | червячное колесо | planned |
-| NURBS-0089 | наружная резьба | planned |
-| NURBS-0090 | внутренняя резьба | planned |
+| NURBS-0088 | червячное колесо | native |
+| NURBS-0089 | наружная резьба | native |
+| NURBS-0090 | внутренняя резьба | native |
 | NURBS-0091 | кулачок | native |
 | NURBS-0092 | лопатка | native |
 | NURBS-0093 | крыло | native |
@@ -398,3 +525,150 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 Профили лежат в плоскости XY, допускают последующее нативное affine-преобразование. Замыкание использует совпадающие концы clamped-базы, не periodic encoding. Круговые участки рационально точны в вещественной арифметике; сертификат погрешности binary64 не заявлен. Недопустимые размеры и вырожденные данные отклоняются.
 
 Проверки 2026-10-01: `cargo test --manifest-path crates/Cargo.toml -p nurbs-core --no-default-features --quiet` — 282 теста и 2 doctest; после усиления проверки знакового угла — повторно 4 профильных теста. Нативный пример `engineering_profiles` выполнен успешно; он строит также стенку корпуса через extrusion. `node scripts/audit-nurbs-catalog.mjs` — 200 записей, ошибок нет. Проверки с codec/transport и новая сборка WASM в этом пакете не выполнялись.
+
+## Supporting surfaces for coherent periodic regions, 2026-10-16
+
+**195/200 remains unchanged.** The typed B-rep owner now saves the actual surface and original coherent UV context, replays seam and world-error admission, and rejects nonwrapped retained connectors. Exact positive boundary weight gauges are supported. World-aware UV refinement uses the existing shared proof budget and never changes the caller's world tolerance. **125 focused tests pass**, including the three multispan Boolean regressions, plus WASM checks for both crates and API/catalog checks. These are focused results, not a new full-repository regression. Surface regularity, injectivity, lifted 3D boundary edges and owned face assembly remain unqualified. [Evidence](../qualification/nurbs-periodic-surface-regions-2026-10-16/native-tests.json).
+
+## Source-bound spherical bevel flank, 2026-10-16
+
+**195/200 remains unchanged.** Rust now constructs spherical involutes and radial straight-bevel working flanks. Independent outward endpoint-jet/whole-control-net checks provide continuous source-bound error including rounding. An opaque owner enforces the requested world tolerance and replays the original source. Eleven focused checks pass (six new flank tests, three gear parameter tests, two planar involute regressions), along with both-crate WASM and API/catalog checks. Full bevel gear qualification remains planned; the 32-control surface limit requires multi-patch development for fine wide flanks. [Contract](nurbs-straight-bevel-flank.md), [evidence](../qualification/nurbs-bevel-flank-2026-10-16/native-tests.json).
+
+## Original-parameter bevel patches, 2026-10-16
+
+**195/200 remains unchanged.** Fine whole straight-bevel working flanks now partition the original certified cubic profile into radial surfaces, preserving global source parameters and exact common rows. The independent verifier reconstructs the complete outer source chain and requalifies world error, source coverage and radial scaling. Missing/reordered patches, damaged seams, altered radii and insufficient patch budgets are refused. Twelve focused tests pass, both crates check for WASM, and API/catalog checks pass. Nominal full-gear derivation, tooth outline and owned B-rep assembly remain planned. [Contract](nurbs-straight-bevel-flank.md), [evidence](../qualification/nurbs-bevel-patches-2026-10-16/native-tests.json).
+
+## Nominal straight-bevel working flank, 2026-10-16
+
+**195/200 remains unchanged.** Native Rust derives outward original-spec pitch/base/tip/root cone and roll boxes, cone-distance width, backlash half-thickness and pitch azimuth. The opaque working-flank owner now propagates nominal parameter uncertainty into a continuous saved-patch world error, replays the original gear spec, and enforces the unchanged tolerance. Fifteen focused tests pass, both crates check for WASM, and API/catalog checks pass. Whole-tooth placement, closed root/tip outline, original profile embedding and complete B-rep gear remain unqualified. [Contract](nurbs-straight-bevel-flank.md), [evidence](../qualification/nurbs-bevel-nominal-2026-10-16/native-tests.json).
+
+## Paired nominal bevel tooth flanks, 2026-10-16
+
+**195/200 remains unchanged.** Native Rust places both working flanks for every tooth, including nominal pitch thickness/backlash, reflection and tooth phase. The complete inventory is owned and independently requalified against every original saved pole, basis and nominal phase interval. Ideal first-quadrant source sectors and exact patch seams are checked; changed side/count, missing flanks, damaged poles/weights and insufficient surface budgets are refused. Eighteen focused tests pass, both crates check for WASM, and API/catalog checks pass. Root/tip closure, actual complete-profile embedding and owned B-rep gear admission remain unqualified. [Contract](nurbs-straight-bevel-flank.md), [evidence](../qualification/nurbs-bevel-teeth-2026-10-16/native-tests.json).
+
+## Closed spherical bevel profile, 2026-10-16
+
+**195/200 remains unchanged.** Native Rust now closes the original paired working flanks with rational tip/root parallels and, where required, meridian root transitions. Original source curves and exactly common canonical endpoints are retained. The whole original-spec profile certificate independently bounds every transition pole/weight and checks complete source-role ownership and closure. Twenty-one focused tests pass, both crates check for WASM, and API/catalog checks pass. Actual complete-profile embedding and owned cap/bore/B-rep solid assembly remain unqualified. [Contract](nurbs-straight-bevel-flank.md), [evidence](../qualification/nurbs-bevel-outline-2026-10-16/native-tests.json).
+
+## Native straight-bevel body candidate, 2026-10-16
+
+**196/200: 79 integrated + 117 native; four planned remain.** NURBS-0086 now has a typed strict native body constructor owning the independently embedded original spherical profile, actual matching outer model edges, inclusive nominal wall/axis-fan-cap error and complete continuous shared-edge closure. The default 20-tooth constructor passes at 1e-6; 6/20-tooth body candidates pass closure, positive volume against an independent formula, pole corruption and too-small tolerance tests. Original 20/100-tooth projection checks and all five planar modular-profile regressions also pass (separate compiled snapshot). Both crates check for WASM. Like the four prior native gear families, the object explicitly reports global solid geometry unqualified. Fan caps, no bore, proof budgets and the 1024-face limit are declared in the [contract](nurbs-straight-bevel-flank.md). [Body evidence](../qualification/nurbs-bevel-body-2026-10-16/native-tests.json), [profile evidence](../qualification/nurbs-bevel-embedding-2026-10-16/native-tests.json).
+
+## Axial ZA worm working surface, 2026-10-16
+
+**196/200 remains unchanged.** A separate native Rust worm module derives axial trapezoidal rack parameters, diameter quotient, pitch/lead and lead-angle boxes, then qualifies every original saved helical patch against nominal source data. It does not alias the 60-degree thread. Fifteen focused tests pass, including both hands, multiple starts/turns, actual source/geometry corruption, the full 8-start/16-turn census (2560 patches), and shared thread/helical/gear parameter regressions. Both crates check for WASM; the API map has 179 modules and catalog checks pass. Finite trim/cap/sewn-body qualification remains open, so NURBS-0087 stays planned. [Contract](nurbs-worm-za.md), [evidence](../qualification/nurbs-worm-patches-2026-10-16/native-tests.json).
+
+## Native finite ZA worm, 2026-10-16
+
+**197/200: 79 integrated + 118 native; three planned remain.** NURBS-0087 now has its own strict typed native finite ZA body constructor: original axial-rack source accuracy, complete retained/excluded affine clipping and UV isotopy, exact represented disk-cap profile proofs, original actual wall binding and final continuous shared-edge agreement. Both hands, axial extent longer than a full lead and two starts pass independent volume/source checks. Twenty-six core tests and eight distinct B-rep tests pass, plus the extended worm cases and both-crate WASM/API/catalog checks. The existing finite-thread native criterion is unchanged: global saved-solid geometry and combined ideal finite-body error remain explicitly unqualified. [Contract](nurbs-worm-za.md), [trim evidence](../qualification/nurbs-worm-trim-2026-10-16/native-tests.json), [body evidence](../qualification/nurbs-worm-finite-2026-10-16/native-tests.json).
+
+## ZA worm-wheel contact foundation, 2026-10-16
+
+**197/200 remains unchanged.** Native Rust derives the original ZA generating-motion contact equation, distinguishes strict exclusions from uncertain tangencies, and independently brackets both simple roots per period at each queried source point. Original hand/flank/start data, normal/velocity boxes and wheel coordinates are replayable; no sampled residual authorizes a certificate. Twelve focused tests pass, including an independently differentiated motion triple product and original multi-start binding, plus both-crate WASM/API/catalog checks. Complete envelope sheet coverage, NURBS approximation and owned wheel geometry remain open, so NURBS-0088 stays planned. The API map contains 180 modules. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-contact-2026-10-16/native-tests.json).
+
+## Whole ZA wheel contact-angle charts, 2026-10-16
+
+**197/200 remains unchanged.** The meshing equation now solves source roll directly in a contact-angle chart, crossing inverse angular-root folds. Outward automatic differentiation bounds original positions and Jacobians on whole requested rectangles. A private adaptive partition replays full source coverage and nonzero Jacobian receipts; resource/denominator/singular failures remain unqualified leaves. Seventeen focused tests pass, including independent derivative checks, complete full-U covers through beta +/-0.3 and original multi-start phase, plus WASM/API/catalog gates. Certified NURBS interpolation and complete wheel/stock/B-rep qualification remain open. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-chart-2026-10-16/native-tests.json).
+
+## Certified quintic wheel envelopes and exact packing, 2026-10-16
+
+**197/200 remains unchanged.** Native Rust now builds original-source quintic tensor NURBS grids with continuous sixth-derivative/Lagrange remainder and actual saved-pole error bounds. Full source domains, actual patch regularity and exact C0 seams replay independently. Lossless multi-span packing copies original controls/knots: the verified default descending example packs 32 cells into two surfaces with source error <=1.0773757602446802e-8 at requested 1e-4. Sixteen focused integration/math checks pass, plus WASM/API/catalog gates. Stock/root/tip, whole-tooth placement, global embedding and wheel B-rep remain open. The API map now has 181 modules after registering an unrelated normal-trace query module. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-fit-2026-10-16/native-tests.json).
+
+
+## Original worm-wheel stock intersections and NURBS fits, 2026-10-16
+
+**197/200**, unchanged. A private replayable Rust proof establishes one original-envelope/stock-cylinder crossing for every angle using a complete Cartesian derivative cover and original endpoint signs. It identifies the cylindrical blank material side, encloses implicit edge positions/tangents and supplies sixth-order derivatives for the true crest-to-stock chart. `fit_stock_chart` retains this original implicit source through the existing quintic error verification and lossless C0 packing. The tested default strip uses one Surface per flank (error <=2.40e-8 at tolerance 1e-3); a wide left-handed two-start source uses four packed Surfaces (error <=4.48e-9 at tolerance 1e-4).
+
+**28 final focused checks pass**, including the three former Boolean failures, exact source phase, altered poles/radius, invalid domains, proof budgets and independent implicit Taylor algebra. Both crates compile for WASM; explicit changed-file formatting, the 182-module API map and catalog audit pass. Full compiled native snapshots pass **1941 core + 1305 B-rep tests and two doctests**, with three explicitly ignored B-rep diagnostics. The initial stale multispan-injectivity expectation was corrected with shape-preservation and actual-backtracking checks. Later stock-source changes are covered by the final focused/WASM gates; the full snapshot is not relabelled as a frozen current-tree build.
+
+Generated root transitions, stock-tip/axial boundaries, replication and the complete wheel body remain open. General surface/surface intersections and periodic owned faces are the other two planned entries. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-stock-2026-10-16/native-tests.json).
+
+
+## Generated worm-wheel root transitions, 2026-10-16
+
+**197/200**, unchanged. Rust now owns the original convex crest-edge and crest-cylinder envelopes, with whole-domain normal-cone/unique-contact proofs, analytic regularity lower bounds and original-chart injectivity. Sixth derivatives feed the shared quintic fitter. Each default root part for either hand, beta [-0.15,0.15], uses one NURBS Surface at requested tolerance 1e-4; largest error upper is 4.982e-5. Distinct working-flank/root owner types preserve actual source roles. Packing replay checks knot/control/weight bits, including signed zero.
+
+**34 distinct focused checks pass**, plus both-crate WASM, explicit changed-file formatting, the 182-module API map and catalog audit. Current root-source replay detects a changed phase despite a phase-invariant contact proof. Earlier full native results remain compiled-snapshot evidence; they are not relabelled as a full run of these new sources. Stock-tip/finite axial boundaries, tooth placement, actual cross-family stitching and the closed wheel B-rep remain open. NURBS-0088 is still planned. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-root-2026-10-16/native-tests.json).
+
+
+## Finite physical-Y worm-wheel side templates, 2026-10-16
+
+**197/200**, unchanged. Rust now has all six finite side families for one tooth period: two original generated root transitions, crest-cylinder gap, two true crest-to-stock working flanks and cylindrical stock tip. Explicit physical-Y domains replace variable-height angular ends. Actual NURBS end controls lie exactly on the requested planes; interior Y rounding is retained in the source error. The default Y=[-2,2], stock R=21 case passes unchanged tolerance 1e-4: root parts pack into one Surface each; each working flank and tip pack into three. Whole-domain stock root/rank proofs, constrained-circle sixth derivatives and actual source ownership replay are implemented.
+
+**47 distinct focused checks pass** (36 integration, 8 math/ownership, 3 Boolean), plus both-crate WASM, explicit formatting, API map182 and catalog audit. Existing angular/stock APIs retain their regressions. This is not a closed wheel: common actual controls, periodic placement, cap profiles and owned B-rep remain. Full previous suite results are retained as compiled-snapshot evidence, not relabelled as a full run of the new sources. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-axial-2026-10-16/native-tests.json).
+
+## Complete finite generated worm-wheel candidate, 2026-10-16
+
+**198/200**. NURBS-0088 now owns all40 periods,240 original side grids,720 packed supports and two continuously admitted physical planar caps. Actual controls are shared after nominal placement and requalified. The connected manifold candidate has722 faces,1680 edges and960 vertices; complete current saved-edge closure passes. Independent volume checks give5066.9680793 and5066.9662757 mm³. **34 focused checks pass**, plus current both-crate WASM compilation. Source/cap/topology/proof limits and global-solid/ideal-body limitations are explicit. General surface/surface coverage and periodic supporting owned faces remain planned. [Contract](nurbs-worm-wheel-envelope.md), [evidence](../qualification/nurbs-worm-wheel-caps-2026-10-16/native-tests.json). Historical full-suite results above remain snapshots; no full current-tree run is claimed.
+
+## Original-support periodic faces and full corner ownership, 2026-10-16
+
+**198/200**, unchanged. Admitted coherent periodic UV regions now produce owned faces on the unchanged original supporting surface, with complete original-chart injectivity/rank covers, continuous actual world-edge lifts, shared generated seam edges and manifold vertex links. A rational torus with unequal U/V domains passes four-face/four-seam corner ownership. Nonlinear rational pcurve composition, preserved multi-span paths and correlated original-parameter UV error bounds are implemented. **172 focused checks pass**, plus both-crate WASM, explicit owned-file formatting, API map182 and catalog audit. General nonlinear alias correspondence and inter-wire contact regularization still keep NURBS-0173 planned; general surface/surface coverage keeps NURBS-0030 planned. [Contract](nurbs-periodic-winding-regions.md), [evidence](../qualification/nurbs-periodic-owned-faces-2026-10-16/native-tests.json). Earlier full native suite totals remain historical snapshots.
+
+## Uniform original-source intersection fibers, 2026-10-16
+
+**198/200**, unchanged. A typed owned Krawczyk operator now proves a unique original-system root for every value in a complete free-parameter interval, with actual weighted contraction, strict box inclusion and original source ownership. Correlated empty boxes, rational roots, knot coverage, actual periodic seam data, tangencies, false preconditioners and singular point-image cases are independently tested. **34 focused checks pass**, plus both-crate WASM, explicit new-file formatting, API map182 and catalog audit. This does not authorize general full-domain coverage, branch-atlas/graph topology or world traces; NURBS-0030 remains planned. [Contract](nurbs-surface-surface-coverage.md), [evidence](../qualification/nurbs-ss-fibers-2026-10-16/native-tests.json).
+
+## Complete original complement coverage around one fiber, 2026-10-16
+
+**198/200**, unchanged. The whole original four-parameter domain can now be qualified around an owned uniform fiber by excluding every closed complement slab and retaining/replaying a complete subdivision tree. A nonlinear cubic case needs64 nodes,35 excluded leaves and190 original rectangles. A second real branch, a real natural-boundary branch, partial free intervals, missing work and forged/dropped proof data cannot inherit completeness. **26 focused checks pass**, plus both-crate WASM, explicit new-file formatting, API map182 and catalog audit. Multi-fiber/chart coverage, physical branch graphs/world traces and trim topology still keep NURBS-0030 planned. [Contract](nurbs-surface-surface-coverage.md), [evidence](../qualification/nurbs-ss-fiber-coverage-2026-10-16/native-tests.json).
+
+## Multiple original root fibers, 2026-10-16
+
+**198/200**, unchanged. Added an owned, replayable union of disjoint same-axis
+root tubes with full complement coverage and shared proof budgets. Both branches
+of a quadratic example qualify together; duplicate tubes, mixed surfaces,
+partial second intervals and exhausted budgets cannot inherit coverage. The old
+single-fiber result remains semantically separate. **28 focused checks pass**
+(24 integration, one corruption audit, three former Boolean failures), plus
+both-crate WASM and catalog/API-map audits. General chart transitions and owned
+physical graph/trim admission remain open. Evidence:
+`docs/qualification/nurbs-ss-fiber-atlas-2026-10-16/`.
+
+## Exact nonlinear source-family correspondence, 2026-10-16
+
+**198/200**, unchanged. Rust now owns positive projective correspondence between
+original rational Bezier curves, exact restrictions at every saved seam interval,
+and synchronized source/candidate family homotopies. Coherent quotient winding
+accepts these separately replayed receipts and retains the actual original
+multiplicity. Different degrees, reversed traversal, nonlinear seams and malformed
+receipts are checked without weakening normalized-function identity. General
+multi-span source correspondence and inter-wire contact regularization still keep
+NURBS-0173 planned. Evidence is under
+`docs/qualification/nurbs-projective-homotopy-2026-10-16/`.
+
+The projective path now reaches original-source owned B-rep regions and actual
+supporting-surface faces. The exact nonlinear seam fixture produces2 faces and
+one shared shore on the unchanged closed square-tube support. Current focused
+B-rep19 cases and2 private source-proof audits pass; three former Boolean failures
+pass again. Full integration snapshot194 suites/952 cases completed successfully
+before these additions; current new code additionally passes the full1371-case
+NURBS library and both-crate WASM. These scopes remain separate in evidence.
+General multi-span nonlinear source maps and inter-wire contact regularization
+keep NURBS-0173 planned; catalog remains198/200.
+
+## Original B-spline phase correspondence, 2026-10-16
+
+**198/200**, unchanged. Exact projective source correspondence now covers
+complete clamped multi-span B-spline bases, including actual degree25 and
+C0/C1/C2 cases, with independent position/chain-rule oracles and exact exponent
+gauges. A source triangle reaches owned actual-support geometry with1 face,
+3 edges and3 vertices. Original-control directional homotopy bounds remove the
+old axis-box-only anchor refusal without admitting a genuine anchor crossing.
+Current gates: full1372-case NURBS library,62 predicates,124 periodic integration
+cases and20 B-rep region/face cases; both-crate WASM passes. API ownership now
+covers183 public modules after registering the existing surface_collar analysis
+module. Historical full integration snapshots remain separately scoped.
+Evidence: `docs/qualification/nurbs-projective-bspline-2026-10-16/`.
+
+## Exact original partition functions, 2026-10-16
+
+**198/200**, unchanged. Added a native original-basis restriction predicate and
+private source-owned exact partition receipt. C1 B-splines can now be checked
+against differently graded/rational pieces on all original intervals, including
+cuts inside original knot cells. The proof clears exact de Boor denominators and
+compares homogeneous polynomial coefficients; source data and requested accuracy
+are unchanged. This is a prerequisite for admitting preserved source contacts,
+not a new catalog figure or a completed contact regularizer. Current periodic
+regressions128, raw predicate tests63 and the private corruption replay pass;
+both-crate WASM and API-map184/catalog audit are checked separately in evidence.

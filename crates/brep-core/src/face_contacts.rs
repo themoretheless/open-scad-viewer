@@ -23,6 +23,7 @@ pub enum SharedBoundary {
     ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
+    OwnedVertex(crate::trimmed_vertex_contact::Certificate),
 }
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -35,7 +36,7 @@ pub struct Pair {
     /// Exact control-hull separation work spent on this pair. Attributed to
     /// the pair so per-pair work adds up to the report totals.
     pub hull_cells: usize,
-    /// Charged full-domain subdivision of a shared curved boundary.
+    /// Charged shared-boundary admission work, including exact vertex contacts.
     pub boundary_cells: usize,
     pub reason: &'static str,
 }
@@ -58,6 +59,58 @@ pub struct Report {
 }
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
     inspect_with_hulls(model, tolerance_uv, limits, &[])
+}
+/// Scope is exactly the pairs incident to `face`; this cannot certify the
+/// remaining body pairs or self-intersections within any individual face.
+pub struct IncidentReport {
+    pub face:usize,
+    pub pairs:Vec<Pair>,
+    pub total_pairs:usize,
+    pub next_pair:Option<[usize;2]>,
+    pub cells:usize,
+    pub domain_cells:usize,
+    pub all_incident_pairs_classified:bool,
+    pub all_incident_pairs_disjoint:bool,
+    /// Additional exact vertex work; legacy pair-search work is separate.
+    pub vertex_exact_work:u64,
+}
+pub fn inspect_incident(model:&Model,face:usize,tolerance_uv:f64,limits:Limits)->Result<IncidentReport> {
+    if face>=model.faces.len() {return Err(Error::new("BREP_CONTACT_FACE","Incident face index is out of range"));}
+    let mut inspector=Inspector::new(std::sync::Arc::new(model.clone()),tolerance_uv,limits,
+        vec![],vec![],false,false,None)?;
+    inspector.incident=Some(face);
+    inspector.report.total_pairs=model.faces.len()-1;
+    while !inspector.finished() {inspector.advance(64)?;}
+    let r=inspector.finish()?;
+    Ok(IncidentReport {face,pairs:r.pairs,total_pairs:r.total_pairs,next_pair:r.next_pair,
+        cells:r.cells,domain_cells:r.domain_cells,all_incident_pairs_classified:r.all_pairs_classified,
+        all_incident_pairs_disjoint:r.all_pairs_disjoint,vertex_exact_work:0})
+}
+/// Extend the same scoped search with freshly proven exact owned-vertex
+/// contacts. A metric locality bound never promotes the pair's exact status.
+pub fn inspect_incident_with_vertices(model:&Model,face:usize,tolerance_uv:f64,limits:Limits,max_exact:u64)->Result<IncidentReport> {
+    if max_exact>1000000 {return Err(Error::new("BREP_CONTACT_BUDGET","Exact vertex work exceeds its bounded allowance"));}
+    let mut report=inspect_incident(model,face,tolerance_uv,limits)?;
+    for pair in &mut report.pairs {
+        if pair.reason!="pair-unresolved" {continue;}
+        if report.cells==limits.cells||report.domain_cells==limits.domain_cells||report.vertex_exact_work==max_exact {break;}
+        let allowance=(limits.cells-report.cells).min(limits.domain_cells-report.domain_cells).min(100000);
+        let attempt=crate::trimmed_vertex_contact::inspect(model,pair.faces,
+            allowance,max_exact-report.vertex_exact_work)?;
+        report.cells+=attempt.cells;report.vertex_exact_work+=attempt.exact_work;
+        // The vertex primitive has one combined geometry/trim ledger. Charge
+        // all its work to the UV allowance too, rather than omit trim work.
+        report.domain_cells+=attempt.cells;
+        pair.boundary_cells+=attempt.cells;
+        if let Some(c)=attempt.certificate.filter(|c|c.exact_vertex_contact) {
+            pair.boundary=Some(SharedBoundary::OwnedVertex(c));pair.reason="shared-vertex";
+        }
+    }
+    report.all_incident_pairs_classified=report.next_pair.is_none()
+        &&report.pairs.len()==report.total_pairs&&report.pairs.iter().all(|p|
+            p.boundary.is_some()||p.hull_disjoint||p.result.as_ref().is_some_and(|r|r.absence_proven));
+    // Exact vertex contact is a real contact, never a disjointness proof.
+    Ok(report)
 }
 /// Hull certificates are admitted only by the exact boundary embedding audit.
 pub(crate) fn inspect_with_hulls(
@@ -89,6 +142,7 @@ pub(crate) fn inspect_with_certificates(
 }
 /// Sweep-only exact hull separation, also for closed bodies without caps.
 /// Every plane is proved on actual positive rational control coefficients.
+#[allow(dead_code)]
 pub(crate) fn inspect_with_sweep_certificates(
     model: &Model,
     tolerance_uv: f64,
@@ -110,6 +164,7 @@ pub(crate) fn inspect_with_sweep_certificates(
 }
 /// Prepared only by the same immutable-model boundary audit. The charged
 /// count includes preparation and any earlier cap separation queries.
+#[allow(dead_code)]
 pub(crate) fn inspect_with_prepared_sweep_certificates(
     model: &Model,
     tolerance_uv: f64,
@@ -163,6 +218,7 @@ pub(crate) struct Inspector {
     scalar_next: usize,
     done: bool,
     failed: bool,
+    incident:Option<usize>,
 }
 impl Inspector {
     pub(crate) fn new(model: std::sync::Arc<Model>, tolerance_uv: f64, limits: Limits,
@@ -215,7 +271,7 @@ impl Inspector {
     };
         let pending = cover.as_ref().map(|c| vec![c.root]).unwrap_or_default();
         Ok(Self { model, limits, hulls, caps, sweep_hulls, joint_exact_domain,
-            domains, cover, report: out, cursor: 0, pending, scalar_next: 1, done: n < 2, failed: false })
+            domains, cover, report: out, cursor: 0, pending, scalar_next: 1, done: n < 2, failed: false, incident:None })
     }
     pub(crate) fn finished(&self) -> bool { self.done }
     /// One unit visits a cover node or attempts the next scalar pair.
@@ -244,6 +300,7 @@ impl Inspector {
         let scalar_next = &mut self.scalar_next;
         let done = &mut self.done;
         let n = model.faces.len();
+        let incident=self.incident;
         let mut used = 0;
         while *cursor < n && used < max_units {
             used += 1;
@@ -282,6 +339,17 @@ impl Inspector {
                 }
                 node.range[0]
             } else {
+                if let Some(face)=incident {
+                    if a<face {
+                        *cursor+=1;*scalar_next=*cursor+1;
+                        face
+                    }else if a>face {
+                        *cursor=n;continue;
+                    }else {
+                        if *scalar_next==n {*cursor=n;continue;}
+                        let b=*scalar_next;*scalar_next+=1;b
+                    }
+                }else {
                 if *scalar_next == n {
                     *cursor += 1;
                     *scalar_next = *cursor + 1;
@@ -290,6 +358,7 @@ impl Inspector {
                 let b = *scalar_next;
                 *scalar_next += 1;
                 b
+                }
             };
             if out.pairs.len() == limits.pairs
                 || out.cells == limits.cells

@@ -741,6 +741,7 @@ pub(super) fn rmf_straight_patch_error(sweep:&Sweep<'_>,count:usize,max_cells:us
 /// remain the owner of endpoint displacement and retained decomposition.
 /// Anisotropic affine/center laws use a separate original initial-principal
 /// phase proof when available. Original lines use their constant seed.
+#[allow(dead_code)]
 pub(super) fn corrected_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
     corrected_patch_error_with_shared_arc_pose(sweep,count,max_cells,max_products,shared_length,None)
 }

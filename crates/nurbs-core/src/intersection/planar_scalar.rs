@@ -28,7 +28,7 @@ pub enum Relation {
     },
 }
 pub(super) fn admit(c: &Curve) -> bool {
-    (1..=3).contains(&c.degree)
+    (1..=8).contains(&c.degree)
         && !c.periodic
         && c.control_points.len() == c.degree + 1
         && c.control_points.iter().all(|p| p.len() == 2)
@@ -391,6 +391,10 @@ fn paired(
     parameter_tolerance: f64,
 ) -> Result<Option<Relation>> {
     use cad_predicates::{PlanarPairOutcome, planar_bezier_pair_roots};
+    // The generic paired implicit reducer still has a cubic carrier contract.
+    // Higher-degree scalar reductions above are complete when admitted;
+    // otherwise let the conservative general curve intersector handle them.
+    if a.degree>3 || b.degree>3 {return Ok(None);}
     for swapped in [false, true] {
         let (first, second) = if swapped { (b, a) } else { (a, b) };
         let values = first
@@ -447,7 +451,7 @@ pub fn self_intersections(c: &Curve, tolerance: f64) -> Result<Option<Vec<Point>
         tolerance.is_finite() && tolerance > 0.,
         "Positive planar self contact tolerance required",
     )?;
-    if !admit(c) {
+    if !admit(c) || c.degree>3 {
         return Ok(None);
     }
     let values = c

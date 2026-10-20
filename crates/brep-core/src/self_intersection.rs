@@ -1,6 +1,9 @@
 //! Combined sufficient proof of absence of self-intersections of boundary charts.
 //! This is not a certificate of shell orientation, nesting or filled-volume validity.
 use crate::{Model, Result, face_contacts, face_injectivity};
+#[path = "self_intersection/qualified.rs"]
+mod qualified;
+pub use qualified::{LocalizedPair, QualifiedReport, inspect_qualified};
 
 #[derive(Clone, Debug)]
 pub struct Report {

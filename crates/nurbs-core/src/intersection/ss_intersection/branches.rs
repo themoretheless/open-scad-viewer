@@ -1,4 +1,5 @@
 //! Native classification and coverage rules for surface-intersection branches.
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub(super) enum BranchKind {
     Empty,

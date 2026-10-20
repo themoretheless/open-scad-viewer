@@ -134,3 +134,7 @@ pub fn approximate(
         rounding_certified: false,
     })
 }
+
+#[path = "helical_sweep_certificate.rs"]
+mod certificate;
+pub use certificate::{Certificate, certify_stored};

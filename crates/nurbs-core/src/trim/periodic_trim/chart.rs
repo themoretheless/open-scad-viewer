@@ -3,13 +3,13 @@ use super::winding::PeriodicWindingReport;
 use super::{RegionTransfer, Report, verify_lifted_region};
 use crate::{Result, check, curve::Curve};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChartEdge {
     pub curve: Curve,
     /// Original [loop, piece]; None for an added chart-boundary connector.
     pub source: Option<[usize; 2]>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChartBoundaryGraph {
     pub edges: Vec<ChartEdge>,
     /// Ordered edge indices, each edge used exactly once.
@@ -17,7 +17,7 @@ pub struct ChartBoundaryGraph {
     /// Oppositely oriented exact periodic copies of seam connectors.
     pub connector_pairs: Vec<[usize; 2]>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChartCalibration {
     pub point: [f64; 2],
     pub source: PeriodicWindingReport,

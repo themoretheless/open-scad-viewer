@@ -35,6 +35,25 @@ pub fn assemble_approximated_chart(
     anchor: [f64; 2],
     limits: ApproximateChartLimits,
 ) -> Result<ApproximateChartAssembly> {
+    assemble_impl(sources, partitions, chart, anchor, limits, true)
+}
+pub(super) fn assemble_weighted_candidate(
+    sources: &[Curve],
+    partitions: &[Report],
+    chart: [[f64; 2]; 2],
+    anchor: [f64; 2],
+    limits: ApproximateChartLimits,
+) -> Result<ApproximateChartAssembly> {
+    assemble_impl(sources, partitions, chart, anchor, limits, false)
+}
+fn assemble_impl(
+    sources: &[Curve],
+    partitions: &[Report],
+    chart: [[f64; 2]; 2],
+    anchor: [f64; 2],
+    limits: ApproximateChartLimits,
+    unique: bool,
+) -> Result<ApproximateChartAssembly> {
     // Exact identity/link budgets belong only to the separate exact admission.
     // The common backend uses edge/image/classification budgets, not these two.
     let common = ChartAssemblyLimits {
@@ -103,7 +122,7 @@ pub fn assemble_approximated_chart(
     // cells to the same source/raw classification allowance in the backend.
     let query = out.transfer.source.as_ref().unwrap().clone();
     let assembled =
-        double_chart::assemble_candidate(partitions, chart, anchor, common, true, || Ok(query))?;
+        double_chart::assemble_candidate(partitions, chart, anchor, common, unique, || Ok(query))?;
     out.candidate_winding_preserved = assembled.chart_winding_preserved;
     out.graph = assembled.graph;
     out.calibration = assembled.calibration;

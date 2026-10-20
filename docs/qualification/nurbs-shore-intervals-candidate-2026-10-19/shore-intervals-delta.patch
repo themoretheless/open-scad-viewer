@@ -1,0 +1,495 @@
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -761,3 +761,5 @@
+ pub use span_intersections::{OriginalPeriodicNativeShoreRole, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShore, PeriodicNativeShoreLimits, OwnedPeriodicNativeChartShores, own_periodic_native_chart_shores};
+ 
+ pub use span_intersections::{OriginalPeriodicShoreSampleOrigin, OriginalPeriodicShoreMaterialSample, PeriodicShoreMaterialSampleLimits, OwnedPeriodicShoreMaterialSamples, own_periodic_shore_material_samples};
++
++pub use span_intersections::{OriginalPeriodicShoreContactKind, OriginalPeriodicShoreContact, PeriodicShoreMaterialIntervalLimits, OwnedPeriodicShoreMaterialIntervals, own_periodic_shore_material_intervals};
+--- a/crates/brep-core/src/profile_certificate/arithmetic/selected_winding.rs
++++ b/crates/brep-core/src/profile_certificate/arithmetic/selected_winding.rs
+@@ -2,7 +2,7 @@
+ use super::*;
+ use branch_neighbourhood::ParameterValue;
+ use std::cmp::Ordering;
+-pub(super) fn compare(
++pub(in crate::profile_certificate) fn compare(
+     f: &Poly,
+     root: &[Q; 2],
+     domain: &[Q; 2],
+--- a/crates/brep-core/src/profile_certificate/span_intersections.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections.rs
+@@ -551,3 +551,5 @@
+ pub use translated::{OriginalPeriodicNativeShoreRole, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShore, PeriodicNativeShoreLimits, OwnedPeriodicNativeChartShores, own_periodic_native_chart_shores};
+ 
+ pub use translated::{OriginalPeriodicShoreSampleOrigin, OriginalPeriodicShoreMaterialSample, PeriodicShoreMaterialSampleLimits, OwnedPeriodicShoreMaterialSamples, own_periodic_shore_material_samples};
++
++pub use translated::{OriginalPeriodicShoreContactKind, OriginalPeriodicShoreContact, PeriodicShoreMaterialIntervalLimits, OwnedPeriodicShoreMaterialIntervals, own_periodic_shore_material_intervals};
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
+@@ -1,3 +1,5 @@
++mod periodic_shore_material_intervals;
++pub use periodic_shore_material_intervals::{OriginalPeriodicShoreContactKind, OriginalPeriodicShoreContact, PeriodicShoreMaterialIntervalLimits, OwnedPeriodicShoreMaterialIntervals, own_periodic_shore_material_intervals};
+ mod periodic_shore_material_samples;
+ pub use periodic_shore_material_samples::{OriginalPeriodicShoreSampleOrigin, OriginalPeriodicShoreMaterialSample, PeriodicShoreMaterialSampleLimits, OwnedPeriodicShoreMaterialSamples, own_periodic_shore_material_samples};
+ mod periodic_chart_shores;
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs
+@@ -364,6 +364,57 @@
+         }
+         Ok(())
+     }
++    // Freshly replayed enclosing owners use this to check the COMPLETE contact
++    // census. Outside values are clipped by the actual native side endpoints.
++    pub(super) fn admit_cut(
++        &self,
++        shore: usize,
++        primitive: &[Q],
++        root: &[Q; 2],
++        position: &[Vec<Q>; 2],
++    ) -> Result<Option<usize>> {
++        let s = self
++            .data
++            .shores
++            .get(shore)
++            .ok_or_else(|| refused("Unknown native shore contact"))?;
++        let q = Scalar {
++            f: primitive.to_vec(),
++            root: root.clone(),
++            n: position[0].clone(),
++            d: position[1].clone(),
++        };
++        let mut cmp = Compare {
++            limits: self.parameter_limits,
++            cap: self.limits.max_comparisons,
++            work: 0,
++        };
++        let first = scalar(&self.owner, s.points[0], 1 - s.fixed_axis)?;
++        let last = scalar(
++            &self.owner,
++            *s.points
++                .last()
++                .ok_or_else(|| refused("Empty native shore contact frame"))?,
++            1 - s.fixed_axis,
++        )?;
++        if cmp.compare(&q, &first)? == Ordering::Less
++            || cmp.compare(&q, &last)? == Ordering::Greater
++        {
++            return Ok(None);
++        }
++        let (mut lo, mut hi) = (0, s.points.len());
++        while lo < hi {
++            let mid = lo + (hi - lo) / 2;
++            match cmp.compare(&q, &scalar(&self.owner, s.points[mid], 1 - s.fixed_axis)?)? {
++                Ordering::Less => hi = mid,
++                Ordering::Greater => lo = mid + 1,
++                Ordering::Equal => return Ok(Some(mid)),
++            }
++        }
++        Err(refused(
++            "Original source contact lies strictly inside an unsplit native shore interval",
++        ))
++    }
+     // The enclosing batch must freshly replay this immutable owner first.
+     pub(super) fn interior_contains(
+         &self,
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_samples.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_samples.rs
+@@ -326,6 +326,21 @@
+         )
+         .unwrap()
+     }
++    fn qualify(o: &OwnedPeriodicShoreMaterialSamples) {
++        let intervals = own_periodic_shore_material_intervals(
++            Arc::new(o.clone()),
++            ParameterOrderLimits::default(),
++            PeriodicShoreMaterialIntervalLimits::default(),
++        )
++        .unwrap();
++        for sample in o.samples() {
++            assert_eq!(
++                intervals.selected(sample.shore, sample.interval).unwrap(),
++                sample.selected
++            );
++        }
++        assert!(intervals.selected(99, 0).is_err());
++    }
+     fn labels(o: &OwnedPeriodicShoreMaterialSamples, shore: usize) -> Vec<bool> {
+         o.samples()
+             .iter()
+@@ -334,7 +349,8 @@
+             .collect()
+     }
+     #[test]
+-    fn actual_plane_point_labels_replay_and_refuse_cache_and_work_changes() {
++    fn actual_plane_point_labels_replay_and_refuse_cache_and_work_changes_and_complete_interval_germs()
++     {
+         let sig = fixtures::signatures(super::super::periodic_support_material::tests::full_plane(
+             true,
+         ));
+@@ -369,19 +385,52 @@
+             PeriodicShoreMaterialSampleLimits::default(),
+         )
+         .unwrap();
++        qualify(&o);
+         assert_eq!(o.samples().len(), 4);
+         assert!(o.samples().iter().all(|p| p.selected
+             && matches!(
+                 p.origin,
+                 OriginalPeriodicShoreSampleOrigin::OwnedSide { .. }
+             )));
++        let q = |n: i64, d: i64| Q::new(n.into(), d.into());
++        let f = vec![Q::zero(), Q::one()];
++        let root = [Q::zero(), Q::zero()];
++        assert!(
++            o.owner()
++                .admit_cut(0, &f, &root, &[vec![q(1, 2)], vec![Q::one()]])
++                .is_err()
++        );
++        assert_eq!(
++            o.owner()
++                .admit_cut(0, &f, &root, &[vec![Q::zero()], vec![Q::one()]])
++                .unwrap(),
++            Some(0)
++        );
++        assert_eq!(
++            o.owner()
++                .admit_cut(0, &f, &root, &[vec![q(-1, 1)], vec![Q::one()]])
++                .unwrap(),
++            None
++        );
++        assert!(
++            own_periodic_shore_material_intervals(
++                Arc::new(o.clone()),
++                ParameterOrderLimits::default(),
++                PeriodicShoreMaterialIntervalLimits {
++                    max_contacts: 0,
++                    ..Default::default()
++                }
++            )
++            .is_err()
++        );
+         o.reverify_source().unwrap();
+         let mut bad = o.clone();
+         bad.samples[0].selected = false;
+         assert!(bad.reverify_source().is_err());
+     }
+     #[test]
+-    fn actual_cylinder_bands_label_both_periodic_sides_and_keep_natural_exterior_empty() {
++    fn actual_cylinder_bands_label_both_periodic_sides_and_keep_natural_exterior_empty_and_complete_interval_germs()
++     {
+         let sig = Arc::new(
+             own_periodic_support_signatures(
+                 fixtures::cylinder_bands(),
+@@ -400,6 +449,7 @@
+         let o = samples(frame::shores(frame::corners(Arc::new(
+             r.regions().unwrap().clone(),
+         ))));
++        qualify(&o);
+         assert_eq!(o.samples().len(), 12);
+         assert_eq!(labels(&o, 0), vec![false, true, false, true, false]);
+         assert_eq!(labels(&o, 1), labels(&o, 0));
+@@ -413,8 +463,10 @@
+         );
+     }
+     #[test]
+-    fn actual_one_sided_coincident_rectangle_has_different_chart_inside_labels_across_seam() {
++    fn actual_one_sided_coincident_rectangle_has_different_chart_inside_labels_across_seam_and_complete_interval_germs()
++     {
+         let o = samples(frame::shores(frame::cylinder_profile(false)));
++        qualify(&o);
+         assert_eq!(o.samples().len(), 8);
+         assert_eq!(labels(&o, 0), vec![false, true, false]);
+         assert_eq!(labels(&o, 1), vec![false, false, false]);
+@@ -431,8 +483,10 @@
+         }
+     }
+     #[test]
+-    fn actual_irrational_quadratic_contacts_have_strict_inside_point_labels_without_rounded_cuts() {
++    fn actual_irrational_quadratic_contacts_have_strict_inside_point_labels_without_rounded_cuts_and_complete_interval_germs()
++     {
+         let o = samples(frame::shores(frame::cylinder_profile(true)));
++        qualify(&o);
+         assert_eq!(o.samples().len(), 8);
+         assert_eq!(labels(&o, 0), vec![false, true, false]);
+         assert_eq!(labels(&o, 1), labels(&o, 0));
+@@ -444,7 +498,7 @@
+         );
+     }
+     #[test]
+-    fn actual_zero_source_torus_point_labels_use_no_invented_sources() {
++    fn actual_zero_source_torus_point_labels_use_no_invented_sources_and_complete_interval_germs() {
+         let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
+         let input = super::super::periodic_support_boundaries::tests::original(
+             &surface,
+@@ -499,6 +553,7 @@
+             own_periodic_support_regions(sig, &[], 10000).unwrap(),
+         )));
+         let o = samples(o);
++        qualify(&o);
+         assert_eq!(o.samples().len(), 4);
+         assert!(o.samples().iter().all(|p| p.selected
+             && p.origin == OriginalPeriodicShoreSampleOrigin::ClearedNormalLeg
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_intervals.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_intervals.rs
+@@ -0,0 +1,260 @@
++//! Constant chart-inside material germs on actual open native frame intervals.
++//! The complete original-source contact census is separate from point labels.
++use super::*;
++use crate::profile_certificate::algebraic_intersections::{decode_polynomial, decode_ratio};
++use std::{cmp::Ordering, sync::Arc};
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum OriginalPeriodicShoreContactKind {
++    Finite {
++        cuts: Vec<usize>,
++    },
++    /// Every active source cell is identically on the shore, with a complete
++    /// derivative-root census proving regular monotone traversal on its cuts.
++    Coincident {
++        ends: [Option<usize>; 2],
++        direction: i8,
++    },
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct OriginalPeriodicShoreContact {
++    pub shore: usize,
++    pub piece: usize,
++    pub period_shift: [i8; 2],
++    pub kind: OriginalPeriodicShoreContactKind,
++}
++#[derive(Clone, Copy, Debug)]
++pub struct PeriodicShoreMaterialIntervalLimits {
++    pub max_source_views: usize,
++    pub max_contacts: usize,
++}
++impl Default for PeriodicShoreMaterialIntervalLimits {
++    fn default() -> Self {
++        Self {
++            max_source_views: 1000000,
++            max_contacts: 1000000,
++        }
++    }
++}
++#[derive(Clone, Debug)]
++pub struct OwnedPeriodicShoreMaterialIntervals {
++    owner: Arc<OwnedPeriodicShoreMaterialSamples>,
++    parameters: ParameterOrderLimits,
++    limits: PeriodicShoreMaterialIntervalLimits,
++    contacts: Vec<OriginalPeriodicShoreContact>,
++    events: usize,
++}
++fn derive(
++    o: &OwnedPeriodicShoreMaterialIntervals,
++) -> Result<(Vec<OriginalPeriodicShoreContact>, usize)> {
++    if [o.limits.max_source_views, o.limits.max_contacts]
++        .iter()
++        .any(|n| !(1..=1000000).contains(n))
++        || o.parameters.max_refinements > 512
++        || !(1..=128).contains(&o.parameters.max_resultant_size)
++    {
++        return Err(refused(
++            "Invalid complete shore material interval allowance",
++        ));
++    }
++    o.owner.reverify_source()?;
++    let shores = o.owner.owner();
++    let corners = shores.owner();
++    let copies = corners.owner();
++    let incidence = copies.owner();
++    let traces = incidence.owner();
++    let regions = traces.owner();
++    let lifts = regions.owner().owner();
++    let selection = lifts.owner().owner();
++    let graph = selection.rule().material().base().owner().owner().owner();
++    let cover = graph.owner().owner().pieces();
++    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
++    let periods = chart.clone().map(|d| d[1].clone() - &d[0]);
++    let shifts: [Vec<i8>; 2] = cover
++        .wrapped()
++        .map(|wrapped| if wrapped { vec![-1, 0, 1] } else { vec![0] });
++    let views = cover
++        .pieces()
++        .len()
++        .checked_mul(shifts[0].len())
++        .and_then(|n| n.checked_mul(shifts[1].len()))
++        .and_then(|n| n.checked_mul(shores.shores().len()))
++        .filter(|n| *n <= o.limits.max_source_views)
++        .ok_or_else(|| refused("Complete native shore source-view census exceeds allowance"))?;
++    let original = cover
++        .sources()
++        .iter()
++        .map(cells)
++        .collect::<Result<Vec<_>>>()?;
++    let mut out = Vec::with_capacity(views);
++    let mut events = 0usize;
++    let mut charge = || -> Result<()> {
++        events = events
++            .checked_add(1)
++            .filter(|n| *n <= o.limits.max_contacts)
++            .ok_or_else(|| refused("Complete native shore contact census exceeds allowance"))?;
++        Ok(())
++    };
++    for (shore, s) in shores.shores().iter().enumerate() {
++        for (piece, p) in cover.pieces().iter().enumerate() {
++            let c = &original[p.source][p.cell];
++            let bound = |end: usize| -> Result<arithmetic::branch_neighbourhood::ParameterValue> {
++                let value = &cover.cuts()[p.source][p.cuts[end]].value;
++                Ok(arithmetic::branch_neighbourhood::ParameterValue {
++                    primitive: decode_polynomial(&value.primitive)?,
++                    value: decode_polynomial(&value.parameter)?,
++                    interval: [
++                        decode_ratio(&value.interval[0])?,
++                        decode_ratio(&value.interval[1])?,
++                    ],
++                })
++            };
++            let bounds = [bound(0)?, bound(1)?];
++            for &u in &shifts[0] {
++                for &v in &shifts[1] {
++                    let offset = [
++                        decode_ratio(&p.translation[0])? + Q::from_integer(u.into()) * &periods[0],
++                        decode_ratio(&p.translation[1])? + Q::from_integer(v.into()) * &periods[1],
++                    ];
++                    let net = arithmetic::shore_events::translated_net(&c.net, &offset)?;
++                    let roots = arithmetic::shore_events::produce(
++                        &net,
++                        &c.domain,
++                        s.fixed_axis,
++                        &chart[s.fixed_axis][s.end],
++                        &Q::new(1.into(), 1024.into()),
++                        o.parameters.max_refinements,
++                    )?;
++                    let kind = if let Some(roots) = roots {
++                        let mut cuts = Vec::new();
++                        for root in roots {
++                            if arithmetic::selected_winding::compare(
++                                &root.primitive,
++                                &root.root,
++                                &c.domain,
++                                &bounds[0],
++                                o.parameters.max_refinements,
++                                o.parameters.max_resultant_size,
++                            )? == Ordering::Less
++                                || arithmetic::selected_winding::compare(
++                                    &root.primitive,
++                                    &root.root,
++                                    &c.domain,
++                                    &bounds[1],
++                                    o.parameters.max_refinements,
++                                    o.parameters.max_resultant_size,
++                                )? == Ordering::Greater
++                            {
++                                continue;
++                            }
++                            charge()?;
++                            if let Some(cut) = shores.admit_cut(
++                                shore,
++                                &root.primitive,
++                                &root.root,
++                                &root.position[1 - s.fixed_axis],
++                            )? {
++                                cuts.push(cut)
++                            }
++                        }
++                        OriginalPeriodicShoreContactKind::Finite { cuts }
++                    } else {
++                        let (_, direction) = arithmetic::shore_carrier::prove(
++                            &[(net.clone(), c.domain.clone())],
++                            &bounds,
++                            s.fixed_axis,
++                            &chart[s.fixed_axis][s.end],
++                            o.parameters.max_refinements,
++                            o.parameters.max_resultant_size,
++                        )?;
++                        let mut ends = [None, None];
++                        for end in 0..2 {
++                            charge()?;
++                            let b = &bounds[end];
++                            let uv = arithmetic::shore_events::translated_point(
++                                &net,
++                                &c.domain,
++                                &b.value,
++                                &b.primitive,
++                                &b.interval,
++                                &[Q::zero(), Q::zero()],
++                                o.parameters.max_refinements,
++                            )?;
++                            ends[end] = shores.admit_cut(
++                                shore,
++                                &b.primitive,
++                                &b.interval,
++                                &uv[1 - s.fixed_axis],
++                            )?;
++                        }
++                        OriginalPeriodicShoreContactKind::Coincident { ends, direction }
++                    };
++                    out.push(OriginalPeriodicShoreContact {
++                        shore,
++                        piece,
++                        period_shift: [u, v],
++                        kind,
++                    });
++                }
++            }
++        }
++    }
++    if out.len() != views {
++        return Err(refused("Incomplete native shore source-view census"));
++    }
++    Ok((out, events))
++}
++impl OwnedPeriodicShoreMaterialIntervals {
++    pub fn owner(&self) -> &Arc<OwnedPeriodicShoreMaterialSamples> {
++        &self.owner
++    }
++    pub fn contacts(&self) -> &[OriginalPeriodicShoreContact] {
++        &self.contacts
++    }
++    pub fn contact_events(&self) -> usize {
++        self.events
++    }
++    /// The chart-inside MATERIAL GERM is constant over this whole OPEN native
++    /// interval. Endpoint strata are retained separately by the owned frame.
++    pub fn selected(&self, shore: usize, interval: usize) -> Result<bool> {
++        self.owner
++            .samples()
++            .iter()
++            .find(|s| s.shore == shore && s.interval == interval)
++            .map(|s| s.selected)
++            .ok_or_else(|| refused("Unknown certified native material interval"))
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let (contacts, events) = derive(self)?;
++        if contacts != self.contacts || events != self.events {
++            return Err(refused(
++                "Native shore complete contact census or material interval proof changed",
++            ));
++        }
++        Ok(())
++    }
++}
++/// Full finite source-shore contacts and monotone coincident image endpoints
++/// occur only at the owned frame cuts. Between these cuts, a one-sided material
++/// germ cannot change: all authored source curves are continuous algebraic cells
++/// and all operand labels descend through the actual support periods. The
++/// owner's cleared-leg or source-side point witness fixes that constant label.
++/// Critical coincident carriers that lack a monotone proof refuse; no sampling,
++/// empty search or finite budget may stand in for this completeness proof.
++/// This does not publish physical face cycles or sew world-space edges.
++pub fn own_periodic_shore_material_intervals(
++    owner: Arc<OwnedPeriodicShoreMaterialSamples>,
++    parameters: ParameterOrderLimits,
++    limits: PeriodicShoreMaterialIntervalLimits,
++) -> Result<OwnedPeriodicShoreMaterialIntervals> {
++    let mut o = OwnedPeriodicShoreMaterialIntervals {
++        owner,
++        parameters,
++        limits,
++        contacts: Vec::new(),
++        events: 0,
++    };
++    let (contacts, events) = derive(&o)?;
++    o.contacts = contacts;
++    o.events = events;
++    Ok(o)
++}

@@ -172,6 +172,149 @@ pub fn at(surface: &Surface, parameter: [f64; 2], sides: [Side; 2]) -> Result<Re
     Ok(report)
 }
 
+pub struct RegionReport {
+    pub shape: Report,
+    pub cells: usize,
+}
+/// Whole natural-UV rectangle on the original representation, including
+/// degenerate rectangles on interior trim lines. Differentiate original spans
+/// before restriction; no rounded cropped surface is used as evidence.
+pub fn rectangle_bounds(
+    surface: &Surface,
+    query: [[f64; 2]; 2],
+    max_cells: usize,
+) -> Result<RegionReport> {
+    surface.validate()?;
+    crate::check(
+        max_cells <= 100000,
+        "Shape region needs at most 100000 cells",
+    )?;
+    let domains = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    crate::check(
+        !surface.periodic_u
+            && !surface.periodic_v
+            && (0..2).all(|k| {
+                query[k].iter().all(|x| x.is_finite())
+                    && domains[k][0] <= query[k][0]
+                    && query[k][0] <= query[k][1]
+                    && query[k][1] <= domains[k][1]
+            }),
+        "Shape rectangle must lie in a nonperiodic original domain",
+    )?;
+    let missing = |status, cells| RegionReport {
+        shape: Report {
+            status,
+            normal: None,
+            tensor: None,
+        },
+        cells,
+    };
+    for (degree, knots, axis) in [
+        (surface.degree_u, &surface.knots_u, 0),
+        (surface.degree_v, &surface.knots_v, 1),
+    ] {
+        for &node in knots {
+            if domains[axis][0] < node
+                && node < domains[axis][1]
+                && query[axis][0] <= node
+                && node <= query[axis][1]
+                && (degree as isize - knots.iter().filter(|&&k| k == node).count() as isize) < 2
+            {
+                return Ok(missing(Status::ContinuityNotProven, 0));
+            }
+        }
+    }
+    let midpoint = query.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    let frame = surface
+        .evaluate(midpoint[0], midpoint[1])
+        .ok()
+        .and_then(|p| p.unit_normal())
+        .and_then(|n| {
+            let z = (0..3).max_by(|&a, &b| n[a].abs().total_cmp(&n[b].abs()))?;
+            if n[z] == 0. {
+                return None;
+            }
+            let axes = [(z + 1) % 3, (z + 2) % 3, z];
+            let plane = [-n[axes[0]] / n[z], -n[axes[1]] / n[z]];
+            plane.iter().all(|x| x.is_finite()).then_some((axes, plane))
+        });
+    let mut result: Option<Shape> = None;
+    let mut cells = 0;
+    for u in surface.degree_u..surface.control_points.len() {
+        for v in surface.degree_v..surface.control_points[0].len() {
+            let full = [
+                [surface.knots_u[u], surface.knots_u[u + 1]],
+                [surface.knots_v[v], surface.knots_v[v + 1]],
+            ];
+            let clipped =
+                std::array::from_fn(|k| [query[k][0].max(full[k][0]), query[k][1].min(full[k][1])]);
+            if (0..2).any(|k| full[k][0] == full[k][1] || clipped[k][0] > clipped[k][1]) {
+                continue;
+            }
+            if cells == max_cells {
+                return Ok(missing(Status::RegularityNotProven, cells));
+            }
+            cells += 1;
+            let graph = frame
+                .map(|f| {
+                    jets::calculate_partial_stable_graph(surface, [u, v], clipped, [None; 2], f)
+                })
+                .transpose()?;
+            let proposed = if let (Some(f), Some(j)) = (frame, graph.as_ref()) {
+                from_graph_jets(j, f)?
+            } else {
+                None
+            };
+            let shape = match proposed {
+                Some(x) => Some(x),
+                None => from_jets(&jets::calculate_partial_stable(
+                    surface,
+                    [u, v],
+                    clipped,
+                    [None; 2],
+                )?)?,
+            };
+            let Some(shape) = shape else {
+                return Ok(missing(Status::RegularityNotProven, cells));
+            };
+            if let Some(current) = &mut result {
+                for i in 0..3 {
+                    current.normal[i].lo = current.normal[i].lo.min(shape.normal[i].lo);
+                    current.normal[i].hi = current.normal[i].hi.max(shape.normal[i].hi);
+                    for j in 0..3 {
+                        current.tensor[i][j].lo =
+                            current.tensor[i][j].lo.min(shape.tensor[i][j].lo);
+                        current.tensor[i][j].hi =
+                            current.tensor[i][j].hi.max(shape.tensor[i][j].hi);
+                    }
+                }
+            } else {
+                result = Some(shape);
+            }
+        }
+    }
+    let Some(shape) = result else {
+        return Ok(missing(Status::RegularityNotProven, cells));
+    };
+    Ok(RegionReport {
+        shape: Report {
+            status: Status::Available,
+            normal: Some(shape.normal.map(|x| [x.lo, x.hi])),
+            tensor: Some(shape.tensor.map(|r| r.map(|x| [x.lo, x.hi]))),
+        },
+        cells,
+    })
+}
+
 /// Continuous tensor/normal boxes on a normalized boundary subinterval.
 /// This does not compare two surfaces or certify G2. An interior free-axis
 /// knot in the query requires a C2 basis; storage seam closure is not inferred.

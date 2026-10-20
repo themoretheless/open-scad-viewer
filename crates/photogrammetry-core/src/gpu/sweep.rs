@@ -384,8 +384,11 @@ impl SweepBatch<'_> {
         ]);
     }
 
-    /// Submits once; returns the raw readback bytes per job, in push order.
-    fn finish_raw(self) -> Result<Vec<Vec<u8>>, gpu_compute::ReadbackError> {
+    /// Submits once and decodes each job in its mapped staging allocation.
+    fn finish_with<R>(
+        self,
+        consume: impl Fn(&[u8]) -> R,
+    ) -> Result<Vec<R>, gpu_compute::ReadbackError> {
         let SweepBatch {
             sweep,
             encoder,
@@ -396,7 +399,9 @@ impl SweepBatch<'_> {
         sweep.queue.submit([encoder.finish()]);
         let results = reads
             .iter()
-            .map(|(read_buf, bytes)| super::try_read_buffer(&sweep.device, read_buf, *bytes))
+            .map(|(read_buf, bytes)| {
+                gpu_compute::try_read_buffer_with(&sweep.device, read_buf, *bytes, &consume)
+            })
             .collect();
         drop(keep);
         results
@@ -410,24 +415,19 @@ impl SweepBatch<'_> {
     /// Fallible selection readback; a transfer failure cannot become an empty
     /// selection map. Callers may fall back to a CPU sweep for the whole batch.
     pub fn try_finish(self) -> Result<Vec<Vec<Option<Selection>>>, gpu_compute::ReadbackError> {
-        Ok(self
-            .finish_raw()?
-            .into_iter()
-            .map(|raw| {
-                raw.chunks_exact(16)
-                    .map(|chunk| {
-                        let f = |i: usize| {
-                            f32::from_ne_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap())
-                        };
-                        (f(0) > 0.).then(|| Selection {
-                            bin: f(1) as u32,
-                            offset: f(2),
-                            score: f(3),
-                        })
+        self.finish_with(|raw| {
+            raw.chunks_exact(16)
+                .map(|chunk| {
+                    let f =
+                        |i: usize| f32::from_le_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap());
+                    (f(0) > 0.).then(|| Selection {
+                        bin: f(1) as u32,
+                        offset: f(2),
+                        score: f(3),
                     })
-                    .collect()
-            })
-            .collect())
+                })
+                .collect()
+        })
     }
 
     /// Submits once; returns raw score rows per job (`push_scores`), in push order.
@@ -438,15 +438,11 @@ impl SweepBatch<'_> {
 
     /// Fallible raw-score readback, preserving transfer errors.
     pub fn try_finish_scores(self) -> Result<Vec<Vec<f32>>, gpu_compute::ReadbackError> {
-        Ok(self
-            .finish_raw()?
-            .into_iter()
-            .map(|raw| {
-                raw.chunks_exact(4)
-                    .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
-                    .collect()
-            })
-            .collect())
+        self.finish_with(|raw| {
+            raw.chunks_exact(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                .collect()
+        })
     }
 }
 

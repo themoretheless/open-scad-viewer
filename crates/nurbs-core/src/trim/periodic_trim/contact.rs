@@ -8,8 +8,9 @@ use crate::{
 };
 use std::cmp::Ordering;
 mod coefficient;
+mod common_projection;
 pub use coefficient::PoweredBendCoefficient;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ContactPort {
     pub edge: usize,
     pub incoming: bool,
@@ -39,7 +40,7 @@ impl ContactPort {
         (numerator > 0).then_some([numerator, k])
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ContactOwnership {
     pub point: [f64; 2],
     /// Counterclockwise exact order, without materialized vector subtraction.
@@ -47,7 +48,7 @@ pub struct ContactOwnership {
     /// Incoming -> outgoing, bounding the intervening oriented left sector.
     pub pairs: Vec<[usize; 2]>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ContactOwnershipReport {
     pub complete: bool,
     pub contacts: Vec<ContactOwnership>,
@@ -202,7 +203,10 @@ fn coefficient_interval(port: &ContactPort) -> Option<(usize, [f64; 2])> {
 /// exact integer comparisons of normal/tangential vanishing orders. Equal
 /// exponents are separated by disjoint outward powered radial coefficient
 /// bounds; fractional powers are never estimated. Regular curvature/2 bounds
-/// are retained as a tighter special case. Overlapping coefficient intervals and stationary spans
+/// are retained as a tighter special case. Clamped endpoint spans with exactly proportional
+/// oriented knot gaps/weights and an exact common longitudinal projection admit
+/// higher-order separation by their first unequal normal control coefficient.
+/// Other overlapping coefficient intervals and stationary spans
 /// remain unproven. The permutation preserves the entire oriented
 /// chain and its summed winding, not a regular face or a nonzero-fill owner.
 /// The local convention pairs an outgoing ray with the next CCW incoming ray.
@@ -284,33 +288,57 @@ pub fn inspect_contact_ownership(
             }
         }
         ports.sort_by(|a, b| {
-            compare_ports(a, b, vertex.point).then_with(|| {
-                // A total sorting key, not a proof: interval overlap is not a
-                // transitive equality relation. Prove all adjacent gaps below.
-                match (coefficient_interval(a), coefficient_interval(b)) {
-                    (Some((ap, a)), Some((bp, b))) => {
-                        ap.cmp(&bp).then_with(|| a[0].total_cmp(&b[0]))
+            compare_ports(a, b, vertex.point)
+                .then_with(|| {
+                    common_projection::compare(
+                        a,
+                        b,
+                        &edges[a.edge].curve,
+                        &edges[b.edge].curve,
+                        vertex.point,
+                    )
+                    .unwrap_or(Ordering::Equal)
+                })
+                .then_with(|| {
+                    // A total sorting key, not a proof: interval overlap is not a
+                    // transitive equality relation. Prove all adjacent gaps below.
+                    match (coefficient_interval(a), coefficient_interval(b)) {
+                        (Some((ap, a)), Some((bp, b))) => {
+                            ap.cmp(&bp).then_with(|| a[0].total_cmp(&b[0]))
+                        }
+                        (Some(_), None) => Ordering::Less,
+                        (None, Some(_)) => Ordering::Greater,
+                        (None, None) => Ordering::Equal,
                     }
-                    (Some(_), None) => Ordering::Less,
-                    (None, Some(_)) => Ordering::Greater,
-                    (None, None) => Ordering::Equal,
-                }
-            })
+                })
         });
         for i in 0..ports.len() {
             let a = &ports[i];
             let b = &ports[(i + 1) % ports.len()];
             if compare_ports(a, b, vertex.point) == Ordering::Equal {
-                let ordered = match (coefficient_interval(a), coefficient_interval(b)) {
-                    (Some((ap, a)), Some((bp, b))) if ap == bp => {
-                        if i + 1 == ports.len() {
-                            b[1] < a[0]
-                        } else {
-                            a[1] < b[0]
-                        }
-                    }
-                    _ => false,
+                let exact_order = common_projection::compare(
+                    a,
+                    b,
+                    &edges[a.edge].curve,
+                    &edges[b.edge].curve,
+                    vertex.point,
+                );
+                let expected = if i + 1 == ports.len() {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
                 };
+                let ordered = exact_order == Some(expected)
+                    || match (coefficient_interval(a), coefficient_interval(b)) {
+                        (Some((ap, a)), Some((bp, b))) if ap == bp => {
+                            if i + 1 == ports.len() {
+                                b[1] < a[0]
+                            } else {
+                                a[1] < b[0]
+                            }
+                        }
+                        _ => false,
+                    };
                 if !ordered {
                     out.reason = Some("coincident-contact-rays");
                     return Ok(out);

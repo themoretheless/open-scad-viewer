@@ -947,7 +947,23 @@ fn equal_exponent_contact_uses_disjoint_signed_coefficients_including_cyclic_wra
             source: None,
         })
         .collect();
-    let unresolved = periodic_trim::inspect_contact_ownership(&edges, 4).unwrap();
+    // Overlapping interval coefficients no longer force refusal when the
+    // original common basis/projection proves their exact strict order.
+    // First-span y(t)=coefficient*t^2, with four consecutive binary64 values.
+    let exact = periodic_trim::inspect_contact_ownership(&edges, 4).unwrap();
+    assert!(exact.complete, "{exact:?}");
+    assert_eq!(exact.successors.unwrap(), vec![0, 1]);
+    assert_eq!(
+        exact.contacts[0]
+            .ports
+            .iter()
+            .map(|p| (p.edge, p.incoming))
+            .collect::<Vec<_>>(),
+        vec![(0, false), (0, true), (1, false), (1, true)]
+    );
+    let mut unmatched = edges;
+    unmatched[0].curve.control_points[1][0] = f64::from_bits(1_f64.to_bits() + 1);
+    let unresolved = periodic_trim::inspect_contact_ownership(&unmatched, 4).unwrap();
     assert!(!unresolved.complete && unresolved.successors.is_none());
     assert_eq!(unresolved.reason, Some("coincident-contact-rays"));
 }
@@ -1296,4 +1312,186 @@ fn higher_order_cusp_regions_keep_analytic_material_and_gap_after_assembly() {
             Some(w)
         );
     }
+}
+
+fn equal_curvature_cubic_contacts(scale: f64, rotate: bool) -> Vec<ChartEdge> {
+    let curve = |k: f64| Curve {
+        degree: 3,
+        knots: vec![0.1, 0.1, 0.1, 0.1, 1.1, 1.1, 1.1, 1.1],
+        control_points: [[0., 0.], [1., 0.], [2., 1.], [3., k]]
+            .into_iter()
+            .map(|[x, y]| {
+                if rotate {
+                    vec![-y * scale, x * scale]
+                } else {
+                    vec![x * scale, y * scale]
+                }
+            })
+            .collect(),
+        weights: vec![1., 2., 3., 4.],
+        periodic: false,
+    };
+    let mut edges = Vec::new();
+    for (lo, hi) in [(1., 2.), (3., 4.)] {
+        let a = curve(lo);
+        let mut b = curve(hi);
+        let line = Curve::from_polyline(vec![
+            a.control_points[3].clone(),
+            b.control_points[3].clone(),
+        ])
+        .unwrap();
+        b.control_points.reverse();
+        b.weights.reverse();
+        // Single-Bezier normalized coordinates reverse independently of domain.
+        edges.extend([a, line, b].into_iter().map(|curve| ChartEdge {
+            curve,
+            source: None,
+        }));
+    }
+    edges
+}
+#[test]
+fn equal_curvature_germs_are_ordered_by_exact_common_projection() {
+    for scale in [1., 1e-200] {
+        for rotate in [false, true] {
+            let edges = equal_curvature_cubic_contacts(scale, rotate);
+            let r = periodic_trim::inspect_contact_ownership(&edges, 12).unwrap();
+            assert!(r.complete, "{r:?}");
+            assert_eq!(r.successors.unwrap(), vec![1, 2, 0, 4, 5, 3]);
+            // All four rays have the same leading bend; normal cubic terms
+            // supply the first distinction. Independent evaluations at common
+            // longitudinal coordinates confirm the ordering for finite samples.
+            for t in [0.01, 0.1, 0.25] {
+                let a = edges[0].curve.evaluate(0.1 + t).unwrap().point;
+                let b = edges[2].curve.evaluate(1.1 - t).unwrap().point;
+                let longitudinal = if rotate { 1 } else { 0 };
+                assert!((a[longitudinal] - b[longitudinal]).abs() <= 1e-12 * scale);
+                if rotate {
+                    assert!(a[0] > b[0]);
+                } else {
+                    assert!(a[1] < b[1]);
+                }
+            }
+            let mut shuffled = edges;
+            shuffled.rotate_left(2);
+            let r = periodic_trim::inspect_contact_ownership(&shuffled, 12).unwrap();
+            assert!(r.complete, "{r:?}");
+        }
+    }
+}
+#[test]
+fn equal_curvature_identical_germs_and_insufficient_work_still_refuse() {
+    let mut edges = equal_curvature_cubic_contacts(1., false);
+    let duplicate = edges.clone();
+    edges.extend(duplicate);
+    let r = periodic_trim::inspect_contact_ownership(&edges, 24).unwrap();
+    assert!(!r.complete && r.successors.is_none());
+    let r = periodic_trim::inspect_contact_ownership(&equal_curvature_cubic_contacts(1., false), 1)
+        .unwrap();
+    assert_eq!(r.reason, Some("contact-port-budget"));
+}
+
+#[test]
+fn common_projection_gate_rejects_unmatched_longitudinal_functions() {
+    let mut edges = equal_curvature_cubic_contacts(1., false);
+    // Preserve the leading ray and curvature, but change the quadratic
+    // longitudinal term: equal-parameter normal order is no longer a proof.
+    edges[2].curve.control_points[1][0] += 0.125;
+    let r = periodic_trim::inspect_contact_ownership(&edges, 12).unwrap();
+    assert!(!r.complete && r.successors.is_none(), "{r:?}");
+}
+
+fn equal_curvature_bspline_contacts(time_scale: f64) -> Vec<ChartEdge> {
+    let curve = |k: f64, dilation: f64, weight_scale: f64| Curve {
+        degree: 3,
+        knots: [0., 0., 0., 0., 1., 2., 3., 3., 3., 3.]
+            .into_iter()
+            .map(|u| u * time_scale * dilation)
+            .collect(),
+        control_points: [
+            [0., 0.],
+            [1., 0.],
+            [2., 1.],
+            [3., k],
+            [4., k + 1.],
+            [5., k + 2.],
+        ]
+        .into_iter()
+        .map(|p| p.to_vec())
+        .collect(),
+        weights: (1..=6).map(|i| i as f64 * weight_scale).collect(),
+        periodic: false,
+    };
+    let mut edges = Vec::new();
+    for (lo, hi) in [(1., 2.), (3., 4.)] {
+        let a = curve(lo, 1., 1.);
+        let mut b = curve(hi, 2., 4.);
+        let join = Curve::from_polyline(vec![
+            a.control_points.last().unwrap().clone(),
+            b.control_points.last().unwrap().clone(),
+        ])
+        .unwrap();
+        b.control_points.reverse();
+        b.weights.reverse();
+        // Exact parameter negation avoids rounded a+b-k reflection.
+        b.knots = b.knots.into_iter().rev().map(|u| -u).collect();
+        edges.extend([a, join, b].into_iter().map(|curve| ChartEdge {
+            curve,
+            source: None,
+        }));
+    }
+    edges
+}
+#[test]
+fn equal_curvature_multispan_contacts_admit_exact_knot_and_weight_scaling() {
+    for time_scale in [1., 1e-200] {
+        let edges = equal_curvature_bspline_contacts(time_scale);
+        if time_scale < 1. {
+            assert_eq!(time_scale * time_scale, 0.);
+        }
+        let r = periodic_trim::inspect_contact_ownership(&edges, 12).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.successors.unwrap(), vec![1, 2, 0, 4, 5, 3]);
+        for t in [0.01, 0.125, 0.5] {
+            let a = edges[0].curve.evaluate_de_boor(t * time_scale).unwrap();
+            let b = edges[2]
+                .curve
+                .evaluate_de_boor(-2. * t * time_scale)
+                .unwrap();
+            assert!((a[0] - b[0]).abs() < 1e-12);
+            assert!(a[1] < b[1]);
+        }
+        let mut shuffled = edges;
+        shuffled.reverse();
+        assert!(
+            periodic_trim::inspect_contact_ownership(&shuffled, 12)
+                .unwrap()
+                .complete
+        );
+    }
+}
+#[test]
+fn equal_curvature_multispan_germs_are_invariant_under_exact_linear_rotation() {
+    let mut edges = equal_curvature_bspline_contacts(1.);
+    for edge in &mut edges {
+        for p in &mut edge.curve.control_points {
+            let (x, y) = (p[0], p[1]);
+            p[0] = x - y;
+            p[1] = x + y;
+        }
+    }
+    let r = periodic_trim::inspect_contact_ownership(&edges, 12).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.successors.unwrap(), vec![1, 2, 0, 4, 5, 3]);
+}
+#[test]
+fn common_projection_rejects_changed_basis_despite_equal_leading_curvature() {
+    let mut edges = equal_curvature_bspline_contacts(1.);
+    // Incoming normalized gap2 changes from 2 to 9/4. Match the leading
+    // normal coefficient exactly, leaving higher germ order unresolved.
+    let b = &mut edges[2].curve;
+    b.knots[4] = -4.5;
+    b.control_points[3][1] = 1.125;
+    let r = periodic_trim::inspect_contact_ownership(&edges, 12).unwrap();
+    assert!(!r.complete && r.successors.is_none(), "{r:?}");
 }

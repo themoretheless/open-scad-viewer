@@ -29,3 +29,5 @@ pub mod profile_spring;
 pub mod bellows;
 
 pub mod sphere_envelope;
+
+pub mod worm_wheel;

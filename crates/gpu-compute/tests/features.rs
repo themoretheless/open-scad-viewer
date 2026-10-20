@@ -27,7 +27,12 @@ fn native_subgroups_and_timestamps_require_explicit_opt_in() {
     assert!(context.subgroup_report().supported);
     assert!(context.same_device(&context.clone()));
     let default = GpuContext::new().unwrap();
-    assert!(default.enabled_features().is_empty());
+    let implicit = if gpu_compute::shared_memory_uploads(&default.device) {
+        wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
+    } else {
+        wgpu::Features::empty()
+    };
+    assert_eq!(default.enabled_features(), implicit);
     assert!(!default.subgroup_report().supported);
     assert!(!context.same_device(&default));
 }

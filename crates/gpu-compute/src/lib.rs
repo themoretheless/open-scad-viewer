@@ -8,20 +8,25 @@ mod backend;
 mod buffer;
 mod context;
 mod executor;
-mod readback;
 mod memory;
 mod profiling;
+mod readback;
 
 pub use backend::{
     BackendKind, BackendReport, SubgroupReport, available_backend_report,
     available_subgroup_report, backend_label, tuned_workgroup_size,
 };
-pub use buffer::{pack_f32, pack_u32, read_buffer, storage_entry, uniform_entry};
+pub use buffer::{
+    f32_le_bytes, pack_f32, pack_u32, read_buffer, storage_entry, u32_le_bytes, uniform_entry,
+    write_buffer_words,
+};
 pub use context::{GpuContext, GpuContextError};
-pub use profiling::{GpuTimer, GpuTimestamp, TimestampError, TimestampReadback};
 pub use executor::block_on;
-pub use memory::{GpuBuffer, GpuBufferView, BufferError};
-pub use readback::{ByteReadback, ReadbackError, try_read_buffer};
+pub use memory::{
+    BufferError, GpuBuffer, GpuBufferView, create_buffer_initialized, shared_memory_uploads,
+};
+pub use profiling::{GpuTimer, GpuTimestamp, TimestampError, TimestampReadback};
+pub use readback::{ByteReadback, ReadbackError, try_read_buffer, try_read_buffer_with};
 pub use wgpu;
 
 #[cfg(feature = "cuda")]

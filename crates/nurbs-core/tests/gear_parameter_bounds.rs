@@ -85,6 +85,26 @@ fn parameter_family_certificate_bounds_actual_curve_against_all_box_corners() {
 }
 #[test]
 fn invalid_parameter_derivations_return_errors_without_point_panics() {
+    let curve = involute::approximate_quintic([0.; 3], 20., 0.1, 0.7, 1e-6)
+        .unwrap()
+        .curve;
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert!(involute::certify_quintic(&curve, [0.; 3], bad, 0.1, 0.7).is_err());
+        assert!(involute::certify_quintic(&curve, [0.; 3], 20., bad, 0.7).is_err());
+        assert!(involute::certify_quintic(&curve, [0.; 3], 20., 0.1, bad).is_err());
+        assert!(
+            involute::certify_quintic_parameter_box(
+                &curve,
+                [0.; 3],
+                [20., bad],
+                [0.1; 2],
+                [0.7; 2],
+                [0.; 2],
+                1.
+            )
+            .is_err()
+        );
+    }
     for (m, n, p, c, b) in [
         (f64::NAN, 16, 20., 0., 0.),
         (1., 0, 20., 0., 0.),

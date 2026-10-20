@@ -360,9 +360,9 @@ function setProfileTarget(id:string){
  if(index>0){const ids=[...surfaceInputs.value];[ids[0],ids[index]]=[ids[index],ids[0]];surfaceInputs.value=ids}
 }
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
-const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
+const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-runout'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
+const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
@@ -614,6 +614,7 @@ function beginAdvanced(kind:typeof advancedOp.value) {
  if(isProfileCommand(kind)||kind==='offset'){surfaceInputs.value=[...selectedIds.value];activePlane.value=structuredClone(selectedSketch.value?.plane??xyPlane());sketchPaneOpen.value=true;mode.value='2d'}
  if(kind==='nurbs-match'||kind==='nurbs-prepare'||kind==='nurbs-curve-match'){surfaceInputs.value=[...selectedIds.value];mode.value='3d'}
  if(kind==='instance-transform'){advanced.value={...advanced.value,x:0,y:0,z:0,angle:0,scale:1,axis:'z'};mode.value='3d'}
+ if(kind==='nurbs-runout'){loftPreviewId.value=crypto.randomUUID();mode.value='3d';surfaceInputs.value=[...selectedIds.value.filter(id=>document.value.surfaces?.some(s=>s.id===id)),...selectedIds.value.filter(id=>document.value.curves?.some(c=>c.id===id))];advanced.value.matchBoundaryA='vMax';surfaceReversed.value=[]}
  if(kind==='loft'||kind==='nurbs-loft'||kind==='nurbs-sweep'||kind==='nurbs-patch'){loftPreviewId.value=crypto.randomUUID();mode.value='3d';surfaceInputs.value=[...selectedIds.value];surfaceReversed.value=surfaceInputs.value.map(()=>false)}
  if(kind==='instance-create'){loftPreviewId.value=crypto.randomUUID();advanced.value={...advanced.value,x:10,y:0,z:0};mode.value='3d'}
  if(kind==='instance-place'&&selectedBody.value?.instance){const m=selectedBody.value.instance.matrix;advanced.value={...advanced.value,x:m[0][3],y:m[1][3],z:m[2][3]};mode.value='3d'}
@@ -885,13 +886,19 @@ async function runNativeBrep(options:Exclude<SolidBrepToolOptions,{kind:'display
 const FALLBACK_NOTICE=()=>label('Одно из тел не имело точной топологии, результат построен по сетке и не является точным B-rep.','A body had no exact topology; the result was built from the mesh and is not an exact B-rep.')
 const EMPTY_NOTICE=()=>label('Результат пуст: тела не пересекаются так, как требует операция.','The result is empty: the bodies do not overlap the way this operation needs.')
 const formatMm=(mm:number)=>mm>=1e-3?mm.toPrecision(2):mm.toExponential(1)
+const formatUpperMm=(mm:number)=>{if(mm===0)return '0';const [coefficient,power]=mm.toExponential(2).split('e');return ((Number(coefficient.replace('.',''))+1)/100).toFixed(2)+'e'+power}
 const TOLERANT_NOTICE=(mm:number)=>label(`Точного решения для этой пары нет; кривая пересечения построена численно с допуском ${formatMm(mm)} мм.`,`No exact solution exists for this pair; the intersection curve was traced numerically within ${formatMm(mm)} mm.`)
 const booleanWorker=createSolidPreviewWorker(),booleanPending=ref(false)
+const booleanKind=ref<'boolean'|'minkowski3d'>('boolean')
+const minkowskiDeviation=ref(1)
+const minkowskiProof=shallowRef<import('../services/solidMinkowski').SolidMinkowskiResult|null>(null)
+watch(document,()=>{minkowskiProof.value=null},{flush:'sync'})
 let booleanGeneration=0
 function cancelBoolean(){booleanGeneration++;booleanWorker.cancel();booleanPending.value=false}
 async function runBoolean(options:SolidBooleanOptions,guided=false){
  if(booleanPending.value)return
  cancelBoolean()
+ booleanKind.value='boolean'
  const generation=booleanGeneration,snapshot=guided?captureCommand():null
  error.value='';notice.value='';booleanPending.value=true
  try{
@@ -907,6 +914,22 @@ async function runBoolean(options:SolidBooleanOptions,guided=false){
  }catch(e){if(generation===booleanGeneration)error.value=bodyCalculationFailure(e,false)}
  finally{if(generation===booleanGeneration)booleanPending.value=false}
 }
+async function applyMinkowski(){
+ if(booleanPending.value)return
+ const ids=selectedIds.value.filter(id=>document.value.bodies.some(b=>b.id===id))
+ if(ids.length!==2){error.value=label('Выберите ровно два разных тела.','Select exactly two different bodies.');return}
+ cancelCommand();cancelBoolean();booleanKind.value='minkowski3d'
+ const generation=booleanGeneration
+ error.value='';notice.value='';booleanPending.value=true
+ try{
+  const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0],ids[1]],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}})
+  if(generation!==booleanGeneration)return
+  booleanPending.value=false;commit(result.document);selection.value=result.resultId??'';extraSelection.value=[]
+  minkowskiProof.value=result;mode.value='3d';fit('3d')
+ }catch(e){if(generation===booleanGeneration)error.value=bodyCalculationFailure(e,false)}
+ finally{if(generation===booleanGeneration)booleanPending.value=false}
+}
+function downloadMinkowskiProof(){if(minkowskiProof.value)download(JSON.stringify(minkowskiProof.value.proof),'minkowski-3d-proof.json')}
 function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
  if(booleanPending.value)return
  cancelCommand()
@@ -1085,6 +1108,12 @@ function surfaceConstructionError(error:unknown):string {
   if(message.includes('tangent discontinuities'))return label('У пути есть разрыв касательной. Разбейте путь в месте излома.','The path has a tangent discontinuity. Split it at the corner.')
  }
  if(message==='Choose distinct curves.')return label('Для каждой роли выберите отдельную кривую.','Choose a distinct curve for each role.')
+ if(advancedOp.value==='nurbs-runout'){
+  if(message.includes('RUNOUT_INPUTS'))return label('Выберите исходную поверхность, плоский торец и пространственную граничную кривую.','Choose a source surface, a planar end face and a spatial boundary curve.')
+  if(message.includes('affine plane'))return label('Для торца нужна плоская поверхность. Выберите другую поверхность во второй роли.','The end surface must be planar. Choose another surface for the second role.')
+  if(message.includes('RUNOUT_TARGET'))return label('Проверьте кривую на торце: она должна лежать на выбранной плоскости и иметь определённую касательную.','Check the end curve: it must lie on the selected plane and have a defined tangent.')
+  return label('Переход G2 не подтверждён. Измените положение шва, длину касательных или сторону перехода.','G2 transition is unproven. Adjust the seam position, tangent length or transition side.')
+ }
  if(advancedOp.value!=='nurbs-patch')return message
  if(message.includes('PATCH_BUDGET')){
   const role=message.match(/PATCH_BUDGET:([0-3])/)
@@ -1167,8 +1196,8 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
     return
    }
    if(isSolidSurfaceBuild(operation)){
-    const result=await bodyEditWorker.run({kind:'surfaceBuild',document:source,options:{kind:operation,ids:options.inputs,id:loftPreviewId.value,group:activeGroup.value||undefined,reversed:[...surfaceReversed.value],patchPreparation:{enabled:options.patchPrepare,maxError:options.patchError},sweep:{mode:options.sweepMode,normal:[options.sweepNormalX,options.sweepNormalY,options.sweepNormalZ],sections:options.sweepSections,maxDeviation:options.sweepDeviation}}})
-    if(generation===bodyEditGeneration)surfaceBuildResult.value=result
+    const result=await bodyEditWorker.run({kind:'surfaceBuild',document:source,options:{kind:operation,ids:options.inputs,id:loftPreviewId.value,group:activeGroup.value||undefined,reversed:[...surfaceReversed.value],runout:{sourceBoundary:options.matchBoundaryA,sourcePosition:options.runoutPosition/100,tangentLengthMm:options.runoutTangentLength,flipSide:options.runoutFlip,reverse:options.matchReverse},patchPreparation:{enabled:options.patchPrepare,maxError:options.patchError},sweep:{mode:options.sweepMode,normal:[options.sweepNormalX,options.sweepNormalY,options.sweepNormalZ],sections:options.sweepSections,maxDeviation:options.sweepDeviation}}})
+    if(generation===bodyEditGeneration){surfaceBuildResult.value=result;if(operation==='nurbs-runout'&&result.runoutReport?.complete===false)bodyEditRetryVisible.value=true}
     return
    }
    if(isSolidNurbsRefit(operation)){
@@ -1210,6 +1239,7 @@ const pointTrimCut=computed(()=>{
  const p=advanced.value.end==='start'?curve?.controlPoints.at(-1):curve?.controlPoints[0]
  return p?[p[0],p[1],p[2]??0]:undefined
 })
+const runoutProblemCurve=computed(()=>advancedOp.value==='nurbs-runout'&&advancedPreview.value.rawError.includes('RUNOUT_TARGET')?surfaceInputs.value[2]:undefined)
 const patchBudgetCurve=computed(()=>{
  const role=advancedOp.value==='nurbs-patch'?advancedPreview.value.rawError.match(/PATCH_BUDGET:([0-3])/):null
  return role?surfaceInputs.value[Number(role[1])]:undefined
@@ -1236,7 +1266,7 @@ function applyAdvanced(){run(()=>{
 const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
 const advancedBodyIds=computed(()=>new Set([...selectedIds.value,...sceneBodies.value.filter(b=>b.instance&&selectedIds.value.includes(b.instance.sourceId)).map(b=>b.id),'preview-split',loftPreviewId.value]))
 const advancedPolygons=computed(()=>advancedPreview.value.document?.bodies.filter(b=>advancedBodyIds.value.has(b.id)).flatMap(b=>meshPolygons(b,1)).sort((a,b)=>a.depth-b.depth)??[])
-const advancedSurfaceIds=computed(()=>advancedOp.value==='nurbs-prepare'?surfaceInputs.value:advancedOp.value==='nurbs-match'?[surfaceInputs.value[1]]:advancedOp.value==='nurbs-surface-reduce'||advancedOp.value==='nurbs-surface-rebuild'?[selection.value]:[loftPreviewId.value])
+const advancedSurfaceIds=computed(()=>advancedOp.value==='nurbs-runout'?(advancedPreview.value.document?.surfaces??[]).filter(s=>s.id===loftPreviewId.value||s.id.startsWith(loftPreviewId.value+':')).map(s=>s.id):advancedOp.value==='nurbs-prepare'?surfaceInputs.value:advancedOp.value==='nurbs-match'?[surfaceInputs.value[1]]:advancedOp.value==='nurbs-surface-reduce'||advancedOp.value==='nurbs-surface-rebuild'?[selection.value]:[loftPreviewId.value])
 const advancedSurfacePolygons=computed(()=>advancedPreview.value.document?.surfaces?.filter(item=>advancedSurfaceIds.value.includes(item.id)).flatMap(item=>surfacePolygons(item)).sort((a,b)=>a.depth-b.depth)??[])
 const advancedSketches=computed(()=>advancedPreview.value.document?.sketches.filter(s=>selectedIds.value.includes(s.id)&&samePlane(s.plane,activePlane.value))??[])
 const advancedSketchDisplay=computed(()=>new Map(advancedSketches.value.map(s=>[s.id,profileLoops(s)])))
@@ -2140,7 +2170,7 @@ const commandHint = computed(() => {
   if(gizmoPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
   if(directTransformPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
   if(sketchEditPending.value)return label('Вычисляется предпросмотр. Esc — отменить.', 'Computing preview. Esc cancels.')
-  if(booleanPending.value)return label('Вычисляется Boolean. Esc — отменить.', 'Computing Boolean. Esc cancels.')
+  if(booleanPending.value)return booleanKind.value==='minkowski3d'?label('Вычисляется сумма Минковского. Esc — отменить.','Computing Minkowski sum. Esc cancels.'):label('Вычисляется Boolean. Esc — отменить.', 'Computing Boolean. Esc cancels.')
   if (commandFailure.value) return label('Измените параметры или выбор. Исходная модель сохранена.', 'Change parameters or selection. The original model is preserved.')
   if (subtract.value) return subtract.value.active === 'a' ? label('Выберите тела A, из которых нужно вычесть.', 'Select target bodies A.') : label('Выберите режущие тела B.', 'Select cutting bodies B.')
   if (advancedOp.value === 'nurbs-prepare') return label('Подготовка меняет базис обеих поверхностей. Проверьте отклонение и подтвердите.', 'Preparation changes both surface bases. Check the deviation and confirm.')
@@ -2772,6 +2802,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('nurbs-offset','Смещение NURBS-кривой','Offset NURBS curve',()=>beginAdvanced('nurbs-offset'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-point-trim','Обрезать NURBS по точке','Trim NURBS at point',()=>beginAdvanced('nurbs-point-trim'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-curve-match','Согласовать кривые G1','Match curves G1',()=>beginAdvanced('nurbs-curve-match'),{enabled:!!selectedCurvePair.value,disabledReason:label('Выберите две NURBS-кривые','Select two NURBS curves')}),
+    cmd('nurbs-runout','Концевой переход G2','G2 end transition',()=>beginAdvanced('nurbs-runout'),{enabled:selectedIds.value.length===3&&selectedIds.value.filter(id=>document.value.surfaces?.some(s=>s.id===id)).length===2&&selectedIds.value.filter(id=>document.value.curves?.some(c=>c.id===id&&c.curve.controlPoints[0]?.length===3)).length===1,disabledReason:label('Выберите две поверхности и пространственную кривую на торце','Select two surfaces and a spatial end curve')}),
     cmd('nurbs-match','Согласовать поверхности G1/G2','Match surfaces G1/G2',()=>beginAdvanced('nurbs-match'),{enabled:!!selectedSurfacePair.value,disabledReason:label('Выберите две NURBS-поверхности','Select two NURBS surfaces')}),
     cmd('nurbs-surface-rebuild','Перестроить поверхность','Rebuild surface',()=>{beginAdvanced('nurbs-surface-rebuild');mode.value='3d'},{enabled:!!selectedNurbsSurface.value,disabledReason:label('Выберите NURBS-поверхность','Select a NURBS surface')}),
     cmd('nurbs-rebuild','Перестроить кривую','Rebuild curve',()=>{beginAdvanced('nurbs-rebuild');mode.value='3d'},{enabled:!!selectedNurbsCurve.value&&!selectedNurbsCurve.value.bridge,disabledReason:label('Выберите независимую NURBS-кривую','Select an independent NURBS curve')}),
@@ -2796,6 +2827,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('grid', floorVisible.value ? 'Скрыть сетку 3D' : 'Показать сетку 3D', floorVisible.value ? 'Hide 3D grid' : 'Show 3D grid', () => { floorVisible.value = !floorVisible.value }, { detail: label('Вид', 'View') }),
     cmd('undo', 'Отменить', 'Undo', () => undo(), { shortcut: 'Ctrl Z', enabled: undoable.value, disabledReason: label('Нечего отменять', 'Nothing to undo') }),
     cmd('redo', 'Повторить', 'Redo', () => undo(true), { shortcut: 'Ctrl Shift Z', enabled: redoable.value, disabledReason: label('Нечего повторять', 'Nothing to redo') }),
+    cmd('minkowski-3d','Сумма Минковского','Minkowski sum',()=>void applyMinkowski(),{detail:label('Два тела · проверяемая сумма исходной геометрии','Two bodies · verified source geometry sum'),keywords:['minkowski','минковского','сумма'],enabled:twoBodies,disabledReason:needTwo}),
     cmd('brep-union', 'Объединить тела', 'Union bodies', () => applyBrepBoolean('union'), { detail: booleanDetail, aliases: ['Объединить тела', 'Union bodies', 'B-rep объединить', 'B-rep Union'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
     cmd('brep-difference', 'Вычесть: A − B', 'Subtract: A − B', () => beginSubtract(), { detail: label('Панель: A − B, тела кликом, Shift добавляет', 'Panel: A − B, click bodies, Shift adds'), aliases: ['Вычесть: A − B', 'Subtract: A − B', 'B-rep A − B'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: anyBody, disabledReason: needSelection }),
     cmd('brep-intersection', 'Пересечение тел', 'Intersect bodies', () => applyBrepBoolean('intersection'), { detail: booleanDetail, aliases: ['Пересечение тел', 'Intersect bodies', 'B-rep пересечение', 'B-rep Intersection'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
@@ -2877,6 +2909,8 @@ function repeatCommand() {
   if((isProfileCommand(saved.id))&&saved.surfaceInputs.every(id=>document.value.sketches.some(s=>s.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if(saved.id==='nurbs-curve-match'&&saved.surfaceInputs.every(id=>document.value.curves?.some(c=>c.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if((saved.id==='nurbs-match'||saved.id==='nurbs-prepare')&&saved.surfaceInputs.every(id=>document.value.surfaces?.some(s=>s.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
+  if(saved.id==='nurbs-runout'&&saved.surfaceInputs.length===3&&saved.inputSelection.every(id=>selectedIds.value.includes(id))
+    &&saved.surfaceInputs.slice(0,2).every(id=>document.value.surfaces?.some(s=>s.id===id))&&document.value.curves?.some(c=>c.id===saved.surfaceInputs[2]))surfaceInputs.value=[...saved.surfaceInputs]
   if(['nurbs-loft','nurbs-sweep','nurbs-patch'].includes(saved.id)) {
     const order=saved.surfaceInputs.map(id=>saved.inputSelection.indexOf(id))
     if(saved.inputSelection.length===selectedIds.value.length&&saved.inputSelection.every((id,i)=>id===selectedIds.value[i])&&saved.surfaceInputs.every(id=>document.value.curves?.some(c=>c.id===id)))surfaceInputs.value=[...saved.surfaceInputs]
@@ -3408,8 +3442,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span v-if="selectedGroup">{{ label('Группа выбора', 'Selection group') }}: {{ selectedGroup }}</span>
       <span class="state-legend"><i class="state-hover"></i>{{ label('Наведение','Hover') }} <i class="state-selected"></i>{{ label('Выбор','Selection') }} <i class="state-preview"></i>{{ label('Предпросмотр','Preview') }}</span>
     </div>
-    <div v-if="commandActive" class="command-guidance" :class="{ failed: commandFailure }" role="status">
-      <strong>{{ commandFailure ? label('! Ошибка построения', '! Build error') : booleanPending ? 'Boolean' : label('Предпросмотр операции', 'Operation preview') }}</strong>
+    <div v-if="commandActive" class="command-guidance" :class="{ failed: commandFailure, 'runout-guidance': advancedOp==='nurbs-runout' }" :style="advancedOp==='nurbs-runout'?{'--runout-dock-width':(dockOpen?344:46)+'px'}:undefined" role="status">
+      <strong>{{ commandFailure ? label('! Ошибка построения', '! Build error') : booleanPending ? (booleanKind==='minkowski3d'?label('Сумма Минковского','Minkowski sum'):'Boolean') : label('Предпросмотр операции', 'Operation preview') }}</strong>
       <span>{{ commandHint }}</span><span class="command-keys"><template v-if="commandReady"><kbd>Enter</kbd> {{ label('применить','apply') }} </template> <button @click="cancelCommand"><kbd>Esc</kbd> {{ label('отмена','cancel') }}</button></span>
     </div>
     <div class="workspace-row">
@@ -3441,6 +3475,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
               <span v-if="selectedBody || twoSelectedBodies" class="tool-divider" aria-hidden="true"></span>
               <div v-if="selectedBody || twoSelectedBodies" class="tool-group" role="group" :aria-label="label('Булевы операции','Boolean operations')">
+                <button class="tool-icon" :title="label('Сумма Минковского: два тела, с проверкой исходных поверхностей','Minkowski sum: two bodies, with source surface verification')" :aria-label="label('Сумма Минковского','Minkowski sum')" :disabled="!twoSelectedBodies || commandActive" @click="applyMinkowski"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 8l5-3 5 3-5 3zM3 8v6l5 3 5-3V8M15 12h6M18 9v6M9 18l5 3 7-4v-1"/></svg></button>
+                <label v-if="twoSelectedBodies" class="minkowski-tolerance">{{ label('Допуск поверхностей, мм','Surface tolerance, mm') }} <input v-model.number="minkowskiDeviation" type="number" min="0.000000001" max="10000" step="0.1" :aria-label="label('Допуск исходных поверхностей Минковского, мм','Minkowski source surface tolerance, mm')" :disabled="commandActive" style="width:5rem" /></label>
                 <button class="tool-icon" :title="label('Объединить тела','Union bodies')" :aria-label="label('Объединить тела','Union bodies')" :disabled="!twoSelectedBodies" @click="applyBrepBoolean('union')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/></svg></button>
                 <button class="tool-icon" :title="label('Вычесть: A − B','Subtract: A − B')" :aria-label="label('Вычесть: A − B','Subtract: A − B')" @click="beginSubtract()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/><path d="M15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" stroke-dasharray="3 2"/></svg></button>
                 <button class="tool-icon" :title="label('Пересечение тел','Intersect bodies')" :aria-label="label('Пересечение тел','Intersect bodies')" :disabled="!twoSelectedBodies" @click="applyBrepBoolean('intersection')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M12 8.8a5 5 0 0 0 0 8.4 5 5 0 0 0 0-8.4z" fill="currentColor" fill-opacity=".45" stroke="none"/></svg></button>
@@ -3509,7 +3545,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <!-- Stateless SVG slots follow painter order; update geometry and hit identity without moving DOM nodes. -->
                 <CpuOrbitCanvas :active="cpuOrbitActive" :triangles="cpuOrbitTriangles" :size="views['3d']" :left="centers['3d'][0]-views['3d']/2" :top="centers['3d'][1]-views['3d']/2" @ready="cpuOrbitReady=$event" /><template v-if="!gpuActive && !(cpuOrbitActive && cpuOrbitReady)"><template v-for="(p, slot) in polygons" :key="slot"><polygon v-if="p.preview" :data-preview-body="p.id" :points="p.points" :fill="p.preview===2?(extrusionMode==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'" :fill-opacity="p.preview===2?.28:.45" stroke="none" pointer-events="none"/><polygon v-else-if="p.surface" v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" :data-surface="p.id" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="none" :pointer-events="objectSelectable(p.id)?undefined:'none'" @pointerdown.stop="pickObject(p.id,'3d')"/><polygon v-else :opacity="p.material?.opacity??1" :data-body="p.id" :data-triangle="p.triangle" v-show="!advancedPreview.document || !advancedBodyIds.has(p.id)" :points="p.points" :style="{color:polygonColor(p)}" fill="currentColor" :stroke="(p.material?.opacity??1)<1?'none':'currentColor'" :pointer-events="objectSelectable(p.id)?undefined:'none'" stroke-width="1" stroke-linejoin="round" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></template></template>
                 <polygon v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" pointer-events="none" v-for="p in gpuActive?nurbsSurfacePolygons:[]" :data-surface="p.id" :key="'surface-'+p.key" :points="p.points" fill="transparent" stroke="none" />
-                <polyline :pointer-events="objectSelectable(curve.id)?undefined:'none'" v-for="curve in nurbsCurvePaths" v-show="!(advancedOp==='nurbs-curve-match' && advancedPreview.document && curve.id===surfaceInputs[1])" :key="'curve-'+curve.id" :data-diagnostic="curve.id===patchBudgetCurve?'patch-budget':undefined" :points="curve.points" fill="none" :stroke="curve.id===patchBudgetCurve?'#ff647c':selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickNurbsCurve($event,curve.id)" />
+                <polyline :pointer-events="objectSelectable(curve.id)?undefined:'none'" v-for="curve in nurbsCurvePaths" v-show="!(advancedOp==='nurbs-curve-match' && advancedPreview.document && curve.id===surfaceInputs[1])" :key="'curve-'+curve.id" :data-diagnostic="curve.id===runoutProblemCurve?'runout-target':curve.id===patchBudgetCurve?'patch-budget':undefined" :points="curve.points" fill="none" :stroke="curve.id===patchBudgetCurve||curve.id===runoutProblemCurve?'#ff647c':selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickNurbsCurve($event,curve.id)" />
                 <g v-if="selectedNurbs" class="nurbs-cage">
                   <polyline v-if="selectedNurbsCurve" :points="selectedNurbsCurve.curve.controlPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
                   <template v-if="selectedNurbsSurface">
@@ -3645,8 +3681,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
-            <div v-if="advancedOp && pane === (['offset','extend','curve','profile-prepare','profile-union','profile-difference','profile-intersection'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
-              <strong>{{ ({'nurbs-offset':label('Смещение NURBS-кривой','Offset NURBS curve'),'nurbs-point-trim':label('Обрезать NURBS по точке','Trim NURBS at point'),'profile-difference':label('Вычесть области профилей','Subtract profile regions'),'profile-intersection':label('Пересечь точные профили','Intersect exact profiles'),'profile-union':label('Объединить точные профили','Union exact profiles'),'profile-prepare':label('Собрать профиль','Prepare profile'),'nurbs-curve-match':label('Согласовать кривые G1','Match curves G1'),'nurbs-prepare':label('Подготовить границы','Prepare boundaries'),'nurbs-match':label('Согласовать поверхности G1/G2','Match surfaces G1/G2'),'instance-transform':label('Преобразовать экземпляр','Transform instance'),'instance-create':label('Создать связанный экземпляр','Create linked instance'),'instance-place':label('Разместить экземпляр','Place instance'),'nurbs-surface-rebuild':label('Перестроить поверхность','Rebuild surface'),'nurbs-rebuild':label('Перестроить кривую','Rebuild curve'),'nurbs-patch':label('Coons patch','Coons patch'),'nurbs-surface-reduce':label('Снизить степень поверхности','Reduce surface degree'),'nurbs-reduce':label('Снизить степень кривой','Reduce curve degree'),'nurbs-loft':label('Поверхность по сечениям','NURBS loft'),'nurbs-sweep':label('Перенос профиля по пути','Sweep'),loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
+            <div v-if="advancedOp && pane === (['offset','extend','curve','profile-prepare','profile-union','profile-difference','profile-intersection'].includes(advancedOp) ? '2d' : '3d')" class="operation-card" :class="{'runout-card':advancedOp==='nurbs-runout'}">
+              <strong>{{ ({'nurbs-offset':label('Смещение NURBS-кривой','Offset NURBS curve'),'nurbs-point-trim':label('Обрезать NURBS по точке','Trim NURBS at point'),'profile-difference':label('Вычесть области профилей','Subtract profile regions'),'profile-intersection':label('Пересечь точные профили','Intersect exact profiles'),'profile-union':label('Объединить точные профили','Union exact profiles'),'profile-prepare':label('Собрать профиль','Prepare profile'),'nurbs-curve-match':label('Согласовать кривые G1','Match curves G1'),'nurbs-prepare':label('Подготовить границы','Prepare boundaries'),'nurbs-runout':label('Концевой переход G2','G2 end transition'),'nurbs-match':label('Согласовать поверхности G1/G2','Match surfaces G1/G2'),'instance-transform':label('Преобразовать экземпляр','Transform instance'),'instance-create':label('Создать связанный экземпляр','Create linked instance'),'instance-place':label('Разместить экземпляр','Place instance'),'nurbs-surface-rebuild':label('Перестроить поверхность','Rebuild surface'),'nurbs-rebuild':label('Перестроить кривую','Rebuild curve'),'nurbs-patch':label('Coons patch','Coons patch'),'nurbs-surface-reduce':label('Снизить степень поверхности','Reduce surface degree'),'nurbs-reduce':label('Снизить степень кривой','Reduce curve degree'),'nurbs-loft':label('Поверхность по сечениям','NURBS loft'),'nurbs-sweep':label('Перенос профиля по пути','Sweep'),loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
               <small v-if="advancedPreview.error" role="alert">{{ advancedPreview.error }}</small>
               <small v-if="selectedBody?.brep && (advancedOp==='chamfer' || advancedOp==='edge-fillet' && advanced.filletMode==='constant')">{{ label('Точный B-rep: скругление — полные выпуклые продольные цепочки призмы/корпуса или круговые рёбра фланца; фаска — связанные прямые выпуклые рёбра. Shift добавляет рёбра. При отказе уменьшите радиус или измените набор рёбер.', 'Exact B-rep: fillet complete convex longitudinal chains of a prism/enclosure or circular annular rims; chamfer connected straight convex edges. Shift adds edges. If refused, reduce the radius or change the edge selection.') }}</small>
               <small v-else-if="advancedOp === 'push'">{{ label('Сдвиг плоской грани выпуклого тела или торца цилиндра.', 'Move a planar face of a convex solid or a cylinder end cap.') }}</small>
@@ -3707,6 +3743,16 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <output v-if="nurbsReduction?.value">{{ label('Верхняя граница отклонения: ','Deviation upper bound: ')+nurbsReduction.value.certificate.hausdorffErrorUpper }} mm</output>
                 <small>{{ label('Применение доступно только при подтверждённом допуске. ID и исходная геометрия в истории сохраняются.','Apply requires an accepted tolerance certificate. Identity and the original geometry in history are preserved.') }}</small>
               </template>
+              <section v-if="advancedOp==='nurbs-runout'" class="runout-controls">
+                <small>{{ label('Создаётся отдельная переходная поверхность. Исходные поверхности сохраняются.','Creates an independent transition surface and preserves the source surfaces.') }}</small>
+                <label v-for="(role,i) in [label('Исходная поверхность','Source surface'),label('Плоский торец','Planar end'),label('Граница на торце','End boundary')]" :key="role">{{ role }}<select v-model="surfaceInputs[i]" :aria-label="role" :aria-invalid="(i===2 && !!runoutProblemCurve)||(i===1 && advancedPreview.rawError.includes('affine plane'))"><template v-if="i<2"><option v-for="s in document.surfaces??[]" :key="s.id" :value="s.id">{{ s.name }}</option></template><template v-else><option v-for="c in (document.curves??[]).filter(c=>c.curve.controlPoints[0]?.length===3)" :key="c.id" :value="c.id">{{ c.name }}</option></template></select></label>
+                <label>{{ label('Край исходной поверхности','Source edge') }}<select v-model="advanced.matchBoundaryA" :aria-label="label('Край исходной поверхности','Source edge')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
+                <label>{{ label('Положение шва, %','Seam position, %') }}<input v-model.number="advanced.runoutPosition" type="number" min="0" max="100" step="1" :aria-label="label('Положение шва, %','Seam position, %')"></label>
+                <label>{{ label('Длина касательных, мм','Tangent length, mm') }}<CadQuantityInput v-model="advanced.runoutTangentLength" kind="length" :locale="locale" :min="0.000001" :aria-label="label('Длина касательных, мм','Tangent length, mm')" @validity="quantityValidity('runoutTangentLength',$event)" /></label>
+                <label><input v-model="advanced.runoutFlip" type="checkbox">{{ label('Обратить сторону перехода','Reverse transition side') }}</label>
+                <label><input v-model="advanced.matchReverse" type="checkbox">{{ label('Обратить направление границы','Reverse boundary direction') }}</label>
+                <output v-if="surfaceBuildResult?.runoutReport" data-testid="runout-report">{{ surfaceBuildResult.runoutReport.withinTolerance?label('G2 подтверждена по всей длине обоих швов','G2 confirmed over both complete seams'):label('Гладкость не подтверждена; измените параметры','Smoothness unproven; adjust parameters') }}</output>
+              </section>
               <template v-if="advancedOp==='nurbs-loft'||advancedOp==='nurbs-sweep'||advancedOp==='nurbs-patch'">
                 <small v-if="advancedOp==='nurbs-patch'">{{ label('Низ и верх идут вдоль U, левая и правая — вдоль V. Соедините концы и согласуйте веса.','Bottom/top follow U; left/right follow V. Connect endpoints and match weights.') }}</small>
                 <CoonsPreparationControls v-if="advancedOp==='nurbs-patch'" v-model:enabled="advanced.patchPrepare" v-model:budget="advanced.patchError" :locale="locale" :reports="surfaceBuildResult?.patchReports" @validity="quantityValidity('patchError',$event)" />
@@ -3757,7 +3803,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </template>
               <small v-if="bodyEditPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
               <button v-if="bodyEditRetryVisible" type="button" :disabled="bodyEditPending || Object.keys(invalidQuantities).length>0" @click="bodyEditRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>
-              <div><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter','Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
+              <div class="command-actions"><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter','Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
             </div>
 
             <div v-if="pane==='3d' && selectedNurbs && (!commandActive || pointEditActive || nativeNurbsPending)" class="operation-card nurbs-card">
@@ -4133,6 +4179,14 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
+    <div v-if="minkowskiProof" class="notice-bar" role="status" :aria-label="label('Сертификат суммы Минковского','Minkowski sum certificate')">
+      {{ minkowskiProof.resultId===null?label('Сумма подтверждена: результат пуст.','Sum verified: the result is empty.'):minkowskiProof.curvedSourceErrorCertified?label('Проверены границы суммы исходных поверхностей.','Source surface sum enclosures verified.'):label('Сумма полигональных оболочек подтверждена.','Polyhedral sum verified.') }}
+      {{ label('Топология при округлении сохранена.','Topology preserved through rounding.') }}
+      <span v-if="minkowskiProof.curvedSourceErrorCertified">{{ minkowskiProof.approximationTopology?label('Топология аппроксимации исходных поверхностей и суммы доказана.','Source surface and sum approximation topology proved.'):minkowskiProof.sourceApproximationTopology?.every(Boolean)?label('Топология исходных тел сохранена; для суммы не доказана.','Source body topology is preserved; sum topology is unproved.'):label('Топология аппроксимации исходных поверхностей не доказана.','Source surface approximation topology is unproved.') }}</span>
+      {{ minkowskiProof.maximumSetDeviationMm===null?label('Единая граница расстояния не доказана; сохранены внутреннее и внешнее приближения.','A global distance bound is unproved; inner and outer enclosures are retained.'):label('Отклонение результата ≤ ','Result deviation ≤ ')+formatUpperMm(minkowskiProof.maximumSetDeviationMm)+' mm' }}
+      {{ minkowskiProof.maximumCoordinateRoundingMm?label('Погрешность координат сетки ≤ ','Mesh coordinate error ≤ ')+formatUpperMm(minkowskiProof.maximumCoordinateRoundingMm)+' mm':label('Координаты сетки точные.','Mesh coordinates are exact.') }}
+      <button @click="downloadMinkowskiProof">{{ label('Скачать сертификат','Download certificate') }}</button>
+    </div>
     <div v-if="gpuTransparencyLimited" class="notice-bar" role="status" aria-label="gpu-transparency-limit">{{ label('Сложный предпросмотр показан без прозрачности.','Complex preview is shown opaque.') }}</div>
     <div v-if="polygonView.limited" class="notice-bar" role="status" aria-label="transparency-limit">{{ label('Прозрачность приблизительная. Скройте часть сцены.','Transparency is approximate. Hide some objects.') }}</div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
@@ -4156,6 +4210,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 
 .compact-workspace .sketch-start-bar,.compact-workspace .primitive-bar{display:none}
 .compact-workspace .pane-tools .subtle{display:none}
+.minkowski-tolerance{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px}
 .compact-workspace .pane-tools{gap:4px;padding:6px;align-items:center}
 .compact-workspace .pane-tools select{max-width:100px}
 .compact-workspace .pane-tools .tool-icon{width:30px;height:30px;flex-shrink:0}
@@ -4256,6 +4311,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
   border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--surface) 98%, transparent); box-shadow: 0 8px 28px rgba(0,0,0,.4);
 }
 .direct-workspace .command-guidance.failed { border-color: var(--danger); }
+.canvas-wrap>.operation-card.runout-card { display:flex;flex-direction:column;overflow:hidden; }
+.runout-card>.runout-controls { display:grid;gap:10px;min-height:0;overflow-y:auto;flex:1; }
+.runout-card>.command-actions { flex:0 0 auto;padding-top:8px;border-top:1px solid var(--hairline); }
+@media(min-width:751px){.direct-workspace .command-guidance.runout-guidance { left:14px;right:calc(var(--runout-dock-width) + 259px);transform:none;max-width:none; }}
+
 .direct-workspace .ws-count { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 @media (max-width: 750px) { .direct-workspace .workspace-bar > .file-menu > div { left: auto; right: 0; } }
 .direct-workspace .splitter { border: 0; background: var(--hairline); }

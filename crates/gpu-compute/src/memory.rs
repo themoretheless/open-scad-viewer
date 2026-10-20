@@ -30,39 +30,9 @@ impl GpuBuffer {
         bytes: u64,
         usage: wgpu::BufferUsages,
     ) -> Result<Self, BufferError> {
-        let device = &context.device;
-        if usage.is_empty()
-            || (usage.intersects(wgpu::BufferUsages::BLAS_INPUT | wgpu::BufferUsages::TLAS_INPUT)
-                && !context
-                    .enabled_features()
-                    .contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY))
-            || (!context
-                .enabled_features()
-                .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
-                && ((usage.contains(wgpu::BufferUsages::MAP_READ)
-                    && !(usage - wgpu::BufferUsages::MAP_READ - wgpu::BufferUsages::COPY_DST)
-                        .is_empty())
-                    || (usage.contains(wgpu::BufferUsages::MAP_WRITE)
-                        && !(usage
-                            - wgpu::BufferUsages::MAP_WRITE
-                            - wgpu::BufferUsages::COPY_SRC)
-                            .is_empty())))
-        {
-            return Err(BufferError::InvalidUsage);
-        }
-        let bytes = bytes.max(4);
-        let limits = &context.limits;
-        if bytes > limits.max_buffer_size
-            || (usage.contains(wgpu::BufferUsages::STORAGE)
-                && bytes > limits.max_storage_buffer_binding_size as u64)
-        {
-            return Err(BufferError::TooLarge);
-        }
-        if !bytes.is_multiple_of(4) {
-            return Err(BufferError::InvalidRange);
-        }
+        let bytes = validate_allocation(context, bytes, usage)?;
         let buffer = create_buffer_checked(
-            device,
+            &context.device,
             &wgpu::BufferDescriptor {
                 label: Some("owned GPU buffer"),
                 size: bytes,
@@ -75,6 +45,35 @@ impl GpuBuffer {
             buffer,
         })
     }
+
+    /// Initializes fresh storage before exposing it to GPU work. On Apple
+    /// Silicon Metal the callback writes directly into the final shared buffer;
+    /// elsewhere wgpu provides its portable mapped-at-creation staging path.
+    /// The callback cannot retain the mapping, and the buffer is unmapped before
+    /// return. Existing/aliased buffers must still be updated through the queue.
+    pub fn new_initialized(
+        context: &crate::GpuContext,
+        bytes: u64,
+        usage: wgpu::BufferUsages,
+        initialize: impl FnOnce(wgpu::WriteOnly<'_, [u8]>),
+    ) -> Result<Self, BufferError> {
+        let bytes = validate_allocation(context, bytes, usage)?;
+        let buffer = create_buffer_initialized(
+            &context.device,
+            &wgpu::BufferDescriptor {
+                label: Some("initialized GPU buffer"),
+                size: bytes,
+                usage,
+                mapped_at_creation: true,
+            },
+            initialize,
+        )?;
+        Ok(Self {
+            context: context.clone(),
+            buffer,
+        })
+    }
+
     pub fn device(&self) -> &wgpu::Device {
         &self.context.device
     }
@@ -98,6 +97,84 @@ impl GpuBuffer {
             bytes: range.end - range.start,
         })
     }
+}
+
+fn validate_allocation(
+    context: &crate::GpuContext,
+    bytes: u64,
+    usage: wgpu::BufferUsages,
+) -> Result<u64, BufferError> {
+    if usage.is_empty()
+        || (usage.intersects(wgpu::BufferUsages::BLAS_INPUT | wgpu::BufferUsages::TLAS_INPUT)
+            && !context
+                .enabled_features()
+                .contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY))
+        || (!context
+            .enabled_features()
+            .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
+            && ((usage.contains(wgpu::BufferUsages::MAP_READ)
+                && !(usage - wgpu::BufferUsages::MAP_READ - wgpu::BufferUsages::COPY_DST)
+                    .is_empty())
+                || (usage.contains(wgpu::BufferUsages::MAP_WRITE)
+                    && !(usage - wgpu::BufferUsages::MAP_WRITE - wgpu::BufferUsages::COPY_SRC)
+                        .is_empty())))
+    {
+        return Err(BufferError::InvalidUsage);
+    }
+    let bytes = bytes.max(4);
+    let limits = &context.limits;
+    if bytes > limits.max_buffer_size
+        || (usage.contains(wgpu::BufferUsages::STORAGE)
+            && bytes > limits.max_storage_buffer_binding_size as u64)
+    {
+        return Err(BufferError::TooLarge);
+    }
+    if !bytes.is_multiple_of(4) {
+        return Err(BufferError::InvalidRange);
+    }
+    Ok(bytes)
+}
+
+/// Whether fresh mapped uploads use the final Metal shared allocation.
+pub fn shared_memory_uploads(device: &wgpu::Device) -> bool {
+    cfg!(all(target_os = "macos", target_arch = "aarch64"))
+        && device
+            .features()
+            .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
+        && device.adapter_info().backend == wgpu::Backend::Metal
+}
+
+/// Fill a new buffer without a host packing Vec. MAP_WRITE is essential here:
+/// without it wgpu implements mapped_at_creation using a staging allocation,
+/// even on Metal. Keep GPU-only outputs private by using ordinary allocation.
+pub fn create_buffer_initialized(
+    device: &wgpu::Device,
+    descriptor: &wgpu::BufferDescriptor<'_>,
+    initialize: impl FnOnce(wgpu::WriteOnly<'_, [u8]>),
+) -> Result<wgpu::Buffer, BufferError> {
+    if descriptor.usage.is_empty() {
+        return Err(BufferError::InvalidUsage);
+    }
+    if descriptor.size == 0 || !descriptor.size.is_multiple_of(4) {
+        return Err(BufferError::InvalidRange);
+    }
+    let mut descriptor = descriptor.clone();
+    descriptor.mapped_at_creation = true;
+    if shared_memory_uploads(device) {
+        descriptor.usage |= wgpu::BufferUsages::MAP_WRITE;
+    }
+    // Browser error-scope futures require the JS event loop; do not block on
+    // them from this synchronous compatibility API.
+    #[cfg(target_arch = "wasm32")]
+    let buffer = device.create_buffer(&descriptor);
+    #[cfg(not(target_arch = "wasm32"))]
+    let buffer = create_buffer_checked(device, &descriptor)?;
+    let result = buffer
+        .get_mapped_range_mut(..)
+        .map(|mut mapping| initialize(mapping.slice(..)));
+    buffer.unmap();
+    result.map_err(|error| BufferError::Device(error.to_string()))?;
+    Ok(buffer)
 }
 
 fn create_buffer_checked(

@@ -285,6 +285,21 @@ pub enum Field {
         period: f64,
         thickness: f64,
     },
+    Neovius {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
+    Lidinoid {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
+    SchoenIWP {
+        origin: Point,
+        period: f64,
+        thickness: f64,
+    },
     Capsule {
         a: Point,
         b: Point,
@@ -312,9 +327,32 @@ pub enum Field {
         b: Box<Field>,
         radius: f64,
     },
+    ChamferUnion {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
+    ChamferIntersection {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
+    ChamferDifference {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
     Offset {
         input: Box<Field>,
         distance: f64,
+    },
+    Onion {
+        input: Box<Field>,
+        thickness: f64,
+    },
+    Elongate {
+        input: Box<Field>,
+        half_extents: Point,
     },
     Translate {
         input: Box<Field>,
@@ -524,6 +562,21 @@ impl Field {
                     origin,
                     period,
                     thickness,
+                }
+                | Field::Neovius {
+                    origin,
+                    period,
+                    thickness,
+                }
+                | Field::Lidinoid {
+                    origin,
+                    period,
+                    thickness,
+                }
+                | Field::SchoenIWP {
+                    origin,
+                    period,
+                    thickness,
                 } => {
                     finite(*origin)
                         && positive(*period)
@@ -536,11 +589,26 @@ impl Field {
                     walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
                 }
                 Field::Capsule { a, b, radius } => finite(*a) && finite(*b) && positive(*radius),
-                Field::SmoothUnion { a, b, radius } | Field::SmoothDifference { a, b, radius } => {
+                Field::SmoothUnion { a, b, radius }
+                | Field::SmoothDifference { a, b, radius }
+                | Field::ChamferUnion { a, b, radius }
+                | Field::ChamferIntersection { a, b, radius }
+                | Field::ChamferDifference { a, b, radius } => {
                     positive(*radius) && walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
                 }
                 Field::Offset { input, distance } => {
                     distance.is_finite() && distance.abs() <= 1e6 && walk(input, depth + 1, budget)
+                }
+                Field::Onion { input, thickness } => {
+                    positive(*thickness) && walk(input, depth + 1, budget)
+                }
+                Field::Elongate {
+                    input,
+                    half_extents,
+                } => {
+                    finite(*half_extents)
+                        && half_extents.iter().all(|&x| (0.0..=1e6).contains(&x))
+                        && walk(input, depth + 1, budget)
                 }
                 Field::Translate { input, vector } => {
                     finite(*vector) && walk(input, depth + 1, budget)
@@ -617,6 +685,21 @@ impl Field {
                 origin,
                 period,
                 thickness,
+            }
+            | Self::Neovius {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Lidinoid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchoenIWP {
+                origin,
+                period,
+                thickness,
             } => {
                 let k = std::f64::consts::TAU / period;
                 let q = [
@@ -630,7 +713,27 @@ impl Field {
                 let iso = match self {
                     Self::Gyroid { .. } => sx * cy + sy * cz + sz * cx,
                     Self::SchwarzP { .. } => cx + cy + cz,
-                    _ => sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz,
+                    Self::Diamond { .. } => {
+                        sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz
+                    }
+                    Self::Neovius { .. } => 3.0 * (cx + cy + cz) + 4.0 * cx * cy * cz,
+                    Self::Lidinoid { .. } => {
+                        let s2x = 2.0 * sx * cx;
+                        let s2y = 2.0 * sy * cy;
+                        let s2z = 2.0 * sz * cz;
+                        let c2x = cx * cx - sx * sx;
+                        let c2y = cy * cy - sy * sy;
+                        let c2z = cz * cz - sz * sz;
+                        0.5 * (s2x * cy * sz + s2y * cz * sx + s2z * cx * sy)
+                            - 0.5 * (c2x * c2y + c2y * c2z + c2z * c2x)
+                            + 0.15
+                    }
+                    _ => {
+                        let c2x = cx * cx - sx * sx;
+                        let c2y = cy * cy - sy * sy;
+                        let c2z = cz * cz - sz * sz;
+                        2.0 * (cx * cy + cy * cz + cz * cx) - (c2x + c2y + c2z)
+                    }
                 };
                 iso.abs() / k - 0.5 * thickness
             }
@@ -653,7 +756,34 @@ impl Field {
             Self::SmoothDifference { a, b, radius: k } => {
                 -smooth_min(-a.sample(p), b.sample(p), *k)
             }
+            Self::ChamferUnion { a, b, radius: r } => {
+                let da = a.sample(p);
+                let db = b.sample(p);
+                da.min(db).min((da - r + db) * std::f64::consts::FRAC_1_SQRT_2)
+            }
+            Self::ChamferIntersection { a, b, radius: r } => {
+                let da = a.sample(p);
+                let db = b.sample(p);
+                da.max(db).max((da + r + db) * std::f64::consts::FRAC_1_SQRT_2)
+            }
+            Self::ChamferDifference { a, b, radius: r } => {
+                let da = a.sample(p);
+                let db = -b.sample(p);
+                da.max(db).max((da + r + db) * std::f64::consts::FRAC_1_SQRT_2)
+            }
             Self::Offset { input, distance } => input.sample(p) - distance,
+            Self::Onion { input, thickness } => input.sample(p).abs() - 0.5 * thickness,
+            Self::Elongate {
+                input,
+                half_extents: h,
+            } => {
+                let q = [
+                    p[0] - p[0].clamp(-h[0], h[0]),
+                    p[1] - p[1].clamp(-h[1], h[1]),
+                    p[2] - p[2].clamp(-h[2], h[2]),
+                ];
+                input.sample(q)
+            }
             Self::Translate { input, vector } => input.sample(sub(p, *vector)),
         }
     }
@@ -670,9 +800,14 @@ impl Field {
             | Self::Intersection { a, b }
             | Self::Difference { a, b }
             | Self::SmoothUnion { a, b, .. }
-            | Self::SmoothDifference { a, b, .. } => a.sample_work() + b.sample_work(),
+            | Self::SmoothDifference { a, b, .. }
+            | Self::ChamferUnion { a, b, .. }
+            | Self::ChamferIntersection { a, b, .. }
+            | Self::ChamferDifference { a, b, .. } => a.sample_work() + b.sample_work(),
             Self::Deform { input, .. }
             | Self::Offset { input, .. }
+            | Self::Onion { input, .. }
+            | Self::Elongate { input, .. }
             | Self::Translate { input, .. } => input.sample_work(),
             _ => 1,
         }
@@ -1716,4 +1851,273 @@ mod tests {
         assert!(polygonize_with(|_| f64::NAN, &g).is_err());
         assert!(polygonize_with(|_| -1., &g).is_err());
     }
+    #[test]
+    fn tpms_chamfer_onion_elongate_and_surface_nets() {
+        let neovius = Field::Neovius {
+            origin: [0.; 3],
+            period: 4.0,
+            thickness: 0.5,
+        };
+        let lidinoid = Field::Lidinoid {
+            origin: [0.; 3],
+            period: 4.0,
+            thickness: 0.5,
+        };
+        let iwp = Field::SchoenIWP {
+            origin: [0.; 3],
+            period: 4.0,
+            thickness: 0.5,
+        };
+        for tpms in [&neovius, &lidinoid, &iwp] {
+            assert!(tpms.validate().is_ok());
+            assert!(tpms.evaluate([0.5, 0.7, 1.1]).unwrap().is_finite());
+        }
+
+        let onion_sphere = Field::Onion {
+            input: Box::new(sphere()),
+            thickness: 0.2,
+        };
+        // On the original sphere surface (r=1), onion field is -0.1 (inside shell); at origin it's +0.9 (outside shell).
+        assert!((onion_sphere.evaluate([1., 0., 0.]).unwrap() + 0.1).abs() < 1e-12);
+        assert!((onion_sphere.evaluate([0., 0., 0.]).unwrap() - 0.9).abs() < 1e-12);
+
+        let elongated = Field::Elongate {
+            input: Box::new(sphere()),
+            half_extents: [1.0, 0.0, 0.0],
+        };
+        // Elongating a unit sphere by 1.0 along +-X produces a capsule of total length 4 along X.
+        assert!((elongated.evaluate([2.0, 0., 0.]).unwrap()).abs() < 1e-12);
+        assert!(elongated.evaluate([1.5, 0., 0.]).unwrap() < 0.);
+
+        let chamfer = Field::ChamferUnion {
+            a: Box::new(sphere()),
+            b: Box::new(Field::Box {
+                center: [0.8, 0., 0.],
+                half_size: [0.6; 3],
+            }),
+            radius: 0.2,
+        };
+        assert!(chamfer.validate().is_ok());
+
+        let sn_mesh = polygonize_surface_nets(&chamfer, &grid(16)).unwrap();
+        assert!(triangles_closed(&sn_mesh));
+        assert!(triangles_ok(&sn_mesh));
+    }
+}
+
+impl Field {
+    /// Computes the unit outward gradient $\nabla f(p) / \|\nabla f(p)\|$ using a 4-point
+    /// tetrahedral finite-difference stencil.
+    pub fn gradient(&self, p: Point, eps: f64) -> Point {
+        let h = eps.max(1e-7);
+        let d0 = self.sample([p[0] + h, p[1] - h, p[2] - h]);
+        let d1 = self.sample([p[0] - h, p[1] - h, p[2] + h]);
+        let d2 = self.sample([p[0] - h, p[1] + h, p[2] - h]);
+        let d3 = self.sample([p[0] + h, p[1] + h, p[2] + h]);
+        let g = [
+            d0 - d1 - d2 + d3,
+            -d0 - d1 + d2 + d3,
+            -d0 + d1 - d2 + d3,
+        ];
+        let n = length(g);
+        if n > 1e-15 {
+            [g[0] / n, g[1] / n, g[2] / n]
+        } else {
+            [0.0, 0.0, 1.0]
+        }
+    }
+}
+
+/// Dual Surface Nets / Dual Contouring extraction with gradient-guided QEF vertex projection.
+/// Places one dual vertex per active grid cell at the mass point of edge crossings and projects
+/// it onto the tangent planes defined by the SDF gradients $\nabla f$, then emits two outward
+/// triangles per sign-changing interior grid edge.
+pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> {
+    check_grid_budget(field, grid)?;
+    if !finite(grid.min)
+        || !finite(grid.max)
+        || grid.cells.iter().any(|&n| n == 0 || n > 64)
+        || (0..3).any(|i| grid.max[i] <= grid.min[i])
+    {
+        return Err(error(
+            "Invalid grid: each axis requires 1..64 cells and ordered finite bounds",
+        ));
+    }
+    let [nx, ny, nz] = grid.cells;
+    let index = |x: usize, y: usize, z: usize| (z * (ny + 1) + y) * (nx + 1) + x;
+    let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
+    let mut points = Vec::with_capacity(sample_count);
+    let mut values = Vec::with_capacity(sample_count);
+    let snap = 32.0
+        * f64::EPSILON
+        * (0..3)
+            .map(|i| grid.max[i] - grid.min[i])
+            .fold(0.0, f64::max);
+    for z in 0..=nz {
+        for y in 0..=ny {
+            for x in 0..=nx {
+                let p = std::array::from_fn(|i| {
+                    grid.min[i]
+                        + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64 / grid.cells[i] as f64
+                });
+                let v = field.sample(p);
+                let v = if v.abs() <= snap { 0.0 } else { v };
+                if !v.is_finite() {
+                    return Err(error("Field returned a non-finite value"));
+                }
+                if (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz) && v <= 0.0 {
+                    return Err(error("Surface touches grid boundary; enlarge bounds"));
+                }
+                points.push(p);
+                values.push(v);
+            }
+        }
+    }
+
+    let cell_idx = |cx: usize, cy: usize, cz: usize| (cz * ny + cy) * nx + cx;
+    let mut cell_vert = vec![usize::MAX; nx * ny * nz];
+    let mut positions = Vec::new();
+    let step = [
+        (grid.max[0] - grid.min[0]) / nx as f64,
+        (grid.max[1] - grid.min[1]) / ny as f64,
+        (grid.max[2] - grid.min[2]) / nz as f64,
+    ];
+    let grad_eps = step[0].min(step[1]).min(step[2]) * 0.05;
+
+    const CUBE_EDGES: [[usize; 2]; 12] = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7],
+    ];
+
+    for cz in 0..nz {
+        for cy in 0..ny {
+            for cx in 0..nx {
+                let c = [
+                    index(cx, cy, cz),
+                    index(cx + 1, cy, cz),
+                    index(cx + 1, cy + 1, cz),
+                    index(cx, cy + 1, cz),
+                    index(cx, cy, cz + 1),
+                    index(cx + 1, cy, cz + 1),
+                    index(cx + 1, cy + 1, cz + 1),
+                    index(cx, cy + 1, cz + 1),
+                ];
+                let mut crossings = Vec::with_capacity(12);
+                for &[ea, eb] in &CUBE_EDGES {
+                    let va = values[c[ea]];
+                    let vb = values[c[eb]];
+                    if (va < 0.0) != (vb < 0.0) {
+                        let t = (va / (va - vb)).clamp(0.0, 1.0);
+                        let pa = points[c[ea]];
+                        let pb = points[c[eb]];
+                        crossings.push([
+                            pa[0] + t * (pb[0] - pa[0]),
+                            pa[1] + t * (pb[1] - pa[1]),
+                            pa[2] + t * (pb[2] - pa[2]),
+                        ]);
+                    }
+                }
+                if crossings.is_empty() {
+                    continue;
+                }
+                let mut v_pos = [0.0; 3];
+                for p in &crossings {
+                    for k in 0..3 {
+                        v_pos[k] += p[k] / crossings.len() as f64;
+                    }
+                }
+                // Gradient-descent / QEF tangent-plane projection clamped strictly inside cell bounds
+                let c_min = points[c[0]];
+                let c_max = points[c[6]];
+                for _ in 0..2 {
+                    let mut disp = [0.0; 3];
+                    for p in &crossings {
+                        let n = field.gradient(*p, grad_eps);
+                        let d = dot(sub(*p, v_pos), n);
+                        for k in 0..3 {
+                            disp[k] += d * n[k] / crossings.len() as f64;
+                        }
+                    }
+                    for k in 0..3 {
+                        let margin = step[k] * 0.05;
+                        v_pos[k] = (v_pos[k] + 0.5 * disp[k])
+                            .clamp(c_min[k] + margin, c_max[k] - margin);
+                    }
+                }
+                let vid = positions.len() / 3;
+                positions.extend_from_slice(&v_pos);
+                cell_vert[cell_idx(cx, cy, cz)] = vid;
+            }
+        }
+    }
+
+    let mut indices = Vec::new();
+    let mut emit_quad = |v0: usize, v1: usize, v2: usize, v3: usize, flip: bool| {
+        if flip {
+            indices.extend_from_slice(&[v0, v2, v1, v0, v3, v2]);
+        } else {
+            indices.extend_from_slice(&[v0, v1, v2, v0, v2, v3]);
+        }
+    };
+
+    // X-parallel edges: shared by cells (x, y-1, z-1), (x, y, z-1), (x, y, z), (x, y-1, z)
+    for z in 1..nz {
+        for y in 1..ny {
+            for x in 0..nx {
+                let va = values[index(x, y, z)];
+                let vb = values[index(x + 1, y, z)];
+                if (va < 0.0) != (vb < 0.0) {
+                    let c0 = cell_vert[cell_idx(x, y - 1, z - 1)];
+                    let c1 = cell_vert[cell_idx(x, y, z - 1)];
+                    let c2 = cell_vert[cell_idx(x, y, z)];
+                    let c3 = cell_vert[cell_idx(x, y - 1, z)];
+                    emit_quad(c0, c1, c2, c3, va >= 0.0);
+                }
+            }
+        }
+    }
+    // Y-parallel edges: shared by cells (x-1, y, z-1), (x-1, y, z), (x, y, z), (x, y, z-1)
+    for z in 1..nz {
+        for y in 0..ny {
+            for x in 1..nx {
+                let va = values[index(x, y, z)];
+                let vb = values[index(x, y + 1, z)];
+                if (va < 0.0) != (vb < 0.0) {
+                    let c0 = cell_vert[cell_idx(x - 1, y, z - 1)];
+                    let c1 = cell_vert[cell_idx(x - 1, y, z)];
+                    let c2 = cell_vert[cell_idx(x, y, z)];
+                    let c3 = cell_vert[cell_idx(x, y, z - 1)];
+                    emit_quad(c0, c1, c2, c3, va >= 0.0);
+                }
+            }
+        }
+    }
+    // Z-parallel edges: shared by cells (x-1, y-1, z), (x, y-1, z), (x, y, z), (x-1, y, z)
+    for z in 0..nz {
+        for y in 1..ny {
+            for x in 1..nx {
+                let va = values[index(x, y, z)];
+                let vb = values[index(x, y, z + 1)];
+                if (va < 0.0) != (vb < 0.0) {
+                    let c0 = cell_vert[cell_idx(x - 1, y - 1, z)];
+                    let c1 = cell_vert[cell_idx(x, y - 1, z)];
+                    let c2 = cell_vert[cell_idx(x, y, z)];
+                    let c3 = cell_vert[cell_idx(x - 1, y, z)];
+                    emit_quad(c0, c1, c2, c3, va >= 0.0);
+                }
+            }
+        }
+    }
+
+    finish_triangles(Triangles { positions, indices })
 }

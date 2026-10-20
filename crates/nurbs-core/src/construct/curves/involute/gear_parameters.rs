@@ -11,6 +11,8 @@ pub struct GearParameterBounds {
     pub roll_end: [f64; 2],
     pub half_base_angle: [f64; 2],
     pub tooth_step: [f64; 2],
+    pub half_low_angle: [f64; 2],
+    pub half_high_angle: [f64; 2],
 }
 fn pair(x: I) -> [f64; 2] {
     [x.lo, x.hi]
@@ -43,7 +45,28 @@ fn atan_small(x: I) -> Result<I> {
     let error = power.lo.abs().max(power.hi.abs()) / 65.;
     sum.add(I::new(-error.next_up(), error.next_up())?)
 }
-fn pi() -> Result<I> {
+pub(crate) fn atan_positive(mut x: I) -> Result<I> {
+    check(
+        x.lo >= 0. && x.hi <= 8.,
+        "Certified gear roll arctangent must lie in 0..8",
+    )?;
+    if x.lo == 0. && x.hi == 0. {
+        return Ok(I::point(0.));
+    }
+    let mut factor = 1.;
+    for _ in 0..5 {
+        if x.hi <= 0.5 {
+            return atan_small(x)?.mul(I::point(factor));
+        }
+        let divisor = I::point(1.).add(sqrt_positive(I::point(1.).add(x.mul(x)?)?)?)?;
+        x = x.div(divisor)?;
+        factor *= 2.;
+    }
+    Err(crate::input(
+        "Gear roll arctangent reduction exceeded its fixed budget",
+    ))
+}
+pub(crate) fn pi() -> Result<I> {
     // Machin's identity pi = 16 atan(1/5) - 4 atan(1/239).
     // No f64 PI, libm atan or sampled identity is trusted as evidence.
     atan_small(I::point(1.).div(I::point(5.))?)?
@@ -114,6 +137,16 @@ pub fn derive_gear_parameter_bounds(
     } else {
         half.sub(allowance)?
     };
+    let half_base = half.add(inv_pitch)?;
+    let involute_angle = |t: I| -> Result<I> {
+        if t.lo == 0. && t.hi == 0. {
+            Ok(I::point(0.))
+        } else {
+            t.sub(atan_positive(t)?)
+        }
+    };
+    let half_low = half_base.sub(involute_angle(start)?)?;
+    let half_high = half_base.sub(involute_angle(end)?)?;
     Ok(GearParameterBounds {
         pitch_radius: pair(pitch),
         base_radius: pair(base),
@@ -121,7 +154,38 @@ pub fn derive_gear_parameter_bounds(
         root_radius: pair(root),
         roll_start: pair(start),
         roll_end: pair(end),
-        half_base_angle: pair(half.add(inv_pitch)?),
+        half_base_angle: pair(half_base),
+        half_low_angle: pair(half_low),
+        half_high_angle: pair(half_high),
         tooth_step: pair(pi.mul(I::point(2.))?.div(I::point(teeth as f64))?),
     })
+}
+
+/// Outward total twist height*tan(beta)/pitch_radius, where beta is given in
+/// degrees. Arguments are exact stored real data; no libm tangent is trusted.
+pub fn derive_gear_twist_bounds(
+    module: f64,
+    teeth: usize,
+    height: f64,
+    helix_degrees: f64,
+) -> Result<[f64; 2]> {
+    check(
+        module.is_finite()
+            && (0.05..=100.).contains(&module)
+            && (3..=256).contains(&teeth)
+            && height.is_finite()
+            && (0.05..=1000.).contains(&height)
+            && helix_degrees.is_finite()
+            && helix_degrees.abs() < 80.,
+        "Gear twist requires supported finite module, tooth count, height and helix angle",
+    )?;
+    if helix_degrees == 0. {
+        return Ok([0.; 2]);
+    }
+    let alpha = pi()?.mul(I::point(helix_degrees))?.div(I::point(180.))?;
+    let (sin, cos) = trig(alpha)?;
+    let pitch = I::point(module)
+        .mul(I::point(teeth as f64))?
+        .div(I::point(2.))?;
+    Ok(pair(I::point(height).mul(sin.div(cos)?)?.div(pitch)?))
 }

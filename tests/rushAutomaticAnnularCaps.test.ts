@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -13,7 +14,7 @@ it.each(['sync','async'] as const)('selects native ring caps through ordinary Ru
  const options={action:'build' as const,display:{segments:2,subdivisionLevels:0}}
  const built=mode==='sync'?buildOwnNurbs(document,options):await buildOwnNurbsAsync(document,options)
  expect(built.nativeGeometry).toBeDefined()
- const data=JSON.parse(built.nativeGeometry!.geometryJson),evidence=data.sweepBodyBoundaryEvidence
+ const data=readNativeGeometryData(built.nativeGeometry!),evidence=data.sweepBodyBoundaryEvidence
  expect(evidence.capRepresentation).toBe('radial-annular')
  expect(evidence.planarCapFaces).toEqual([])
  expect(evidence.capFaceGroups.map((g:number[])=>g.length)).toEqual([4,4])
@@ -50,7 +51,7 @@ show brep_progressive_sweep([[outer],[hole]],path,
  initial_sections: 9,max_sections: 9,max_deviation: 2mm
 ).brep_tessellate(2)`
  const built=await buildOwnNurbsAsync(compileRushFrontend(closed).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
- const data=JSON.parse(built.nativeGeometry!.geometryJson),evidence=data.sweepBodyBoundaryEvidence
+ const data=readNativeGeometryData(built.nativeGeometry!),evidence=data.sweepBodyBoundaryEvidence
  expect(evidence).toMatchObject({capRepresentation:'closed',closedPath:true,capFaces:[],capFaceGroups:[[],[]],planarCapFaces:[],capSelectionExactWork:0})
  expect(evidence.retainedSmoothness.capWallContinuity).toBe('absent')
  expect(evidence.retainedAnnularFilling).toBeNull()
@@ -63,7 +64,7 @@ it('keeps exact straight ring caps in their legacy representation through Rush',
   .replace('normal: [0,0,1],\n scale:','normal: [1,0,0],\n scale:')
   .replace('values: [1,2]','values: [1,1]')
  const built=await buildOwnNurbsAsync(compileRushFrontend(straight).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
- const data=JSON.parse(built.nativeGeometry!.geometryJson),evidence=data.sweepBodyBoundaryEvidence
+ const data=readNativeGeometryData(built.nativeGeometry!),evidence=data.sweepBodyBoundaryEvidence
  expect(evidence.capRepresentation).toBe('legacy')
  expect(evidence.capFaceGroups.map((g:number[])=>g.length)).toEqual([1,1])
  expect(evidence.planarCapFaces).toEqual(evidence.capFaces)

@@ -1,3 +1,6 @@
+import packagedGeometryIdentity from '../generated/geometry-kernels/identity'
+import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from './currentRuntimeGeometryEvidence'
+import { RUNTIME_GEOMETRY_EVIDENCE_V3 } from './runtimeGeometryEvidenceV3'
 import { OWN_RUST_CAD_EVIDENCE } from './ownRustCadEvidence'
 import type { GeometryQuality } from './build'
 import { sha256Hex } from './sha256'
@@ -399,7 +402,36 @@ const brepClosedManifestV1: GeometryEngineStaticManifest = {
 }
 brepClosedManifestV1.manifestDigest = computeGeometryManifestDigest(brepClosedManifestV1)
 
+// Private candidate binding. Publication requires the referenced complete
+// qualification record; historical manifests remain immutable.
+function bindCurrentRuntime(
+  base: GeometryEngineStaticManifest, version: string, engineKey: string,
+  evidence: {wasmSha256:string;noticesSha256:string;lockfileSha256:string;recordId:string;corpusVersion:string},
+): GeometryEngineStaticManifest {
+  const manifest: GeometryEngineStaticManifest = {
+    ...base, engineKey, capabilityManifestVersion: version,
+    kernelFingerprint: `sha256:${evidence.wasmSha256}`,
+    qualification: {status: 'qualified', recordId: evidence.recordId,
+      corpusVersion: evidence.corpusVersion, target: 'browser-worker/node-mcp'},
+    dependency: {...base.dependency, sbomSha256: evidence.noticesSha256,
+      lockfileSha256: evidence.lockfileSha256},
+    manifestDigest: '',
+  }
+  manifest.manifestDigest = computeGeometryManifestDigest(manifest)
+  return manifest
+}
+
+const ownRustCadRuntimeV3 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v3', 'own-rust-cad-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
+const brepClosedRuntimeV3 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v3', 'rust-brep-closed-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
+
+const ownRustCadRuntimeV4 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v4', 'own-rust-cad-v4', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
+const brepClosedRuntimeV4 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v4', 'rust-brep-closed-v4', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
+
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v4': ownRustCadRuntimeV4,
+  'brep-closed-v4': brepClosedRuntimeV4,
+  'own-rust-node-v3': ownRustCadRuntimeV3,
+  'brep-closed-v3': brepClosedRuntimeV3,
   'own-rust-node-v1': deepFreeze(ownRustCadManifestV1),
   'own-rust-node-v2': deepFreeze(ownRustCadManifest),
   'brep-closed-v1': deepFreeze(brepClosedManifestV1),
@@ -460,8 +492,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v2',
-  brep: 'brep-closed-v2',
+  mesh: 'own-rust-node-v4',
+  brep: 'brep-closed-v4',
 } as const)
 
 export type GeometryProviderAdmissionMode =
@@ -563,11 +595,13 @@ function qualifiedRuntimeManifestVersion(
 ): keyof typeof GEOMETRY_MANIFEST_ARCHIVE {
   const currentVersion = CURRENT_GEOMETRY_MANIFEST_VERSIONS[engineClass]
   const current = GEOMETRY_MANIFEST_ARCHIVE[currentVersion]
-  if (geometryProviderAdmissionForManifest(current).allowed) return currentVersion
+  if (geometryProviderAdmissionForManifest(current).allowed
+    && current.kernelFingerprint === `sha256:${packagedGeometryIdentity.sha256}`) return currentVersion
 
   const fallback = Object.entries(GEOMETRY_MANIFEST_ARCHIVE)
     .reverse()
     .find(([, manifest]) => manifest.engineClass === engineClass
+      && manifest.kernelFingerprint === `sha256:${packagedGeometryIdentity.sha256}`
       && geometryProviderAdmissionForManifest(manifest).allowed)
   if (!fallback) {
     throw new TypeError(`No qualified runtime manifest is available for ${engineClass}`)

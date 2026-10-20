@@ -23,11 +23,18 @@ fn scale(x: I, k: f64) -> Result<I> {
 }
 /// Taylor polynomials at zero, with a Lagrange remainder. No libm call is used
 /// as evidence. The common degree-63 remainder |x|^64/64! bounds both series.
-pub(super) fn trig(x: I) -> Result<(I, I)> {
+pub(crate) fn trig(x: I) -> Result<(I, I)> {
     check(
         x.lo >= -9. && x.hi <= 9.,
         "Involute certificate angle enclosure must lie within -9..9",
     )?;
+    // Certify one exact stored point, then use the global derivative bound
+    // |sin'|, |cos'| <= 1 for the input interval. This avoids exponential
+    // interval dependency in the alternating Taylor terms at larger angles.
+    let middle = (x.lo + (x.hi - x.lo) * 0.5).clamp(x.lo, x.hi);
+    let delta = x.sub(I::point(middle))?;
+    let variation = delta.lo.abs().max(delta.hi.abs());
+    let x = I::point(middle);
     let xx = neg(x.mul(x)?)?;
     let mut st = x;
     let mut ct = I::point(1.);
@@ -46,7 +53,8 @@ pub(super) fn trig(x: I) -> Result<(I, I)> {
     for k in 1..=64 {
         remainder = remainder.mul(a)?.div(I::point(k as f64))?;
     }
-    let r = I::new(-remainder.hi, remainder.hi)?;
+    let total = I::point(remainder.hi).add(I::point(variation))?.hi;
+    let r = I::new(-total, total)?;
     Ok((
         sin.add(r)?.intersect(-1., 1.)?,
         cos.add(r)?.intersect(-1., 1.)?,

@@ -6,7 +6,6 @@ use crate::{
     foundation::guards::Budget,
     surface::Surface,
     surface_contact::{self, Witness},
-    surface_distance::rectangle_bounds,
 };
 use std::collections::VecDeque;
 
@@ -118,8 +117,6 @@ fn search_impl(
     let mut guard = Budget::with_iterations(max_cells)?.guard("surface_contact_search");
     let mut prepared_a = surface_contact::PreparedSurface::new(a)?;
     let mut prepared_b = surface_contact::PreparedSurface::new(b)?;
-    let mut control_a = crate::surface_distance::PreparedControlSurface::new(a);
-    let mut control_b = crate::surface_distance::PreparedControlSurface::new(b);
     while cells < max_cells {
         guard.tick()?;
         guard.check()?;
@@ -134,12 +131,13 @@ fn search_impl(
         }
         let mut split_proposal = None;
         if control_hulls {
-            if let Some((gap, scores)) = crate::surface_distance::rectangle_control_query_prepared(&mut control_a, &mut control_b, cell)? {
+            if let Some((gap, scores)) = crate::surface_distance::rectangle_control_query_prepared(&mut prepared_a.controls, &mut prepared_b.controls, cell)? {
                 if gap > 0. { continue; }
                 if scores.iter().any(|x| *x > 0.) { split_proposal = Some(scores); }
             }
         }
-        if classify(cell, &mut domain_cells)? == crate::trim_domain::Location::Outside {
+        let location = classify(cell, &mut domain_cells)?;
+        if location == crate::trim_domain::Location::Outside {
             continue;
         }
         if domains.is_some() && domain_cells == max_domain_cells {
@@ -149,6 +147,11 @@ fn search_impl(
         // Overlap search neighborhoods so a root on an artificial subdivision
         // plane can still be strictly enclosed. These probes prove existence
         // only; they never remove cells from the coverage queue.
+        // Sweep absence is established only by the full coverage queue.
+        // Keep the initial contact probe, then defer repeated probes in trim-straddling boxes until an
+        // inside subcell is reached. Neither a skipped probe nor a section
+        // exclusion removes coverage. Plain diagnostic accounting is unchanged.
+        if !control_hulls || cells == 1 || location == crate::trim_domain::Location::Inside {
         let mut probe = cell;
         for s in 0..2 {
             for k in 0..2 {
@@ -172,6 +175,7 @@ fn search_impl(
                 }
             }
             // Exclusion of one section cannot exclude the surrounding cell.
+        }
         }
         if contact.is_some() || (domains.is_some() && domain_cells == max_domain_cells) {
             queue.push_front(cell);
@@ -301,6 +305,19 @@ mod tests {
             }
         }
         assert_eq!([a,b],before);
+    }
+    #[test]
+    fn trim_aware_probes_keep_interior_contact_and_low_budget_refusal() {
+        let a=plane();let mut b=plane();
+        for row in &mut b.control_points {for p in row {p[2]=p[1]-0.5;p[1]=0.5;}}
+        let curve=crate::curve::Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],
+            vec![1.,1.],vec![0.,1.],vec![0.,0.]]).unwrap();
+        let domain=crate::trim_domain::TrimDomain::new(&[vec![curve]],1e-10).unwrap();
+        let short=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],1,100000).unwrap();
+        assert!(!short.absence_proven && !short.unresolved.is_empty());
+        let complete=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],10000,100000).unwrap();
+        assert!(complete.contact.is_some());assert!(!complete.absence_proven);
+        assert!(complete.cells<=10000 && complete.domain_cells<=100000);
     }
     #[test]
     fn overlapping_initial_bounds_need_subdivision_to_prove_separation() {

@@ -44,7 +44,8 @@
     "thread",
     "formula",
     "curve_reconstruction",
-    "radial_cam"
+    "radial_cam",
+    "worm"
   ],
   "surfaces": [
     "function_surface",
@@ -87,7 +88,8 @@
     "wing_loft",
     "profile_spring",
     "bellows",
-    "sphere_envelope"
+    "sphere_envelope",
+    "worm_wheel"
   ],
   "editing": [
     "affine",
@@ -112,7 +114,11 @@
     "ellipse_transition",
     "circle_rectangle_transition",
     "join",
-    "surface_blend"
+    "surface_blend",
+    "surface_g2_pcurves",
+    "surface_g1_pcurves",
+    "corner_blend",
+    "radius_transition"
   ],
   "offsets": [
     "curve_offset",
@@ -147,7 +153,11 @@
     "analysis",
     "distance",
     "surface_occlusion",
-    "parallel_sections"
+    "parallel_sections",
+    "surface_coordinate_flow",
+    "surface_normal_trace",
+    "curve_secant_trace",
+    "surface_collar"
   ],
   "parameterization": [
     "curve_pullback",
@@ -186,7 +196,8 @@
     "trim_simplicity",
     "certificates",
     "retained_wall_coefficients",
-    "retained_wall_domain_certificate"
+    "retained_wall_domain_certificate",
+    "skin_radius"
   ],
   "meshing": [
     "curve_tessellation",

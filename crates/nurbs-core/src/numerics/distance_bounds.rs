@@ -18,11 +18,13 @@ impl Interval {
     }
     /// Construct a validated interval; rejects non-finite or inverted bounds.
     pub fn new(lo: f64, hi: f64) -> Result<Self> {
-        numeric(
-            lo.is_finite() && hi.is_finite() && lo <= hi,
-            "Distance interval exceeded numeric range",
-        )?;
-        Ok(Self { lo, hi })
+        // Keep the successful path free of the generic Result<()> adapter.
+        // These predicates, signed-zero bits and the rejection are unchanged.
+        if lo.is_finite() && hi.is_finite() && lo <= hi {
+            Ok(Self { lo, hi })
+        } else {
+            Err(crate::numeric_err("Distance interval exceeded numeric range"))
+        }
     }
     /// Outward-rounded sum.
     pub fn add(self, b: Self) -> Result<Self> {
@@ -38,10 +40,9 @@ impl Interval {
         let p1 = self.lo * b.hi;
         let p2 = self.hi * b.lo;
         let p3 = self.hi * b.hi;
-        numeric(
-            p0.is_finite() && p1.is_finite() && p2.is_finite() && p3.is_finite(),
-            "Distance product exceeded numeric range",
-        )?;
+        if !(p0.is_finite() && p1.is_finite() && p2.is_finite() && p3.is_finite()) {
+            return Err(crate::numeric_err("Distance product exceeded numeric range"));
+        }
         // Preserve the original seeded left-fold order and outward rounding.
         // Explicit four-term reductions avoid iterator calls in size builds.
         Self::new(
@@ -51,7 +52,9 @@ impl Interval {
     }
     /// Outward-rounded quotient; `b` must be separated above zero.
     pub fn div(self, b: Self) -> Result<Self> {
-        numeric(b.lo > 0., "Distance denominator is not separated from zero")?;
+        if !(b.lo > 0.) {
+            return Err(crate::numeric_err("Distance denominator is not separated from zero"));
+        }
         self.mul(Self::new((1. / b.hi).next_down(), (1. / b.lo).next_up())?)
     }
     /// Outward-rounded quotient for a nonzero-signed denominator.
@@ -68,10 +71,9 @@ impl Interval {
     }
     /// Optional tightening against scalar bounds; returns `Ok(None)` if disjoint.
     pub fn try_intersect(self, lo: f64, hi: f64) -> Result<Option<Self>> {
-        numeric(
-            lo.is_finite() && hi.is_finite() && lo <= hi,
-            "Scalar bounds exceeded numeric range",
-        )?;
+        if !(lo.is_finite() && hi.is_finite() && lo <= hi) {
+            return Err(crate::numeric_err("Scalar bounds exceeded numeric range"));
+        }
         let n_lo = self.lo.max(lo);
         let n_hi = self.hi.min(hi);
         if n_lo <= n_hi {
@@ -130,6 +132,31 @@ pub enum DistanceStopReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn constructor_preserves_frozen_validation_and_signed_zero_bits() {
+        let mut bits = vec![0, 1, 1u64 << 63, (1u64 << 63) | 1,
+            f64::MAX.to_bits(), (-f64::MAX).to_bits(),
+            f64::MIN_POSITIVE.to_bits(), (-f64::MIN_POSITIVE).to_bits(),
+            f64::INFINITY.to_bits(), f64::NEG_INFINITY.to_bits(),
+            f64::NAN.to_bits(), 0x7ff0000000000001, 0xfff8000000000001];
+        let mut state = 0x5ad1_7e90_36bc_294fu64;
+        for _ in 0..128 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            bits.push(state);
+        }
+        for &a in &bits {
+            for &b in &bits {
+                let (lo, hi) = (f64::from_bits(a), f64::from_bits(b));
+                let previous = numeric(lo.is_finite() && hi.is_finite() && lo <= hi,
+                    "Distance interval exceeded numeric range")
+                    .map(|()| (lo.to_bits(), hi.to_bits()));
+                assert_eq!(Interval::new(lo, hi).map(|x| (x.lo.to_bits(), x.hi.to_bits())), previous);
+            }
+        }
+    }
 
     #[test]
     fn product_matches_frozen_bounds_and_errors_at_binary64_extremes() {

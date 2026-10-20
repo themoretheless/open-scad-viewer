@@ -1,0 +1,11 @@
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -18,7 +18,7 @@
+ mod algebraic_intersections;
+ mod arithmetic;
+ mod intersections;
+-pub use algebraic_intersections::{ExactRatio, ExactPolynomial, 
++pub use algebraic_intersections::{ExactRatio, ExactPolynomial,
+     AlgebraicFactorWitness, AlgebraicIntersectionCertificate, AlgebraicRootWitness,
+     VerifiedAlgebraicIntersections, certify_algebraic_intersections,
+     verify_algebraic_intersections,

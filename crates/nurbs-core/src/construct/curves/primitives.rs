@@ -559,3 +559,7 @@ mod tests {
         assert!(conic_osculating([0.; 3], [0.; 3], 1.).is_err());
     }
 }
+
+#[path = "primitives/arc_certificate.rs"]
+mod arc_certificate;
+pub use arc_certificate::{ArcCertificate,certify_circle_arc_radians,RadialSegmentCertificate,certify_radial_segment_radians};

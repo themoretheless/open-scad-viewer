@@ -31,6 +31,28 @@ pub struct Report {
 /// within tolerance, not exact equality, trim simplicity, embedding or volume.
 pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
     let agreement = boundary_agreement::verify(model, max_cells)?;
+    inspect_agreement(model, agreement)
+}
+
+pub struct QualifiedReport {
+    pub exact: boundary_agreement::ExactReport,
+    pub closure: Report,
+}
+/// Whole-model closure using explicit exact and interval work budgets. Exact
+/// identity authorizes only its own original uses; other uses require continuous
+/// interval evidence. This still does not establish trim validity or embedding.
+pub fn inspect_with_exact(
+    model: &Model,
+    max_cells: usize,
+    max_work: u64,
+) -> Result<QualifiedReport> {
+    let proof = boundary_agreement::verify_with_exact(model, max_cells, max_work)?;
+    Ok(QualifiedReport {
+        exact: proof.exact,
+        closure: inspect_agreement(model, proof.agreement)?,
+    })
+}
+fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Result<Report> {
     let mut shells = Vec::new();
     for (shell, s) in model.shells.iter().enumerate() {
         let mut uses = std::collections::BTreeMap::<usize, Vec<bool>>::new();
@@ -383,6 +405,9 @@ pub fn inspect_boundary_portions(
 }
 
 mod correspondence;
-pub use correspondence::{Correspondence, inspect_boundary_correspondence, infer_boundary_correspondence};
+pub use correspondence::{
+    BoundarySubranges, Correspondence, infer_boundary_correspondence,
+    inspect_boundary_correspondence, inspect_boundary_subranges,
+};
 mod linear_patch_set;
 pub use linear_patch_set::{LinearMatch, LinearPatchSetReport, inspect_linear_patch_set};

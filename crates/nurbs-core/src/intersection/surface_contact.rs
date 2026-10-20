@@ -60,7 +60,7 @@ fn span(s: &Surface, d: [[f64; 2]; 2]) -> Option<[usize; 2]> {
         find(&s.knots_v, s.degree_v, s.control_points[0].len(), d[1])?,
     ])
 }
-const CACHE_LIMIT: usize = 32;
+const CACHE_LIMIT: usize = 128;
 type DomainKey = [u64; 4];
 type Jacobian = [[I; 2]; 3];
 fn domain_key(d: [[f64; 2]; 2]) -> DomainKey {
@@ -71,13 +71,14 @@ fn domain_key(d: [[f64; 2]; 2]) -> DomainKey {
 // Fixed-size LRU storage cannot grow with subdivision or outlive its source.
 pub(crate) struct PreparedSurface<'a> {
     surface: &'a Surface,
+    pub(crate) controls: crate::surface_distance::PreparedControlSurface<'a>,
     bounds: std::collections::VecDeque<(DomainKey, Vec<I>)>,
     jacobians: std::collections::VecDeque<(([usize; 2], DomainKey), Jacobian)>,
 }
 impl<'a> PreparedSurface<'a> {
     pub(crate) fn new(surface: &'a Surface) -> Result<Self> {
         surface.validate()?;
-        Ok(Self { surface, bounds: Default::default(), jacobians: Default::default() })
+        Ok(Self { surface, controls: crate::surface_distance::PreparedControlSurface::new(surface), bounds: Default::default(), jacobians: Default::default() })
     }
     pub(crate) fn bounds(&mut self, domain: [[f64; 2]; 2]) -> Result<Vec<I>> {
         let key = domain_key(domain);
@@ -87,7 +88,10 @@ impl<'a> PreparedSurface<'a> {
             self.bounds.push_back(entry);
             return Ok(result);
         }
-        let value = bounds(self.surface, domain)?;
+        let value = match self.controls.single_span_bounds(domain)? {
+            Some(value) => value,
+            None => bounds(self.surface, domain)?,
+        };
         if self.bounds.len() == CACHE_LIMIT { self.bounds.pop_front(); }
         self.bounds.push_back((key, value.clone()));
         Ok(value)

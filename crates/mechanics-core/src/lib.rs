@@ -201,8 +201,63 @@ fn min_wall_mm(section: &LayerSection) -> f64 {
     if !span.is_finite() || span <= 0.0 {
         return 0.0;
     }
-    let step = (span / 32.0).max(span * 1e-4);
     let mut min_wall = f64::INFINITY;
+    // Rotation-invariant normal ray probes from edge midpoints
+    for (ring_idx, ring) in section.contours.iter().enumerate() {
+        for i in 0..ring.len() {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            let dx = b[0] - a[0];
+            let dy = b[1] - a[1];
+            let len = dx.hypot(dy);
+            if len <= 1e-9 {
+                continue;
+            }
+            let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
+            for sign in [1.0, -1.0] {
+                let dir = [-sign * dy / len, sign * dx / len];
+                let probe = [
+                    mid[0] + dir[0] * (span * 1e-5),
+                    mid[1] + dir[1] * (span * 1e-5),
+                ];
+                if winding(probe, &section.contours) == 0 {
+                    continue;
+                }
+                let mut best_t = f64::INFINITY;
+                for (other_ring_idx, other_ring) in section.contours.iter().enumerate() {
+                    for j in 0..other_ring.len() {
+                        if ring_idx == other_ring_idx && i == j {
+                            continue;
+                        }
+                        let c = other_ring[j];
+                        let d = other_ring[(j + 1) % other_ring.len()];
+                        let s = [d[0] - c[0], d[1] - c[1]];
+                        let denom = cross2(dir, s);
+                        if denom.abs() <= 1e-12 {
+                            continue;
+                        }
+                        let qp = sub2(c, mid);
+                        let t = cross2(qp, s) / denom;
+                        let u = cross2(qp, dir) / denom;
+                        if t > 1e-7 && (0.0..=1.0).contains(&u) && t < best_t {
+                            let check_mid =
+                                [mid[0] + dir[0] * (t * 0.5), mid[1] + dir[1] * (t * 0.5)];
+                            if winding(check_mid, &section.contours) != 0 {
+                                best_t = t;
+                            }
+                        }
+                    }
+                }
+                if best_t.is_finite() {
+                    min_wall = min_wall.min(best_t);
+                }
+            }
+        }
+    }
+    if min_wall.is_finite() {
+        return min_wall;
+    }
+    let step = (span / 32.0).max(span * 1e-4);
     let mut y = min_y + step * 0.5;
     while y <= max_y - step * 0.25 {
         let mut hits = Vec::new();
@@ -231,35 +286,6 @@ fn min_wall_mm(section: &LayerSection) -> f64 {
             pair += 2;
         }
         y += step;
-    }
-    let mut x = min_x + step * 0.5;
-    while x <= max_x - step * 0.25 {
-        let mut hits = Vec::new();
-        for ring in &section.contours {
-            for i in 0..ring.len() {
-                let a = ring[i];
-                let b = ring[(i + 1) % ring.len()];
-                let (x0, x1) = (a[0], b[0]);
-                if (x0 <= x && x < x1) || (x1 <= x && x < x0) {
-                    let t = (x - x0) / (x1 - x0);
-                    if t.is_finite() {
-                        hits.push(a[1] + (b[1] - a[1]) * t);
-                    }
-                }
-            }
-        }
-        hits.sort_by(|a, b| a.total_cmp(b));
-        let mut pair = 0;
-        while pair + 1 < hits.len() {
-            let y0 = hits[pair];
-            let y1 = hits[pair + 1];
-            let mid = [x, (y0 + y1) * 0.5];
-            if winding(mid, &section.contours) != 0 {
-                min_wall = min_wall.min((y1 - y0).abs());
-            }
-            pair += 2;
-        }
-        x += step;
     }
     if min_wall.is_finite() { min_wall } else { 0.0 }
 }
@@ -378,3 +404,328 @@ pub fn analyze_layers(sections: &[LayerSection], load: &LoadCase) -> Result<Stre
         weakest_index,
     })
 }
+
+/// 3D wall thickness analysis result over a triangle mesh.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WallThickness3dReport {
+    pub triangle_thickness_mm: Vec<f64>,
+    pub min_thickness_mm: f64,
+    pub max_thickness_mm: f64,
+    pub thin_triangle_indices: Vec<usize>,
+}
+
+/// Casts inward normal rays from each triangle centroid of a closed 3D mesh (`positions` flat xyz,
+/// `indices` flat triangle indices) to measure local wall thickness across the part.
+pub fn analyze_wall_thickness_3d(
+    positions: &[f64],
+    indices: &[u32],
+    min_threshold_mm: f64,
+) -> Result<WallThickness3dReport> {
+    if !positions.len().is_multiple_of(3)
+        || positions.is_empty()
+        || !indices.len().is_multiple_of(3)
+        || indices.is_empty()
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_MESH",
+            "Mesh requires non-empty xyz positions and triangle indices",
+        ));
+    }
+    require_finite(min_threshold_mm, "Threshold must be finite")?;
+    let v_count = positions.len() / 3;
+    let tri_count = indices.len() / 3;
+    if tri_count > 50_000 {
+        return Err(invalid(
+            "MECHANICS_MESH_LIMIT",
+            "3D wall thickness analysis supports up to 50000 triangles",
+        ));
+    }
+    let mut tris = Vec::with_capacity(tri_count);
+    for t in indices.chunks_exact(3) {
+        let (i0, i1, i2) = (t[0] as usize, t[1] as usize, t[2] as usize);
+        if i0 >= v_count || i1 >= v_count || i2 >= v_count {
+            return Err(invalid(
+                "MECHANICS_INVALID_MESH",
+                "Triangle index out of bounds",
+            ));
+        }
+        let v0 = [positions[i0 * 3], positions[i0 * 3 + 1], positions[i0 * 3 + 2]];
+        let v1 = [positions[i1 * 3], positions[i1 * 3 + 1], positions[i1 * 3 + 2]];
+        let v2 = [positions[i2 * 3], positions[i2 * 3 + 1], positions[i2 * 3 + 2]];
+        tris.push((v0, v1, v2));
+    }
+    let mut thicknesses = Vec::with_capacity(tri_count);
+    let mut min_t = f64::INFINITY;
+    let mut max_t = 0.0_f64;
+    let mut thin_indices = Vec::new();
+
+    for (ti, &(v0, v1, v2)) in tris.iter().enumerate() {
+        let e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+        let e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+        let n = [
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0],
+        ];
+        let n_len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+        if n_len <= 1e-12 {
+            thicknesses.push(0.0);
+            continue;
+        }
+        // Inward ray direction is -normal
+        let dir = [-n[0] / n_len, -n[1] / n_len, -n[2] / n_len];
+        let origin = [
+            (v0[0] + v1[0] + v2[0]) / 3.0,
+            (v0[1] + v1[1] + v2[1]) / 3.0,
+            (v0[2] + v1[2] + v2[2]) / 3.0,
+        ];
+        let mut best_hit = f64::INFINITY;
+        for (oj, &(u0, u1, u2)) in tris.iter().enumerate() {
+            if ti == oj {
+                continue;
+            }
+            let ue1 = [u1[0] - u0[0], u1[1] - u0[1], u1[2] - u0[2]];
+            let ue2 = [u2[0] - u0[0], u2[1] - u0[1], u2[2] - u0[2]];
+            let h = [
+                dir[1] * ue2[2] - dir[2] * ue2[1],
+                dir[2] * ue2[0] - dir[0] * ue2[2],
+                dir[0] * ue2[1] - dir[1] * ue2[0],
+            ];
+            let a = ue1[0] * h[0] + ue1[1] * h[1] + ue1[2] * h[2];
+            if a.abs() <= 1e-12 {
+                continue;
+            }
+            let f = 1.0 / a;
+            let s = [origin[0] - u0[0], origin[1] - u0[1], origin[2] - u0[2]];
+            let u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
+            if !(0.0..=1.0).contains(&u) {
+                continue;
+            }
+            let q = [
+                s[1] * ue1[2] - s[2] * ue1[1],
+                s[2] * ue1[0] - s[0] * ue1[2],
+                s[0] * ue1[1] - s[1] * ue1[0],
+            ];
+            let v = f * (dir[0] * q[0] + dir[1] * q[1] + dir[2] * q[2]);
+            if v < 0.0 || u + v > 1.0 {
+                continue;
+            }
+            let dist = f * (ue2[0] * q[0] + ue2[1] * q[1] + ue2[2] * q[2]);
+            if dist > 1e-6 && dist < best_hit {
+                best_hit = dist;
+            }
+        }
+        let thick = if best_hit.is_finite() { best_hit } else { 0.0 };
+        if thick > 0.0 {
+            min_t = min_t.min(thick);
+            max_t = max_t.max(thick);
+            if thick < min_threshold_mm {
+                thin_indices.push(ti);
+            }
+        }
+        thicknesses.push(thick);
+    }
+    Ok(WallThickness3dReport {
+        triangle_thickness_mm: thicknesses,
+        min_thickness_mm: if min_t.is_finite() { min_t } else { 0.0 },
+        max_thickness_mm: max_t,
+        thin_triangle_indices: thin_indices,
+    })
+}
+
+/// Computes Euler column critical buckling load ($P_{\text{cr}} = \pi^2 E I / (K L)^2$) and safety factor
+/// for a slender member under compressive axial load `compressive_load_n` (positive in compression).
+pub fn euler_buckling_safety_factor(
+    young_mpa: f64,
+    min_moment_of_inertia_mm4: f64,
+    length_mm: f64,
+    effective_length_factor_k: f64,
+    compressive_load_n: f64,
+) -> Result<(f64, f64)> {
+    if ![
+        young_mpa,
+        min_moment_of_inertia_mm4,
+        length_mm,
+        effective_length_factor_k,
+    ]
+    .into_iter()
+    .all(|v| v.is_finite() && v > 0.0)
+        || !compressive_load_n.is_finite()
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Euler buckling requires positive finite E, I, L, K and finite load",
+        ));
+    }
+    let kl = effective_length_factor_k * length_mm;
+    let p_cr = std::f64::consts::PI.powi(2) * young_mpa * min_moment_of_inertia_mm4 / (kl * kl);
+    let fos = if compressive_load_n > 0.0 {
+        p_cr / compressive_load_n
+    } else {
+        f64::INFINITY
+    };
+    Ok((p_cr, fos))
+}
+
+/// Estimates fundamental natural frequency $f_1$ (Hz) from static nodal displacements under gravity
+/// via the Rayleigh quotient: $\omega_1^2 \approx g \sum m_i u_i / \sum m_i u_i^2$.
+pub fn estimate_fundamental_frequency_hz(
+    nodal_masses_kg: &[f64],
+    static_gravity_deflections_mm: &[f64],
+) -> Result<f64> {
+    if nodal_masses_kg.is_empty()
+        || nodal_masses_kg.len() != static_gravity_deflections_mm.len()
+        || nodal_masses_kg.iter().any(|&m| !m.is_finite() || m < 0.0)
+        || static_gravity_deflections_mm
+            .iter()
+            .any(|&u| !u.is_finite() || u < 0.0)
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Rayleigh frequency estimate requires matching non-negative masses and deflections",
+        ));
+    }
+    let mut num = 0.0;
+    let mut den = 0.0;
+    for (&m, &u_mm) in nodal_masses_kg.iter().zip(static_gravity_deflections_mm) {
+        let u_m = u_mm * 1e-3;
+        num += m * u_m;
+        den += m * u_m * u_m;
+    }
+    if den <= 1e-18 || num <= 0.0 {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Total mass deflection product must be positive",
+        ));
+    }
+    let g = 9.80665;
+    let omega = (g * num / den).sqrt();
+    Ok(omega / std::f64::consts::TAU)
+}
+
+/// Classical high-cycle fatigue criteria.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FatigueCriterion {
+    /// Modified Goodman line: $\sigma_a / S_e + \sigma_m / S_{ut} = 1 / n$
+    Goodman,
+    /// Soderberg line (conservative, yield-based): $\sigma_a / S_e + \sigma_m / S_y = 1 / n$
+    Soderberg,
+    /// Gerber parabola: $n \sigma_a / S_e + (n \sigma_m / S_{ut})^2 = 1$
+    Gerber,
+}
+
+/// Computes high-cycle fatigue factor of safety under fluctuating stress ($\sigma_{\min}$, $\sigma_{\max}$).
+pub fn fatigue_safety_factor(
+    sigma_min_mpa: f64,
+    sigma_max_mpa: f64,
+    endurance_limit_mpa: f64,
+    yield_strength_mpa: f64,
+    ultimate_strength_mpa: f64,
+    criterion: FatigueCriterion,
+) -> Result<f64> {
+    if ![
+        sigma_min_mpa,
+        sigma_max_mpa,
+        endurance_limit_mpa,
+        yield_strength_mpa,
+        ultimate_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || endurance_limit_mpa <= 0.0
+        || yield_strength_mpa <= 0.0
+        || ultimate_strength_mpa <= 0.0
+        || sigma_max_mpa < sigma_min_mpa
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Fatigue calculation requires finite stresses with sigma_max >= sigma_min and positive material strengths",
+        ));
+    }
+    let sigma_a = 0.5 * (sigma_max_mpa - sigma_min_mpa);
+    let sigma_m = 0.5 * (sigma_max_mpa + sigma_min_mpa).max(0.0);
+    if sigma_a <= 1e-12 && sigma_m <= 1e-12 {
+        return Ok(f64::INFINITY);
+    }
+    let fos = match criterion {
+        FatigueCriterion::Goodman => {
+            1.0 / (sigma_a / endurance_limit_mpa + sigma_m / ultimate_strength_mpa)
+        }
+        FatigueCriterion::Soderberg => {
+            1.0 / (sigma_a / endurance_limit_mpa + sigma_m / yield_strength_mpa)
+        }
+        FatigueCriterion::Gerber => {
+            if sigma_m <= 1e-12 {
+                endurance_limit_mpa / sigma_a
+            } else {
+                let r_a = sigma_a / endurance_limit_mpa;
+                let r_m = sigma_m / ultimate_strength_mpa;
+                (-r_a + (r_a * r_a + 4.0 * r_m * r_m).sqrt()) / (2.0 * r_m * r_m)
+            }
+        }
+    };
+    Ok(fos)
+}
+
+#[cfg(test)]
+mod lib_tests {
+    use super::*;
+
+    #[test]
+    fn min_wall_mm_is_rotation_invariant_for_tilted_thin_strips() {
+        // A 20 mm x 1.2 mm thin strip rotated by 37 degrees
+        let angle = 37.0_f64.to_radians();
+        let (s, c) = angle.sin_cos();
+        let rot = |x: f64, y: f64| [x * c - y * s, x * s + y * c];
+        let rect = vec![
+            rot(0.0, 0.0),
+            rot(20.0, 0.0),
+            rot(20.0, 1.2),
+            rot(0.0, 1.2),
+        ];
+        let sec = LayerSection {
+            z_mm: 0.0,
+            contours: vec![rect],
+        };
+        let wall = min_wall_mm(&sec);
+        assert!((wall - 1.2).abs() < 1e-4, "expected 1.2 mm, got {wall}");
+    }
+
+    #[test]
+    fn wall_thickness_3d_detects_thin_box_walls() {
+        // Closed box: 10 x 10 x 1.5 mm
+        let positions = vec![
+            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 1.5, 10.0,
+            0.0, 1.5, 10.0, 10.0, 1.5, 0.0, 10.0, 1.5,
+        ];
+        let indices = vec![
+            0, 2, 1, 0, 3, 2, // bottom (-Z)
+            4, 5, 6, 4, 6, 7, // top (+Z)
+            0, 1, 5, 0, 5, 4, // front (-Y)
+            2, 3, 7, 2, 7, 6, // back (+Y)
+            0, 4, 7, 0, 7, 3, // left (-X)
+            1, 2, 6, 1, 6, 5, // right (+X)
+        ];
+        let rep = analyze_wall_thickness_3d(&positions, &indices, 2.0).unwrap();
+        assert!((rep.min_thickness_mm - 1.5).abs() < 1e-6);
+        assert!(!rep.thin_triangle_indices.is_empty());
+    }
+
+    #[test]
+    fn euler_buckling_rayleigh_frequency_and_fatigue() {
+        let (p_cr, fos) = euler_buckling_safety_factor(200_000.0, 1000.0, 500.0, 1.0, 2000.0).unwrap();
+        assert!(p_cr > 7800.0 && p_cr < 8000.0);
+        assert!(fos > 3.9);
+
+        // Single DOF 1 mm static deflection under gravity -> f = (1/2pi)*sqrt(9.80665 / 0.001) ≈ 15.76 Hz
+        let f1 = estimate_fundamental_frequency_hz(&[1.0], &[1.0]).unwrap();
+        assert!((f1 - 15.756).abs() < 0.05);
+
+        let n_goodman = fatigue_safety_factor(50.0, 150.0, 200.0, 350.0, 500.0, FatigueCriterion::Goodman).unwrap();
+        let n_soderberg = fatigue_safety_factor(50.0, 150.0, 200.0, 350.0, 500.0, FatigueCriterion::Soderberg).unwrap();
+        let n_gerber = fatigue_safety_factor(50.0, 150.0, 200.0, 350.0, 500.0, FatigueCriterion::Gerber).unwrap();
+        assert!(n_soderberg < n_goodman && n_goodman < n_gerber);
+        assert!((n_goodman - 2.2222).abs() < 1e-3);
+    }
+}
+

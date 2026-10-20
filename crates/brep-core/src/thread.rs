@@ -211,6 +211,15 @@ fn cap_patch_network_impl(
     for c in source.loops.iter().flat_map(|l| &l.coedges) {
         incidence[c.edge] += 1;
     }
+    if trim_limits.is_none()
+        && source.edges.iter().enumerate().any(|(i, e)| {
+            incidence[i] == 1
+                && e.curve.degree > 2
+                && e.curve.control_points.iter().all(|p| p[2] == z_plane)
+        })
+    {
+        return internal::cap_single_exact(source, z_plane, max_verification_cells);
+    }
     let mut addresses = Vec::new();
     let mut curves = Vec::new();
     for (wire, l) in source.loops.iter().enumerate() {
@@ -520,13 +529,43 @@ pub fn clipped_thread_network(
     max_curve_change: f64,
     max_verification_cells: usize,
 ) -> Result<TurnSheet> {
+    let trims = nurbs_core::thread::trim_candidates(spec, z_limits, tolerance)?;
+    clipped_patch_network(
+        &trims,
+        spec.starts,
+        z_limits,
+        max_uv_error,
+        tolerance,
+        max_spans,
+        max_curve_change,
+        max_verification_cells,
+    )
+}
+/// Shared geometric network assembly from already authored screw trim patches.
+/// This does not qualify original nominal geometry or source trim completeness.
+pub fn clipped_patch_network(
+    trims: &nurbs_core::thread::TrimCandidates,
+    starts: usize,
+    z_limits: [f64; 2],
+    max_uv_error: f64,
+    tolerance: f64,
+    max_spans: usize,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+) -> Result<TurnSheet> {
+    if !(1..=8).contains(&starts) || trims.requested_z_bounds != z_limits {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Screw network source or slab changed",
+        ));
+    }
     if max_verification_cells > 10_000_000 {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",
             "Network budget exceeds 10000000 cells",
         ));
     }
-    let trims = nurbs_core::thread::trim_candidates(spec, z_limits, tolerance)?;
+
     if !trims.unresolved.is_empty() || trims.candidates.is_empty() || trims.candidates.len() > 254 {
         return Err(Error::new(
             "BREP_THREAD_PATCH_UNRESOLVED",
@@ -566,7 +605,7 @@ pub fn clipped_thread_network(
         if axis == 0 {
             if p.profile_segment < 4 {
                 (p.start, p.turn, p.quarter, p.profile_segment + 1)
-            } else if p.start + 1 < spec.starts {
+            } else if p.start + 1 < starts {
                 (p.start + 1, p.turn, p.quarter, 0)
             } else {
                 (0, p.turn + 1, p.quarter, 0)
@@ -1547,6 +1586,9 @@ pub struct FiniteThreadCandidate {
     pub body: ClosedBodyCandidate,
     pub agreement_cells: usize,
     pub side_faces: usize,
+    /// Additional cylindrical outer walls, absent for external threads.
+    pub outer_wall_faces: usize,
+    pub outer_wall_radius_bounds: Option<[f64; 2]>,
     /// Maximum per-operation displacement bound, not total ideal-thread error.
     pub max_endpoint_adjustment_upper_bound: f64,
 }
@@ -1613,6 +1655,25 @@ pub fn finite_external_candidate(
         body,
         agreement_cells: used,
         side_faces,
+        outer_wall_faces: 0,
+        outer_wall_radius_bounds: None,
         max_endpoint_adjustment_upper_bound: network.max_endpoint_adjustment_upper_bound,
     })
+}
+
+#[path = "thread_verified.rs"]
+mod verified;
+pub use verified::{CertifiedFiniteThread, finite_external_with_certificates};
+
+#[path = "thread_internal.rs"]
+mod internal;
+pub use internal::{CapProfileProof, finite_internal_with_certificates};
+
+pub(crate) fn cap_external_screw_network(
+    network: TurnSheet,
+    hand: nurbs_core::thread::Hand,
+    z_limits: [f64; 2],
+    limits: FiniteThreadLimits,
+) -> Result<(FiniteThreadCandidate, Vec<CapProfileProof>)> {
+    internal::external_network_candidate(network, hand, z_limits, limits)
 }

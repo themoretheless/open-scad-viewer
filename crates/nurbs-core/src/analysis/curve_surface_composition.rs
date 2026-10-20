@@ -4,7 +4,7 @@
 use crate::{Result, curve::Curve, distance_bounds::Interval, surface::Surface};
 type Poly = Vec<Interval>;
 fn choose(n: usize, k: usize) -> f64 {
-    // n <= 48: all integer intermediates and results fit u64, and the result
+    // n <= 50: all integer intermediates and results fit u64, and the result
     // is below 2^53, hence exactly representable as binary64.
     let mut v = 1u64;
     for i in 0..k.min(n - k) {
@@ -12,7 +12,7 @@ fn choose(n: usize, k: usize) -> f64 {
     }
     v as f64
 }
-fn mul(a: &Poly, b: &Poly) -> Result<Poly> {
+pub(crate) fn mul(a: &[Interval], b: &[Interval]) -> Result<Poly> {
     let (p, q) = (a.len() - 1, b.len() - 1);
     let mut out = vec![Interval::point(0.); p + q + 1];
     for (i, &x) in a.iter().enumerate() {
@@ -59,10 +59,11 @@ fn homogeneous(c: &Curve, reversed: bool) -> Result<Vec<Poly>> {
 pub(crate) fn upper(c: &Curve, p: &Curve, s: &Surface, reversed: bool) -> Result<Option<f64>> {
     let (du, dv) = (s.degree_u, s.degree_v);
     let degree = p.degree.saturating_mul(du.saturating_add(dv));
+    // The composed lift has degree <=32 and the source degree <=16, so
+    // every cross-multiplied polynomial remains within choose()'s exact <=48
+    // binomial range. Tensor degree alone need not exclude a 6x6 surface.
     if degree > 32
         || c.degree > 16
-        || du + dv > 8
-        || p.degree > 4
         || !bezier(&c.knots, c.degree, c.control_points.len())
         || !bezier(&p.knots, p.degree, p.control_points.len())
         || !bezier(&s.knots_u, du, s.control_points.len())
@@ -304,8 +305,6 @@ pub(crate) fn upper_mapped_cell(
     let (du, dv) = (s.degree_u, s.degree_v);
     if p.degree.saturating_mul(du.saturating_add(dv)) > 32
         || c.degree > 16
-        || du + dv > 8
-        || p.degree > 4
     {
         return Ok(None);
     }
@@ -442,19 +441,41 @@ fn lift_coefficients(
 pub(crate) fn trace_candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
     p.validate()?;
     s.validate()?;
+    if s.periodic_u || s.periodic_v {
+        // Candidate-only view of the same natural-domain basis. Admission
+        // still checks the complete original periodic support in lift().
+        let mut chart=s.clone();chart.periodic_u=false;chart.periodic_v=false;
+        return trace_candidate(p,&chart);
+    }
+    if p.control_points.len()>p.degree+1 && !p.periodic {
+        return multi_trace::piecewise(p,s);
+    }
+    if p.degree>1 || p.weights.iter().any(|w|*w!=p.weights[0])
+        || s.weights.iter().flatten().any(|w|*w!=s.weights[0][0]) {
+        if let Some(c)=cell_trace::candidate(p,s)? {return Ok(Some(c));}
+    }
     let (du, dv) = (s.degree_u, s.degree_v);
+    if !bezier(&s.knots_u,du,s.control_points.len()) || !bezier(&s.knots_v,dv,s.control_points[0].len()) {
+        return multi_trace::trace(p,s);
+    }
+
     if p.control_points[0].len() != 2
         || p.degree != 1
         || p.control_points.len() != 2
         || p.periodic
         || s.periodic_u
         || s.periodic_v
-        || du + dv > 8
+        // Match the existing full-original verifier's source-curve degree
+        // range. Cross products stay at degree <=32, within exact choose<=48.
+        || du + dv > 16
         || !bezier(&p.knots, p.degree, p.control_points.len())
         || !bezier(&s.knots_u, du, s.control_points.len())
         || !bezier(&s.knots_v, dv, s.control_points[0].len())
     {
         return Ok(None);
+    }
+    if p.weights[0]==p.weights[1] && s.weights.iter().flatten().all(|&w|w==s.weights[0][0]) {
+        return multi_trace::trace(p,s);
     }
     let domains = [
         [s.knots_u[du], s.knots_u[du + 1]],
@@ -625,3 +646,7 @@ mod bernstein_section_tests {
         assert!(invalid.validate().is_err());
     }
 }
+
+#[path = "curve_surface_composition/multi_trace.rs"]
+mod multi_trace;
+mod cell_trace;

@@ -6,6 +6,7 @@ import {dirname,resolve} from 'node:path'
 import {checkCompleteFacePairCover} from './sweep-face-pair-cover.mjs'
 import {bindStepOracle} from './sweep-step-oracle-binding.mjs'
 import {smoothCapGapCompanions,checkAutomaticSmoothCapContract} from './sweep-automatic-cap-contracts.mjs'
+import {legacyCapRefusals,checkLegacyCapRefusal} from './sweep-legacy-cap-refusal-contracts.mjs'
 
 // Independent reconciliation of native global certificates with OCCT results.
 // Finite fixture coverage never promotes an unresolved body or a general theorem.
@@ -23,7 +24,7 @@ assert.match(artifact.geometryWasmSha256,/^[a-f0-9]{64}$/)
 assert.ok(Number.isSafeInteger(artifact.geometryWasmByteLength)&&artifact.geometryWasmByteLength>0)
 assert.equal(artifact.publicAndPackedVerified,true)
 assert.deepEqual(oracle.artifactProvenance,artifact,'OCCT/native WASM provenance differs')
-const expectedRefusals=new Set(['open-spatial-hollow-miter.step','affine-oblique-hollow-miter.step'])
+const expectedRefusals=legacyCapRefusals
 // Legacy raw caps remain exact-boundary negatives with Different identities
 // and a fully certified corrected companion. The explicit Auto matrix instead
 // requires original-source radial filling plus fresh whole-model proofs.
@@ -67,6 +68,7 @@ for(const item of manifest.cases){
  const companionFile=automaticCapCase?undefined:pairedCompanionFile
  if(automaticCapCase)checkAutomaticSmoothCapContract(item)
  const refused=expectedRefusals.has(item.file)||companionFile!==undefined
+ if(expectedRefusals.has(item.file))checkLegacyCapRefusal(item)
  assert.equal(native.solidGeometryCertified,!refused,`${item.file}: unexpected native admission`)
  if(companionFile){
   assert.equal(item.requireNativeSolid,false,'Raw exact-cap negative cannot be a required Solid')

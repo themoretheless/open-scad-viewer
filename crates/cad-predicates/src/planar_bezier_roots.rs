@@ -112,6 +112,25 @@ pub(crate) fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<P
     Ok(out)
 }
 fn homogeneous(p: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<[Poly; 3], Reason> {
+    let mut constant_weight = p[0][2].sign() != Sign::Zero;
+    for row in &p[1..] {
+        if row[2].sub(&p[0][2], ctx)?.sign() != Sign::Zero {
+            constant_weight = false;
+            break;
+        }
+    }
+    if constant_weight {
+        // Cancel only an exactly common nonzero authored weight. The rational
+        // map is polynomial; retaining that scalar through every resultant
+        // product needlessly enlarges exact coefficients.
+        let x = p.iter().map(|v| v[0].clone()).collect::<Vec<_>>();
+        let y = p.iter().map(|v| v[1].clone()).collect::<Vec<_>>();
+        return Ok([
+            power(&x, ctx)?,
+            power(&y, ctx)?,
+            vec![Expansion::scalar(1.)],
+        ]);
+    }
     let x = p
         .iter()
         .map(|p| p[0].mul(&p[2], ctx))
@@ -123,6 +142,7 @@ fn homogeneous(p: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<[
     let w = p.iter().map(|p| p[2].clone()).collect::<Vec<_>>();
     Ok([power(&x, ctx)?, power(&y, ctx)?, power(&w, ctx)?])
 }
+
 fn mul(a: &Poly, b: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     let mut out = vec![Expansion::scalar(0.); a.len() + b.len() - 1];
     for (i, x) in a.iter().enumerate() {
@@ -278,6 +298,9 @@ pub(crate) fn isolate(
     tolerance: f64,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Vec<PlanarScalarRoot>, Reason> {
+    if let Some(roots) = bernstein_endpoint_roots(p, ctx)? {
+        return Ok(roots);
+    }
     let (chain, mut gcd) = square_free_chain(p, ctx)?;
     let mut gcd_chains = Vec::new();
     while gcd.len() > 1 {
@@ -343,6 +366,70 @@ pub(crate) fn isolate(
     }
     Ok(roots)
 }
+// C(n,k)*b_k = sum_{i<=k} a_i*C(n-i,k-i). All factors are
+// exact integers: no division or rounded Bernstein proxy is introduced.
+// One-sided nonzero coefficients exclude every root in the open unit interval.
+fn bernstein_endpoint_roots(
+    p: &Poly,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<Option<Vec<PlanarScalarRoot>>, Reason> {
+    let n = p.len() - 1;
+    if n == 0 || n > 24 {
+        return Ok(None);
+    }
+    let mut sign = Sign::Zero;
+    for k in 0..=n {
+        let mut value = Expansion::scalar(0.);
+        for i in 0..=k {
+            value = value.add(
+                &p[i].mul(&Expansion::integer(choose(n - i, k - i), ctx)?, ctx)?,
+                ctx,
+            )?;
+        }
+        let next = value.sign();
+        if next == Sign::Zero {
+            continue;
+        }
+        if sign != Sign::Zero && sign != next {
+            return Ok(None);
+        }
+        sign = next;
+    }
+    if sign == Sign::Zero {
+        return Ok(None);
+    }
+    let mut roots = Vec::new();
+    let first = p
+        .iter()
+        .position(|x| x.sign() != Sign::Zero)
+        .ok_or(Reason::MissingProof)?;
+    if first > 0 {
+        roots.push(PlanarScalarRoot {
+            interval: [0., 0.],
+            multiplicity: first,
+        });
+    }
+    for k in 0..=n {
+        let mut value = Expansion::scalar(0.);
+        for i in k..=n {
+            value = value.add(
+                &p[i].mul(&Expansion::integer(choose(i, k), ctx)?, ctx)?,
+                ctx,
+            )?;
+        }
+        if value.sign() != Sign::Zero {
+            if k > 0 {
+                roots.push(PlanarScalarRoot {
+                    interval: [1., 1.],
+                    multiplicity: k,
+                });
+            }
+            return Ok(Some(roots));
+        }
+    }
+    Err(Reason::MissingProof)
+}
+
 fn monotone(
     points: &[[Expansion; 3]],
     axis: usize,
@@ -440,7 +527,7 @@ fn straight(points: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result
     }
     Ok(monotone(points, 0, ctx)? || monotone(points, 1, ctx)?)
 }
-/// Source rows are Euclidean XY plus positive weight, degree 1..3. Domains
+/// Source rows are Euclidean XY plus positive weight, degree 1..8. Domains
 /// are normalized only by the caller's parameter mapping; no trimmed/fitted
 /// control net is introduced into the predicate's source arena.
 pub fn planar_bezier_scalar_roots(
@@ -449,8 +536,8 @@ pub fn planar_bezier_scalar_roots(
     b: &[[LeafRef; 3]],
     parameter_tolerance: f64,
 ) -> Result<PlanarScalarDecision, InputError> {
-    if !(2..=4).contains(&a.len())
-        || !(2..=4).contains(&b.len())
+    if !(2..=9).contains(&a.len())
+        || !(2..=9).contains(&b.len())
         || !parameter_tolerance.is_finite()
         || parameter_tolerance <= 0.
         || parameter_tolerance >= 1.
@@ -733,7 +820,7 @@ pub fn planar_bezier_stationary_roots(
     axis: usize,
     tolerance: f64,
 ) -> Result<PlanarStationaryDecision, InputError> {
-    if !(2..=4).contains(&source.len())
+    if !(2..=9).contains(&source.len())
         || axis >= 2
         || !tolerance.is_finite()
         || tolerance <= 0.

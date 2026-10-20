@@ -221,7 +221,17 @@ impl Field {
                     flat.aux
                         .extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
                 }
-                Field::Extrude { .. } | Field::Revolve { .. } | Field::Deform { .. } => {
+                Field::Extrude { .. }
+                | Field::Revolve { .. }
+                | Field::Deform { .. }
+                | Field::Neovius { .. }
+                | Field::Lidinoid { .. }
+                | Field::SchoenIWP { .. }
+                | Field::ChamferUnion { .. }
+                | Field::ChamferIntersection { .. }
+                | Field::ChamferDifference { .. }
+                | Field::Onion { .. }
+                | Field::Elongate { .. } => {
                     return None;
                 }
             }

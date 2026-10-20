@@ -299,3 +299,65 @@ mod tests {
         );
     }
 }
+
+/// Exact evidence and tolerance agreement have separate, explicit work ledgers.
+pub struct QualifiedReport {
+    pub exact: ExactReport,
+    pub agreement: Report,
+}
+/// Recompute exact identities on the actual immutable model first. Equal uses
+/// have zero geometric residual; unsupported/different/indeterminate uses still
+/// require the original whole-interval tolerance check. Never accept endpoints,
+/// a shell flag, or a partial exact report as evidence for an unprocessed use.
+pub fn verify_with_exact(
+    model: &Model,
+    max_cells: usize,
+    max_work: u64,
+) -> Result<QualifiedReport> {
+    if !(1..=1000000).contains(&max_cells) {
+        return Err(Error::new(
+            "BREP_AGREEMENT_BUDGET",
+            "Boundary agreement budget must be in 1..1000000",
+        ));
+    }
+    let exact = verify_exact(model, max_work)?;
+    let mut agreement = Report {
+        complete: true,
+        cells: 0,
+        uses: Vec::with_capacity(exact.uses.len()),
+    };
+    for u in &exact.uses {
+        let mut entry = BoundaryUse {
+            face: u.face,
+            wire: u.wire,
+            coedge: u.coedge,
+            edge: u.edge,
+            status: Status::Unresolved,
+            witness: None,
+            witness_distance: None,
+        };
+        if u.decision
+            .as_ref()
+            .is_some_and(|p| p.outcome == cad_predicates::BezierIdentity::Equal)
+        {
+            entry.status = Status::WithinTolerance;
+        } else if agreement.cells < max_cells {
+            let c = &model.loops[u.wire].coedges[u.coedge];
+            let proof = curve_surface_agreement::verify(
+                &model.edges[c.edge].curve,
+                &c.pcurve,
+                &model.faces[u.face].surface,
+                c.reversed,
+                model.tolerance_mm,
+                (max_cells - agreement.cells).min(100000),
+            )?;
+            agreement.cells += proof.cells;
+            entry.status = proof.status;
+            entry.witness = proof.witness;
+            entry.witness_distance = proof.witness_distance;
+        }
+        agreement.complete &= entry.status == Status::WithinTolerance;
+        agreement.uses.push(entry);
+    }
+    Ok(QualifiedReport { exact, agreement })
+}

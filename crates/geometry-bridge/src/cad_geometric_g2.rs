@@ -7,10 +7,10 @@ pub(crate) fn inspect(model:&Model,edges:&[usize],t:Tolerances,max_cells:usize)-
     let report=geometric::inspect_edges(model,edges,t,max_cells)?;
     Ok(json!({"method":"owned-boundary-geometric-G2-intervals","complete":report.complete,"withinTolerance":report.within_tolerance,
         "positionTolerance":t.position,"normalTolerance":t.normal,"curvatureTolerance":t.curvature,
-        "maxCells":max_cells,"cells":report.cells,"edgeIds":edges,"exactIdentityClaim":false,"solidGeometryCertified":false,
+        "maxCells":max_cells,"cells":report.cells,"maxExactWork":1000000,"exactWork":report.exact_work,"edgeIds":edges,"exactIdentityClaim":false,"solidGeometryCertified":false,
         "corners":report.corners.iter().map(|c|json!({"vertex":c.vertex,"edges":c.edges,"faces":c.faces,"omittedEdges":c.omitted_edges,
             "closedLink":c.closed_link,"allIncidentSeamsWithinTolerance":c.all_incident_seams_within_tolerance,"solidGeometryCertified":false})).collect::<Vec<_>>(),
-        "seams":report.seams.iter().map(|s|json!({"edge":s.edge,"faces":s.faces,
+        "seams":report.seams.iter().map(|s|json!({"edge":s.edge,"faces":s.faces,"positionValidated":s.positions.as_ref().map(|p|p.proven),"positionUpper":s.positions.as_ref().and_then(|p|p.upper),
             "inspection":s.inspection.as_ref().map(|r|json!({"positionBounds":r.position_bounds,"regularityProven":r.regularity_proven,"cells":r.cells,
                 "decision":match r.decision {nurbs_core::surface_join::Decision::WithinTolerance=>"within-tolerance",nurbs_core::surface_join::Decision::CorrespondenceExceedsTolerance=>"exceeds-tolerance",nurbs_core::surface_join::Decision::Unresolved=>"unresolved"},
                 "orientation":r.orientation.map(|o|match o {nurbs_core::surface_g2::Orientation::Same=>"same",nurbs_core::surface_g2::Orientation::Opposite=>"opposite"}),

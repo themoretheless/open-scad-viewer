@@ -265,7 +265,7 @@ pub(crate) fn clip_pair(
         *budget -= 1;
         let start_a = cur_a;
         let start_b = cur_b;
-        let (ca, wa) = euclidean_controls(a, cur_a)?;
+        let (ca, _wa) = euclidean_controls(a, cur_a)?;
         let (cb, wb) = euclidean_controls(b, cur_b)?;
         match clip_one_direction(&ca, &cb, &wb, cur_b) {
             ClipOutcome::Separated => return Ok(None),
@@ -274,7 +274,7 @@ pub(crate) fn clip_pair(
         }
         // Re-clip in the opposite direction against the (possibly shrunk) box.
         let (ca, wa) = euclidean_controls(a, cur_a)?;
-        let (cb, wb) = euclidean_controls(b, cur_b)?;
+        let (cb, _wb) = euclidean_controls(b, cur_b)?;
         match clip_one_direction(&cb, &ca, &wa, cur_a) {
             ClipOutcome::Separated => return Ok(None),
             ClipOutcome::Indeterminate => {}

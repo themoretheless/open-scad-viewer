@@ -1,4 +1,76 @@
 use nurbs_core::{surface::Surface,surface_blend::{self,Options,Order,Boundary}};
+#[test]
+fn rational_curved_cap_trace_is_checked_on_original_support() {
+    let floor=Surface {degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+        control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
+        weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+    let mut cap=floor.clone();for row in &mut cap.control_points {for p in row {p[2]=p[1];p[1]=1.;}}
+    let pc=nurbs_core::curve::Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+        control_points:vec![vec![0.,0.1],vec![0.5,0.2],vec![1.,0.1]],weights:vec![1.,0.7,1.],periodic:false};
+    let o=Options{gains:[0.1;2],..Default::default()};
+    let trace=surface_blend::Trace{at:0.9,along:[0.,1.]};
+    let before=[floor.clone(),cap.clone()];
+    let r=surface_blend::g2_to_plane_trace(&floor,trace,&cap,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    assert!(r.complete&&r.within_tolerance,"cells={} seams={:?}",r.cells,r.support_seams.iter().map(|s|(&s.2.geometric,s.2.positions.proven)).collect::<Vec<_>>());
+    assert!(r.support_seams.iter().all(|s|s.2.positions.proven));
+    for u in [0.,0.31,1.] {
+        let uv=pc.evaluate(u).unwrap().point;
+        close(r.construction.patches[0].evaluate(u,1.).unwrap().point,cap.evaluate(uv[0],uv[1]).unwrap().point,1e-10);
+    }
+    let mut forged=cap.clone();forged.control_points[1][1][1]+=0.1;
+    let bad=surface_blend::g2_to_plane_trace(&floor,trace,&forged,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    assert!(!bad.within_tolerance);
+    let exhausted=surface_blend::g2_to_plane_trace(&floor,trace,&cap,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],0,0).unwrap();
+    assert!(!exhausted.complete&&!exhausted.within_tolerance);
+    assert_eq!([floor,cap],before);
+}
+#[test]
+fn interior_runout_at_one_tenth_mm_qualifies_original_plane_traces() {
+    let floor=Surface {degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+        control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![2.,0.,0.],vec![2.,1.,0.]]],
+        weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+    let mut cap=floor.clone();
+    for row in &mut cap.control_points {for p in row {p[2]=p[1];p[1]=1.;}}
+    let saved=[floor.clone(),cap.clone()];
+    let traces=[surface_blend::Trace{at:0.9,along:[0.25,0.75]},surface_blend::Trace{at:0.1,along:[0.25,0.75]}];
+    let o=Options{gains:[0.1;2],..Default::default()};
+    let r=surface_blend::g2_traces([&floor,&cap],traces,o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    assert!(r.complete&&r.within_tolerance,"seams={:?}",r.support_seams.iter().map(|s|&s.2.geometric).collect::<Vec<_>>());
+    assert_eq!(r.support_seams.len(),2);
+    assert!(r.support_seams.iter().all(|s|s.2.positions.proven));
+    assert!(r.cells<=100000&&r.exact_work<=1000000);
+    let p=&r.construction.patches[0];
+    close(p.evaluate(0.,0.).unwrap().point,[0.5,0.9,0.],1e-12);
+    close(p.evaluate(1.,1.).unwrap().point,[1.5,1.,0.1],1e-12);
+    let interior=nurbs_core::surface_linear_monotonicity::inspect(p,[[1,0,0],[0,1,1]],100000-r.cells).unwrap();
+    assert!(interior.certified,"{:?}",interior);
+    assert!(r.cells+interior.cells<=100000);
+    let empty=surface_blend::g2_traces([&floor,&cap],traces,o,[1e-7,1e-5,1e-4],0,0).unwrap();
+    assert!(!empty.complete&&!empty.within_tolerance&&empty.support_seams.is_empty());
+    let mut invalid=traces;invalid[0].at=0.;
+    assert!(surface_blend::g2_traces([&floor,&cap],invalid,o,[1e-7,1e-5,1e-4],100000,1000000).is_err());
+    assert_eq!([floor,cap],saved);
+}
+#[test]
+fn interior_rational_traces_preserve_nonunit_original_charts_and_reversal() {
+    let a=Surface {degree_u:2,degree_v:1,knots_u:vec![2.,2.,2.,7.,7.,7.],knots_v:vec![-3.,-3.,1.,1.],
+        control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.25,0.],vec![1.,1.25,0.]],vec![vec![2.,0.,0.],vec![2.,1.,0.]]],
+        weights:vec![vec![1.,2.],vec![0.5,1.],vec![1.,2.]],periodic_u:false,periodic_v:false};
+    let mut b=a.clone();for row in &mut b.control_points {for p in row {p[1]+=3.;}}
+    let before=[a.clone(),b.clone()];
+    let traces=[surface_blend::Trace{at:0.,along:[3.,6.]},surface_blend::Trace{at:-2.,along:[3.,6.]}];
+    let o=Options{gains:[0.1;2],reverse_u:[true;2],..Default::default()};
+    let r=surface_blend::g2_traces([&a,&b],traces,o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    assert!(r.complete&&r.within_tolerance);
+    assert_eq!(r.support_seams.len(),2);
+    for (side,s) in [&a,&b].into_iter().enumerate() {
+        for u in [0.,0.31,1.] {
+            close(r.construction.patches[0].evaluate(u,side as f64).unwrap().point,
+                s.evaluate(6.-3.*u,traces[side].at).unwrap().point,1e-10);
+        }
+    }
+    assert_eq!([a,b],before);
+}
 fn support(offset:f64,degree:usize,unclamped:bool)->Surface {
     let n=if unclamped {4} else {degree+1};let nv=if unclamped {4} else {3};
     let points=(0..n).map(|i|(0..nv).map(|j|vec![i as f64/(n-1) as f64,offset+j as f64/(nv-1) as f64,0.1*i as f64*j as f64+0.07*(j*j) as f64]).collect()).collect();

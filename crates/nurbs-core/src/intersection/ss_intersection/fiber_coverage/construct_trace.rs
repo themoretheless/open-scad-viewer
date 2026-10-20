@@ -1,0 +1,289 @@
+//! Adaptive proposals for a specific original root fiber, with whole-piece proof.
+use super::*;
+use crate::curve::Curve;
+use std::collections::BTreeMap;
+
+#[derive(Clone, Copy, Debug)]
+pub struct FiberTraceBuildLimits {
+    pub tolerance_world: f64,
+    /// Shared fresh source rectangles AND candidate agreement cells.
+    pub max_cells: usize,
+    pub max_evaluations: usize,
+    pub max_segments: usize,
+    pub max_depth: usize,
+}
+impl Default for FiberTraceBuildLimits {
+    fn default() -> Self {
+        Self {
+            tolerance_world: 1e-7,
+            max_cells: 100000,
+            max_evaluations: 4096,
+            max_segments: 256,
+            max_depth: 16,
+        }
+    }
+}
+pub struct FiberTraceBuild {
+    /// Present only when the complete original free interval is covered.
+    /// Each piece retains fresh original-root world-error evidence.
+    pub trace: Option<Vec<QualifiedFiberWorldTrace>>,
+    pub unresolved_interval: Option<[f64; 2]>,
+    pub reason: &'static str,
+    pub cells: usize,
+    pub evaluations: usize,
+    pub attempts: usize,
+}
+#[derive(Clone)]
+struct Site {
+    uv: [f64; 4],
+    derivative: [f64; 4],
+    world: [f64; 3],
+    tangent: [f64; 3],
+}
+
+fn solve(mut a: [[f64; 3]; 3], mut b: [f64; 3]) -> Option<[f64; 3]> {
+    for col in 0..3 {
+        let pivot = (col..3).max_by(|&i, &j| a[i][col].abs().total_cmp(&a[j][col].abs()))?;
+        a.swap(col, pivot);
+        b.swap(col, pivot);
+        let scale = a[col][col];
+        if !scale.is_finite() || scale == 0. {
+            return None;
+        }
+        for k in col..3 {
+            a[col][k] /= scale;
+        }
+        b[col] /= scale;
+        for row in 0..3 {
+            if row == col {
+                continue;
+            }
+            let factor = a[row][col];
+            for k in col..3 {
+                a[row][k] -= factor * a[col][k];
+            }
+            b[row] -= factor * b[col];
+        }
+    }
+    b.iter().all(|v| v.is_finite()).then_some(b)
+}
+fn sample(source: &QualifiedFiber, t: f64, work: &mut usize, max: usize) -> Result<Option<Site>> {
+    let free = source.free_axis().index();
+    let mut unknown = [0usize; 3];
+    let mut idx = 0;
+    for k in 0..4 {
+        if k != free {
+            unknown[idx] = k;
+            idx += 1;
+        }
+    }
+    let domain = source.domain();
+    let mut uv = domain.map(|d| 0.5 * d[0] + 0.5 * d[1]);
+    uv[free] = t;
+    // Numerical solves only propose coefficients. No sampled residual grants
+    // original root or saved-curve authority.
+    for iteration in 0..32 {
+        if max.saturating_sub(*work) < 2 {
+            return Ok(None);
+        }
+        *work += 2;
+        let a = source.source().first().evaluate(uv[0], uv[1])?;
+        let b = source.source().second().evaluate(uv[2], uv[3])?;
+        let (Some((au, av)), Some((bu, bv))) = (a.first_derivatives(), b.first_derivatives())
+        else {
+            return Ok(None);
+        };
+        let columns = [au, av, bu.map(|v| -v), bv.map(|v| -v)];
+        let jac = std::array::from_fn(|k| std::array::from_fn(|i| columns[unknown[i]][k]));
+        let residual = std::array::from_fn(|k| a.point[k] - b.point[k]);
+        let Some(delta) = solve(jac, residual) else {
+            return Ok(None);
+        };
+        let mut next = uv;
+        for i in 0..3 {
+            next[unknown[i]] -= delta[i];
+        }
+        if (0..4).any(|i| !next[i].is_finite() || next[i] < domain[i][0] || next[i] > domain[i][1])
+        {
+            return Ok(None);
+        }
+        let settled = next == uv || delta.iter().all(|v| v.abs() <= 1e-14);
+        if settled || iteration == 31 {
+            let Some(d) = solve(jac, columns[free].map(|v| -v)) else {
+                return Ok(None);
+            };
+            let mut derivative = [0.; 4];
+            derivative[free] = 1.;
+            for i in 0..3 {
+                derivative[unknown[i]] = d[i];
+            }
+            let tangent = std::array::from_fn(|k| au[k] * derivative[0] + av[k] * derivative[1]);
+            return Ok(Some(Site {
+                uv,
+                derivative,
+                world: a.point,
+                tangent,
+            }));
+        }
+        uv = next;
+    }
+    Ok(None)
+}
+fn hermite(a: &[f64], b: &[f64], da: &[f64], db: &[f64], span: f64) -> Curve {
+    Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        weights: vec![1.; 4],
+        periodic: false,
+        control_points: vec![
+            a.to_vec(),
+            a.iter().zip(da).map(|(p, d)| p + span * d / 3.).collect(),
+            b.iter().zip(db).map(|(p, d)| p - span * d / 3.).collect(),
+            b.to_vec(),
+        ],
+    }
+}
+/// Build a complete chain on one supplied uniform original root chart. Both
+/// curved original supports are permitted; neither a planar nor a ruled chart
+/// is assumed. Newton/Hermite construction is a proposal. Every actual cubic
+/// piece must pass fresh root replay, contained monotone clock and continuous
+/// C-S(P) bounds on both original surfaces before returning a complete trace.
+/// This is local branch construction: full SS coverage, trim membership,
+/// nonzero world speed, root-bound B-rep endpoints and corner topology remain
+/// separate admission obligations.
+pub fn construct_fiber_trace(
+    source: &QualifiedFiber,
+    limits: FiberTraceBuildLimits,
+) -> Result<FiberTraceBuild> {
+    check(
+        (1e-12..=1e-2).contains(&limits.tolerance_world)
+            && (1..=100000).contains(&limits.max_cells)
+            && (1..=16384).contains(&limits.max_evaluations)
+            && (1..=256).contains(&limits.max_segments)
+            && limits.max_depth <= 24
+            && [source.source().first(), source.source().second()]
+                .iter()
+                .all(|s| {
+                    s.control_points
+                        .len()
+                        .checked_mul(s.control_points[0].len())
+                        .is_some_and(|n| n <= 4096)
+                }),
+        "Need bounded original-fiber construction and proof work",
+    )?;
+    let free = source.free_axis().index();
+    let whole = source.domain()[free];
+    let mut out = FiberTraceBuild {
+        trace: None,
+        unresolved_interval: Some(whole),
+        reason: "source-root-unproven",
+        cells: 0,
+        evaluations: 0,
+        attempts: 0,
+    };
+    let fresh = source.source().certify(
+        source.domain(),
+        source.free_axis(),
+        FiberLimits {
+            max_rectangles: limits.max_cells,
+            preconditioner: None,
+        },
+    )?;
+    out.cells += fresh.report().rectangles;
+    let Some(source) = fresh.into_fiber() else {
+        return Ok(out);
+    };
+    let parent_factor = super::world_trace::root_error(&source, [1., 1.])?.1;
+    let mut sites = BTreeMap::<u64, Site>::new();
+    let mut stack = vec![(whole, 0)];
+    let mut traces = Vec::new();
+    while let Some((interval, depth)) = stack.pop() {
+        out.unresolved_interval = Some(interval);
+        out.reason = "construction-work-unproven";
+        if out.cells >= limits.max_cells || traces.len() + stack.len() + 1 > limits.max_segments {
+            return Ok(out);
+        }
+        let keys = [interval[0].to_bits(), interval[1].to_bits()];
+        for (t, key) in interval.into_iter().zip(keys) {
+            if !sites.contains_key(&key) {
+                let Some(site) = sample(&source, t, &mut out.evaluations, limits.max_evaluations)?
+                else {
+                    out.reason = "root-site-proposal-unproven";
+                    return Ok(out);
+                };
+                sites.insert(key, site);
+            }
+        }
+        let [a, b] = [&sites[&keys[0]], &sites[&keys[1]]];
+        let span = interval[1] - interval[0];
+        let pcurves = std::array::from_fn(|i| {
+            hermite(
+                &a.uv[2 * i..2 * i + 2],
+                &b.uv[2 * i..2 * i + 2],
+                &a.derivative[2 * i..2 * i + 2],
+                &b.derivative[2 * i..2 * i + 2],
+                span,
+            )
+        });
+        let curve = hermite(&a.world, &b.world, &a.tangent, &b.tangent, span);
+        let mut domain = source.domain();
+        domain[free] = interval;
+        let local = source.source().certify(
+            domain,
+            source.free_axis(),
+            FiberLimits {
+                max_rectangles: limits.max_cells - out.cells,
+                preconditioner: None,
+            },
+        )?;
+        out.cells += local.report().rectangles;
+        out.attempts += 1;
+        let mut accepted = None;
+        if let Some(local) = local.into_fiber() {
+            if out.cells < limits.max_cells {
+                // A failed coarse proposal may not spend the entire shared
+                // budget before its smaller descendants can be constructed.
+                let remaining = limits.max_cells - out.cells;
+                // A replay recomputes the same original operator. Its freshly
+                // observed rectangle count sizes the allowance only; the
+                // verifier still reruns every original rectangle itself.
+                let replay_allowance = remaining.min(local.report().rectangles.max(1));
+                let local_factor = super::world_trace::root_error(&local, [1., 1.])?.1;
+                // Reserve composition accuracy for later admission against the
+                // WHOLE parent operator, rather than accepting only an easier
+                // local operator with a smaller contraction/gain.
+                let local_tolerance = limits
+                    .tolerance_world
+                    .min(limits.tolerance_world * (local_factor / parent_factor) * 0.25);
+                let local_tolerance = local_tolerance.max(1e-12);
+                let proof = qualify_fiber_world_trace(
+                    &local,
+                    &pcurves,
+                    &curve,
+                    FiberWorldTraceLimits {
+                        tolerance_world: local_tolerance,
+                        max_rectangles: replay_allowance,
+                        max_agreement_cells: remaining.saturating_sub(replay_allowance).min(1024),
+                    },
+                )?;
+                out.cells += proof.rectangles() + proof.agreement_cells();
+                accepted = proof.into_trace();
+            }
+        }
+        if let Some(trace) = accepted {
+            traces.push(trace);
+            continue;
+        }
+        let middle = 0.5 * interval[0] + 0.5 * interval[1];
+        if depth == limits.max_depth || middle <= interval[0] || middle >= interval[1] {
+            out.reason = "whole-original-root-trace-unproven";
+            return Ok(out);
+        }
+        stack.push(([middle, interval[1]], depth + 1));
+        stack.push(([interval[0], middle], depth + 1));
+    }
+    out.trace = Some(traces);
+    out.unresolved_interval = None;
+    out.reason = "complete-original-root-trace";
+    Ok(out)
+}
