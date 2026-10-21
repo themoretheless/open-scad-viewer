@@ -1,0 +1,68 @@
+diff --git a/crates/gpu-compute/src/buffer.rs b/crates/gpu-compute/src/buffer.rs
+index e7f02cbfb..169db9e33 100644
+--- a/crates/gpu-compute/src/buffer.rs
++++ b/crates/gpu-compute/src/buffer.rs
+@@ -33,6 +33,50 @@ pub fn write_buffer_words(
+     Ok(())
+ }
+ 
++/// Join contiguous byte slices into one immediate queue write, up to 4 KiB.
++/// Validates the entire range before mutation. No submit, map or GPU wait.
++/// Packing is stack-local; a single nonempty part is borrowed directly.
++pub fn write_small_parts<'a>(
++    queue: &wgpu::Queue,
++    buffer: &wgpu::Buffer,
++    offset: u64,
++    parts: impl Iterator<Item = &'a [u8]> + Clone,
++) -> Result<(), crate::BufferError> {
++    let size = parts
++        .clone()
++        .try_fold(0usize, |n, p| n.checked_add(p.len()))
++        .ok_or(crate::BufferError::TooLarge)?;
++    if size > 4096 {
++        return Err(crate::BufferError::TooLarge);
++    }
++    if !offset.is_multiple_of(4)
++        || !size.is_multiple_of(4)
++        || offset
++            .checked_add(size as u64)
++            .is_none_or(|end| end > buffer.size())
++    {
++        return Err(crate::BufferError::InvalidRange);
++    }
++    if !buffer.usage().contains(wgpu::BufferUsages::COPY_DST) {
++        return Err(crate::BufferError::MissingUsage);
++    }
++    if size == 0 {
++        return Ok(());
++    }
++    if let Some(part) = parts.clone().find(|p| p.len() == size) {
++        queue.write_buffer(buffer, offset, part);
++        return Ok(());
++    }
++    let mut packed = [0u8; 4096];
++    let mut cursor = 0;
++    for part in parts {
++        packed[cursor..cursor + part.len()].copy_from_slice(part);
++        cursor += part.len();
++    }
++    queue.write_buffer(buffer, offset, &packed[..size]);
++    Ok(())
++}
++
+ /// Storage-buffer binding layout entry used by all GPU stages.
+ pub fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
+     wgpu::BindGroupLayoutEntry {
+diff --git a/crates/gpu-compute/src/lib.rs b/crates/gpu-compute/src/lib.rs
+index 82d969d5a..36e0c8ea3 100644
+--- a/crates/gpu-compute/src/lib.rs
++++ b/crates/gpu-compute/src/lib.rs
+@@ -18,7 +18,7 @@ pub use backend::{
+ };
+ pub use buffer::{
+     f32_le_bytes, pack_f32, pack_u32, read_buffer, storage_entry, u32_le_bytes, uniform_entry,
+-    write_buffer_words,
++    write_buffer_words, write_small_parts,
+ };
+ pub use context::{GpuContext, GpuContextError};
+ pub use executor::block_on;

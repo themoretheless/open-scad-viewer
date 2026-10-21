@@ -2,9 +2,14 @@ import type {DirectSketch,Point2} from './directModeling'
 import {authorBrepProfile,booleanBrepProfiles,offsetBrepProfile,transformBrepProfile,validateBrepProfile,type BrepProfile,type BrepProfileBooleanOperation} from './geometry/brepProfile'
 import {callGeometryRust} from './geometry/kernel'
 
+const profileDisplayCache = new WeakMap<BrepProfile, Point2[][]>()
 /** Display samples only. All modelling uses retainedProfile.loops. */
 export function retainedProfileDisplay(profile:BrepProfile):Point2[][] {
- return callGeometryRust<Point2[][]>('brep_profile_display',{loops:profile.loops})
+ const cached = profileDisplayCache.get(profile)
+ if (cached) return cached
+ const display = callGeometryRust<Point2[][]>('brep_profile_display',{loops:profile.loops})
+ profileDisplayCache.set(profile, display)
+ return display
 }
 export function sketchProfile(sketch:DirectSketch):BrepProfile {
  if(sketch.retainedProfile)return validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)
@@ -26,8 +31,10 @@ export function combineSketchProfiles(sketches:DirectSketch[],operation:BrepProf
  if(!['union','difference','intersection'].includes(operation))throw Error('Unsupported sketch profile operation.')
  if(sketches.length<2)throw Error('Select at least two closed profiles.')
  const plane=sketches[0].plane??{origin:[0,0,0],u:[1,0,0],v:[0,1,0]}
- if(sketches.some(s=>{const p=s.plane??{origin:[0,0,0],u:[1,0,0],v:[0,1,0]};return ![p.origin,p.u,p.v].every((a,i)=>a.every((x,j)=>x===[plane.origin,plane.u,plane.v][i][j]))}))throw Error('Exact profile operations require a common sketch plane.')
- const profile=sketches.slice(1).reduce((a,s)=>booleanBrepProfiles(a,sketchProfile(s),operation),sketchProfile(sketches[0]))
+ const po=plane.origin,pu=plane.u,pv=plane.v
+ if(sketches.some(s=>{const p=s.plane??{origin:[0,0,0],u:[1,0,0],v:[0,1,0]},so=p.origin,su=p.u,sv=p.v;return so[0]!==po[0]||so[1]!==po[1]||so[2]!==po[2]||su[0]!==pu[0]||su[1]!==pu[1]||su[2]!==pu[2]||sv[0]!==pv[0]||sv[1]!==pv[1]||sv[2]!==pv[2]}))throw Error('Exact profile operations require a common sketch plane.')
+ let profile=sketchProfile(sketches[0])
+ for(let i=1;i<sketches.length;i++)profile=booleanBrepProfiles(profile,sketchProfile(sketches[i]),operation)
  return withRetainedProfile(sketches[0],profile)
 }
 export const unionSketchProfiles=(sketches:DirectSketch[]):DirectSketch=>combineSketchProfiles(sketches,'union')

@@ -65,17 +65,22 @@ fn extrude_on_plane(
 pub fn recognize_prism(mesh: &Mesh, direction: [f64; 3]) -> Result<StraightPrism> {
     let n = unit(direction)?;
     mesh.validate()?;
-    let p: Vec<[f64; 3]> = mesh.positions.as_chunks::<3>().0.to_vec();
+    let p = mesh.positions.as_chunks::<3>().0;
     let topology = mesh_topology::planar::topology(mesh.view()).map_err(mesh_error)?;
-    let levels: Vec<f64> = p.iter().map(|&q| dot(q, n)).collect();
-    let min = levels.iter().copied().fold(f64::INFINITY, f64::min);
-    let max = levels.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    for &q in p {
+        let v = dot(q, n);
+        min = min.min(v);
+        max = max.max(v);
+    }
     if !min.is_finite()
         || !max.is_finite()
         || max - min < 1e-7
-        || levels
-            .iter()
-            .any(|&v| (v - min).abs() > 1e-5 && (v - max).abs() > 1e-5)
+        || p.iter().any(|&q| {
+            let v = dot(q, n);
+            (v - min).abs() > 1e-5 && (v - max).abs() > 1e-5
+        })
     {
         return Err(error(
             "This extension requires a straight prism; general curved shells are not supported.",
@@ -101,11 +106,10 @@ pub fn recognize_prism(mesh: &Mesh, direction: [f64; 3]) -> Result<StraightPrism
         u: plane.u,
         v: plane.v,
     };
-    let bottom_indices: Vec<usize> = topology.faces[bottom]
-        .triangles
-        .iter()
-        .flat_map(|&t| mesh.indices[t * 3..t * 3 + 3].iter().copied())
-        .collect();
+    let mut bottom_indices = Vec::with_capacity(topology.faces[bottom].triangles.len() * 3);
+    for &t in &topology.faces[bottom].triangles {
+        bottom_indices.extend_from_slice(&mesh.indices[t * 3..t * 3 + 3]);
+    }
     let bottom_mesh = Mesh {
         positions: mesh.positions.clone(),
         indices: bottom_indices,
@@ -121,18 +125,16 @@ pub fn recognize_prism(mesh: &Mesh, direction: [f64; 3]) -> Result<StraightPrism
         let v = sub(q, sketch_plane.origin);
         [dot(v, sketch_plane.u), dot(v, sketch_plane.v)]
     };
-    let mut points: Vec<[f64; 2]> = loops[0].iter().map(|&i| local(p[i])).collect();
+    let mut points = Vec::with_capacity(loops[0].len());
+    points.extend(loops[0].iter().map(|&i| local(p[i])));
     if points.len() > 1 {
         let last = *points.last().unwrap();
         if (points[0][0] - last[0]).hypot(points[0][1] - last[1]) < 1e-7 {
             points.pop();
         }
     }
-    let top_points: Vec<[f64; 2]> = topology.faces[top]
-        .vertices
-        .iter()
-        .map(|&i| local(p[i]))
-        .collect();
+    let mut top_points = Vec::with_capacity(topology.faces[top].vertices.len());
+    top_points.extend(topology.faces[top].vertices.iter().map(|&i| local(p[i])));
     if points.iter().any(|a| {
         !top_points
             .iter()
@@ -154,23 +156,24 @@ pub fn recognize_prism(mesh: &Mesh, direction: [f64; 3]) -> Result<StraightPrism
 /// Concentric inner skin for a tessellated sphere; bridge only the requested openings.
 pub fn sphere_shell(mesh: &Mesh, openings: &[usize], thickness: f64) -> Result<Mesh> {
     mesh.validate()?;
-    let points: Vec<[f64; 3]> = mesh.positions.as_chunks::<3>().0.to_vec();
+    let points = mesh.positions.as_chunks::<3>().0;
     if points.is_empty() {
         return Err(error("Keep at least one closed face."));
     }
-    let center: [f64; 3] = std::array::from_fn(|k| {
-        let min = points.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min);
-        let max = points
-            .iter()
-            .map(|p| p[k])
-            .fold(f64::NEG_INFINITY, f64::max);
-        (min + max) / 2.
-    });
-    let radii: Vec<f64> = points.iter().map(|&p| norm(sub(p, center))).collect();
-    let radius = radii.iter().sum::<f64>() / radii.len() as f64;
-    if radii
+    let mut pmin = [f64::INFINITY; 3];
+    let mut pmax = [f64::NEG_INFINITY; 3];
+    for p in points {
+        for k in 0..3 {
+            pmin[k] = pmin[k].min(p[k]);
+            pmax[k] = pmax[k].max(p[k]);
+        }
+    }
+    let center: [f64; 3] = std::array::from_fn(|k| (pmin[k] + pmax[k]) / 2.);
+    let radius = points.iter().map(|&p| norm(sub(p, center))).sum::<f64>() / points.len() as f64;
+    let r_tol = 1e-5_f64.max(radius * 1e-5);
+    if points
         .iter()
-        .any(|&r| (r - radius).abs() > 1e-5_f64.max(radius * 1e-5))
+        .any(|&p| (norm(sub(p, center)) - radius).abs() > r_tol)
     {
         return Err(error(
             "Shell supports convex planar solids, straight prisms and tessellated spheres; this surface needs a general offset kernel.",
@@ -191,9 +194,10 @@ pub fn sphere_shell(mesh: &Mesh, openings: &[usize], thickness: f64) -> Result<M
     if removed.is_empty() || removed.len() == tri_count {
         return Err(error("Keep at least one closed face."));
     }
-    let mut positions = mesh.positions.clone();
+    let mut positions = Vec::with_capacity(mesh.positions.len() * 2);
+    positions.extend_from_slice(&mesh.positions);
     let scale = (radius - thickness) / radius;
-    for p in &points {
+    for p in points {
         for k in 0..3 {
             positions.push(center[k] + (p[k] - center[k]) * scale);
         }

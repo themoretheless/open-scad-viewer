@@ -34,10 +34,16 @@ pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
             "Boundary agreement budget must be in 1..1000000",
         ));
     }
+    let total_coedges: usize = model
+        .faces
+        .iter()
+        .flat_map(|f| std::iter::once(&f.outer).chain(&f.holes))
+        .map(|&w| model.loops[w].coedges.len())
+        .sum();
     let mut report = Report {
         complete: true,
         cells: 0,
-        uses: Vec::new(),
+        uses: Vec::with_capacity(total_coedges),
     };
     for (face_id, face) in model.faces.iter().enumerate() {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
@@ -97,11 +103,20 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
     if max_work == 0 || max_work > cad_predicates::MAX_WORK {
         return Err(Error::new("BREP_AGREEMENT_BUDGET","Exact boundary work must be in 1..1000000"));
     }
-    let mut report=ExactReport{all_equal:true,joins:Vec::new(),all_joins_exact:true,work:0,uses:Vec::new()};
+    let total_wires: usize = model.faces.iter().map(|f| 1 + f.holes.len()).sum();
+    let total_coedges: usize = model
+        .faces
+        .iter()
+        .flat_map(|f| std::iter::once(&f.outer).chain(&f.holes))
+        .map(|&w| model.loops[w].coedges.len())
+        .sum();
+    let mut report=ExactReport{all_equal:true,joins:Vec::with_capacity(total_wires),all_joins_exact:true,work:0,uses:Vec::with_capacity(total_coedges)};
+    let mut curves = Vec::new();
     let mut jobs=Vec::new();
     for (face_id,face) in model.faces.iter().enumerate() {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
-            let curves=model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>();
+            curves.clear();
+            curves.extend(model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()));
             let closed=nurbs_core::trim_domain::exact_loop_joins(&curves)?;
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
@@ -345,4 +360,66 @@ mod tests {
         assert!(!r.all_equal);
         assert!(r.uses.iter().any(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Different)));
     }
+}
+
+/// Exact evidence and tolerance agreement have separate, explicit work ledgers.
+pub struct QualifiedReport {
+    pub exact: ExactReport,
+    pub agreement: Report,
+}
+/// Recompute exact identities on the actual immutable model first. Equal uses
+/// have zero geometric residual; unsupported/different/indeterminate uses still
+/// require the original whole-interval tolerance check. Never accept endpoints,
+/// a shell flag, or a partial exact report as evidence for an unprocessed use.
+pub fn verify_with_exact(
+    model: &Model,
+    max_cells: usize,
+    max_work: u64,
+) -> Result<QualifiedReport> {
+    if !(1..=1000000).contains(&max_cells) {
+        return Err(Error::new(
+            "BREP_AGREEMENT_BUDGET",
+            "Boundary agreement budget must be in 1..1000000",
+        ));
+    }
+    let exact = verify_exact(model, max_work)?;
+    let mut agreement = Report {
+        complete: true,
+        cells: 0,
+        uses: Vec::with_capacity(exact.uses.len()),
+    };
+    for u in &exact.uses {
+        let mut entry = BoundaryUse {
+            face: u.face,
+            wire: u.wire,
+            coedge: u.coedge,
+            edge: u.edge,
+            status: Status::Unresolved,
+            witness: None,
+            witness_distance: None,
+        };
+        if u.decision
+            .as_ref()
+            .is_some_and(|p| p.outcome == cad_predicates::BezierIdentity::Equal)
+        {
+            entry.status = Status::WithinTolerance;
+        } else if agreement.cells < max_cells {
+            let c = &model.loops[u.wire].coedges[u.coedge];
+            let proof = curve_surface_agreement::verify(
+                &model.edges[c.edge].curve,
+                &c.pcurve,
+                &model.faces[u.face].surface,
+                c.reversed,
+                model.tolerance_mm,
+                (max_cells - agreement.cells).min(100000),
+            )?;
+            agreement.cells += proof.cells;
+            entry.status = proof.status;
+            entry.witness = proof.witness;
+            entry.witness_distance = proof.witness_distance;
+        }
+        agreement.complete &= entry.status == Status::WithinTolerance;
+        agreement.uses.push(entry);
+    }
+    Ok(QualifiedReport { exact, agreement })
 }

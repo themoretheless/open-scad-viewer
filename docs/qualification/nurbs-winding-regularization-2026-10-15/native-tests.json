@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "profile_certificate_unit": 24,
+    "winding_regularization": 5,
+    "planar_cap": 6,
+    "thread_internal": 3,
+    "thread_verified": 3,
+    "gear_profile": 2,
+    "gear_verified_profile": 2
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/profile_certificate.rs": "e97064777d2f410f556aa9c1e5af1813520213791a95efb7a4a12798af8a8476",
+    "crates/brep-core/src/profile_certificate/producer.rs": "3c56ce65924b484e39bde4c6eb6de6e6a92144bc1ba4b7aa4735febafd3908f3",
+    "crates/brep-core/src/profile_certificate/winding.rs": "e7af26832f927ad6848397c28adc88b3b52eae9086e6bad4d05fe0b2fa6c26ae",
+    "crates/brep-core/tests/winding_regularization.rs": "9a9e558564520cd3f91f2dfbdf6f888024140f344ad1b97decc4722350074974"
+  },
+  "scope": "Exact original separated simple UV-wire nonzero-fill regularization; immutable source bindings and independently verified material-left output profiles. No 3D face authoring or general contact regularization.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "ordinaryMaterialLeftPolicyUnchanged": true,
+  "sourceCurvesRetainedOrExactlyParameterNegated": true,
+  "searchFreeReplay": true,
+  "supportingSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false,
+  "fullNativeBaseline": "../nurbs-thread-source-2026-10-15/native-tests.json",
+  "baselineScope": "Full baseline predates this owner refactor; 45 focused native checks and WASM compilation cover this delta."
+}

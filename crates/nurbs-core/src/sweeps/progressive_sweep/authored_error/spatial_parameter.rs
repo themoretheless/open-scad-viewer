@@ -3,17 +3,117 @@
 //! original arc-length phase; sampled chord correction is never assumed exact.
 use super::*;
 
+// A single immutable XYZ source snapshot owns all scalar spans once. Queries
+// then charge every actual original restriction, including point contacts at
+// either side of a knot; unsuccessful work is never credited back.
+struct SourceValues {
+    curve: Curve,
+}
+impl SourceValues {
+    fn new(path: &Curve, budget: usize) -> Result<(usize, Option<Self>)> {
+        path.validate()?;
+        check(
+            path.control_points.iter().all(|p| p.len() == 3),
+            "Source values require XYZ controls",
+        )?;
+        let charge = (path.degree..path.control_points.len())
+            .filter(|&i| path.knots[i] < path.knots[i + 1])
+            .count();
+        if charge > budget {
+            return Ok((0, None));
+        }
+        Ok((
+            charge,
+            Some(Self {
+                curve: path.clone(),
+            }),
+        ))
+    }
+    fn values(
+        &self,
+        traversal: [f64; 2],
+        budget: usize,
+    ) -> Result<vector_certificate::ValuesReport> {
+        check(
+            budget <= 100000
+                && traversal[0] >= 0.
+                && traversal[1] <= 1.
+                && traversal[0] <= traversal[1]
+                && traversal.iter().all(|v| v.is_finite()),
+            "Invalid original source value query",
+        )?;
+        let mut cells = 0;
+        let curve = &self.curve;
+        let result = (|| -> Result<Option<[[f64; 2]; 3]>> {
+            let [a, b] = curve.domain();
+            let source = I::point(a)
+                .add(
+                    I::point(b)
+                        .sub(I::point(a))?
+                        .mul(I::new(traversal[0], traversal[1])?)?,
+                )?
+                .intersect(a, b)?;
+            let mut values = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+            for span in curve.degree..curve.control_points.len() {
+                if curve.knots[span] >= curve.knots[span + 1] {
+                    continue;
+                }
+                let lo = source.lo.max(curve.knots[span]);
+                let hi = source.hi.min(curve.knots[span + 1]);
+                if lo > hi {
+                    continue;
+                }
+                if cells == budget {
+                    return Ok(None);
+                }
+                cells += 1;
+                // Restrict XYZ and the shared denominator in one original
+                // homogeneous blossom, rather than three scalar curve clones.
+                let controls =
+                    crate::curve_distance::restricted_controls(curve, span, I::new(lo, hi)?)?;
+                let hull = |axis: usize| -> Result<I> {
+                    I::new(
+                        controls
+                            .iter()
+                            .map(|p| p[axis].lo)
+                            .fold(f64::INFINITY, f64::min),
+                        controls
+                            .iter()
+                            .map(|p| p[axis].hi)
+                            .fold(f64::NEG_INFINITY, f64::max),
+                    )
+                };
+                let weight = hull(3)?;
+                for axis in 0..3 {
+                    let value = hull(axis)?
+                        .div(weight)?
+                        .add(I::point(curve.control_points[span - curve.degree][axis]))?;
+                    values[axis][0] = values[axis][0].min(value.lo);
+                    values[axis][1] = values[axis][1].max(value.hi);
+                }
+            }
+            Ok(Some(values))
+        })();
+        Ok(vector_certificate::ValuesReport {
+            cells,
+            value: result.unwrap_or(None),
+        })
+    }
+}
+
 pub(super) fn section_interpolation(
     sweep: &Sweep<'_>,
     count: usize,
     steps: usize,
     max_cells: usize,
     shared: Option<&super::super::rmf_transport::OriginalRmfTransportReport>,
+    mut shared_pose: Option<&mut SharedArcPose>,
 ) -> Result<SectionInterpolationReport> {
     let mut out = SectionInterpolationReport {
         status: Status::Unresolved,
         cells: 0,
         error_upper: None,
+        refinement_error_upper: None,
         endpoint_displacement_upper: None,
         cap_endpoint_displacement_upper: None,
         reason: Some("parameter-spatial-rmf-image-unproved"),
@@ -64,6 +164,23 @@ pub(super) fn section_interpolation(
         out.reason = Some("retained-section-basis-correspondence-unproved");
         return Ok(out);
     }
+    if transport.status == Status::Certified {
+        return super::spatial_first::section_interpolation(
+            sweep,
+            count,
+            transport,
+            &qs,
+            &sections,
+            max_cells,
+            out,
+            shared_pose,
+        );
+    }
+    let (work, source_values) = SourceValues::new(sweep.path, max_cells - out.cells)?;
+    out.cells += work;
+    let Some(source_values) = source_values else {
+        return Ok(out);
+    };
     // These outward ratios contain both the mathematical station and the
     // binary64 fraction stored by the constructor. Domain mapping is enclosed
     // independently by the original-coefficient value certificate.
@@ -76,26 +193,29 @@ pub(super) fn section_interpolation(
     let mut caps = [0_f64; 2];
     for i in 0..count {
         let at = station(i)?;
-        let source = vector_certificate::certify_values_traversal(
-            sweep.path,
-            at,
-            max_cells - out.cells,
-            false,
-        )?;
+        let source = if let Some(pose) = shared_pose.as_deref_mut() {
+            pose.source_values(at, || source_values.values(at, max_cells - out.cells))?
+        } else {
+            source_values.values(at, max_cells - out.cells)?
+        };
         out.cells += source.cells;
         let Some(source) = source.value else {
             return Ok(out);
         };
-        let relative = super::super::rmf_transport::relative_values(
-            &transport,
-            sweep.scale,
-            sweep.twist,
-            sweep.affine_laws,
-            &qs,
-            at,
-            at,
-            max_cells - out.cells,
-        )?;
+        let relative = if let Some(pose) = shared_pose.as_deref_mut() {
+            pose.rmf_values(transport, sweep, &qs, at, at, max_cells - out.cells)?
+        } else {
+            super::super::rmf_transport::relative_values(
+                &transport,
+                sweep.scale,
+                sweep.twist,
+                sweep.affine_laws,
+                &qs,
+                at,
+                at,
+                max_cells - out.cells,
+            )?
+        };
         out.cells += relative.cells;
         let Some(values) = relative
             .values
@@ -125,26 +245,38 @@ pub(super) fn section_interpolation(
             continue;
         }
         let interval = [at[0], station(i + 1)?[1]];
-        let source = vector_certificate::certify_values_traversal(
-            sweep.path,
-            interval,
-            max_cells - out.cells,
-            false,
-        )?;
+        let source = if let Some(pose) = shared_pose.as_deref_mut() {
+            pose.source_values(interval, || {
+                source_values.values(interval, max_cells - out.cells)
+            })?
+        } else {
+            source_values.values(interval, max_cells - out.cells)?
+        };
         out.cells += source.cells;
         let Some(source) = source.value else {
             return Ok(out);
         };
-        let relative = super::super::rmf_transport::relative_values(
-            &transport,
-            sweep.scale,
-            sweep.twist,
-            sweep.affine_laws,
-            &qs,
-            interval,
-            interval,
-            max_cells - out.cells,
-        )?;
+        let relative = if let Some(pose) = shared_pose.as_deref_mut() {
+            pose.rmf_values(
+                transport,
+                sweep,
+                &qs,
+                interval,
+                interval,
+                max_cells - out.cells,
+            )?
+        } else {
+            super::super::rmf_transport::relative_values(
+                &transport,
+                sweep.scale,
+                sweep.twist,
+                sweep.affine_laws,
+                &qs,
+                interval,
+                interval,
+                max_cells - out.cells,
+            )?
+        };
         out.cells += relative.cells;
         let Some(values) = relative
             .values
@@ -176,6 +308,59 @@ pub(super) fn section_interpolation(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn immutable_source_values_charge_selected_original_spans_and_discard_partial_xyz() {
+        let path = Curve {
+            degree: 1,
+            knots: vec![2., 2., 3., 4., 5., 5.],
+            control_points: vec![
+                vec![0.; 3],
+                vec![1., 0., 0.],
+                vec![1., 2., 0.],
+                vec![1., 2., 3.],
+            ],
+            weights: vec![1., 2., 0.5, 1.],
+            periodic: false,
+        };
+        let (work, owner) = SourceValues::new(&path, 10000).unwrap();
+        assert_eq!(work, 3);
+        assert!(SourceValues::new(&path, 2).unwrap().1.is_none());
+        let owner = owner.unwrap();
+        for interval in [[0.125, 0.1875], [1. / 3.; 2], [0., 1.], [1.; 2]] {
+            let reference =
+                vector_certificate::certify_values_traversal(&path, interval, 10000, false)
+                    .unwrap();
+            let query = owner.values(interval, 10000).unwrap();
+            assert_eq!(query.value, reference.value);
+            assert!(query.cells > 0 && query.cells <= reference.cells);
+            for budget in [0, query.cells - 1] {
+                let refused = owner.values(interval, budget).unwrap();
+                assert!(refused.value.is_none());
+                assert!(refused.cells <= budget);
+            }
+        }
+        let narrow = owner.values([0.125, 0.1875], 1).unwrap();
+        assert!(narrow.value.is_some());
+        assert_eq!(narrow.cells, 1);
+        let mut shared = SharedArcPose::default();
+        let interval = [0.125, 0.1875];
+        let refused = shared
+            .source_values(interval, || owner.values(interval, 0))
+            .unwrap();
+        assert!(refused.value.is_none());
+        let first = shared
+            .source_values(interval, || owner.values(interval, 1))
+            .unwrap();
+        assert_eq!(first.value, narrow.value);
+        assert_eq!(first.cells, 1);
+        let second = shared
+            .source_values(interval, || {
+                panic!("Certified shared source query must not run again")
+            })
+            .unwrap();
+        assert_eq!(second.value, first.value);
+        assert_eq!(second.cells, 0);
+    }
     #[test]
     fn arc_spatial_rmf_multiple_contours_share_original_transport_and_total_work() {
         let ring = [
@@ -360,19 +545,22 @@ mod tests {
                 .status,
             Status::Unresolved
         );
-        let request = value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale,"twist":twist,
-            "axis_scale":axes,"center_law":center,"normal":[1.,0.,0.],"orientation":"rmf","spacing":"parameter",
-            "initial_sections":129,"max_sections":129,"max_deviation":0.25,"preview_sections":129,"transport_steps":4096,"maxCells":100000,"maxProducts":1000000});
-        let public = crate::transport::dispatch(request).unwrap();
-        assert_eq!(public["continuousBound"], value_codec::json!(true));
-        assert_eq!(public["errorUpper"].as_f64(), Some(upper));
-        assert_eq!(public["solidCertified"], value_codec::json!(false));
-        assert_eq!(
-            public["scope"],
-            value_codec::json!(
-                "retained-patches-relative-to-original-spatial-rmf-parameter-transport"
-            )
-        );
+        #[cfg(feature = "transport")]
+        {
+            let request = value_codec::json!({"op":"surface_progressive_sweep_spatial_rmf_error","profile":profile,"path":path,"scale":scale,"twist":twist,
+                "axis_scale":axes,"center_law":center,"normal":[1.,0.,0.],"orientation":"rmf","spacing":"parameter",
+                "initial_sections":129,"max_sections":129,"max_deviation":0.25,"preview_sections":129,"transport_steps":4096,"maxCells":100000,"maxProducts":1000000});
+            let public = crate::transport::dispatch(request).unwrap();
+            assert_eq!(public["continuousBound"], value_codec::json!(true));
+            assert_eq!(public["errorUpper"].as_f64(), Some(upper));
+            assert_eq!(public["solidCertified"], value_codec::json!(false));
+            assert_eq!(
+                public["scope"],
+                value_codec::json!(
+                    "retained-patches-relative-to-original-spatial-rmf-parameter-transport"
+                )
+            );
+        }
         // Independent Bernstein path, RK4 Bishop frame and fine polygonal
         // arc phase. Numerical comparisons validate, but never admit a body.
         let position = |u: f64| -> V {

@@ -36,10 +36,14 @@ export interface CsrStiffnessMatrix {
 export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
   const numNodes = model.nodesMm.length
   const numDofs = numNodes * 3
-  const rowMaps: Map<number, number>[] = Array.from({ length: numDofs }, () => new Map())
+  const rowMaps: (Map<number, number> | undefined)[] = new Array(numDofs)
 
   function addEntry(r: number, c: number, val: number) {
-    const map = rowMaps[r]!
+    let map = rowMaps[r]
+    if (!map) {
+      map = new Map()
+      rowMaps[r] = map
+    }
     map.set(c, (map.get(c) ?? 0) + val)
   }
 
@@ -63,16 +67,23 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
       throw new Error('Zero-length truss member')
     }
 
-    const dir = [dx / length, dy / length, dz / length]
-    const kAxial = (mem.youngMpa * mem.areaMm2) / length
+    const invLen = 1 / length
+    const d0 = dx * invLen
+    const d1 = dy * invLen
+    const d2 = dz * invLen
+    const kAxial = (mem.youngMpa * mem.areaMm2) * invLen
+    const baseA = na * 3
+    const baseB = nb * 3
 
     for (let i = 0; i < 3; i++) {
+      const di = i === 0 ? d0 : i === 1 ? d1 : d2
+      const dofA_i = baseA + i
+      const dofB_i = baseB + i
       for (let j = 0; j < 3; j++) {
-        const kij = kAxial * dir[i]! * dir[j]!
-        const dofA_i = na * 3 + i
-        const dofA_j = na * 3 + j
-        const dofB_i = nb * 3 + i
-        const dofB_j = nb * 3 + j
+        const dj = j === 0 ? d0 : j === 1 ? d1 : d2
+        const kij = kAxial * di * dj
+        const dofA_j = baseA + j
+        const dofB_j = baseB + j
 
         addEntry(dofA_i, dofA_j, kij)
         addEntry(dofB_i, dofB_j, kij)
@@ -85,36 +96,57 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
   const freeMask = new Uint8Array(numDofs)
   let freeDofs = 0
   for (let n = 0; n < numNodes; n++) {
-    const r = model.restrained[n] ?? [false, false, false]
-    for (let d = 0; d < 3; d++) {
-      if (!r[d]) {
-        freeMask[n * 3 + d] = 1
-        freeDofs++
-      }
+    const r = model.restrained[n]
+    const base = n * 3
+    if (!r) {
+      freeMask[base] = 1
+      freeMask[base + 1] = 1
+      freeMask[base + 2] = 1
+      freeDofs += 3
+    } else {
+      if (!r[0]) { freeMask[base] = 1; freeDofs++ }
+      if (!r[1]) { freeMask[base + 1] = 1; freeDofs++ }
+      if (!r[2]) { freeMask[base + 2] = 1; freeDofs++ }
     }
+  }
+
+  let totalNnz = 0
+  for (let r = 0; r < numDofs; r++) {
+    const map = rowMaps[r]
+    if (map) totalNnz += map.size
   }
 
   const rowPtr = new Uint32Array(numDofs + 1)
-  const colList: number[] = []
-  const valList: number[] = []
+  const colIdx = new Uint32Array(totalNnz)
+  const values = new Float64Array(totalNnz)
   const diag = new Float64Array(numDofs)
+  let writePos = 0
 
   for (let r = 0; r < numDofs; r++) {
-    rowPtr[r] = colList.length
-    const entries = [...rowMaps[r]!.entries()].sort((a, b) => a[0] - b[0])
-    for (const [c, v] of entries) {
-      colList.push(c)
-      valList.push(v)
+    rowPtr[r] = writePos
+    const map = rowMaps[r]
+    if (!map || map.size === 0) continue
+    const rowCols = colIdx.subarray(writePos, writePos + map.size)
+    let k = 0
+    for (const c of map.keys()) {
+      rowCols[k++] = c
+    }
+    rowCols.sort()
+    for (let i = 0; i < rowCols.length; i++) {
+      const c = rowCols[i]!
+      const v = map.get(c)!
+      values[writePos + i] = v
       if (r === c) diag[r] = v
     }
+    writePos += rowCols.length
   }
-  rowPtr[numDofs] = colList.length
+  rowPtr[numDofs] = writePos
 
   return {
     numDofs,
     rowPtr,
-    colIdx: new Uint32Array(colList),
-    values: new Float64Array(valList),
+    colIdx,
+    values,
     diag,
     freeMask,
     freeDofs,

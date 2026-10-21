@@ -206,8 +206,10 @@ impl<'a> Sweep<'a> {
                 [dot(q, initial), dot(q, side), dot(q, coordinate_axis)]
             })
             .collect();
-        let mut normals = vec![initial];
-        let mut lengths = vec![0.];
+        let mut normals = Vec::with_capacity(count);
+        normals.push(initial);
+        let mut lengths = Vec::with_capacity(count);
+        lengths.push(0.);
         for i in 1..count {
             let (previous, previous_tangent) = samples[i - 1];
             let (position, tangent) = samples[i];
@@ -323,25 +325,36 @@ impl<'a> Sweep<'a> {
             };
             let normal = rotate(normals[i], tangent, twist + correction * lengths[i] / total);
             let side = cross(tangent, normal);
-            let mut curve = self.profile.clone();
-            curve.control_points = coordinates
+            let s_pos = samples[i].0;
+            let simple = self.affine_laws.is_none() && contact_anchor.is_none();
+            let control_points = coordinates
                 .iter()
                 .map(|q| {
-                    (0..3)
-                        .map(|k| {
-                            if self.affine_laws.is_none() && contact_anchor.is_none() {
-                                return samples[i].0[k]
-                                    + scale
-                                        * (q[0] * normal[k] + q[1] * side[k] + q[2] * tangent[k]);
-                            }
-                            samples[i].0[k]
-                                + contact_fit * (scale * axes[0] * q[0] + center[0]) * normal[k]
-                                + (scale * axes[1] * q[1] + center[1]) * side[k]
-                                + (scale * axes[2] * q[2] + center[2]) * tangent[k]
-                        })
-                        .collect()
+                    if simple {
+                        vec![
+                            s_pos[0] + scale * (q[0] * normal[0] + q[1] * side[0] + q[2] * tangent[0]),
+                            s_pos[1] + scale * (q[0] * normal[1] + q[1] * side[1] + q[2] * tangent[1]),
+                            s_pos[2] + scale * (q[0] * normal[2] + q[1] * side[2] + q[2] * tangent[2]),
+                        ]
+                    } else {
+                        let c0 = contact_fit * (scale * axes[0] * q[0] + center[0]);
+                        let c1 = scale * axes[1] * q[1] + center[1];
+                        let c2 = scale * axes[2] * q[2] + center[2];
+                        vec![
+                            s_pos[0] + c0 * normal[0] + c1 * side[0] + c2 * tangent[0],
+                            s_pos[1] + c0 * normal[1] + c1 * side[1] + c2 * tangent[1],
+                            s_pos[2] + c0 * normal[2] + c1 * side[2] + c2 * tangent[2],
+                        ]
+                    }
                 })
                 .collect();
+            let curve = Curve {
+                degree: self.profile.degree,
+                knots: self.profile.knots.clone(),
+                control_points,
+                weights: self.profile.weights.clone(),
+                periodic: self.profile.periodic,
+            };
             curve.validate()?;
             curves.push(curve);
         }

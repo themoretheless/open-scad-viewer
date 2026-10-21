@@ -18,10 +18,10 @@ pub(super) fn decode(dtype: LowDtype, bits: u16) -> f32 {
             f64::NAN
         }
     } else if exponent == 0 {
-        f64::from(fraction) * 2_f64.powi(1 - bias - fraction_bits)
+        f64::from(fraction) * f64::from_bits(((1023 + 1 - bias - fraction_bits) as u64) << 52)
     } else {
-        (1.0 + f64::from(fraction) / 2_f64.powi(fraction_bits))
-            * 2_f64.powi(i32::from(exponent) - bias)
+        (1.0 + f64::from(fraction) * f64::from_bits(((1023 - fraction_bits) as u64) << 52))
+            * f64::from_bits(((1023 + i32::from(exponent) - bias) as u64) << 52)
     };
     (if bits & 0x8000 != 0 { -value } else { value }) as f32
 }
@@ -48,9 +48,12 @@ fn check_casts<B: TensorLowBackend>(b: &B, dtype: LowDtype) -> Result<(), B::Err
     let transposed = b.permute_low(&tensor, &[1, 0])?;
     let copied = b.materialize_low(&transposed)?;
     let flattened = b.reshape_low(&copied, shape(&[65536]))?;
-    let transposed_bits: Vec<u16> = (0..256)
-        .flat_map(|x| (0..256).map(move |y| (y * 256 + x) as u16))
-        .collect();
+    let mut transposed_bits = Vec::with_capacity(65536);
+    for x in 0..256 {
+        for y in 0..256 {
+            transposed_bits.push((y * 256 + x) as u16);
+        }
+    }
     assert_eq!(b.read_low_bits(&flattened)?, transposed_bits);
     let restored = b.permute_low(&copied, &[1, 0])?;
     assert_cast(&b.read_f32(&b.cast_to_f32(&restored)?)?, &expected, dtype);

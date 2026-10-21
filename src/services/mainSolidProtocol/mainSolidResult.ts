@@ -1,3 +1,7 @@
+import {validOffsetEnvelope} from './results/offsetEnvelope'
+import {validMinkowskiResult} from './results/minkowski'
+import {validG2RunoutResult} from '../geometricG2'
+import type {AssemblyFrameExport} from '../assemblyFrameExport'
 import type { CurveMeasurement, FaceDistanceResult, PointMeasurement, ShellDistanceResult } from '../solidMeasurements'
 import type { DirectDocument } from '../directModeling'
 import type { DisplayMesh } from '../solidDisplayCache'
@@ -5,7 +9,7 @@ import { finite, isNumericSequence, vector } from '../mainSolidProtocol'
 import type { MainSolidExpectation, MainSolidResults } from '../mainSolidProtocol'
 import type { NurbsCurve, NurbsCurveDistance } from '../nurbsCurve'
 import type { NurbsSurfaceDistance } from '../nurbsSurface'
-import type { OffsetContactBand, OffsetContactTangent, OffsetEnvelope, OffsetSourceBoundary, TrimmedOffsetContactBand } from '../nurbsSurfaceOffset'
+import type { OffsetContactBand, OffsetContactTangent, OffsetSourceBoundary, TrimmedOffsetContactBand } from '../nurbsSurfaceOffset'
 import type { PolygonMesh } from '../geometry/polygon'
 import type { SolidBooleanResult } from '../solidBoolean'
 import type { SolidBrepToolResult } from '../solidBrepTool'
@@ -36,45 +40,16 @@ import { validateProfileIntersectionReport } from '../geometry/profileIntersecti
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
   if(job.kind==='sourceBodyRestore')return validSourceBody(job,value)
   if (!value || typeof value!=='object') return false
+  if(job.kind==='g2RunoutSurface')return validG2RunoutResult(value,job.maxCells,job.maxExactWork,job.maxPatches,job.tolerances)
+if(job.kind==='minkowski3d')return validMinkowskiResult(job,value,document=>mainSolidResult({kind:'extrusion'},document))
+if(job.kind==='animationFrames'){const v=value as AssemblyFrameExport;return v?.frames?.length>0&&v.frames.length<=300&&finite(v.fps)&&v.fps>0&&v.width===960&&v.height===640&&v.frames.every(f=>finite(f.time)&&typeof f.svg==='string'&&f.svg.startsWith('<svg'))}
+if(job.kind==='animationSample'){const v=value as MainSolidResults['animationSample'];return v?.document?.version===1&&Array.isArray(v.document.bodies)&&Array.isArray(v.document.sketches)&&finite(v.camera?.yaw)&&finite(v.camera?.pitch)}
+if(job.kind==='drawingPdf')return value instanceof Uint8Array&&value.length>0&&value.length<=32*1024*1024
+if(job.kind==='drawingSheets')return Array.isArray(value)&&value.length>0&&value.length<=40&&value.every(s=>s&&typeof s.svg==='string'&&s.svg.length<32*1024*1024&&finite(s.width)&&finite(s.height)&&typeof s.title==='string')
+
   if(job.kind==='offsetContactQualification')return validContactQualification(job,value)
   if(job.kind==='offsetEnvelopeFit')return validEnvelopeFit(job,value)
-  if(job.kind==='offsetEnvelope') {
-    const v=value as OffsetEnvelope
-    if(!Number.isSafeInteger(job.maxCells)||job.maxCells<1||job.maxCells>1_000_000
-      ||v.method!=='interval-rolling-ball-envelope'||v.scope!=='constant-radius-local-contact-band'
-      ||v.radiusMm!==job.radiusMm||!finite(v.radiusMm)||v.radiusMm<=0
-      ||v.wholeCurveComplete!==false||v.finiteNurbsPatchProven!==false||v.trimMembershipProven!==false
-      ||v.embeddingProven!==false||v.topologyAuthority!==false||typeof v.envelopeRegularityProven!=='boolean'
-      ||!mainSolidResult(job.tangent,v.centerTangent)||!Array.isArray(v.cells)
-      ||!Number.isSafeInteger(v.visitedCells)||v.visitedCells<0||v.visitedCells>job.maxCells)return false
-    if(v.cells.length===0)return v.visitedCells===0&&!v.envelopeRegularityProven
-      &&(v.reason==='center-regularity-unproven'?!v.centerTangent.centerRegularityProven:
-        v.centerTangent.centerRegularityProven&&['source-jet-enclosure-unresolved','antipodal-contact-unresolved','arc-weight-unresolved'].includes(v.reason))
-    if(!v.centerTangent.centerRegularityProven||v.visitedCells!==2*v.cells.length-1)return false
-    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
-    let end=0,regular=true
-    for(const c of v.cells) {
-      if(!c||!interval(c.arcParameter)||c.arcParameter[0]!==end||c.arcParameter[1]<=end||c.arcParameter[1]>1
-        ||!arrayOf(c.imageIntervalsMm,3,interval)||!arrayOf(c.centerDerivativeIntervalsMm,3,interval)
-        ||!arrayOf(c.arcDerivativeIntervalsMm,3,interval)||!interval(c.areaSpeedIntervalMm2)
-        ||c.areaSpeedIntervalMm2[0]<0||typeof c.regularityProven!=='boolean'
-        ||c.regularityProven!==(c.areaSpeedIntervalMm2[0]>0))return false
-      if(c.regularityProven&&(c.centerDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)
-        ||c.arcDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)))return false
-      if(c.regularityProven) {
-        const mul=(a:number[],b:number[])=>{const p=[a[0]*b[0],a[0]*b[1],a[1]*b[0],a[1]*b[1]];return [Math.min(...p),Math.max(...p)]}
-        const crossIncludesZero=[0,1,2].every(k=>{
-          const a=mul(c.centerDerivativeIntervalsMm[(k+1)%3],c.arcDerivativeIntervalsMm[(k+2)%3])
-          const b=mul(c.centerDerivativeIntervalsMm[(k+2)%3],c.arcDerivativeIntervalsMm[(k+1)%3])
-          return a[0]-b[1]<=0&&a[1]-b[0]>=0
-        })
-        if(crossIncludesZero)return false
-      }
-      end=c.arcParameter[1];regular&&=c.regularityProven
-    }
-    return end===1&&v.envelopeRegularityProven===regular
-      &&v.reason===(regular?'regular-local-envelope':'envelope-regularity-unproven')
-  }
+  if(job.kind==='offsetEnvelope')return validOffsetEnvelope(job,value,mainSolidResult)
   if(job.kind==='offsetContactTangent') {
     const v=value as OffsetContactTangent,unique=v.contactStatus==='continuous-branch'
     if(v.method!=='interval-offset-center-tangent'||v.scope!=='constant-offset-contact-band'
@@ -390,6 +365,10 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
   }
   if(job.kind==='surfaceBuild') {
     const v=value as MainSolidResults['surfaceBuild'],r=v.report
+    if(job.runoutId&&v.document){
+      const patches=(v.document.surfaces??[]).filter(s=>s.id===job.runoutId||s.id.startsWith(job.runoutId+':')).map(s=>s.surface)
+      if(!validG2RunoutResult({patches,report:v.runoutReport},100000,1000000,256)||!v.runoutReport?.withinTolerance)return false
+    }
     return typeof v.error==='string'&&(v.document===null?v.error.length>0:v.error===''&&mainSolidResult({kind:'extrusion'},v.document))
       &&(r===null||!!r&&typeof r.accepted==='boolean'&&finite(r.sampledControlDeviation)&&r.sampledControlDeviation>=0&&finite(r.budget)&&r.budget>=0
         &&Number.isInteger(r.stations)&&r.stations>0&&Number.isInteger(r.sections)&&r.sections>0&&typeof r.continuousBound==='boolean'&&r.method==='double-reflection-fourfold-section-refinement'

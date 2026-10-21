@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {composeSweepBoundaryCertificate} from '../src/services/sweepBoundaryCertificate'
 
@@ -90,7 +91,7 @@ it('carries the nonparallel cap budget and explicit chart work through Rush and 
  expect(node).toMatchObject({retained_wall_max_injectivity_cells:10000})
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({continuousBound:true,boundaryCertificate:{withinBudget:true,scope:'boundary-set-hausdorff'},capParallelism:{parallel:[true,false]}})
- const payload=JSON.parse(built.nativeGeometry!.geometryJson)
+ const payload=readNativeGeometryData(built.nativeGeometry!)
  expect(payload.sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
  expect(payload.sweepEvidence.volume).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true},orientations:[{outward:true,expectedOutward:true}]})
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')

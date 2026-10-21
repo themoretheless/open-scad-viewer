@@ -2,13 +2,26 @@
 
 /// Replace known secrets with `[redacted]` (case-sensitive exact substrings).
 pub fn scrub_secrets(message: &str, secrets: &[&str]) -> String {
-    let mut out = message.to_owned();
-    for secret in secrets {
-        if secret.is_empty() {
-            continue;
+    if !secrets.iter().any(|s| !s.is_empty() && message.contains(s)) {
+        return message.to_owned();
+    }
+    let mut out = String::with_capacity(message.len());
+    let mut i = 0;
+    while i < message.len() {
+        let rest = &message[i..];
+        let mut matched_len = 0;
+        for &secret in secrets {
+            if !secret.is_empty() && rest.starts_with(secret) && secret.len() > matched_len {
+                matched_len = secret.len();
+            }
         }
-        if out.contains(secret) {
-            out = out.replace(secret, "[redacted]");
+        if matched_len > 0 {
+            out.push_str("[redacted]");
+            i += matched_len;
+        } else {
+            let ch = rest.chars().next().unwrap();
+            out.push(ch);
+            i += ch.len_utf8();
         }
     }
     out

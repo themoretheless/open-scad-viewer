@@ -99,6 +99,7 @@ pub fn certify(
             planes: Some(planes.into_iter().map(|p| p.map(encode)).collect()),
             closing_normal: closing.map(encode),
             holonomy_angle: angle,
+            distribute_holonomy:true,
             cumulative_lengths: Some(lengths.into_iter().map(|v| [v.lo, v.hi]).collect()),
             reason: None,
             sites: Some(points.to_vec()),

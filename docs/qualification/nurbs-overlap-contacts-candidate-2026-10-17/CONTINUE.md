@@ -1,0 +1,7 @@
+# Original common-carrier third-source contacts
+
+OwnedOriginalOverlapContacts binds one original common-image component to two complete source/third-curve event censuses. Both third-source definitions must be identical. Exact original natural-parameter comparisons select contacts on the closed common interval, including reversed clocks and algebraic cuts. Equal exact third-source parameters establish spatial correspondence. Every selected traversal must have one unique mate, matching endpoint provenance, and every mate must be used once. Output contacts are ordered by increasing common-image coordinate. Comparison work is bounded; budget refusal is not an empty contact set. Replay detects omission, endpoint relabeling, node rebinding and swapped source owners.
+
+Fresh gates: 105 profile tests, 15 integrations across two binaries, WASM compilation. New regressions cover two interior cuts on quadratic/reversed-linear sources, irrational natural parameters, common endpoint contact and rejection of unrelated third sources. Prior full suites remain historical.
+
+Still open: third source coincident with the common component, grouping multiple third-source traversals at one physical cut, a global multi-contributor subdivision/dictionary and graph/winding integration. The global contact atlas still refuses overlaps. Mixed shore/source chart cuts and the general surface-intersection atlas remain unfinished. Catalog stays 198/200. Rust remains isolated; cumulative patch applies to the verified baseline, not after previous patches.

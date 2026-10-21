@@ -1,4 +1,10 @@
-import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../rushGraphNurbsKernel'
+import {buildProgressiveSweepNode} from './buildProgressiveSweepNode'
+import {buildDirectMiterNode} from './buildDirectMiterNode'
+import {readSweepCorrections} from './readSweepCorrections'
+import {createDirectMiterOwnedBody,reconstructCertifiedProgressiveStations,type ProgressiveBrepBody} from '../geometry/brep'
+import type {StationResolver,StationArguments} from '../rushGraphNurbsKernel'
+import {createNativeDirectMiterGeometry} from '../geometry/brep'
+import { PendingProgressiveStations, PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../rushGraphNurbsKernel'
 import type { BodyArguments, BodyResolver, Mesh, MiterArguments, MiterResolver, OwnNurbsRequest, SweepArguments, SweepResolver, Value } from '../rushGraphNurbsKernel'
 import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, createBrepCylinder, createBrepFrustum, createBrepGear, createBrepSphere, createBrepTorus, createBrepTube, createCappedBrepLoftSurfaces, createCappedBrepLoftWithCaps, createMiterBrepProfileBody, createNaturalBrepSectionLoft, createProgressiveBrepProfileBody, createProgressiveMiterBrepProfileBody, extrudeBrepCurves, extrudeBrepPolygon, filletNurbsBrepEdges, reconstructCertifiedMiterStations, revolveBrepProfile, tessellateNurbsBrep, transformCertifiedMiterBody, transformNurbsBrep } from '../geometry/brep'
 import type { CertifiedMiterBoundaryOwner, NurbsBrep } from '../geometry/brep'
@@ -21,7 +27,7 @@ import { tessellateSubdivision } from '../geometry/subdivision'
 
 import { buildNativePrimitive } from './buildNativePrimitive'
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]
-export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: OwnNurbsRequest, resolveSweep?: SweepResolver, resolveBody?: BodyResolver, resolveMiter?: MiterResolver) {
+export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: OwnNurbsRequest, resolveSweep?: SweepResolver, resolveBody?: BodyResolver, resolveMiter?: MiterResolver, resolveStations?:StationResolver) {
     const cache = new Map<string, Value>()
     const needCurve = (key: string) => { const result = get(key); if (result.kind !== 'curve')
         throw new Error(`Expected curve at ${key}.`); return result.data; };
@@ -32,6 +38,7 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
     const needBrep=(key:string):NurbsBrep=>{const v=get(key);if(v.kind!=='brep')throw new Error('Expected a B-rep body');return v.data;};
     const needSdf=(key:string):SdfField=>{const v=get(key);if(v.kind!=='sdf')throw new Error('Expected SDF field');return v.data;};
     const reconstructionReports:Record<string,unknown>={};
+    const progressiveBodySources=new Map<string,ProgressiveBrepBody>()
     const miterSources=new Map<string,CertifiedMiterBoundaryOwner>()
     const exactMiterPlacements=new Map<string,{body:CertifiedMiterBoundaryOwner;quantum:number;maxWork:number}>()
     const constructionReports:Record<string,object>={};
@@ -233,21 +240,9 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
                 case 'two_guide_sweep': result={kind:'surface',data:twoGuideSweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]),needCurve(n.inputs[2]),n.width,n.axis_y,n.axis_z)};break;
                 case 'scaled_sweep': result={kind:'surface',data:scaledSweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]),n.scale,n.origin)};break;
                 case 'progressive_sweep': {
-                    if(n.orientation==='authored'&&(!n.frame_axis||!n.frame_normal))throw new Error('Authored progressive sweep requires frame_axis and frame_normal');
-                    if((n.contact_parameter!==undefined&&!n.orientation_guide)||(n.contact_profile!==undefined&&n.contact_parameter===undefined))throw new Error('Contact anchor requires orientation_guide and contact_parameter');
-                    const frameOptions=n.orientation==='authored'?{orientation:'authored' as const,frameAxis:n.frame_axis!,frameNormal:n.frame_normal!}:{orientation:n.orientation};
-                    const sweep=(...args:SweepArguments)=>resolveSweep?resolveSweep(key,args):progressiveSweepNurbsProfiles(...args);
-                    const builtSweep=sweep(n.inputs.slice(0,-1).map(needCurve),needCurve(n.inputs[n.inputs.length-1]!),n.scale,n.twist,{...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide),...(n.contact_parameter!==undefined?{contactAnchor:{profileIndex:n.contact_profile??0,parameter:n.contact_parameter}}:{})}:{}),axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,...frameOptions,spacing:n.spacing,initialSections:n.initial_sections,maxSections:n.max_sections,maxDeviation:n.max_deviation,lengthTolerance:n.length_tolerance,lengthMaxCells:n.length_max_cells,rmfTransportSteps:n.rmf_transport_steps,errorMaxCells:n.error_max_cells,errorMaxProducts:n.error_max_products});
-                    if(!builtSweep.report.accepted||!builtSweep.patches){
-                        const report=builtSweep.report;
-                        if(n.rmf_transport_steps!==undefined&&!report.continuousBound)throw new Error("Progressive sweep continuous retained-patch error is unproved at the configured RMF work budget");
-                        const error=report.continuousBound||report.knownProfileErrorUpper!=null
-                            ?`continuous retained-patch error ${report.continuousErrorUpper??report.knownProfileErrorUpper}`
-                            :`continuous retained-patch error or refinement ${report.sampledControlDeviation}`;
-                        throw new Error(`Progressive sweep ${error}mm exceeds ${report.budget}mm at ${report.sections} sections`);
-                    }
+                    const builtSweep=buildProgressiveSweepNode(n,needCurve,resolveSweep);
                     constructionReports[key]={...builtSweep.report,levels:builtSweep.levels,profilePatchRanges:builtSweep.profilePatchRanges};
-                    result={kind:'patches',data:{patches:builtSweep.patches,faceIds:builtSweep.patches.map((_,i)=>i)}};break;
+                    result={kind:'patches',data:{patches:builtSweep.patches!,faceIds:builtSweep.patches!.map((_,i)=>i)}};break;
                 }
                 case 'profile_sweep': {
                     const sweep=checkedProfileSweepNurbsSurface(needCurve(n.inputs[0]),needCurve(n.inputs[1]),n.scale,n.normal,n.sections,n.max_deviation);
@@ -292,6 +287,15 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
                     if(n.circle_correction_tolerance!==undefined||n.cap_correction_tolerance!==undefined||(body.sectionCorrection?.reason==='automatic-bounded-cap-planarity'||body.sectionCorrection?.reason==='bounded-periodic-profile-interpolation'||body.sectionCorrection?.reason==='bounded-rational-periodic-profile-interpolation'))exactMiterPlacements.set(key,{body,quantum:n.circle_correction_quantum??n.cap_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??n.cap_correction_max_work??1000000});
                     result={kind:'brep',data:body.model};break;
                 }
+                case 'brep_smooth_sweep_stations': {
+                    needBrep(n.input);
+                    const source=progressiveBodySources.get(n.input);
+                    if(!source)throw new Error('Missing owned progressive station source');
+                    const args:StationArguments=[source,{quantum:n.quantum,wallTolerance:n.wall_tolerance,maxWork:n.max_work,smoothnessMaxWork:n.smoothness_max_work}];
+                    const body=resolveStations?resolveStations(key,args):reconstructCertifiedProgressiveStations(...args);
+                    constructionReports[key]=body;
+                    result={kind:'brep',data:body.model};break;
+                }
                 case 'brep_smooth_miter_stations': {
                     needBrep(n.input);
                     const source=miterSources.get(n.input);
@@ -301,7 +305,11 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
                     exactMiterPlacements.set(key,{body,quantum:n.quantum,maxWork:n.max_work});
                     result={kind:'brep',data:body.model};break;
                 }
-                case 'brep_miter_sweep': {if(n.cap_correction_tolerance===undefined&&(n.cap_correction_quantum!==undefined||n.cap_correction_max_work!==undefined))throw new Error('Miter cap correction requires a displacement tolerance');const body=createMiterBrepProfileBody(n.loops.map(wire=>wire.map(needCurve)),n.points,n.normal,n.miter_limit,n.closed,n.cap_correction_tolerance===undefined?undefined:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000});constructionReports[key]=body.report;result={kind:'brep',data:body.model};break;}
+                case 'brep_miter_sweep': {
+                    const {body,placement}=buildDirectMiterNode(n,needCurve);
+                    if(placement){miterSources.set(key,placement.body);exactMiterPlacements.set(key,placement);}
+                    constructionReports[key]=body.report;result={kind:'brep',data:body.model};break;
+                }
                 case 'brep_natural_loft': result={kind:'brep',data:createNaturalBrepSectionLoft(n.sections.map(s=>s.map(r=>r.map(needCurve))),n.parameters)};break;
                 case 'brep_capped_loft': {
                     const start=n.start.map(r=>r.map(needCurve)),end=n.end.map(r=>r.map(needCurve)),sides=n.sides.map(r=>r.map(needSurface));
@@ -406,14 +414,15 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
                     result={kind:'brep',data:extrudeBrepPolygon(profile.data.outer as [number,number][],Math.min(0,n.height),Math.max(0,n.height),profile.data.holes as [number,number][][])};break;
                 }
                 case 'brep_progressive_sweep': {
+                    const corrections=readSweepCorrections(n);
                     if(n.orientation==='authored'&&(!n.frame_axis||!n.frame_normal))throw new Error('Authored progressive body requires frame_axis and frame_normal');
                     if((n.contact_parameter!==undefined&&!n.orientation_guide)||(n.contact_profile!==undefined&&n.contact_parameter===undefined))throw new Error('Contact anchor requires orientation_guide and contact_parameter');
-                    if(n.cap_correction_tolerance===undefined&&(n.cap_correction_quantum!==undefined||n.cap_correction_max_work!==undefined))throw new Error('Cap correction requires a displacement tolerance');
                     const frameOptions=n.orientation==='authored'?{orientation:'authored' as const,frameAxis:n.frame_axis!,frameNormal:n.frame_normal!}:{orientation:n.orientation};
                     const makeBody=(...args:BodyArguments)=>resolveBody?resolveBody(key,args):createProgressiveBrepProfileBody(...args);
-                    const body=makeBody(n.loops.map(wire=>wire.map(needCurve)),needCurve(n.inputs[0]),n.scale,n.twist,{...(n.cap_correction_tolerance===undefined?{}:{capCorrection:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000}}),...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide),...(n.contact_parameter!==undefined?{contactAnchor:{profileIndex:n.contact_profile??0,parameter:n.contact_parameter}}:{})}:{}),axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,...frameOptions,spacing:n.spacing,initialSections:n.initial_sections,maxSections:n.max_sections,maxDeviation:n.max_deviation,lengthTolerance:n.length_tolerance,lengthMaxCells:n.length_max_cells,rmfTransportSteps:n.rmf_transport_steps,errorMaxCells:n.error_max_cells,errorMaxProducts:n.error_max_products});
+                    const body=makeBody(n.loops.map(wire=>wire.map(needCurve)),needCurve(n.inputs[0]),n.scale,n.twist,{annularCaps:{automatic:true},...corrections,...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide),...(n.contact_parameter!==undefined?{contactAnchor:{profileIndex:n.contact_profile??0,parameter:n.contact_parameter}}:{})}:{}),axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,...frameOptions,spacing:n.spacing,initialSections:n.initial_sections,maxSections:n.max_sections,maxDeviation:n.max_deviation,lengthTolerance:n.length_tolerance,lengthMaxCells:n.length_max_cells,rmfTransportSteps:n.rmf_transport_steps,errorMaxCells:n.error_max_cells,errorMaxProducts:n.error_max_products});
+                    progressiveBodySources.set(key,body);
                     constructionReports[key]={...body.approximation.report,levels:body.approximation.levels,profilePatchRanges:body.approximation.profilePatchRanges,globalEmbeddingCertified:body.globalEmbeddingCertified,
-                        bodyBoundaryEvidence:{capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,
+                        bodyBoundaryEvidence:{capSelectionExactWork:body.capSelectionExactWork,capRepresentation:body.capRepresentation,capFaceGroups:body.capFaceGroups,capFaces:body.capFaces,planarCapFaces:body.planarCapFaces,retainedAnnularFilling:body.retainedAnnularFilling,retainedSmoothness:body.retainedSmoothness,profileCorrectionErrorUpper:body.profileCorrectionErrorUpper,profileSmoothness:body.profileSmoothness,capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,
                             bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts,
                             filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,
                             boundaryContinuousBound:body.boundaryContinuousBound,boundaryErrorScope:body.boundaryErrorScope,
@@ -475,7 +484,7 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
             }
         }
         catch (error) {
-            if(error instanceof PendingProgressiveSweep||error instanceof PendingProgressiveBody||error instanceof PendingProgressiveMiter)throw error;
+            if(error instanceof PendingProgressiveStations||error instanceof PendingProgressiveSweep||error instanceof PendingProgressiveBody||error instanceof PendingProgressiveMiter)throw error;
             throw new Error(`Node ${key}: ${error instanceof Error ? error.message : 'NURBS operation failed.'}`);
         }
         if(result.kind==='sdf')evaluateSdf(result.data,[0,0,0]);
@@ -484,5 +493,5 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: 
         cache.set(key, result);
         return result;
     }
-    return { get, cache, constructionReports, reconstructionReports }
+    return { get, cache, constructionReports, reconstructionReports, exactMiterPlacements }
 }

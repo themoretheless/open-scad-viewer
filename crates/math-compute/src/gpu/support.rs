@@ -1,8 +1,10 @@
 #[cfg(target_arch = "wasm32")]
 pub(super) use crate::M3;
 pub(super) use crate::V3;
+#[cfg(target_arch = "wasm32")]
+pub(super) use compute_core::gpu_compute::pack_f32;
 pub(super) use compute_core::gpu_compute::wgpu;
-pub(super) use compute_core::gpu_compute::{GpuContext, pack_f32, pack_u32};
+pub(super) use compute_core::gpu_compute::{GpuContext, pack_u32};
 pub(super) use compute_core::{
     Binding, Kernel, try_read_f32 as read_f32, try_read_u32 as read_u32,
 };
@@ -59,3 +61,21 @@ pub(super) const UNIFORM_REDUCE1: [Binding; 3] = [
     Binding::StorageRead,
     Binding::StorageReadWrite,
 ];
+
+/// Convert xyz directly into queue staging instead of a float Vec + byte Vec.
+pub(super) fn write_points(
+    queue: &wgpu::Queue,
+    buffer: &Buffer,
+    points: &[V3],
+) -> Result<(), gpu_compute::ReadbackError> {
+    gpu_compute::write_buffer_words(
+        queue,
+        buffer,
+        0,
+        points
+            .as_flattened()
+            .iter()
+            .map(|&v| (v as f32).to_le_bytes()),
+    )
+    .map_err(|error| gpu_compute::ReadbackError::Device(error.to_string()))
+}

@@ -1,0 +1,11 @@
+# Source-owned periodic finite event membership
+
+OwnedPeriodicPairEvents binds an actual periodic cover, two source-owned piece indices, a complete translated-original multi-span census and exact source-clock comparisons against BOTH algebraic piece boundaries. Every finite event retains Before/Start/Interior/End/After classifications on both curves; the complete source census is never silently reduced to chosen-piece samples. Closed-piece inclusion is an explicit derived query. Replay checks actual source expressions/offsets and the entire cached classification census.
+
+Regressions cover reentrant source traversals with one retained and one outside finite event, an irrational lattice-shore event exactly equal to the actual selected piece START, omitted events/changed classification/piece binding/invalid-budget refusal, and a positive common interval spanning selected pieces despite BOTH original endpoints lying outside. Such common relations are retained through the census and endpoint classifications; they are NOT mislabeled absent just because no endpoint lies inside.
+
+Fresh gates:139 profile+73 integration tests and WASM compile. This completes finite-event parameter membership, not periodic common-interval clipping: a new shared endpoint must still be lifted through BOTH original clocks for that operation. Complete material topology and physical face publication remain open. Catalog198/200; Rust isolated, shared changes preserved.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

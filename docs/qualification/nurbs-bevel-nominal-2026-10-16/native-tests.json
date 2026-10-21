@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "scope": "Nominal straight-bevel working-flank parameters and original-spec world-error binding; not complete gear",
+  "focused_tests_passed": 15,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/spherical/parameters.rs": "ba3553fa21aeae65de58d66751533066dec1f5efbb4f3b2ef04d7bafa9193b94",
+    "crates/nurbs-core/src/construct/curves/involute/spherical.rs": "07b9c23bcdb5252f9fa4c100c90ce659cc9a29ddf8affd132897a3c894904d27",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "29c8cb53bfa9fa182b7e73edeb7822227d29ba47d7d49d8f538d5d503bf45a6a",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "3575f5453c1851d920e0984c802187859eae6756958ef2a8b9c77d94389f4e18",
+    "crates/nurbs-core/tests/bevel_parameters.rs": "64ec8c31661f0dcea1c3f0cc26c27a087752a43f8fb914ead62728d7a0b9a66b"
+  },
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "claims": [
+    "Outward nominal cone-distance/base/tip/root/roll derivation",
+    "Certified inverse trig monotone brackets",
+    "Complete saved working-flank error versus original gear inputs",
+    "Opaque owner reconstructs nominal derivation and actual saved patch certificates"
+  ],
+  "unqualified": [
+    "Whole-tooth placement, sharp transitions and closed outline",
+    "Original full-profile embedding",
+    "Complete sewn B-rep gear solid and manufacturing envelope"
+  ]
+}

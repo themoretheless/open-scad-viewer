@@ -36,7 +36,7 @@ impl KernelCache {
     pub fn new(context: &GpuContext, capacity: usize) -> Self {
         Self {
             context: context.clone(),
-            entries: HashMap::new(),
+            entries: HashMap::with_capacity(capacity.min(64)),
             capacity,
             clock: 0,
             stats: KernelCacheStats::default(),

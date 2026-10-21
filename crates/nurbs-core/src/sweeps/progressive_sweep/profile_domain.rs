@@ -5,7 +5,7 @@ use crate::sweeps::progressive_miter::{authored_frame_certificate as frame,
     profile_domain_certificate::{Report, certify_original_profile_projection_domain},
     scalar_certificate::Status};
 
-fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
+pub(super) fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
     if let Some((axis,normal))=sweep.frame_laws {return Ok(Some(frame::certify_twisted_values(axis,normal,twist,t,budget)?));}
     if let Some(guide)=sweep.orientation_guide {return Ok(Some(frame::certify_path_guide_values(sweep.path,guide,twist,t,budget)?));}
     // Explicit spatial RMF endpoint material uses the original Bishop cover,
@@ -51,6 +51,10 @@ fn original_frame_without_line(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:us
         let plane=super::source_plane::certify(sweep.path,sweep.options.normal,budget as u64)?;
         let cells=plane.exact_work as usize;
         if !plane.proved {
+            if plane.reason==Some("source-plane-coefficients-nonzero") {
+                let mut values=super::authored_error::corrected_regular_frame_values(sweep,twist,t,budget-cells)?;
+                values.cells+=cells;return Ok(Some(values));
+            }
             return Ok(Some(frame::ValuesReport{status:Status::Unresolved,cells,
                 longitudinal:None,transverse:None,binormal:None}));
         }
@@ -361,7 +365,13 @@ mod tests {
         let valid=square(-2.,2.,false);
         let sweep=MultiSweep::new(&valid,&spatial,&scale,&twist,options).unwrap();
         let proof=sweep.certify_local_profile_domain(&[4],1e-9,10000,100000,1000000).unwrap();
-        assert_eq!(proof.reason,Some("initial-frame-unproved"));assert!(!proof.local_domain_certified);
+        assert!(proof.local_domain_certified,"{proof:?}");assert_eq!(proof.reason,None);
+        // A spatial leading straight interval has no original regular principal
+        // seed. It must not inherit the newly proved nonzero-curvature branch.
+        let zero_initial=crate::paths::bezier(vec![vec![0.;3],vec![0.,0.,2.],vec![0.,0.,4.],vec![1.,0.,6.],vec![1.,1.,10.]],None).unwrap();
+        let unproved=MultiSweep::new(&valid,&zero_initial,&scale,&twist,options).unwrap();
+        let refused=unproved.certify_local_profile_domain(&[4],1e-9,10000,100000,1000000).unwrap();
+        assert_eq!(refused.reason,Some("initial-frame-unproved"));assert!(!refused.local_domain_certified);
         let line=MultiSweep::new(&valid,&path,&scale,&twist,options).unwrap();
         assert!(line.certify_ideal_endpoint_domains(&[4],1e-9,10000,100000,1000000).unwrap().ideal_endpoint_domains_certified);
     }

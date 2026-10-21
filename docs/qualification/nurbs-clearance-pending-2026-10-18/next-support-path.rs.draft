@@ -1,0 +1,57 @@
+//! Positive regularized-material connectivity inside one canonical chart.
+//! This owner proves only a supplied path, not complete region discovery.
+use super::*;
+use crate::profile_certificate::algebraic_intersections::{decode_polynomial,decode_ratio};
+use std::sync::Arc;
+#[derive(Clone,Debug)]
+pub struct OwnedPeriodicSupportPath {
+ owner:Arc<OwnedPeriodicSupportLifts>,
+ endpoints:[[usize;2];2],
+ path:Vec<[ExactRatio;2]>,
+ limits:ParameterOrderLimits,
+ max_work:usize,
+ work:usize,
+}
+fn derive(o:&OwnedPeriodicSupportPath)->Result<usize>{
+ if !(2..=4096).contains(&o.path.len()) || !(1..=1000000).contains(&o.max_work) || o.limits.max_refinements>512 || !(1..=128).contains(&o.limits.max_resultant_size) { return Err(refused("Invalid complete material path allowance")); }
+ o.owner.reverify_source()?;
+ let selection=o.owner.owner().owner();
+ let graph=selection.rule().material().base().owner().owner().owner();
+ let cover=graph.owner().owner().pieces();
+ let chart=cover.chart().map(|d|d.map(|v|Q::from_float(v).unwrap()));
+ let path=o.path.iter().map(|p|Ok([decode_ratio(&p[0])?,decode_ratio(&p[1])?])).collect::<Result<Vec<_>>>()?;
+ for p in &path { for axis in 0..2 { if p[axis]<=chart[axis][0] || p[axis]>=chart[axis][1] { return Err(refused("Material path is not strictly inside the canonical chart")); } } }
+ for end in 0..2 {
+  let [edge,side]=o.endpoints[end];
+  let row=selection.sides().get(edge).ok_or_else(||refused("Material path endpoint edge is unknown"))?;
+  if side>1 || !row.selected()[side] || row.samples()[side].is_none() { return Err(refused("Material path endpoint is not an actual selected inside sample")); }
+  let actual=&row.probes().queries()[side];let expected=[decode_ratio(&actual[0])?,decode_ratio(&actual[1])?];
+  if path[if end==0 {0} else {path.len()-1}]!=expected { return Err(refused("Material path does not bind its actual source-owned endpoint")); }
+ }
+ let work=(path.len()-1).checked_mul(o.owner.parts_count()).ok_or_else(||refused("Complete material path work overflow"))?;
+ if work>o.max_work {return Err(refused("Complete selected-boundary path census exceeds allowance"));}
+ let mut original=Vec::new();for curve in cover.sources(){original.push(cells(curve)?);}
+ let mut seen=vec![false;graph.edges().len()];let mut n=0;
+ for walk in o.owner.walks(){for part in &walk.parts {
+  if part.edge>=seen.len() || seen[part.edge] { return Err(refused("Material path repeats a selected physical edge")); }seen[part.edge]=true;n+=1;
+  let piece=&cover.pieces()[part.piece];let cell=&original[part.source][part.cell];
+  let offset=[decode_ratio(&piece.translation[0])?,decode_ratio(&piece.translation[1])?];
+  // Use the CANONICAL piece, never the walk's accumulated universal-cover shift.
+  let net=cell.net.iter().map(|p|[&p[0]+&offset[0]*&p[2],&p[1]+&offset[1]*&p[2],p[2].clone()]).collect::<Vec<_>>();
+  let mut bounds=part.parameters.iter().map(|p|Ok(arithmetic::branch_neighbourhood::ParameterValue {primitive:decode_polynomial(&p.primitive)?,value:decode_polynomial(&p.parameter)?,interval:[decode_ratio(&p.interval[0])?,decode_ratio(&p.interval[1])?]})).collect::<Result<Vec<_>>>()?;
+  if part.direction<0 {bounds.reverse();}let bounds:[_;2]=bounds.try_into().map_err(|_|refused("Material path lost original cuts"))?;
+  for segment in path.windows(2){ if !arithmetic::selected_clearance::clear(&net,&cell.domain,&bounds,&[segment[0].clone(),segment[1].clone()],o.limits.max_refinements,o.limits.max_resultant_size)? {return Err(refused("Material path contacts a selected original boundary"));} }
+ }}
+ if n!=o.owner.parts_count() || n!=selection.selected().len() {return Err(refused("Material path omitted selected original boundary edges"));}
+ Ok(work)
+}
+impl OwnedPeriodicSupportPath {
+ pub fn owner(&self)->&Arc<OwnedPeriodicSupportLifts>{&self.owner}
+ pub fn endpoints(&self)->&[[usize;2];2]{&self.endpoints}
+ pub fn path(&self)->&[[ExactRatio;2]]{&self.path}
+ pub fn work(&self)->usize{self.work}
+ pub fn reverify_source(&self)->Result<()>{if derive(self)?!=self.work {return Err(refused("Material path source census changed"));}Ok(())}
+}
+pub fn own_periodic_support_path(owner:Arc<OwnedPeriodicSupportLifts>,endpoints:[[usize;2];2],path:&[[ExactRatio;2]],limits:ParameterOrderLimits,max_work:usize)->Result<OwnedPeriodicSupportPath>{
+ let mut o=OwnedPeriodicSupportPath{owner,endpoints,path:path.to_vec(),limits,max_work,work:0};o.work=derive(&o)?;Ok(o)
+}

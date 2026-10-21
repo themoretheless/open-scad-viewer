@@ -10,7 +10,11 @@ it.each(['closed-profile-planar-10.r','closed-profile-spatial-6.r'])('forwards n
  const graph=compileRushFrontend(source).document
  if(file==='closed-profile-planar-10.r'){
   const tight=compileRushFrontend(source.replace('max_deviation:256mm','max_deviation:1mm')).document
-  expect(()=>buildOwnNurbs(tight,request)).toThrow(/budget/)
+  const tighter=readSweepBodyBoundaryViewportEvidence(buildOwnNurbs(tight,request).nativeGeometry)
+  expect(tighter).toMatchObject({continuousBound:true,withinBudget:true})
+  expect(tighter!.errorUpper).toBeLessThanOrEqual(1)
+  const strict=compileRushFrontend(source.replace('max_deviation:256mm','max_deviation:0.000000000001mm')).document
+  expect(()=>buildOwnNurbs(strict,request)).toThrow(/budget/)
  }
  const node=graph.nodes.find(n=>n.op==='brep_progressive_sweep')!
  for(const built of [buildOwnNurbs(graph,request),await buildOwnNurbsAsync(graph,request)]){
@@ -21,7 +25,9 @@ it.each(['closed-profile-planar-10.r','closed-profile-spatial-6.r'])('forwards n
    expect(boundary!.errorUpper).toBeGreaterThan(0)
    expect(boundary!.errorUpper).toBeLessThanOrEqual(256)
   }else{
-   expect(boundary).toMatchObject({nodeId:node.id,continuousBound:false,errorUpper:null,withinBudget:null})
+   expect(boundary).toMatchObject({nodeId:node.id,continuousBound:true,withinBudget:true})
+   expect(boundary!.errorUpper).toBeGreaterThan(0)
+   expect(boundary!.errorUpper).toBeLessThanOrEqual(1)
   }
   const report=built.report.construction![node.id] as any
   expect(report.seamContinuity).toBe('C0')

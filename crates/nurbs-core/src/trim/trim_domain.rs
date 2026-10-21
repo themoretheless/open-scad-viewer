@@ -73,7 +73,7 @@ pub enum ClassificationReason {
     BoundaryBand,
     PrecisionLimit,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Classification {
     pub location: Location,
     pub winding: Option<i32>,
@@ -191,11 +191,12 @@ impl TrimDomain {
             !loops.is_empty() && loops.iter().all(|l| !l.is_empty()),
             "Trim-domain loops must be nonempty",
         )?;
-        if loops.iter().map(Vec::len).sum::<usize>() > 256 {
+        let total_curves = loops.iter().map(Vec::len).sum::<usize>();
+        if total_curves > 256 {
             return Err(resource("Trim domain exceeds 256 curves"));
         }
-        let mut curves = Vec::new();
-        let mut joins = Vec::new();
+        let mut curves = Vec::with_capacity(total_curves);
+        let mut joins = Vec::with_capacity(total_curves);
         let mut count = 0;
         for (li, contour) in loops.iter().enumerate() {
             let start = curves.len();
@@ -205,7 +206,8 @@ impl TrimDomain {
                     curve.control_points[0].len() == 2,
                     "Trim-domain curves must have two coordinates",
                 )?;
-                let mut pieces = Vec::new();
+                let mut pieces =
+                    Vec::with_capacity(curve.control_points.len().saturating_sub(curve.degree));
                 for span in curve.degree..curve.control_points.len() {
                     if curve.knots[span] < curve.knots[span + 1] {
                         count += 1;
@@ -336,8 +338,10 @@ impl TrimDomain {
             }
             winding += chord_winding(join.ends[0].point, join.ends[1].point, bounds, point);
         }
+        let mut stack = Vec::new();
         for source in &self.curves {
-            let mut stack: Vec<_> = source.pieces.iter().rev().cloned().collect();
+            stack.clear();
+            stack.extend(source.pieces.iter().rev().cloned());
             while let Some(piece) = stack.pop() {
                 let where_at = (source.loop_index, source.curve_index, piece.domain);
                 if cells == max_cells {

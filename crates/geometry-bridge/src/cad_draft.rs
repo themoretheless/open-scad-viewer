@@ -50,34 +50,50 @@ pub fn draft(v: Value) -> Result<Value> {
         }
         let mut mesh: Mesh = field(&body, "mesh")?;
         mesh.validate()?;
-        let (min, max) = polygon_core::scene_flatten::bounds(&[mesh.positions.clone()])?;
+        if mesh.positions.is_empty() {
+            return Err(input("Empty geometry"));
+        }
+        let mut min = [f64::INFINITY; 3];
+        let mut max = [f64::NEG_INFINITY; 3];
+        for p in mesh.positions.as_chunks::<3>().0 {
+            min[0] = min[0].min(p[0]);
+            min[1] = min[1].min(p[1]);
+            min[2] = min[2].min(p[2]);
+            max[0] = max[0].max(p[0]);
+            max[1] = max[1].max(p[1]);
+            max[2] = max[2].max(p[2]);
+        }
         let center: [f64; 3] = std::array::from_fn(|k| min[k] * 0.5 + max[k] * 0.5);
-        let span = (0..3)
-            .map(|k| max[k] * 0.5 - min[k] * 0.5)
-            .fold(0., f64::max);
+        let span = (max[0] * 0.5 - min[0] * 0.5)
+            .max(max[1] * 0.5 - min[1] * 0.5)
+            .max(max[2] * 0.5 - min[2] * 0.5);
         if !span.is_finite() || span <= 0. {
             return Err(input("Draft requires a nonzero body extent."));
         }
         for p in mesh.positions.as_chunks_mut::<3>().0 {
-            let h: f64 = (0..3).map(|k| (p[k] - origin[k]) * n[k]).sum();
-            let axial: f64 = (0..3).map(|k| (p[k] - center[k]) * n[k]).sum();
+            let h = (p[0] - origin[0]) * n[0]
+                + (p[1] - origin[1]) * n[1]
+                + (p[2] - origin[2]) * n[2];
+            let axial = (p[0] - center[0]) * n[0]
+                + (p[1] - center[1]) * n[1]
+                + (p[2] - center[2]) * n[2];
             let factor = 1. + h * tangent / span;
             if !factor.is_finite() || factor <= 0.01 {
                 return Err(input(
                     "Draft collapses the section or exceeds finite numeric range.",
                 ));
             }
-            for k in 0..3 {
-                p[k] += (p[k] - center[k] - axial * n[k]) * (factor - 1.);
-            }
+            let scale_f = factor - 1.;
+            p[0] += (p[0] - center[0] - axial * n[0]) * scale_f;
+            p[1] += (p[1] - center[1] - axial * n[1]) * scale_f;
+            p[2] += (p[2] - center[2] - axial * n[2]) * scale_f;
         }
         if !mesh.inspect()?.closed {
             return Err(input("Invalid draft result."));
         }
-        let mut object = body
-            .as_object()
-            .ok_or_else(|| input("Expected body record"))?
-            .clone();
+        let Value::Object(mut object) = body else {
+            return Err(input("Expected body record"));
+        };
         object.insert("mesh".into(), encode(mesh)?);
         result.push(Value::Object(object));
     }

@@ -2,14 +2,14 @@ import type { McpServer, StandardSchemaWithJSON } from '@modelcontextprotocol/se
 
 type Converter = StandardSchemaWithJSON['~standard']['jsonSchema']['input']
 
-function memoizedSchema(schema: StandardSchemaWithJSON): StandardSchemaWithJSON {
+export function memoizedSchema(schema: StandardSchemaWithJSON): StandardSchemaWithJSON {
   const standard = schema['~standard']
   const memoize = (convert: Converter): Converter => {
     const cache = new Map<string, Record<string, unknown>>()
     return options => {
       // Library-specific overrides may change conversion semantics. The SDK's
       // normal tools/list path supplies only its fixed JSON Schema target.
-      if (options.libraryOptions) return convert(options)
+      if (options.libraryOptions && Object.keys(options.libraryOptions).length > 0) return convert(options)
       let result = cache.get(options.target)
       if (!result) {
         result = convert(options)

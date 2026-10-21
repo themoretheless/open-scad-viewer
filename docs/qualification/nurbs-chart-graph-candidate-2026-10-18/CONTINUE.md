@@ -1,0 +1,13 @@
+# Exact translated periodic chart graph and original carrier ownership
+
+OwnedPeriodicChartGraph derives its vertices ONLY from complete source-owned finite contacts, clipped common endpoint correspondences and proved whole-interval aliases. Every union retains its exact pair/event/common/alias origin and source cut references. Different original clocks/traversals remain distinct uses inside a proved vertex. No endpoint float coordinate matching is used.
+
+Source atomic edges merge ONLY through exact whole common interval aliases. A complete signed alias traversal checks every orientation cycle; each original carrier keeps actual piece, interval, source, cell and direction. Every carrier endpoint must match the canonical vertex pair in its proved direction. Each canonical edge contributes TWO separately indexed endpoint incidences, even when both vertex identifiers coincide. The graph does not select material boundaries or publish faces.
+
+Regressions prove crossing topology (5 vertices,4 edges,one four-port vertex), reverse coincident carriers plus a transverse crossing (6 original carrier intervals collapse to4 edges with four genuine crossing ports), and a closed original native-knot cycle (4 vertices,4 edges,8 endpoint incidences). Cached source use, relation, cell/source and direction damage refuse source replay. Fresh gates:149 profile+73 integration tests and WASM compile.
+
+This remains SAME-CHART UV graph topology. Complete opposite-shore contact census/alignment must precede physical quotient graph publication; actual surface seam identity and material/face incidence remain separate obligations. The original local/full source embedding owner is not replaced or claimed by this chart graph. Catalog198/200. All Rust isolated; shared source changes preserved, cumulative patch targets verified original baseline.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

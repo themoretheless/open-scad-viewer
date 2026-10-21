@@ -210,3 +210,36 @@ fn projective_mesh_domain_orientation_and_source_attributes() {
             .positions
     );
 }
+
+#[test]
+fn solid_mass_properties_area_volume_com_and_inertia() {
+    // Centered 2x4x6 cuboid: volume = 48, area = 2*(8+12+24) = 88, COM = (0,0,0).
+    let mesh = crate::solid::primitives::cube([2., 4., 6.], true).unwrap();
+    assert!((mesh.surface_area() - 88.).abs() < 1e-10);
+    assert!((mesh.volume() - 48.).abs() < 1e-10);
+    let com = mesh.center_of_mass();
+    for c in com {
+        assert!(c.abs() < 1e-12);
+    }
+    let inertia = mesh.inertia_tensor();
+    // I_xx = M/12 * (b^2 + c^2) = 48/12 * (16 + 36) = 4 * 52 = 208
+    // I_yy = 4 * (4 + 36) = 160
+    // I_zz = 4 * (4 + 16) = 80
+    assert!((inertia[0][0] - 208.).abs() < 1e-9);
+    assert!((inertia[1][1] - 160.).abs() < 1e-9);
+    assert!((inertia[2][2] - 80.).abs() < 1e-9);
+    assert!(inertia[0][1].abs() < 1e-9);
+    assert!(inertia[0][2].abs() < 1e-9);
+    assert!(inertia[1][2].abs() < 1e-9);
+
+    // Translated cuboid [0,2]x[0,4]x[0,6]: COM = (1, 2, 3), same central inertia tensor.
+    let shifted = crate::solid::primitives::cube([2., 4., 6.], false).unwrap();
+    let s_com = shifted.center_of_mass();
+    assert!((s_com[0] - 1.).abs() < 1e-10);
+    assert!((s_com[1] - 2.).abs() < 1e-10);
+    assert!((s_com[2] - 3.).abs() < 1e-10);
+    let s_inertia = shifted.inertia_tensor();
+    assert!((s_inertia[0][0] - 208.).abs() < 1e-9);
+    assert!((s_inertia[1][1] - 160.).abs() < 1e-9);
+    assert!((s_inertia[2][2] - 80.).abs() < 1e-9);
+}

@@ -31,7 +31,29 @@ pub struct Report {
 /// within tolerance, not exact equality, trim simplicity, embedding or volume.
 pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
     let agreement = boundary_agreement::verify(model, max_cells)?;
-    let mut shells = Vec::new();
+    inspect_agreement(model, agreement)
+}
+
+pub struct QualifiedReport {
+    pub exact: boundary_agreement::ExactReport,
+    pub closure: Report,
+}
+/// Whole-model closure using explicit exact and interval work budgets. Exact
+/// identity authorizes only its own original uses; other uses require continuous
+/// interval evidence. This still does not establish trim validity or embedding.
+pub fn inspect_with_exact(
+    model: &Model,
+    max_cells: usize,
+    max_work: u64,
+) -> Result<QualifiedReport> {
+    let proof = boundary_agreement::verify_with_exact(model, max_cells, max_work)?;
+    Ok(QualifiedReport {
+        exact: proof.exact,
+        closure: inspect_agreement(model, proof.agreement)?,
+    })
+}
+fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Result<Report> {
+    let mut shells = Vec::with_capacity(model.shells.len());
     for (shell, s) in model.shells.iter().enumerate() {
         let mut uses = std::collections::BTreeMap::<usize, Vec<bool>>::new();
         for face_use in &s.faces {
@@ -40,7 +62,7 @@ pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
                 for c in &model.loops[wire].coedges {
                     if !model.edges[c.edge].degenerate {
                         uses.entry(c.edge)
-                            .or_default()
+                            .or_insert_with(|| Vec::with_capacity(2))
                             .push(c.reversed ^ face_use.reversed);
                     }
                 }
@@ -381,3 +403,11 @@ pub fn inspect_boundary_portions(
         within_tolerance,
     })
 }
+
+mod correspondence;
+pub use correspondence::{
+    BoundarySubranges, Correspondence, infer_boundary_correspondence,
+    inspect_boundary_correspondence, inspect_boundary_subranges,
+};
+mod linear_patch_set;
+pub use linear_patch_set::{LinearMatch, LinearPatchSetReport, inspect_linear_patch_set};

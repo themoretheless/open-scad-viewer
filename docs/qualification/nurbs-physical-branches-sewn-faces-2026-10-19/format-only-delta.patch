@@ -1,0 +1,17 @@
+--- native/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_strict_patches.rs
++++ formatted/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_strict_patches.rs
+@@ -280,7 +280,10 @@
+     );
+ }
+ 
+-pub(super) fn hierarchy_parts(contains: Vec<Vec<bool>>, positive: &[bool])
+-    -> Result<(Vec<Option<usize>>, Vec<OriginalPeriodicChartStrictPatch>)> {
+-    let d=hierarchy(contains,positive)?; Ok((d.parents,d.patches))
+-}
++pub(super) fn hierarchy_parts(
++    contains: Vec<Vec<bool>>,
++    positive: &[bool],
++) -> Result<(Vec<Option<usize>>, Vec<OriginalPeriodicChartStrictPatch>)> {
++    let d = hierarchy(contains, positive)?;
++    Ok((d.parents, d.patches))
++}

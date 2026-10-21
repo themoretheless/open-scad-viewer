@@ -46,7 +46,12 @@ it('lowers miter limits and spatial sites through Rush, parser and Solid',async(
   const {parseOpenSCAD}=await import('../src/services/openscadParser')
   const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
   const scene=await parseOpenSCAD(source)
-  expect(()=>sceneMeshesToSolidDocument(scene.meshes)).toThrow(/Sweep Solid geometry could not be proved: exact boundary agreement/)
+  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+  expect(readSweepViewportEvidence(scene.meshes[0]!.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true})
+  const solid=sceneMeshesToSolidDocument(scene.meshes)
+  expect(solid.bodies).toHaveLength(1)
+  expect(solid.bodies[0]!.brep!.faces).toHaveLength(32)
+  expect(inspectNurbsBrep(solid.bodies[0]!.brep!).boundaryEdgeCount).toBe(0)
 })
 
 it('retains cyclic miter extrusion correspondence and shared rational seam controls',()=>{
@@ -66,7 +71,8 @@ it('preserves a hollow closed miter body without caps through Rush, Solid and ST
   const compiled=compileRushFrontend(source)
   const node=compiled.document.nodes.find(n=>n.op==='brep_miter_sweep')!
   const built=buildOwnNurbs(compiled.document,{action:'build'})
-  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,sections:5,globalEmbeddingCertified:false,profileRegularityCertified:true,wallRegularityCertified:true,continuousBound:false,
+  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,sections:5,globalEmbeddingCertified:false,profileRegularityCertified:true,wallRegularityCertified:true,continuousBound:true,
+    boundaryCertificate:{continuousBound:true,closed:true,budget:null,withinBudget:null,filledCapErrorUpper:null},
     retainedWallCharts:{allChartsCertified:true,unresolvedFaces:[]}})
   const charts=(built.report.construction?.[node.id] as {retainedWallCharts:{charts:{face:number}[];cells:number}}).retainedWallCharts
   expect(charts.charts.map(chart=>chart.face)).toEqual(Array.from({length:32},(_,face)=>face))
@@ -115,14 +121,19 @@ it('carries explicit bounded cap correction from Rush through parser to the reta
  const built=buildOwnNurbs(compiled.document,{action:'build'})
  expect(built.report.construction?.[node.id]).toMatchObject({
   sectionCorrection:{reason:'bounded-section-interpolation',exactPlanarSections:[0,3]},
-  retainedCorrespondence:{exact:true,wallErrorUpper:0},roundingCertified:false,
+  continuousBound:true,roundingCertified:false,
+  boundaryCertificate:{continuousBound:true,closed:false,budget:null,withinBudget:null},
  })
+ const certificate=(built.report.construction![node.id] as {boundaryCertificate:{errorUpper:number;wallErrorUpper:number;filledCapErrorUpper:[number,number]}}).boundaryCertificate
+ expect(certificate.errorUpper).toBeGreaterThanOrEqual(certificate.wallErrorUpper)
+ expect(certificate.errorUpper).toBeGreaterThanOrEqual(Math.max(...certificate.filledCapErrorUpper))
+ expect(certificate.errorUpper).toBeLessThanOrEqual(1e-9)
  const {parseOpenSCAD}=await import('../src/services/openscadParser')
  const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
  const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
  const scene=await parseOpenSCAD(source)
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- expect(scene.meshes.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(Boolean)).toEqual([expect.objectContaining({solidGeometryCertified:true,continuousBound:false,wallRegularityCertified:true,profileRegularityCertified:true})])
+ expect(scene.meshes.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(Boolean)).toEqual([expect.objectContaining({solidGeometryCertified:true,continuousBound:true,wallRegularityCertified:true,profileRegularityCertified:true})])
  const solid=sceneMeshesToSolidDocument(scene.meshes)
  expect(solid.bodies).toHaveLength(1)
  const model=solid.bodies[0]!.brep!

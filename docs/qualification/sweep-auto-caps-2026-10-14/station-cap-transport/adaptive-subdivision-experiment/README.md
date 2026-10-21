@@ -1,0 +1,1 @@
+Derivative-difference split proposals did not close the original1000cell shared-pair proof. This experiment is removed; the historical fixed-axis inspector is restored. No cell/depth/resource budget was raised.

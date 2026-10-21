@@ -62,13 +62,13 @@ fn zip_error(message: &str) -> crate::Error {
     invalid("GCODE_3MF", message)
 }
 
-fn format_coord(value: f64) -> Result<String> {
+fn validate_coord(value: f64) -> Result<f64> {
     if !value.is_finite() || value.abs() > 1_000_000.0 {
         return Err(zip_error(
             "Mesh coordinates must be finite within +/-1000000 mm",
         ));
     }
-    Ok(format!("{value}"))
+    Ok(value)
 }
 
 fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
@@ -93,17 +93,15 @@ fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
             return Err(zip_error("Mesh index is out of range"));
         }
     }
-    let mut out = String::new();
+    let estimated_cap = (320 + vertices * 48 + triangles * 40).min(MAX_OUTPUT_BYTES);
+    let mut out = String::with_capacity(estimated_cap);
     out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"><resources><object id=\"1\" name=\"Part 1\" type=\"model\"><mesh><vertices>");
     for p in mesh.positions.as_chunks::<3>().0 {
-        write!(
-            out,
-            "<vertex x=\"{}\" y=\"{}\" z=\"{}\"/>",
-            format_coord(p[0])?,
-            format_coord(p[1])?,
-            format_coord(p[2])?
-        )
-        .map_err(|_| zip_error("Mesh model allocation failed"))?;
+        let x = validate_coord(p[0])?;
+        let y = validate_coord(p[1])?;
+        let z = validate_coord(p[2])?;
+        write!(out, "<vertex x=\"{x}\" y=\"{y}\" z=\"{z}\"/>")
+            .map_err(|_| zip_error("Mesh model allocation failed"))?;
         if out.len() > MAX_OUTPUT_BYTES {
             return Err(zip_error("Mesh model exceeds the byte budget"));
         }

@@ -1,7 +1,7 @@
 //! Typed spatial graph generation, component counts and conservative decimation.
 use crate::{Error, Mesh, Result};
 use math_core::{cross, dot, sub};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 fn input(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
@@ -30,26 +30,34 @@ pub fn component_count(mesh: &Mesh, positive_only: bool) -> Result<usize> {
     }
 
     if !positive_only {
-        return Ok(mesh
-            .indices
-            .iter()
-            .map(|&i| root(&mut parent, i))
-            .collect::<BTreeSet<_>>()
-            .len());
+        let mut unique = rustc_hash::FxHashSet::default();
+        for &i in &mesh.indices {
+            unique.insert(root(&mut parent, i));
+        }
+        return Ok(unique.len());
     }
 
     // Give each indexed component its own origin to avoid cancellation between
     // distant disconnected pieces. The threshold retains the editor contract.
-    let mut sums = BTreeMap::<usize, (f64, f64)>::new();
+    let mut sums = rustc_hash::FxHashMap::<usize, (f64, f64)>::default();
     for f in mesh.indices.as_chunks::<3>().0 {
         let r = root(&mut parent, f[0]);
         let origin = &mesh.positions[r * 3..r * 3 + 3];
-        let p: [[f64; 3]; 3] = std::array::from_fn(|i| {
-            std::array::from_fn(|k| mesh.positions[f[i] * 3 + k] - origin[k])
-        });
-        let volume = (p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1])
-            + p[0][1] * (p[1][2] * p[2][0] - p[1][0] * p[2][2])
-            + p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0]))
+        let i0 = f[0] * 3;
+        let i1 = f[1] * 3;
+        let i2 = f[2] * 3;
+        let p00 = mesh.positions[i0] - origin[0];
+        let p01 = mesh.positions[i0 + 1] - origin[1];
+        let p02 = mesh.positions[i0 + 2] - origin[2];
+        let p10 = mesh.positions[i1] - origin[0];
+        let p11 = mesh.positions[i1 + 1] - origin[1];
+        let p12 = mesh.positions[i1 + 2] - origin[2];
+        let p20 = mesh.positions[i2] - origin[0];
+        let p21 = mesh.positions[i2 + 1] - origin[1];
+        let p22 = mesh.positions[i2 + 2] - origin[2];
+        let volume = (p00 * (p11 * p22 - p12 * p21)
+            + p01 * (p12 * p20 - p10 * p22)
+            + p02 * (p10 * p21 - p11 * p20))
             / 6.;
         if !volume.is_finite() {
             return Err(input("Component volume exceeds finite numeric range."));

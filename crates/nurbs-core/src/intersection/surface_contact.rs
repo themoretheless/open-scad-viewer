@@ -60,6 +60,56 @@ fn span(s: &Surface, d: [[f64; 2]; 2]) -> Option<[usize; 2]> {
         find(&s.knots_v, s.degree_v, s.control_points[0].len(), d[1])?,
     ])
 }
+const CACHE_LIMIT: usize = 128;
+type DomainKey = [u64; 4];
+type Jacobian = [[I; 2]; 3];
+fn domain_key(d: [[f64; 2]; 2]) -> DomainKey {
+    [d[0][0], d[0][1], d[1][0], d[1][1]].map(f64::to_bits)
+}
+// Owned by one search and tied to one immutable surface borrow. Every cached
+// value is the exact result of the original interval routine, not a new bound.
+// Fixed-size LRU storage cannot grow with subdivision or outlive its source.
+pub(crate) struct PreparedSurface<'a> {
+    surface: &'a Surface,
+    pub(crate) controls: crate::surface_distance::PreparedControlSurface<'a>,
+    bounds: std::collections::VecDeque<(DomainKey, Vec<I>)>,
+    jacobians: std::collections::VecDeque<(([usize; 2], DomainKey), Jacobian)>,
+}
+impl<'a> PreparedSurface<'a> {
+    pub(crate) fn new(surface: &'a Surface) -> Result<Self> {
+        surface.validate()?;
+        Ok(Self { surface, controls: crate::surface_distance::PreparedControlSurface::new(surface), bounds: Default::default(), jacobians: Default::default() })
+    }
+    pub(crate) fn bounds(&mut self, domain: [[f64; 2]; 2]) -> Result<Vec<I>> {
+        let key = domain_key(domain);
+        if let Some(index) = self.bounds.iter().position(|entry| entry.0 == key) {
+            let entry = self.bounds.remove(index).unwrap();
+            let result = entry.1.clone();
+            self.bounds.push_back(entry);
+            return Ok(result);
+        }
+        let value = match self.controls.single_span_bounds(domain)? {
+            Some(value) => value,
+            None => bounds(self.surface, domain)?,
+        };
+        if self.bounds.len() == CACHE_LIMIT { self.bounds.pop_front(); }
+        self.bounds.push_back((key, value.clone()));
+        Ok(value)
+    }
+    fn jacobian(&mut self, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Jacobian> {
+        let key = (span, domain_key(domain));
+        if let Some(index) = self.jacobians.iter().position(|entry| entry.0 == key) {
+            let entry = self.jacobians.remove(index).unwrap();
+            let result = entry.1;
+            self.jacobians.push_back(entry);
+            return Ok(result);
+        }
+        let value = crate::surface_injectivity::section_jacobian(self.surface, span, domain)?;
+        if self.jacobians.len() == CACHE_LIMIT { self.jacobians.pop_front(); }
+        self.jacobians.push_back((key, value));
+        Ok(value)
+    }
+}
 fn bounds(s: &Surface, d: [[f64; 2]; 2]) -> Result<Vec<I>> {
     crate::surface_distance::rectangle_bounds(s, d)?
         .into_iter()
@@ -341,4 +391,107 @@ mod tests {
         let err = certify(&a, &b, 1, 0.5, [0., 1.], [[0., 1.], [f64::NAN, 1.]]).unwrap_err();
         assert!(err.contains("second v[0]"), "{err}");
     }
+}
+
+pub(crate) fn certify_prepared(
+    a: &mut PreparedSurface<'_>,
+    b: &mut PreparedSurface<'_>,
+    fixed_axis: usize,
+    fixed: f64,
+    first_other: [f64; 2],
+    second: [[f64; 2]; 2],
+) -> Result<Verdict> {
+    check(fixed_axis < 2, "Choose a fixed surface parameter axis")?;
+    // Boundary validation through the unified finite guards (item 1093).
+    require_finite_f64(fixed, "fixed")?;
+    require_finite_point(&first_other, "first_other")?;
+    require_finite_point(&second[0], "second u")?;
+    require_finite_point(&second[1], "second v")?;
+    check(
+        std::iter::once(&first_other)
+            .chain(&second)
+            .all(|d| d[0] < d[1]),
+        "Contact intervals must have positive widths",
+    )?;
+    let free = 1 - fixed_axis;
+    let mut first = [first_other; 2];
+    first[fixed_axis] = [fixed; 2];
+    let pa = a.bounds(first)?;
+    let pb = b.bounds(second)?;
+    if (0..3).any(|k| pa[k].hi < pb[k].lo || pb[k].hi < pa[k].lo) {
+        return Ok(Verdict::Excluded);
+    }
+    let (Some(sa), Some(sb)) = (span(a.surface, first), span(b.surface, second)) else {
+        return Ok(Verdict::Unresolved);
+    };
+    let ja = a.jacobian(sa, first)?;
+    let jb = b.jacobian(sb, second)?;
+    let mut jac = [[I::point(0.); 3]; 3];
+    for k in 0..3 {
+        jac[k] = [
+            ja[k][free],
+            I::point(0.).sub(jb[k][0])?,
+            I::point(0.).sub(jb[k][1])?,
+        ];
+    }
+    let Some(y) = inverse(jac.map(|r| r.map(|v| v.lo * 0.5 + v.hi * 0.5))) else {
+        return Ok(Verdict::Unresolved);
+    };
+    let domain = [first_other, second[0], second[1]];
+    let center = domain.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    if (0..3).any(|k| center[k] <= domain[k][0] || center[k] >= domain[k][1]) {
+        return Ok(Verdict::Unresolved);
+    }
+    let mut ac = first;
+    ac[free] = [center[0]; 2];
+    let ac = a.bounds(ac)?;
+    let bc = b.bounds([[center[1]; 2], [center[2]; 2]])?;
+    let mut f = [I::point(0.); 3];
+    for k in 0..3 {
+        f[k] = ac[k].sub(bc[k])?;
+    }
+    let mut image = center.map(I::point);
+    let mut contraction = 0_f64;
+    for i in 0..3 {
+        let mut row = I::point(0.);
+        for j in 0..3 {
+            image[i] = image[i].sub(I::point(y[i][j]).mul(f[j])?)?;
+        }
+        for k in 0..3 {
+            let mut residual = I::point(if i == k { 1. } else { 0. });
+            for j in 0..3 {
+                residual = residual.sub(I::point(y[i][j]).mul(jac[j][k])?)?;
+            }
+            row = row.add(I::point(residual.lo.abs().max(residual.hi.abs())))?;
+            let offset = I::new(domain[k][0], domain[k][1])?.sub(I::point(center[k]))?;
+            image[i] = image[i].add(residual.mul(offset)?)?;
+        }
+        contraction = contraction.max(row.hi);
+    }
+    if (0..3).any(|k| image[k].hi < domain[k][0] || image[k].lo > domain[k][1]) {
+        return Ok(Verdict::Excluded);
+    }
+    // A norm bound below one for I-YJ proves YJ, and therefore Y,
+    // invertible. The invariant image gives a fixed point with F=0, not merely
+    // a small Newton residual. The whole 3D section box has a unique root.
+    if contraction >= 0.5
+        || (0..3).any(|k| image[k].lo <= domain[k][0] || image[k].hi >= domain[k][1])
+    {
+        return Ok(Verdict::Unresolved);
+    }
+    first[free] = [image[0].lo, image[0].hi];
+    let second = [[image[1].lo, image[1].hi], [image[2].lo, image[2].hi]];
+    let pa = a.bounds(first)?;
+    let pb = b.bounds(second)?;
+    let mut point = [[0.; 2]; 3];
+    for k in 0..3 {
+        let v = I::new(pa[k].lo.max(pb[k].lo), pa[k].hi.min(pb[k].hi))?;
+        point[k] = [v.lo, v.hi];
+    }
+    Ok(Verdict::Witness(Witness {
+        first_uv: first,
+        second_uv: second,
+        point,
+        contraction_upper: contraction,
+    }))
 }

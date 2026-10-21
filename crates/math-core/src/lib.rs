@@ -17,6 +17,7 @@ mod nearest_two;
 mod registration;
 mod rounding;
 pub use rounding::{next_down, next_up};
+pub mod spatial;
 mod stats;
 mod transform_error;
 mod types;
@@ -54,6 +55,7 @@ pub use nearest_two::{
     nearest_two_ratios_accelerated,
 };
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
+pub use spatial::{DualQuat, Frustum, Plane3, Quat, Ray3};
 pub use stats::{
     PointCloudStats, point_cloud_stats, point_cloud_stats_accelerated,
     transformed_point_cloud_stats, transformed_point_cloud_stats_accelerated,
@@ -70,3 +72,6 @@ pub mod viewport;
 
 pub mod witness_bounds;
 pub mod profile_plane;
+
+pub mod parallel;
+pub use parallel::{available_threads,par_map,par_map_index,par_try_map};

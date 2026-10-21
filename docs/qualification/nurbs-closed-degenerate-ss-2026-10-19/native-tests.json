@@ -1,0 +1,71 @@
+{
+  "status": "qualified and applied in working project; all selected checks complete",
+  "snapshot": "/private/tmp/nurbs-native-200-closed-degenerate-dispatch-20261019",
+  "owned_paths": [
+    "crates/nurbs-core/src/intersection/ss_intersection.rs",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch.rs",
+    "crates/nurbs-core/tests/ss_closed_degenerate.rs"
+  ],
+  "installed_artifacts_changed_by_this_task": false,
+  "catalog_count_unchanged": 200,
+  "checks_completed": {
+    "catalog": true,
+    "api_map": true,
+    "rustfmt_new_sources": true,
+    "git_diff_check": true,
+    "all_nurbs_brep_test_modules_typecheck": true,
+    "wasm_nurbs_brep_compile": true,
+    "source_snapshot_identity": true
+  },
+  "initial_snapshot_native_passed": 20,
+  "current_main_source_manifest_matches_snapshot": true,
+  "source_inputs": 2696,
+  "native_core_exit": 0,
+  "native_core_passed": 23,
+  "native_core_names": [
+    "crossing_edge_stations_retain_independent_diagonal_geometry_and_true_shared_singular_node",
+    "closed_circle_is_one_complete_cycle_with_four_exact_shared_vertices_and_two_trims_per_edge",
+    "crossing_node_has_four_incident_halfedges_and_two_distinct_original_branches",
+    "dispatcher_never_masks_exact_work_exhaustion_with_a_larger_marching_or_discovery_budget",
+    "irrational_ellipse_radii_retain_algebraic_stations_in_both_original_native_domains",
+    "exact_critical_levels_never_merge_tiny_closed_loops_empty_sets_or_tangent_points",
+    "isolated_tangent_point_has_no_fake_branch_or_trim_curve",
+    "tangent_double_lines_are_complete_multiplicity_two_curves_in_either_axis",
+    "unsupported_source_identities_and_exhausted_work_never_publish_false_topology",
+    "public_dispatch_uses_complete_exact_graph_owners_and_preserves_regular_original_arc_fallback",
+    "automatic_empty_set_has_a_complete_source_owned_exclusion_partition",
+    "automatic_original_fiber_needs_no_authored_seed_or_chart_in_either_order",
+    "automatic_nonlinear_original_graph_discovers_its_own_overlapping_charts",
+    "automatic_two_components_cover_both_exact_roots_and_shared_cell_faces",
+    "discovery_budget_or_tangency_never_authorizes_a_partial_atlas",
+    "automatic_empty_and_single_chart_component_census_remain_source_owned",
+    "automatic_nonlinear_component_needs_no_authored_bridge",
+    "automatic_two_root_components_connect_closed_chart_endpoints_and_separate_all_other_pairs",
+    "exact_branch_stations_enclose_independent_analytic_roots_and_reject_unowned_queries",
+    "folded_support_parameter_component_never_becomes_an_embedded_physical_arc",
+    "actual_two_roots_publish_disjoint_world_arcs_and_both_original_trim_projections",
+    "original_empty_intersection_has_no_physical_vertices_or_trim_uses",
+    "nonlinear_original_world_arc_is_not_replaced_by_a_sampled_polyline"
+  ],
+  "native_extension_integration_cases": 10,
+  "native_existing_open_arc_regression_cases": 13,
+  "limits": [
+    "Exact single-span degree1/2 common affine XY polynomial graph family only for closed/singular cases",
+    "WASM compile only; no new transport, package, installed binary or runtime UI qualification"
+  ],
+  "native_private_replay_exit": 0,
+  "native_private_replay_passed": 1,
+  "recorded_at_utc": "2026-10-19T15:27:28.533443+00:00",
+  "native_boolean_exit": 0,
+  "native_boolean_passed": 3,
+  "native_boolean_names": [
+    "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+    "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+    "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations"
+  ],
+  "distinct_selected_native_cases": 27,
+  "new_native_cases": 11,
+  "existing_regression_cases": 16,
+  "owned_running_jobs": []
+}

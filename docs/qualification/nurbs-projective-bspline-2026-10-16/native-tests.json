@@ -1,0 +1,75 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1434,
+      "failed": 0,
+      "ignored": 0
+    },
+    "periodic": {
+      "suites": 11,
+      "passed": 124,
+      "failed": 0,
+      "ignored": 0
+    },
+    "brep_regions": {
+      "suites": 3,
+      "passed": 20,
+      "failed": 0,
+      "ignored": 0
+    },
+    "wasm": "both crates pass",
+    "boolean": {
+      "passed": 3,
+      "failed": 0
+    },
+    "brep_replay": {
+      "passed": 2,
+      "failed": 0
+    },
+    "api_map": {
+      "modules": 183,
+      "catalog_entries": 200,
+      "check": "pass"
+    },
+    "catalog_audit": "198 implemented, two planned, no errors",
+    "format": "explicit changed modules/tests pass"
+  },
+  "scope": [
+    "exact original clamped continuous B-spline basis correspondence under one complete positive global projective map",
+    "original degree/control net correspond; other representations remain unresolved",
+    "raw predicate degrees1..32; public Curve validation currently caps degree at25 and256 poles",
+    "C0,C1,C2 and native degree25 independently checked by positions and chain-rule derivatives",
+    "exact common exponent gauges for knot units/factors and denominator products",
+    "tiny exact power-of-two domains qualify; rounded nonbinary domains do not inherit identity",
+    "actual original-control directional enclosures for complete anchor homotopy, with shared bounded checks",
+    "source/candidate translation crossing anchor remains unqualified",
+    "nonlinear original three-span triangle reaches3 canonical weighted edges and1 actual plane face/3 edges/3 vertices"
+  ],
+  "remaining": [
+    "arbitrary nonlinear correspondence and representations beyond admitted projective bases",
+    "general inter-wire contact regularization",
+    "general original SS coordinate-chart coverage and owned physical branch/world-trace/trim graphs"
+  ],
+  "source_sha256": {
+    "crates/cad-predicates/src/bspline_projective_correspondence.rs": "015cb9602b9c9d781d2c0b386aca97a93b79bc15b2a1a0b9d44da300e88c2df5",
+    "crates/cad-predicates/src/bezier_projective_correspondence.rs": "d60209383b34e7932dd5bc59abb71b4576394a42f18943374856fd35691b3940",
+    "crates/nurbs-core/src/trim/periodic_trim/coherent/projective.rs": "7780b782ee2b6c629fc19c63686daa50a48336d5ef229913966cb8c10b479955",
+    "crates/nurbs-core/src/trim/periodic_trim/anchor.rs": "de5cc3e2174bae7636bb62bdb5d75beabcfaf4bc045e0c87fb43b0dc3801cf05",
+    "crates/nurbs-core/tests/periodic_projective_bspline.rs": "791a41147ab4b00964ee285a9eadf21989d6c714eb0e71d72811e688f777e3b3",
+    "crates/nurbs-core/tests/periodic_projective_correspondence.rs": "c347adb4449e7dce5b78235b58088628e11f829d3348295e4cacf096e512f9d8",
+    "crates/brep-core/tests/periodic_projective_regions.rs": "1d5ac34adfd169f8b2efd792f2a1bff3b87c6fd59eb4f52f303bfe289b1480ac",
+    "crates/nurbs-core/src/domains.rs": "e1e2a2172f72b951b273d418031448ccd8070a44561c631e4f870b284d29e034",
+    "docs/design/nurbs-api-domains.json": "c2daa297020f5e13f01cdbe880a72034d208fff51f1a6eb18ba8cc5c873143eb"
+  },
+  "historical": "Previous194-suite/952-case integration snapshot and older B-rep full library remain historical; current changed modules have the explicit gates above. Do not add earlier or superseded counts.",
+  "jobs": "all terminal and consumed"
+}

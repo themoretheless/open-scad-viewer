@@ -26,17 +26,20 @@ pub fn simplify_with_progress(
     if !tolerance.is_finite() || tolerance < 0. || passes > 16 {
         return Err(crate::error("Invalid simplification limits"));
     }
-    if input.colors.len() != input.positions.len()
-        || input.positions.iter().flatten().any(|v| !v.is_finite())
+    let n_pos = input.positions.len();
+    if input.colors.len() != n_pos
+        || input
+            .positions
+            .iter()
+            .any(|p| !(p[0].is_finite() && p[1].is_finite() && p[2].is_finite()))
         || input
             .triangles
             .iter()
-            .flatten()
-            .any(|&i| i as usize >= input.positions.len())
+            .any(|t| t[0] as usize >= n_pos || t[1] as usize >= n_pos || t[2] as usize >= n_pos)
     {
         return Err(crate::error("Invalid simplification mesh"));
     }
-    let mut parent: Vec<_> = (0..input.positions.len()).collect();
+    let mut parent: Vec<_> = (0..n_pos).collect();
     fn root(parent: &mut [usize], mut i: usize) -> usize {
         while parent[i] != i {
             parent[i] = parent[parent[i]];
@@ -44,7 +47,10 @@ pub fn simplify_with_progress(
         }
         i
     }
-    let mut oriented_edges = FastMap::<(u32, u32), (u32, i32)>::default();
+    let mut oriented_edges = FastMap::<(u32, u32), (u32, i32)>::with_capacity_and_hasher(
+        input.triangles.len().saturating_mul(3) / 2,
+        Default::default(),
+    );
     for (fi, t) in input.triangles.iter().enumerate() {
         if fi % 4096 == 0 {
             super::cancelled(
@@ -91,9 +97,13 @@ pub fn simplify_with_progress(
     }
     let mut faces: Vec<_> = input.triangles.iter().copied().map(Some).collect();
     let mut radius = vec![0.; input.positions.len()];
+    let mut offsets = Vec::with_capacity(input.positions.len() + 1);
+    let mut incident_faces = Vec::new();
+    let mut cursor = Vec::with_capacity(input.positions.len());
     for pass in 0..passes {
         super::cancelled(&mut progress, "simplify", pass, passes)?;
-        let mut offsets = vec![0usize; input.positions.len() + 1];
+        offsets.clear();
+        offsets.resize(input.positions.len() + 1, 0usize);
         for t in faces.iter().flatten() {
             for &i in t {
                 offsets[i as usize + 1] += 1;
@@ -102,8 +112,10 @@ pub fn simplify_with_progress(
         for i in 1..offsets.len() {
             offsets[i] += offsets[i - 1];
         }
-        let mut incident_faces = vec![0usize; *offsets.last().unwrap()];
-        let mut cursor = offsets[..input.positions.len()].to_vec();
+        incident_faces.clear();
+        incident_faces.resize(*offsets.last().unwrap(), 0usize);
+        cursor.clear();
+        cursor.extend_from_slice(&offsets[..input.positions.len()]);
         // Input caps bound vertex/face indices and edge incidence counts
         // (at most three per face) below u32::MAX, including malformed topology.
         let mut edges = FastMap::<(u32, u32), (u32, [u32; 2])>::with_capacity_and_hasher(
@@ -133,7 +145,6 @@ pub fn simplify_with_progress(
             }
         }
         edge_capacity_hint = edges.len();
-        drop(cursor);
         let incidents = |v: usize| &incident_faces[offsets[v]..offsets[v + 1]];
         let normals: Vec<_> = faces
             .iter()

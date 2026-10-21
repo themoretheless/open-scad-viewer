@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original 3D bevel-profile embedding through exact source-bound XY projection",
+  "native_suite_status": "passed",
+  "completed_test_cases": [
+    "original_source_projection_and_every_modular_witness_remain_bound"
+  ],
+  "verified_case": "20-tooth below-base original profile construction, projection ownership and witness corruption refusals",
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/brep-core/src/bevel_profile.rs": "23c9393a3742630f5779720c586ef7cd9817bf5ea3dacd362db43308b082d459",
+    "crates/brep-core/src/gear_profile_embedding.rs": "96b72d9182a4870a1711abab2107506a8afe021d73c459849503ff155f263eac",
+    "crates/brep-core/src/gear.rs": "611eae97c2afe3bd026503e105218fc8bb60c05ae8d519b8cbe4b30e68298869",
+    "crates/brep-core/tests/bevel_profile.rs": "d687238d517d131b8277183a1b74d4e78edf37ab44233823c669e925c84e0509"
+  },
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "focused_tests_passed": 7,
+  "compiled_snapshot_note": "Gear module subsequently gained a separate body builder; embedding tests describe the compiled source snapshot captured in this receipt."
+}

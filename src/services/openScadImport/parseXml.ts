@@ -229,19 +229,29 @@ export function descendantsNs(element: XmlElement, localName: string, namespaceU
 }
 
 export function attribute(element: XmlElement, key: string): string | undefined {
-  const exact = element.attributes[key.toLowerCase()]
+  const normalized = key.toLowerCase()
+  const exact = element.attributes[normalized]
   if (exact !== undefined) return exact
-  const suffix = `:${key.toLowerCase()}`
-  const found = Object.entries(element.attributes).find(([name]) => name.endsWith(suffix))
-  return found?.[1]
+  const suffix = `:${normalized}`
+  for (const name in element.attributes) {
+    if (name.endsWith(suffix)) return element.attributes[name]
+  }
+  return undefined
 }
 
 export function attributeNs(element: XmlElement, key: string, namespaceUri: string | null): string | undefined {
   const normalized = key.toLowerCase()
-  const found = Object.entries(element.attributes).find(([name]) => (
-    name.split(':').at(-1) === normalized && element.attributeNamespaces[name] === namespaceUri
-  ))
-  return found?.[1]
+  if (namespaceUri === null && element.attributeNamespaces[normalized] === null) {
+    const exact = element.attributes[normalized]
+    if (exact !== undefined) return exact
+  }
+  const suffix = `:${normalized}`
+  for (const name in element.attributes) {
+    if (element.attributeNamespaces[name] === namespaceUri && (name === normalized || name.endsWith(suffix))) {
+      return element.attributes[name]
+    }
+  }
+  return undefined
 }
 
 export function requiredAttributeNs(
@@ -339,19 +349,40 @@ export function appendRawMesh(
   const nextTriangles = targetTriangles.length / 3 + mesh.triangles.length / 3
   boundedCount(nextVertices, OPENSCAD_IMPORT_MAX_VERTICES, `${format.toUpperCase()} expanded vertex count`, format)
   boundedCount(nextTriangles, OPENSCAD_IMPORT_MAX_TRIANGLES, `${format.toUpperCase()} expanded triangle count`, format)
-  for (let offset = 0; offset < mesh.vertices.length; offset += 3) {
-    targetVertices.push(...transform3(matrix, mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]))
+  const m0 = matrix[0], m1 = matrix[1], m2 = matrix[2], m3 = matrix[3]
+  const m4 = matrix[4], m5 = matrix[5], m6 = matrix[6], m7 = matrix[7]
+  const m8 = matrix[8], m9 = matrix[9], m10 = matrix[10], m11 = matrix[11]
+  const srcVertices = mesh.vertices
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    targetVertices.push(
+      m0 * x + m1 * y + m2 * z + m3,
+      m4 * x + m5 * y + m6 * z + m7,
+      m8 * x + m9 * y + m10 * z + m11,
+    )
   }
-  const determinant = matrix[0] * (matrix[5] * matrix[10] - matrix[6] * matrix[9])
-    - matrix[1] * (matrix[4] * matrix[10] - matrix[6] * matrix[8])
-    + matrix[2] * (matrix[4] * matrix[9] - matrix[5] * matrix[8])
+  const determinant = m0 * (m5 * m10 - m6 * m9)
+    - m1 * (m4 * m10 - m6 * m8)
+    + m2 * (m4 * m9 - m5 * m8)
   if (determinant === 0 || !Number.isFinite(determinant)) {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} transform is singular or non-finite.`, format)
   }
-  for (let offset = 0; offset < mesh.triangles.length; offset += 3) {
-    const a = vertexOffset + mesh.triangles[offset]
-    const b = vertexOffset + mesh.triangles[offset + 1]
-    const c = vertexOffset + mesh.triangles[offset + 2]
-    targetTriangles.push(a, ...(determinant < 0 ? [c, b] : [b, c]))
+  const srcTriangles = mesh.triangles
+  if (determinant < 0) {
+    for (let offset = 0; offset < srcTriangles.length; offset += 3) {
+      targetTriangles.push(
+        vertexOffset + srcTriangles[offset],
+        vertexOffset + srcTriangles[offset + 2],
+        vertexOffset + srcTriangles[offset + 1],
+      )
+    }
+  } else {
+    for (let offset = 0; offset < srcTriangles.length; offset += 3) {
+      targetTriangles.push(
+        vertexOffset + srcTriangles[offset],
+        vertexOffset + srcTriangles[offset + 1],
+        vertexOffset + srcTriangles[offset + 2],
+      )
+    }
   }
 }

@@ -1,3 +1,4 @@
+import {primitiveCreationError} from '../../services/primitiveCreationError'
 import { primitiveKinds, type Pane } from './helpers'
 import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
 import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../services/directModeling'
@@ -9,7 +10,7 @@ import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type Comp
 
 export interface PrimitivesOptions {
   activeGroup: Ref<string>
-  advancedOp: Ref<"split" | "push" | "shell" | "curve" | "transform" | "offset" | "loft" | "chamfer" | "instance-create" | "instance-transform" | "instance-place" | "nurbs-loft" | "nurbs-sweep" | "nurbs-patch" | "nurbs-rebuild" | "nurbs-reduce" | "nurbs-surface-rebuild" | "nurbs-surface-reduce" | "profile-union" | "profile-difference" | "profile-intersection" | "extend" | "edge-fillet" | "profile-prepare" | "nurbs-offset" | "nurbs-point-trim" | "nurbs-match" | "nurbs-prepare" | "nurbs-curve-match" | null>
+  advancedOp: Ref<"split" | "push" | "shell" | "curve" | "transform" | "offset" | "loft" | "chamfer" | "instance-create" | "instance-transform" | "instance-place" | "nurbs-loft" | "nurbs-sweep" | "nurbs-patch" | "nurbs-runout" | "nurbs-rebuild" | "nurbs-reduce" | "nurbs-surface-rebuild" | "nurbs-surface-reduce" | "profile-union" | "profile-difference" | "profile-intersection" | "extend" | "edge-fillet" | "profile-prepare" | "nurbs-offset" | "nurbs-point-trim" | "nurbs-match" | "nurbs-prepare" | "nurbs-curve-match" | null>
   brepSegments: Ref<number>
   cancelCommand: () => void
   commit: (next: DirectDocument) => void
@@ -37,6 +38,9 @@ export interface PrimitivesOptions {
 export function usePrimitives(options: PrimitivesOptions) {
   const { activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace } = options
 const roundGeometry=ref<'exact'|'faceted'>('exact')
+const primitiveG2Enabled=ref(false),primitiveG2Size=ref(0.5)
+const primitiveG2Individual=ref(false),primitiveG2Sizes=ref<[number,number,number,number]>([0.5,0.5,0.5,0.5])
+const failedPrimitive=ref<typeof primitiveKinds[number]|null>(null),primitiveG2Invalid=ref(false)
 const primitiveSize = ref(20),primitiveTopRadius=ref(5),primitiveInnerRadius=ref(7)
 // 24x24 stroke icons for the pane tool bars; labels stay in the tooltip and aria-label.
 const TOOL_ICONS = {
@@ -64,25 +68,30 @@ const primitiveWorker=createSolidPreviewWorker(),primitivePending=ref(false)
 let primitiveGeneration=0
 function cancelPrimitive(){primitiveGeneration++;primitiveWorker.cancel();primitivePending.value=false}
 onUnmounted(()=>{cancelPrimitive();primitiveWorker.dispose()})
-watch(()=>[props.open,document.value,operation.value,advancedOp.value,tool.value,primitiveSize.value,primitiveTopRadius.value,primitiveInnerRadius.value,roundGeometry.value,brepSegments.value,activeGroup.value,lockedIds.value.join(',')],()=>{if(primitivePending.value)cancelPrimitive()},{flush:'sync'})
+watch(()=>[props.open,document.value,operation.value,advancedOp.value,tool.value,primitiveSize.value,primitiveTopRadius.value,primitiveInnerRadius.value,primitiveG2Enabled.value,primitiveG2Size.value,primitiveG2Individual.value,...primitiveG2Sizes.value,roundGeometry.value,brepSegments.value,activeGroup.value,lockedIds.value.join(',')],()=>{if(primitivePending.value)cancelPrimitive()},{flush:'sync'})
 async function addPrimitive(kind: typeof primitiveKinds[number]) {
- cancelCommand();error.value=''
+ cancelCommand();error.value='';failedPrimitive.value=null;primitiveG2Invalid.value=false
  const generation=++primitiveGeneration,before=document.value,target=history,id=crypto.randomUUID()
  const current=()=>generation===primitiveGeneration&&props.open&&!isRestoreDisposed()&&before===document.value&&target===history
  let name=primitiveLabel(kind)
  if(['box','wedge','cylinder','frustum','tube'].includes(kind))name+=' · 3D'
  if(['cylinder','sphere','cone'].includes(kind)&&!(kind==='cone'&&roundGeometry.value==='faceted'))name+=` · ${roundGeometry.value==='exact'?label('точный B-rep','exact B-rep'):label('гранёный B-rep','faceted B-rep')}`
  if(['frustum','tube','torus'].includes(kind))name+=` · ${label('точный B-rep','exact B-rep')}`
+ if(kind==='tube'&&primitiveG2Enabled.value)name+=' · G2'
  primitivePending.value=true;workspace.value?.focus()
  try{
   if(!Number.isFinite(primitiveSize.value)||primitiveSize.value<.1||primitiveSize.value>10000)throw Error(label('Размер от 0.1 до 10000 мм','Size must be 0.1–10000 mm'))
-  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
+  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
   if(!current())return
   const {validateLocked,added}=prepareCommit(next)
   const applied=await target.commitAsync(async()=>next,validateLocked)
   if(!current()||!applied)return
   primitivePending.value=false;finishCommit(added);pickObject(id,'3d');fit('3d')
- }catch(e){if(current())error.value=e instanceof Error?e.message:String(e)}
+ }catch(e){if(current()){
+  const message=e instanceof Error?e.message:String(e),code=e&&typeof e==='object'&&'code' in e&&typeof e.code==='string'?e.code:'';failedPrimitive.value=kind
+  primitiveG2Invalid.value=kind==='tube'&&primitiveG2Enabled.value&&(code==='BREP_G2_ANNULAR_LIMITS'||message.includes('BREP_G2_ANNULAR_LIMITS')||message.includes('G2 tube transition size'))
+  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code)
+ }}
  finally{if(generation===primitiveGeneration)primitivePending.value=false}
 }
 const bridgeEndA=ref<'start'|'end'>('end'),bridgeEndB=ref<'start'|'end'>('start'),bridgeTension=ref(1)
@@ -108,5 +117,5 @@ function addNurbs(kind: 'curve'|'surface') { run(() => {
   else d.surfaces!.push(item as ReturnType<typeof createSolidNurbsSurface>)
   commit(d); pickObject(item.id, '3d'); fit('3d')
 }) }
-  return { roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs }
+  return { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs }
 }

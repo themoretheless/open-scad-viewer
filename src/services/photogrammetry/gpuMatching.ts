@@ -63,25 +63,28 @@ export function parseMatchingPayload(blob: Uint8Array): GpuMatchingPayload {
  * of packed ColBest (i, d1) — exactly the wire format the kernel's
  * `matches_from_gpu_response` parses.
  */
+const EMPTY_F32 = new Float32Array(0)
+
 export async function runGpuMatching(blob: Uint8Array, wgsl: string): Promise<Uint8Array> {
   const payload = parseMatchingPayload(blob)
-  const dispatches = payload.pairs.map(([a, b]) => {
+  const pairParamsBlock = new Uint32Array(payload.pairs.length * 4)
+  const dispatches = payload.pairs.map(([a, b], index) => {
     const rows = payload.featureCounts[a]!
     const cols = payload.featureCounts[b]!
-    const params = new ArrayBuffer(16)
-    const pv = new DataView(params)
-    pv.setUint32(0, rows, true)
-    pv.setUint32(4, cols, true)
-    pv.setUint32(8, payload.featureOffset[a]!, true)
-    pv.setUint32(12, payload.featureOffset[b]!, true)
+    const base = index * 4
+    pairParamsBlock[base] = rows
+    pairParamsBlock[base + 1] = cols
+    pairParamsBlock[base + 2] = payload.featureOffset[a]!
+    pairParamsBlock[base + 3] = payload.featureOffset[b]!
+    const params = pairParamsBlock.subarray(base, base + 4)
     return {
       buffers: [
         { binding: 0, data: params, uniform: true },
         // Same backing object at both bindings: the runtime uploads the table once.
         { binding: 1, data: payload.descriptors },
         { binding: 2, data: payload.descriptors },
-        { binding: 3, data: new Float32Array(0), output: true, outputBytes: rows * 12 },
-        { binding: 4, data: new Float32Array(0), output: true, outputBytes: cols * 8 },
+        { binding: 3, data: EMPTY_F32, output: true, outputBytes: rows * 12 },
+        { binding: 4, data: EMPTY_F32, output: true, outputBytes: cols * 8 },
       ],
       outputBytes: Math.max(rows * 12, cols * 8, 16),
       // One workgroup per row and per column, exactly like the native kernels.

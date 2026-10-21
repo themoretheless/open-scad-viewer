@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "testsPassed": 6,
+  "testsFailed": 0,
+  "suiteTests": {
+    "planar_toolpath": 4,
+    "curve_clearance": 2
+  },
+  "reportedRuntimeSeconds": {
+    "planar_toolpath": 0.96,
+    "curve_clearance": 0.0
+  },
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test planar_toolpath --test curve_clearance",
+  "sourceSha256": {
+    "crates/nurbs-core/src/offset/machining.rs": "d6f01e72325c69ebd3b1eb09b41498adde344da4b4a428b20b7acd93e9da9e38",
+    "crates/nurbs-core/src/distance/curve_distance/clearance.rs": "df31460b4ce5559c0077ad8223460e587a0b9e769f5c487dae0520a1a08d1366",
+    "crates/nurbs-core/src/distance/curve_distance.rs": "16ba1d43ddcdf3e29db933c9835de756d11850a07cefa1c695be33acc76b4c8c",
+    "crates/nurbs-core/tests/planar_toolpath.rs": "4045a09d440355723de1dca94b0137b81454a3659047175f3516b4421d745243",
+    "crates/nurbs-core/tests/curve_clearance.rs": "2be38ee5663880a86b1326228f3d02a5cf278b08e859402da5992fc5b10a4802"
+  },
+  "continuousOriginalContourClearance": true,
+  "originalContourWindingAdmission": true,
+  "nominalOffsetToleranceIncludesSafetyMargin": true,
+  "sampledProxyUsedAsProof": false,
+  "pocketCoverageCertified": false,
+  "machineInstructionsAuthored": false,
+  "wasmEditorExportQualified": false
+}

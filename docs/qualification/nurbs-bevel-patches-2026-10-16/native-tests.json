@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "scope": "Complete original-source working flank via radial Bernstein patches; not a complete gear",
+  "focused_tests_passed": 12,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/spherical/patches.rs": "31015979591fa240988e2a04fd0554b325e0a49d52dff8ee24abbdbce3d522a7",
+    "crates/nurbs-core/src/construct/curves/involute/spherical.rs": "988b35bdfd0c6a634796207ec16ee8fd348d0e424a7d8edb1699fff0f8e7f366",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "68cd8883f70482127125b54c19528082fe22a11b5f311900e847410f8e4ebb8f",
+    "crates/nurbs-core/tests/spherical_involute.rs": "9736696551b1e78016aced7f8892e21276e1ec399eb8d27f24579e9558bac9f5"
+  },
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "claims": [
+    "Complete ordered original U coverage",
+    "Exact shared radial boundary rows",
+    "Continuous original-source error including saved-pole, knot and radial-scaling rounding",
+    "Independent reconstruction of original outer source chain",
+    "Caller world tolerance and patch budget enforced"
+  ],
+  "unqualified": [
+    "Full nominal gear parameters and tooth outline",
+    "Surface injectivity and higher seam continuity",
+    "Sewn B-rep faces and complete gear solid"
+  ]
+}

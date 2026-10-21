@@ -10,10 +10,10 @@ default = ["codec"]
 codec = []
 
 [dependencies]
-brep-core = { path = "../brep-core" }
-nurbs-intersect = { path = "../nurbs-intersect" }
-nurbs-core = { path = "../nurbs-core" }
-value-codec = { path = "../value-codec" }
+brep-core = { workspace = true, features = ["codec"] }
+nurbs-intersect = { workspace = true, features = ["codec"] }
+nurbs-core = { workspace = true, features = ["transport"] }
+value-codec = { workspace = true }
 
 [dev-dependencies]
-brep-topology = { path = "../brep-topology" }
+brep-topology = { workspace = true, features = ["codec"] }

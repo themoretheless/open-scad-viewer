@@ -53,10 +53,18 @@ export default defineConfig({
             // WASM host plumbing is shared by every kernel. Grouped with the
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
+            { name: 'direct-commands', test: /src[\\/]features[\\/]directModeler[\\/]use(CommandPalette|Primitives)\.ts$/, includeDependenciesRecursively: false },
+            { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
+            // The declarative command inventory is shared by the entry and help panels.
+            { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
             { name: 'editor-controls', test: /src[\\/](composables[\\/]useEditor(Formatting|Resize)|services[\\/](codeFormat|editorBlocks))\.ts$/ },
+            // Keep the Vue facade and its script/template submodules together.
+            // Splitting only the facade creates a cyclic, uninitialized export.
+            { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.vue(?:\?|$)/, includeDependenciesRecursively: false },
             {
               // Direct-modeling helpers are shared by lazy CAD panels; they must
               // not capture the geometry kernel they reference.
@@ -71,6 +79,7 @@ export default defineConfig({
             { name: 'csg-preview-parse', test: /src[\\/]services[\\/](gpuCsgParse|openscadCompiler)\.ts$/ },
             // Keep independent GPU preview and compute passes out of renderer control code.
             { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpu[A-Z][A-Za-z]*|webgpuRenderer[\\/]gpuPasses)\.ts$|crates[\\/]compute-core[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
+            { name: 'renderer-resources', test: /src[\\/]services[\\/](pipelineFactory|textureResources|uniformFill)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],

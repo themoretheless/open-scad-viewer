@@ -271,3 +271,9 @@ mod tests {
         assert!(b[0] <= 15. && b[1] >= 15.);
     }
 }
+
+mod finite_interval;
+pub use finite_interval::{Crossing,Unresolved,IntervalReport,Decision};
+pub use finite_interval::inspect_interval;
+pub use finite_interval::inspect as inspect_finite_interval;
+pub use finite_interval::Report as FiniteIntervalReport;

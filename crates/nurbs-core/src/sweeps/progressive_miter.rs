@@ -325,7 +325,8 @@ impl<'a> Sweep<'a> {
         let traversal =
             (self.lengths[edge] + f * (self.lengths[edge + 1] - self.lengths[edge])) / total;
         let t = self.tangents[edge];
-        let angle = law(self.twist, traversal)? + self.correction * traversal;
+        let twist_val = law(self.twist, traversal)?;
+        let angle = twist_val + self.correction * traversal;
         let (n,b,frame_axis)=if let Some((longitudinal,transverse))=self.frame_laws {
             let value=|curve:&Curve|->Result<V>{let [a,b]=curve.domain();let p=curve.evaluate(a+(b-a)*traversal)?.point;Ok([p[0],p[1],p[2]])};
             let axis=unit(value(longitudinal)?)?;
@@ -335,14 +336,14 @@ impl<'a> Sweep<'a> {
                 sub(rail,path)
             } else {value(transverse)?};
             let normal=unit(sub(v,axis.map(|x|x*dot(axis,v))))?;
-            let n=rotate(normal,axis,law(self.twist,traversal)?);(n,cross(axis,n),axis)
+            let n=rotate(normal,axis,twist_val);(n,cross(axis,n),axis)
         } else if let Some(guide)=self.orientation_guide {
             let [a,b]=guide.domain();let rail=guide.evaluate(a+(b-a)*traversal)?.point;
             let next=(edge+1)%self.points.len();
             let path:V=std::array::from_fn(|k|(1.-f)*self.points[edge][k]+f*self.points[next][k]);
             let v=sub([rail[0],rail[1],rail[2]],path);
             let normal=unit(sub(v,t.map(|x|x*dot(t,v))))?;
-            let n=rotate(normal,t,law(self.twist,traversal)?);(n,cross(t,n),t)
+            let n=rotate(normal,t,twist_val);(n,cross(t,n),t)
         } else {let n=rotate(self.normals[edge],t,angle);(n,cross(t,n),t)};
         let scale = law(self.scale, traversal)?;
         let (axes,center)=if let Some((axes,center))=self.affine_laws {
@@ -350,29 +351,43 @@ impl<'a> Sweep<'a> {
             (value(axes)?,value(center)?)
         } else {([1.;3],[0.;3])};
         let next = (edge + 1) % self.points.len();
-        self.profiles
-            .iter()
-            .zip(&self.offsets)
-            .map(|(profile, offsets)| {
-                let mut curve = profile.clone();
-                for (p, offset) in curve.control_points.iter_mut().zip(offsets) {
-                    let q: V =
-                        if self.affine_laws.is_some(){std::array::from_fn(|k|
-                            (scale*axes[0]*offset[0]+center[0])*n[k]+(scale*axes[1]*offset[1]+center[1])*b[k]+center[2]*frame_axis[k])}
-                        else {std::array::from_fn(|k| scale * (offset[0] * n[k] + offset[1] * b[k]))};
-                    let shift = |plane: Option<V>| plane.map_or(0., |h| dot(q, h) / dot(t, h));
-                    let axial = (1. - f) * shift(self.planes[edge]) + f * shift(self.planes[next]);
-                    *p = (0..3)
-                        .map(|k| {
-                            (1. - f) * self.points[edge][k] + f * self.points[next][k] + q[k]
-                                - axial * t[k]
-                        })
-                        .collect();
-                }
-                curve.validate()?;
-                Ok(curve)
-            })
-            .collect()
+        let p_edge = self.points[edge];
+        let p_next = self.points[next];
+        let base_pt: V = std::array::from_fn(|k| (1. - f) * p_edge[k] + f * p_next[k]);
+        let plane_edge = self.planes[edge];
+        let plane_next = self.planes[next];
+        let mut out = Vec::with_capacity(self.profiles.len());
+        for (profile, offsets) in self.profiles.iter().zip(&self.offsets) {
+            let mut control_points = Vec::with_capacity(offsets.len());
+            for offset in offsets {
+                let q: V = if self.affine_laws.is_some() {
+                    std::array::from_fn(|k| {
+                        (scale * axes[0] * offset[0] + center[0]) * n[k]
+                            + (scale * axes[1] * offset[1] + center[1]) * b[k]
+                            + center[2] * frame_axis[k]
+                    })
+                } else {
+                    std::array::from_fn(|k| scale * (offset[0] * n[k] + offset[1] * b[k]))
+                };
+                let shift = |plane: Option<V>| plane.map_or(0., |h| dot(q, h) / dot(t, h));
+                let axial = (1. - f) * shift(plane_edge) + f * shift(plane_next);
+                control_points.push(vec![
+                    base_pt[0] + q[0] - axial * t[0],
+                    base_pt[1] + q[1] - axial * t[1],
+                    base_pt[2] + q[2] - axial * t[2],
+                ]);
+            }
+            let curve = Curve {
+                degree: profile.degree,
+                knots: profile.knots.clone(),
+                control_points,
+                weights: profile.weights.clone(),
+                periodic: profile.periodic,
+            };
+            curve.validate()?;
+            out.push(curve);
+        }
+        Ok(out)
     }
     fn at(&self, index: usize, steps: usize) -> Result<Vec<Curve>> {
         if self.options.closed && index == self.tangents.len() * steps {
@@ -398,181 +413,8 @@ impl<'a> Sweep<'a> {
         )?;
         (0..count).map(|i| self.at(i, steps)).collect()
     }
-    pub fn preview_at(&self, steps: usize) -> Result<Level> {
-        check(
-            steps >= self.options.initial_steps && steps <= self.options.max_steps,
-            "Miter preview steps are outside the authored progression",
-        )?;
-        let sections = self.sections_at(steps)?;
-        let fine_steps = 4 * steps;
-        let stations = self.tangents.len() * fine_steps + 1;
-        let mut maximum = 0_f64;
-        let mut previous = self.at(0, fine_steps)?;
-        // Unified guard as a backstop over the refinement-station budget.
-        let mut guard = Budget::with_iterations(stations + 1)?.guard("miter_preview");
-        for i in 1..stations {
-            guard.tick()?;
-            let fine = self.at(i, fine_steps)?;
-            let j = (i / 4).min(sections.len() - 2);
-            let f = (i - 4 * j) as f64 / 4.;
-            for ((p, a), b) in fine.iter().zip(&sections[j]).zip(&sections[j + 1]) {
-                for ((p, a), b) in p
-                    .control_points
-                    .iter()
-                    .zip(&a.control_points)
-                    .zip(&b.control_points)
-                {
-                    maximum = maximum.max(norm(std::array::from_fn(|k| {
-                        p[k] - (1. - f) * a[k] - f * b[k]
-                    })));
-                }
-            }
-            let tangent = self.tangents[(i - 1) / fine_steps];
-            for (a, b) in previous.iter().zip(&fine) {
-                for (a, b) in a.control_points.iter().zip(&b.control_points) {
-                    check(
-                        dot(sub([b[0], b[1], b[2]], [a[0], a[1], a[2]]), tangent) > 0.,
-                        "Progressive miter has a sampled backward control advance",
-                    )?;
-                }
-            }
-            previous = fine;
-        }
-        check(maximum.is_finite(), "Miter sampled deviation overflows")?;
-        // A uniform probe grid can alias several whole turns. Inspect the
-        // local rational twist control hull before promoting a sampled level.
-        // This is an admission guard, not a continuous/rounding certificate.
-        let [a, b] = self.twist.domain();
-        let total = *self.lengths.last().unwrap();
-        let mut phase_resolved = true;
-        let mut continuous_error_upper = 0_f64;
-        for edge in 0..self.tangents.len() {
-            for i in 0..steps {
-                let traversal = |j: usize| {
-                    (self.lengths[edge]
-                        + (self.lengths[edge + 1] - self.lengths[edge]) * j as f64 / steps as f64)
-                        / total
-                };
-                let s0 = traversal(i);
-                let s1 = traversal(i + 1);
-                let (scale, s1_bound, s2_bound, scale_smooth) = scalar_bounds(self.scale, s0, s1)?;
-                let (_, t1_bound, t2_bound, twist_smooth) = scalar_bounds(self.twist, s0, s1)?;
-                let angular_first = t1_bound + self.correction.abs() * (s1 - s0);
-                let tangent = self.tangents[edge];
-                let transverse = |plane: Option<V>| {
-                    plane.map_or([0.; 3], |h| {
-                        let d = dot(tangent, h);
-                        std::array::from_fn(|k| h[k] / d - tangent[k])
-                    })
-                };
-                let v0 = transverse(self.planes[edge]);
-                let v1 = transverse(self.planes[(edge + 1) % self.points.len()]);
-                let shear = norm(v0).max(norm(v1));
-                let shear_derivative = norm(sub(v1, v0)) / steps as f64;
-                for offsets in &self.offsets {
-                    for offset in offsets {
-                        let radius = offset[0].hypot(offset[1]);
-                        let q1 = radius * (s1_bound + scale * angular_first);
-                        let q2 = radius
-                            * (s2_bound
-                                + 2. * s1_bound * angular_first
-                                + scale * (t2_bound + angular_first * angular_first));
-                        // Linear interpolation remainder on [0,1]: ||F''||/8.
-                        // Across internal law knots use the Lipschitz remainder L/2,
-                        // which needs no agreement of one-sided derivatives.
-                        let error = if scale_smooth && twist_smooth {
-                            ((1. + shear) * q2 + 2. * shear_derivative * q1) / 8.
-                        } else {
-                            ((1. + shear) * q1 + shear_derivative * radius * scale) / 2.
-                        };
-                        continuous_error_upper = continuous_error_upper.max(error);
-                    }
-                }
-
-                let lo = if edge == 0 && i == 0 {
-                    a
-                } else {
-                    a + (b - a) * s0
-                };
-                let hi = if edge == self.tangents.len() - 1 && i + 1 == steps {
-                    b
-                } else {
-                    a + (b - a) * s1
-                };
-                check(lo < hi, "Miter phase-guard parameter interval collapsed")?;
-                let trimmed = self.twist.trim(lo, hi)?;
-                let minimum = trimmed
-                    .control_points
-                    .iter()
-                    .map(|p| p[0])
-                    .fold(f64::INFINITY, f64::min);
-                let maximum = trimmed
-                    .control_points
-                    .iter()
-                    .map(|p| p[0])
-                    .fold(f64::NEG_INFINITY, f64::max);
-                if maximum - minimum + self.correction.abs() * (s1 - s0)
-                    > std::f64::consts::FRAC_PI_2
-                {
-                    phase_resolved = false;
-                }
-            }
-        }
-        check(
-            continuous_error_upper.is_finite(),
-            "Miter continuous interpolation estimate overflows",
-        )?;
-        let certificate = self.certify_level(steps, &sections, 100000, 64)?;
-        let profile_regularity = self.certify_profile_regularity(10000)?;
-        let wall_regularity = if profile_regularity.spanwise_regular
-            && phase_resolved
-            && certificate
-                .error_upper
-                .is_some_and(|upper| upper <= self.options.max_deviation)
-        {
-            Some(self.certify_wall_regularity(&sections, 10000)?)
-        } else {
-            None
-        };
-
-        Ok(Level {
-            report: Report {
-                accepted: profile_regularity.spanwise_regular
-                    && wall_regularity.as_ref().is_some_and(|r| r.spanwise_regular)
-                    && phase_resolved
-                    && self.transport_certificate.status == scalar_certificate::Status::Certified
-                    && maximum <= self.options.max_deviation
-                    && certificate
-                        .error_upper
-                        .is_some_and(|upper| upper <= self.options.max_deviation),
-                phase_resolved,
-                frame_transport_certified: self.transport_certificate.status
-                    == scalar_certificate::Status::Certified,
-                frame_transport_reason: self.transport_certificate.reason,
-                steps,
-                sections: sections.len(),
-                stations,
-                sampled_control_deviation: maximum,
-                continuous_error_upper:if self.affine_laws.is_some() || self.frame_laws.is_some() || self.orientation_guide.is_some(){certificate.error_upper.unwrap_or(f64::MAX)}else{continuous_error_upper},
-                certified_error_upper: certificate.error_upper,
-                affine_laws_applied: self.affine_laws.is_some(),
-                authored_frames_applied: self.frame_laws.is_some(),
-                orientation_guide_applied: self.orientation_guide.is_some(),
-                endpoint_contour_error_upper: certificate.endpoint_contour_error_upper,
-                error_certificate_cells: certificate.cells,
-                error_certificate_reason: certificate.reason,
-                profile_regularity_certified: profile_regularity.spanwise_regular,
-                wall_regularity_certified: wall_regularity.as_ref().map(|r| r.spanwise_regular),
-                regularity_cells: profile_regularity.cells
-                    + wall_regularity.as_ref().map_or(0, |r| r.cells),
-                unresolved_wall_patches: wall_regularity
-                    .map_or_else(Vec::new, |r| r.unresolved_patches),
-                budget: self.options.max_deviation,
-                closed_path: self.options.closed,
-                holonomy_correction: self.correction,
-            },
-            sections,
-        })
+    pub fn preview_at(&self, steps:usize)->Result<Level> {
+        self.preview_retained_at(steps,self.sections_at(steps)?)
     }
 }
 impl Iterator for Sweep<'_> {
@@ -614,3 +456,200 @@ pub fn approximate(
 #[cfg(test)]
 #[path = "tests/progressive_miter.rs"]
 mod tests;
+
+pub mod endpoint_point_certificate;
+
+impl<'a> Sweep<'a> {
+pub fn new_direct(
+    profiles: &'a [Curve], points: &'a [V], scale: &'a Curve,
+    twist: &'a Curve, options: Options,
+) -> Result<Self> {
+    scale.validate()?;
+    twist.validate()?;
+    check(scale.control_points.iter().all(|p| p[0] == 1.)
+        && twist.control_points.iter().all(|p| p[0] == 0.),
+        "Direct miter source requires neutral scale and twist")?;
+    let mut sweep = Self::new(profiles, points, scale, twist, options)?;
+    sweep.correction = 0.;
+    sweep.transport_certificate = sweep.transport_certificate.without_distributed_holonomy();
+    Ok(sweep)
+}
+}
+
+impl<'a> Sweep<'a> {
+pub fn preview_retained_at(&self, steps: usize, sections: Vec<Vec<Curve>>) -> Result<Level> {
+    check(
+        steps >= self.options.initial_steps && steps <= self.options.max_steps,
+        "Miter preview steps are outside the authored progression",
+    )?;
+    let certificate = self.certify_level(steps, &sections, 100000, 64)?;
+    let fine_steps = 4 * steps;
+    let stations = self.tangents.len() * fine_steps + 1;
+    let mut maximum = 0_f64;
+    let mut previous = self.at(0, fine_steps)?;
+    // Unified guard as a backstop over the refinement-station budget.
+    let mut guard = Budget::with_iterations(stations + 1)?.guard("miter_preview");
+    for i in 1..stations {
+        guard.tick()?;
+        let fine = self.at(i, fine_steps)?;
+        let j = (i / 4).min(sections.len() - 2);
+        let f = (i - 4 * j) as f64 / 4.;
+        for ((p, a), b) in fine.iter().zip(&sections[j]).zip(&sections[j + 1]) {
+            for ((p, a), b) in p
+                .control_points
+                .iter()
+                .zip(&a.control_points)
+                .zip(&b.control_points)
+            {
+                maximum = maximum.max(norm(std::array::from_fn(|k| {
+                    p[k] - (1. - f) * a[k] - f * b[k]
+                })));
+            }
+        }
+        let tangent = self.tangents[(i - 1) / fine_steps];
+        for (a, b) in previous.iter().zip(&fine) {
+            for (a, b) in a.control_points.iter().zip(&b.control_points) {
+                check(
+                    dot(sub([b[0], b[1], b[2]], [a[0], a[1], a[2]]), tangent) > 0.,
+                    "Progressive miter has a sampled backward control advance",
+                )?;
+            }
+        }
+        previous = fine;
+    }
+    check(maximum.is_finite(), "Miter sampled deviation overflows")?;
+    // A uniform probe grid can alias several whole turns. Inspect the
+    // local rational twist control hull before promoting a sampled level.
+    // This is an admission guard, not a continuous/rounding certificate.
+    let [a, b] = self.twist.domain();
+    let total = *self.lengths.last().unwrap();
+    let mut phase_resolved = true;
+    let mut continuous_error_upper = 0_f64;
+    for edge in 0..self.tangents.len() {
+        for i in 0..steps {
+            let traversal = |j: usize| {
+                (self.lengths[edge]
+                    + (self.lengths[edge + 1] - self.lengths[edge]) * j as f64 / steps as f64)
+                    / total
+            };
+            let s0 = traversal(i);
+            let s1 = traversal(i + 1);
+            let (scale, s1_bound, s2_bound, scale_smooth) = scalar_bounds(self.scale, s0, s1)?;
+            let (_, t1_bound, t2_bound, twist_smooth) = scalar_bounds(self.twist, s0, s1)?;
+            let angular_first = t1_bound + self.correction.abs() * (s1 - s0);
+            let tangent = self.tangents[edge];
+            let transverse = |plane: Option<V>| {
+                plane.map_or([0.; 3], |h| {
+                    let d = dot(tangent, h);
+                    std::array::from_fn(|k| h[k] / d - tangent[k])
+                })
+            };
+            let v0 = transverse(self.planes[edge]);
+            let v1 = transverse(self.planes[(edge + 1) % self.points.len()]);
+            let shear = norm(v0).max(norm(v1));
+            let shear_derivative = norm(sub(v1, v0)) / steps as f64;
+            for offsets in &self.offsets {
+                for offset in offsets {
+                    let radius = offset[0].hypot(offset[1]);
+                    let q1 = radius * (s1_bound + scale * angular_first);
+                    let q2 = radius
+                        * (s2_bound
+                            + 2. * s1_bound * angular_first
+                            + scale * (t2_bound + angular_first * angular_first));
+                    // Linear interpolation remainder on [0,1]: ||F''||/8.
+                    // Across internal law knots use the Lipschitz remainder L/2,
+                    // which needs no agreement of one-sided derivatives.
+                    let error = if scale_smooth && twist_smooth {
+                        ((1. + shear) * q2 + 2. * shear_derivative * q1) / 8.
+                    } else {
+                        ((1. + shear) * q1 + shear_derivative * radius * scale) / 2.
+                    };
+                    continuous_error_upper = continuous_error_upper.max(error);
+                }
+            }
+
+            let lo = if edge == 0 && i == 0 {
+                a
+            } else {
+                a + (b - a) * s0
+            };
+            let hi = if edge == self.tangents.len() - 1 && i + 1 == steps {
+                b
+            } else {
+                a + (b - a) * s1
+            };
+            check(lo < hi, "Miter phase-guard parameter interval collapsed")?;
+            let trimmed = self.twist.trim(lo, hi)?;
+            let minimum = trimmed
+                .control_points
+                .iter()
+                .map(|p| p[0])
+                .fold(f64::INFINITY, f64::min);
+            let maximum = trimmed
+                .control_points
+                .iter()
+                .map(|p| p[0])
+                .fold(f64::NEG_INFINITY, f64::max);
+            if maximum - minimum + self.correction.abs() * (s1 - s0)
+                > std::f64::consts::FRAC_PI_2
+            {
+                phase_resolved = false;
+            }
+        }
+    }
+    check(
+        continuous_error_upper.is_finite(),
+        "Miter continuous interpolation estimate overflows",
+    )?;
+    let profile_regularity = self.certify_profile_regularity(10000)?;
+    let wall_regularity = if profile_regularity.spanwise_regular
+        && phase_resolved
+        && certificate
+            .error_upper
+            .is_some_and(|upper| upper <= self.options.max_deviation)
+    {
+        Some(self.certify_wall_regularity(&sections, 10000)?)
+    } else {
+        None
+    };
+
+    Ok(Level {
+        report: Report {
+            accepted: profile_regularity.spanwise_regular
+                && wall_regularity.as_ref().is_some_and(|r| r.spanwise_regular)
+                && phase_resolved
+                && self.transport_certificate.status == scalar_certificate::Status::Certified
+                && maximum <= self.options.max_deviation
+                && certificate
+                    .error_upper
+                    .is_some_and(|upper| upper <= self.options.max_deviation),
+            phase_resolved,
+            frame_transport_certified: self.transport_certificate.status
+                == scalar_certificate::Status::Certified,
+            frame_transport_reason: self.transport_certificate.reason,
+            steps,
+            sections: sections.len(),
+            stations,
+            sampled_control_deviation: maximum,
+            continuous_error_upper:if self.affine_laws.is_some() || self.frame_laws.is_some() || self.orientation_guide.is_some(){certificate.error_upper.unwrap_or(f64::MAX)}else{continuous_error_upper},
+            certified_error_upper: certificate.error_upper,
+            affine_laws_applied: self.affine_laws.is_some(),
+            authored_frames_applied: self.frame_laws.is_some(),
+            orientation_guide_applied: self.orientation_guide.is_some(),
+            endpoint_contour_error_upper: certificate.endpoint_contour_error_upper,
+            error_certificate_cells: certificate.cells,
+            error_certificate_reason: certificate.reason,
+            profile_regularity_certified: profile_regularity.spanwise_regular,
+            wall_regularity_certified: wall_regularity.as_ref().map(|r| r.spanwise_regular),
+            regularity_cells: profile_regularity.cells
+                + wall_regularity.as_ref().map_or(0, |r| r.cells),
+            unresolved_wall_patches: wall_regularity
+                .map_or_else(Vec::new, |r| r.unresolved_patches),
+            budget: self.options.max_deviation,
+            closed_path: self.options.closed,
+            holonomy_correction: self.correction,
+        },
+        sections,
+    })
+}
+}

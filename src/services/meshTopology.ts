@@ -118,7 +118,8 @@ export async function extractSemanticEdgesGpu(
   triangleIndices: Uint32Array,
   options: SemanticEdgeOptions = {},
 ): Promise<SemanticEdgesResult> {
-  if (options.mergeFromVert === undefined && options.mergeToVert === undefined && !(options.weldCoincidentVertices ?? true)) {
+  if (typeof navigator !== 'undefined' && navigator.gpu
+    && options.mergeFromVert === undefined && options.mergeToVert === undefined && !(options.weldCoincidentVertices ?? true)) {
     const requestedCreaseAngle = options.creaseAngleDegrees ?? DEFAULT_CREASE_ANGLE_DEGREES
     if (
       vertices.length % VERTEX_STRIDE === 0 &&

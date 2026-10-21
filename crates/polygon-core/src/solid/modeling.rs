@@ -97,24 +97,18 @@ fn cap(ring: &[Point]) -> Result<Vec<usize>> {
             .all(|&p| dot(sub(p, a), normal).abs() <= size * 1e-9),
         "Loft caps require planar sections",
     )?;
-    let points: Vec<_> = ring
-        .iter()
-        .map(|&p| [dot(sub(p, a), u) / size, dot(sub(p, a), v) / size])
-        .collect();
-    let min = [
-        points.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min),
-        points.iter().map(|p| p[1]).fold(f64::INFINITY, f64::min),
-    ];
-    let max = [
-        points
-            .iter()
-            .map(|p| p[0])
-            .fold(f64::NEG_INFINITY, f64::max),
-        points
-            .iter()
-            .map(|p| p[1])
-            .fold(f64::NEG_INFINITY, f64::max),
-    ];
+    let mut points = Vec::with_capacity(ring.len());
+    let mut min = [f64::INFINITY; 2];
+    let mut max = [f64::NEG_INFINITY; 2];
+    for &p in ring {
+        let d = sub(p, a);
+        let pt = [dot(d, u) / size, dot(d, v) / size];
+        min[0] = min[0].min(pt[0]);
+        min[1] = min[1].min(pt[1]);
+        max[0] = max[0].max(pt[0]);
+        max[1] = max[1].max(pt[1]);
+        points.push(pt);
+    }
     let normalized = points
         .iter()
         .map(|p| {
@@ -126,7 +120,7 @@ fn cap(ring: &[Point]) -> Result<Vec<usize>> {
         .collect();
     tessellation::validate_loops(&[normalized])?;
     let mut remaining: Vec<_> = (0..ring.len()).collect();
-    let mut triangles = Vec::new();
+    let mut triangles = Vec::with_capacity((ring.len() - 2) * 3);
     while remaining.len() > 3 {
         let mut found = false;
         for i in 0..remaining.len() {

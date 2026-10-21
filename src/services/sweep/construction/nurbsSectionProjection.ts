@@ -36,3 +36,15 @@ export function projectSweepSections(
 ):SweepSectionCorrection {
  return callNurbsRust('sweep_project_sections',{sections,corrections,maxWork})
 }
+
+export function correctMiterSweepSections(sections:NurbsCurve[][],points:[number,number,number][],options:{
+ closed?:boolean;circleCorrection?:{quantum:number;tolerance:number;maxWork:number};
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean};
+ frameAxis?:{degree:number;knots:number[];values:number[][];weights:number[]},
+}):(SweepSectionCorrection & {sections:NurbsCurve[][]})|undefined {
+ const budget=(value:typeof options.circleCorrection)=>value?{...value,maxWork:Number.isFinite(value.maxWork)?value.maxWork:null}:null
+ const frameAxis=options.frameAxis?{degree:options.frameAxis.degree,knots:options.frameAxis.knots,controlPoints:options.frameAxis.values,weights:options.frameAxis.weights,periodic:false}:null
+ return callNurbsRust<(SweepSectionCorrection & {sections:NurbsCurve[][]})|null>('sweep_correct_miter_sections',{
+  sections,points,closed:options.closed??false,circleCorrection:budget(options.circleCorrection),capCorrection:budget(options.capCorrection),frameAxis,
+ })??undefined
+}

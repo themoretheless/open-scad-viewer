@@ -298,9 +298,9 @@ pub fn basis_funs_ders(
         u.is_finite() && u >= knots[span] && u <= knots[span + 1],
         "Parameter is outside the given span",
     )?;
-    let mut ndu = vec![vec![0.; p + 1]; p + 1];
-    let mut left = vec![0.; p + 1];
-    let mut right = vec![0.; p + 1];
+    let mut ndu = [[0.; 26]; 26];
+    let mut left = [0.; 26];
+    let mut right = [0.; 26];
     ndu[0][0] = 1.;
     for j in 1..=p {
         left[j] = u - knots[span + 1 - j];
@@ -318,11 +318,11 @@ pub fn basis_funs_ders(
         }
         ndu[j][j] = saved;
     }
-    let mut ders = vec![vec![0.; p + 1]; nder + 1];
+    let mut ders = [[0.; 26]; 3];
     for j in 0..=p {
         ders[0][j] = ndu[j][p];
     }
-    let mut a = vec![vec![0.; p + 1]; 2];
+    let mut a = [[0.; 26]; 2];
     for r in 0..=p {
         let (mut s1, mut s2) = (0, 1);
         a[0][0] = 1.;
@@ -372,20 +372,20 @@ pub fn basis_funs_ders(
         factor *= (p - kk) as f64;
     }
     numeric(
-        ders.iter().flatten().all(|v| v.is_finite()),
+        ders[..=nder].iter().flat_map(|row| &row[..=p]).all(|v| v.is_finite()),
         "Knot scale exhausted finite derivative precision",
     )?;
     let empty = || vec![0.; p + 1];
     Ok(LocalBasis {
         span,
-        values: std::mem::take(&mut ders[0]),
+        values: ders[0][..=p].to_vec(),
         d1: if nder >= 1 {
-            std::mem::take(&mut ders[1])
+            ders[1][..=p].to_vec()
         } else {
             empty()
         },
         d2: if nder >= 2 {
-            std::mem::take(&mut ders[2])
+            ders[2][..=p].to_vec()
         } else {
             empty()
         },

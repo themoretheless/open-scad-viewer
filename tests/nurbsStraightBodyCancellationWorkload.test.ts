@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -13,7 +14,7 @@ it.each([{file:'progressive-hollow-boundary.r',faces:514},{file:'progressive-uns
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing valid native cancellation body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.01})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry,saved=JSON.stringify(model)
+ const model=readNativeGeometryData(built.nativeGeometry).geometry,saved=JSON.stringify(model)
  expect(model.faces).toHaveLength(faces)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
   allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true}})

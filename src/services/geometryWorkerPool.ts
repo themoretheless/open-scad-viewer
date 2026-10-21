@@ -25,25 +25,26 @@ export interface HardwareConcurrencyCapabilities {
   wasmSharedMemorySupported: boolean
 }
 
-/**
- * Probes the current runtime environment for hardware multithreading and shared memory support.
- */
-export function detectHardwareConcurrency(maxWorkers = 16): HardwareConcurrencyCapabilities {
-  const rawCores =
-    typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
-      ? navigator.hardwareConcurrency
-      : 4
+let cachedSharedMemCaps: {
+  crossOriginIsolated: boolean
+  sharedArrayBufferSupported: boolean
+  atomicsSupported: boolean
+  wasmSharedMemorySupported: boolean
+  sabCtor: typeof SharedArrayBuffer | undefined
+} | null = null
 
-  const logicalCores = Math.max(1, rawCores)
-  const recommendedWorkers = Math.max(1, Math.min(maxWorkers, Math.max(1, logicalCores - 1)))
-
+function getSharedMemoryCapabilities() {
+  const currentSabCtor = typeof SharedArrayBuffer !== 'undefined' ? SharedArrayBuffer : undefined
   const crossOriginIsolated =
     typeof globalThis !== 'undefined' && (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated === true
+  if (cachedSharedMemCaps && cachedSharedMemCaps.sabCtor === currentSabCtor && cachedSharedMemCaps.crossOriginIsolated === crossOriginIsolated) {
+    return cachedSharedMemCaps
+  }
 
   let sharedArrayBufferSupported = false
   try {
-    if (typeof SharedArrayBuffer !== 'undefined') {
-      const sab = new SharedArrayBuffer(16)
+    if (currentSabCtor !== undefined) {
+      const sab = new currentSabCtor(16)
       sharedArrayBufferSupported = sab.byteLength === 16
     }
   } catch {
@@ -59,19 +60,42 @@ export function detectHardwareConcurrency(maxWorkers = 16): HardwareConcurrencyC
   if (sharedArrayBufferSupported && typeof WebAssembly !== 'undefined' && typeof WebAssembly.Memory === 'function') {
     try {
       const mem = new WebAssembly.Memory({ initial: 1, maximum: 2, shared: true })
-      wasmSharedMemorySupported = mem.buffer instanceof SharedArrayBuffer
+      wasmSharedMemorySupported = mem.buffer instanceof currentSabCtor!
     } catch {
       wasmSharedMemorySupported = false
     }
   }
 
-  return {
-    logicalCores,
-    recommendedWorkers,
+  cachedSharedMemCaps = {
     crossOriginIsolated,
     sharedArrayBufferSupported,
     atomicsSupported,
     wasmSharedMemorySupported,
+    sabCtor: currentSabCtor,
+  }
+  return cachedSharedMemCaps
+}
+
+/**
+ * Probes the current runtime environment for hardware multithreading and shared memory support.
+ */
+export function detectHardwareConcurrency(maxWorkers = 16): HardwareConcurrencyCapabilities {
+  const rawCores =
+    typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
+      ? navigator.hardwareConcurrency
+      : 4
+
+  const logicalCores = Math.max(1, rawCores)
+  const recommendedWorkers = Math.max(1, Math.min(maxWorkers, Math.max(1, logicalCores - 1)))
+  const sharedCaps = getSharedMemoryCapabilities()
+
+  return {
+    logicalCores,
+    recommendedWorkers,
+    crossOriginIsolated: sharedCaps.crossOriginIsolated,
+    sharedArrayBufferSupported: sharedCaps.sharedArrayBufferSupported,
+    atomicsSupported: sharedCaps.atomicsSupported,
+    wasmSharedMemorySupported: sharedCaps.wasmSharedMemorySupported,
   }
 }
 
@@ -146,6 +170,7 @@ export interface WorkerTaskOptions {
   priority?: number
   signal?: AbortSignal
   transfer?: boolean
+  timeoutMs?: number
 }
 
 export type TaskExecutor<TInput, TOutput> = (input: TInput, workerIndex: number) => Promise<TOutput> | TOutput
@@ -155,6 +180,8 @@ interface QueuedTask<TInput, TOutput> {
   input: TInput
   priority: number
   signal?: AbortSignal
+  timeoutMs?: number
+  aborted?: boolean
   resolve: (value: TOutput) => void
   reject: (reason: unknown) => void
 }
@@ -167,15 +194,32 @@ export interface WorkerPoolStats {
   perWorkerCompleted: number[]
 }
 
+export interface WorkerPoolDiagnostics {
+  poolSize: number
+  activeWorkers: number
+  idleWorkers: number
+  queuedJobs: number
+  completedJobs: number
+  peakQueueDepth: number
+  cancelledJobs: number
+  timedOutJobs: number
+}
+
 /**
  * Parallel Work-Stealing / Least-Loaded Scheduler for multi-core geometry evaluation.
  */
 export class GeometryWorkerPool<TInput, TOutput> {
   readonly poolSize: number
   private readonly executor: TaskExecutor<TInput, TOutput>
-  private readonly busyWorkers = new Set<number>()
+  private readonly busyWorkers: Uint8Array
+  private activeCount = 0
   private readonly perWorkerCount: number[]
   private readonly queue: QueuedTask<TInput, TOutput>[] = []
+  private queueHead = 0
+  private activeQueuedCount = 0
+  private peakQueueDepth = 0
+  private cancelledCount = 0
+  private timedOutCount = 0
   private nextTaskId = 1
   private completedCount = 0
   private disposed = false
@@ -184,6 +228,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
     const caps = detectHardwareConcurrency()
     this.poolSize = Math.max(1, poolSize ?? caps.recommendedWorkers)
     this.executor = executor
+    this.busyWorkers = new Uint8Array(this.poolSize)
     this.perWorkerCount = new Array(this.poolSize).fill(0)
   }
 
@@ -195,6 +240,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
       return Promise.reject(new Error('GeometryWorkerPool has been disposed'))
     }
     if (options.signal?.aborted) {
+      this.cancelledCount++
       return Promise.reject(new Error('Task aborted'))
     }
 
@@ -204,6 +250,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
         input,
         priority: options.priority ?? 0,
         signal: options.signal,
+        timeoutMs: options.timeoutMs,
         resolve,
         reject,
       }
@@ -212,9 +259,10 @@ export class GeometryWorkerPool<TInput, TOutput> {
         options.signal.addEventListener(
           'abort',
           () => {
-            const idx = this.queue.indexOf(task)
-            if (idx !== -1) {
-              this.queue.splice(idx, 1)
+            if (!task.aborted) {
+              task.aborted = true
+              this.activeQueuedCount--
+              this.cancelledCount++
               reject(new Error('Task aborted'))
             }
           },
@@ -222,17 +270,27 @@ export class GeometryWorkerPool<TInput, TOutput> {
         )
       }
 
-      // Insert in priority order (higher priority first, FIFO for ties)
-      let inserted = false
-      for (let i = 0; i < this.queue.length; i++) {
-        if (task.priority > this.queue[i]!.priority) {
-          this.queue.splice(i, 0, task)
-          inserted = true
-          break
+      // Insert in priority order (higher priority first, FIFO for ties) using binary search
+      const q = this.queue
+      const len = q.length
+      if (len === this.queueHead || task.priority <= q[len - 1]!.priority) {
+        q.push(task)
+      } else {
+        let lo = this.queueHead
+        let hi = len
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1
+          if (task.priority > q[mid]!.priority) {
+            hi = mid
+          } else {
+            lo = mid + 1
+          }
         }
+        q.splice(lo, 0, task)
       }
-      if (!inserted) {
-        this.queue.push(task)
+      this.activeQueuedCount++
+      if (this.activeQueuedCount > this.peakQueueDepth) {
+        this.peakQueueDepth = this.activeQueuedCount
       }
 
       this.pump()
@@ -247,12 +305,13 @@ export class GeometryWorkerPool<TInput, TOutput> {
   }
 
   private findAvailableWorker(): number | null {
+    if (this.activeCount >= this.poolSize) return null
     // Choose idle worker with the fewest completed tasks for even load balancing
     let bestWorker: number | null = null
     let bestCount = Infinity
 
     for (let w = 0; w < this.poolSize; w++) {
-      if (!this.busyWorkers.has(w)) {
+      if (this.busyWorkers[w] === 0) {
         const count = this.perWorkerCount[w]!
         if (count < bestCount) {
           bestCount = count
@@ -263,34 +322,80 @@ export class GeometryWorkerPool<TInput, TOutput> {
     return bestWorker
   }
 
+  private dequeueTask(): QueuedTask<TInput, TOutput> | null {
+    while (this.queueHead < this.queue.length) {
+      const task = this.queue[this.queueHead]!
+      this.queue[this.queueHead] = undefined as unknown as QueuedTask<TInput, TOutput>
+      this.queueHead++
+      if (this.queueHead === this.queue.length) {
+        this.queue.length = 0
+        this.queueHead = 0
+      } else if (this.queueHead >= 64 && this.queueHead * 2 >= this.queue.length) {
+        this.queue.splice(0, this.queueHead)
+        this.queueHead = 0
+      }
+      if (task.aborted) continue
+      this.activeQueuedCount--
+      return task
+    }
+    return null
+  }
+
   private pump(): void {
     if (this.disposed) return
 
-    while (this.queue.length > 0) {
+    while (this.activeQueuedCount > 0 && this.activeCount < this.poolSize) {
       const workerIdx = this.findAvailableWorker()
       if (workerIdx === null) break
 
-      const task = this.queue.shift()!
+      const task = this.dequeueTask()
+      if (!task) break
       if (task.signal?.aborted) {
+        task.aborted = true
+        this.cancelledCount++
         task.reject(new Error('Task aborted'))
         continue
       }
 
-      this.busyWorkers.add(workerIdx)
+      // Mark aborted=true so the queued-abort listener becomes a no-op once dispatched
+      task.aborted = true
+      this.busyWorkers[workerIdx] = 1
+      this.activeCount++
+
+      let settled = false
+      let timerId: ReturnType<typeof setTimeout> | undefined
+      if (task.timeoutMs !== undefined && Number.isFinite(task.timeoutMs) && task.timeoutMs > 0) {
+        timerId = setTimeout(() => {
+          if (settled) return
+          settled = true
+          this.timedOutCount++
+          task.reject(new Error(`Task timed out after ${task.timeoutMs}ms`))
+        }, task.timeoutMs)
+      }
 
       Promise.resolve()
         .then(() => this.executor(task.input, workerIdx))
         .then(
           result => {
-            this.busyWorkers.delete(workerIdx)
+            if (timerId !== undefined) clearTimeout(timerId)
+            this.busyWorkers[workerIdx] = 0
+            this.activeCount--
             this.perWorkerCount[workerIdx]!++
             this.completedCount++
-            task.resolve(result)
+            if (!settled) {
+              settled = true
+              task.resolve(result)
+            }
             this.pump()
           },
           err => {
-            this.busyWorkers.delete(workerIdx)
-            task.reject(err)
+            if (timerId !== undefined) clearTimeout(timerId)
+            this.busyWorkers[workerIdx] = 0
+            this.activeCount--
+            if (!settled) {
+              settled = true
+              task.reject(err)
+            }
             this.pump()
           }
         )
@@ -300,17 +405,33 @@ export class GeometryWorkerPool<TInput, TOutput> {
   getStats(): WorkerPoolStats {
     return {
       poolSize: this.poolSize,
-      activeTasks: this.busyWorkers.size,
-      queuedTasks: this.queue.length,
+      activeTasks: this.activeCount,
+      queuedTasks: this.activeQueuedCount,
       completedTasks: this.completedCount,
       perWorkerCompleted: [...this.perWorkerCount],
     }
   }
 
+  getPoolDiagnostics(): WorkerPoolDiagnostics {
+    return {
+      poolSize: this.poolSize,
+      activeWorkers: this.activeCount,
+      idleWorkers: Math.max(0, this.poolSize - this.activeCount),
+      queuedJobs: this.activeQueuedCount,
+      completedJobs: this.completedCount,
+      peakQueueDepth: this.peakQueueDepth,
+      cancelledJobs: this.cancelledCount,
+      timedOutJobs: this.timedOutCount,
+    }
+  }
+
   dispose(): void {
     this.disposed = true
-    while (this.queue.length > 0) {
-      const task = this.queue.shift()!
+    while (true) {
+      const task = this.dequeueTask()
+      if (!task) break
+      task.aborted = true
+      this.cancelledCount++
       task.reject(new Error('GeometryWorkerPool disposed'))
     }
   }

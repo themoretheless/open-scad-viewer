@@ -1,6 +1,7 @@
 //! Retained rational section loft with authored incidence and audited cap trims.
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
+use nurbs_core::numerics::error_upper as error_bound;
 mod smooth_stations;
 pub use smooth_stations::{SmoothStationWalls,smooth_station_walls};
 mod polygon_stations;
@@ -458,11 +459,65 @@ pub struct ProgressiveBodyEvidence {
     pub cap_projection:Option<nurbs_core::progressive_sweep::EndpointCapProjectionReport>,
     pub filled_cap_error_upper:Option<[f64;2]>,
     pub cap_correction_error_upper:Option<f64>,
+    pub profile_correction_error_upper:Option<f64>,
     pub retained_walls:crate::sweep_retained_walls::Report,
     pub boundary_error_upper:Option<f64>,
     pub boundary_error_within_budget:Option<bool>,
     pub body_decomposition_error_upper:Option<f64>,
     pub body_decomposition_products:usize,
+    // Constructor-owned premises cannot be replaced by public receipt fields.
+    station_sections:Vec<Vec<Vec<Curve>>>,
+    station_boundary:nurbs_core::sweeps::filled_cap_error::BoundaryCertificate,
+    station_closed:bool,
+    station_budget:f64,
+    annular_caps:Option<AnnularCaps>,
+    cap_selection_work:u64,
+}
+
+mod annular_caps;
+pub use annular_caps::{Boundary as AnnularProgressiveBody, CapEvidence as AnnularCaps};
+
+impl ProgressiveBodyEvidence {
+    /// Explicit retained-wall reconstruction, bounded against the original sweep.
+    /// This does not certify actual jets, regularity, embedding or Solid admission.
+    /// Mutating the public model cannot transfer the private source certificate.
+    pub fn reconstruct_stations(
+        &self,
+        quantum:f64,
+        tolerance:f64,
+        max_work:u64,
+    )->Result<crate::sweep_miter_owned::StationBoundary>{
+        use nurbs_core::{numerics::error_upper,sweeps::filled_cap_error};
+        let source=&self.station_boundary;
+        let mut out=crate::sweep_miter_owned::StationBoundary {
+            reconstruction:None,boundary:None,reason:"source-bound-unproved",
+        };
+        if !source.continuous_bound || source.within_budget!=Some(true) {return Ok(out);}
+        let mut reconstruction=if self.annular_caps.is_some() {
+            annular_caps::reconstruct(&self.model,&self.station_sections,quantum,tolerance,max_work)?
+        } else {
+            crate::sweep_station_reconstruction::reconstruct(
+                &self.model,&self.station_sections,&[],self.station_closed,
+                quantum,tolerance,max_work,
+            )?
+        };
+        let Some(displacement)=reconstruction.candidate.wall_displacement_upper else {
+            out.reason=reconstruction.candidate.reason;
+            return Ok(out);
+        };
+        if reconstruction.model.is_none(){out.reason=reconstruction.candidate.reason;return Ok(out);}
+        let wall=source.wall_error_upper.and_then(|upper|error_upper::add(upper,displacement));
+        let boundary=filled_cap_error::compose_boundary(
+            wall,source.filled_cap_error_upper,self.station_closed,Some(self.station_budget),
+        );
+        if !boundary.continuous_bound || boundary.within_budget!=Some(true) {
+            reconstruction.model=None;
+            out.reason="boundary-budget-unproved";
+        }else{out.reason="owned-progressive-station-complete-boundary";}
+        out.reconstruction=Some(reconstruction);
+        out.boundary=Some(boundary);
+        Ok(out)
+    }
 }
 
 /// Reproduce the constructor's retained sections and certify their complete
@@ -530,198 +585,52 @@ pub fn progressive_profile_body_with_rmf_policy(
     guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
     correction:Option<EndpointCapCorrection>,rmf_policy:Option<(usize,usize,usize)>,
 )->Result<ProgressiveBodyEvidence>{
-    use nurbs_core::progressive_sweep::{Sweep, approximate_profiles};
-    if rmf_policy.is_some() && (frames.is_some() || guidance.is_some()) {
-        return Err(err("Spatial RMF policy excludes authored frames and guides"));
-    }
-    if (frames.is_some() || guidance.is_some()) && affine.is_none() || frames.is_some() && guidance.is_some() {
-        return Err(err("Progressive body frame/guide configuration requires affine laws and one frame source"));
-    }
-    if options.max_sections > 1025
-        || loops.is_empty()
-        || loops.len() > 16
-        || loops.iter().any(Vec::is_empty)
-    {
-        return Err(err(
-            "Progressive body needs 1..16 nonempty loops and at most1025 sections",
-        ));
-    }
-    let profiles = loops.iter().flatten().cloned().collect::<Vec<_>>();
-    let spans = profiles
-        .iter()
-        .map(|c| c.decompose().map(|s| s.len()))
-        .collect::<nurbs_core::Result<Vec<_>>>()?
-        .into_iter()
-        .sum::<usize>();
-    if spans == 0 || spans > 64 {
-        return Err(err("Progressive body exceeds64 section spans"));
-    }
-    let cap_faces = if nurbs_core::progressive_sweep::path_is_closed(path)? {
-        0
-    } else {
-        2
-    };
-    let options = nurbs_core::progressive_sweep::Options {
-        max_sections: options
-            .max_sections
-            .min((MAX_FACES - cap_faces) / spans + 1),
-        ..options
-    };
-    let approximation = if let Some((steps,cells,products)) = rmf_policy {
-        nurbs_core::progressive_sweep::approximate_spatial_rmf_profiles(
-            &profiles,path,scale,twist,affine,options,steps,cells,products,
-        )?
-    } else if let Some((guide, anchor)) = guidance {
-        let (axes, center) = affine.unwrap();
-        if let Some((index, parameter)) = anchor {
-            nurbs_core::progressive_sweep::approximate_contact_profiles(
-                &profiles, path, scale, twist, guide, index, parameter, axes, center, options,
-            )?
-        } else {
-            nurbs_core::progressive_sweep::approximate_guided_profiles(
-                &profiles, path, scale, twist, guide, axes, center, options,
-            )?
-        }
-    } else if let Some((longitudinal, transverse)) = frames {
-        let (axes, center) = affine.unwrap();
-        nurbs_core::progressive_sweep::approximate_authored_profiles(
-            &profiles,
-            path,
-            scale,
-            twist,
-            longitudinal,
-            transverse,
-            axes,
-            center,
-            options,
-        )?
-    } else if let Some((axes, center)) = affine {
-        nurbs_core::progressive_sweep::approximate_affine_profiles(
-            &profiles, path, scale, twist, axes, center, options,
-        )?
-    } else {
-        approximate_profiles(&profiles, path, scale, twist, options)?
-    };
-    let report = approximation.levels.last().unwrap();
-    if !report.accepted {
-        if rmf_policy.is_some() {
-            return Err(err(&format!("Progressive body continuous retained-patch error is unproved or exceeds budget: {}",
-                report.error_certificate_reason.unwrap_or("configured RMF error budget"))));
-        }
-        return Err(err(&format!("Progressive body continuous retained-patch error or refinement exceeds budget: sections={}, budget={}, sampled={}, known_bound={:?}, reason={:?}",
-            report.sections, report.budget, report.sampled_control_deviation, report.known_profile_error_upper, report.error_certificate_reason)));
-    }
-    let transported = if let Some((guide, anchor)) = guidance {
-        let sweep =
-            nurbs_core::progressive_sweep::MultiSweep::new(&profiles, path, scale, twist, options)?;
-        let sweep = if let Some((index, parameter)) = anchor {
-            sweep.with_contact_guide(guide, index, parameter)?
-        } else {
-            sweep.with_orientation_guide(guide)?
-        };
-        let (axes, center) = affine.unwrap();
-        sweep
-            .with_affine_laws(axes, center)?
-            .sections_at(report.sections)?
-    } else {
-        profiles
-            .iter()
-            .map(|p| {
-                let sweep = Sweep::new(p, path, scale, twist, options)?;
-                let sweep = if let Some((axes, center)) = affine {
-                    sweep.with_affine_laws(axes, center)?
-                } else {
-                    sweep
-                };
-                let sweep = if let Some((longitudinal, transverse)) = frames {
-                    sweep.with_frame_laws(longitudinal, transverse)?
-                } else {
-                    sweep
-                };
-                sweep.sections_at(report.sections)
-            })
-            .collect::<nurbs_core::Result<Vec<_>>>()?
-    };
-    let mut sections = (0..report.sections)
-        .map(|station| {
-            let mut first = 0;
-            loops
-                .iter()
-                .map(|ring| {
-                    let section = transported[first..first + ring.len()]
-                        .iter()
-                        .map(|p| p[station].clone())
-                        .collect::<Vec<_>>();
-                    first += ring.len();
-                    section
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let cap_correction_error_upper=if let Some(correction)=correction {
-        if report.closed_path{return Err(err("Closed progressive body has no caps to correct"));}
-        let mut work=0_u64;let mut displacement=0_f64;
-        for end in [false,true] {
-            let station=if end {sections.len()-1}else{0};
-            let normal=if let Some((axis,_))=frames {
-                let domain=axis.domain();axis.evaluate(if end {domain[1]}else{domain[0]})?.point
-            }else{
-                let domain=path.domain();let parameter=if end&&options.orientation!=nurbs_core::progressive_sweep::Orientation::Fixed {domain[1]}else{domain[0]};
-                path.evaluate(parameter)?.d1.ok_or_else(||err("Cap correction needs an endpoint tangent"))?
-            };
-            let axis=nurbs_core::progressive_sweep::constant_vector_law([normal[0],normal[1],normal[2]])?;
-            let curves=sections[station].iter().flatten().cloned().collect::<Vec<_>>();
-            let projected=nurbs_core::section_projection::project_authored_axis(&curves,&axis,0.,correction.quantum,
-                correction.tolerance,correction.max_work.checked_sub(work).ok_or_else(||err("Cap correction work exhausted"))?)?;
-            work+=projected.work;
-            if !projected.exact_planar{return Err(err(&format!("Progressive cap correction refused: {}",projected.reason)));}
-            let corrected=projected.curves.ok_or_else(||err("Progressive cap correction has no geometry"))?;
-            displacement=displacement.max(projected.displacement_upper.ok_or_else(||err("Cap correction displacement unproved"))?);
-            let mut at=0;
-            for ring in &mut sections[station]{for curve in ring{*curve=corrected[at].clone();at+=1;}}
-        }
-        Some(displacement)
-    }else{None};
-    let model = if report.closed_path {
-        periodic_section_loft(&sections)?
-    } else {
-        rational_section_loft(&sections)?
-    };
-    let (retained_sections,body_decomposition_error_upper,body_decomposition_products)=retained_section_partition(&sections,1000000)?;
-    let retained_caps=if report.closed_path {None} else {
-        Some(crate::sweep_retained_caps::inspect(&model,&[retained_sections[0].clone(),retained_sections.last().unwrap().clone()],
-            crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,
-                max_trim_pairs:100000,max_trim_cells:100000,max_trim_domain_cells:1000000},1024)?)
-    };
-    let cap_projection=if report.closed_path {None} else {
-        let mut source=nurbs_core::progressive_sweep::MultiSweep::new(&profiles,path,scale,twist,options)?;
-        if let Some((axes,center))=affine {source=source.with_affine_laws(axes,center)?;}
-        if let Some((axis,normal))=frames {source=source.with_frame_laws(axis,normal)?;}
-        if let Some((guide,anchor))=guidance {
-            source=if let Some((index,parameter))=anchor {source.with_contact_guide(guide,index,parameter)?}else{source.with_orientation_guide(guide)?};
-        }
-        if let Some((steps,cells,products))=rmf_policy {source=source.with_spatial_rmf_error_limits(steps,cells,products)?;}
-        let sizes=loops.iter().map(Vec::len).collect::<Vec<_>>();
-        let caps=[model.faces[model.faces.len()-2].surface.clone(),model.faces.last().unwrap().surface.clone()];
-        Some(source.certify_endpoint_cap_projection(&sizes,&caps,1e-9,10000,100000,1000000)?)
-    };
-    let filled_cap_error_upper=cap_projection.as_ref().and_then(|projection|nurbs_core::sweeps::filled_cap_error::filled_caps(
-        &nurbs_core::sweeps::filled_cap_error::Premises {
-            ideal_domains_certified:projection.original.domains.ideal_endpoint_domains_certified,
-            retained_regions_exact:retained_caps.as_ref().is_some_and(|r|r.exact),
-            projection_normal_dots:projection.normal_dots,endpoint_error:report.endpoint_contour_error_upper,
-            correction:Some(cap_correction_error_upper.unwrap_or(0.)),decomposition:body_decomposition_error_upper.map(|e|[e;2]),parallel_planes:[false;2],
-        }));
-    let retained_walls=crate::sweep_retained_walls::inspect(&model,&retained_sections,report.closed_path,1024,1000000)?;
-    // Preview may itself have been decomposed; keeping its full error and adding
-    // constructor extraction is conservative even when both include that term.
-    let original_wall_error=if retained_walls.certified {report.continuous_error_upper.zip(body_decomposition_error_upper)
-        .and_then(|(a,b)|nurbs_core::numerics::error_upper::add(a,b))}else{None};
-    let wall_error=if let Some(correction)=cap_correction_error_upper {original_wall_error.and_then(|e|nurbs_core::numerics::error_upper::add(e,correction))}else{original_wall_error};
-    let boundary_error_upper=nurbs_core::sweeps::filled_cap_error::boundary(wall_error,filled_cap_error_upper,report.closed_path);
-    let boundary_error_within_budget=boundary_error_upper.map(|upper|upper<=options.max_deviation);
-    Ok(ProgressiveBodyEvidence {model,approximation,retained_caps,cap_projection,filled_cap_error_upper,cap_correction_error_upper,retained_walls,boundary_error_upper,boundary_error_within_budget,body_decomposition_error_upper,body_decomposition_products})
+    progressive_profile_body_with_rmf_policy_and_corrections(loops,path,scale,twist,affine,frames,guidance,options,correction,None,rmf_policy)
 }
+
+/// Explicit same-basis circle repair applies only to these retained ruled walls.
+/// Its displacement is charged against the original source, including filled caps.
+pub fn progressive_profile_body_with_rmf_policy_and_corrections(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
+    rmf_policy:Option<(usize,usize,usize)>,
+)->Result<ProgressiveBodyEvidence>{
+    progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
+        correction,profile_correction,rmf_policy,None,false)
+}
+
+/// Source-owned progressive body with complete radial annular end caps.
+/// Legacy constructors keep their representation; this explicit mode shares
+/// cap construction/filling work and preserves physical cap groups.
+pub fn progressive_profile_body_with_annular_caps(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
+    rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
+)->Result<AnnularProgressiveBody>{
+    let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
+        correction,profile_correction,rmf_policy,Some(caps),false)?;
+    Ok(annular_caps::Boundary::new(body))
+}
+
+/// Native selection preserves exact legacy caps. A failed terminal coedge
+/// probe and annular construction/filling share one exact-work allowance.
+pub fn progressive_profile_body_with_automatic_caps(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
+    rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
+)->Result<AnnularProgressiveBody>{
+    let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
+        correction,profile_correction,rmf_policy,Some(caps),true)?;
+    Ok(annular_caps::Boundary::new(body))
+}
+
+
 
 #[cfg(test)]
 #[path="tests/rational_loft_retained_tests.rs"]
@@ -742,3 +651,7 @@ mod nonuniform_wall_regression;
 #[cfg(test)]
 #[path="tests/rational_loft_closed_planar_rmf_boundary_tests.rs"]
 mod closed_planar_rmf_boundary_tests;
+
+#[path = "rational_loft/owned_progressive_body.rs"]
+mod owned_progressive_body;
+use owned_progressive_body::progressive_profile_body_internal;

@@ -84,18 +84,28 @@ pub fn approximate(
             if i == 0 {
                 row.push(a.to_vec());
             }
-            row.push((0..3).map(|j| a[j] + h * da[j] / 5.).collect());
-            row.push(
-                (0..3)
-                    .map(|j| a[j] + 2. * h * da[j] / 5. + h * h * dda[j] / 20.)
-                    .collect(),
-            );
-            row.push(
-                (0..3)
-                    .map(|j| b[j] - 2. * h * db[j] / 5. + h * h * ddb[j] / 20.)
-                    .collect(),
-            );
-            row.push((0..3).map(|j| b[j] - h * db[j] / 5.).collect());
+            let h_5 = h / 5.;
+            let h2_20 = h * h / 20.;
+            row.push(vec![
+                a[0] + h_5 * da[0],
+                a[1] + h_5 * da[1],
+                a[2] + h_5 * da[2],
+            ]);
+            row.push(vec![
+                a[0] + 2. * h_5 * da[0] + h2_20 * dda[0],
+                a[1] + 2. * h_5 * da[1] + h2_20 * dda[1],
+                a[2] + 2. * h_5 * da[2] + h2_20 * dda[2],
+            ]);
+            row.push(vec![
+                b[0] - 2. * h_5 * db[0] + h2_20 * ddb[0],
+                b[1] - 2. * h_5 * db[1] + h2_20 * ddb[1],
+                b[2] - 2. * h_5 * db[2] + h2_20 * ddb[2],
+            ]);
+            row.push(vec![
+                b[0] - h_5 * db[0],
+                b[1] - h_5 * db[1],
+                b[2] - h_5 * db[2],
+            ]);
             row.push(b.to_vec());
         }
         controls.push(row);
@@ -124,3 +134,7 @@ pub fn approximate(
         rounding_certified: false,
     })
 }
+
+#[path = "helical_sweep_certificate.rs"]
+mod certificate;
+pub use certificate::{Certificate, certify_stored};

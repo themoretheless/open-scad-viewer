@@ -33,14 +33,9 @@ pub fn certify_third_traversal(
     let mut third = value;
     let mut single_span = true;
     for axis in 0..3 {
-        let mut scalar = law.clone();
-        scalar.control_points = law
-            .control_points
-            .iter()
-            .map(|p| vec![p[axis], 0., 0.])
-            .collect();
-        let r = scalar_certificate::certify_third_traversal(
-            &scalar,
+        let r = scalar_certificate::certify_third_traversal_axis(
+            law,
+            axis,
             traversal,
             max_cells - out.base.cells,
         )?;

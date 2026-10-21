@@ -1,0 +1,70 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "original source-owned multi-span rational oriented image traversal and full weighted region ownership",
+    "other-curve knot preimages may be irrational; no rounded preimage enters the proof",
+    "degree3 versus degree6 t\u00b2 traversal with different actual original B-spline knot bases; two dictionary edges with coefficient2",
+    "actual bilinear curved support faces through complete common physical checks; reversed traversal cancellation",
+    "general multi-span rational higher-degree UV lift proposal with unchanged full-original agreement admission"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1449,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "regressions": {
+      "suites": 23,
+      "passed": 172,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "source-replay": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "wasm": {
+      "finished": true,
+      "exit_code": 0
+    },
+    "api-map": "186 modules / 200 entries; check passed",
+    "catalog": "79 integrated + 119 native + 2 planned; no errors",
+    "format": "six modified implementation/test files passed explicit rustfmt check"
+  },
+  "gate_scope": "two full core/predicate libraries, sixteen core integration binaries, seven B-rep regional integration binaries, one focused private B-rep source receipt replay; not a full B-rep library/integration sweep",
+  "source_sha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "d3ce0768c13586f01061ab06d9ec7068d67a0d41341765cfb0a65252f6ba118f",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "bf8538981116952984b2f1d7516119476c3ce3b2130c93815220e81de72732d1",
+    "crates/nurbs-core/src/analysis/curve_surface_composition.rs": "2188f9101504789a1d7d2dde21bb5c8c59b9f0c2b64c3a5f4418b9a617f28510",
+    "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs": "39522dca654d8f3e82ea7ee8966d72574d89d894d39d120dd9406540e00f76e5",
+    "crates/nurbs-core/tests/piecewise_surface_lifts.rs": "069862ae6efe5b4a0f99cc4d76aa1231c25119a5d32f32e7966322158f5122fc",
+    "crates/nurbs-core/tests/periodic_image_alias_candidates.rs": "bc9808969f48b5fce8fb1b3e533b8cadb3077dbd81b3d3c3c7e585a8edb62219",
+    "crates/brep-core/src/profile_certificate/winding/periodic/multispan.rs": "383004ea7a3fd009badfc2e1e8732826f86b0f22211f104b85083725547c56b5",
+    "crates/brep-core/tests/periodic_multispan_regions.rs": "581b8fdd97242701ee0e78d016348214fa069e389e4adb631bb1fff51fdcff2e",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "2d91b8d76c52caa767e6ca85d93c0f852638b47427b9fa5239abaaa941f51eb7",
+    "crates/brep-core/src/profile_certificate/winding.rs": "7f1d3bca9bb395c98f03fe04f6b81127148e4af4ae3cf06bac439fd9a41c3622",
+    "crates/brep-core/src/profile_certificate.rs": "ca1ca1c944c841946dc8a9a352a98539571e852d8c0b71d50ee29aaac1dec519"
+  },
+  "budgets": "max_work covers original partition predicates only; multispan relation production/replay retains its independent exact cell/depth/step caps and at most64 requested image pairs",
+  "no_authority_from_candidates": "compact_image_alias_candidates checks structural census and computes proposed integer flow only; MultispanPeriodicRegions privately binds and verifies every actual curve relation before using its candidate output",
+  "remaining": [
+    "general inter-wire contact regularization with original topology ownership",
+    "arbitrary traversals outside admitted original exact/projective/multispan or qualified approximation families",
+    "N0030 complete automatic root atlas discovery, owned physical branch graph, original trim topology"
+  ],
+  "historical": "full three-library2486/3ignored and Boolean3 are previous baseline, not refreshed by this gate",
+  "selected_source_hashes_unchanged_at_close": true
+}

@@ -1,3 +1,4 @@
+use super::loft_curve_loops::ARC_WEIGHT;
 use super::*;
 
 /// Equal-radius valence-3 blend at the axis-aligned cuboid max corner:

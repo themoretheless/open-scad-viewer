@@ -12,9 +12,10 @@ mod frenet_path_values;
 pub use frenet_path_values::{certify_frenet_cover,certify_frenet_path_values,certify_frenet_control_values,certify_frenet_planar_control_trajectories,certify_frenet_path,certify_frenet_control_trajectories};
 pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_values,certify_fixed_normal_control_values,certify_fixed_normal_control_trajectories,certify_fixed_normal_cover};
 pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
-pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
+pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory,certify_fixed_relative_values,certify_fixed_relative_trajectories};
 pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
 pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use trajectory::{translated_constant_values_with_source,translated_constant_jets_with_source};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
 mod guided_path_values;
@@ -59,14 +60,15 @@ pub fn certify_twisted_values(
         transverse: None,
         binormal: None,
     };
-    let mut value = |curve: &Curve| -> Result<Option<I>> {
+    let mut value = |curve: &Curve, axis: usize| -> Result<Option<I>> {
         let charge = (curve.degree..curve.control_points.len())
             .filter(|&i| curve.knots[i] < curve.knots[i + 1])
             .count();
         if charge > max_cells - out.cells {
             return Ok(None);
         }
-        let result = super::scalar_certificate::value_traversal(curve, traversal, charge)?;
+        let result =
+            super::scalar_certificate::value_traversal_axis(curve, axis, traversal, charge)?;
         out.cells += charge;
         result.map(|v| I::new(v[0], v[1])).transpose()
     };
@@ -78,19 +80,13 @@ pub fn certify_twisted_values(
             "Authored frame requires XYZ controls",
         )?;
         for k in 0..3 {
-            let mut scalar = curve.clone();
-            scalar.control_points = curve
-                .control_points
-                .iter()
-                .map(|p| vec![p[k], 0., 0.])
-                .collect();
-            let Some(v) = value(&scalar)? else {
+            let Some(v) = value(curve, k)? else {
                 return Ok(out);
             };
             vectors[index][k] = v;
         }
     }
-    let Some(theta) = value(twist)? else {
+    let Some(theta) = value(twist, 0)? else {
         return Ok(out);
     };
     let constant = |v| Jet {
@@ -303,7 +299,7 @@ fn certify_guide_values_at(
 )->Result<ValuesReport>{
     super::validate_law(twist, false)?;
     let rail = vector_certificate::certify_values_traversal(guide, traversal, max_cells, false)?;
-    let mut out = ValuesReport {
+    let out = ValuesReport {
         status: Status::Unresolved,
         cells: rail.cells,
         longitudinal: None,
@@ -575,10 +571,11 @@ fn certify_frame_cover(
     Ok(out)
 }
 #[cfg(test)]
-#[path = "tests/authored_frame_certificate.rs"]
+#[path = "authored_frame_certificate/tests/tests_integration.rs"]
 mod tests;
 
 pub(crate) use frenet_path_values::certify_frenet_relative_values;
+pub(crate) use frenet_path_values::certify_frenet_relative_values_with_binormal_identity;
 
 pub(crate) use guided_path_values::{certify_path_guide_relative_values,certify_contact_relative_values};
 
@@ -590,5 +587,22 @@ pub(crate) fn relative_control_values_from_frame(
  station:[f64;2], max_cells:usize, frame:ValuesReport,
 )->Result<ControlValuesReport>{
  let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
- trajectory::control_values_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
+ // This freshly constructed source is identically zero. Its exact value is
+ // available by construction; do not reprove three scalar zero restrictions
+ // on every relative-frame query.
+ trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,station,max_cells,frame,None,Some([[0.;2];3]))
+}
+
+pub(crate) use frenet_path_values::certify_c4_frenet_arc_relative_trajectories;
+
+/// Compose original source points with a frame proved by the owning sweep.
+/// All supplied frame work remains charged to the same request.
+pub(crate) fn control_values_from_owned_frame(
+    path: &Curve, scale: &Curve, affine: Option<(&Curve, &Curve)>,
+    coordinates: &[[[f64; 2]; 3]], fraction: [f64; 2], max_cells: usize,
+    frame: ValuesReport, transverse_fit: Option<crate::distance_bounds::Interval>,
+) -> Result<ControlValuesReport> {
+    trajectory::control_values_with_prepared_path(
+        path, scale, affine, coordinates, fraction, max_cells, frame, transverse_fit, None,
+    )
 }

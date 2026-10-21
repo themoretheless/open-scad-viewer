@@ -2,6 +2,7 @@
 use crate::intersection::UnresolvedReason;
 
 pub enum UnresolvedClassification {
+    UnprovenReduction,
     PoleOrSingular,
     NearMissOrIllConditioned,
     BranchBudget,

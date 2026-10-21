@@ -50,7 +50,7 @@ impl RowPlan {
             .filter(|axis| !axes.contains(axis))
             .collect();
         let dense = Layout::contiguous(layout.shape().clone())?;
-        let mut metadata = Vec::new();
+        let mut metadata = Vec::with_capacity(layout.shape().rank() * 3);
         for list in [&kept[..], axes] {
             metadata.extend(list.iter().map(|&axis| layout.shape().dims()[axis] as u64));
             metadata.extend(list.iter().map(|&axis| layout.strides()[axis] as u64));

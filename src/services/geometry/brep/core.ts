@@ -1,3 +1,4 @@
+import {transferNativeCapSelection} from '../../sweep/construction/nativeCapSelections'
 import type {DirectSketch} from '../../directModeling'
 import {callGeometryRust} from '../kernel'
 import type {NurbsCurve} from '../../nurbsCurve'
@@ -361,7 +362,7 @@ export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBre
 export const inspectPolygonBrep=(model:PolygonBrep):BrepReport=>callGeometryRust('brep_polygon_inspect',{model})
 export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>normalizePolygonMesh(callGeometryRust('brep_polygon_tessellate',{model}))
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
-export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>callGeometryRust('brep_nurbs_transform',{model,matrix})
+export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>transferNativeCapSelection(model,callGeometryRust('brep_nurbs_transform',{model,matrix}))
 /** `/7` document composition assigns fresh occurrence-local TopoIds in Rust. */
 export const composeStepV7Occurrences=(models:NurbsBrep[]):NurbsBrep=>
   callGeometryRust('brep_nurbs_compose_step_v7',{models})

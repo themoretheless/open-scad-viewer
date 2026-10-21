@@ -1,0 +1,566 @@
+//! Conservative radial-homeomorphism certificate. Closed oriented source
+//! charts are local orientation-preserving maps to S²; checked degree one and
+//! nondegenerate seam/vertex stars make them global radial graphs. The exact
+//! nominal boundary is checked separately. Their filled sets are closed balls.
+use super::*;
+#[derive(Clone, Debug, PartialEq)]
+pub struct Report {
+    pub center: ExactPoint,
+    pub chart_cells: usize,
+    pub nominal_triangles: usize,
+}
+#[derive(Clone)]
+struct I(Q, Q);
+impl I {
+    fn point(q: Q) -> Self {
+        Self(q.clone(), q)
+    }
+    fn add(&self, b: &Self) -> Self {
+        Self(&self.0 + &b.0, &self.1 + &b.1)
+    }
+    fn neg(&self) -> Self {
+        Self(-&self.1, -&self.0)
+    }
+    fn sub(&self, b: &Self) -> Self {
+        self.add(&b.neg())
+    }
+    fn mul(&self, b: &Self) -> Self {
+        let x = [
+            &self.0 * &b.0,
+            &self.0 * &b.1,
+            &self.1 * &b.0,
+            &self.1 * &b.1,
+        ];
+        Self(
+            x.iter().min().unwrap().clone(),
+            x.iter().max().unwrap().clone(),
+        )
+    }
+    fn div_positive(&self, b: &Self) -> Self {
+        self.mul(&Self(Q::one() / &b.1, Q::one() / &b.0))
+    }
+}
+type Scalar = Vec<Vec<Q>>;
+fn choose(n: usize, k: usize) -> Q {
+    (0..k).fold(Q::one(), |a, i| {
+        a * integer((n - i) as i64) / integer((i + 1) as i64)
+    })
+}
+fn product(a: &Scalar, b: &Scalar, work: &mut Work) -> Result<Scalar> {
+    let (n, m, r, s) = (a.len() - 1, a[0].len() - 1, b.len() - 1, b[0].len() - 1);
+    work.charge(a.len() * a[0].len() * b.len() * b[0].len())?;
+    let u = (0..=n)
+        .map(|i| {
+            (0..=r)
+                .map(|k| choose(n, i) * choose(r, k) / choose(n + r, i + k))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let v = (0..=m)
+        .map(|j| {
+            (0..=s)
+                .map(|l| choose(m, j) * choose(s, l) / choose(m + s, j + l))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let mut out = vec![vec![Q::zero(); m + s + 1]; n + r + 1];
+    for i in 0..=n {
+        for j in 0..=m {
+            for k in 0..=r {
+                for l in 0..=s {
+                    if !a[i][j].is_zero() && !b[k][l].is_zero() {
+                        out[i + k][j + l] += &a[i][j] * &b[k][l] * &u[i][k] * &v[j][l];
+                    }
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+fn derivative(p: &Scalar, axis: usize) -> Scalar {
+    if axis == 0 {
+        p.windows(2)
+            .map(|r| {
+                r[0].iter()
+                    .zip(&r[1])
+                    .map(|(a, b)| (b - a) * integer((p.len() - 1) as i64))
+                    .collect()
+            })
+            .collect()
+    } else {
+        p.iter()
+            .map(|r| {
+                r.windows(2)
+                    .map(|v| (&v[1] - &v[0]) * integer((r.len() - 1) as i64))
+                    .collect()
+            })
+            .collect()
+    }
+}
+fn radial(h: &sb::Net, center: &P, reversed: bool, work: &mut Work) -> Result<bool> {
+    let scalar = |k: usize| {
+        h.iter()
+            .map(|r| r.iter().map(|p| p[k].clone()).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+    };
+    let w = scalar(3);
+    let wmin = w.iter().flatten().min().unwrap();
+    let wmax = w.iter().flatten().max().unwrap();
+    let denom = I(wmin.pow(2), wmax.pow(2));
+    let mut tangent = Vec::new();
+    let mut numerators = Vec::new();
+    for axis in 0..2 {
+        let dw = derivative(&w, axis);
+        let mut vector = Vec::new();
+        let mut polynomials = Vec::new();
+        for k in 0..3 {
+            let n = scalar(k);
+            let a = product(&derivative(&n, axis), &w, work)?;
+            let b = product(&n, &dw, work)?;
+            let polynomial = a
+                .iter()
+                .zip(&b)
+                .map(|(a, b)| a.iter().zip(b).map(|(a, b)| a - b).collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+            let p = polynomial.iter().flatten().collect::<Vec<_>>();
+            vector.push(
+                I(
+                    (*p.iter().min().unwrap()).clone(),
+                    (*p.iter().max().unwrap()).clone(),
+                )
+                .div_positive(&denom),
+            );
+            polynomials.push(polynomial);
+        }
+        tangent.push(vector);
+        numerators.push(polynomials);
+    }
+    let positions = h.iter().flatten().map(sb::point).collect::<Vec<_>>();
+    let normal = (0..3)
+        .map(|k| {
+            let (a, b) = ((k + 1) % 3, (k + 2) % 3);
+            tangent[0][a]
+                .mul(&tangent[1][b])
+                .sub(&tangent[0][b].mul(&tangent[1][a]))
+        })
+        .collect::<Vec<_>>();
+    let det = (0..3).fold(I::point(Q::zero()), |a, k| {
+        a.add(
+            &I(
+                positions.iter().map(|p| &p[k] - &center[k]).min().unwrap(),
+                positions.iter().map(|p| &p[k] - &center[k]).max().unwrap(),
+            )
+            .mul(&normal[k]),
+        )
+    });
+    if if reversed {
+        det.1 < Q::zero()
+    } else {
+        det.0 > Q::zero()
+    } {
+        return Ok(true);
+    }
+    // Keep dependencies that interval products lose, notably N dot (N_u W -
+    // N W_u) cross (N_v W - N W_v) on rational spherical patches. The positive
+    // denominator W^5 can be discarded for this exact sign certificate.
+    let mut determinant: Option<Scalar> = None;
+    for k in 0..3 {
+        let (a, b) = ((k + 1) % 3, (k + 2) % 3);
+        let x = product(&numerators[0][a], &numerators[1][b], work)?;
+        let y = product(&numerators[0][b], &numerators[1][a], work)?;
+        let cross = x
+            .iter()
+            .zip(&y)
+            .map(|(a, b)| a.iter().zip(b).map(|(a, b)| a - b).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let a = scalar(k)
+            .iter()
+            .zip(&w)
+            .map(|(a, w)| {
+                a.iter()
+                    .zip(w)
+                    .map(|(a, w)| a - &center[k] * w)
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let term = product(&a, &cross, work)?;
+        if let Some(d) = &mut determinant {
+            for (row, t) in d.iter_mut().zip(term) {
+                for (c, t) in row.iter_mut().zip(t) {
+                    *c += t
+                }
+            }
+        } else {
+            determinant = Some(term)
+        }
+    }
+    Ok(determinant.unwrap().iter().flatten().all(|q| {
+        if reversed {
+            q < &Q::zero()
+        } else {
+            q > &Q::zero()
+        }
+    }))
+}
+fn tangent(h: &[sb::H], end: bool) -> P {
+    let (a, b) = if end {
+        (&h[h.len() - 2], &h[h.len() - 1])
+    } else {
+        (&h[0], &h[1])
+    };
+    std::array::from_fn(|k| {
+        (&b[k] * &a[3] - &a[k] * &b[3]) * integer((h.len() - 1) as i64)
+            / if end { b[3].pow(2) } else { a[3].pow(2) }
+    })
+}
+fn regular(h: &[sb::H], depth: u8) -> bool {
+    let n = h.len() - 1;
+    let w = h.iter().map(|h| h[3].clone()).collect::<Vec<_>>();
+    let dw = w
+        .windows(2)
+        .map(|p| (&p[1] - &p[0]) * integer(n as i64))
+        .collect::<Vec<_>>();
+    let mut square = vec![Q::zero(); 4 * n - 1];
+    for k in 0..2 {
+        let p = h.iter().map(|h| h[k].clone()).collect::<Vec<_>>();
+        let d = p
+            .windows(2)
+            .map(|p| (&p[1] - &p[0]) * integer(n as i64))
+            .collect::<Vec<_>>();
+        let a = sb::multiply(&d, &w);
+        let b = sb::multiply(&p, &dw);
+        let t = a.iter().zip(b).map(|(a, b)| a - b).collect::<Vec<_>>();
+        for (s, p) in square.iter_mut().zip(sb::multiply(&t, &t)) {
+            *s += p
+        }
+    }
+    if square.iter().all(|q| q > &Q::zero()) {
+        return true;
+    }
+    if depth == 6 {
+        return false;
+    }
+    let mut level = h.to_vec();
+    let mut left = vec![level[0].clone()];
+    let mut right = vec![level.last().unwrap().clone()];
+    while level.len() > 1 {
+        level = level
+            .windows(2)
+            .map(|p| std::array::from_fn(|k| (&p[0][k] + &p[1][k]) / integer(2)))
+            .collect();
+        left.push(level[0].clone());
+        right.push(level.last().unwrap().clone());
+    }
+    right.reverse();
+    regular(&left, depth + 1) && regular(&right, depth + 1)
+}
+fn atlas(m: &Model, work: &mut Work) -> Result<()> {
+    let mut edges = BTreeMap::<(usize, usize), Vec<(sb::Trace, bool)>>::new();
+    let uses = &m.shells[m.bodies[0].outer_shell].faces;
+    let mut stations = BTreeSet::from([Q::zero(), Q::one(), Q::new(1.into(), 2.into())]);
+    trimmed::stations(m, uses, &mut stations)?;
+    let stations = stations.into_iter().collect::<Vec<_>>();
+    for u in uses {
+        let f = &m.faces[u.face];
+        let loops = std::iter::once(f.outer)
+            .chain(f.holes.iter().copied())
+            .map(|l| {
+                m.loops[l]
+                    .coedges
+                    .iter()
+                    .map(|c| c.pcurve.clone())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let certificate = crate::profile_certificate::certify(&loops, 1e-7)?;
+        let v = crate::profile_certificate::verify(&loops, 1e-7, &certificate)?;
+        if v.nesting_depth()
+            .iter()
+            .enumerate()
+            .any(|(i, d)| *d != usize::from(i != 0))
+        {
+            return Err(fail("source face trim is not a disk with disjoint holes"));
+        }
+        for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
+            let cs = &m.loops[wire].coedges;
+            let mut ends = Vec::new();
+            for c in cs {
+                let d = c.pcurve.domain();
+                let a = Q::from_float(d[0]).unwrap();
+                let len = Q::from_float(d[1]).unwrap() - &a;
+                let mut start = None;
+                let mut finish = None;
+                for (i, t) in stations.windows(2).enumerate() {
+                    let pc = sb::curve(&c.pcurve, &(&a + &len * &t[0]), &(&a + &len * &t[1]))?;
+                    if !regular(&pc, 0) {
+                        return Err(fail("source trim has an unproved regular tangent"));
+                    }
+                    if i == 0 {
+                        start = Some(tangent(&pc, false));
+                    }
+                    finish = Some(tangent(&pc, true));
+                    let mut image = sb::Trace::Surface {
+                        surface: f.surface.clone(),
+                        pcurve: pc,
+                    };
+                    for (end, p) in image.endpoints()?.iter().enumerate() {
+                        if (end == 0 && i == 0) || (end == 1 && i + 2 == stations.len()) {
+                            let vertex = m.edges[c.edge].vertices[usize::from(c.reversed) ^ end];
+                            let exact = m.vertices[vertex].point.map(|x| Q::from_float(x).unwrap());
+                            if *p != exact {
+                                return Err(fail("source vertex is not exactly on its face image"));
+                            }
+                        }
+                    }
+                    if c.reversed {
+                        image.reverse()
+                    }
+                    edges
+                        .entry((
+                            c.edge,
+                            if c.reversed {
+                                stations.len() - 2 - i
+                            } else {
+                                i
+                            },
+                        ))
+                        .or_default()
+                        .push((image, c.reversed ^ u.reversed));
+                }
+                ends.push((start.unwrap(), finish.unwrap()));
+            }
+            for i in 0..ends.len() {
+                let incoming = &ends[i].1;
+                let outgoing = &ends[(i + 1) % ends.len()].0;
+                let turn = &incoming[0] * &outgoing[1] - &incoming[1] * &outgoing[0];
+                // Ordinary convex/reflex corners have positive local sector
+                // angle. A smooth join has angle pi. Zero-angle cusps do not
+                // establish the open local vertex star used by the degree proof.
+                if turn.is_zero() && dot(incoming, outgoing) <= Q::zero() {
+                    return Err(fail("source trim vertex star is unproved"));
+                }
+            }
+        }
+    }
+    for group in edges.into_values() {
+        if group.len() != 2
+            || group[0].1 == group[1].1
+            || !sb::same_trace(&group[0].0, &group[1].0, work)?
+        {
+            return Err(fail("source atlas lacks exact oriented edge gluing"));
+        }
+    }
+    Ok(())
+}
+fn mesh(i: &Input, center: &P, work: &mut Work) -> Result<bool> {
+    if i.faces.iter().any(|f| eval(&plane(f), center) >= Q::zero())
+        || winding(center, &i.faces, work)? != 1
+    {
+        return Ok(false);
+    }
+    Ok(manifold_links(i))
+}
+pub(super) fn manifold_links(i: &Input) -> bool {
+    let mut links = BTreeMap::<P, Vec<(P, P)>>::new();
+    for f in &i.faces {
+        for k in 0..3 {
+            links
+                .entry(f[k].clone())
+                .or_default()
+                .push((f[(k + 1) % 3].clone(), f[(k + 2) % 3].clone()));
+        }
+    }
+    for link in links.into_values() {
+        let mut successors = BTreeMap::new();
+        for (a, b) in &link {
+            if successors.insert(a.clone(), b.clone()).is_some() {
+                return false;
+            }
+        }
+        let start = link[0].0.clone();
+        let mut p = start.clone();
+        let mut visited = BTreeSet::new();
+        loop {
+            if !visited.insert(p.clone()) {
+                break;
+            }
+            let Some(next) = successors.get(&p) else {
+                return false;
+            };
+            p = next.clone();
+        }
+        if p != start || visited.len() != link.len() {
+            return false;
+        }
+    }
+    true
+}
+pub(super) fn prove(
+    s: &Source,
+    input: &Input,
+    nominal: &[Poly],
+    tubes: &[Poly],
+    work: &mut Work,
+) -> Option<Report> {
+    let attempt = (|| -> Result<Report> {
+        let (points, triangles) = boundary(nominal, work)?;
+        let mesh_input = input_points(
+            &points,
+            &triangles.iter().flatten().copied().collect::<Vec<_>>(),
+        )?;
+        // The strict kernel of a nonconvex polyhedron is the intersection of
+        // its oriented facet halfspaces. Construct it exactly rather than
+        // guessing that the arithmetic mean lies in a thin or concave body.
+        let mut kernel = bounding_box(&points)?;
+        let planes = mesh_input
+            .faces
+            .iter()
+            .map(|f| normalized(&plane(f), true))
+            .collect::<BTreeSet<_>>();
+        for h in planes {
+            kernel = kernel
+                .clip(&h, work)?
+                .ok_or_else(|| fail("nominal source has no full-dimensional radial kernel"))?;
+        }
+        let center = centroid(&kernel.vertices());
+        if tubes.iter().any(|t| t.contains(&center)) {
+            return Err(fail("source homotopy tube reaches the radial center"));
+        }
+        if !mesh(&mesh_input, &center, work)? {
+            return Err(fail("nominal source has no degree-one radial embedding"));
+        }
+        let mut chart_cells = 0;
+        if let Source::Brep(m) = s {
+            if m.bodies.len() != 1 || !m.bodies[0].inner_shells.is_empty() {
+                return Err(fail("radial topology needs one shell"));
+            }
+            atlas(m, work)?;
+            if winding(&center, &input.faces, work)? != 1 {
+                return Err(fail("source chain radial degree is not one"));
+            }
+            for u in &m.shells[m.bodies[0].outer_shell].faces {
+                let s = &m.faces[u.face].surface;
+                let mut proved = false;
+                for depth in 0..=4 {
+                    let n = 1usize << depth;
+                    let station = |knots: &[f64], degree: usize, count: usize| {
+                        let a = Q::from_float(knots[degree]).unwrap();
+                        let b = Q::from_float(knots[count]).unwrap();
+                        let mut values = (0..=n)
+                            .map(|i| &a + (&b - &a) * Q::new(i.into(), n.into()))
+                            .collect::<Vec<_>>();
+                        values.extend(
+                            knots[degree..=count]
+                                .iter()
+                                .map(|x| Q::from_float(*x).unwrap()),
+                        );
+                        values.sort();
+                        values.dedup();
+                        values
+                    };
+                    let a = station(&s.knots_u, s.degree_u, s.control_points.len());
+                    let b = station(&s.knots_v, s.degree_v, s.control_points[0].len());
+                    if (a.len() - 1) * (b.len() - 1) > 256 {
+                        break;
+                    }
+                    let mut complete = true;
+                    'cells: for x in a.windows(2) {
+                        for y in b.windows(2) {
+                            let h = sb::cell(
+                                s,
+                                [x[0].clone(), x[1].clone()],
+                                [y[0].clone(), y[1].clone()],
+                            )?;
+                            if !radial(&h, &center, u.reversed, work)? {
+                                complete = false;
+                                break 'cells;
+                            }
+                        }
+                    }
+                    if complete {
+                        chart_cells += (a.len() - 1) * (b.len() - 1);
+                        proved = true;
+                        break;
+                    }
+                }
+                if !proved {
+                    return Err(fail("original surface radial Jacobian is unproved"));
+                }
+            }
+        }
+        Ok(Report {
+            center: std::array::from_fn(|k| ratio(&center[k])),
+            chart_cells,
+            nominal_triangles: triangles.len(),
+        })
+    })();
+    #[cfg(test)]
+    if let Err(e) = &attempt {
+        eprintln!("Radial topology unproved: {}", e.message);
+    }
+    attempt.ok()
+}
+impl Serialize for Report {
+    fn to_value(&self) -> Value {
+        json!({"kind":"radial-homeomorphism","center":self.center,"radialDegree":1,"chartCells":self.chart_cells,"nominalTriangles":self.nominal_triangles,"filledSet":"closed-three-ball"})
+    }
+}
+impl<'de> Deserialize<'de> for Report {
+    fn from_value(v: Value) -> value_codec::Result<Self> {
+        let keys = [
+            "kind",
+            "center",
+            "radialDegree",
+            "chartCells",
+            "nominalTriangles",
+            "filledSet",
+        ];
+        if v.as_object()
+            .is_none_or(|o| o.len() != keys.len() || keys.iter().any(|k| !o.contains_key(*k)))
+            || v["kind"].as_str() != Some("radial-homeomorphism")
+            || v["radialDegree"].as_i64() != Some(1)
+            || v["filledSet"].as_str() != Some("closed-three-ball")
+        {
+            return Err(error("Source topology certificate schema mismatch"));
+        }
+        Ok(Self {
+            center: value_codec::from_value(v["center"].clone())?,
+            chart_cells: value_codec::from_value(v["chartCells"].clone())?,
+            nominal_triangles: value_codec::from_value(v["nominalTriangles"].clone())?,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn spherical_charts_have_an_exact_whole_chart_radial_jacobian() {
+        let m = crate::sphere(1.).unwrap();
+        let mut work = Work::default();
+        for use_ in &m.shells[0].faces {
+            let s = &m.faces[use_.face].surface;
+            let h = sb::cell(
+                s,
+                [
+                    Q::from_float(s.knots_u[s.degree_u]).unwrap(),
+                    Q::from_float(s.knots_u[s.control_points.len()]).unwrap(),
+                ],
+                [
+                    Q::from_float(s.knots_v[s.degree_v]).unwrap(),
+                    Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap(),
+                ],
+            )
+            .unwrap();
+            assert!(
+                radial(
+                    &h,
+                    &[Q::zero(), Q::zero(), Q::zero()],
+                    use_.reversed,
+                    &mut work
+                )
+                .unwrap()
+            );
+        }
+    }
+}

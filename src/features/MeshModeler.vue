@@ -39,7 +39,7 @@ import {
   type MeshWorkspaceDocument,
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
-import { projectMeshModelerFaces } from '../services/meshModelerProjection'
+import { projectMeshModelerObject,cachedMeshModelerStats } from '../services/meshModelerProjection'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
@@ -121,8 +121,9 @@ watch(() => props.open, async open => {
 }, { immediate: true })
 
 watch(document, d => {
+  if (elementDrag) return
   try { storageSet(storageKey, stringifyMeshJson(d)) } catch { /* ignore quota */ }
-}, { deep: true })
+})
 
 // A seed (the Code scene or a Solid document) replaces the workspace once; later opens keep the user's edits.
 const appliedSeeds = new WeakSet<MeshWorkspaceDocument>()
@@ -137,11 +138,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, { immediate: true })
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
-const stats = computed(() => {
-  if (!kernelReady.value || !selected.value) return null
-  const base = meshObjectStats(selected.value.mesh)
-  return { ...base, edges: buildEdgeList(selected.value.mesh).length }
-})
+const stats=computed(()=>kernelReady.value&&selected.value?cachedMeshModelerStats(selected.value.mesh):null)
 
 function syncHistoryFlags() {
   undoable.value = history.canUndo
@@ -186,7 +183,7 @@ function transformSelected() {
     if ((selectMode.value === 'vertex' && selectedVerts.value.length) ||
         (selectMode.value === 'edge' && selectedEdges.value.length)) {
       const vertexIds = selectMode.value === 'edge'
-        ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(d.objects[index].mesh)[edge] ?? []))]
+        ? [...new Set(selectedEdges.value.flatMap(edge => getEdgeList(d.objects[index].mesh)[edge] ?? []))]
         : selectedVerts.value
       d.objects[index] = {
         ...d.objects[index],
@@ -515,28 +512,18 @@ function togglePick(kind: 'vertex' | 'face' | 'edge', id: number) {
   list.value = [...set]
 }
 
-function projected(objectId: string) {
-  const object = document.value.objects.find(o => o.id === objectId)
-  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
-  const cam = camera.value
-  const tris = projectMeshModelerFaces(object.mesh, cam)
-  const verts: Array<{ x: number; y: number; id: number }> = []
-  if (selectMode.value === 'vertex') {
-    for (let i = 0; i < object.mesh.positions.length / 3; i++) {
-      const p = projectDirectPoint([object.mesh.positions[i * 3], object.mesh.positions[i * 3 + 1], object.mesh.positions[i * 3 + 2]], cam)
-      verts.push({ x: p[0], y: -p[1], id: i })
-    }
+const edgeListCache = new WeakMap<PolygonMesh, Array<[number, number]>>()
+function getEdgeList(mesh: PolygonMesh): Array<[number, number]> {
+  let edges = edgeListCache.get(mesh)
+  if (!edges) {
+    edges = buildEdgeList(mesh)
+    edgeListCache.set(mesh, edges)
   }
-  const edges = selectMode.value === 'edge' ? buildEdgeList(object.mesh).map(([a, b], id) => {
-    const point = (vertex: number) => projectDirectPoint([
-      object.mesh.positions[vertex * 3],
-      object.mesh.positions[vertex * 3 + 1],
-      object.mesh.positions[vertex * 3 + 2],
-    ], cam)
-    const pa = point(a), pb = point(b)
-    return { id, x1: pa[0], y1: -pa[1], x2: pb[0], y2: -pb[1] }
-  }) : []
-  return { tris, verts, edges }
+  return edges
+}
+
+function projected(object: MeshWorkspaceDocument['objects'][number]) {
+  return projectMeshModelerObject(object,camera.value,selectMode.value,getEdgeList)
 }
 
 // Dragging a vertex, edge or face moves the current selection in the screen plane (LMB, no modifiers);
@@ -560,7 +547,7 @@ function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' 
   if (!list.value.includes(id)) { list.value = [...list.value, id] }
   const mesh = object.mesh
   const vertexIds = kind === 'vertex' ? [...selectedVerts.value]
-    : kind === 'edge' ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(mesh)[edge] ?? []))]
+    : kind === 'edge' ? [...new Set(selectedEdges.value.flatMap(edge => getEdgeList(mesh)[edge] ?? []))]
       : [...new Set(selectedFaces.value.flatMap(face => [mesh.indices[face * 3], mesh.indices[face * 3 + 1], mesh.indices[face * 3 + 2]]))]
   const target = event.currentTarget as SVGGraphicsElement
   const svg = target.ownerSVGElement ?? (target as unknown as SVGSVGElement)
@@ -645,11 +632,18 @@ function onWheel(event: WheelEvent) {
 }
 
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
-const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
-const sceneFaces = computed(() => scene.value.flatMap(object =>
-  object.tris.map(tri => ({ ...tri, objectId: object.id })),
-).sort((a, b) => a.depth - b.depth))
+const sceneFaces = computed(() => {
+  const faces: Array<{ points: string; face: number; depth: number; objectId: string }> = []
+  for (const object of scene.value) {
+    const objectId = object.id
+    for (const tri of object.tris) {
+      faces.push({ points: tri.points, face: tri.face, depth: tri.depth, objectId })
+    }
+  }
+  return faces.sort((a, b) => a.depth - b.depth)
+})
 </script>
 
 <template>

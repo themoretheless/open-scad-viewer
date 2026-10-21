@@ -8,7 +8,7 @@
 use crate::pipeline::RasterPipelines;
 use crate::shaders::MORPH_VERTEX_STRIDE;
 use crate::uniform::{SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, SceneUniform, shadow_light_vp};
-use gpu_compute::{GpuContext, pack_f32, wgpu};
+use gpu_compute::{GpuContext, f32_le_bytes, wgpu};
 
 pub use crate::resources::{
     DrawEdges, DrawMesh, InstancePool, InstancedGeometry, LineBatch, OverlayBatch,
@@ -66,6 +66,10 @@ pub struct Rasterizer {
     shadow_active: bool,
     /// Mirrors `SceneUniform.options.x`; gates the section-cap pass.
     section_enabled: bool,
+    /// Cached key-light orthographic VP `(light, center, radius, vp)` to avoid recomputing when unchanged.
+    cached_shadow_vp: Option<([f32; 3], [f32; 3], f32, [f32; 16])>,
+    /// Last uploaded scene uniform floats to skip redundant GPU queue writes.
+    last_scene_floats: Option<[f32; SCENE_UNIFORM_FLOATS]>,
 }
 
 impl Rasterizer {
@@ -98,15 +102,16 @@ impl Rasterizer {
             label: Some("raster grid quad"),
             size: 6 * 8,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: true,
         });
-        context.queue.write_buffer(
-            &grid_quad,
-            0,
-            &pack_f32(&[
+        grid_quad
+            .slice(..)
+            .get_mapped_range_mut()
+            .expect("mapped grid quad")
+            .copy_from_slice(&f32_le_bytes(&[
                 -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
-            ]),
-        );
+            ]));
+        grid_quad.unmap();
         // Shadow sampling shaders always have something bound: natively a 1×1
         // depth dummy + comparison sampler, with shadow_params disabled.
         let shadow_dummy = context.device.create_texture(&wgpu::TextureDescriptor {
@@ -162,6 +167,8 @@ impl Rasterizer {
             shadow_bounds: None,
             shadow_active: false,
             section_enabled: false,
+            cached_shadow_vp: None,
+            last_scene_floats: None,
         }
     }
 
@@ -187,11 +194,21 @@ impl Rasterizer {
             && scene.shadow_params[0] >= 0.0;
         if self.shadow_active {
             let (center, radius) = self.shadow_bounds.unwrap();
-            let vp = shadow_light_vp(
-                [scene.light[0], scene.light[1], scene.light[2]],
-                center,
-                radius,
-            );
+            let light_dir = [scene.light[0], scene.light[1], scene.light[2]];
+            let vp = match self.cached_shadow_vp {
+                Some((cached_light, cached_center, cached_radius, cached_vp))
+                    if cached_light == light_dir
+                        && cached_center == center
+                        && cached_radius == radius =>
+                {
+                    cached_vp
+                }
+                _ => {
+                    let computed = shadow_light_vp(light_dir, center, radius);
+                    self.cached_shadow_vp = Some((light_dir, center, radius, computed));
+                    computed
+                }
+            };
             floats[76..92].copy_from_slice(&vp);
             floats[92] = 1.0;
             floats[93] = 1.0 / SHADOW_MAP_SIZE as f32;
@@ -204,9 +221,16 @@ impl Rasterizer {
             floats[94] = 0.0015;
             floats[95] = 1.0;
         }
-        self.context
-            .queue
-            .write_buffer(&self.scene_buffer, 0, &pack_f32(&floats));
+        let unchanged = self
+            .last_scene_floats
+            .as_ref()
+            .is_some_and(|prev| prev == &floats);
+        if !unchanged {
+            self.context
+                .queue
+                .write_buffer(&self.scene_buffer, 0, &f32_le_bytes(&floats));
+            self.last_scene_floats = Some(floats);
+        }
         self.section_enabled = scene.options[0] > 0.5;
     }
 
@@ -265,7 +289,10 @@ impl Rasterizer {
     /// Sets the scene bounds (center, radius) used to build the key-light
     /// orthographic VP; `None` disables the shadow pass until bounds are set.
     pub fn set_shadow_bounds(&mut self, bounds: Option<([f32; 3], f32)>) {
-        self.shadow_bounds = bounds;
+        if self.shadow_bounds != bounds {
+            self.shadow_bounds = bounds;
+            self.cached_shadow_vp = None;
+        }
     }
 
     /// The bind group the sampling shaders should read this frame: the real

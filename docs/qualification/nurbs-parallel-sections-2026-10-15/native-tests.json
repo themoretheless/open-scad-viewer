@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "testsPassed": 5,
+  "testsFailed": 0,
+  "runtimeSeconds": 1.24,
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test parallel_sections",
+  "cargoCheckPassed": true,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/parallel_sections.rs": "9702c1a2e85aca54fbeb4a1aa0122d3f4bee40069a5e05d4f902a8145bc19d0b",
+    "crates/nurbs-core/tests/parallel_sections.rs": "abe59813a90f711197e20fe46eb3b18482dd25e59f31d4b3e583ae116aeee002"
+  },
+  "continuousOriginalSurfaceBound": true,
+  "admittedScope": "Complete regular monotone graphs in either natural parameter direction; complete whole-image exclusion; all other cases retain the whole original domain as unresolved",
+  "arbitraryIntersectionTopologyCertified": false,
+  "topologyAuthorship": false,
+  "wasmEditorStepQualified": false
+}

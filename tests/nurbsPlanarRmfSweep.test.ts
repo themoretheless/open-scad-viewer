@@ -28,11 +28,15 @@ it('certifies original curved planar RMF transport through packaged WASM',()=>{
  expect(result.report.continuousErrorUpper).toBeLessThanOrEqual(.1)
  expect(result.patches?.length).toBeGreaterThan(0)
 })
-it('does not infer RMF planarity from rounded station samples',()=>{
+it('owns a subnormal departure from the seed plane through general RMF transport',()=>{
  const changed=structuredClone(path);changed.controlPoints[1]![2]=Number.MIN_VALUE
  const result=progressiveSweepNurbsPatches(profile,changed,scale,twist,options)
- expect(result.report).toMatchObject({continuousBound:false,continuousErrorUpper:null})
- expect(result.report.errorCertificateReason).toMatch(/^source-plane-(coefficients-nonzero|exact-work-unproved)$/)
+ expect(result.report).toMatchObject({accepted:true,continuousBound:true,errorCertificateReason:null})
+ expect(result.report.continuousErrorUpper).toBeGreaterThan(0)
+ expect(result.report.continuousErrorUpper).toBeLessThanOrEqual(options.maxDeviation)
+ const exhausted=progressiveSweepNurbsPatches(profile,changed,scale,twist,
+  {...options,rmfTransportSteps:512,errorMaxCells:0,errorMaxProducts:1000000})
+ expect(exhausted.report).toMatchObject({accepted:false,continuousBound:false,continuousErrorUpper:null})
 })
 it('preserves joint scale/twist/affine/center laws on original rational planar RMF',()=>{
  const rational=bezierNurbsCurve([[0,0,0],[1/3,0,0],[.5,.5,0]],[1,1.5,2])

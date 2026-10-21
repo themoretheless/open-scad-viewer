@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_contacts": 25,
+    "periodic_trim_support": 11,
+    "periodic_trim_weighted": 6
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/contact.rs": "d1e5b686992b68bee993df14235697421da78ff83cff6f17d8ca21e698370821",
+    "crates/nurbs-core/src/trim/periodic_trim/contact/common_projection.rs": "9bb131476969f621173f18c626906929309494d48d6e2e0f39f4b215ddbafcd2",
+    "crates/nurbs-core/tests/periodic_trim_contacts.rs": "d595975b727610051c271872e085219d7c2a92ab740ad9530f3e63eb015f8999"
+  },
+  "scope": "Exact local germ order under identical rational Bezier weights and longitudinal projection; no general owned-face regularization",
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "wasmCompilationPassed": true,
+  "wasmCompilationStatus": "passed",
+  "supersededBy": "../nurbs-periodic-bspline-germs-2026-10-15/native-tests.json",
+  "previousSourceRevalidation": "../nurbs-thread-source-2026-10-15/native-tests.json"
+}

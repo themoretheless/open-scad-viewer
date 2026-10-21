@@ -266,6 +266,10 @@ pub fn trace_geodesic_report(
         (1..=4096).contains(&max_steps),
         "Geodesic step budget must be 1..4096.",
     )?;
+    let direction_scale = direction_uv[0].abs().max(direction_uv[1].abs());
+    check(direction_scale > 0., "Geodesic direction must be nonzero")?;
+    let direction_uv = direction_uv.map(|v| v / direction_scale);
+    check(length / 64. > 0., "Geodesic length is below representable initial step")?;
     let d = domains(surface);
     check(
         inside(&d, [start_uv[0], start_uv[1], 0., 0.], 0.),
@@ -278,7 +282,7 @@ pub fn trace_geodesic_report(
         + 2. * m[1] * direction_uv[0] * direction_uv[1]
         + m[2] * direction_uv[1] * direction_uv[1];
     check(
-        speed2 > 0.,
+        speed2.is_finite() && speed2 > 0.,
         "Geodesic direction must be nonzero in the surface metric.",
     )?;
     let scale = speed2.sqrt();
@@ -332,21 +336,22 @@ pub fn trace_geodesic_report(
             }
         };
         if !inside(&d, accepted, 0.) {
-            // Bisect the segment y → accepted for the last inside point, then
-            // clamp onto the boundary and stop.
-            let (mut a, mut b) = (y, accepted);
-            for _ in 0..64 {
-                let mid = std::array::from_fn(|i| (a[i] + b[i]) / 2.);
-                if inside(&d, mid, 0.) {
-                    a = mid;
-                } else {
-                    b = mid;
+            // Clip the retained UV chord to the first rectangular boundary.
+            // Fixed-count bisection cannot resolve a fraction near 1e-100.
+            let mut low = 1_f64;
+            for axis in 0..2 {
+                if accepted[axis] < d[axis][0] {
+                    low=low.min((y[axis]-d[axis][0])/(y[axis]-accepted[axis]));
+                } else if accepted[axis] > d[axis][1] {
+                    low=low.min((d[axis][1]-y[axis])/(accepted[axis]-y[axis]));
                 }
             }
+            let mut a: [f64;4]=std::array::from_fn(|i|y[i]*(1.-low)+accepted[i]*low);
             a[0] = a[0].clamp(d[0][0], d[0][1]);
             a[1] = a[1].clamp(d[1][0], d[1][1]);
             states.push(a);
-            return finish(surface, states, s + step, GeodesicStop::BoundaryHit);
+            // Only the retained fraction belongs to the returned path.
+            return finish(surface, states, s + step*low, GeodesicStop::BoundaryHit);
         }
         // Grow the step when the defect was far below tolerance.
         let err_free = step;

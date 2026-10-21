@@ -32,6 +32,19 @@ export async function createNativeCancelProbe(browser,wasm){
   pending.set(id,{resolve,reject,timer})
   root.send('Target.sendMessageToTarget',{sessionId,message:JSON.stringify({id,method,params})}).catch(error=>{clearTimeout(timer);pending.delete(id);reject(error)})
  })
+ // Authenticate modules already present on a warm Worker before starting the
+ // measured profile. Otherwise the first useful sample is discarded while
+ // fetching/hash-checking the bytecode and a short real request can finish.
+ // Identity still comes from the complete module bytes, never its URL/name.
+ const authenticateExistingScripts=async()=>{
+  for(const script of scripts.values()){
+   if(script.scriptLanguage!=='WebAssembly'&&!script.url?.startsWith('wasm:'))continue
+   if(verified.has(script.scriptId))continue
+   const response=await send('Debugger.getScriptSource',{scriptId:script.scriptId})
+   assert.ok(response.bytecode,'WASM bytecode must be available')
+   verified.set(script.scriptId,sha(Buffer.from(response.bytecode,'base64')))
+  }
+ }
  const targets=async()=> (await root.send('Target.getTargets')).targetInfos.filter(t=>t.type==='worker'&&t.url.includes('geometry.worker-'))
  const waitUntil=async(predicate,label,timeout=10000)=>{
   const until=Date.now()+timeout
@@ -40,7 +53,7 @@ export async function createNativeCancelProbe(browser,wasm){
  }
  return {
   async attachExisting(){const list=await targets();assert.equal(list.length,1,'Native build probe requires one isolated geometry Worker');await this.attach(list[0])},
-  async attach(target){sessionId=(await root.send('Target.attachToTarget',{targetId:target.targetId,flatten:false})).sessionId;detached=false;paused=null;scripts.clear();verified.clear();await send('Debugger.enable');return target},
+  async attach(target){sessionId=(await root.send('Target.attachToTarget',{targetId:target.targetId,flatten:false})).sessionId;detached=false;paused=null;scripts.clear();verified.clear();await send('Debugger.enable');await authenticateExistingScripts();return target},
   async targetIds(){return new Set((await targets()).map(t=>t.targetId))},
   async attachNew(before){let target;await waitUntil(async()=>{target=(await targets()).find(t=>!before.has(t.targetId));return Boolean(target)},'new exact-solid Worker');await this.attach(target);return target},
   async pauseGeometryRequest(){
@@ -77,6 +90,7 @@ export async function createNativeCancelProbe(browser,wasm){
   async armRunningGeometry(){
    assert.ok(!profilerArmed,'CPU profiler is already armed')
    assert.equal(paused,null,'Running cancellation must not pause the Worker')
+   await authenticateExistingScripts()
    await send('Profiler.enable')
    await send('Profiler.setSamplingInterval',{interval:1000})
    await send('Profiler.start')

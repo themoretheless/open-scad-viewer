@@ -11,7 +11,15 @@ export const DEFAULT_MAX_PENDING_OUTBOUND_MESSAGES = 24
 export const DEFAULT_MAX_PENDING_CONTROL_MESSAGES = 64
 export const MAX_MCP_SUBSCRIPTIONS = 8
 export const MAX_MCP_STRING_REQUEST_ID_LENGTH = 128
+export const MAX_MCP_FRAME_BYTES = 32 * 1024 * 1024
 export const TRANSPORT_BUSY_RETRY_AFTER_MS = 250
+
+export function isAdmissibleJsonRpcMessage(message: unknown): message is JSONRPCMessage {
+  if (!message || typeof message !== 'object' || Array.isArray(message)) return false
+  const record = message as Record<string, unknown>
+  if (record.jsonrpc !== '2.0') return false
+  return true
+}
 
 export class OutboundBackpressureError extends Error {
   constructor(readonly maxPending: number) {
@@ -237,6 +245,7 @@ export class BoundedTransport implements Transport {
   }
 
   private receive<T extends JSONRPCMessage>(message: T, extra?: MessageExtraInfo): void {
+    if (!isAdmissibleJsonRpcMessage(message)) return
     const requestId = inboundRequestId(message)
     if (requestId === null) {
       this.receiveNonRequest(message, extra)

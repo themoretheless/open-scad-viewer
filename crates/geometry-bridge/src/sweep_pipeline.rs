@@ -55,6 +55,7 @@ pub fn admission(v: Value) -> Result<Value> {
         "brep_progressive_miter_sweep",
         "brep_miter_sweep",
         "brep_smooth_miter_stations",
+        "brep_smooth_sweep_stations",
     ]
     .contains(&op)
     {
@@ -84,7 +85,7 @@ pub fn admission(v: Value) -> Result<Value> {
     budgets["maxExactWork"] = json!(remaining);
     // Profile closure is constructor-derived, not a trusted author-supplied flag.
     // The fresh full-model proof covers every actual face and trimmed domain.
-    let caps = if op == "brep_progressive_sweep" || op == "brep_smooth_miter_stations" {
+    let caps = if op == "brep_progressive_sweep" || op == "brep_smooth_miter_stations" || op == "brep_smooth_sweep_stations" {
         brep_core::sweep_cap_contacts::endpoint_chart_candidates(&model)
     } else if node["closed"] == json!(true) {
         vec![]

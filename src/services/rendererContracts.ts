@@ -204,3 +204,15 @@ export interface SceneUploadMetrics {
   geometryBuffersCreated: number
   reusedEntities: number
 }
+
+export interface WebGPUFrameDiagnostics {
+  opaqueMeshCount: number
+  transparentMeshCount: number
+  edgeMeshCount: number
+  totalMeshCount: number
+  deviceLost: boolean
+}
+
+export function describeFrameDiagnostics(opaqueMeshCount:number,transparentMeshCount:number,edgeMeshCount:number,totalMeshCount:number,deviceLost:boolean):WebGPUFrameDiagnostics {
+ return {opaqueMeshCount,transparentMeshCount,edgeMeshCount,totalMeshCount,deviceLost}
+}

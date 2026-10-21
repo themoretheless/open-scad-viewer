@@ -25,3 +25,6 @@ pub mod fillet_surfaces;
 pub(crate) fn cross2d(a: [Interval; 2], b: [Interval; 2]) -> Result<Interval> {
     a[0].mul(b[1])?.sub(a[1].mul(b[0])?)
 }
+
+/// Clearance-qualified outside contour machining paths.
+pub mod machining;

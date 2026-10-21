@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {miterLawMatrixModes,miterLawMatrixSource} from '../scripts/miter-law-matrix-sources'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -18,7 +19,7 @@ it.each(miterLawMatrixModes)('owns all miter law combinations through Rush/viewp
  if(mode.closed)expect(report).toMatchObject({seamContinuity:'C0'})
  if(!built.nativeGeometry)throw Error('Missing native owned miter body')
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true,boundaryErrorWithinBudget:true})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  const volume=inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)!
  expect(volume).toMatchObject({solidGeometryCertified:true,allFacesInjective:true,allPairsClassified:true})
  expect(volume.orientations.every(o=>o.outward===o.expectedOutward)).toBe(true)

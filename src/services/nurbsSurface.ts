@@ -98,18 +98,19 @@ export async function tessellateNurbsSurfaceOnGpu(
   const numCtrlV = numCtrlU > 0 ? surface.controlPoints[0].length : 0
   if (numCtrlU === 0 || numCtrlV === 0) return null
 
-  const controlPoints = new Float32Array(numCtrlU * numCtrlV * 3)
-  const weights = new Float32Array(numCtrlU * numCtrlV)
+  const totalCp = numCtrlU * numCtrlV
+  const controlPoints = new Float32Array(totalCp * 3)
+  const weights = new Float32Array(totalCp)
   for (let i = 0; i < numCtrlU; i++) {
     const row = surface.controlPoints[i]
     const wRow = surface.weights[i]
-    for (let j = 0; j < numCtrlV; j++) {
-      const idx = i + j * numCtrlU
+    for (let j = 0, idx = i; j < numCtrlV; j++, idx += numCtrlU) {
       const pt = row[j]
-      controlPoints[idx * 3] = pt[0]
-      controlPoints[idx * 3 + 1] = pt[1]
-      controlPoints[idx * 3 + 2] = pt[2]
-      weights[idx] = wRow?.[j] ?? 1
+      const cIdx = idx * 3
+      controlPoints[cIdx] = pt[0]
+      controlPoints[cIdx + 1] = pt[1]
+      controlPoints[cIdx + 2] = pt[2]
+      weights[idx] = wRow !== undefined ? (wRow[j] ?? 1) : 1
     }
   }
 
@@ -118,8 +119,8 @@ export async function tessellateNurbsSurfaceOnGpu(
     {
       degreeU: surface.degreeU,
       degreeV: surface.degreeV,
-      knotsU: new Float32Array(surface.knotsU),
-      knotsV: new Float32Array(surface.knotsV),
+      knotsU: surface.knotsU instanceof Float32Array ? surface.knotsU : new Float32Array(surface.knotsU),
+      knotsV: surface.knotsV instanceof Float32Array ? surface.knotsV : new Float32Array(surface.knotsV),
       controlPoints,
       weights,
       numCpU: numCtrlU,

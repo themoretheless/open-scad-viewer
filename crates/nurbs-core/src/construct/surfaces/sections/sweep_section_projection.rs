@@ -41,7 +41,18 @@ pub fn project_miter_caps(
     tolerance: f64,
     max_work: Option<f64>,
 ) -> Result<Report> {
+    project_miter_caps_selected(sections, points, closed, authored, axis, quantum, tolerance, max_work, [true; 2])
+}
+/// Explicit endpoint subset, retaining every unselected source section.
+pub fn project_miter_caps_selected(
+    sections: &[Vec<Curve>], points: &[[f64; 3]], closed: bool, authored: bool,
+    axis: Option<&Curve>, quantum: f64, tolerance: f64, max_work: Option<f64>,
+    endpoints: [bool; 2],
+) -> Result<Report> {
     let invalid = |message| Error::new("NURBS_INVALID_INPUT", message);
+    if !endpoints.iter().any(|&selected| selected) {
+        return Err(invalid("Cap correction requires a selected endpoint"));
+    }
     if closed {
         return Err(invalid("Closed miter has no caps to correct"));
     }
@@ -55,6 +66,7 @@ pub fn project_miter_caps(
     }
     let mut corrections = Vec::with_capacity(2);
     for end in [false, true] {
+        if !endpoints[end as usize] { continue; }
         let target = if authored {
             Target::AuthoredAxis {
                 axis: axis

@@ -19,10 +19,63 @@ pub struct PreparedMesh {
     pub color: [f32; 4],
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ScaleMode {
+    /// Normalize the scene bounding box to fit inside `target_extent_m` (default `0.6` m) centered at the origin.
+    NormalizedFit(f64),
+    /// Preserve true 1:1 CAD dimensions by converting millimeters directly to meters (`0.001`) centered at the origin.
+    TrueScaleMmToMeters,
+}
+
+pub struct PreparedMeshWithNormals {
+    pub positions: Vec<f32>,
+    pub normals: Vec<f32>,
+    pub indices: Vec<u32>,
+    pub color: [f32; 4],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VrRayHit {
+    pub mesh_index: usize,
+    pub triangle_index: usize,
+    pub distance_m: f32,
+    pub point: [f32; 3],
+}
+
 pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
+    prepare_scene_with_scale(meshes, ScaleMode::NormalizedFit(0.6))
+}
+
+pub fn prepare_scene_with_scale(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+) -> Result<Vec<PreparedMesh>, Error> {
+    let with_normals = prepare_scene_impl(meshes, scale_mode, false)?;
+    Ok(with_normals
+        .into_iter()
+        .map(|m| PreparedMesh {
+            positions: m.positions,
+            indices: m.indices,
+            color: m.color,
+        })
+        .collect())
+}
+
+pub fn prepare_scene_with_normals(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+) -> Result<Vec<PreparedMeshWithNormals>, Error> {
+    prepare_scene_impl(meshes, scale_mode, true)
+}
+
+fn prepare_scene_impl(
+    meshes: Vec<Mesh>,
+    scale_mode: ScaleMode,
+    compute_normals: bool,
+) -> Result<Vec<PreparedMeshWithNormals>, Error> {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(meshes.len());
     for mesh in meshes {
         if mesh.indices.is_empty() {
             continue;
@@ -38,14 +91,35 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
             return Err(Error::InvalidGeometry);
         }
         let mut positions = Vec::with_capacity(mesh.vertices.len() / 2);
+        let mut normals = if compute_normals {
+            Vec::with_capacity(mesh.vertices.len() / 2)
+        } else {
+            Vec::new()
+        };
         let m = mesh.transform.map(f64::from);
         for p in mesh.vertices.chunks_exact(6) {
             let [x, y, z] = [p[0] as f64, p[1] as f64, p[2] as f64];
-            positions.extend([
+            positions.extend_from_slice(&[
                 (m[0] * x + m[1] * y + m[2] * z + m[3]) as f32,
                 (m[8] * x + m[9] * y + m[10] * z + m[11]) as f32,
                 -(m[4] * x + m[5] * y + m[6] * z + m[7]) as f32,
             ]);
+            if compute_normals {
+                let [nx, ny, nz] = [p[3] as f64, p[4] as f64, p[5] as f64];
+                let rx = m[0] * nx + m[1] * ny + m[2] * nz;
+                let ry = m[8] * nx + m[9] * ny + m[10] * nz;
+                let rz = -(m[4] * nx + m[5] * ny + m[6] * nz);
+                let len = (rx * rx + ry * ry + rz * rz).sqrt();
+                if len > 1e-12 {
+                    normals.extend_from_slice(&[
+                        (rx / len) as f32,
+                        (ry / len) as f32,
+                        (rz / len) as f32,
+                    ]);
+                } else {
+                    normals.extend_from_slice(&[0.0, 1.0, 0.0]);
+                }
+            }
         }
         for &index in &mesh.indices {
             let offset = (index as usize)
@@ -61,8 +135,9 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
                 max[a] = max[a].max(p[a] as f64);
             }
         }
-        result.push(PreparedMesh {
+        result.push(PreparedMeshWithNormals {
             positions,
+            normals,
             indices: mesh.indices,
             color: mesh.color,
         });
@@ -71,14 +146,32 @@ pub fn prepare_scene(meshes: Vec<Mesh>) -> Result<Vec<PreparedMesh>, Error> {
         return Err(Error::EmptyScene);
     }
     let extent = (0..3).map(|a| max[a] - min[a]).fold(0.0_f64, f64::max);
-    let scale = if extent > 0.0 { 0.6 / extent } else { 0.001 };
+    let scale = match scale_mode {
+        ScaleMode::NormalizedFit(target) => {
+            if extent > 0.0 && target.is_finite() && target > 0.0 {
+                target / extent
+            } else {
+                0.001
+            }
+        }
+        ScaleMode::TrueScaleMmToMeters => 0.001,
+    };
+    let center = [
+        (min[0] + max[0]) * 0.5,
+        (min[1] + max[1]) * 0.5,
+        (min[2] + max[2]) * 0.5,
+    ];
     for mesh in &mut result {
-        for (i, value) in mesh.positions.iter_mut().enumerate() {
-            *value = ((*value as f64 - (min[i % 3] + max[i % 3]) / 2.0) * scale) as f32;
+        for p in mesh.positions.chunks_exact_mut(3) {
+            p[0] = ((p[0] as f64 - center[0]) * scale) as f32;
+            p[1] = ((p[1] as f64 - center[1]) * scale) as f32;
+            p[2] = ((p[2] as f64 - center[2]) * scale) as f32;
         }
     }
     Ok(result)
 }
+
+
 
 /// Lock a scene 1.2 m along the viewer's forward direction.
 pub fn anchor(mut pose: [f32; 16]) -> [f32; 16] {
@@ -86,6 +179,436 @@ pub fn anchor(mut pose: [f32; 16]) -> [f32; 16] {
         pose[12 + a] -= pose[8 + a] * 1.2;
     }
     pose
+}
+
+/// 3D point-to-point measurement in XR space with true millimeter conversion.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VrMeasurement {
+    pub point_a: [f32; 3],
+    pub point_b: [f32; 3],
+    pub delta_m: [f32; 3],
+    pub distance_m: f32,
+    pub cad_distance_mm: f64,
+}
+
+/// Computes Euclidean distance and axis deltas between two picked XR points.
+/// `scene_scale_m_per_mm` converts VR meters back into CAD millimeters (use `0.001` for `TrueScaleMmToMeters`).
+pub fn measure_vr_distance(
+    point_a: [f32; 3],
+    point_b: [f32; 3],
+    scene_scale_m_per_mm: f64,
+) -> Option<VrMeasurement> {
+    if !point_a
+        .iter()
+        .chain(point_b.iter())
+        .all(|v| v.is_finite())
+        || !scene_scale_m_per_mm.is_finite()
+        || scene_scale_m_per_mm <= 0.0
+    {
+        return None;
+    }
+    let dx = point_b[0] - point_a[0];
+    let dy = point_b[1] - point_a[1];
+    let dz = point_b[2] - point_a[2];
+    let dist_m = (dx * dx + dy * dy + dz * dz).sqrt();
+    Some(VrMeasurement {
+        point_a,
+        point_b,
+        delta_m: [dx, dy, dz],
+        distance_m: dist_m,
+        cad_distance_mm: (dist_m as f64) / scene_scale_m_per_mm,
+    })
+}
+
+/// Computes the angle in degrees ($[0, 180]$) at `vertex` between rays to `point_a` and `point_b`.
+pub fn measure_angle_deg(point_a: [f32; 3], vertex: [f32; 3], point_b: [f32; 3]) -> Option<f32> {
+    let u = [
+        point_a[0] - vertex[0],
+        point_a[1] - vertex[1],
+        point_a[2] - vertex[2],
+    ];
+    let v = [
+        point_b[0] - vertex[0],
+        point_b[1] - vertex[1],
+        point_b[2] - vertex[2],
+    ];
+    let lu = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
+    let lv = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if !lu.is_finite() || !lv.is_finite() || lu <= 1e-7 || lv <= 1e-7 {
+        return None;
+    }
+    let cos_a = ((u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (lu * lv)).clamp(-1.0, 1.0);
+    Some(cos_a.acos().to_degrees())
+}
+
+/// Clips a VR scene against a section plane `plane = [nx, ny, nz, d]`, keeping triangles whose
+/// centroid satisfies $n_x x + n_y y + n_z z + d \le 0$.
+pub fn clip_scene_by_plane(scene: &[PreparedMesh], plane: [f32; 4]) -> Vec<PreparedMesh> {
+    if !plane.iter().all(|v| v.is_finite()) {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(scene.len());
+    for mesh in scene {
+        let mut kept_indices = Vec::with_capacity(mesh.indices.len());
+        for tri in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (
+                (tri[0] as usize) * 3,
+                (tri[1] as usize) * 3,
+                (tri[2] as usize) * 3,
+            );
+            if i0 + 2 >= mesh.positions.len()
+                || i1 + 2 >= mesh.positions.len()
+                || i2 + 2 >= mesh.positions.len()
+            {
+                continue;
+            }
+            let cx = (mesh.positions[i0] + mesh.positions[i1] + mesh.positions[i2]) / 3.0;
+            let cy =
+                (mesh.positions[i0 + 1] + mesh.positions[i1 + 1] + mesh.positions[i2 + 1]) / 3.0;
+            let cz =
+                (mesh.positions[i0 + 2] + mesh.positions[i1 + 2] + mesh.positions[i2 + 2]) / 3.0;
+            let signed_dist = plane[0] * cx + plane[1] * cy + plane[2] * cz + plane[3];
+            if signed_dist <= 0.0 {
+                kept_indices.extend_from_slice(tri);
+            }
+        }
+        if !kept_indices.is_empty() {
+            out.push(PreparedMesh {
+                positions: mesh.positions.clone(),
+                indices: kept_indices,
+                color: mesh.color,
+            });
+        }
+    }
+    out
+}
+
+/// Generates an interactive exploded VR assembly view by translating each mesh radially outward
+/// from the overall scene centroid by `explosion_factor` ($\ge 0$).
+pub fn vr_exploded_view(scene: &[PreparedMesh], explosion_factor: f32) -> Vec<PreparedMesh> {
+    if scene.is_empty() || !explosion_factor.is_finite() || explosion_factor <= 0.0 {
+        return scene
+            .iter()
+            .map(|m| PreparedMesh {
+                positions: m.positions.clone(),
+                indices: m.indices.clone(),
+                color: m.color,
+            })
+            .collect();
+    }
+    let mut part_centers = Vec::with_capacity(scene.len());
+    let mut global_sum = [0.0_f64; 3];
+    let mut total_verts = 0usize;
+    for mesh in scene {
+        let mut sum = [0.0_f64; 3];
+        let v_count = mesh.positions.len() / 3;
+        for p in mesh.positions.chunks_exact(3) {
+            sum[0] += p[0] as f64;
+            sum[1] += p[1] as f64;
+            sum[2] += p[2] as f64;
+        }
+        global_sum[0] += sum[0];
+        global_sum[1] += sum[1];
+        global_sum[2] += sum[2];
+        total_verts += v_count;
+        if v_count > 0 {
+            part_centers.push([
+                (sum[0] / v_count as f64) as f32,
+                (sum[1] / v_count as f64) as f32,
+                (sum[2] / v_count as f64) as f32,
+            ]);
+        } else {
+            part_centers.push([0.0; 3]);
+        }
+    }
+    let gc = if total_verts > 0 {
+        [
+            (global_sum[0] / total_verts as f64) as f32,
+            (global_sum[1] / total_verts as f64) as f32,
+            (global_sum[2] / total_verts as f64) as f32,
+        ]
+    } else {
+        [0.0; 3]
+    };
+    scene
+        .iter()
+        .zip(part_centers)
+        .map(|(mesh, pc)| {
+            let offset = [
+                (pc[0] - gc[0]) * explosion_factor,
+                (pc[1] - gc[1]) * explosion_factor,
+                (pc[2] - gc[2]) * explosion_factor,
+            ];
+            let mut positions = mesh.positions.clone();
+            for p in positions.chunks_exact_mut(3) {
+                p[0] += offset[0];
+                p[1] += offset[1];
+                p[2] += offset[2];
+            }
+            PreparedMesh {
+                positions,
+                indices: mesh.indices.clone(),
+                color: mesh.color,
+            }
+        })
+        .collect()
+}
+
+/// Computes an ergonomic grab/turntable anchor point (`[x, y, z]` in meters) at `distance_m`
+/// in front of the viewer pose and `vertical_drop_m` below eye level.
+pub fn compute_ergonomic_grab_anchor(
+    head_pose: [f32; 16],
+    distance_m: f32,
+    vertical_drop_m: f32,
+) -> [f32; 3] {
+    [
+        head_pose[12] - head_pose[8] * distance_m,
+        head_pose[13] - head_pose[9] * distance_m - vertical_drop_m,
+        head_pose[14] - head_pose[10] * distance_m,
+    ]
+}
+
+/// Two-controller gesture transform (scale + rotation + translation) for VR CAD manipulation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TwoHandTransform {
+    /// Uniform scale ratio between current and previous inter-controller distances.
+    pub scale: f32,
+    /// Translation of the midpoint from previous to current frame (`[dx, dy, dz]` in meters).
+    pub translation_m: [f32; 3],
+    /// Unit axis of rotation mapping the previous hand-to-hand vector onto the current one.
+    pub rotation_axis: [f32; 3],
+    /// Signed rotation angle in radians around `rotation_axis`.
+    pub rotation_angle_rad: f32,
+    /// Yaw rotation in radians in the horizontal ($XZ$) plane.
+    pub yaw_rad: f32,
+}
+
+impl TwoHandTransform {
+    /// Solves the two-handed scale, rotation, and translation gesture between two consecutive XR frames.
+    pub fn solve(
+        prev_left: [f32; 3],
+        prev_right: [f32; 3],
+        curr_left: [f32; 3],
+        curr_right: [f32; 3],
+    ) -> Option<Self> {
+        if !prev_left
+            .iter()
+            .chain(prev_right.iter())
+            .chain(curr_left.iter())
+            .chain(curr_right.iter())
+            .all(|v| v.is_finite())
+        {
+            return None;
+        }
+        let prev_vec = [
+            prev_right[0] - prev_left[0],
+            prev_right[1] - prev_left[1],
+            prev_right[2] - prev_left[2],
+        ];
+        let curr_vec = [
+            curr_right[0] - curr_left[0],
+            curr_right[1] - curr_left[1],
+            curr_right[2] - curr_left[2],
+        ];
+        let prev_len =
+            (prev_vec[0] * prev_vec[0] + prev_vec[1] * prev_vec[1] + prev_vec[2] * prev_vec[2])
+                .sqrt();
+        let curr_len =
+            (curr_vec[0] * curr_vec[0] + curr_vec[1] * curr_vec[1] + curr_vec[2] * curr_vec[2])
+                .sqrt();
+        if prev_len <= 1e-5 || curr_len <= 1e-5 {
+            return None;
+        }
+        let scale = curr_len / prev_len;
+        let prev_mid = [
+            (prev_left[0] + prev_right[0]) * 0.5,
+            (prev_left[1] + prev_right[1]) * 0.5,
+            (prev_left[2] + prev_right[2]) * 0.5,
+        ];
+        let curr_mid = [
+            (curr_left[0] + curr_right[0]) * 0.5,
+            (curr_left[1] + curr_right[1]) * 0.5,
+            (curr_left[2] + curr_right[2]) * 0.5,
+        ];
+        let translation_m = [
+            curr_mid[0] - prev_mid[0],
+            curr_mid[1] - prev_mid[1],
+            curr_mid[2] - prev_mid[2],
+        ];
+        let u = [
+            prev_vec[0] / prev_len,
+            prev_vec[1] / prev_len,
+            prev_vec[2] / prev_len,
+        ];
+        let v = [
+            curr_vec[0] / curr_len,
+            curr_vec[1] / curr_len,
+            curr_vec[2] / curr_len,
+        ];
+        let dot = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]).clamp(-1.0, 1.0);
+        let rotation_angle_rad = dot.acos();
+        let cx = u[1] * v[2] - u[2] * v[1];
+        let cy = u[2] * v[0] - u[0] * v[2];
+        let cz = u[0] * v[1] - u[1] * v[0];
+        let clen = (cx * cx + cy * cy + cz * cz).sqrt();
+        let rotation_axis = if clen > 1e-6 {
+            [cx / clen, cy / clen, cz / clen]
+        } else {
+            [0.0, 1.0, 0.0]
+        };
+        let prev_yaw = prev_vec[2].atan2(prev_vec[0]);
+        let curr_yaw = curr_vec[2].atan2(curr_vec[0]);
+        let mut yaw_rad = curr_yaw - prev_yaw;
+        while yaw_rad > std::f32::consts::PI {
+            yaw_rad -= 2.0 * std::f32::consts::PI;
+        }
+        while yaw_rad < -std::f32::consts::PI {
+            yaw_rad += 2.0 * std::f32::consts::PI;
+        }
+        Some(Self {
+            scale,
+            translation_m,
+            rotation_axis,
+            rotation_angle_rad,
+            yaw_rad,
+        })
+    }
+
+    /// Applies the gesture transform (anchored at `pivot`) to a 3D point.
+    pub fn apply_to_point(&self, point: [f32; 3], pivot: [f32; 3]) -> [f32; 3] {
+        let p = [
+            (point[0] - pivot[0]) * self.scale,
+            (point[1] - pivot[1]) * self.scale,
+            (point[2] - pivot[2]) * self.scale,
+        ];
+        let [kx, ky, kz] = self.rotation_axis;
+        let (sin_a, cos_a) = self.rotation_angle_rad.sin_cos();
+        let k_dot_p = kx * p[0] + ky * p[1] + kz * p[2];
+        let k_cross_p = [
+            ky * p[2] - kz * p[1],
+            kz * p[0] - kx * p[2],
+            kx * p[1] - ky * p[0],
+        ];
+        [
+            pivot[0]
+                + self.translation_m[0]
+                + p[0] * cos_a
+                + k_cross_p[0] * sin_a
+                + kx * k_dot_p * (1.0 - cos_a),
+            pivot[1]
+                + self.translation_m[1]
+                + p[1] * cos_a
+                + k_cross_p[1] * sin_a
+                + ky * k_dot_p * (1.0 - cos_a),
+            pivot[2]
+                + self.translation_m[2]
+                + p[2] * cos_a
+                + k_cross_p[2] * sin_a
+                + kz * k_dot_p * (1.0 - cos_a),
+        ]
+    }
+}
+
+/// Checks whether a spherical VR controller/hand volume (`hand_pos`, `hand_radius_m`)
+/// collides with any triangle in `scene`.
+pub fn check_hand_collision(
+    hand_pos: [f32; 3],
+    hand_radius_m: f32,
+    scene: &[PreparedMesh],
+) -> bool {
+    if !hand_pos.iter().all(|v| v.is_finite()) || !hand_radius_m.is_finite() || hand_radius_m < 0.0
+    {
+        return false;
+    }
+    let r2 = hand_radius_m * hand_radius_m;
+    for mesh in scene {
+        for tri in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (
+                (tri[0] as usize) * 3,
+                (tri[1] as usize) * 3,
+                (tri[2] as usize) * 3,
+            );
+            if i0 + 2 >= mesh.positions.len()
+                || i1 + 2 >= mesh.positions.len()
+                || i2 + 2 >= mesh.positions.len()
+            {
+                continue;
+            }
+            let a = [
+                mesh.positions[i0],
+                mesh.positions[i0 + 1],
+                mesh.positions[i0 + 2],
+            ];
+            let b = [
+                mesh.positions[i1],
+                mesh.positions[i1 + 1],
+                mesh.positions[i1 + 2],
+            ];
+            let c = [
+                mesh.positions[i2],
+                mesh.positions[i2 + 1],
+                mesh.positions[i2 + 2],
+            ];
+            if point_triangle_dist_sq(hand_pos, a, b, c) <= r2 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn point_triangle_dist_sq(p: [f32; 3], a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> f32 {
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let ap = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
+    let d1 = ab[0] * ap[0] + ab[1] * ap[1] + ab[2] * ap[2];
+    let d2 = ac[0] * ap[0] + ac[1] * ap[1] + ac[2] * ap[2];
+    if d1 <= 0.0 && d2 <= 0.0 {
+        return ap[0] * ap[0] + ap[1] * ap[1] + ap[2] * ap[2];
+    }
+    let bp = [p[0] - b[0], p[1] - b[1], p[2] - b[2]];
+    let d3 = ab[0] * bp[0] + ab[1] * bp[1] + ab[2] * bp[2];
+    let d4 = ac[0] * bp[0] + ac[1] * bp[1] + ac[2] * bp[2];
+    if d3 >= 0.0 && d4 <= d3 {
+        return bp[0] * bp[0] + bp[1] * bp[1] + bp[2] * bp[2];
+    }
+    let vc = d1 * d4 - d3 * d2;
+    if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
+        let v = d1 / (d1 - d3);
+        let q = [a[0] + v * ab[0], a[1] + v * ab[1], a[2] + v * ab[2]];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let cp = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+    let d5 = ab[0] * cp[0] + ab[1] * cp[1] + ab[2] * cp[2];
+    let d6 = ac[0] * cp[0] + ac[1] * cp[1] + ac[2] * cp[2];
+    if d6 >= 0.0 && d5 <= d6 {
+        return cp[0] * cp[0] + cp[1] * cp[1] + cp[2] * cp[2];
+    }
+    let vb = d5 * d2 - d1 * d6;
+    if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
+        let w = d2 / (d2 - d6);
+        let q = [a[0] + w * ac[0], a[1] + w * ac[1], a[2] + w * ac[2]];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let va = d3 * d6 - d5 * d4;
+    if va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0 {
+        let w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        let q = [
+            b[0] + w * (c[0] - b[0]),
+            b[1] + w * (c[1] - b[1]),
+            b[2] + w * (c[2] - b[2]),
+        ];
+        return (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2);
+    }
+    let denom = 1.0 / (va + vb + vc);
+    let v = vb * denom;
+    let w = vc * denom;
+    let q = [
+        a[0] + ab[0] * v + ac[0] * w,
+        a[1] + ab[1] * v + ac[1] * w,
+        a[2] + ab[2] * v + ac[2] * w,
+    ];
+    (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2)
 }
 
 // Compact little-endian transport, shared by native tests and the WASM host.
@@ -118,7 +641,7 @@ pub fn prepare_bytes(bytes: &[u8]) -> Result<Vec<u8>, Error> {
     if count > r.bytes.len() / 88 {
         return Err(Error::InvalidGeometry);
     }
-    let mut meshes = Vec::new();
+    let mut meshes = Vec::with_capacity(count);
     for _ in 0..count {
         let nv = r.u32()? as usize;
         let ni = r.u32()? as usize;
@@ -140,15 +663,29 @@ pub fn prepare_bytes(bytes: &[u8]) -> Result<Vec<u8>, Error> {
         return Err(Error::InvalidGeometry);
     }
     let scene = prepare_scene(meshes)?;
-    let mut words = vec![0, scene.len() as u32];
+    let total_words: usize = 2 + scene
+        .iter()
+        .map(|m| 6 + m.positions.len() + m.indices.len())
+        .sum::<usize>();
+    let total_bytes = u32::try_from(total_words.checked_mul(4).ok_or(Error::InvalidGeometry)?)
+        .map_err(|_| Error::InvalidGeometry)?;
+    let mut out = Vec::with_capacity(total_bytes as usize);
+    out.extend_from_slice(&total_bytes.to_le_bytes());
+    out.extend_from_slice(&(scene.len() as u32).to_le_bytes());
     for mesh in scene {
-        words.extend([mesh.positions.len() as u32, mesh.indices.len() as u32]);
-        words.extend(mesh.color.map(f32::to_bits));
-        words.extend(mesh.positions.into_iter().map(f32::to_bits));
-        words.extend(mesh.indices);
+        out.extend_from_slice(&(mesh.positions.len() as u32).to_le_bytes());
+        out.extend_from_slice(&(mesh.indices.len() as u32).to_le_bytes());
+        for c in mesh.color {
+            out.extend_from_slice(&c.to_le_bytes());
+        }
+        for p in mesh.positions {
+            out.extend_from_slice(&p.to_le_bytes());
+        }
+        for i in mesh.indices {
+            out.extend_from_slice(&i.to_le_bytes());
+        }
     }
-    words[0] = u32::try_from(words.len() * 4).map_err(|_| Error::InvalidGeometry)?;
-    Ok(words.into_iter().flat_map(u32::to_le_bytes).collect())
+    Ok(out)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -187,51 +724,10 @@ mod wasm {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    fn mesh(offset: f32) -> Mesh {
-        Mesh {
-            vertices: vec![
-                0., 0., 0., 0., 0., 1., 100., 0., 0., 0., 0., 1., 0., 0., 100., 0., 0., 1.,
-            ],
-            indices: vec![0, 1, 2],
-            transform: [
-                1., 0., 0., offset, 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
-            ],
-            color: [1.; 4],
-        }
-    }
-    #[test]
-    fn scene_spacing_and_axis() {
-        let result = prepare_scene(vec![mesh(0.), mesh(100.)]).unwrap();
-        assert!((result[0].positions[0] + 0.3).abs() < 1e-6);
-        assert!((result[1].positions[3] - 0.3).abs() < 1e-6);
-        assert!((result[0].positions[7] - 0.15).abs() < 1e-6);
-    }
-    #[test]
-    fn rejects_invalid_inputs() {
-        assert!(matches!(prepare_scene(vec![]), Err(Error::EmptyScene)));
-        let mut m = mesh(0.);
-        m.indices[0] = u32::MAX;
-        assert!(matches!(
-            prepare_scene(vec![m]),
-            Err(Error::InvalidGeometry)
-        ));
-        let mut m = mesh(0.);
-        m.vertices[0] = f32::NAN;
-        assert!(prepare_scene(vec![m]).is_err());
-        for input in [&[][..], &[255, 255, 255, 255][..], &[1, 0, 0, 0][..]] {
-            assert!(prepare_bytes(input).is_err());
-        }
-    }
-    #[test]
-    fn rotated_anchor() {
-        let p = [
-            0., 0., -1., 0., 0., 1., 0., 0., 1., 0., 0., 0., 3., 2., 1., 1.,
-        ];
-        let a = anchor(p);
-        assert!((a[12] - 1.8).abs() < 1e-6);
-        assert_eq!(a[13], 2.);
-        assert_eq!(a[14], 1.);
-    }
-}
+#[path = "tests/tests_integration.rs"]
+mod tests;
+
+
+#[path = "scene_raycast.rs"]
+mod scene_raycast;
+pub use scene_raycast::raycast_scene;

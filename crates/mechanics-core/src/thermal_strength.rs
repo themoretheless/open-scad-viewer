@@ -166,6 +166,32 @@ pub fn evaluate(
     })
 }
 
+/// Computes restrained thermal strain $\varepsilon_{\text{th}} = \alpha \Delta T$,
+/// restrained thermal axial stress $\sigma_{\text{th}} = -E \alpha \Delta T$ (MPa),
+/// and unrestrained thermal expansion $\Delta L = \alpha \Delta T L_0$ (mm).
+pub fn restrained_thermal_stress(
+    young_mpa: f64,
+    cte_per_c: f64,
+    delta_temp_c: f64,
+    length_mm: f64,
+) -> Result<(f64, f64, f64)> {
+    if ![young_mpa, cte_per_c, delta_temp_c, length_mm]
+        .into_iter()
+        .all(f64::is_finite)
+        || young_mpa <= 0.0
+        || cte_per_c <= 0.0
+        || length_mm < 0.0
+    {
+        return Err(invalid(
+            "Thermal strain/stress calculation requires positive E, positive CTE, finite delta_temp_c, and non-negative length",
+        ));
+    }
+    let strain = cte_per_c * delta_temp_c;
+    let stress_mpa = -young_mpa * strain;
+    let delta_l_mm = strain * length_mm;
+    Ok((strain, stress_mpa, delta_l_mm))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,435 @@
+//! Spherical involute and radial straight-bevel working flank.
+//! Formula: https://www.mdpi.com/2076-3417/14/24/11919/html
+//! Remainders are real-arithmetic Hermite bounds, not inclusive certificates.
+use crate::{Result, check, helix::Approximation, surface::Surface};
+
+/// Base cone semi-angle and unwinding interval, all in radians.
+#[derive(Clone, Copy, Debug)]
+pub struct SphericalInvoluteSpec {
+    pub base_cone_angle: f64,
+    pub roll: [f64; 2],
+}
+impl SphericalInvoluteSpec {
+    fn validate(&self) -> Result<()> {
+        check(
+            self.base_cone_angle.is_finite()
+                && self.base_cone_angle > 0.
+                && self.base_cone_angle < std::f64::consts::FRAC_PI_2
+                && self.roll.iter().all(|x| x.is_finite())
+                && self.roll[0] >= 0.
+                && self.roll[0] < self.roll[1]
+                && self.roll[1] <= 16.,
+            "Spherical involute requires a base cone in (0, pi/2) and rolls 0 <= start < end <= 16",
+        )
+    }
+    /// Unit sphere position and derivative with respect to unwinding roll.
+    /// This evaluation is binary64, not a rounding-inclusive oracle.
+    pub fn evaluate(&self, roll: f64) -> Result<([f64; 3], [f64; 3])> {
+        self.validate()?;
+        check(
+            roll.is_finite() && self.roll[0] <= roll && roll <= self.roll[1],
+            "Spherical involute roll lies outside the source interval",
+        )?;
+        Ok(self.jet(roll))
+    }
+    fn jet(&self, t: f64) -> ([f64; 3], [f64; 3]) {
+        let (s, c) = self.base_cone_angle.sin_cos();
+        Self::jet_with_trig(s, c, t)
+    }
+    fn jet_with_trig(s: f64, c: f64, t: f64) -> ([f64; 3], [f64; 3]) {
+        let (st, ct) = t.sin_cos();
+        let (sw, cw) = (s * t).sin_cos();
+        // Unwind a great-circle segment of length s*t from the base circle.
+        let p = [s * cw * ct + sw * st, s * cw * st - sw * ct, c * cw];
+        let d = [c * c * sw * ct, c * c * sw * st, -c * s * sw];
+        (p, d)
+    }
+}
+
+/// Cubic NURBS approximation on normalized parameter [0,1].
+/// The bound excludes trig, stored-control and evaluation rounding.
+pub fn approximate_spherical_involute(
+    spec: SphericalInvoluteSpec,
+    radius: f64,
+    budget: f64,
+) -> Result<Approximation> {
+    spec.validate()?;
+    check(
+        radius.is_finite() && radius > 0. && budget.is_finite() && budget > 0.,
+        "Spherical involute radius and error budget must be finite positive",
+    )?;
+    let (s, c) = spec.base_cone_angle.sin_cos();
+    let length = spec.roll[1] - spec.roll[0];
+    // Product-to-sum: XY frequencies 1-s and 1+s, Z frequency s.
+    // A coordinate cubic Hermite remainder is max|f''''| h^4/384.
+    let xy = ((1. + s) * (1. - s).powi(4) + (1. - s) * (1. + s).powi(4)) / 2.;
+    let z = c * s.powi(4);
+    let fourth = xy.hypot(xy).hypot(z) * radius;
+    let mut choice = None;
+    for spans in 1..=85 {
+        let h = length / spans as f64;
+        let error = fourth * h.powi(4) / 384.;
+        if error.is_finite() && error > 0. && error <= budget {
+            choice = Some((spans, error));
+            break;
+        }
+    }
+    let (spans, error) = choice.ok_or_else(|| {
+        crate::input("Spherical involute remainder unrepresentable or exceeds 85 cubic spans")
+    })?;
+    let mut points = Vec::with_capacity(spans + 1);
+    let mut tangents = Vec::with_capacity(spans + 1);
+    let mut parameters = Vec::with_capacity(spans + 1);
+    for i in 0..=spans {
+        let u = i as f64 / spans as f64;
+        let t = if i == spans {
+            spec.roll[1]
+        } else {
+            spec.roll[0] + length * u
+        };
+        let (p, d) = SphericalInvoluteSpec::jet_with_trig(s, c, t);
+        points.push(p.map(|x| radius * x));
+        tangents.push(d.map(|x| radius * length * x));
+        parameters.push(u);
+    }
+    let curve = crate::hermite::interpolate_inferred(&points, &tangents, &parameters)?;
+    Ok(Approximation {
+        curve,
+        spans,
+        budget,
+        real_arithmetic_error_estimate: error,
+    })
+}
+
+pub struct StraightBevelFlank {
+    pub surface: Surface,
+    pub outer_profile: Approximation,
+    pub cone_distances: [f64; 2],
+    pub source: SphericalInvoluteSpec,
+    /// Continuous ideal-arithmetic bound for the whole radial flank.
+    pub real_arithmetic_error_estimate: f64,
+}
+/// A single straight-bevel flank S(u,v)=R(v)*q(roll(u)), apex at origin.
+/// U is normalized roll, V interpolates inner to outer cone distance.
+/// The radial ruling is exact in ideal arithmetic. This is not a whole gear,
+/// manufactured root fillet, conjugate pair, sewn face or solid certificate.
+pub fn straight_bevel_flank(
+    spec: SphericalInvoluteSpec,
+    cone_distances: [f64; 2],
+    budget: f64,
+) -> Result<StraightBevelFlank> {
+    check(
+        cone_distances.iter().all(|x| x.is_finite())
+            && cone_distances[0] > 0.
+            && cone_distances[0] < cone_distances[1],
+        "Bevel flank requires 0 < inner cone distance < outer cone distance",
+    )?;
+    let profile = approximate_spherical_involute(spec, cone_distances[1], budget)?;
+    check(
+        profile.curve.control_points.len() <= 32,
+        "Bevel flank exceeds the surface kernel limit of 32 U controls; split the roll range",
+    )?;
+    let ratio = cone_distances[0] / cone_distances[1];
+    check(
+        ratio > 0. && ratio < 1.,
+        "Bevel radial ratio is unrepresentable",
+    )?;
+    let curve = &profile.curve;
+    let surface = Surface {
+        degree_u: curve.degree,
+        degree_v: 1,
+        knots_u: curve.knots.clone(),
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: curve
+            .control_points
+            .iter()
+            .map(|p| vec![p.iter().map(|x| ratio * x).collect(), p.clone()])
+            .collect(),
+        weights: curve.weights.iter().map(|w| vec![*w, *w]).collect(),
+        periodic_u: false,
+        periodic_v: false,
+    };
+    surface.validate()?;
+    let error = profile.real_arithmetic_error_estimate;
+    Ok(StraightBevelFlank {
+        surface,
+        outer_profile: profile,
+        cone_distances,
+        source: spec,
+        real_arithmetic_error_estimate: error,
+    })
+}
+
+/// Continuous bound against the exact real values of the supplied binary64
+/// source data. Stored knots/poles and arithmetic rounding are included;
+/// rounding of a future point evaluation is separate.
+#[derive(Clone, Debug)]
+pub struct SphericalInvoluteCertificate {
+    pub error_upper: f64,
+    pub hermite_remainder_upper: f64,
+    pub control_difference_upper: f64,
+    pub spans: usize,
+}
+/// Reconstruct ideal cubic endpoint jets independently with outward Taylor
+/// trig bounds and compare every original Bernstein pole. No sampling is used.
+/// Accepts normalized unit-weight C0 cubic chains and source rolls up to 8.
+pub fn certify_spherical_involute(
+    curve: &crate::curve::Curve,
+    spec: SphericalInvoluteSpec,
+    radius: f64,
+) -> Result<SphericalInvoluteCertificate> {
+    use super::quintic_certificate::trig;
+    use crate::distance_bounds::{Interval as I, box_distance};
+    spec.validate()?;
+    curve.validate()?;
+    let count = curve.control_points.len();
+    check(
+        radius.is_finite()
+            && radius > 0.
+            && spec.roll[1] <= 8.
+            && curve.degree == 3
+            && !curve.periodic
+            && count >= 4
+            && count <= 256
+            && (count - 1) % 3 == 0
+            && curve.weights.iter().all(|w| *w == 1.)
+            && curve.control_points.iter().all(|p| p.len() == 3),
+        "Spherical certificate requires radius > 0, rolls <= 8 and a unit-weight cubic 3D Bezier chain",
+    )?;
+    let n = (count - 1) / 3;
+    let breaks: Vec<_> = (0..=n).map(|i| curve.knots[3 + 3 * i]).collect();
+    check(
+        breaks[0] == 0. && breaks[n] == 1. && breaks.windows(2).all(|w| w[0] < w[1]),
+        "Spherical certificate requires normalized increasing parameters",
+    )?;
+    let mut knots = Vec::with_capacity(3 * n + 5);
+    knots.extend(std::iter::repeat_n(0., 4));
+    for &u in &breaks[1..n] {
+        knots.extend(std::iter::repeat_n(u, 3));
+    }
+    knots.extend(std::iter::repeat_n(1., 4));
+    check(
+        curve.knots == knots,
+        "Spherical certificate needs full Bernstein span ownership",
+    )?;
+    let (s, c) = trig(I::point(spec.base_cone_angle))?;
+    let cc = c.mul(c)?;
+    let radius = I::point(radius);
+    let range = I::point(spec.roll[1]).sub(I::point(spec.roll[0]))?;
+    let jets = |u: f64| -> Result<([I; 3], [I; 3])> {
+        let t = I::point(spec.roll[0]).add(range.mul(I::point(u))?)?;
+        let (st, ct) = trig(t)?;
+        let (sw, cw) = trig(s.mul(t)?)?;
+        let p = [
+            s.mul(cw)?.mul(ct)?.add(sw.mul(st)?)?,
+            s.mul(cw)?.mul(st)?.sub(sw.mul(ct)?)?,
+            c.mul(cw)?,
+        ];
+        let d = [
+            cc.mul(sw)?.mul(ct)?,
+            cc.mul(sw)?.mul(st)?,
+            I::point(0.).sub(c.mul(s)?.mul(sw)?)?,
+        ];
+        Ok((
+            [p[0].mul(radius)?, p[1].mul(radius)?, p[2].mul(radius)?],
+            [
+                d[0].mul(radius)?.mul(range)?,
+                d[1].mul(radius)?.mul(range)?,
+                d[2].mul(radius)?.mul(range)?,
+            ],
+        ))
+    };
+    let fourth = |x: I| -> Result<I> {
+        let xx = x.mul(x)?;
+        xx.mul(xx)
+    };
+    let plus = I::point(1.).add(s)?;
+    let minus = I::point(1.).sub(s)?;
+    let xy = plus
+        .mul(fourth(minus)?)?
+        .add(minus.mul(fourth(plus)?)?)?
+        .div(I::point(2.))?;
+    let z = c.mul(fourth(s)?)?;
+    let norm = xy.mul(xy)?.mul(I::point(2.))?.add(z.mul(z)?)?;
+    let derivative = I::new(0., norm.hi.sqrt().next_up())?.mul(radius)?;
+    let mut difference = 0_f64;
+    let mut remainder = 0_f64;
+    let mut current_jet = jets(breaks[0])?;
+    for i in 0..n {
+        let (a, da) = current_jet;
+        let next_jet = jets(breaks[i + 1])?;
+        let (b, db) = next_jet;
+        current_jet = next_jet;
+        let h = I::point(breaks[i + 1]).sub(I::point(breaks[i]))?;
+        let third = h.div(I::point(3.))?;
+        for k in 0..4 {
+            let ideal = match k {
+                0 => a,
+                1 => [
+                    a[0].add(da[0].mul(third)?)?,
+                    a[1].add(da[1].mul(third)?)?,
+                    a[2].add(da[2].mul(third)?)?,
+                ],
+                2 => [
+                    b[0].sub(db[0].mul(third)?)?,
+                    b[1].sub(db[1].mul(third)?)?,
+                    b[2].sub(db[2].mul(third)?)?,
+                ],
+                _ => b,
+            };
+            let cp = &curve.control_points[3 * i + k];
+            let saved = [I::point(cp[0]), I::point(cp[1]), I::point(cp[2])];
+            difference = difference.max(box_distance(&saved, &ideal)?.1);
+        }
+        remainder = remainder.max(
+            derivative
+                .mul(fourth(range.mul(h)?)?)?
+                .div(I::point(384.))?
+                .hi,
+        );
+    }
+    let error_upper = I::point(difference).add(I::point(remainder))?.hi;
+    Ok(SphericalInvoluteCertificate {
+        error_upper,
+        hermite_remainder_upper: remainder,
+        control_difference_upper: difference,
+        spans: n,
+    })
+}
+
+/// Inclusive whole-flank error bound against the saved source specification.
+#[derive(Clone, Debug)]
+pub struct StraightBevelFlankCertificate {
+    pub outer_profile: SphericalInvoluteCertificate,
+    pub radial_control_difference_upper: f64,
+    pub error_upper: f64,
+}
+/// Requalify the actual surface net, including inner-row scaling rounding.
+/// The outer curve error bounds every intermediate radius; Bernstein convexity
+/// bounds the saved radial-row perturbation. No face/solid embedding claim.
+pub fn certify_straight_bevel_flank(
+    surface: &Surface,
+    spec: SphericalInvoluteSpec,
+    distances: [f64; 2],
+) -> Result<StraightBevelFlankCertificate> {
+    use crate::distance_bounds::{Interval as I, box_distance};
+    surface.validate()?;
+    check(
+        distances.iter().all(|x| x.is_finite())
+            && distances[0] > 0.
+            && distances[0] < distances[1]
+            && surface.degree_v == 1
+            && surface.knots_v == [0., 0., 1., 1.]
+            && !surface.periodic_u
+            && !surface.periodic_v
+            && surface.control_points.iter().all(|r| r.len() == 2)
+            && surface.weights.iter().all(|r| r.len() == 2 && r[0] == r[1]),
+        "Bevel certificate requires finite ordered radii and a normalized radial ruled surface",
+    )?;
+    let curve = crate::curve::Curve {
+        degree: surface.degree_u,
+        knots: surface.knots_u.clone(),
+        control_points: surface
+            .control_points
+            .iter()
+            .map(|r| r[1].clone())
+            .collect(),
+        weights: surface.weights.iter().map(|r| r[1]).collect(),
+        periodic: false,
+    };
+    let outer = certify_spherical_involute(&curve, spec, distances[1])?;
+    let ratio = I::point(distances[0]).div(I::point(distances[1]))?;
+    let mut difference = 0_f64;
+    for row in &surface.control_points {
+        let r1 = &row[1];
+        let ideal = [
+            I::point(r1[0]).mul(ratio)?,
+            I::point(r1[1]).mul(ratio)?,
+            I::point(r1[2]).mul(ratio)?,
+        ];
+        let r0 = &row[0];
+        let saved = [I::point(r0[0]), I::point(r0[1]), I::point(r0[2])];
+        difference = difference.max(box_distance(&saved, &ideal)?.1);
+    }
+    let error_upper = I::point(outer.error_upper).add(I::point(difference))?.hi;
+    Ok(StraightBevelFlankCertificate {
+        outer_profile: outer,
+        radial_control_difference_upper: difference,
+        error_upper,
+    })
+}
+
+/// Owned original-source flank with a rounding-inclusive, replayable bound.
+/// This owner certifies geometric approximation only, not B-rep topology.
+pub struct QualifiedStraightBevelFlank {
+    candidate: StraightBevelFlank,
+    certificate: StraightBevelFlankCertificate,
+    tolerance: f64,
+}
+impl QualifiedStraightBevelFlank {
+    pub fn surface(&self) -> &Surface {
+        &self.candidate.surface
+    }
+    pub fn source(&self) -> SphericalInvoluteSpec {
+        self.candidate.source
+    }
+    pub fn cone_distances(&self) -> [f64; 2] {
+        self.candidate.cone_distances
+    }
+    pub fn certificate(&self) -> &StraightBevelFlankCertificate {
+        &self.certificate
+    }
+    pub fn reverify(&self) -> Result<()> {
+        let fresh = certify_straight_bevel_flank(
+            &self.candidate.surface,
+            self.candidate.source,
+            self.candidate.cone_distances,
+        )?;
+        check(
+            fresh.error_upper <= self.tolerance
+                && fresh.error_upper == self.certificate.error_upper,
+            "Owned bevel flank no longer matches its source-bound error receipt",
+        )
+    }
+}
+/// Construct and independently admit a flank to the caller's unchanged
+/// continuous spatial tolerance. Refuses unproved error or kernel limits.
+pub fn qualified_straight_bevel_flank(
+    spec: SphericalInvoluteSpec,
+    cone_distances: [f64; 2],
+    tolerance: f64,
+) -> Result<QualifiedStraightBevelFlank> {
+    check(
+        tolerance.is_finite() && tolerance > 0.,
+        "Bevel tolerance must be finite positive",
+    )?;
+    let candidate = straight_bevel_flank(spec, cone_distances, tolerance * 0.5)?;
+    let certificate = certify_straight_bevel_flank(&candidate.surface, spec, cone_distances)?;
+    check(
+        certificate.error_upper <= tolerance,
+        "Bevel flank rounding-inclusive error exceeds requested spatial tolerance",
+    )?;
+    Ok(QualifiedStraightBevelFlank {
+        candidate,
+        certificate,
+        tolerance,
+    })
+}
+
+mod patches;
+pub use patches::{
+    BevelPatchCertificate, QualifiedBevelPatches, certify_straight_bevel_patches,
+    qualified_straight_bevel_patches,
+};
+mod parameters;
+pub use parameters::{BevelGearParameterBounds, BevelGearSpec, derive_bevel_gear_parameters};
+pub use parameters::{QualifiedNominalBevelFlank, qualified_nominal_bevel_flank};
+mod teeth;
+pub use teeth::{
+    BevelSide, BevelTeethCertificate, PlacedBevelFlank, QualifiedBevelTeeth, certify_bevel_teeth,
+    qualified_bevel_teeth,
+};
+mod outline;
+pub use outline::{
+    BevelOutlineCertificate, QualifiedBevelOutline, certify_bevel_outline, qualified_bevel_outline,
+};

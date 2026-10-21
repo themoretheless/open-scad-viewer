@@ -268,7 +268,7 @@ mod tests {
         let interior = controls - degree - 1;
         let mut knots: Vec<f64> = std::iter::repeat_n(0., degree + 1).collect();
         let mut u = 0.;
-        for i in 0..interior {
+        for _ in 0..interior {
             u += 0.5 + rng.next();
             knots.push(u);
         }

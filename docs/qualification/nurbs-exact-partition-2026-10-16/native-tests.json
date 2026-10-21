@@ -1,0 +1,51 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200
+  },
+  "gates": {
+    "periodic": {
+      "suites": 12,
+      "passed": 128,
+      "failed": 0,
+      "ignored": 0
+    },
+    "predicates": {
+      "suites": 1,
+      "passed": 63,
+      "failed": 0,
+      "ignored": 0
+    },
+    "private_replay": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "format": "new modules/test pass",
+    "api_map": 184,
+    "catalog_audit": "no errors",
+    "wasm": "both crates pass after registry update"
+  },
+  "scope": [
+    "entire original function identity for ordered candidate pieces, not contact or face admission",
+    "different degrees/knots/positive rational weights and translations",
+    "common original knot-cell census and exact homogeneous coefficient comparison",
+    "shared work across all original-piece proofs; private actual-source replay",
+    "continuous nonperiodic 2D Curve snapshots with nonempty natural end cells"
+  ],
+  "remaining": [
+    "contact/regularization admission using the exact source identity",
+    "general nonlinear source-family correspondence",
+    "NURBS-0030 general coverage and owned physical branch/world trace/trim graph"
+  ],
+  "source_sha256": {
+    "crates/cad-predicates/src/bspline_restriction_identity.rs": "4f8db08261a61ff87a11479ae10a585aa0edb92e56e7e61239b7197ec67bebe4",
+    "crates/nurbs-core/src/trim/periodic_trim/exact_partition.rs": "bf40afd9b86e1fc57b50a711941415f5b0da47bd8fedc141b2891c5a849bd824",
+    "crates/nurbs-core/tests/periodic_exact_partition.rs": "edd6d28d694bdcdffbf4bba3509f9bce1b1215c5674edbaf63104a77bfa4c486",
+    "crates/nurbs-core/src/domains.rs": "b3a6dc6b750685de35a3cb84befb4c30cc9c1bb3c97dbc4a0611ddde17e777f4",
+    "docs/design/nurbs-api-domains.json": "2314c596e60d8b87279c9fa4fc94a906bb3fdf4eb19abe06448aaba69a7e60ef"
+  },
+  "historical": "Older full1372/952/Boolean/region gates are separately scoped; these current gates concern the newly added source-identity path.",
+  "jobs": "all terminal and consumed"
+}

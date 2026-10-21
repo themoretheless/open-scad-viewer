@@ -983,10 +983,8 @@ fn noninterpolated_periodic_quadratic_knot_roots_are_exact_and_seam_owned() {
     for e in &r.events {
         for &i in &e.cells {
             assert_eq!(r.report.cells[i].root_multiplicity, Some(1));
-            assert_eq!(
-                r.report.cells[i].proof,
-                Some(Proof::EndpointWithMonotonicity)
-            );
+            assert!(matches!(r.report.cells[i].proof,
+                Some(Proof::EndpointWithMonotonicity|Proof::OriginalSturmRootIsolation)));
         }
     }
     // A nonzero offset cannot be erased by the new exact knot predicate.

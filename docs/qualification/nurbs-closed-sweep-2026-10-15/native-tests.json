@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-15",
+  "passed": true,
+  "tests": 3,
+  "command": [
+    "cargo",
+    "test",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "1",
+    "--no-default-features",
+    "--features",
+    "codec",
+    "--target-dir",
+    "/tmp/nurbs-periodic-verified-L6P5rB",
+    "--test",
+    "closed_sweep_native"
+  ],
+  "environment": {
+    "CARGO_PROFILE_TEST_DEBUG": "0"
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/analytic/rational_loft.rs": "0c90b619024f8de74deaeaa44fa4755066e66d757e32558289809eca105e9459",
+    "crates/brep-core/tests/closed_sweep_native.rs": "c499da72fc5304072e9f1683af16c6dcdc258389f663d14883eb3cbd9560e514",
+    "crates/brep-core/tests/rational_section_loft.rs": "c6fda218667e2085296a4bf388e5ac825308e10a13caa02b6e7abdf97a93cdda",
+    "crates/nurbs-core/src/sweeps/framed_sweep.rs": "51fb95e7fe0bac44cfb1403d1c33f02abd4cc6a9eae5ad11480888e38e32055b",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "ed8bb1bc2222dc16283b17c13f9bbe19ef477e8da256e2f2f4ab81e14c00fae2",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "0735cf878360f6a682308eb366b4398e8934e40238deacdfbf9dcaa8820ccd1d"
+  },
+  "scope": "Nonplanar source-owned closed RMF body with continuous retained boundary receipt; periodic topology; sampled open-profile surface variant",
+  "precisionBudget": 0.03,
+  "rmfPolicy": {
+    "transportSteps": 4096,
+    "maxCells": 100000,
+    "maxProducts": 1000000
+  },
+  "globalSolidGeometryCertified": false,
+  "surfaceOnlyVariantContinuousBound": false,
+  "probeAt129Sections": {
+    "sampledDeviation": 0.0006636333731405419,
+    "defaultContinuousUpper": 0.12550994336163632,
+    "controlledContinuousUpper": 0.016650689556172354
+  }
+}

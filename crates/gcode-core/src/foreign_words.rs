@@ -12,25 +12,36 @@ pub(super) enum Command {
 
 pub(super) fn command(word: &str) -> Command {
     let bytes = word.as_bytes();
-    let numeric_tool = bytes.first().is_some_and(|b| b.eq_ignore_ascii_case(&b'T'))
-        && bytes[1..]
-            .iter()
-            .all(|b| b.is_ascii_digit() || matches!(b, b'+' | b'-' | b'.'));
-    if bytes.len() < 2 || !bytes[1..].iter().all(u8::is_ascii_digit) {
-        return if numeric_tool {
+    if bytes.len() < 2 {
+        return Command::Other;
+    }
+    let prefix = bytes[0].to_ascii_uppercase();
+    let mut number = 0u32;
+    let mut all_digits = true;
+    let mut overflow = false;
+    let mut tool_chars = true;
+    for &b in &bytes[1..] {
+        if b.is_ascii_digit() {
+            if let Some(n) = number.checked_mul(10).and_then(|n| n.checked_add((b - b'0') as u32)) {
+                number = n;
+            } else {
+                overflow = true;
+            }
+        } else {
+            all_digits = false;
+            if !matches!(b, b'+' | b'-' | b'.') {
+                tool_chars = false;
+            }
+        }
+    }
+    if !all_digits || overflow {
+        return if prefix == b'T' && tool_chars {
             Command::InvalidTool
         } else {
             Command::Other
         };
     }
-    let Ok(number) = word[1..].parse() else {
-        return if numeric_tool {
-            Command::InvalidTool
-        } else {
-            Command::Other
-        };
-    };
-    match bytes[0].to_ascii_uppercase() {
+    match prefix {
         b'G' => Command::G(number),
         b'M' => Command::M(number),
         b'T' => Command::T(number),

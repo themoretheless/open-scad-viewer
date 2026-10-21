@@ -16,6 +16,102 @@ pub struct BezierIdentityDecision {
     pub work_used: u64,
     pub context: ContextIdentity,
 }
+/// Sufficient identity for complete positive-weight rational B-spline
+/// definitions in the same parameter domain. Different representations remain
+/// unresolved; this never mistakes unequal controls for different geometry.
+pub fn rational_bspline_same_definition(
+    ctx: &mut PredicateContext<'_>,
+    degree: usize,
+    a: &[[LeafRef; 4]],
+    ak: &[LeafRef],
+    b: &[[LeafRef; 4]],
+    bk: &[LeafRef],
+) -> Result<BezierIdentityDecision, InputError> {
+    if !(1..=32).contains(&degree)
+        || a.len() <= degree
+        || a.len() > 4096
+        || a.len() != b.len()
+        || ak.len() != a.len() + degree + 1
+        || ak.len() != bk.len()
+    {
+        return Err(InputError::InvalidInput(
+            "Invalid B-spline definition identity census",
+        ));
+    }
+    let left = a
+        .iter()
+        .flatten()
+        .chain(ak)
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<_>, _>>()?;
+    let right = b
+        .iter()
+        .flatten()
+        .chain(bk)
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<_>, _>>()?;
+    let computed = (|| -> Result<BezierIdentity, Reason> {
+        ctx.charge((left.len() + right.len()) as u64)?;
+        // Identical finite binary64 leaves are identical exact dyadic reals.
+        // Only order/equality is required; positivity and knot order still
+        // apply. Cancellation and the complete work charge precede this proof.
+        if left == right
+            && left
+                .iter()
+                .all(|v| matches!(v, AuthoredScalar::Binary64Bits(_)))
+        {
+            let values = left
+                .iter()
+                .map(|v| match v {
+                    AuthoredScalar::Binary64Bits(b) => f64::from_bits(*b),
+                    _ => unreachable!(),
+                })
+                .collect::<Vec<_>>();
+            let k = &values[4 * a.len()..];
+            if values[..4 * a.len()].chunks_exact(4).all(|p| p[3] > 0.)
+                && k.windows(2).all(|w| w[0] <= w[1])
+                && k[degree] < k[a.len()]
+            {
+                return Ok(BezierIdentity::Equal);
+            }
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let av = exact_inputs(&left, ctx)?;
+        let bv = exact_inputs(&right, ctx)?;
+        for values in [&av, &bv] {
+            if values[..4 * a.len()]
+                .chunks_exact(4)
+                .any(|p| p[3].sign() != Sign::Positive)
+            {
+                return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+            }
+            let k = &values[4 * a.len()..];
+            for pair in k.windows(2) {
+                if pair[1].sub(&pair[0], ctx)?.sign() == Sign::Negative {
+                    return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+                }
+            }
+            if k[a.len()].sub(&k[degree], ctx)?.sign() != Sign::Positive {
+                return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+            }
+        }
+        if left == right {
+            return Ok(BezierIdentity::Equal);
+        }
+        for (x, y) in av.iter().zip(&bv) {
+            if x.sub(y, ctx)?.sign() != Sign::Zero {
+                return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+            }
+        }
+        Ok(BezierIdentity::Equal)
+    })()
+    .and_then(|value| ctx.charge(0).map(|_| value));
+    Ok(BezierIdentityDecision {
+        outcome: computed.unwrap_or_else(BezierIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
 /// Each row contains authored Euclidean XYZ followed by its positive weight.
 /// Curves may have different degrees (1..32). Reversal is represented by the
 /// caller reversing one control sequence, never by a rounded reconstruction.
@@ -40,7 +136,7 @@ pub fn rational_bezier_identity(
         // Equal authored controls and positive weights define the same rational
         // Bezier map. Validate exact inputs first; nonrepresentable inputs, limits
         // and cancellation must still refuse this inexpensive identity proof.
-        let identical = a.len()==b.len() && values[..4*a.len()]==values[4*a.len()..];
+        let identical = a.len() == b.len() && values[..4 * a.len()] == values[4 * a.len()..];
         let values = exact_inputs(&values, ctx)?;
         if values
             .chunks_exact(4)
@@ -48,10 +144,10 @@ pub fn rational_bezier_identity(
         {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         }
-        if identical { return Ok(BezierIdentity::Equal); }
-        let binomial = |n: usize, k: usize| -> u64 {
-            (0..k).fold(1_u64, |v, i| v * (n - i) as u64 / (i + 1) as u64)
-        };
+        if identical {
+            return Ok(BezierIdentity::Equal);
+        }
+        let binomial = crate::binomial_u64;
         let (p, q) = (a.len() - 1, b.len() - 1);
         // The common positive factor C(p+q,k) is omitted. Every coefficient
         // of Na*Wb-Nb*Wa must vanish identically, for all three coordinates.
@@ -90,6 +186,62 @@ pub fn rational_bezier_identity(
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn bspline_definition_proof_preserves_input_admission_limits_and_cancellation() {
+        use std::sync::atomic::AtomicBool;
+        let values = [
+            0., 0., 0., 1., 1., 0., 0.2, 0.5, 2., 0., 0., 1., 0., 0., 0.5, 1., 1.,
+        ];
+        let source = SourceArena::authored(
+            "bspline-definition-test",
+            1,
+            values
+                .iter()
+                .map(|v: &f64| AuthoredScalar::Binary64Bits(v.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let rows = (0..3)
+            .map(|i| std::array::from_fn(|j| source.leaf(4 * i + j).unwrap()))
+            .collect::<Vec<_>>();
+        let knots = (12..17)
+            .map(|i| source.leaf(i).unwrap())
+            .collect::<Vec<_>>();
+        let tolerance = ToleranceContext::default_valid();
+        let run = |work, cancel| {
+            let mut ctx = PredicateContext::new(
+                &source,
+                &tolerance,
+                Limits {
+                    max_work: work,
+                    ..Limits::default()
+                },
+                cancel,
+            );
+            rational_bspline_same_definition(&mut ctx, 1, &rows, &knots, &rows, &knots).unwrap()
+        };
+        let proof = run(1000, None);
+        assert_eq!(proof.outcome, BezierIdentity::Equal);
+        assert_eq!(proof.work_used, 34);
+        assert_eq!(
+            run(0, None).outcome,
+            BezierIdentity::Indeterminate(Reason::ResourceLimit)
+        );
+        let cancel = AtomicBool::new(true);
+        assert_eq!(
+            run(1000, Some(&cancel)).outcome,
+            BezierIdentity::Indeterminate(Reason::Cancelled)
+        );
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        let mut wrong = knots.clone();
+        wrong.swap(2, 3);
+        assert_ne!(
+            rational_bspline_same_definition(&mut ctx, 1, &rows, &wrong, &rows, &wrong)
+                .unwrap()
+                .outcome,
+            BezierIdentity::Equal
+        );
+    }
     fn check(a: &[[f64; 4]], b: &[[f64; 4]], limits: Limits) -> BezierIdentity {
         let source = SourceArena::authored(
             "bezier-test",
@@ -116,16 +268,50 @@ mod tests {
     fn identical_authored_controls_keep_cancellation_deadline_and_positive_weight_obligations() {
         use std::sync::atomic::AtomicBool;
         use std::time::Instant;
-        let scalars=vec![0.,0.,0.,1.,1.,2.,3.,2.];
-        let source=SourceArena::authored("identical-cancel",1,scalars.iter().map(|v|AuthoredScalar::Binary64Bits(f64::to_bits(*v))).collect()).unwrap();
-        let refs=(0..2).map(|i|std::array::from_fn(|k|source.leaf(4*i+k).unwrap())).collect::<Vec<_>>();
-        let tolerance=ToleranceContext::default_valid();let cancelled=AtomicBool::new(true);
-        let mut ctx=PredicateContext::new(&source,&tolerance,Limits::default(),Some(&cancelled));
-        assert!(matches!(rational_bezier_identity(&mut ctx,&refs,&refs).unwrap().outcome,BezierIdentity::Indeterminate(Reason::Cancelled)));
-        let mut ctx=PredicateContext::new(&source,&tolerance,Limits {deadline:Some(Instant::now()),..Limits::default()},None);
-        assert!(matches!(rational_bezier_identity(&mut ctx,&refs,&refs).unwrap().outcome,BezierIdentity::Indeterminate(Reason::DeadlineExceeded)));
-        let mut bad=[[0.,0.,0.,1.],[1.,2.,3.,2.]];bad[0][3]=0.;
-        assert!(matches!(check(&bad,&bad,Limits::default()),BezierIdentity::Indeterminate(Reason::MissingProof)));
+        let scalars = vec![0., 0., 0., 1., 1., 2., 3., 2.];
+        let source = SourceArena::authored(
+            "identical-cancel",
+            1,
+            scalars
+                .iter()
+                .map(|v| AuthoredScalar::Binary64Bits(f64::to_bits(*v)))
+                .collect(),
+        )
+        .unwrap();
+        let refs = (0..2)
+            .map(|i| std::array::from_fn(|k| source.leaf(4 * i + k).unwrap()))
+            .collect::<Vec<_>>();
+        let tolerance = ToleranceContext::default_valid();
+        let cancelled = AtomicBool::new(true);
+        let mut ctx =
+            PredicateContext::new(&source, &tolerance, Limits::default(), Some(&cancelled));
+        assert!(matches!(
+            rational_bezier_identity(&mut ctx, &refs, &refs)
+                .unwrap()
+                .outcome,
+            BezierIdentity::Indeterminate(Reason::Cancelled)
+        ));
+        let mut ctx = PredicateContext::new(
+            &source,
+            &tolerance,
+            Limits {
+                deadline: Some(Instant::now()),
+                ..Limits::default()
+            },
+            None,
+        );
+        assert!(matches!(
+            rational_bezier_identity(&mut ctx, &refs, &refs)
+                .unwrap()
+                .outcome,
+            BezierIdentity::Indeterminate(Reason::DeadlineExceeded)
+        ));
+        let mut bad = [[0., 0., 0., 1.], [1., 2., 3., 2.]];
+        bad[0][3] = 0.;
+        assert!(matches!(
+            check(&bad, &bad, Limits::default()),
+            BezierIdentity::Indeterminate(Reason::MissingProof)
+        ));
     }
     #[test]
     fn degree_elevation_and_weight_scaling_are_exact() {

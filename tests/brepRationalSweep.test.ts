@@ -5,6 +5,24 @@ import {reverseNurbsCurve} from '../src/services/nurbsCurve'
 import {exportDirectStepV5,importDirectStepV5} from '../src/services/cadNurbsStep'
 const loops=(z:number,s=1)=>[[circleNurbsCurve([0,0,z],[0,0,1],3*s)],[reverseNurbsCurve(circleNurbsCurve([0,0,z],[0,0,1],s))]]
 const law=(a:number,b:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
+function expectBodyRefinementReports(previews:unknown[],levels:unknown[],label='body') {
+ // Surface previews attach separate Rust frame/retained-wall diagnostics.
+ // The body owns its cap/seam certificates; compare every refinement field exactly.
+ const diagnostics=new Set(['authoredFrameRegularity','retainedPatchRegularity','sourceFrameRegularity',
+  'sourceFrameSmoothness','closedSourceFrameSmoothnessC1','closedSourceFrameSmoothness',
+  'retainedDecompositionSmoothness','retainedDecompositionG1Fallback'])
+ expect(previews,label).toHaveLength(levels.length)
+ for(const [index,preview] of previews.entries()) {
+  const entries=Object.entries(preview as Record<string,unknown>)
+  expect(Object.fromEntries(entries.filter(([key])=>!diagnostics.has(key))),`${label}: level ${index}`).toEqual(levels[index])
+  for(const [key,value] of entries.filter(([key])=>diagnostics.has(key))) {
+   expect(value,`${label}: ${key}`).toBeTypeOf('object')
+   for(const flag of ['continuousBound','solidCertified','globalEmbeddingCertified']) {
+    if(flag in (value as object))expect((value as Record<string,unknown>)[flag],`${label}: ${key}.${flag}`).toBe(false)
+   }
+  }
+ }
+}
 it('retains rational hollow loft walls, cap holes and manifold incidence through WASM',()=>{
  const model=createRationalBrepSectionLoft([loops(0),loops(5,1.5),loops(10,2)])
  expect(inspectNurbsBrep(model)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
@@ -191,7 +209,7 @@ it('streams rational body walls on the same face budget before returning an audi
   expect('model' in level.value).toBe(false)
   reports.push(level.value.report)
  }
- expect(reports).toEqual(expected.approximation.levels)
+ expectBodyRefinementReports(reports,expected.approximation.levels)
 })
 
 it('cancels body streaming before topology construction and refuses exhausted wall refinement',async()=>{
@@ -239,8 +257,8 @@ it.each(['progressive-hollow-body','authored-progressive-hollow-body','affine-ho
    reports.push(preview.report)
   }})
   expect(result,name).toEqual(expected)
-  expect(reports,name).toEqual((expected.report.construction![node.id] as {levels:unknown[]}).levels)
-},120000)
+  expectBodyRefinementReports(reports,(expected.report.construction![node.id] as {levels:unknown[]}).levels,name)
+})
 
 
 it('cancels Rush body parsing on a wall preview and recovers on the same parser queue',async()=>{

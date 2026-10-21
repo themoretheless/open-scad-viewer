@@ -223,3 +223,10 @@ it('presents an explicit closed source C1 proof without promoting C2 or Solid',(
   expect(readSweepPatchViewportEvidence(artifact({...proof,...change}))?.closedSourceFrameC1Certified).toBe(false)
  }
 })
+
+it('presents an unbudgeted native union bound without claiming budget acceptance',()=>{
+ const certificate={method:'retained-sweep-boundary-union',scope:'boundary-set-hausdorff',continuousBound:true,errorUpper:.25,budget:null,withinBudget:null}
+ const artifact=(c:unknown)=>createNativeGeometryArtifact('direct','brep',{geometry:{},sweepEvidence:{volume:{solidGeometryCertified:true},continuousBound:true,boundaryErrorUpper:.25,boundaryErrorBudget:null,boundaryErrorWithinBudget:null,boundaryCertificate:c}},{})
+ expect(readSweepViewportEvidence(artifact(certificate))).toMatchObject({continuousBound:true,boundaryErrorUpper:.25,boundaryErrorBudget:null,boundaryErrorWithinBudget:null})
+ for(const c of [{...certificate,withinBudget:true},{...certificate,errorUpper:.5},{...certificate,budget:undefined}])expect(readSweepViewportEvidence(artifact(c))?.continuousBound).toBe(false)
+})

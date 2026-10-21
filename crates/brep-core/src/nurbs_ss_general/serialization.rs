@@ -22,10 +22,10 @@ fn pcurve(value: &Value) -> Result<GeneralPcurve> {
     Ok(match value["kind"].as_str() {
         Some("line") => GeneralPcurve::Line {
             endpoints: [array(&value["start"])?, array(&value["end"])?],
-            correspondence: if value["correspondence"] == "exact_affine" {
-                TraceCorrespondence::ExactAffine
-            } else {
-                TraceCorrespondence::IntervalCertified
+            correspondence: match value["correspondence"].as_str() {
+                Some("exact_affine") => TraceCorrespondence::ExactAffine,
+                Some("interval_certified") => TraceCorrespondence::IntervalCertified,
+                _ => TraceCorrespondence::CandidateOnly,
             },
         },
         Some("rational_trace") => GeneralPcurve::RationalTrace {
@@ -54,8 +54,18 @@ pub fn branch_graph_from_ss_report(
     if report["version"] != "nurbs-ss/1" || report["kind"] != "surface_surface" {
         return Err(refuse("Expected nurbs-ss/1 surface_surface report"));
     }
+    let expected_context = value_codec::json!(context.spec_identity());
+    if report["evidence"]["toleranceIdentity"] != expected_context
+        || report["branchGraph"]["certificate"]["context"] != expected_context
+    {
+        return Err(refuse("General SS wire report ToleranceContext mismatch"));
+    }
     let components = decode_branches(report)?;
-    let complete = report["coverage"]["complete"].as_bool().unwrap_or(false);
+    let admitted_scope = matches!(
+        report["coverage"]["proofScope"].as_str(),
+        Some("original_control_hull_disjoint" | "same_parameter_identity" | "rectilinear_charts")
+    );
+    let complete = admitted_scope && report["coverage"]["complete"].as_bool().unwrap_or(false);
     let missed = report["coverage"]["missedBranchProof"]
         .as_bool()
         .unwrap_or(false);
@@ -67,11 +77,9 @@ pub fn branch_graph_from_ss_report(
         components,
         context: context.spec_identity(),
         complete: complete && unresolved_empty,
-        permits_topology_authorship: complete
-            && missed
-            && unresolved_empty
-            && report["booleanMutationAuthority"] == false
-            && report["topologyAuthority"]["granted"] == false,
+        // A wire claim cannot replay branch ownership or geometric proof.
+        // Version 1 imports are query data, even when flags claim otherwise.
+        permits_topology_authorship: false,
         boolean_mutation_authority: false,
         missed_branch_proof: missed,
     })

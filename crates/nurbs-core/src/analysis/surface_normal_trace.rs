@@ -1,0 +1,410 @@
+//! Original rational normal fields along original pcurves, with secant error.
+//! Third surface jets and second pcurve jets bound the entire interpolation
+//! remainder. Endpoint normals alone never authorize an interior bound.
+use crate::{
+    Result, check,
+    curve::Curve,
+    distance_bounds::{Interval as I, box_distance},
+    numerics::curve_jets,
+    surface::Surface,
+    surface_measure::jets,
+};
+type V = [I; 3];
+#[derive(Clone, Debug)]
+pub struct Report {
+    pub endpoints: Option<[[[f64; 2]; 3]; 2]>,
+    /// Derivative with respect to the inspected interval's local x in [0,1].
+    pub second_derivative_bounds: Option<[[f64; 2]; 3]>,
+    pub secant_error_upper: Option<f64>,
+    pub cells: usize,
+    pub reason: &'static str,
+}
+fn add(a: V, b: V) -> Result<V> {
+    Ok([a[0].add(b[0])?, a[1].add(b[1])?, a[2].add(b[2])?])
+}
+fn scale(a: V, t: I) -> Result<V> {
+    Ok([a[0].mul(t)?, a[1].mul(t)?, a[2].mul(t)?])
+}
+fn cross(a: V, b: V) -> Result<V> {
+    Ok([
+        a[1].mul(b[2])?.sub(a[2].mul(b[1])?)?,
+        a[2].mul(b[0])?.sub(a[0].mul(b[2])?)?,
+        a[0].mul(b[1])?.sub(a[1].mul(b[0])?)?,
+    ])
+}
+fn dot(a: V, b: V) -> Result<I> {
+    a[0].mul(b[0])?.add(a[1].mul(b[1])?)?.add(a[2].mul(b[2])?)
+}
+fn c_basis(knots: &[f64], p: usize, n: usize, order: usize, range: [f64; 2], closed: bool) -> bool {
+    let mut i = p + 1;
+    while i < n {
+        let mut end = i + 1;
+        while end < n && knots[end] == knots[i] {
+            end += 1;
+        }
+        if knots[p] < knots[i]
+            && knots[i] < knots[n]
+            && (if closed {
+                range[0] <= knots[i] && knots[i] <= range[1]
+            } else {
+                range[0] < knots[i] && knots[i] < range[1]
+            })
+            && end - i > p.saturating_sub(order)
+        {
+            return false;
+        }
+        i = end;
+    }
+    true
+}
+fn map(d: [f64; 2], q: f64, reverse: bool) -> Result<I> {
+    crate::curve_secant_trace::map(d, q, reverse)
+}
+fn uv_box(pc: &Curve, t: I, cells: &mut usize, max: usize) -> Result<Option<[[f64; 2]; 2]>> {
+    let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
+    let mut found = false;
+    for span in pc.degree..pc.control_points.len() {
+        let lo = t.lo.max(pc.knots[span]);
+        let hi = t.hi.min(pc.knots[span + 1]);
+        if pc.knots[span] == pc.knots[span + 1] || lo > hi {
+            continue;
+        }
+        if *cells == max {
+            return Ok(None);
+        }
+        *cells += 1;
+        let b = crate::curve_distance::enclosure(pc, span, I::new(lo, hi)?)?;
+        for k in 0..2 {
+            bounds[k][0] = bounds[k][0].min(b[k].lo);
+            bounds[k][1] = bounds[k][1].max(b[k].hi);
+        }
+        found = true;
+    }
+    Ok(found.then_some(bounds))
+}
+fn second_normal(j: &jets::Jets, rates: [I; 2], acceleration: [I; 2]) -> Result<Option<V>> {
+    let (u, v) = (rates[0], rates[1]);
+    let (uu, vv) = (u.mul(u)?, v.mul(v)?);
+    let uv = u.mul(v)?.mul(I::point(2.))?;
+    let a = j[1][0];
+    let b = j[0][1];
+    let a1 = add(scale(j[2][0], u)?, scale(j[1][1], v)?)?;
+    let b1 = add(scale(j[1][1], u)?, scale(j[0][2], v)?)?;
+    let a2 = add(
+        add(
+            add(scale(j[3][0], uu)?, scale(j[2][1], uv)?)?,
+            scale(j[1][2], vv)?,
+        )?,
+        add(
+            scale(j[2][0], acceleration[0])?,
+            scale(j[1][1], acceleration[1])?,
+        )?,
+    )?;
+    let b2 = add(
+        add(
+            add(scale(j[2][1], uu)?, scale(j[1][2], uv)?)?,
+            scale(j[0][3], vv)?,
+        )?,
+        add(
+            scale(j[1][1], acceleration[0])?,
+            scale(j[0][2], acceleration[1])?,
+        )?,
+    )?;
+    let w = cross(a, b)?;
+    let w1 = add(cross(a1, b)?, cross(a, b1)?)?;
+    let w2 = add(
+        add(cross(a2, b)?, scale(cross(a1, b1)?, I::point(2.))?)?,
+        cross(a, b2)?,
+    )?;
+    let (lo, hi) = box_distance(&w, &[I::point(0.); 3])?;
+    if lo <= 0. {
+        return Ok(None);
+    }
+    let h = I::new(lo, hi)?;
+    let h2 = h.mul(h)?;
+    let h3 = h2.mul(h)?;
+    let z = dot(w, w1)?;
+    let h1 = z.div(h)?;
+    let h_second = dot(w1, w1)?
+        .add(dot(w, w2)?)?
+        .div(h)?
+        .sub(z.mul(z)?.div(h3)?)?;
+    let result = add(
+        add(
+            scale(w2, I::point(1.).div(h)?)?,
+            scale(w1, I::point(-2.).mul(h1)?.div(h2)?)?,
+        )?,
+        scale(
+            w,
+            I::point(2.)
+                .mul(h1.mul(h1)?)?
+                .div(h3)?
+                .sub(h_second.div(h2)?)?,
+        )?,
+    )?;
+    Ok(Some(result))
+}
+/// Normal secant interpolation on a normalized original-pcurve interval.
+/// C2 surface and C1 pcurve bases make the normal derivative continuous across
+/// knot cells, so the whole-cell second-derivative bound supplies M/8 error.
+/// Periodic charts, missing regularity or incomplete traversal remain unknown.
+pub fn inspect(
+    pc: &Curve,
+    s: &Surface,
+    q: [f64; 2],
+    reverse: bool,
+    max_cells: usize,
+) -> Result<Report> {
+    pc.validate()?;
+    s.validate()?;
+    check(
+        max_cells <= 100000
+            && q.iter().all(|x| x.is_finite())
+            && 0. <= q[0]
+            && q[0] < q[1]
+            && q[1] <= 1.
+            && pc.control_points[0].len() == 2
+            && s.control_points[0][0].len() == 3,
+        "Normal trace needs a unit interval, original 2D pcurve, 3D chart and bounded work",
+    )?;
+    let mut out = Report {
+        endpoints: None,
+        second_derivative_bounds: None,
+        secant_error_upper: None,
+        cells: 0,
+        reason: "work-limit",
+    };
+    if pc.periodic
+        || s.periodic_u
+        || s.periodic_v
+        || pc.control_points.len() > 4096
+        || s.control_points
+            .len()
+            .saturating_mul(s.control_points[0].len())
+            > 4096
+    {
+        out.reason = "smooth-original-basis-unproven";
+        return Ok(out);
+    }
+    let natural = [
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ];
+    check(
+        pc.control_points
+            .iter()
+            .all(|p| (0..2).all(|k| natural[k][0] <= p[k] && p[k] <= natural[k][1])),
+        "Normal trace pcurve hull must stay in the original chart",
+    )?;
+    let d = pc.domain();
+    let ends = [map(d, q[0], reverse)?, map(d, q[1], reverse)?];
+    let mut endpoint_normals = Vec::new();
+    for t in ends {
+        let Some(uv) = uv_box(pc, t, &mut out.cells, max_cells)? else {
+            return Ok(out);
+        };
+        if out.cells == max_cells {
+            return Ok(out);
+        }
+        let bound = crate::surface_shape_operator::rectangle_bounds(s, uv, max_cells - out.cells)?;
+        out.cells += bound.cells;
+        let Some(n) = bound.shape.normal else {
+            out.reason = "endpoint-normal-unproven";
+            return Ok(out);
+        };
+        endpoint_normals.push(n);
+    }
+    let t = I::new(ends[0].lo.min(ends[1].lo), ends[0].hi.max(ends[1].hi))?;
+    if !c_basis(
+        &pc.knots,
+        pc.degree,
+        pc.control_points.len(),
+        0,
+        [t.lo, t.hi],
+        true,
+    ) || !c_basis(
+        &pc.knots,
+        pc.degree,
+        pc.control_points.len(),
+        1,
+        [t.lo, t.hi],
+        false,
+    ) {
+        out.reason = "pcurve-trace-C1-unproven";
+        return Ok(out);
+    }
+    let signed_width = I::point(d[1])
+        .sub(I::point(d[0]))?
+        .mul(I::point(q[1]).sub(I::point(q[0]))?)?
+        .mul(I::point(if reverse { -1. } else { 1. }))?;
+    let mut second = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    let mut found = false;
+    for span in pc.degree..pc.control_points.len() {
+        let lo = t.lo.max(pc.knots[span]);
+        let hi = t.hi.min(pc.knots[span + 1]);
+        if lo >= hi {
+            continue;
+        }
+        if out.cells == max_cells {
+            return Ok(out);
+        }
+        out.cells += 1;
+        let p = curve_jets::enclose(pc, span, [lo, hi])?;
+        let factor = signed_width.div(I::point(hi).sub(I::point(lo))?)?;
+        let first = [p[1][0].mul(factor)?, p[1][1].mul(factor)?];
+        let factor2 = factor.mul(factor)?;
+        let acceleration = [p[2][0].mul(factor2)?, p[2][1].mul(factor2)?];
+        let uv = [
+            p[0][0].intersect(natural[0][0], natural[0][1])?,
+            p[0][1].intersect(natural[1][0], natural[1][1])?,
+        ];
+        if !c_basis(
+            &s.knots_u,
+            s.degree_u,
+            s.control_points.len(),
+            2,
+            [uv[0].lo, uv[0].hi],
+            true,
+        ) || !c_basis(
+            &s.knots_v,
+            s.degree_v,
+            s.control_points[0].len(),
+            2,
+            [uv[1].lo, uv[1].hi],
+            true,
+        ) {
+            out.reason = "surface-trace-C2-unproven";
+            return Ok(out);
+        }
+        let knots = [&s.knots_u, &s.knots_v];
+        for u in s.degree_u..s.control_points.len() {
+            for v in s.degree_v..s.control_points[0].len() {
+                let cell = [u, v];
+                if (0..2).any(|k| {
+                    knots[k][cell[k]] == knots[k][cell[k] + 1]
+                        || uv[k].hi < knots[k][cell[k]]
+                        || uv[k].lo > knots[k][cell[k] + 1]
+                }) {
+                    continue;
+                }
+                if out.cells == max_cells {
+                    return Ok(out);
+                }
+                out.cells += 1;
+                let domain = std::array::from_fn(|k| {
+                    [
+                        uv[k].lo.max(knots[k][cell[k]]),
+                        uv[k].hi.min(knots[k][cell[k] + 1]),
+                    ]
+                });
+                let width = [
+                    I::point(s.knots_u[u + 1]).sub(I::point(s.knots_u[u]))?,
+                    I::point(s.knots_v[v + 1]).sub(I::point(s.knots_v[v]))?,
+                ];
+                let j = jets::calculate_partial_stable(s, cell, domain, [None; 2])?;
+                let rates = [first[0].div(width[0])?, first[1].div(width[1])?];
+                let acc = [
+                    acceleration[0].div(width[0])?,
+                    acceleration[1].div(width[1])?,
+                ];
+                let Some(bound) = second_normal(&j, rates, acc)? else {
+                    out.reason = "whole-trace-regularity-unproven";
+                    return Ok(out);
+                };
+                for k in 0..3 {
+                    second[k][0] = second[k][0].min(bound[k].lo);
+                    second[k][1] = second[k][1].max(bound[k].hi);
+                }
+                found = true;
+            }
+        }
+    }
+    if !found {
+        out.reason = "incomplete-original-trace-coverage";
+        return Ok(out);
+    }
+    let bounds = second
+        .map(|x| I::new(x[0], x[1]))
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
+    let (_, norm) = box_distance(&bounds, &[I::point(0.); 3])?;
+    out.endpoints = Some(endpoint_normals.try_into().unwrap());
+    out.second_derivative_bounds = Some(second);
+    out.secant_error_upper = Some(I::point(norm).div(I::point(8.))?.hi);
+    out.reason = "complete-original-normal-secant-bound";
+    Ok(out)
+}
+
+#[derive(Clone, Debug)]
+pub struct Range {
+    pub normal: Option<[[f64; 2]; 3]>,
+    pub cells: usize,
+    pub reason: &'static str,
+}
+/// Conservative original normal range, also across pcurve derivative jumps.
+/// This grants no secant bound; the actual source image must still be regular.
+pub fn range_bounds(
+    pc: &Curve,
+    s: &Surface,
+    q: [f64; 2],
+    reverse: bool,
+    max: usize,
+) -> Result<Range> {
+    pc.validate()?;
+    s.validate()?;
+    check(
+        max <= 100000
+            && q.iter().all(|x| x.is_finite())
+            && 0. <= q[0]
+            && q[0] <= q[1]
+            && q[1] <= 1.
+            && pc.control_points[0].len() == 2
+            && s.control_points[0][0].len() == 3,
+        "Normal range requires an original unit trace interval and bounded work",
+    )?;
+    let mut out = Range {
+        normal: None,
+        cells: 0,
+        reason: "work-limit",
+    };
+    if pc.periodic
+        || s.periodic_u
+        || s.periodic_v
+        || pc.control_points.len() > 4096
+        || s.control_points
+            .len()
+            .saturating_mul(s.control_points[0].len())
+            > 4096
+    {
+        out.reason = "unsupported-original-chart";
+        return Ok(out);
+    }
+    let natural = [
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ];
+    check(
+        pc.control_points
+            .iter()
+            .all(|p| (0..2).all(|k| natural[k][0] <= p[k] && p[k] <= natural[k][1])),
+        "Normal pcurve hull must stay in the original chart",
+    )?;
+    let a = map(pc.domain(), q[0], reverse)?;
+    let b = map(pc.domain(), q[1], reverse)?;
+    let t = I::new(a.lo.min(b.lo), a.hi.max(b.hi))?;
+    let Some(uv) = uv_box(pc, t, &mut out.cells, max)? else {
+        return Ok(out);
+    };
+    if out.cells == max {
+        return Ok(out);
+    }
+    let shape = crate::surface_shape_operator::rectangle_bounds(s, uv, max - out.cells)?;
+    out.cells += shape.cells;
+    out.normal = shape.shape.normal;
+    out.reason = if out.normal.is_some() {
+        "complete-original-normal-range"
+    } else {
+        "shape-normal-range-unproven"
+    };
+    Ok(out)
+}

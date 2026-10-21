@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "gear_profile_embedding_main": 4,
+    "gear_profile_embedding_minimum_supplement": 1,
+    "gear_verified_profile": 2
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/gear_profile_embedding.rs": "9197d39aee1bc2b8ae7e7219c995c61dc6d1cca79436ac0b6c2f9cb38d090e1f",
+    "crates/brep-core/src/gear.rs": "95c9bb1488850b7377512b79923fc12262072a2ab114d56daf44352b1dc1f167",
+    "crates/brep-core/tests/gear_profile_embedding.rs": "9393869fb1e2f620ea542df7a16158c5a6390e6bfb18e89b7ee87baf82b4ac62",
+    "crates/brep-core/tests/gear_verified_profile.rs": "73a75ce7aed8f9339b0c44f72ae2d50336664212213efbafe6296dc0be84ccb3"
+  },
+  "originalCompleteProfileEmbedding": true,
+  "orientationAndNestingProven": true,
+  "modelBaseEdgesBoundToVerifiedSource": true,
+  "nominalProfileErrorLimit": 1e-06,
+  "nominalWallErrorLimit": 0.000101,
+  "testedToothCounts": [
+    3,
+    8,
+    20,
+    40,
+    256
+  ],
+  "testedFamilies": [
+    "spur",
+    "positive_helical",
+    "negative_helical",
+    "herringbone",
+    "internal_ring"
+  ],
+  "wholeSolidEmbeddingQualified": false,
+  "solid_geometry_certified": false,
+  "wasmCompilationPassed": true,
+  "packagedBrowserEditorStepQualified": false,
+  "nativeCatalogCount": 193,
+  "nativeCriterion": "Typed Rust constructors, independently checked original profile/accuracy, invalid-data refusals and declared limits; global solid admission is a separate qualification."
+}

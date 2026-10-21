@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest'
 import {deflateRawSync} from 'node:zlib'
-import {unpackWasm} from '../src/services/wasmPacking'
+import {unpackWasm,unpackWasmBase64} from '../src/services/wasmPacking'
+import {encodeSeptBase118} from '../scripts/wasm-base91.mjs'
 
 const lengthBase = [3, 4, 5, 6, 7, 8, 9, 10]
 const distanceBase = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33]
@@ -45,4 +46,16 @@ describe('DEFLATE match copying', () => {
       expect(unpackWasm(Buffer.concat([header, deflateRawSync(data, {level: 9})]))).toEqual(data)
     }
   })
+})
+
+
+it('decodes compact bootstrap transport exactly and retains legacy base64',()=>{
+ const source=Buffer.from(Array.from({length:32768},(_,i)=>(i*73+(i>>>7))&255))
+ const size=Buffer.alloc(4);size.writeUInt32LE(source.length)
+ const packed=Buffer.concat([size,deflateRawSync(source,{level:9})])
+ expect(Buffer.from(unpackWasmBase64(encodeSeptBase118(packed)))).toEqual(source)
+ expect(Buffer.from(unpackWasmBase64(packed.toString('base64')))).toEqual(source)
+ const bad=Buffer.from(packed);bad.writeUInt32LE(source.length-1)
+ expect(()=>unpackWasmBase64(encodeSeptBase118(bad))).toThrow()
+ expect(()=>unpackWasmBase64(encodeSeptBase118(packed).slice(0,-1))).toThrow()
 })

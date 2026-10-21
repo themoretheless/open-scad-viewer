@@ -17,22 +17,24 @@ function checkJob(job: SvgJob): SvgJob {
     || fonts.reduce((sum, font) => sum + font.byteLength, 0) > SVG_MAX_TOTAL_FONT_BYTES) throw new RangeError('SVG fonts exceed the supported size or count.')
   const options = { ...job.options, fonts: [...fonts] }
   if (job.kind !== 'project') {
-    if (typeof job.svg !== 'string' || job.svg.length > SVG_MAX_BYTES || new TextEncoder().encode(job.svg).length > SVG_MAX_BYTES) throw new RangeError('SVG exceeds 4 MiB.')
+    if (typeof job.svg !== 'string' || job.svg.length > SVG_MAX_BYTES || (job.svg.length * 3 > SVG_MAX_BYTES && new TextEncoder().encode(job.svg).length > SVG_MAX_BYTES)) throw new RangeError('SVG exceeds 4 MiB.')
     return { ...job, options }
   }
   if (job.face) {
     const mesh = job.meshes[job.face.meshIndex], triangle = job.face.triangleIndex
     if (!mesh || !Number.isInteger(triangle) || triangle < 0 || triangle * 3 + 2 >= mesh.indices.length) throw new RangeError('Select a valid planar face.')
     const faceId = mesh.faceIds[triangle], indices: number[] = [], vertices: number[] = [], remap = new Map<number, number>()
-    for (let offset = 0; offset < mesh.indices.length; offset += 3) {
-      if (faceId === undefined ? offset !== triangle * 3 : mesh.faceIds[offset / 3] !== faceId) continue
+    const srcVertices = mesh.vertices, srcIndices = mesh.indices, srcFaceIds = mesh.faceIds
+    for (let offset = 0; offset < srcIndices.length; offset += 3) {
+      if (faceId === undefined ? offset !== triangle * 3 : srcFaceIds[offset / 3] !== faceId) continue
       if (indices.length >= 60000) throw new RangeError('SVG projection is limited to 20000 triangles.')
       for (let corner = 0; corner < 3; corner++) {
-        const source = mesh.indices[offset + corner]
+        const source = srcIndices[offset + corner]
         let target = remap.get(source)
         if (target === undefined) {
           target = vertices.length / 6; remap.set(source, target)
-          for (let field = 0; field < 6; field++) vertices.push(mesh.vertices[source * 6 + field])
+          const base = source * 6
+          vertices.push(srcVertices[base], srcVertices[base + 1], srcVertices[base + 2], srcVertices[base + 3], srcVertices[base + 4], srcVertices[base + 5])
         }
         indices.push(target)
       }

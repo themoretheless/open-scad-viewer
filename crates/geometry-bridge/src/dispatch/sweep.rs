@@ -2,8 +2,22 @@
 use crate::*;
 #[path = "sweep_profile.rs"]
 mod native_profile;
+#[path="sweep_profile_candidate.rs"]
+mod candidate_profile;
 
 const OPS: &[&str] = &[
+    "brep_miter_annular_owned_construct",
+    "brep_sweep_volume_charts_audit",
+    "brep_sweep_volume_begin",
+    "brep_sweep_volume_step",
+    "brep_sweep_volume_drop",
+
+    "brep_nurbs_progressive_profile_body_reconstruct_stations",
+    "brep_nurbs_progressive_profile_annular_body",
+    "brep_nurbs_progressive_profile_annular_body_reconstruct_stations",
+    "brep_nurbs_progressive_profile_auto_body",
+    "brep_nurbs_progressive_profile_auto_body_reconstruct_stations",
+
     "brep_nurbs_progressive_profile_body",
     "brep_miter_wall_preview",
     "brep_miter_sharp_stations",
@@ -53,6 +67,13 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_miter_annular_owned_construct"=>cad_miter_owned::construct_annular(v),
+        "brep_sweep_volume_charts_audit"=>cad_face_contacts::diagnose_sweep_volume_and_charts(v),
+        "brep_sweep_volume_begin"=>cad_face_contacts::begin_sweep_volume(v),
+        "brep_sweep_volume_step"=>cad_face_contacts::step_sweep_volume(v),
+        "brep_sweep_volume_drop"=>cad_face_contacts::drop_sweep_volume(v),
+
+"brep_nurbs_progressive_profile_body_reconstruct_stations" | "brep_nurbs_progressive_profile_annular_body" | "brep_nurbs_progressive_profile_annular_body_reconstruct_stations" | "brep_nurbs_progressive_profile_auto_body" | "brep_nurbs_progressive_profile_auto_body_reconstruct_stations" => candidate_profile::build(v),
         "brep_nurbs_progressive_profile_body" => native_profile::build(v),
         "brep_miter_wall_preview" => cad_miter_layout::preview(v),
         "brep_miter_sharp_stations" => cad_miter_layout::sharp(v),

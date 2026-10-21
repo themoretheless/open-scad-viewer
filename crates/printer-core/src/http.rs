@@ -49,29 +49,35 @@ impl HttpTransport for MockHttpTransport {
 /// Build a multipart/form-data body. Returns `(content_type, body)`.
 pub fn multipart_form(fields: &[(&str, Option<&str>, &[u8])]) -> (String, Vec<u8>) {
     let boundary = "----printer-core-boundary7f3a";
-    let mut body = Vec::new();
+    let cap: usize = 36
+        + fields
+            .iter()
+            .map(|(name, file, data)| {
+                120 + name.len() + file.map_or(0, str::len) + data.len()
+            })
+            .sum::<usize>();
+    let mut body = Vec::with_capacity(cap);
     for (name, filename, data) in fields {
-        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        body.extend_from_slice(b"--");
+        body.extend_from_slice(boundary.as_bytes());
+        body.extend_from_slice(b"\r\nContent-Disposition: form-data; name=\"");
+        body.extend_from_slice(name.as_bytes());
         match filename {
             Some(file) => {
-                body.extend_from_slice(
-                    format!(
-                        "Content-Disposition: form-data; name=\"{name}\"; filename=\"{file}\"\r\n"
-                    )
-                    .as_bytes(),
-                );
-                body.extend_from_slice(b"Content-Type: application/octet-stream\r\n\r\n");
+                body.extend_from_slice(b"\"; filename=\"");
+                body.extend_from_slice(file.as_bytes());
+                body.extend_from_slice(b"\"\r\nContent-Type: application/octet-stream\r\n\r\n");
             }
             None => {
-                body.extend_from_slice(
-                    format!("Content-Disposition: form-data; name=\"{name}\"\r\n\r\n").as_bytes(),
-                );
+                body.extend_from_slice(b"\"\r\n\r\n");
             }
         }
         body.extend_from_slice(data);
         body.extend_from_slice(b"\r\n");
     }
-    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    body.extend_from_slice(b"--");
+    body.extend_from_slice(boundary.as_bytes());
+    body.extend_from_slice(b"--\r\n");
     (format!("multipart/form-data; boundary={boundary}"), body)
 }
 
@@ -95,19 +101,33 @@ pub fn escape_json(value: &str) -> String {
     out
 }
 
+fn find_quoted_key(haystack: &str, key: &str) -> Option<usize> {
+    let h = haystack.as_bytes();
+    let k = key.as_bytes();
+    let needed = k.len() + 2;
+    if h.len() < needed {
+        return None;
+    }
+    for i in 0..=h.len() - needed {
+        if h[i] == b'"' && h[i + 1 + k.len()] == b'"' && &h[i + 1..i + 1 + k.len()] == k {
+            return Some(i + needed);
+        }
+    }
+    None
+}
+
 /// Find `"key":"value"` or `"key": number` in a flat-ish JSON object (best-effort).
 pub fn find_string_field(json: &str, key: &str) -> Option<String> {
-    let needle = format!("\"{key}\"");
     let mut search = json;
-    while let Some(rel) = search.find(&needle) {
-        let start = rel + needle.len();
+    while let Some(start) = find_quoted_key(search, key) {
         let rest = search[start..].trim_start();
         let Some(rest) = rest.strip_prefix(':').map(str::trim_start) else {
             search = &search[start..];
             continue;
         };
         if let Some(rest) = rest.strip_prefix('"') {
-            let mut out = String::new();
+            let end_quote = rest.find('"').unwrap_or(16);
+            let mut out = String::with_capacity(end_quote);
             let mut chars = rest.chars();
             while let Some(c) = chars.next() {
                 match c {
@@ -132,8 +152,7 @@ pub fn find_string_field(json: &str, key: &str) -> Option<String> {
 }
 
 pub fn find_number_field(json: &str, key: &str) -> Option<f64> {
-    let needle = format!("\"{key}\"");
-    let start = json.find(&needle)? + needle.len();
+    let start = find_quoted_key(json, key)?;
     let rest = json[start..].trim_start();
     let rest = rest.strip_prefix(':')?.trim_start();
     let end = rest

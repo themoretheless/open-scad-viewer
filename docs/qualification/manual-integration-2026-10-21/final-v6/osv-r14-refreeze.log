@@ -1,0 +1,204 @@
+{
+  "mode": "write",
+  "written": true,
+  "qualificationClaim": "none",
+  "completedWorkUnits": 0,
+  "plannedWorkUnits": 4740,
+  "changedBindings": [
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-11",
+      "previousSha256": "8d58cbf29eaafe599a23e9ad1a9308fca654ea48618acb1727b6dd19ac6394d2",
+      "currentSha256": "3e184e1c71459e528503b43c63fc3ffb15b4b771784cae68bb93b60cf43bea34"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-workflow",
+      "previousSha256": "c6a113c90cbcb03f00b958a3881db8c260c9aa9034983b4f2ab1e83115eb1c0f",
+      "currentSha256": "57b1704cc442cd29fa401979fa10797109aac517451fb9674908b879744ebaee"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-harness",
+      "previousSha256": "7f90d0b65981ac7aaae4fc01813d0a7f01b8f4eea619a2b4bdf3b8146c9377a4",
+      "currentSha256": "8b5a01101845d3a020d199d6edda5ab3f81f1540f8d30adf4a0588ad988d04b6"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-clean-fragment-selector",
+      "previousSha256": "65d0e10558f310cf440825a784d77e7653ec2e710afbf5ed2981097514641d32",
+      "currentSha256": "67a0dcce05ebd596b10c9844b0baec5e123f85f38e8d6fc4dde5441367e9ac89"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-ubuntu-selector",
+      "previousSha256": "7da0360e64877285873958e2c762db7a6c22cc6dc01836498a22157f58036a69",
+      "currentSha256": "b1f674c87a53a8c447ca6ff693790068e8bd1231c6244ee61287f64fca449a94"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-948",
+      "previousSha256": "9d861728bc7f93102e0bca94fc8be2b78f27b92e76c50d7c6d2fd4ce20266dfa",
+      "currentSha256": "0880aa3f1f6f061e7ad564148ab9ef9d65e27b389b09e8ad7d6f8e2ab5d875aa"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1008",
+      "previousSha256": "6f7446da8fadbcc0e87a693419386507e538cc8ffea51c85ebfd9b5cde83e199",
+      "currentSha256": "5b0feacbda70eeaa7527c0ed015f3e9eb8d6eb566f4edada9756b6f110b41ff8"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1011",
+      "previousSha256": "ef9980d5369d0e1d0a95078cdffdf2ef82a4b51458add8d724adf3cc4befab95",
+      "currentSha256": "b8d27248c33d4ac263ee3181420dcb47630add7246ddd81cbaac611fb7faeb91"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1109",
+      "previousSha256": "ba61bb596ab815257834af95fd290927e73d03f8958ab5a3d0a2e824ae8d1248",
+      "currentSha256": "bef740d23ed256ef394d1a1579d2544bb4cac0d57ac7bfe5ad309afa525cead4"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1513",
+      "previousSha256": "18ca4b70b59fae8a012c775b85b8ad89b698c61badcb5d09e50210463200a776",
+      "currentSha256": "8932b41917fc04aa7edbfecff8b3ab88a2d13b72626f1f365421e0296b5cf9e2"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1698",
+      "previousSha256": "b58d62a2c2a2833a066c68d371af355cbc2f8a09af102a65d799f07f24982621",
+      "currentSha256": "3f2b715ac3a3c261cd8667c37474051a158947581c292e8e7920e93951388a88"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1701",
+      "previousSha256": "0c2be86c58165d73dd45efc8b18697fcaacf0832ae807c6d32509688d25f9671",
+      "currentSha256": "04e8afe366f3bd28a0974a17f94196baea2f6eadd9ebcfeb191dc09a7af51e3e"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1742",
+      "previousSha256": "d4c9d1a91f407502c37d0343d6ca26c712ff7c658c8f60262345b0bf59d645a4",
+      "currentSha256": "0d76334971cec3f415447b9410f04c75defeed1d1b266128b0d0aea027cb934f"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1767",
+      "previousSha256": "5533bb67fb0b1268769e55107ce1ac54bfb95cd2df8d5b7870f4e9655c681ad7",
+      "currentSha256": "eaae410c51bdeae8062663ad48ee232125c7e007641649c4cd5aed2d0b6d16e0"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1770",
+      "previousSha256": "9d88444daeee80533ffb2757c8a219cc650614bb56d0dac1b410416852f20305",
+      "currentSha256": "63d45ac82af81bb5bbc0ee0f26ee3167c6eea4e0314a6f9fa08a61efe3ce3afa"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1797",
+      "previousSha256": "9e8a33a7d055c54d95f364058ed438c36250cd968d886a14d254de19481490bc",
+      "currentSha256": "0cf407cb15998b576864466a41b739fe42f69b40c25126b89c5ba84d17ba9f37"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1800",
+      "previousSha256": "c6fda218667e2085296a4bf388e5ac825308e10a13caa02b6e7abdf97a93cdda",
+      "currentSha256": "7052d565a68e13789645f0530cc69db549cbaeaa684956273eec102aa1cd4efb"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1981",
+      "previousSha256": "04b225a0cd2abe69099cffa5b7d9d296c3f2ba0c16b8b791e7f99922e5ba3bdf",
+      "currentSha256": "31b86ca9dc541d33a96ea30b2158224bff50d51c192f5bb0f08ed32374cf7a07"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2071",
+      "previousSha256": "1ef699236387ee683c5d5d892308565e4d7383f38bddd855cd88255e97998b7a",
+      "currentSha256": "da101102b2c11a18d062f5a33fb9d18bff0857cd4898507c29e35268fad39fd4"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2091",
+      "previousSha256": "d4a032597dabc586fa55442e1072b8e866db0d4fcf81f6a278f67448a6ec4c5c",
+      "currentSha256": "a5af24b9917ff4a62a19e1f7094c5be0e5d1827559d7472b4f6716f70b69361c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2097",
+      "previousSha256": "a9581ec91b833757981d83d91bfae6c22c2954e3455d3c0fe746113f299d4811",
+      "currentSha256": "1e505f69d5d0ba0a1ac8a58636dd899a83eaf9352c9b568cd9a48acd1dc809af"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2197",
+      "previousSha256": "dd2a4e8b5158ff30133766c088ef71a50acabb60f5ca55eb8cf76751e5033ed9",
+      "currentSha256": "9a457729b9e265b19474c62b4493d7ae4245c626a15bc91e85727ba2fd0231cd"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2210",
+      "previousSha256": "b78d1e45bf07776d507f2c6fbf7bfd8815b032eda88e6f61863a8a4dc3799763",
+      "currentSha256": "717841c79310af23427ae0c6476c3f745b1593ed62811c1673e52a84db66c786"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2304",
+      "previousSha256": "77514a56d5c941be1d83af38ce9eced079805352a360d99020c229f9a11b5e39",
+      "currentSha256": "317a0432322636658edc9515250f5738f32088352b74f4aa777a131efeb5c53a"
+    },
+    {
+      "kind": "g1-bundle",
+      "id": "g1-candidate-bundle",
+      "previousSha256": "b4c94c6501f8071704f3aa80054d4e0ca71eaa271d6db6ea79be250c9b08172e",
+      "currentSha256": "6dd97edc5bb3cc1020326b53f8c2191cf09f0aaa4d75f7a1fbc9fdc629f2d6e7"
+    },
+    {
+      "kind": "g1-bundle",
+      "id": "g1-qualification-harness-bundle",
+      "previousSha256": "ca80dc18bb6d73205584cd6029103034e3c7a5e082eb5202fd2ffde720533a4e",
+      "currentSha256": "3d690de5f6bdad254964f24cac72f9337d3cd8c07e166e855eb650ca78c0a0d4"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "own-rust-cad-v70-evidence",
+      "previousSha256": null,
+      "currentSha256": "ef58a8510c02c201089054422b65df2f17b3f917b6c66191578741a6d79acfe2"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2411",
+      "previousSha256": null,
+      "currentSha256": "ae6513724edea8a3976bef654b519735747f5c48701a1042ba4e5244ac21bc4e"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2412",
+      "previousSha256": null,
+      "currentSha256": "1f210851589c312bea52c754f15c424367859b1160f979f6b32039f35c41a572"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-2413",
+      "previousSha256": null,
+      "currentSha256": "2b18cc40b835395267c85a0c14c392c23a995c85a6867977fc82ed90acca6f6c"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "fingerprint",
+      "path": "docs/qualification/g0-toolchain-fingerprints-v87.json",
+      "sha256": "819a2334ea92348eb85ce4072b3c32219b0e9c2a5f029f541423c4b8b46a8c78",
+      "byteLength": 548246
+    },
+    {
+      "id": "plan",
+      "path": "docs/qualification/semantic-manifold-g1-plan-v104.json",
+      "sha256": "28a96a4d521e1249ff04635c3b211f754b7e7f8bb2f087156114583a648efa35",
+      "byteLength": 75588
+    }
+  ],
+  "statusPath": "docs/qualification/g0-v87-g1-v104-refreeze-status-v1.json"
+}

@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "orthogonal_offset_cleanup": 3
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/offset/orthogonal_cleanup.rs": "c1626c7ad15cfc5baadd061063a6478f0b2ce96ca4fd07372705e64897ddb1f9",
+    "crates/nurbs-core/tests/orthogonal_offset_cleanup.rs": "1ab06144c3a256c8f6b6ed8955bbe68e5170d4070721be05e69a9246b2e38ed1",
+    "crates/nurbs-core/src/offset/curve_offset.rs": "d756e3a760a60cdf827c4ff7873cc0c59c9c2dcc2af409dbf857185f20cc50f3"
+  },
+  "sourceToArrangementIdentityCertified": true,
+  "sourceToArrangementErrorUpper": 0.0,
+  "scope": "exact original orthogonal constant-weight NURBS line-wire miter offsets, complete exact arrangements and independently admitted fill boundaries",
+  "generalSmoothNurbsOffsetQualified": false,
+  "minkowskiBufferQualified": false,
+  "wasmEditorStepQualified": false
+}

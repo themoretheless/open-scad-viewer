@@ -1,0 +1,183 @@
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_relative_winding.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_relative_winding.rs
+@@ -210,10 +210,25 @@
+         owner: Arc<OwnedPeriodicWireJumps>,
+         limits: ParameterOrderLimits,
+     ) -> Result<Self> {
++        Self::prepare(owner, limits, true)
++    }
++    pub(super) fn from_verified_material(
++        proof: &super::periodic_material::VerifiedMaterialRule<'_>,
++        limits: ParameterOrderLimits,
++    ) -> Result<Self> {
++        Self::prepare(proof.source_owner().clone(), limits, false)
++    }
++    fn prepare(
++        owner: Arc<OwnedPeriodicWireJumps>,
++        limits: ParameterOrderLimits,
++        replay: bool,
++    ) -> Result<Self> {
+         if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+             return Err(refused("Invalid batch winding parameter allowance"));
+         }
+-        owner.reverify_source()?;
++        if replay {
++            owner.reverify_source()?;
++        }
+         let graph = owner.owner().owner();
+         let cover = graph.owner().owner().pieces();
+         let wires = graph.seam_contacts().embedding().wires();
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_material.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_material.rs
+@@ -265,6 +265,17 @@
+     Ok(o)
+ }
+ 
++// The field is private: only this module can issue the capability, immediately
++// after replaying either the exact rule or the actual shore owner containing it.
++// It borrows the immutable rule; prepared views retain its actual Arc owners.
++pub(super) struct VerifiedMaterialRule<'a> {
++    rule: &'a Arc<OwnedPeriodicMaterialRule>,
++}
++impl VerifiedMaterialRule<'_> {
++    pub(super) fn source_owner(&self) -> &Arc<OwnedPeriodicWireJumps> {
++        self.rule.base.owner()
++    }
++}
+ /// Immutable batch-local replay authority; callers cannot supply cached deltas.
+ pub(super) struct MaterialView {
+     rule: Arc<OwnedPeriodicMaterialRule>,
+@@ -276,11 +287,44 @@
+         limits: ParameterOrderLimits,
+     ) -> Result<Self> {
+         rule.reverify_source()?;
+-        let winding = super::periodic_relative_winding::RelativeWindingView::new(
+-            rule.base.owner().clone(),
+-            limits,
+-        )?;
++        let winding =
++            super::periodic_relative_winding::RelativeWindingView::from_verified_material(
++                &VerifiedMaterialRule { rule: &rule },
++                limits,
++            )?;
+         Ok(Self { rule, winding })
++    }
++    /// Fresh replay of the complete shore owner also replays THIS actual rule
++    /// and source owner through support selection. Do not re-run those same
++    /// immutable subproofs while preparing this one batch.
++    pub(super) fn for_shores(
++        shores: &OwnedPeriodicNativeChartShores,
++        limits: ParameterOrderLimits,
++    ) -> Result<Self> {
++        shores.reverify_source()?;
++        let corners = shores.owner();
++        let copies = corners.owner();
++        let incidence = copies.owner();
++        let traces = incidence.owner();
++        let regions = traces.owner();
++        let lifts = regions.owner().owner();
++        let selection = lifts.owner().owner();
++        let rule = selection.rule().material();
++        let winding =
++            super::periodic_relative_winding::RelativeWindingView::from_verified_material(
++                &VerifiedMaterialRule { rule },
++                limits,
++            )?;
++        Ok(Self {
++            rule: rule.clone(),
++            winding,
++        })
++    }
++    pub(super) fn rule(&self) -> &Arc<OwnedPeriodicMaterialRule> {
++        &self.rule
++    }
++    pub(super) fn clear(&self, endpoints: &[[ExactRatio; 2]; 2], max_work: usize) -> Result<bool> {
++        self.winding.clear(endpoints, max_work)
+     }
+     pub(super) fn sample(
+         &self,
+@@ -512,6 +556,7 @@
+         let mut bad = (*rule).clone();
+         bad.periods[0].homology[0] = "0".into();
+         assert!(bad.reverify_source().is_err());
++        assert!(MaterialView::new(Arc::new(bad), ParameterOrderLimits::default()).is_err());
+         let mut invalid = operands.clone();
+         invalid[0].wire_weights.pop();
+         assert!(own_periodic_material_rule(base.clone(), &invalid, &[Operand(0)]).is_err());
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs
+@@ -574,6 +574,13 @@
+ pub(super) mod tests {
+     use super::super::periodic_support_regions::tests as fixtures;
+     use super::*;
++    pub(in super::super) fn corrupt_direction(
++        o: &OwnedPeriodicNativeChartShores,
++    ) -> OwnedPeriodicNativeChartShores {
++        let mut bad = o.clone();
++        bad.data.shores[0].direction *= -1;
++        bad
++    }
+     fn q(n: i64, d: i64) -> ExactRatio {
+         [n.to_string(), d.to_string()]
+     }
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_samples.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_samples.rs
+@@ -107,7 +107,7 @@
+     {
+         return Err(refused("Invalid native shore material sample allowance"));
+     }
+-    o.owner.reverify_source()?;
++    let labels = super::periodic_material::MaterialView::for_shores(&o.owner, o.parameters)?;
+     let corners = o.owner.owner();
+     let copies = corners.owner();
+     let incidence = copies.owner();
+@@ -118,11 +118,11 @@
+     let cover = selection.rule().support().augmented().surface().pieces();
+     let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
+     let material = selection.rule().material();
+-    let winding = super::periodic_relative_winding::RelativeWindingView::new(
+-        material.base().owner().clone(),
+-        o.parameters,
+-    )?;
+-    let labels = super::periodic_material::MaterialView::new(material.clone(), o.parameters)?;
++    if !Arc::ptr_eq(labels.rule(), material) {
++        return Err(refused(
++            "Shore material batch belongs to a different actual rule",
++        ));
++    }
+     let mut work = Work {
+         used: 0,
+         cap: l.max_queries,
+@@ -215,7 +215,7 @@
+             let center = o.owner.interior_uv(shore, interval, l.max_levels)?;
+             let center_dto = center.clone().map(|q| ratio(&q));
+             work.charge()?;
+-            if !winding.clear(
++            if !labels.clear(
+                 &[center_dto.clone(), center_dto.clone()],
+                 l.max_clearance_work,
+             )? {
+@@ -240,7 +240,7 @@
+                 }
+                 let probe_dto = probe.clone().map(|q| ratio(&q));
+                 work.charge()?;
+-                if winding.clear(
++                if labels.clear(
+                     &[center_dto.clone(), probe_dto.clone()],
+                     l.max_clearance_work,
+                 )? {
+@@ -392,6 +392,14 @@
+                 p.origin,
+                 OriginalPeriodicShoreSampleOrigin::OwnedSide { .. }
+             )));
++        let counterfeit = frame::corrupt_direction(o.owner());
++        assert!(
++            super::super::periodic_material::MaterialView::for_shores(
++                &counterfeit,
++                ParameterOrderLimits::default()
++            )
++            .is_err()
++        );
+         let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+         let f = vec![Q::zero(), Q::one()];
+         let root = [Q::zero(), Q::zero()];

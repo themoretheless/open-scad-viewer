@@ -1,0 +1,14 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('.message.error') to be visible[22m
+
+    at /private/tmp/osv-push-integration-20261021/scripts/check-sweep-miter-matrix-browser.mjs:372:60 {
+  log: [ "  - waiting for locator('.message.error') to be visible" ],
+  name: 'TimeoutError'
+}
+
+Node.js v26.12.0

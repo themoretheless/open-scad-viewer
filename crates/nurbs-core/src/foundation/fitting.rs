@@ -1,4 +1,5 @@
 //! Native point fitting, interpolation and cloud error reports.
+mod cloud_surface;
 use super::{
     Curve, Result, Surface, ToleranceContext, binomial, box_of, check, context, distance, interval,
     next_up, numeric, solve,
@@ -317,55 +318,7 @@ pub fn fit_surface_cloud_certified_report(
             require_finite_at(x, "cloud_surface_points", i * 3 + axis)?;
         }
     }
-    // PCA plane parameters as admitted unstructured domain.
-    let centroid =
-        [0, 1, 2].map(|axis| points.iter().map(|p| p[axis]).sum::<f64>() / points.len() as f64);
-    let mut cov = [[0.; 3]; 3];
-    for point in &points {
-        let d = [
-            point[0] - centroid[0],
-            point[1] - centroid[1],
-            point[2] - centroid[2],
-        ];
-        for i in 0..3 {
-            for j in 0..3 {
-                cov[i][j] += d[i] * d[j];
-            }
-        }
-    }
-    // Power iteration for two dominant planar axes.
-    let mut power_iter = Budget::with_iterations(24 * 2 + 1)?.guard("cloud-surface-power-iteration");
-    let mut axes = [[1., 0., 0.], [0., 1., 0.]];
-    for axis in &mut axes {
-        for _ in 0..24 {
-            power_iter.tick()?;
-            let mut next = [0.; 3];
-            for i in 0..3 {
-                next[i] = cov[i][0] * axis[0] + cov[i][1] * axis[1] + cov[i][2] * axis[2];
-            }
-            let norm = next
-                .iter()
-                .map(|x| x * x)
-                .sum::<f64>()
-                .sqrt()
-                .max(f64::from_bits(1));
-            *axis = next.map(|x| x / norm);
-        }
-    }
-    let mut uv: Vec<[f64; 2]> = points
-        .iter()
-        .map(|point| {
-            let d = [
-                point[0] - centroid[0],
-                point[1] - centroid[1],
-                point[2] - centroid[2],
-            ];
-            [
-                d[0] * axes[0][0] + d[1] * axes[0][1] + d[2] * axes[0][2],
-                d[0] * axes[1][0] + d[1] * axes[1][1] + d[2] * axes[1][2],
-            ]
-        })
-        .collect();
+    let mut uv = cloud_surface::parameters(&points)?;
     let u_bounds = interval(uv.iter().map(|p| p[0]));
     let v_bounds = interval(uv.iter().map(|p| p[1]));
     for parameter in &mut uv {
@@ -437,30 +390,8 @@ pub fn fit_surface_cloud_certified_report(
         periodic_v: false,
     };
     surface.validate()?;
-    let site_error = uv
-        .iter()
-        .zip(&points)
-        .map(|(parameter, point)| {
-            distance(
-                &surface
-                    .evaluate_validated(parameter[0], parameter[1])
-                    .unwrap()
-                    .point,
-                point,
-            )
-        })
-        .fold(0., f64::max);
-    let controls: Vec<Vec<f64>> = surface.control_points.iter().flatten().cloned().collect();
-    let (min, max) = box_of(&controls);
-    let diameter = next_up(
-        min.iter()
-            .zip(max)
-            .map(|(a, b)| (b - a) * (b - a))
-            .sum::<f64>()
-            .sqrt(),
-    );
-    let delta = 1. / ((points.len() as f64).sqrt().max(1.));
-    let hausdorff = next_up(site_error + diameter * delta);
+    let site_error = cloud_surface::site_error(&surface.control_points, &uv, &points)?;
+    let hausdorff = cloud_surface::hull_bound(&surface.control_points, &points)?;
     let tolerance = context(tolerance);
     Ok(SurfaceFitResult {
         surface,

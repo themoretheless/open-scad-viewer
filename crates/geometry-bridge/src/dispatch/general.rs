@@ -2,6 +2,13 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "native_geometry_snapshot_pack",
+    "native_geometry_snapshot_unpack",
+    "cad_drawing_project",
+    "cad_animation_frame",
+    "cad_live_pattern",
+    "cad_keyframe_sample",
+
     "sketch_solve_diagnostics",
     "frame_solve",
     "frame_envelope",
@@ -70,6 +77,13 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "native_geometry_snapshot_pack"=>native_snapshot::pack(v),
+        "native_geometry_snapshot_unpack"=>native_snapshot::unpack(v),
+        "cad_drawing_project"=>drawing_projection::drawing(&v),
+        "cad_animation_frame"=>drawing_projection::frame(&v),
+        "cad_live_pattern"=>cad_body_affine::live_pattern(v),
+        "cad_keyframe_sample"=>encode(geometry_ops::keyframes::sample(&field::<Vec<f64>>(&v,"times")?,&field::<Vec<Vec<f64>>>(&v,"values")?,field(&v,"time")?,&field::<Vec<usize>>(&v,"angles")?)?),
+
         "frame_solve" => frame::solve(v),
         "frame_envelope" => frame::envelope(v),
         "frame_diagnose" => frame::diagnose(v),

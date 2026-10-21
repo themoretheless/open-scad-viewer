@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-15",
+  "passed": true,
+  "tests": 19,
+  "command": [
+    "cargo",
+    "test",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "1",
+    "--no-default-features",
+    "--features",
+    "codec",
+    "--target-dir",
+    "/tmp/nurbs-periodic-verified-L6P5rB",
+    "--test",
+    "rational_section_loft"
+  ],
+  "environment": {
+    "CARGO_PROFILE_TEST_DEBUG": "0"
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/analytic/rational_loft.rs": "0c90b619024f8de74deaeaa44fa4755066e66d757e32558289809eca105e9459",
+    "crates/brep-core/tests/rational_section_loft.rs": "c6fda218667e2085296a4bf388e5ac825308e10a13caa02b6e7abdf97a93cdda"
+  },
+  "scope": "Retained rational section body construction, cap trims and owned incidence; representative native STEP round trips",
+  "globalSolidGeometryCertified": false
+}

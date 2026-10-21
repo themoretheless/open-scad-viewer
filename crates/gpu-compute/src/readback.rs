@@ -160,6 +160,16 @@ impl ByteReadback {
     }
 
     pub fn try_read(&mut self) -> Result<Option<Vec<u8>>, ReadbackError> {
+        self.try_read_with(<[u8]>::to_vec)
+    }
+
+    /// Consume mapped bytes in place, without an intermediate host byte Vec.
+    /// The result cannot borrow the mapping. It is released before return,
+    /// including if the consumer unwinds; pending/failed reads do not call it.
+    pub fn try_read_with<R>(
+        &mut self,
+        consume: impl FnOnce(&[u8]) -> R,
+    ) -> Result<Option<R>, ReadbackError> {
         if let Some(error) = &self.terminal {
             return Err(error.clone());
         }
@@ -169,7 +179,7 @@ impl ByteReadback {
         self.device.poll(wgpu::PollType::Poll).map_err(poll_error)?;
         if self.size == 0 {
             self.terminal = Some(ReadbackError::Consumed);
-            return Ok(Some(Vec::new()));
+            return Ok(Some(consume(&[])));
         }
         match self
             .receiver
@@ -185,11 +195,12 @@ impl ByteReadback {
                     return Err(error);
                 }
                 let buffer = self.buffer.as_ref().expect("nonempty staging");
+                let unmap = UnmapOnDrop(buffer);
                 let result = buffer
                     .get_mapped_range(..self.size)
-                    .map(|view| view.to_vec())
+                    .map(|view| consume(&view))
                     .map_err(|e| ReadbackError::Mapping(e.to_string()));
-                buffer.unmap();
+                drop(unmap);
                 result.map(Some)
             }
             Err(mpsc::TryRecvError::Empty) => Ok(None),
@@ -207,9 +218,28 @@ impl ByteReadback {
         Err(ReadbackError::BlockingUnavailable)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn wait_with<R>(
+        &mut self,
+        _timeout: Duration,
+        _consume: impl FnOnce(&[u8]) -> R,
+    ) -> Result<R, ReadbackError> {
+        Err(ReadbackError::BlockingUnavailable)
+    }
+
     /// A timeout leaves the ticket pending, so callers can retry or cancel it.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn wait(&mut self, timeout: Duration) -> Result<Vec<u8>, ReadbackError> {
+        self.wait_with(timeout, <[u8]>::to_vec)
+    }
+
+    /// Blocking variant of `try_read_with`; a timeout retains the pending read.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn wait_with<R>(
+        &mut self,
+        timeout: Duration,
+        consume: impl FnOnce(&[u8]) -> R,
+    ) -> Result<R, ReadbackError> {
         if let Some(error) = &self.terminal {
             return Err(error.clone());
         }
@@ -222,7 +252,13 @@ impl ByteReadback {
                 timeout: Some(timeout),
             })
             .map_err(poll_error)?;
-        self.try_read()?.ok_or(ReadbackError::Timeout)
+        self.try_read_with(consume)?.ok_or(ReadbackError::Timeout)
+    }
+}
+struct UnmapOnDrop<'a>(&'a wgpu::Buffer);
+impl Drop for UnmapOnDrop<'_> {
+    fn drop(&mut self) {
+        self.0.unmap();
     }
 }
 impl Drop for ByteReadback {
@@ -260,12 +296,22 @@ pub fn try_read_buffer(
     buffer: &wgpu::Buffer,
     size: usize,
 ) -> Result<Vec<u8>, ReadbackError> {
+    try_read_buffer_with(device, buffer, size, <[u8]>::to_vec)
+}
+
+/// Decode an already-submitted staging buffer directly from its mapping.
+pub fn try_read_buffer_with<R>(
+    device: &wgpu::Device,
+    buffer: &wgpu::Buffer,
+    size: usize,
+    consume: impl FnOnce(&[u8]) -> R,
+) -> Result<R, ReadbackError> {
     ByteReadback::range(buffer, 0, size as u64)?;
     if !buffer.usage().contains(wgpu::BufferUsages::MAP_READ) {
         return Err(ReadbackError::MissingUsage);
     }
     if size == 0 {
-        return Ok(Vec::new());
+        return Ok(consume(&[]));
     }
     let (sender, receiver) = mpsc::channel();
     let cancelled = Arc::new(Mutex::new(false));
@@ -284,7 +330,7 @@ pub fn try_read_buffer(
         terminal: None,
         cancelled,
     };
-    ticket.wait(Duration::from_secs(30))
+    ticket.wait_with(Duration::from_secs(30), consume)
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

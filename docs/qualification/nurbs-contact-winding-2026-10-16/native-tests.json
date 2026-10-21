@@ -1,0 +1,89 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "exact original rational point winding through complete checked algebraic ray roots and original stationary/end germs",
+    "full integer NONZERO rational contact arrangement of proved line-image NURBS with higher-degree/rational parameterization",
+    "actual original periodic graph and complete source-owned linear contact regions",
+    "fix clock/multispan compaction to consume actual materialized graph AFTER nonzero perimeter correction"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1449,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "core-regressions": {
+      "suites": 17,
+      "passed": 140,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "source-replay": {
+      "suites": 1,
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "linear-replay": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "regions": {
+      "suites": 10,
+      "passed": 47,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "wasm": {
+      "finished": true,
+      "exit_code": 0
+    },
+    "format": "11 explicit changed implementation/test files passed rustfmt check; shared unformatted parent modules were not globally rewritten",
+    "api-map": "186 public modules / 200 entries; --check passed",
+    "catalog": "79 integrated + 119 native + 2 planned; no errors"
+  },
+  "total_distinct_native_tests": 1647,
+  "source_sha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/exact_chart.rs": "c85ae72f8d3476fbf3ca496b33c15b4797198367567c324daae25da29f617940",
+    "crates/nurbs-core/src/trim/periodic_trim/exact_chart/mapped.rs": "5e165ae2fe029149c09a73f311705e2a91ac2167a794940d7d49a9fcd7287d3d",
+    "crates/brep-core/src/profile_certificate/arithmetic/ray_winding.rs": "0fa1cbf847a48bef36da80d9df72001247da4e322bf0487c2a2752b5bda18d70",
+    "crates/brep-core/src/profile_certificate/arithmetic.rs": "f86479796218159dfa0b63c965e87b867910d0a355ff3cac153abbc6dd8cd780",
+    "crates/brep-core/src/profile_certificate/point_winding.rs": "4c014cf1f126f49d6b650fe46c5f8bf927b42b42b70ae6573e30113ca9865831",
+    "crates/brep-core/src/profile_certificate/linear_arrangement.rs": "74974f5b0987e96432d40b8f99a30e96e69db6b4346c3e0d6281819097822450",
+    "crates/brep-core/src/profile_certificate/offset_regions/arrangement.rs": "9b47d9e27c552bfebc1c44a7e2f8f9412070411448558107788174c4f14184ff",
+    "crates/brep-core/src/profile_certificate/winding/periodic/linear_contacts.rs": "e10c37655190481b5618b5d78ea6b309ed1ca76d4a85dc126517e705397c1d95",
+    "crates/brep-core/src/profile_certificate/winding/periodic/multispan.rs": "a9e35e59204cb43dbb2804f7c31f97b58b38a43e3960ff1c8f066d62c547187c",
+    "crates/nurbs-core/tests/periodic_corrected_image_graph.rs": "a1413a8fd616a4afbe7315960a32f75a251e99e92ae1a85bdee721930e248648",
+    "crates/brep-core/tests/point_winding.rs": "844f74fdf123c7fe73c179ac68410e1012152e59e00f02ecd5121c4be28d0bf5",
+    "crates/brep-core/tests/linear_winding_arrangement.rs": "e6c47d30b204967d4ada67af6935a668f873ab6dca494063be45c484278992e6",
+    "crates/brep-core/tests/periodic_linear_contacts.rs": "a04a0a853a5a1e8987e8ef65d4a0ffbb4654ca387595f3753c76c95c28d1e51e"
+  },
+  "selected_13_files_unchanged_across_final_gates": true,
+  "stable_source_boundary": "selected13 source/test footprint is frozen and verified. This is not a complete shared-repo release/build snapshot; preserve other threads release snapshot and all concurrent work.",
+  "remaining": [
+    "general curved contact event nodes, cyclic port ordering, atomic source carriers, nonzero arrangement topology and physical face provenance",
+    "N0030 automatic complete root atlas discovery and owned physical branch graph/source trim topology"
+  ],
+  "no_claims": [
+    "general curved-carrier arrangement finished",
+    "linear contact arrangement rounded output or physical faces qualified",
+    "full B-rep library/integration sweep",
+    "complete release/STEP/viewer qualification"
+  ],
+  "historical": "previous full three-library2486/3ignored and Boolean3 are a prior baseline. Current gate scopes and exact counts above are authoritative."
+}

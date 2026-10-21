@@ -30,15 +30,19 @@ const DEFAULT_POLICY:StepExternalPolicy={
   allowedUris:new Set(),expectedSha256:{},maxDocuments:16,maxDepth:4,
   maxDocumentBytes:16*1024*1024,maxTotalBytes:32*1024*1024,
 }
+const UTF8_ENCODER=new TextEncoder()
+const HEX_BYTE=Array.from({length:256},(_,i)=>i.toString(16).padStart(2,'0'))
 const externalUris=(imported:DirectStepV9Import):string[]=>[...new Set(imported.externalReferences.map(reference=>{
   const separator=reference.indexOf(':')
   if(separator<0)throw Error('Malformed STEP external-reference report')
   return reference.slice(separator+1)
 }))].sort()
 const digest=async(text:string)=>{
-  const bytes=new TextEncoder().encode(text)
-  const hash=await crypto.subtle.digest('SHA-256',bytes)
-  return [...new Uint8Array(hash)].map(value=>value.toString(16).padStart(2,'0')).join('')
+  const bytes=UTF8_ENCODER.encode(text)
+  const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))
+  let hex=''
+  for(let i=0;i<hash.length;i++)hex+=HEX_BYTE[hash[i]]
+  return hex
 }
 const cancelled=(signal:AbortSignal)=>{if(signal.aborted)throw new DOMException('STEP external resolution cancelled','AbortError')}
 const positiveInteger=(value:number,name:string)=>{
@@ -60,7 +64,7 @@ export async function importStepV6WithResolver(
   positiveInteger(limits.maxTotalBytes,'total byte limit')
   const root=importDirectStepV9(text),documents:ResolvedStepDocument[]=[]
   const refused:string[]=[],active=new Set<string>(),seen=new Set<string>()
-  let totalBytes=new TextEncoder().encode(text).byteLength
+  let totalBytes=UTF8_ENCODER.encode(text).byteLength
   if(totalBytes>limits.maxTotalBytes)throw Error('STEP external bundle exceeds total byte limit')
   const visit=async(uri:string,depth:number):Promise<void>=>{
     cancelled(signal)
@@ -72,7 +76,7 @@ export async function importStepV6WithResolver(
     active.add(uri)
     try{
       const resolved=await resolver.resolve(uri,{signal});cancelled(signal)
-      const bytes=new TextEncoder().encode(resolved.text).byteLength
+      const bytes=UTF8_ENCODER.encode(resolved.text).byteLength
       if(bytes>limits.maxDocumentBytes)throw Error(`STEP external document ${uri} exceeds byte limit`)
       totalBytes+=bytes
       if(totalBytes>limits.maxTotalBytes)throw Error('STEP external bundle exceeds total byte limit')

@@ -134,10 +134,36 @@ pub(crate) fn propose_boundary_binary_ratio_scalar(
         exponent += zeros as i32;
         Some((m, exponent))
     }
-    let (Some((mut denominator, de)), Some((mut numerator, ne))) = (dyadic(da[k]), dyadic(db[k]))
-    else {
-        return Ok(None);
-    };
+    // Endpoint differences and degree multiplication must be formed before
+    // rounding, otherwise a decimal line/quintic speed ratio is only a nearby
+    // proposal and fails the exact saved-coefficient proof.
+    fn endpoint_component(s:&Surface,boundary:&str,k:usize)->Option<(u128,i32)> {
+        let along_u=boundary.starts_with('u');let end=boundary.ends_with("Max");
+        let degree=if along_u{s.degree_u}else{s.degree_v};
+        let count=if along_u{s.control_points.len()}else{s.control_points[0].len()};
+        let knots=if along_u{&s.knots_u}else{&s.knots_v};
+        if degree==0||count!=degree+1||knots.len()!=2*count||knots[..count].iter().any(|&v|v!=knots[0])||knots[count..].iter().any(|&v|v!=knots[count]) {return None;}
+        let point=|i:usize|if along_u{&s.control_points[i][0]}else{&s.control_points[0][i]};
+        let weight=|i:usize|if along_u{s.weights[i][0]}else{s.weights[0][i]};
+        if (0..count).any(|i|weight(i)!=weight(0)){return None;}
+        let index=if end{count-2}else{0};
+        fn signed(x:f64)->Option<(i128,i32)> {
+            if x==0. {return Some((0,0));}
+            let (m,e)=dyadic(x)?;Some((if x<0.{-(m as i128)}else{m as i128},e))
+        }
+        let (mut a,mut ae)=signed(point(index)[k])?;let(mut b,mut be)=signed(point(index+1)[k])?;
+        if a==0{ae=be;}if b==0{be=ae;}
+        let exponent=ae.min(be);
+        if ae-exponent>=127||be-exponent>=127{return None;}
+        a=a.checked_mul(1i128.checked_shl((ae-exponent) as u32)?)?;
+        b=b.checked_mul(1i128.checked_shl((be-exponent) as u32)?)?;
+        let m=b.checked_sub(a)?.checked_mul(degree as i128)?.unsigned_abs();
+        if m==0{return None;}
+        let zeros=m.trailing_zeros();Some((m>>zeros,exponent+zeros as i32))
+    }
+    let (Some((mut denominator, de)), Some((mut numerator, ne))) =
+        (endpoint_component(a,ab,k).or_else(||dyadic(da[k])),endpoint_component(b,bb,k).or_else(||dyadic(db[k])))
+    else {return Ok(None);};
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 {
             let r = a % b;
@@ -320,7 +346,7 @@ mod tests {
             2.
         );
     }
-    #[cfg(feature = "codec")]
+    #[cfg(feature = "transport")]
     #[test]
     fn proposal_is_available_through_the_json_boundary() {
         let result = crate::transport::dispatch(value_codec::json!({

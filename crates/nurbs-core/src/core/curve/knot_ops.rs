@@ -83,7 +83,20 @@ impl Curve {
         self.validate()?;
         let [a, b] = self.domain();
         let mut result = self.clone();
-        result.knots = self.knots.iter().rev().map(|k| a + b - k).collect();
+        result.knots = self
+            .knots
+            .iter()
+            .rev()
+            .map(|k| {
+                if *k == a {
+                    b
+                } else if *k == b {
+                    a
+                } else {
+                    a + (b - k)
+                }
+            })
+            .collect();
         check(
             self.knots
                 .windows(2)
@@ -304,4 +317,30 @@ pub fn normalize_knots(curve: &Curve) -> Result<Curve> {
     }
     result.validate()?;
     Ok(result)
+}
+
+#[cfg(test)]
+mod reversal_domain_tests {
+    use super::*;
+    #[test]
+    fn reversal_keeps_both_clamped_endpoints_of_a_signed_domain_exactly() {
+        let c = Curve {
+            degree: 1,
+            knots: vec![-1e8, -1e8, 1e-8, 1e-8],
+            control_points: vec![vec![0., 0.], vec![1., 1.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let r = c.reverse().unwrap();
+        assert_eq!(r.domain(), c.domain());
+        assert_eq!(r.reverse().unwrap().knots, c.knots);
+        assert_eq!(
+            r.evaluate(c.domain()[0]).unwrap().point,
+            c.control_points[1]
+        );
+        assert_eq!(
+            r.evaluate(c.domain()[1]).unwrap().point,
+            c.control_points[0]
+        );
+    }
 }

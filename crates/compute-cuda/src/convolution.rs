@@ -73,7 +73,8 @@ fn metadata(plan: &ConvPlan, input: &Layout, weight: &Layout) -> Result<Vec<u64>
         .ok_or(CudaError::InvalidInput(
             "CUDA convolution kernel volume overflow",
         ))?;
-    let mut result = vec![
+    let mut result = Vec::with_capacity(11 + plan.spatial_rank * 8);
+    result.extend([
         plan.spatial_rank as u64,
         plan.channels_per_group as u64,
         plan.outputs_per_group as u64,
@@ -85,7 +86,7 @@ fn metadata(plan: &ConvPlan, input: &Layout, weight: &Layout) -> Result<Vec<u64>
         weight.strides()[0] as u64,
         weight.strides()[1] as u64,
         plan.output.dims()[1] as u64,
-    ];
+    ]);
     for values in [
         &plan.input.dims()[2..],
         &plan.output.dims()[2..],

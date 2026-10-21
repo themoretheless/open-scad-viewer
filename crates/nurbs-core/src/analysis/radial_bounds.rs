@@ -199,3 +199,72 @@ mod tests {
     }
 
 }
+
+#[derive(Clone, Debug)]
+pub struct CurveRadiusReport {
+    /// Continuous radius range of the original stored rational Bezier curve.
+    pub radius_range: [f64; 2],
+    /// Bounds abs(norm(C(u)-origin)-r) for every u and every requested radius r.
+    pub error_upper: f64,
+    pub rounding_included: bool,
+}
+/// Independent radial error for an original positive rational Bezier curve.
+/// Uses the existing homogeneous Bernstein-product radius owner by embedding
+/// the curve as a constant-V surface with precisely the same image. No fitting,
+/// samples, platform hypot or assumed analytic circle recognition is used.
+/// Returns None for unsupported multi-span/degree layouts or precision limits.
+/// This proves radial error, not angular correspondence or curve embedding.
+pub fn curve_radius_error(
+    c: &crate::curve::Curve,
+    origin: [f64; 3],
+    nominal_radius: [f64; 2],
+) -> Result<Option<CurveRadiusReport>> {
+    c.validate()?;
+    check(
+        matches!(c.control_points[0].len(), 2 | 3),
+        "Radial curve bound requires 2D or 3D controls",
+    )?;
+    let nominal = Interval::new(nominal_radius[0], nominal_radius[1])?;
+    check(
+        nominal.lo > 0.,
+        "Nominal radius enclosure must stay positive",
+    )?;
+    check(
+        origin.iter().all(|x| x.is_finite()),
+        "Radius origin must be finite",
+    )?;
+    if c.degree > 8 || c.control_points.len() != c.degree + 1 {
+        return Ok(None);
+    }
+
+    let s = Surface {
+        degree_u: c.degree,
+        degree_v: 1,
+        knots_u: c.knots.clone(),
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: c
+            .control_points
+            .iter()
+            .map(|p| {
+                let p = if p.len() == 2 {
+                    vec![p[0], p[1], 0.]
+                } else {
+                    p.clone()
+                };
+                vec![p.clone(), p]
+            })
+            .collect(),
+        weights: c.weights.iter().map(|&w| vec![w, w]).collect(),
+        periodic_u: c.periodic,
+        periodic_v: false,
+    };
+    let Some(range) = radius_bounds(&s, origin)? else {
+        return Ok(None);
+    };
+    let error = Interval::new(range[0], range[1])?.sub(nominal)?;
+    Ok(Some(CurveRadiusReport {
+        radius_range: range,
+        error_upper: error.lo.abs().max(error.hi.abs()),
+        rounding_included: true,
+    }))
+}

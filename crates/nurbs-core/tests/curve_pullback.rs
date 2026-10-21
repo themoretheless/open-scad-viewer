@@ -47,6 +47,23 @@ fn affine_pullback_preserves_rational_definition_and_known_uv() {
     assert_eq!((c, s), before);
 }
 #[test]
+fn bounded_affine_proposal_needs_fresh_whole_original_curve_agreement() {
+    let s=plane();
+    for (outside,accepted) in [(1e-14,true),(0.01,false)] {
+        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.5,0.],vec![-outside,1.,0.],vec![0.,1.5,0.]],
+            weights:vec![1.;3],periodic:false};
+        let before=c.clone();
+        let r=curve_pullback::project(&c,&s,limits()).unwrap();
+        assert_eq!(r.within_tolerance,accepted,"{r:?}");
+        if accepted {
+            assert_eq!(r.evaluations,0);
+            assert!(r.pcurve.unwrap().control_points.iter().all(|p|p[0]>=2.));
+        }
+        assert_eq!(c,before);
+    }
+}
+#[test]
 fn general_curved_support_uses_full_interval_admission() {
     let s = Surface {
         degree_u: 2,

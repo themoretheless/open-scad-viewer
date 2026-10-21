@@ -1,0 +1,45 @@
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_copies.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_copies.rs
+@@ -51,6 +51,22 @@
+     parameter_limits: ParameterOrderLimits,
+     limits: PeriodicSourceChartCopyLimits,
+     data: Data,
++}
++fn coordinate(p: &[Q]) -> Result<ExactPolynomial> {
++    let mut end = p.len();
++    while end > 0 && p[end - 1].is_zero() {
++        end -= 1;
++    }
++    let p = &p[..end];
++    if p.len() > 513
++        || p.iter()
++            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
++    {
++        return Err(refused(
++            "Original canonical chart coordinate allowance exceeded",
++        ));
++    }
++    Ok(polynomial(&p.to_vec()))
+ }
+ fn sign(
+     p: &Vec<Q>,
+@@ -140,6 +156,10 @@
+                 for (i, q) in d.iter().enumerate() {
+                     n[i] -= &offset * q;
+                 }
++                // Exact subtraction may cancel the entire numerator. Preserve
++                // the codec's canonical zero/trailing-coefficient convention
++                // and coefficient ceiling before any derived point is issued.
++                let encoded = [coordinate(&n)?, coordinate(&d)?];
+                 let ds = sign(
+                     &d,
+                     &f,
+@@ -182,7 +202,7 @@
+                 } else {
+                     None
+                 };
+-                uv[axis] = [polynomial(&n), polynomial(&d)];
++                uv[axis] = encoded;
+             }
+             // Parent transport proves every use in this group has the SAME
+             // common point and SAME whole-period offset, even in distinct root

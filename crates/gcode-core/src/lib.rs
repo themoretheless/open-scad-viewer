@@ -26,7 +26,9 @@ mod foreign_words;
 mod job;
 mod package_3mf;
 mod parser;
+pub mod stats;
 mod writer;
+pub use stats::{filament_cost_estimate, filament_mass_grams, filament_volume_mm3};
 pub use writer::{emit_job_to, emit_to};
 
 pub use flavor::Flavor;
@@ -65,23 +67,21 @@ impl Default for MachineProfile {
 
 impl MachineProfile {
     pub fn validate(&self) -> Result<()> {
-        let dimensions = [
-            self.layer_height_mm,
-            self.line_width_mm,
-            self.filament_diameter_mm,
-        ];
-        let speeds = [self.print_feedrate_mm_s, self.travel_feedrate_mm_s];
-        if !dimensions.iter().all(|v| valid_dimension(*v))
-            || !speeds
-                .iter()
-                .all(|v| v.is_finite() && (MIN_FEEDRATE_MM_S..=MAX_COORDINATE_MM).contains(v))
-            || ![
-                self.bead_area_mm2(),
-                self.filament_area_mm2(),
-                self.bead_area_mm2() / self.filament_area_mm2(),
-            ]
-            .iter()
-            .all(|v| v.is_finite() && *v > 0.0)
+        let valid_speed = |v: f64| v.is_finite() && (MIN_FEEDRATE_MM_S..=MAX_COORDINATE_MM).contains(&v);
+        let bead = self.bead_area_mm2();
+        let fil = self.filament_area_mm2();
+        let ratio = bead / fil;
+        if !(valid_dimension(self.layer_height_mm)
+            && valid_dimension(self.line_width_mm)
+            && valid_dimension(self.filament_diameter_mm)
+            && valid_speed(self.print_feedrate_mm_s)
+            && valid_speed(self.travel_feedrate_mm_s)
+            && bead.is_finite()
+            && bead > 0.0
+            && fil.is_finite()
+            && fil > 0.0
+            && ratio.is_finite()
+            && ratio > 0.0)
         {
             return Err(invalid(
                 "GCODE_INVALID_SETTINGS",
@@ -96,7 +96,8 @@ impl MachineProfile {
     }
 
     pub fn filament_area_mm2(&self) -> f64 {
-        std::f64::consts::PI * (self.filament_diameter_mm * 0.5).powi(2)
+        let r = self.filament_diameter_mm * 0.5;
+        std::f64::consts::PI * (r * r)
     }
 }
 
@@ -267,8 +268,7 @@ pub(crate) fn require_layers<L: LayerAccess>(layers: &[L]) -> Result<()> {
             }
             if points
                 .iter()
-                .flatten()
-                .any(|value| !valid_coordinate(*value))
+                .any(|p| !(valid_coordinate(p[0]) && valid_coordinate(p[1])))
             {
                 result = Err(invalid(
                     "GCODE_INVALID_COORDINATE",
@@ -289,14 +289,18 @@ fn move_limit() -> Error {
 }
 
 fn path_length(points: &[[f64; 2]], closed: bool) -> f64 {
-    let open: f64 = points
-        .windows(2)
-        .map(|pair| (pair[1][0] - pair[0][0]).hypot(pair[1][1] - pair[0][1]))
-        .sum();
+    let mut open = 0.0;
+    for i in 1..points.len() {
+        let dx = points[i][0] - points[i - 1][0];
+        let dy = points[i][1] - points[i - 1][1];
+        open += (dx * dx + dy * dy).sqrt();
+    }
     if closed && points.len() >= 3 {
         let first = points[0];
         let last = points[points.len() - 1];
-        open + (last[0] - first[0]).hypot(last[1] - first[1])
+        let dx = last[0] - first[0];
+        let dy = last[1] - first[1];
+        open + (dx * dx + dy * dy).sqrt()
     } else {
         open
     }
@@ -439,9 +443,17 @@ fn emit_path(
     writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
         .map_err(output_limit)?;
     let mut previous = start;
-    for point in points.iter().skip(1).chain(closed.then_some(first)) {
+    let total_steps = points.len() - 1 + usize::from(closed);
+    for step_idx in 0..total_steps {
+        let point = if step_idx + 1 < points.len() {
+            &points[step_idx + 1]
+        } else {
+            first
+        };
         let next = point.map(rounded_coordinate);
-        let length = (next[0] - previous[0]).hypot(next[1] - previous[1]);
+        let dx = next[0] - previous[0];
+        let dy = next[1] - previous[1];
+        let length = (dx * dx + dy * dy).sqrt();
         if length == 0.0 {
             continue;
         }
@@ -538,13 +550,14 @@ pub fn parse(gcode: &str) -> Result<GcodePreview> {
             "G-code preview exceeds 4 MiB",
         ));
     }
-    if gcode.lines().next() == Some("; open-scad-viewer/print-preview 1") {
+    let first = gcode.lines().next();
+    if first == Some("; open-scad-viewer/print-preview 1") {
         return Err(invalid(
             "GCODE_DIALECT",
             "Legacy print-preview 1 is unsupported; regenerate the preview with the current exporter",
         ));
     }
-    if gcode.lines().next() != Some(format!("; {DIALECT}").as_str()) {
+    if first.and_then(|line| line.strip_prefix("; ")) != Some(DIALECT) {
         return Err(invalid(
             "GCODE_DIALECT",
             "Not an open-scad-viewer print preview",

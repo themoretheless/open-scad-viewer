@@ -32,3 +32,7 @@ pub use revolve_region_angle::*;
 pub use rational_loft::{progressive_guided_profile_body,progressive_authored_profile_body,progressive_affine_profile_body,progressive_profile_body};
 
 pub use rational_loft::{progressive_profile_body_with_evidence_and_correction,EndpointCapCorrection,progressive_profile_body_with_rmf_policy};
+
+pub mod g2_annular;
+use revolve_region_angle::revolve_g2_annular_meridian;
+pub use rational_loft::{AnnularProgressiveBody,AnnularCaps,progressive_profile_body_with_annular_caps,progressive_profile_body_with_automatic_caps,ProgressiveBodyEvidence,progressive_profile_body_with_evidence,progressive_profile_body_with_rmf_policy_and_corrections};

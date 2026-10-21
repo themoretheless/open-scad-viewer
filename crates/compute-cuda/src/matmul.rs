@@ -45,10 +45,14 @@ impl PreparedGemm {
 
 impl CudaRuntime {
     pub fn matmul_policy(&self, precision: MatmulPrecision) -> Result<CudaMatmulPolicy, CudaError> {
+        static TF32_OVERRIDE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+        let tf32_override = TF32_OVERRIDE
+            .get_or_init(|| std::env::var("NVIDIA_TF32_OVERRIDE").ok())
+            .as_deref();
         CudaMatmulPolicy::for_device(
             precision,
             self.capabilities.compute_capability,
-            std::env::var("NVIDIA_TF32_OVERRIDE").ok().as_deref(),
+            tf32_override,
         )
     }
     pub(crate) fn matmul_impl(

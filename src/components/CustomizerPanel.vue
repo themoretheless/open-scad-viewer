@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { CustomizerParameter, CustomizerValue } from '../services/scadCustomizer'
 
-defineProps<{
+const props = defineProps<{
   errors?: string[]
   parameters: CustomizerParameter[]
   title: string
@@ -11,6 +12,16 @@ defineProps<{
 const emit = defineEmits<{
   change: [name: string, value: CustomizerValue]
 }>()
+
+const selectedOptionIndexByName = computed(() => {
+  const map = new Map<string, number>()
+  for (const parameter of props.parameters) {
+    if (parameter.options?.length) {
+      map.set(parameter.name, parameter.options.indexOf(parameter.value as never))
+    }
+  }
+  return map
+})
 
 function emitNumber(name: string, event: Event) {
   const input = event.target as HTMLInputElement
@@ -36,7 +47,7 @@ function optionValue(parameter: CustomizerParameter, event: Event): CustomizerVa
       <template v-if="parameter.options?.length">
         <select
           :id="`customizer-${parameter.name}`"
-          :value="parameter.options.findIndex(value => value === parameter.value)"
+          :value="selectedOptionIndexByName.get(parameter.name) ?? -1"
           @change="emit('change', parameter.name, optionValue(parameter, $event))"
         >
           <option v-for="(option, index) in parameter.options" :key="`${option}`" :value="index">{{ option }}</option>

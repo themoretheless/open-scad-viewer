@@ -93,16 +93,16 @@ fn align(s: &mut [Surface], axis: Axis) -> Result<()> {
     for x in s.iter_mut() {
         *x = x.edit_axis(axis, |c| c.elevate(degree))?;
     }
-    let knots = |s: &Surface| {
+    fn knots(s: &Surface, axis: Axis) -> &[f64] {
         if matches!(axis, Axis::U) {
-            s.knots_u.clone()
+            &s.knots_u
         } else {
-            s.knots_v.clone()
+            &s.knots_v
         }
-    };
+    }
     let mut unique: Vec<f64> = s
         .iter()
-        .flat_map(knots)
+        .flat_map(|x| knots(x, axis).iter().copied())
         .filter(|k| *k > 0. && *k < 1.)
         .collect();
     unique.sort_by(f64::total_cmp);
@@ -110,11 +110,11 @@ fn align(s: &mut [Surface], axis: Axis) -> Result<()> {
     for k in unique {
         let target = s
             .iter()
-            .map(|x| knots(x).iter().filter(|&&x| x == k).count())
+            .map(|x| knots(x, axis).iter().filter(|&&x| x == k).count())
             .max()
             .unwrap();
         for x in s.iter_mut() {
-            let count = knots(x).iter().filter(|&&x| x == k).count();
+            let count = knots(x, axis).iter().filter(|&&x| x == k).count();
             if count < target {
                 *x = x.edit_axis(axis, |c| c.insert(k, target - count))?;
             }

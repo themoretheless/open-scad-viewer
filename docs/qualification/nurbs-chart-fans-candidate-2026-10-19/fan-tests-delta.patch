@@ -1,0 +1,87 @@
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_cycles.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_cycles.rs
+@@ -576,3 +576,84 @@
+         assert!(permutations(&edges, &mut ports, 8).is_err());
+     }
+ }
++
++#[cfg(test)]
++mod actual_fan_tests {
++    use super::super::periodic_chart_shores::tests as frame;
++    use super::super::periodic_support_regions::tests as fixtures;
++    use super::*;
++    fn build(
++        selection: Arc<OwnedPeriodicSupportSelection>,
++        components: usize,
++    ) -> OwnedPeriodicChartCycles {
++        let signatures = fixtures::signatures(selection);
++        let regions = own_periodic_support_regions(signatures, &[], 100000).unwrap();
++        assert_eq!(regions.components().len(), components);
++        let shores = Arc::new(frame::shores(frame::corners(Arc::new(regions))));
++        let samples = Arc::new(
++            own_periodic_shore_material_samples(
++                shores,
++                ParameterOrderLimits::default(),
++                PeriodicShoreMaterialSampleLimits::default(),
++            )
++            .unwrap(),
++        );
++        let intervals = Arc::new(
++            own_periodic_shore_material_intervals(
++                samples,
++                ParameterOrderLimits::default(),
++                PeriodicShoreMaterialIntervalLimits::default(),
++            )
++            .unwrap(),
++        );
++        own_periodic_chart_cycles(intervals, PeriodicChartCycleLimits::default()).unwrap()
++    }
++    #[test]
++    fn actual_touching_filled_regions_keep_two_cycles_and_one_shared_chart_vertex() {
++        let o = build(fixtures::discs(true), 2);
++        assert_eq!(
++            (o.vertices().len(), o.edges().len(), o.walks().len()),
++            (7, 8, 2)
++        );
++        assert!(o.walks().iter().all(|w| w.len() == 4));
++        assert!(o.coincident_traces().is_empty());
++        let shared = (0..o.vertices().len())
++            .filter(|&v| o.edges().iter().filter(|e| e.vertices.contains(&v)).count() == 4)
++            .collect::<Vec<_>>();
++        assert_eq!(shared.len(), 1);
++        assert!(
++            o.walks()
++                .iter()
++                .all(|w| w.iter().any(|&e| o.edges()[e].vertices[0] == shared[0]))
++        );
++    }
++    #[test]
++    fn actual_tangent_hole_uses_higher_germs_and_retains_a_repeated_vertex_walk() {
++        let o = build(
++            super::super::periodic_support_material::tests::tangent_hole(),
++            1,
++        );
++        assert_eq!(
++            (o.vertices().len(), o.edges().len(), o.walks().len()),
++            (8, 9, 1)
++        );
++        assert_eq!(o.walks()[0].len(), 9);
++        assert_eq!(o.coincident_traces().len(), 5);
++        let mut visits = BTreeMap::new();
++        for &e in &o.walks()[0] {
++            *visits.entry(o.edges()[e].vertices[0]).or_insert(0usize) += 1;
++        }
++        assert_eq!(visits.values().filter(|&&n| n == 2).count(), 1);
++        assert!(visits.values().all(|&n| n == 1 || n == 2));
++        assert_eq!(
++            o.edges()
++                .iter()
++                .filter(|e| matches!(
++                    e.kind,
++                    OriginalPeriodicChartCycleEdgeKind::NativeShore { .. }
++                ))
++                .count(),
++            5
++        );
++    }
++}

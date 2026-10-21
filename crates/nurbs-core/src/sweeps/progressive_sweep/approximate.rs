@@ -56,9 +56,10 @@ impl<'a> MultiSweep<'a> {
             (1..=64).contains(&profiles.len()),
             "Multi-profile sweep needs 1..64 curves",
         )?;
+        let station_cache: super::orientation::StationCache = Default::default();
         let sweeps = profiles
             .iter()
-            .map(|profile| Sweep::new(profile, path, scale, twist, options))
+            .map(|profile| { let mut sweep = Sweep::new(profile, path, scale, twist, options)?; sweep.station_cache=station_cache.clone(); Ok(sweep) })
             .collect::<Result<Vec<_>>>()?;
         Ok(Self {
             sweeps,
@@ -151,6 +152,15 @@ impl MultiSweep<'_> {
             count >= self.options.initial_sections && count <= self.options.max_sections,
             "Preview section count outside configured sweep budget",
         )?;
+        let key = original_level_cache::key(self, count);
+        if let Some(level) = key.as_ref().and_then(|k| original_level_cache::get(k)) {
+            return Ok(level);
+        }
+        let level = self.preview_uncached(count)?;
+        if let Some(key) = key { original_level_cache::put(key, &level); }
+        Ok(level)
+    }
+    pub(super) fn preview_uncached(&self, count: usize) -> Result<MultiLevel> {
         let mut patches = Vec::new();
         let mut ranges = Vec::new();
         let mut report: Option<LevelReport> = None;
@@ -162,9 +172,13 @@ impl MultiSweep<'_> {
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
             &&first.orientation_guide.is_some_and(|g|!g.periodic)
             &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
+        let closed_length_owner=path_is_closed(first.path)?&&first.orientation_guide.is_none()&&first.contact_point.is_none()
+            &&((matches!(first.options.orientation,Orientation::CorrectedFrenet|Orientation::Frenet)&&first.frame_laws.is_none())
+                ||first.options.orientation==Orientation::Fixed
+                ||first.options.orientation==Orientation::FixedNormal&&first.frame_laws.is_none());
         let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
             && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
-            && !first.path.periodic&&!path_is_closed(first.path)?)) {
+            && (!first.path.periodic||closed_length_owner)&&(!path_is_closed(first.path)?||closed_length_owner))) {
             if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
                 check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
                     "Shared length certificate requires identical original source and spacing")?;
@@ -190,7 +204,25 @@ impl MultiSweep<'_> {
         // Both station policies share precisely the same original Bishop
         // transport and closing phase. Source arc division is also shared.
         // Every profile query/decomposition consumes the remaining allowance.
-        let shared_rmf=if let Some([steps,_,_])=first.spatial_rmf_error_limits {
+        let default_spatial=if first.spatial_rmf_error_limits.is_none()
+            &&first.options.orientation==Orientation::RotationMinimizing
+            &&first.frame_laws.is_none()&&first.orientation_guide.is_none()&&first.contact_point.is_none()
+            &&!authored_error::original_line(first.path)
+            &&!authored_error::original_planar_rmf(first.path,first.options.normal) {
+            let plane=source_plane::certify(first.path,first.options.normal,(cell_limit-cells) as u64)?;
+            cells+=plane.exact_work as usize;
+            !plane.proved&&plane.reason==Some("source-plane-coefficients-nonzero")
+        }else{false};
+        // Closed planar parameter transport now uses the same original first-
+        // image owner as spatial RMF. Share its actual transport/phase work
+        // across all profile walls too; each profile still owns its queries.
+        let closed_planar_first=first.options.orientation==Orientation::RotationMinimizing
+            &&first.options.spacing==Spacing::Parameter&&first.frame_laws.is_none()
+            &&first.orientation_guide.is_none()&&first.contact_point.is_none()
+            &&path_is_closed(first.path)?
+            &&authored_error::original_planar_rmf(first.path,first.options.normal);
+        let rmf_policy=first.spatial_rmf_error_limits.or_else(||(default_spatial||closed_planar_first).then_some([512,cell_limit,product_limit]));
+        let shared_rmf=if let Some([steps,_,_])=rmf_policy {
                 check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)
                     &&s.options.normal==first.options.normal&&s.options.spacing==first.options.spacing
                     &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
@@ -200,9 +232,21 @@ impl MultiSweep<'_> {
                     steps,remaining,path_is_closed(first.path)?)?;
                 cells+=proof.cells+proof.exact_work as usize;Some(proof)
         }else{None};
+        let mut shared_pose=if (shared_rmf.is_some() || first.options.orientation==Orientation::CorrectedFrenet
+            &&first.options.spacing!=Spacing::Parameter)&&first.frame_laws.is_none()
+            &&first.orientation_guide.is_none()&&first.contact_point.is_none() {
+            check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)
+                &&std::ptr::eq(s.scale,first.scale)&&std::ptr::eq(s.twist,first.twist)
+                &&s.affine_laws.map(|(a,c)|(a as *const _,c as *const _))==first.affine_laws.map(|(a,c)|(a as *const _,c as *const _))
+                &&s.options.orientation==first.options.orientation&&s.options.normal==first.options.normal
+                &&s.options.spacing==first.options.spacing&&s.options.initial_sections==first.options.initial_sections
+                &&s.options.max_sections==first.options.max_sections&&s.options.max_deviation==first.options.max_deviation&&s.frame_laws.is_none()&&s.orientation_guide.is_none()&&s.contact_point.is_none()),
+                "Shared corrected pose requires identical original source, laws and policy")?;
+            Some(authored_error::SharedArcPose::default())
+        }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_pose.as_mut())?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(

@@ -1,0 +1,13 @@
+Latest continuation: ../nurbs-worm-wheel-root-2026-10-16/CONTINUE.md supersedes the next-step section below.
+
+# Continue native 200
+
+Date: 2026-10-16. Goal remains active. Catalog 197/200 (79 integrated, 118 native), three planned: NURBS-0030, NURBS-0088, NURBS-0173. No aliases/partial promotion and no Git cleanup/commit/push. Shared dirty tree is active.
+
+All final check processes have finished successfully. Full core compiled snapshot: 1941 native + 2 doctests. Full B-rep compiled snapshot: 1305 native, 3 ignored diagnostics. Final current stock/contact/chart/fit/UV integration: 23 passed; final Taylor math: 2 passed; original three Boolean cases also pass inside full B-rep and their focused log. Both-crate WASM passes. Rustfmt explicit changed files, map (182 modules) and catalog pass. See native-tests.json and raw logs. Earlier failed/prototype logs are superseded; do not re-open closed handles or rerun expensive whole suites merely to observe them.
+
+New stock.rs provides opaque original unique-root StockIntersection, material side, angle restriction, point/tangent bounds, and enclose_trimmed_chart with implicit sixth Taylor bounds. Shared expression.rs prepares immutable original constants once per admission; every replay prepares them afresh. Radial proof avoids irrelevant wheel-frame trig. Root proof covers U cells x at most 16 angular cells completely; maximum 65536 derivative rectangles. All actual source parameters/rounding remain bound.
+
+fit.rs now has private Source::Original / Source::Stock. Existing fit_chart/certify_envelope_grid retain original semantics. fit_stock_chart/certify_stock_grid use true implicit crest-to-stock parameterization, local U=t in [0,1]. QualifiedEnvelopeGrid.stock_source distinguishes semantics. Replay checks original source, actual controls/weights/knots, source/saved regularity and exact C0 packing. Default beta +/-0.01: two quintic cells packed into one Surface per flank, E~2.4e-8 at tolerance 1e-3. Left two-start/start 1 beta +/-0.15: 64 cells packed into four Surfaces, E=4.4763921189421845e-9 at tolerance 1e-4. These are actual working flanks, not a complete wheel.
+
+Next for NURBS-0088: generated crest-edge/root-cylinder transitions, stock-tip and finite axial boundaries, complete tooth/period placement, original-source/model ownership and closed B-rep with truthful qualification. Analytic root-corner formula and remaining scope are in nurbs-worm-wheel-envelope.md / prior goal summaries. Do not substitute spur/helical teeth or count the flank fitter as a wheel. Other remaining goals: general SS coverage/owned branch topology; periodic supporting-surface owned-face assembly.

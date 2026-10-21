@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-16",
+  "scope": "Native finite ZA worm body candidate with original nominal source, full trim coverage, exact represented cap profiles and complete current boundary agreement",
+  "tests": {
+    "native-tests": {
+      "passed": 8,
+      "failed_summaries": 0
+    },
+    "extended-tests": {
+      "passed": 2,
+      "failed_summaries": 0
+    }
+  },
+  "distinct_focused_tests": 8,
+  "core_trim_receipt": "docs/qualification/nurbs-worm-trim-2026-10-16/native-tests.json",
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/brep-core/src/worm.rs": "47cdc6cbc2bfcc6c348032070a1bc9f0b7bc3abaf632543bea494b23d301250f",
+    "crates/brep-core/src/thread.rs": "54f32f601a48c931351207cf496b26b5acd0bb1869055afd324726465c92792f",
+    "crates/brep-core/src/thread_internal.rs": "001d57c9ebba7100d1efb301fe186d0c053055c44ac209f335ba4b51c3f7fc17",
+    "crates/brep-core/src/lib.rs": "124fb263320866a5cb0e2ce6a40d148e99afd0fc7397b88283eb7258d3c8db29",
+    "crates/brep-core/tests/worm.rs": "4dd8d12423c9c07484ba4abaa22f0ddc25c2a5167b7837ad277de9101326db9e"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "cases": [
+    "Right one-start finite slab [4,5] with two source turns",
+    "Left one-start slab [4,8] with three source turns: longer than a full lead",
+    "Right two-start slab [7,14] with three source turns: longer than a full lead",
+    "Independent analytic phase-average volume oracle",
+    "Invalid work and incomplete axial coverage refusals",
+    "All external/internal finite-thread regression targets"
+  ],
+  "unqualified": [
+    "Global cap/wall embedding and whole-solid admission",
+    "Combined ideal finite-body bound",
+    "Cutter envelope, conjugate wheel contact and packaged runtime/export"
+  ]
+}

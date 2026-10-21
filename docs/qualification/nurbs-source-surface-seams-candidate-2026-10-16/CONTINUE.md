@@ -1,0 +1,13 @@
+# Actual original supporting-surface seam binding
+
+Candidate /private/tmp/nurbs-native-200-next-6v12adcx. Shared Rust unchanged. Catalog198/200. Cumulative51-file patch against baseline-source-sha256.json; never apply older cumulative patches sequentially. Main kernel files were already Git-dirty at baseline; SHA256 verification confirms this work did not change shared source.
+
+Native kernel now exposes periodic_trim::verify_surface_seam_identity(surface,axis). It validates actual source surface first, validates axis, then reuses exact existing clamped boundary homogeneous-gauge / periodic-storage repeated control-and-knot identity. None means sufficient exact proof unavailable; no sampled approximate or nonidentity verdict. No legacy trim Reports are fabricated.
+
+OwnedOriginalSurfaceSeams owns the complete original UV dictionary and actual source Surface clone. Reverify recomputes complete dictionary plus actual source validation, exact active surface domains vs chart bounds, and exact seam proof on EVERY wrapped axis. UV full monotone interval correspondence plus identical actual surface boundary parameter functions proves full world-image equality across original carrier clocks. No fitted world curve or tolerance. Generic trim chart coverage, regularity, injectivity, quotient manifold and face construction remain independent obligations.
+
+Regression: actual extruded closed 3D surface binds original dictionary; exact common boundary weight gauge allowed; boundary displacement2^-40 refused; malformed surface/invalid axis/fake periodic flag/domain mismatch refuse. Actual periodic-storage surface with repeated controls and exact shifted knots passes, then a knot shift mutation fails. Replay rejects cached proof kind and actual source boundary mutation.
+
+Fresh gates passed:94 profile unit tests +21 chart/shore/dictionary/new surface/legacy surface integrations across5 binaries =115 tests. brep-core WASM and API map186modules/200entries passed. All51 changed Rust hashes stable. No live check handles remain. Historical full191 tests from40-file snapshot remain historical, not a fresh aggregate. Authoritative profile.log / integration.log / wasm.log and native-tests.json saved.
+
+Next: quotient edge/vertex manifold links and coherent material face ownership using algebraic carrier references; do not materialize rounded subcurves into legacy f64 Model edges as authority. Also exact original trim chart coverage and all source/chart crossing cuts, mixed shore subdivisions, partial/shared component overlap assembly. General automatic complete surface intersection atlas/source trim topology remains open. Source-surface seam identity alone must not promote NURBS0173 to generally qualified or construct a physical face.

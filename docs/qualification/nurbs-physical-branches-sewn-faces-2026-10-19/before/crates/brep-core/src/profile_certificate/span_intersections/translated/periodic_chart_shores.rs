@@ -1,0 +1,1013 @@
+//! Exact native side layout. This is not material classification or face sewing.
+use super::*;
+use crate::profile_certificate::algebraic_intersections::{decode_polynomial, decode_ratio, ratio};
+use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalPeriodicNativeShoreRole {
+    NaturalSupport,
+    AuxiliarySeam,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalPeriodicNativeShorePoint {
+    Corner(usize),
+    /// Transport is authorized by the ACTUAL Surface seam identity, not by
+    /// creating an authored curve use at the opposite canonical shore.
+    SourceCopy {
+        copy: usize,
+        transported: bool,
+    },
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OriginalPeriodicNativeShore {
+    pub fixed_axis: usize,
+    pub end: usize,
+    pub role: OriginalPeriodicNativeShoreRole,
+    /// CCW boundary traversal relative to INCREASING native varying coordinate.
+    pub direction: i8,
+    pub points: Vec<OriginalPeriodicNativeShorePoint>,
+    pub intervals: Vec<[usize; 2]>,
+}
+#[derive(Clone, Copy, Debug)]
+pub struct PeriodicNativeShoreLimits {
+    pub max_endpoint_uses: usize,
+    pub max_intervals: usize,
+    /// Each ordering/point admission pass has this cap; owner replay is separate.
+    pub max_comparisons: usize,
+}
+impl Default for PeriodicNativeShoreLimits {
+    fn default() -> Self {
+        Self {
+            max_endpoint_uses: 100000,
+            max_intervals: 100000,
+            max_comparisons: 1000000,
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Data {
+    shores: Vec<OriginalPeriodicNativeShore>,
+    endpoint_uses: usize,
+    intervals: usize,
+    comparisons: usize,
+}
+#[derive(Clone, Debug)]
+pub struct OwnedPeriodicNativeChartShores {
+    owner: Arc<OwnedPeriodicNativeChartCorners>,
+    parameter_limits: ParameterOrderLimits,
+    limits: PeriodicNativeShoreLimits,
+    data: Data,
+}
+struct Scalar {
+    f: Vec<Q>,
+    root: [Q; 2],
+    n: Vec<Q>,
+    d: Vec<Q>,
+}
+struct Compare {
+    limits: ParameterOrderLimits,
+    cap: usize,
+    work: usize,
+}
+impl Compare {
+    fn compare(&mut self, a: &Scalar, b: &Scalar) -> Result<Ordering> {
+        self.work = self
+            .work
+            .checked_add(1)
+            .filter(|n| *n <= self.cap)
+            .ok_or_else(|| refused("Native shore root comparison allowance exhausted"))?;
+        arithmetic::parameter_order::compare_rational(
+            &a.f,
+            [&a.n, &a.d],
+            &a.root,
+            &b.f,
+            [&b.n, &b.d],
+            &b.root,
+            self.limits.max_refinements,
+            self.limits.max_resultant_size,
+        )
+    }
+}
+fn support(corners: &OwnedPeriodicNativeChartCorners) -> &Arc<OwnedPeriodicSupportBoundaries> {
+    let copies = corners.owner();
+    let incidence = copies.owner();
+    let traces = incidence.owner();
+    let regions = traces.owner();
+    let lifts = regions.owner().owner();
+    lifts.owner().owner().rule().support()
+}
+fn scalar(
+    owner: &OwnedPeriodicNativeChartCorners,
+    p: OriginalPeriodicNativeShorePoint,
+    axis: usize,
+) -> Result<Scalar> {
+    match p {
+        OriginalPeriodicNativeShorePoint::Corner(i) => {
+            let c = owner
+                .corners()
+                .get(i)
+                .ok_or_else(|| refused("Native shore lost actual corner reference"))?;
+            Ok(Scalar {
+                f: vec![Q::zero(), Q::one()],
+                root: [Q::zero(), Q::zero()],
+                n: vec![decode_ratio(&c.uv[axis])?],
+                d: vec![Q::one()],
+            })
+        }
+        OriginalPeriodicNativeShorePoint::SourceCopy { copy, .. } => {
+            let c = owner
+                .owner()
+                .copies()
+                .get(copy)
+                .ok_or_else(|| refused("Native shore lost original source-copy reference"))?;
+            Ok(Scalar {
+                f: decode_polynomial(&c.parameter.primitive)?,
+                root: [
+                    decode_ratio(&c.parameter.interval[0])?,
+                    decode_ratio(&c.parameter.interval[1])?,
+                ],
+                n: decode_polynomial(&c.uv[axis][0])?,
+                d: decode_polynomial(&c.uv[axis][1])?,
+            })
+        }
+    }
+}
+/// Fallible stable merge sort on indices: a failed exact root comparison must
+/// never become an Equality branch inside an infallible sorting closure.
+fn order(values: &[Scalar], cmp: &mut Compare) -> Result<Vec<usize>> {
+    let n = values.len();
+    let mut indices = (0..n).collect::<Vec<_>>();
+    let mut scratch = vec![0; n];
+    let mut width = 1usize;
+    while width < n {
+        let step = width
+            .checked_mul(2)
+            .ok_or_else(|| refused("Native shore sort work overflow"))?;
+        for begin in (0..n).step_by(step) {
+            let mid = (begin + width).min(n);
+            let end = (begin + step).min(n);
+            let (mut a, mut b) = (begin, mid);
+            for out in begin..end {
+                if a < mid
+                    && (b == end
+                        || cmp.compare(&values[indices[a]], &values[indices[b]])?
+                            != Ordering::Greater)
+                {
+                    scratch[out] = indices[a];
+                    a += 1;
+                } else {
+                    scratch[out] = indices[b];
+                    b += 1;
+                }
+            }
+        }
+        std::mem::swap(&mut indices, &mut scratch);
+        width = step;
+    }
+    Ok(indices)
+}
+fn derive(o: &OwnedPeriodicNativeChartShores) -> Result<Data> {
+    let _replay = super::periodic_replay::scope();
+    if [
+        o.limits.max_endpoint_uses,
+        o.limits.max_intervals,
+        o.limits.max_comparisons,
+    ]
+    .iter()
+    .any(|n| !(1..=1000000).contains(n))
+        || o.limits.max_endpoint_uses < 8
+        || o.limits.max_intervals < 4
+        || o.parameter_limits.max_refinements > 512
+        || !(1..=128).contains(&o.parameter_limits.max_resultant_size)
+    {
+        return Err(refused("Invalid native shore construction allowance"));
+    }
+    o.owner.reverify_source()?;
+    let cover = support(&o.owner).augmented().surface().pieces();
+    let wrapped = cover.wrapped();
+    let copies = o.owner.owner().copies();
+    // Corner source uses are retained through their proved native corner links.
+    // Noncorner points on a wrapped side are shared with the opposite side.
+    let mut groups: [BTreeMap<usize, Vec<usize>>; 2] = std::array::from_fn(|_| BTreeMap::new());
+    for (i, c) in copies.iter().enumerate() {
+        if c.bounds.iter().all(Option::is_some) {
+            continue;
+        }
+        for axis in 0..2 {
+            if c.bounds[axis].is_some() {
+                groups[axis].entry(c.source_vertex).or_default().push(i);
+            }
+        }
+    }
+    let mut endpoint_uses = 8usize;
+    for axis in 0..2 {
+        let n = groups[axis]
+            .len()
+            .checked_mul(if wrapped[axis] { 2 } else { 1 })
+            .ok_or_else(|| refused("Native shore endpoint census overflow"))?;
+        endpoint_uses = endpoint_uses
+            .checked_add(n)
+            .filter(|n| *n <= o.limits.max_endpoint_uses)
+            .ok_or_else(|| refused("Native shore endpoint census exceeds allowance"))?;
+    }
+    if endpoint_uses > o.limits.max_endpoint_uses || o.limits.max_intervals < 4 {
+        return Err(refused("Native shore frame census exceeds allowance"));
+    }
+    let mut cmp = Compare {
+        limits: o.parameter_limits,
+        cap: o.limits.max_comparisons,
+        work: 0,
+    };
+    let mut shores = Vec::with_capacity(4);
+    let mut intervals = 0usize;
+    for axis in 0..2 {
+        for end in 0..2 {
+            let varying = 1 - axis;
+            let mut points = o
+                .owner
+                .corners()
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| c.ends[axis] == end)
+                .map(|(i, _)| OriginalPeriodicNativeShorePoint::Corner(i))
+                .collect::<Vec<_>>();
+            if points.len() != 2 {
+                return Err(refused("Native shore lacks its two actual corners"));
+            }
+            let lower = points
+                .iter()
+                .copied()
+                .find(|p| match *p {
+                    OriginalPeriodicNativeShorePoint::Corner(i) => {
+                        o.owner.corners()[i].ends[varying] == 0
+                    }
+                    _ => false,
+                })
+                .unwrap();
+            let upper = points
+                .iter()
+                .copied()
+                .find(|p| match *p {
+                    OriginalPeriodicNativeShorePoint::Corner(i) => {
+                        o.owner.corners()[i].ends[varying] == 1
+                    }
+                    _ => false,
+                })
+                .unwrap();
+            for group in groups[axis].values() {
+                let actual = copies[group[0]].bounds[axis]
+                    .ok_or_else(|| refused("Native shore source group is not on an actual side"))?;
+                if !wrapped[axis]
+                    && group
+                        .iter()
+                        .any(|&i| copies[i].bounds[axis] != Some(actual))
+                {
+                    return Err(refused(
+                        "Original shore source identity changes an unwrapped side",
+                    ));
+                }
+                if !wrapped[axis] && actual != end {
+                    continue;
+                }
+                let copy = group
+                    .iter()
+                    .copied()
+                    .find(|&i| copies[i].bounds[axis] == Some(end))
+                    .unwrap_or(group[0]);
+                let p = OriginalPeriodicNativeShorePoint::SourceCopy {
+                    copy,
+                    transported: copies[copy].bounds[axis] != Some(end),
+                };
+                let s = scalar(&o.owner, p, varying)?;
+                for &other in group {
+                    let q = scalar(
+                        &o.owner,
+                        OriginalPeriodicNativeShorePoint::SourceCopy {
+                            copy: other,
+                            transported: false,
+                        },
+                        varying,
+                    )?;
+                    if cmp.compare(&s, &q)? != Ordering::Equal {
+                        return Err(refused(
+                            "Actual opposite-shore source vertex changes its native varying coordinate",
+                        ));
+                    }
+                }
+                points.push(p);
+            }
+            let values = points
+                .iter()
+                .map(|&p| scalar(&o.owner, p, varying))
+                .collect::<Result<Vec<_>>>()?;
+            let ordered = order(&values, &mut cmp)?;
+            for p in ordered.windows(2) {
+                if cmp.compare(&values[p[0]], &values[p[1]])? != Ordering::Less {
+                    return Err(refused(
+                        "Native shore has equal endpoints without a proved original corner/source identity",
+                    ));
+                }
+            }
+            let points = ordered.iter().map(|&i| points[i]).collect::<Vec<_>>();
+            if points.first() != Some(&lower) || points.last() != Some(&upper) {
+                return Err(refused(
+                    "Native shore ordering escaped actual native corner bounds",
+                ));
+            }
+            let count = points.len() - 1;
+            intervals = intervals
+                .checked_add(count)
+                .filter(|n| *n <= o.limits.max_intervals)
+                .ok_or_else(|| refused("Native shore interval census exceeds allowance"))?;
+            shores.push(OriginalPeriodicNativeShore {
+                fixed_axis: axis,
+                end,
+                role: if wrapped[axis] {
+                    OriginalPeriodicNativeShoreRole::AuxiliarySeam
+                } else {
+                    OriginalPeriodicNativeShoreRole::NaturalSupport
+                },
+                direction: if (axis, end) == (0, 0) || (axis, end) == (1, 1) {
+                    -1
+                } else {
+                    1
+                },
+                intervals: (0..count).map(|i| [i, i + 1]).collect(),
+                points,
+            });
+        }
+    }
+    Ok(Data {
+        shores,
+        endpoint_uses,
+        intervals,
+        comparisons: cmp.work,
+    })
+}
+impl OwnedPeriodicNativeChartShores {
+    pub fn owner(&self) -> &Arc<OwnedPeriodicNativeChartCorners> {
+        &self.owner
+    }
+    pub fn shores(&self) -> &[OriginalPeriodicNativeShore] {
+        &self.data.shores
+    }
+    pub fn interval_count(&self) -> usize {
+        self.data.intervals
+    }
+    pub fn comparisons(&self) -> usize {
+        self.data.comparisons
+    }
+    pub fn reverify_source(&self) -> Result<()> {
+        if derive(self)? != self.data {
+            return Err(refused(
+                "Native shore source,ordering,transport or role changed",
+            ));
+        }
+        Ok(())
+    }
+    // Chart-plane ray contribution; wrapped coordinates are NOT normalized.
+    // The enclosing immutable batch has already replayed this actual owner.
+    pub(super) fn ray_contribution(
+        &self,
+        shore: usize,
+        interval: usize,
+        point: &[Q; 2],
+        limits: ParameterOrderLimits,
+    ) -> Result<Option<i64>> {
+        if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+            return Err(refused("Invalid native frame ray allowance"));
+        }
+        let s = self
+            .data
+            .shores
+            .get(shore)
+            .ok_or_else(|| refused("Unknown native ray shore"))?;
+        let at = s
+            .intervals
+            .get(interval)
+            .ok_or_else(|| refused("Unknown native ray interval"))?;
+        if s.direction != 1 && s.direction != -1 {
+            return Err(refused("Invalid native ray direction"));
+        }
+        let chart = support(&self.owner).augmented().surface().pieces().chart();
+        let fixed = Q::from_float(chart[s.fixed_axis][s.end]).unwrap();
+        if (s.fixed_axis == 0 && point[0] > fixed) || (s.fixed_axis == 1 && point[1] != fixed) {
+            return Ok(Some(0));
+        }
+        let q = Scalar {
+            f: vec![Q::zero(), Q::one()],
+            root: [Q::zero(), Q::zero()],
+            n: vec![point[1 - s.fixed_axis].clone()],
+            d: vec![Q::one()],
+        };
+        let mut cmp = Compare {
+            limits,
+            cap: self.limits.max_comparisons,
+            work: 0,
+        };
+        let lower = cmp.compare(&q, &scalar(&self.owner, s.points[at[0]], 1 - s.fixed_axis)?)?;
+        let upper = cmp.compare(&q, &scalar(&self.owner, s.points[at[1]], 1 - s.fixed_axis)?)?;
+        let closed = lower != Ordering::Less && upper != Ordering::Greater;
+        if s.fixed_axis == 1 {
+            return Ok(if closed { None } else { Some(0) });
+        }
+        if point[0] == fixed && closed {
+            return Ok(None);
+        }
+        Ok(Some(
+            if lower != Ordering::Less && upper == Ordering::Less {
+                i64::from(s.direction)
+            } else {
+                0
+            },
+        ))
+    }
+    // Freshly replayed enclosing owners use this to check the COMPLETE contact
+    // census. Outside values are clipped by the actual native side endpoints.
+    pub(super) fn admit_cut(
+        &self,
+        shore: usize,
+        primitive: &[Q],
+        root: &[Q; 2],
+        position: &[Vec<Q>; 2],
+    ) -> Result<Option<usize>> {
+        let s = self
+            .data
+            .shores
+            .get(shore)
+            .ok_or_else(|| refused("Unknown native shore contact"))?;
+        let q = Scalar {
+            f: primitive.to_vec(),
+            root: root.clone(),
+            n: position[0].clone(),
+            d: position[1].clone(),
+        };
+        let mut cmp = Compare {
+            limits: self.parameter_limits,
+            cap: self.limits.max_comparisons,
+            work: 0,
+        };
+        let first = scalar(&self.owner, s.points[0], 1 - s.fixed_axis)?;
+        let last = scalar(
+            &self.owner,
+            *s.points
+                .last()
+                .ok_or_else(|| refused("Empty native shore contact frame"))?,
+            1 - s.fixed_axis,
+        )?;
+        if cmp.compare(&q, &first)? == Ordering::Less
+            || cmp.compare(&q, &last)? == Ordering::Greater
+        {
+            return Ok(None);
+        }
+        let (mut lo, mut hi) = (0, s.points.len());
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            match cmp.compare(&q, &scalar(&self.owner, s.points[mid], 1 - s.fixed_axis)?)? {
+                Ordering::Less => hi = mid,
+                Ordering::Greater => lo = mid + 1,
+                Ordering::Equal => return Ok(Some(mid)),
+            }
+        }
+        Err(refused(
+            "Original source contact lies strictly inside an unsplit native shore interval",
+        ))
+    }
+    // The enclosing batch must freshly replay this immutable owner first.
+    pub(super) fn interior_contains(
+        &self,
+        shore: usize,
+        interval: usize,
+        value: &Q,
+    ) -> Result<bool> {
+        let s = self
+            .data
+            .shores
+            .get(shore)
+            .ok_or_else(|| refused("Unknown native shore sample"))?;
+        let at = s
+            .intervals
+            .get(interval)
+            .ok_or_else(|| refused("Unknown native shore sample interval"))?;
+        let q = Scalar {
+            f: vec![Q::zero(), Q::one()],
+            root: [Q::zero(), Q::zero()],
+            n: vec![value.clone()],
+            d: vec![Q::one()],
+        };
+        let mut cmp = Compare {
+            limits: self.parameter_limits,
+            cap: self.limits.max_comparisons,
+            work: 0,
+        };
+        Ok(
+            cmp.compare(&q, &scalar(&self.owner, s.points[at[0]], 1 - s.fixed_axis)?)?
+                == Ordering::Greater
+                && cmp.compare(&q, &scalar(&self.owner, s.points[at[1]], 1 - s.fixed_axis)?)?
+                    == Ordering::Less,
+        )
+    }
+    pub(super) fn interior_uv(
+        &self,
+        shore: usize,
+        interval: usize,
+        steps: usize,
+    ) -> Result<[Q; 2]> {
+        if !(1..=512).contains(&steps) {
+            return Err(refused("Invalid strict shore witness allowance"));
+        }
+        let s = self
+            .data
+            .shores
+            .get(shore)
+            .ok_or_else(|| refused("Unknown native shore sample"))?;
+        let at = s
+            .intervals
+            .get(interval)
+            .ok_or_else(|| refused("Unknown native shore sample interval"))?;
+        let chart = support(&self.owner)
+            .augmented()
+            .surface()
+            .pieces()
+            .chart()
+            .map(|d| d.map(|v| Q::from_float(v).unwrap()));
+        let mut range = chart[1 - s.fixed_axis].clone();
+        let lower = scalar(&self.owner, s.points[at[0]], 1 - s.fixed_axis)?;
+        let upper = scalar(&self.owner, s.points[at[1]], 1 - s.fixed_axis)?;
+        let mut cmp = Compare {
+            limits: self.parameter_limits,
+            cap: self.limits.max_comparisons,
+            work: 0,
+        };
+        for _ in 0..steps {
+            let value = (&range[0] + &range[1]) / Q::from_integer(2.into());
+            let q = Scalar {
+                f: vec![Q::zero(), Q::one()],
+                root: [Q::zero(), Q::zero()],
+                n: vec![value.clone()],
+                d: vec![Q::one()],
+            };
+            if cmp.compare(&q, &lower)? != Ordering::Greater {
+                range[0] = value;
+            } else if cmp.compare(&q, &upper)? != Ordering::Less {
+                range[1] = value;
+            } else {
+                let mut uv = [value.clone(), value];
+                uv[s.fixed_axis] = chart[s.fixed_axis][s.end].clone();
+                return Ok(uv);
+            }
+        }
+        Err(refused(
+            "Strict native shore witness is unresolved within allowance",
+        ))
+    }
+    /// Exact world geometry of a native frame interval, independent of whether
+    /// material occupies its chart-inside side. The supplied clock is the
+    /// ORIGINAL Surface varying coordinate, not a normalized/fitted parameter.
+    pub fn point(
+        &self,
+        shore: usize,
+        interval: usize,
+        native: &ExactRatio,
+    ) -> Result<[ExactRatio; 3]> {
+        self.reverify_source()?;
+        let s = self
+            .data
+            .shores
+            .get(shore)
+            .ok_or_else(|| refused("Unknown actual native shore"))?;
+        let at = s
+            .intervals
+            .get(interval)
+            .ok_or_else(|| refused("Unknown actual native shore interval"))?;
+        let t = decode_ratio(native)?;
+        let q = Scalar {
+            f: vec![Q::zero(), Q::one()],
+            root: [Q::zero(), Q::zero()],
+            n: vec![t.clone()],
+            d: vec![Q::one()],
+        };
+        let mut cmp = Compare {
+            limits: self.parameter_limits,
+            cap: self.limits.max_comparisons,
+            work: 0,
+        };
+        if cmp.compare(&q, &scalar(&self.owner, s.points[at[0]], 1 - s.fixed_axis)?)?
+            == Ordering::Less
+            || cmp.compare(&q, &scalar(&self.owner, s.points[at[1]], 1 - s.fixed_axis)?)?
+                == Ordering::Greater
+        {
+            return Err(refused(
+                "Native frame query escaped its actual algebraic endpoint cuts",
+            ));
+        }
+        let p = support(&self.owner);
+        let chart = p.augmented().surface().pieces().chart();
+        let mut uv = [t.clone(), t];
+        uv[s.fixed_axis] = Q::from_float(chart[s.fixed_axis][s.end]).unwrap();
+        p.world_uv_point(&uv.map(|q| ratio(&q)))
+    }
+}
+pub fn own_periodic_native_chart_shores(
+    owner: Arc<OwnedPeriodicNativeChartCorners>,
+    parameter_limits: ParameterOrderLimits,
+    limits: PeriodicNativeShoreLimits,
+) -> Result<OwnedPeriodicNativeChartShores> {
+    let mut o = OwnedPeriodicNativeChartShores {
+        owner,
+        parameter_limits,
+        limits,
+        data: Data {
+            shores: Vec::new(),
+            endpoint_uses: 0,
+            intervals: 0,
+            comparisons: 0,
+        },
+    };
+    o.data = derive(&o)?;
+    Ok(o)
+}
+
+#[cfg(test)]
+pub(super) mod tests {
+    use super::super::periodic_support_regions::tests as fixtures;
+    use super::*;
+    pub(in super::super) fn corrupt_direction(
+        o: &OwnedPeriodicNativeChartShores,
+    ) -> OwnedPeriodicNativeChartShores {
+        let mut bad = o.clone();
+        bad.data.shores[0].direction *= -1;
+        bad
+    }
+    fn q(n: i64, d: i64) -> ExactRatio {
+        [n.to_string(), d.to_string()]
+    }
+    pub(in super::super) fn corners(
+        regions: Arc<OwnedPeriodicSupportRegions>,
+    ) -> Arc<OwnedPeriodicNativeChartCorners> {
+        let traces = Arc::new(
+            own_periodic_support_traces(regions, ParameterOrderLimits::default(), 1000).unwrap(),
+        );
+        let incidence = Arc::new(own_periodic_support_incidence(traces, 1000).unwrap());
+        let copies = Arc::new(
+            own_periodic_source_chart_copies(
+                incidence,
+                ParameterOrderLimits::default(),
+                PeriodicSourceChartCopyLimits::default(),
+            )
+            .unwrap(),
+        );
+        Arc::new(own_periodic_native_chart_corners(copies, 100000).unwrap())
+    }
+    pub(in super::super) fn shores(
+        c: Arc<OwnedPeriodicNativeChartCorners>,
+    ) -> OwnedPeriodicNativeChartShores {
+        own_periodic_native_chart_shores(
+            c,
+            ParameterOrderLimits::default(),
+            PeriodicNativeShoreLimits::default(),
+        )
+        .unwrap()
+    }
+    #[test]
+    fn native_chart_shores_order_actual_plane_sides_and_refuse_cache_or_budget_changes() {
+        let sig = fixtures::signatures(super::super::periodic_support_material::tests::full_plane(
+            true,
+        ));
+        let c = corners(Arc::new(
+            own_periodic_support_regions(sig, &[], 100000).unwrap(),
+        ));
+        let limits = PeriodicNativeShoreLimits::default();
+        assert!(
+            own_periodic_native_chart_shores(
+                c.clone(),
+                ParameterOrderLimits::default(),
+                PeriodicNativeShoreLimits {
+                    max_endpoint_uses: 1,
+                    ..limits
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            own_periodic_native_chart_shores(
+                c.clone(),
+                ParameterOrderLimits::default(),
+                PeriodicNativeShoreLimits {
+                    max_intervals: 3,
+                    ..limits
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            own_periodic_native_chart_shores(
+                c.clone(),
+                ParameterOrderLimits::default(),
+                PeriodicNativeShoreLimits {
+                    max_comparisons: 1,
+                    ..limits
+                }
+            )
+            .is_err()
+        );
+        let o = shores(c);
+        assert_eq!(o.interval_count(), 4);
+        assert_eq!(o.shores().len(), 4);
+        assert!(o.shores().iter().all(|s| s.role
+            == OriginalPeriodicNativeShoreRole::NaturalSupport
+            && s.points.len() == 2));
+        assert_eq!(
+            o.shores().iter().map(|s| s.direction).collect::<Vec<_>>(),
+            vec![-1, 1, 1, -1]
+        );
+        assert_eq!(
+            o.point(0, 0, &q(1, 2)).unwrap(),
+            [q(0, 1), q(1, 2), q(0, 1)]
+        );
+        assert!(o.point(0, 0, &q(2, 1)).is_err());
+        let mut changed = o.clone();
+        changed.data.shores[0].role = OriginalPeriodicNativeShoreRole::AuxiliarySeam;
+        assert!(changed.reverify_source().is_err());
+        let mut changed = o.clone();
+        changed.data.shores[0].points[0] = OriginalPeriodicNativeShorePoint::Corner(usize::MAX);
+        assert!(changed.reverify_source().is_err());
+        let mut changed = o.clone();
+        changed.data.shores[0].intervals[0].swap(0, 1);
+        assert!(changed.reverify_source().is_err());
+    }
+    #[test]
+    fn native_chart_shores_partition_actual_cylinder_bands_in_original_surface_clocks() {
+        let sig = Arc::new(
+            own_periodic_support_signatures(
+                fixtures::cylinder_bands(),
+                ParameterOrderLimits::default(),
+                10000,
+            )
+            .unwrap(),
+        );
+        let r = construct_periodic_support_regions(
+            sig,
+            ParameterOrderLimits::default(),
+            PeriodicRegionSearchLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(r.stop(), None);
+        let o = shores(corners(Arc::new(r.regions().unwrap().clone())));
+        assert_eq!(o.interval_count(), 12);
+        for s in o.shores() {
+            assert_eq!(s.intervals.len(), if s.fixed_axis == 0 { 5 } else { 1 });
+            assert_eq!(
+                s.role,
+                if s.fixed_axis == 0 {
+                    OriginalPeriodicNativeShoreRole::AuxiliarySeam
+                } else {
+                    OriginalPeriodicNativeShoreRole::NaturalSupport
+                }
+            );
+        }
+        assert_eq!(
+            o.point(2, 0, &q(3, 2)).unwrap(),
+            [q(1, 1), q(1, 2), q(0, 1)]
+        );
+    }
+    pub(in super::super) fn cylinder_profile(curved: bool) -> Arc<OwnedPeriodicNativeChartCorners> {
+        let rim = Curve::from_polyline(vec![
+            vec![0., 0., 0.],
+            vec![1., 0., 0.],
+            vec![1., 1., 0.],
+            vec![0., 1., 0.],
+            vec![0., 0., 0.],
+        ])
+        .unwrap();
+        let surface = nurbs_core::surface::extrude(&rim, [0., 0., 1.]).unwrap();
+        let curves = if curved {
+            vec![
+                Curve {
+                    degree: 2,
+                    knots: vec![0., 0., 0., 1., 1., 1.],
+                    control_points: vec![vec![0.125, 0.25], vec![-0.375, 0.5], vec![0.125, 0.75]],
+                    weights: vec![1.; 3],
+                    periodic: false,
+                },
+                Curve::from_polyline(vec![vec![0.125, 0.75], vec![0.125, 0.25]]).unwrap(),
+            ]
+        } else {
+            vec![
+                Curve::from_polyline(vec![
+                    vec![0., 0.25],
+                    vec![0.5, 0.25],
+                    vec![0.5, 0.75],
+                    vec![0., 0.75],
+                    vec![0., 0.25],
+                ])
+                .unwrap(),
+            ]
+        };
+        let uses = vec![
+            (0..curves.len())
+                .map(|source| OriginalPeriodicSourceUse {
+                    source,
+                    reversed: false,
+                })
+                .collect(),
+        ];
+        let input = super::super::periodic_support_boundaries::tests::original(
+            &surface,
+            [true, false],
+            &curves,
+            &uses,
+        );
+        let support = Arc::new(
+            own_periodic_support_boundaries(
+                input,
+                1e-12,
+                ParameterOrderLimits::default(),
+                64,
+                100000,
+            )
+            .unwrap(),
+        );
+        let jumps =
+            super::super::periodic_support_boundaries::tests::graph(support.augmented().clone());
+        let a = [q(2, 1), q(1, 2)];
+        let base = Arc::new(
+            own_periodic_relative_winding(
+                jumps.clone(),
+                &[a.clone(), a.clone()],
+                ParameterOrderLimits::default(),
+                10000,
+            )
+            .unwrap(),
+        );
+        let rule = Arc::new(
+            own_periodic_support_material_rule(
+                support.clone(),
+                base,
+                &[OriginalPeriodicOperand {
+                    wire_weights: vec![1],
+                    base_winding: "0".into(),
+                    fill: OriginalPeriodicFillRule::NonZero,
+                }],
+                &[OriginalPeriodicBooleanOp::Operand(0)],
+            )
+            .unwrap(),
+        );
+        let mut sides = Vec::new();
+        for edge in 0..jumps.owner().owner().edges().len() {
+            let p = Arc::new(
+                own_periodic_support_side_probes(
+                    support.clone(),
+                    jumps.clone(),
+                    edge,
+                    q(1, 1024),
+                    ParameterOrderLimits::default(),
+                )
+                .unwrap(),
+            );
+            let samples = std::array::from_fn(|s| {
+                if p.exterior()[s] {
+                    None
+                } else {
+                    Some(Arc::new(
+                        own_periodic_material_sample(
+                            rule.material().clone(),
+                            Arc::new(
+                                own_periodic_relative_winding(
+                                    jumps.clone(),
+                                    &[a.clone(), p.queries()[s].clone()],
+                                    ParameterOrderLimits::default(),
+                                    10000,
+                                )
+                                .unwrap(),
+                            ),
+                        )
+                        .unwrap(),
+                    ))
+                }
+            });
+            sides.push(Arc::new(
+                own_periodic_support_sides(p, rule.clone(), samples).unwrap(),
+            ));
+        }
+        let sig = fixtures::signatures(Arc::new(
+            own_periodic_support_selection(rule, &sides).unwrap(),
+        ));
+        corners(Arc::new(
+            own_periodic_support_regions(sig, &[], 100000).unwrap(),
+        ))
+    }
+    #[test]
+    fn native_chart_shores_transport_one_sided_coincident_contour_points_through_actual_seam() {
+        let o = shores(cylinder_profile(false));
+        assert_eq!(o.interval_count(), 8);
+        assert!(o.shores()[0].points.iter().all(|p| !matches!(
+            p,
+            OriginalPeriodicNativeShorePoint::SourceCopy {
+                transported: true,
+                ..
+            }
+        )));
+        assert_eq!(
+            o.shores()[1]
+                .points
+                .iter()
+                .filter(|p| matches!(
+                    p,
+                    OriginalPeriodicNativeShorePoint::SourceCopy {
+                        transported: true,
+                        ..
+                    }
+                ))
+                .count(),
+            2
+        );
+        assert_eq!(
+            o.point(1, 1, &q(1, 2)).unwrap(),
+            [q(0, 1), q(0, 1), q(1, 2)]
+        );
+    }
+    #[test]
+    fn native_chart_shores_order_actual_irrational_quadratic_contacts_without_rounding_cuts() {
+        // u=t^2-t+1/8 and v=1/4+t/2 cross U=0 at two irrational clocks.
+        let o = shores(cylinder_profile(true));
+        assert_eq!(o.interval_count(), 8);
+        for s in &o.shores()[..2] {
+            assert_eq!(s.points.len(), 4);
+            assert!(
+                s.points[1..3]
+                    .iter()
+                    .all(|p| matches!(p, OriginalPeriodicNativeShorePoint::SourceCopy { .. }))
+            );
+        }
+        assert_eq!(
+            o.point(0, 1, &q(1, 2)).unwrap(),
+            [q(0, 1), q(0, 1), q(1, 2)]
+        );
+        assert!(o.point(0, 1, &q(1, 4)).is_err());
+    }
+    #[test]
+    fn native_chart_shores_cover_actual_zero_source_torus_with_only_auxiliary_frame_edges() {
+        let surface = nurbs_core::primitives::torus([0.; 3], 3., 1., 1.).unwrap();
+        let input = super::super::periodic_support_boundaries::tests::original(
+            &surface,
+            [true, true],
+            &[],
+            &[],
+        );
+        let support = Arc::new(
+            own_periodic_support_boundaries(
+                input,
+                1e-12,
+                ParameterOrderLimits::default(),
+                64,
+                100000,
+            )
+            .unwrap(),
+        );
+        let jumps = super::super::periodic_support_boundaries::tests::graph_with_pair_limits(
+            support.augmented().clone(),
+            OriginalAtlasPairLimits {
+                max_span_work: 1000000,
+                refinement_depth: 4,
+                ..Default::default()
+            },
+        );
+        let a = [q(1, 2), q(1, 2)];
+        let base = Arc::new(
+            own_periodic_relative_winding(
+                jumps,
+                &[a.clone(), a],
+                ParameterOrderLimits::default(),
+                1000,
+            )
+            .unwrap(),
+        );
+        let rule = Arc::new(
+            own_periodic_support_material_rule(
+                support,
+                base,
+                &[OriginalPeriodicOperand {
+                    wire_weights: vec![],
+                    base_winding: "1".into(),
+                    fill: OriginalPeriodicFillRule::NonZero,
+                }],
+                &[OriginalPeriodicBooleanOp::Operand(0)],
+            )
+            .unwrap(),
+        );
+        let sig =
+            fixtures::signatures(Arc::new(own_periodic_support_selection(rule, &[]).unwrap()));
+        let o = shores(corners(Arc::new(
+            own_periodic_support_regions(sig, &[], 10000).unwrap(),
+        )));
+        assert_eq!(o.interval_count(), 4);
+        assert!(o.shores().iter().all(|s| {
+            s.role == OriginalPeriodicNativeShoreRole::AuxiliarySeam
+                && s.points
+                    .iter()
+                    .all(|p| matches!(p, OriginalPeriodicNativeShorePoint::Corner(_)))
+        }));
+        assert!(o.owner().owner().copies().is_empty());
+    }
+}

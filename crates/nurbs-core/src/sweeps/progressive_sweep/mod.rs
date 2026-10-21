@@ -11,6 +11,7 @@ use std::f64::consts::TAU;
 
 type V = [f64; 3];
 mod authored_error;
+mod original_level_cache;
 mod evidence_api;
 mod section_frames;
 mod arc_guide;
@@ -44,3 +45,8 @@ mod orientation;
 mod approximate;
 pub use orientation::*;
 pub use approximate::*;
+
+mod source_jets;
+mod rmf_first_images;
+
+pub mod endpoint_points;

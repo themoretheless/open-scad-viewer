@@ -1,3 +1,5 @@
+import {PendingProgressiveStations} from '../rushGraphNurbsKernel'
+import {reconstructCertifiedProgressiveStations,reconstructCertifiedProgressiveStationsAsync} from '../geometry/brep'
 import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../rushGraphNurbsKernel'
 import type { OwnNurbsBuildControl, OwnNurbsRequest } from '../rushGraphNurbsKernel'
 import { createProgressiveBrepProfileBody, streamProgressiveBrepProfileBody, streamProgressiveMiterBrepProfileBody } from '../geometry/brep'
@@ -12,6 +14,7 @@ export function buildOwnNurbs(document:unknown,request:OwnNurbsRequest){
 
 /** Keeps graph evaluation synchronous except for bounded progressive sweep levels. */
 export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsRequest,control:OwnNurbsBuildControl={}){
+ const stations=new Map<string,ReturnType<typeof reconstructCertifiedProgressiveStations>>()
  const completed=new Map<string,ReturnType<typeof progressiveSweepNurbsProfiles>>()
  const bodies=new Map<string,ReturnType<typeof createProgressiveBrepProfileBody>>()
  const miters=new Map<string,ProgressiveMiterBrepBody>()
@@ -38,7 +41,7 @@ export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsReques
     const ready=bodies.get(nodeId)
     if(ready)return ready
     throw new PendingProgressiveBody(nodeId,args)
-   },(nodeId,args)=>{const ready=miters.get(nodeId);if(ready)return ready;throw new PendingProgressiveMiter(nodeId,args)})
+   },(nodeId,args)=>{const ready=miters.get(nodeId);if(ready)return ready;throw new PendingProgressiveMiter(nodeId,args)},(nodeId,args)=>{const ready=stations.get(nodeId);if(ready)return ready;throw new PendingProgressiveStations(nodeId,args)})
   }catch(error){
    if(error instanceof PendingProgressiveSweep){
     completed.set(error.nodeId,await consume(error.nodeId,
@@ -48,6 +51,8 @@ export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsReques
      streamProgressiveBrepProfileBody(...error.args,{shouldAbort:control.shouldAbort})))
    }else if(error instanceof PendingProgressiveMiter){
     miters.set(error.nodeId,await consume(error.nodeId,streamProgressiveMiterBrepProfileBody(...error.args,{shouldAbort:control.shouldAbort})))
+   }else if(error instanceof PendingProgressiveStations){
+    stations.set(error.nodeId,await reconstructCertifiedProgressiveStationsAsync(...error.args,control))
    }else throw error
   }
  }

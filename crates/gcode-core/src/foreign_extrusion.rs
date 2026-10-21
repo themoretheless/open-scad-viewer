@@ -24,7 +24,8 @@ pub(super) struct Extrusion {
 }
 
 fn area(diameter_mm: f64) -> Result<f64> {
-    let area = std::f64::consts::PI * (diameter_mm / 2.0).powi(2);
+    let r = diameter_mm * 0.5;
+    let area = std::f64::consts::PI * (r * r);
     if !(diameter_mm.is_finite()
         && diameter_mm > 0.0
         && diameter_mm <= MAX_COORDINATE_MM

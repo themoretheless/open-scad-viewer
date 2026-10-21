@@ -114,12 +114,7 @@ impl Renderer {
         focal: f64,
     ) -> Option<Vec<u8>> {
         let pixels = image.width.checked_mul(image.height)?;
-        let source: Vec<u32> = image
-            .rgb
-            .chunks_exact(3)
-            .map(|v| u32::from(v[0]) | u32::from(v[1]) << 8 | u32::from(v[2]) << 16)
-            .collect();
-        let params: Vec<u32> = [
+        let params = [
             image.width as u32,
             image.height as u32,
             0,
@@ -134,8 +129,7 @@ impl Renderer {
             (c.k3 as f32).to_bits(),
             (c.p1 as f32).to_bits(),
             (c.p2 as f32).to_bits(),
-        ]
-        .to_vec();
+        ];
         let device = &context.device;
         let queue = &context.queue;
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -144,14 +138,20 @@ impl Renderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        queue.write_buffer(&params_buf, 0, &pack_u32_bytes(&params));
+        queue.write_buffer(&params_buf, 0, &gpu_compute::u32_le_bytes(&params));
         let source_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_source"),
             size: (pixels * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        queue.write_buffer(&source_buf, 0, &pack_u32_bytes(&source));
+        gpu_compute::write_buffer_words(
+            queue,
+            &source_buf,
+            0,
+            image.rgb.chunks_exact(3).map(|v| [v[0], v[1], v[2], 0]),
+        )
+        .expect("rectification source update failed");
         let output = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_output"),
             size: (pixels * 4) as u64,
@@ -177,24 +177,28 @@ impl Renderer {
         if valid.first() != Some(&1) {
             return None;
         }
-        let values = read_u32(device, queue, &output, pixels);
+        let mut encoder = device.create_command_encoder(&Default::default());
+        let mut result = gpu_compute::ByteReadback::copy_buffer(
+            device,
+            &mut encoder,
+            &output,
+            0,
+            pixels as u64 * 4,
+        )
+        .expect("GPU rectification readback failed");
+        result.submitted(queue.submit([encoder.finish()]));
         Some(
-            values
-                .iter()
-                .flat_map(|&v| {
-                    [
-                        (v & 255) as u8,
-                        ((v >> 8) & 255) as u8,
-                        ((v >> 16) & 255) as u8,
-                    ]
+            result
+                .wait_with(std::time::Duration::from_secs(30), |bytes| {
+                    let mut rgb = Vec::with_capacity(pixels * 3);
+                    for pixel in bytes.chunks_exact(4) {
+                        rgb.extend_from_slice(&pixel[..3]);
+                    }
+                    rgb
                 })
-                .collect(),
+                .expect("GPU rectification readback failed"),
         )
     }
-}
-
-fn pack_u32_bytes(values: &[u32]) -> Vec<u8> {
-    values.iter().flat_map(|v| v.to_le_bytes()).collect()
 }
 
 thread_local! {

@@ -243,18 +243,51 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
     radius_bottom: f64,
     radius_top: f64,
 ) -> Result<Model> {
-    let radii = [radius_bottom, radius_top];
-    if radii.iter().any(|radius| {
-        !(radius.is_finite()
-            && *radius > 0.
-            && 2. * radius < max[0] - min[0]
-            && 2. * radius < max[1] - min[1])
-    }) {
+    independent_radius_cuboid_vertical_edges(
+        source,
+        min,
+        max,
+        rounded,
+        [radius_bottom; 4],
+        [radius_top; 4],
+    )
+}
+
+/// Independent linear radius laws for the four longitudinal corners. Adjacent
+/// setbacks are checked at both ends; their sum is affine along the whole edge.
+/// This constructs a prism family, not a valence-three spherical corner.
+pub(crate) fn independent_radius_cuboid_vertical_edges(
+    source: &Model,
+    min: [f64; 3],
+    max: [f64; 3],
+    rounded: [bool; 4],
+    radius_bottom: [f64; 4],
+    radius_top: [f64; 4],
+) -> Result<Model> {
+    if !rounded.iter().any(|&x| x)
+        || (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || max[i] <= min[i])
+    {
         return Err(refuse(
-            "Variable-radius cuboid radii exceed the admitted profile",
+            "Independent-radius cuboid needs finite positive extents and selected corners",
         ));
     }
-    let profile_at = |radius: f64, z: f64| -> Result<Vec<Curve>> {
+    for radii in [radius_bottom, radius_top] {
+        if (0..4).any(|i| rounded[i] && (!radii[i].is_finite() || radii[i] <= 0.)) {
+            return Err(refuse("Selected corner radii must be finite and positive"));
+        }
+        for i in 0..4 {
+            let next = (i + 1) % 4;
+            let extent = max[i % 2] - min[i % 2];
+            let a = if rounded[i] { radii[i] } else { 0. };
+            let b = if rounded[next] { radii[next] } else { 0. };
+            if !((extent - a) - b > source.tolerance_mm) {
+                return Err(refuse(
+                    "Adjacent corner radii consume their shared support edge",
+                ));
+            }
+        }
+    }
+    let profile_at = |radii: [f64; 4], z: f64| -> Result<Vec<Curve>> {
         let corners = [
             [min[0], min[1]],
             [max[0], min[1]],
@@ -262,22 +295,22 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
             [min[0], max[1]],
         ];
         let entry = [
-            [min[0], min[1] + radius],
-            [max[0] - radius, min[1]],
-            [max[0], max[1] - radius],
-            [min[0] + radius, max[1]],
+            [min[0], min[1] + radii[0]],
+            [max[0] - radii[1], min[1]],
+            [max[0], max[1] - radii[2]],
+            [min[0] + radii[3], max[1]],
         ];
         let exit = [
-            [min[0] + radius, min[1]],
-            [max[0], min[1] + radius],
-            [max[0] - radius, max[1]],
-            [min[0], max[1] - radius],
+            [min[0] + radii[0], min[1]],
+            [max[0], min[1] + radii[1]],
+            [max[0] - radii[2], max[1]],
+            [min[0], max[1] - radii[3]],
         ];
         let centers = [
-            [min[0] + radius, min[1] + radius],
-            [max[0] - radius, min[1] + radius],
-            [max[0] - radius, max[1] - radius],
-            [min[0] + radius, max[1] - radius],
+            [min[0] + radii[0], min[1] + radii[0]],
+            [max[0] - radii[1], min[1] + radii[1]],
+            [max[0] - radii[2], max[1] - radii[2]],
+            [min[0] + radii[3], max[1] - radii[3]],
         ];
         let starts = [
             std::f64::consts::PI,
@@ -297,7 +330,7 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
                 curves.push(arc_curve(
                     CircleArc {
                         center: centers[i],
-                        radius,
+                        radius: radii[i],
                         start: starts[i],
                         sweep: std::f64::consts::FRAC_PI_2,
                     },
@@ -322,5 +355,8 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
         &[source],
     )
 }
+
+
+/// Equal-radius valence-3 blend at the axis-aligned cuboid max corner:
 
 pub(super) const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;

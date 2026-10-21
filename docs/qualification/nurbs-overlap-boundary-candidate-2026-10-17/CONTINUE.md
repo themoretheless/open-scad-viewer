@@ -1,0 +1,5 @@
+# Exact overlap boundary joint extension
+
+General finite-equation RUR production and independent verification now share the original intersection engine. coordinate_boundary constructs exact homogeneous scalar constraints from both original Bernstein cells at a rational projected coordinate. It preserves independent parameter fields, rejects nonisolated fibers and invalid axes, and does not claim full geometric overlap. The new regression uses s²=1/2 and t³=1/2, checks the unique unit-box event, and rejects parameter-map tampering and incomplete factor coverage. All 103 profile tests pass.
+
+Next: bind this census to verified common-image overlap receipts and actual endpoint nodes, then partition and merge contributor carriers before cyclic ordering. Existing atlas still refuses general overlaps. NURBS0030 and NURBS0173 remain open; catalog 198/200. Prior physical-face integration/WASM checks are historical, not rerun on this snapshot. Cumulative patch against baseline, not after old patches.

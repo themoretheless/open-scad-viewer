@@ -349,10 +349,13 @@ impl Expansion {
     /// Remove a shared integer factor from homogeneous coordinates when their exact
     /// dyadic coefficients fit the checked i128 path. Larger spans retain the
     /// original expansion representation; there is no rounded reconstruction.
-    pub(crate) fn reduce_projective<const N: usize>(
-        values: &mut [Self; N],
+    pub(crate) fn reduce_projective(
+        values: &mut [Self],
         ctx: &mut PredicateContext<'_>,
     ) -> Result<(), Reason> {
+        if values.is_empty() || values.len() > 24 {
+            return Ok(());
+        }
         let mut low = i32::MAX;
         let mut high = i32::MIN;
         for part in values.iter().flat_map(|v| &v.0) {
@@ -363,8 +366,8 @@ impl Expansion {
         if low == i32::MAX || high - low > 120 {
             return Ok(());
         }
-        let mut integers = [0i128; N];
-        for (value, integer) in values.iter().zip(&mut integers) {
+        let mut integers = [0i128; 24];
+        for (value, integer) in values.iter().zip(&mut integers[..values.len()]) {
             for part in &value.0 {
                 ctx.charge(8)?;
                 let bits = part.abs().to_bits();
@@ -391,7 +394,7 @@ impl Expansion {
             }
         }
         let mut common = 0u128;
-        for integer in integers {
+        for &integer in &integers[..values.len()] {
             let mut next = integer.unsigned_abs();
             while next != 0 {
                 ctx.charge(1)?;
@@ -404,8 +407,9 @@ impl Expansion {
         let Ok(divisor) = i128::try_from(common) else {
             return Ok(());
         };
-        let mut reduced = std::array::from_fn(|_| Self::scalar(0.));
-        for (out, integer) in reduced.iter_mut().zip(integers) {
+        let mut reduced = Vec::with_capacity(values.len());
+        for &integer in &integers[..values.len()] {
+            let mut out = Self(Vec::with_capacity(4));
             let integer = integer / divisor;
             let magnitude = integer.unsigned_abs();
             for shift in [0, 32, 64, 96] {
@@ -414,10 +418,11 @@ impl Expansion {
                 let part = chunk * f64::from_bits(((1023 + shift) as u64) << 52);
                 out.insert(if integer < 0 { -part } else { part }, ctx)?;
             }
+            reduced.push(out);
         }
         // Each old value equals its integer * the SAME positive 2^low.
         // Division by the SAME positive gcd therefore preserves homogeneous data.
-        *values = reduced;
+        values.clone_from_slice(&reduced);
         Ok(())
     }
     pub(crate) fn term_count(&self) -> usize {
@@ -521,7 +526,9 @@ impl Algebra for Expansion {
     }
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(1)?;
-        let mut result = Self::scalar(0.);
+        let mut result = Self(Vec::with_capacity(
+            (self.0.len() * other.0.len() * 2).min(32),
+        ));
         for &left in &self.0 {
             for &right in &other.0 {
                 let (rounded, residual) = split_product(left, right, ctx)?;

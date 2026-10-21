@@ -1,0 +1,179 @@
+vite v8.3.0 building client environment for production...
+transforming...
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/services/rushFrontendScene.ts is dynamically imported by src/services/openscadParser.ts but also statically imported by src/workers/geometry.worker.ts, dynamic import will not move module into another chunk.
+
+✓ 609 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/nurbs-LDXC7NXg.js                                0.02 kB
+dist/assets/inspectCurrentCurveChain-DnhKGFl2.js             0.60 kB
+dist/assets/rolldown-runtime-hePW80VL.js                     0.71 kB
+dist/assets/rushFrontend-BVxys3gV.js                         0.80 kB
+dist/assets/curveOffsetDiagnostics-9ZebSxCb.js               1.08 kB
+dist/assets/polygon-wY5A0uEy.js                              1.12 kB
+dist/assets/assemblyFrameExport-gvFvj5QC.js                  1.37 kB
+dist/assets/solidNurbsEdit-tNgSE-eI.js                       2.00 kB
+dist/assets/solidMinkowski--cQePkes.js                       3.05 kB
+dist/assets/assemblyAnimation-cTmRbZw8.js                    3.55 kB
+dist/assets/solidTrimmedCurveOffset-lKs8J7U9.js              3.57 kB
+dist/assets/solidCurveOffset-CEMFqyZc.js                     5.11 kB
+dist/index.html                                              5.29 kB │ gzip:     1.54 kB
+dist/assets/worker-wasm-packing-CkWoCbWg.js                  7.61 kB
+dist/assets/kernel-JNE5jkX3.js                               9.09 kB
+dist/assets/rushGraphNurbsCompiler-B40Sz2xk.js               9.47 kB
+dist/assets/drawingSheets-sIUw3_lZ.js                       10.76 kB
+dist/assets/svg.worker-8JFMiPpE.js                          14.23 kB
+dist/assets/gcodePreview.worker-Cb-0m0Ns.js                 16.12 kB
+dist/assets/photogrammetry.worker-Co9QSbdO.js               16.76 kB
+dist/assets/nurbsConstructors-DABV3Ri6.js                   20.09 kB
+dist/assets/openScadTextRuntime-CRjBZhkM.js                 25.88 kB
+dist/assets/exactSolidRuntime-lgxuNPV5.js                   39.33 kB
+dist/assets/solidRushGraphImport-DI1AseSZ.js                46.70 kB
+dist/assets/directExtrusion-D0aePNEU.js                     49.57 kB
+dist/assets/mainSolid.worker-BB6oSo9B.js                    95.39 kB
+dist/assets/harfbuzz-bytes-BSXiNh7q.js                     157.29 kB
+dist/assets/geometry.worker-C-LaLLed.js                    550.86 kB
+dist/assets/CadQuantityInput-BrETNXCm.css                    0.47 kB │ gzip:     0.28 kB
+dist/assets/round-solid-options-C-aTzrR4.css                 0.59 kB │ gzip:     0.32 kB
+dist/assets/SolidVolumeDistance-CKRkApe5.css                 0.75 kB │ gzip:     0.33 kB
+dist/assets/main-sketch-tools-CKGlJ9sv.css                   0.85 kB │ gzip:     0.38 kB
+dist/assets/CadWorkbenchPanel-6Njk__wz.css                   0.91 kB │ gzip:     0.38 kB
+dist/assets/LaserCamPanel-JQX8bYWG.css                       0.96 kB │ gzip:     0.42 kB
+dist/assets/StructuralSectionsPanel-DO5o65UX.css             0.99 kB │ gzip:     0.44 kB
+dist/assets/downloadArtifact-D0wEnRoz.css                    1.00 kB │ gzip:     0.50 kB
+dist/assets/BondedSolidPanel-ePwNYYTl.css                    1.02 kB │ gzip:     0.46 kB
+dist/assets/MaterialPathCheck-CRmidiHR.css                   1.17 kB │ gzip:     0.45 kB
+dist/assets/MainModelingTools-DAQ1faXf.css                   1.65 kB │ gzip:     0.59 kB
+dist/assets/MechanicalGenerator-CyvCCVTY.css                 1.87 kB │ gzip:     0.69 kB
+dist/assets/KeyboardShortcuts-S4quNbCN.css                   2.05 kB │ gzip:     0.78 kB
+dist/assets/PhotogrammetryPanel-DXS5MU0m.css                 2.17 kB │ gzip:     0.71 kB
+dist/assets/SvgPanel-DG2rFvQK.css                            2.55 kB │ gzip:     0.87 kB
+dist/assets/GcodePanel-3lPeBBoN.css                          2.57 kB │ gzip:     0.77 kB
+dist/assets/ScanPlanePanel-CoJ9OQAC.css                      2.87 kB │ gzip:     0.86 kB
+dist/assets/ExampleGallery-BxtLh407.css                      3.30 kB │ gzip:     0.99 kB
+dist/assets/NominalTrussPanel-B55Pwr1V.css                   3.81 kB │ gzip:     1.03 kB
+dist/assets/CommandPalette-BSARWz9s.css                      6.17 kB │ gzip:     1.74 kB
+dist/assets/SceneOutliner-CL7N7P3X.css                       7.82 kB │ gzip:     1.84 kB
+dist/assets/MeshModeler-R7beQ9tJ.css                         9.67 kB │ gzip:     2.20 kB
+dist/assets/FunctionReference-BUtVUpuz.css                  10.59 kB │ gzip:     2.32 kB
+dist/assets/InspectPanel-CgfJE3Mr.css                       12.12 kB │ gzip:     2.61 kB
+dist/assets/DirectModeler-DJBxwt50.css                      28.11 kB │ gzip:     5.13 kB
+dist/assets/index-wsZfvl0x.css                              38.25 kB │ gzip:     7.51 kB
+dist/assets/sweep-viewport-evidence-DbzoKWLY.js              0.02 kB │ gzip:     0.04 kB
+dist/assets/GcodePanel-DYwdmQcr.js                           0.06 kB │ gzip:     0.08 kB
+dist/assets/bytes-BiVFc2bD.js                                0.07 kB │ gzip:     0.09 kB
+dist/assets/cadNurbsStep-B2SgaaiP.js                         0.07 kB │ gzip:     0.08 kB
+dist/assets/_plugin-vue_export-helper-BDNMzG2s.js            0.08 kB │ gzip:     0.09 kB
+dist/assets/svgWorkerClient-Ug1eGerm.js                      0.08 kB │ gzip:     0.08 kB
+dist/assets/gpuCsgParse-Csbm6vZj.js                          0.08 kB │ gzip:     0.09 kB
+dist/assets/wasmBrotliPacking-CmelJ9Vt.js                    0.10 kB │ gzip:     0.10 kB
+dist/assets/meshConvert-BNFx7Itv.js                          0.10 kB │ gzip:     0.10 kB
+dist/assets/rushFrontend-CADs3Eu8.js                         0.11 kB │ gzip:     0.11 kB
+dist/assets/clonedBufferBudget-mj1_Tl1r.js                   0.18 kB │ gzip:     0.16 kB
+dist/assets/solidPreviewWorker-DudG9miw.js                   0.19 kB │ gzip:     0.17 kB
+dist/assets/meshJson-CVKQT5bI.js                             0.20 kB │ gzip:     0.15 kB
+dist/assets/detect-bfspTj6y.js                               0.21 kB │ gzip:     0.17 kB
+dist/assets/meshExportFormats-DMFl2q1L.js                    0.22 kB │ gzip:     0.15 kB
+dist/assets/cadWorkbench-DpPMNJw8.js                         0.23 kB │ gzip:     0.20 kB
+dist/assets/cadNurbsStep-4dBsJFcE.js                         0.25 kB │ gzip:     0.18 kB
+dist/assets/tessellation-xf_KcgpC.js                         0.28 kB │ gzip:     0.21 kB
+dist/assets/meshFlatten-yOhcrQjW.js                          0.35 kB │ gzip:     0.25 kB
+dist/assets/meshExportAdapter-BGNCEF_M.js                    0.39 kB │ gzip:     0.27 kB
+dist/assets/solidMaterial-zu5mKHCm.js                        0.42 kB │ gzip:     0.32 kB
+dist/assets/directBodies-DO6ogp4x.js                         0.51 kB │ gzip:     0.34 kB
+dist/assets/mainSketchAssociation-DHoWEssw.js                0.51 kB │ gzip:     0.31 kB
+dist/assets/solidNurbs-DYXLEtvC.js                           0.75 kB │ gzip:     0.40 kB
+dist/assets/solidBlenderExchange-CJqT1rwM.js                 0.82 kB │ gzip:     0.48 kB
+dist/assets/exampleCatalog-CjAvrbTX.js                       0.89 kB │ gzip:     0.48 kB
+dist/assets/CoonsPreparationControls-BZJpnVVh.js             0.91 kB │ gzip:     0.61 kB
+dist/assets/mainModeling-DRqctoDU.js                         0.98 kB │ gzip:     0.60 kB
+dist/assets/previewSolidCurveOffset-ppskrA2h.js              1.03 kB │ gzip:     0.54 kB
+dist/assets/wasmStreaming-m-Ahuhra.js                        1.09 kB │ gzip:     0.62 kB
+dist/assets/codeHighlight-taaoKFE2.js                        1.17 kB │ gzip:     0.72 kB
+dist/assets/meshExportFormats-Blz0JNkx.js                    1.17 kB │ gzip:     0.62 kB
+dist/assets/SolidVolumeWitness-BjEyRAuE.js                   1.19 kB │ gzip:     0.68 kB
+dist/assets/CurveOffsetPreview-D7RTACvd.js                   1.25 kB │ gzip:     0.65 kB
+dist/assets/meshImportKernel-DFU69Qoy.js                     1.28 kB │ gzip:     0.60 kB
+dist/assets/retainedSketchProfile-DSmiIzOu.js                1.55 kB │ gzip:     0.74 kB
+dist/assets/solidStepExchange-BVuuT7Eo.js                    1.57 kB │ gzip:     0.81 kB
+dist/assets/meshTopology-DC8nG_wQ.js                         1.63 kB │ gzip:     0.82 kB
+dist/assets/meshFormats-CjvxbzDx.js                          1.66 kB │ gzip:     0.84 kB
+dist/assets/solidImportErrorMessage-C3nbkVbP.js              1.73 kB │ gzip:     0.87 kB
+dist/assets/downloadArtifact-7LgANH0C.js                     1.84 kB │ gzip:     1.06 kB
+dist/assets/mainSourceEditing-70WLzKti.js                    1.91 kB │ gzip:     0.93 kB
+dist/assets/surface-selection-Dj0Dd-sZ.js                    2.01 kB │ gzip:     0.94 kB
+dist/assets/ShellDistanceSummary-u3mJvMTk.js                 2.12 kB │ gzip:     1.17 kB
+dist/assets/exactSolidClient-BbuKS981.js                     2.25 kB │ gzip:     1.03 kB
+dist/assets/CurvePointTrimControls-CcMkaJaD.js               2.31 kB │ gzip:     1.22 kB
+dist/assets/curveOffsetErrorMessage-DMcaqWao.js              2.55 kB │ gzip:     1.26 kB
+dist/assets/wasm-host-DsNMU4BB.js                            2.58 kB │ gzip:     1.01 kB
+dist/assets/workspaceIndexedDb-BaqdkEr3.js                   2.82 kB │ gzip:     1.13 kB
+dist/assets/KeyboardShortcuts-CElSEAMA.js                    2.85 kB │ gzip:     1.54 kB
+dist/assets/polygon-DzORQWnK.js                              2.90 kB │ gzip:     1.24 kB
+dist/assets/CurveOffsetControls-DYO9Lkl_.js                  2.96 kB │ gzip:     1.44 kB
+dist/assets/solidBridge-BhIGi8UM.js                          3.18 kB │ gzip:     1.35 kB
+dist/assets/stlImport-BpKIA5WI.js                            3.26 kB │ gzip:     1.54 kB
+dist/assets/ExampleGallery-oR0tn6Ip.js                       4.11 kB │ gzip:     1.99 kB
+dist/assets/rush-frontend-B9WYsTLU.js                        4.35 kB │ gzip:     1.96 kB
+dist/assets/mainSolidWorker-Bd4VKViI.js                      4.41 kB │ gzip:     1.93 kB
+dist/assets/round-solid-options-DDfVdd3x.js                  4.44 kB │ gzip:     1.84 kB
+dist/assets/solid-draft-storage--MtVc27Z.js                  4.58 kB │ gzip:     1.69 kB
+dist/assets/ProfileIntersectionPresentation-BRKiM9jE.js      4.63 kB │ gzip:     1.97 kB
+dist/assets/CadQuantityInput-sJWJDosJ.js                     4.68 kB │ gzip:     2.22 kB
+dist/assets/solidStepAssembly-ClfOKKyr.js                    4.80 kB │ gzip:     2.29 kB
+dist/assets/CurveOffsetConstructionInfo-DH4e5RUo.js          4.99 kB │ gzip:     2.30 kB
+dist/assets/svgWorkerClient-9DAckLzJ.js                      5.25 kB │ gzip:     2.19 kB
+dist/assets/SolidVolumeDistance-666eRFTS.js                  5.38 kB │ gzip:     2.55 kB
+dist/assets/BondedSolidPanel-bX4vPAsX.js                     5.66 kB │ gzip:     2.82 kB
+dist/assets/ScanPlanePanel-CiMSfka_.js                       5.80 kB │ gzip:     2.63 kB
+dist/assets/gcodePreviewGeometry-DxxOebjf.js                 5.92 kB │ gzip:     3.11 kB
+dist/assets/StructuralSectionsPanel-Dft3f2Bq.js              6.40 kB │ gzip:     2.89 kB
+dist/assets/workspaceDocument-DZu708Ty.js                    7.91 kB │ gzip:     3.05 kB
+dist/assets/command-registry-CuZMam0n.js                     8.62 kB │ gzip:     1.76 kB
+dist/assets/LatticeReportPanel-DhuF8TNT.js                   9.59 kB │ gzip:     4.00 kB
+dist/assets/meshEditing-DsVWk7w4.js                          9.92 kB │ gzip:     3.48 kB
+dist/assets/binary-codec-DE_yKJli.js                        11.34 kB │ gzip:     4.88 kB
+dist/assets/SceneOutliner-DQWPgPRJ.js                       11.94 kB │ gzip:     4.49 kB
+dist/assets/InspectPanel-yTWohhlN.js                        11.98 kB │ gzip:     4.23 kB
+dist/assets/brepInspectionCache-D1l7Mmzg.js                 13.30 kB │ gzip:     5.10 kB
+dist/assets/vue-DuzUHoET.js                                 13.91 kB │ gzip:     5.90 kB
+dist/assets/renderer-resources-Dqnqwiuz.js                  14.42 kB │ gzip:     3.80 kB
+dist/assets/cadStepIndexedDb-Byf-Cp8e.js                    14.52 kB │ gzip:     5.85 kB
+dist/assets/app-shell-BWgQOuOO.js                           14.64 kB │ gzip:     5.85 kB
+dist/assets/main-sketch-tools-DJ5oQrmK.js                   14.66 kB │ gzip:     5.63 kB
+dist/assets/LaserCamPanel-DWWV5cmb.js                       14.77 kB │ gzip:     5.15 kB
+dist/assets/nurbsSurface-CPViuFlA.js                        17.45 kB │ gzip:     5.31 kB
+dist/assets/MaterialPathCheck-EylHCO40.js                   20.15 kB │ gzip:     7.06 kB
+dist/assets/SvgPanel-DmZznlsK.js                            20.45 kB │ gzip:     8.08 kB
+dist/assets/direct-modeling-N_D3e13S.js                     20.80 kB │ gzip:     6.83 kB
+dist/assets/solid-gpu-view-BivIYRuw.js                      22.24 kB │ gzip:     7.51 kB
+dist/assets/CommandPalette-TMW6tC74.js                      23.72 kB │ gzip:    10.01 kB
+dist/assets/csg-preview-parse-SC2TwVXQ.js                   25.86 kB │ gzip:     7.99 kB
+dist/assets/NominalTrussPanel-CHPvgtUK.js                   26.00 kB │ gzip:     8.99 kB
+dist/assets/vr-core-bytes-E3IqnTsz.js                       26.47 kB │ gzip:    22.85 kB
+dist/assets/MainModelingTools-B5n6dh3V.js                   27.78 kB │ gzip:    10.77 kB
+dist/assets/direct-commands-DD9xRF6F.js                     27.85 kB │ gzip:     9.20 kB
+dist/assets/meshConvert-BZYc1577.js                         30.30 kB │ gzip:     9.77 kB
+dist/assets/GcodePanel-C_CgDWvl.js                          30.74 kB │ gzip:    10.55 kB
+dist/assets/renderer-gpu-passes-DePc6P9t.js                 31.69 kB │ gzip:     9.53 kB
+dist/assets/CadWorkbenchPanel-CKlD8iz7.js                   36.70 kB │ gzip:    12.42 kB
+dist/assets/PhotogrammetryPanel-qV6k4tdI.js                 37.44 kB │ gzip:    14.21 kB
+dist/assets/MeshModeler-Clwkb7S2.js                         39.32 kB │ gzip:    11.37 kB
+dist/assets/FunctionReference-GPUsWv21.js                   49.85 kB │ gzip:    16.31 kB
+dist/assets/editor-controls-DnzU2Eyu.js                     70.86 kB │ gzip:    27.98 kB
+dist/assets/MechanicalGenerator-dTI1Z5Ut.js                 78.03 kB │ gzip:    23.98 kB
+dist/assets/wasm-brotli-bytes-CvZ-cL32.js                  107.63 kB │ gzip:    92.01 kB
+dist/assets/mainSolidWorkerClient-F5PPsQYZ.js              110.53 kB │ gzip:    28.84 kB
+dist/assets/renderer-CGFjQDy8.js                           123.14 kB │ gzip:    33.92 kB
+dist/assets/photogrammetry-bytes--wIBap9W.js               208.27 kB │ gzip:   179.70 kB
+dist/assets/index-BSYrmvaP.js                              231.48 kB │ gzip:    70.49 kB
+dist/assets/DirectModeler-BNm816XL.js                      438.07 kB │ gzip:   128.12 kB
+dist/assets/language-kernel-bytes-D77Zls03.js              439.92 kB │ gzip:   379.52 kB
+dist/assets/geometry-kernel-bytes-B6yD-yaZ.js            4,667.75 kB │ gzip: 4,025.27 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 3020 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 891ms

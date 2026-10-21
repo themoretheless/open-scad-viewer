@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "shell_thickness": 3
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/shell_thickness.rs": "f46bb4f2a5d434f1d95ce0ddb1d1dd1d7cac3feb1597ecc068284b5e33ee3bb1",
+    "crates/brep-core/tests/shell_thickness.rs": "b1983deff48bd6dff101b6b001e583ff17a1d1aad4fcfa65c2d642e5e975a606",
+    "crates/brep-core/src/rounded_patch_network.rs": "c9aeb6aa1ac6c6d1560e5f26e8c4de86a786d750bfaa398d6c6ffbac88854635",
+    "crates/nurbs-core/src/offset/surface_offset.rs": "bbc965049c618d5fc5bf67e45cca9ea62952f8f41ca047633bf2bbeafe0b75a4"
+  },
+  "originalSourceCapPreserved": true,
+  "savedFaceRegularityProven": true,
+  "continuousSavedBoundaryAgreement": true,
+  "idealThicknessAssurance": "sampled_deviation",
+  "continuousIdealThicknessBoundQualified": false,
+  "idealThicknessRoundingCertified": false,
+  "embeddedSolidQualified": false,
+  "wasmEditorStepQualified": false
+}

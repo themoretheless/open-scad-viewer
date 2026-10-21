@@ -111,9 +111,10 @@ const HEARTBEAT_THROTTLE_MS = 1000
 
 function staleReplacement(request: GeometryBuildRequest) {
   if (request.documentRevision !== latestDocumentRevision) {
-    const latest = [...latestByQuality.values()].reduce<GeometryBuildRequest | undefined>((best, candidate) => (
-      !best || candidate.jobId > best.jobId ? candidate : best
-    ), undefined)
+    let latest: GeometryBuildRequest | undefined
+    for (const candidate of latestByQuality.values()) {
+      if (!latest || candidate.jobId > latest.jobId) latest = candidate
+    }
     return latest ? { documentRevision: latest.documentRevision, jobId: latest.jobId } : undefined
   }
   const latest = latestByQuality.get(request.quality)
@@ -215,8 +216,8 @@ async function runBuild(
         mesh.faceIdsAuthoritative=false
         const event=jobEvent(request,{status:'sweep-preview',phase:'compiling',nodeId,
           sections:preview.report.sections,accepted:preview.report.accepted,
-          ...(!('phaseResolved' in preview.report)?{...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{}),...(preview.report.knownProfileErrorUpper!=null?{knownProfileErrorUpper:preview.report.knownProfileErrorUpper}:{})}:{}),
-          ...('phaseResolved' in preview.report?{phaseResolved:preview.report.phaseResolved,frameTransportCertified:preview.report.frameTransportCertified,certifiedErrorUpper:preview.report.certifiedErrorUpper,endpointContourErrorUpper:preview.report.endpointContourErrorUpper,profileRegularityCertified:preview.report.profileRegularityCertified,wallRegularityCertified:preview.report.wallRegularityCertified,continuousErrorUpper:preview.report.continuousErrorUpper}:{}),
+          ...(!('phaseResolved' in preview.report)?{continuousBound:preview.report.continuousBound,...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{}),...(preview.report.knownProfileErrorUpper!=null?{knownProfileErrorUpper:preview.report.knownProfileErrorUpper}:{})}:{}),
+          ...('phaseResolved' in preview.report?{phaseResolved:preview.report.phaseResolved,frameTransportCertified:preview.report.frameTransportCertified,certifiedErrorUpper:preview.report.certifiedErrorUpper,endpointContourErrorUpper:preview.report.endpointContourErrorUpper,profileRegularityCertified:preview.report.profileRegularityCertified,wallRegularityCertified:preview.report.wallRegularityCertified,...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{})}:{}),
           sampledControlDeviation:preview.report.sampledControlDeviation,budget:preview.report.budget,meshes:[mesh]})
         if(!isGeometryWorkerEvent(event))throw new Error('Sweep preview exceeds worker payload contract')
         let acknowledged:Promise<void>|undefined

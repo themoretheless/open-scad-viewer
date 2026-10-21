@@ -74,8 +74,8 @@ export function triangleDegenerate(vertices: ArrayLike<number>, a: number, b: nu
 
 export function geometry3D(
   format: OpenScadImportGeometry3D['format'],
-  sourceVertices: readonly number[],
-  sourceTriangles: readonly number[],
+  sourceVertices: ArrayLike<number>,
+  sourceTriangles: ArrayLike<number>,
 ): OpenScadImportGeometry3D {
   if (sourceVertices.length % 3 !== 0 || sourceTriangles.length % 3 !== 0) {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} mesh storage is inconsistent.`, format)
@@ -102,9 +102,10 @@ export function geometry3D(
     vertices[index] = stored
   }
   const triangles: number[] = []
+  const validIndex = (index: number): boolean => Number.isSafeInteger(index) && index >= 0 && index < vertexCount
   for (let offset = 0; offset < sourceTriangles.length; offset += 3) {
     const a = sourceTriangles[offset], b = sourceTriangles[offset + 1], c = sourceTriangles[offset + 2]
-    if (![a, b, c].every(index => Number.isSafeInteger(index) && index >= 0 && index < vertexCount)) {
+    if (!validIndex(a) || !validIndex(b) || !validIndex(c)) {
       return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} triangle index is out of bounds.`, format)
     }
     if (!triangleDegenerate(vertices, a, b, c)) triangles.push(a, b, c)

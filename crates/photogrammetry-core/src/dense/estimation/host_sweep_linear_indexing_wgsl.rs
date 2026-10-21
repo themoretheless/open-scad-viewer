@@ -160,6 +160,11 @@ pub(super) fn select_views(sparse: &Reconstruction, image: usize, max_sources: u
         .iter()
         .filter(|point| point.observations.iter().any(|&(view, _)| view == image))
         .collect();
+    let min_angle = 0.5f64.to_radians();
+    let max_angle = 75f64.to_radians();
+    // Loose cosine bounds with small margin for floating-point safety before exact atan2 check.
+    let min_cos = max_angle.cos() - 1e-6;
+    let max_cos = min_angle.cos() + 1e-6;
     let mut candidates = Vec::new();
     for (j, camera) in sparse.cameras.iter().enumerate() {
         let Some(camera) = camera else {
@@ -182,9 +187,13 @@ pub(super) fn select_views(sparse: &Reconstruction, image: usize, max_sources: u
             }
             let a = unit(sub(point.position, center));
             let b = unit(sub(point.position, other_center));
-            let angle = norm(cross(a, b)).atan2(dot(a, b));
+            let cos_ab = dot(a, b);
+            if !(min_cos..=max_cos).contains(&cos_ab) {
+                continue;
+            }
+            let angle = norm(cross(a, b)).atan2(cos_ab);
             // Accept 0.5 to 75 degrees; favor at least 10 degrees, penalize >50.
-            if !(0.5f64.to_radians()..=75f64.to_radians()).contains(&angle) {
+            if !(min_angle..=max_angle).contains(&angle) {
                 continue;
             }
             score += (angle / 10f64.to_radians()).min(1.) * (50f64.to_radians() / angle).min(1.);

@@ -101,21 +101,22 @@ fn placed_sections(sections: &[WingSection]) -> Result<Vec<Curve>> {
 /// Chordal guide parameterization: cumulative distances between section
 /// reference points, normalized to [0, 1].
 fn chordal_parameters(sections: &[WingSection]) -> Result<Vec<f64>> {
-    let mut parameters = vec![0.];
+    let mut steps = Vec::new();
     for pair in sections.array_windows::<2>() {
-        let [a, b] = pair;
-        let ra = a.reference();
-        let rb = b.reference();
-        let step = (0..3)
-            .map(|k| rb[k] - ra[k])
-            .map(|d| d * d)
-            .sum::<f64>()
-            .sqrt();
-        parameters.push(parameters.last().unwrap() + step);
+        let ra = pair[0].reference();
+        let rb = pair[1].reference();
+        let d = std::array::from_fn::<_, 3, _>(|k| rb[k] - ra[k]);
+        let step = d[0].hypot(d[1]).hypot(d[2]);
+        check(step.is_finite() && step > 0., "Wing reference distance overflows or collapses")?;
+        steps.push(step);
     }
+    let scale = steps.iter().copied().fold(0_f64, f64::max);
+    let mut parameters = vec![0.];
+    for step in steps {parameters.push(parameters.last().unwrap() + step / scale);}
     let total = *parameters.last().unwrap();
-    crate::numeric(total > 0., "Wing sections must not share one reference point")?;
-    Ok(parameters.into_iter().map(|v| v / total).collect())
+    for p in &mut parameters {*p /= total;}
+    check(parameters.windows(2).all(|p|p[0] < p[1]), "Wing chordal stations collapse at parameter precision")?;
+    Ok(parameters)
 }
 
 /// Skin the sections into one surface: sections are aligned (domain
@@ -166,10 +167,8 @@ fn collapsed(section: &Curve, scale: f64, offset: f64) -> Result<Curve> {
 
 /// Loft with an explicit tip treatment applied after the last section.
 pub fn loft_wing_with_tip(sections: &[WingSection], tip: &TipClosure) -> Result<Surface> {
-    check(
-        sections.len() <= 9,
-        "Tip closure needs room for up to two extra sections (<= 9 given)",
-    )?;
+    let limit = match tip { TipClosure::None => 11, TipClosure::Collapse => 10, TipClosure::Dome { .. } => 9 };
+    check(sections.len() <= limit, "Tip closure exceeds the eleven-section loft budget")?;
     let mut placed = placed_sections(sections)?;
     let mut parameters = chordal_parameters(sections)?;
     match tip {

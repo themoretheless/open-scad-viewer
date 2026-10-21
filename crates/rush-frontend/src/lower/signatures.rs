@@ -45,6 +45,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_chamfer" => &["edges", "size"],
         "brep_fillet" => &["edges", "radius", "segments"],
         "brep_tessellate" => &["segments"],
+        "brep_smooth_sweep_stations" => &["wall_tolerance","quantum","max_work","smoothness_max_work"],
         "brep_smooth_miter_stations" => &["wall_tolerance","quantum","max_work","max_deviation"],
         "nurbs_surface" => &[
             "degree_u",

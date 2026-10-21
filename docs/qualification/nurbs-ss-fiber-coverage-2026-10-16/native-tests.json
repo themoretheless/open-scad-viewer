@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-16",
+  "scope": "Complete original-product complement exclusion around one owned uniform fiber, with retained/replayed closed subdivision tree. General branch-atlas/physical graph/traces remain unqualified.",
+  "catalog_completed": 198,
+  "catalog_target": 200,
+  "promoted_entries": [],
+  "tests": {
+    "integration": {
+      "passed": 22,
+      "log": "native-regressions.log",
+      "current_coverage_log": "final-coverage-tests.log",
+      "note": "Final coverage tests supersede the same five earlier integration cases; no duplicate count."
+    },
+    "replay": {
+      "passed": 1,
+      "log": "final-replay-tests.log"
+    },
+    "boolean": {
+      "passed": 3,
+      "log": "boolean-tests.log"
+    }
+  },
+  "unique_passed": 26,
+  "wasm_check": "final-wasm.log",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "af716edf150c44a4c59e93de3c08a58288e2a816112ace589660713b84e87c34",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "66d5229fa9a0289dc86d6473857e15ba9bf267e71239ccf87b5de9c0d3162905",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "e1dc8cb813d0d273ead831b7fde2a9f81cef2e0b785b24f0f38027fed42d75c6",
+    "crates/nurbs-core/tests/ss_fiber_coverage.rs": "3b89bd4e4f4bbab8e4011b76ad2e0ab0c90dd0438ec26bfca9b88be646622fe4"
+  },
+  "complete_cubic_fixture": {
+    "nodes": 64,
+    "excluded_leaves": 35,
+    "original_rectangles": 190
+  },
+  "cases": [
+    "whole natural-domain single graph",
+    "additional real branch refuses single-fiber completeness",
+    "real natural-boundary branch remains unresolved",
+    "local free interval cannot authorize whole surfaces",
+    "partial budget and missing/forged tree data refuse authority",
+    "empty-complement receipt cannot expand a partial qualified free interval"
+  ],
+  "remaining": [
+    "multi-fiber/coordinate-chart coverage and discovery",
+    "owned physical branch graph and world traces",
+    "trim topology"
+  ],
+  "evidence_note": "Focused current-source checks, not a full repository test run."
+}

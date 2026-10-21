@@ -57,13 +57,13 @@ pub use crate::core::canonical;
 pub use crate::editing::direct_edit;
 pub use crate::editing::morph;
 pub use crate::editing::fairing;
+pub use crate::editing::fairing::{curvature_comb_samples, curve_torsion_at};
 pub use crate::analysis::geodesic;
 pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;
 pub use crate::construct::curves::curve_extension;
 pub use numerics::interval_eval;
-#[path = "legacy/curve_distance.rs"]
-pub mod curve_distance;
+pub use crate::distance::curve_distance;
 pub use crate::certificates::curve_decomposition_certificate;
 use numerics::exact_curve_segments;
 pub use crate::analysis::curve_deviation;
@@ -135,10 +135,12 @@ pub(crate) use crate::offset::diagnostics as curve_offset_diagnostics;
 pub use crate::offset::curve_offset_join;
 pub use crate::offset::curve_offset_wire;
 pub use crate::analysis::curve_surface_agreement;
+pub use crate::analysis::surface_collar;
 pub(crate) use crate::analysis::curve_surface_composition;
 pub mod intersection;
 use numerics::periodic_chart;
 pub use crate::analysis::radial_bounds;
+pub use crate::analysis::skin_radius;
 pub use crate::analysis::ray_surface;
 pub use crate::intersection::ss_intersection;
 pub use crate::core::surface;
@@ -151,11 +153,12 @@ pub use crate::join::surface_join;
 pub use crate::join::surface_g1;
 pub use crate::join::surface_g2;
 pub use crate::analysis::surface_shape_operator;
+pub use crate::analysis::surface_normal_trace;
+pub use crate::analysis::curve_secant_trace;
 pub use crate::editing::surface_edit;
 pub use crate::intersection::surface_contact;
 pub use crate::intersection::surface_contact_search;
-#[path = "legacy/surface_distance.rs"]
-pub mod surface_distance;
+pub use crate::distance::surface_distance;
 pub use crate::analysis::surface_monotonicity;
 pub use crate::analysis::surface_linear_monotonicity;
 pub use crate::sweeps::audit::wall as sweep_wall_audit;
@@ -205,6 +208,7 @@ pub use crate::sweeps::helical_sweep;
 pub use crate::construct::curves::rack;
 
 pub use crate::construct::curves::thread;
+pub use crate::construct::curves::worm;
 
 use numerics::exact_products;
 
@@ -297,3 +301,34 @@ pub mod surface_projected_jordan;
 pub mod surface_self_chord;
 
 pub mod surface_self_chord_coverage;
+pub use crate::join::surface_blend;
+pub use crate::join::radius_transition;
+#[path = "join/corner_blend.rs"]
+pub mod corner_blend;
+
+pub use crate::construct::surfaces::bellows;
+
+pub use crate::construct::surfaces::sphere_envelope;
+
+pub use crate::intersection::parallel_sections;
+
+pub use crate::offset::machining as planar_toolpath;
+
+#[path = "join/surface_g2_pcurves.rs"]
+pub mod surface_g2_pcurves;
+#[path = "join/surface_g1_pcurves.rs"]
+pub mod surface_g1_pcurves;
+
+#[path = "analysis/surface_coordinate_flow.rs"]
+pub mod surface_coordinate_flow;
+
+pub use crate::construct::surfaces::worm_wheel;
+
+pub use crate::analysis::surface_occlusion;
+pub use crate::construct::surfaces::wave_surface;
+pub use crate::trim::periodic_trim;
+pub use crate::construct::surfaces::superellipsoid;
+pub use crate::construct::surfaces::optical_shapes;
+pub use crate::construct::surfaces::wing_loft;
+pub use crate::construct::surfaces::profile_spring;
+pub use crate::construct::curves::radial_cam;

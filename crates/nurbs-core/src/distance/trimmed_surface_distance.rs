@@ -98,7 +98,7 @@ fn sample_pair(
     domains: &mut Domains,
     best: &mut Option<Witness>,
 ) -> Result<()> {
-    let mut samples: [Vec<Sample>; 2] = [Vec::new(), Vec::new()];
+    let mut samples: [Vec<Sample>; 2] = [Vec::with_capacity(9), Vec::with_capacity(9)];
     for side in 0..2 {
         let [[u0, u1], [v0, v1]] = parts[side].patch.domain;
         let values = |lo: f64, hi: f64| {

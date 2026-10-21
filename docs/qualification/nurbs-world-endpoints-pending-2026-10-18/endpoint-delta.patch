@@ -1,0 +1,534 @@
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -750,4 +750,4 @@
+ pub use span_intersections::{OriginalPeriodicCochainTerm, OriginalPeriodicSeparatingCochain, OriginalPeriodicRegionProbe, OwnedPeriodicSupportSignatures, own_periodic_support_signatures, OriginalPeriodicMaterialComponent, OwnedPeriodicSupportRegions, own_periodic_support_regions};
+ 
+ pub use span_intersections::{PeriodicRegionSearchLimits, PeriodicRegionSearchStop, PeriodicRegionSearchReport, construct_periodic_support_regions};
+-pub use span_intersections::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
++pub use span_intersections::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OriginalPeriodicSurfaceTraceEndpoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
+--- a/crates/brep-core/src/profile_certificate/arithmetic.rs
++++ b/crates/brep-core/src/profile_certificate/arithmetic.rs
+@@ -43,6 +43,7 @@
+         && (d.iter().all(|q| q >= &Q::zero()) || d.iter().all(|q| q <= &Q::zero()))
+ }
+ mod algebraic;
++pub(super) mod surface_expression;
+ pub(super) mod ray_winding;
+ pub(super) mod event_coordinates;
+ pub(super) mod parameter_order;
+--- a/crates/brep-core/src/profile_certificate/span_intersections.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections.rs
+@@ -540,4 +540,4 @@
+ pub use translated::{OriginalPeriodicCochainTerm, OriginalPeriodicSeparatingCochain, OriginalPeriodicRegionProbe, OwnedPeriodicSupportSignatures, own_periodic_support_signatures, OriginalPeriodicMaterialComponent, OwnedPeriodicSupportRegions, own_periodic_support_regions};
+ 
+ pub use translated::{PeriodicRegionSearchLimits, PeriodicRegionSearchStop, PeriodicRegionSearchReport, construct_periodic_support_regions};
+-pub use translated::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
++pub use translated::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OriginalPeriodicSurfaceTraceEndpoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated.rs
+@@ -1,5 +1,5 @@
+ mod periodic_support_traces;
+-pub use periodic_support_traces::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
++pub use periodic_support_traces::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OriginalPeriodicSurfaceTraceEndpoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
+ mod periodic_region_search;
+ pub use periodic_region_search::{PeriodicRegionSearchLimits, PeriodicRegionSearchStop, PeriodicRegionSearchReport, construct_periodic_support_regions};
+ mod periodic_material_clearance;
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_support_traces.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_support_traces.rs
+@@ -1,7 +1,10 @@
+ //! Original selected boundary expressions on their actual supporting surface.
+ //! These are exact compositions, not independently fitted spatial NURBS curves.
+ use super::*;
+-use crate::profile_certificate::algebraic_intersections::{decode_polynomial, decode_ratio, ratio};
++use crate::profile_certificate::algebraic_intersections::{
++    decode_polynomial, decode_ratio, polynomial, ratio,
++};
++use num_bigint::BigInt;
+ use std::{cmp::Ordering, sync::Arc};
+ 
+ #[derive(Clone, Debug, PartialEq, Eq)]
+@@ -17,6 +20,15 @@
+     pub uv: [ExactRatio; 2],
+     pub world: [ExactRatio; 3],
+ }
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct OriginalPeriodicSurfaceTraceEndpoint {
++    /// The unchanged original primitive, isolating interval and native clock.
++    pub parameter: OriginalSourceParameter,
++    /// Continuous lifted UV fractions in this endpoint's OWN original root field.
++    pub uv: [[ExactPolynomial; 2]; 2],
++    /// Exact original supporting-surface values in that SAME selected field.
++    pub world: [[ExactPolynomial; 2]; 3],
++}
+ #[derive(Clone, Debug)]
+ pub struct OwnedPeriodicSupportTraces {
+     owner: Arc<OwnedPeriodicSupportRegions>,
+@@ -62,6 +74,81 @@
+     Ok(traces)
+ }
+ impl OwnedPeriodicSupportTraces {
++    pub fn endpoint(
++        &self,
++        trace: usize,
++        end: usize,
++        max_work: usize,
++    ) -> Result<OriginalPeriodicSurfaceTraceEndpoint> {
++        if end > 1 || !(1..=1000000).contains(&max_work) {
++            return Err(refused("Invalid original surface endpoint query"));
++        }
++        self.reverify_source()?;
++        let p = &self
++            .traces
++            .get(trace)
++            .ok_or_else(|| refused("Unknown original surface endpoint trace"))?
++            .original;
++        let parameter = &p.parameters[end];
++        let f = decode_polynomial(&parameter.primitive)?;
++        let root = [
++            decode_ratio(&parameter.interval[0])?,
++            decode_ratio(&parameter.interval[1])?,
++        ];
++        let support = self.owner.owner().owner().owner().owner().rule().support();
++        let source = support.augmented().surface();
++        let cover = source.pieces();
++        let mut uv = [[Vec::new(), Vec::new()], [Vec::new(), Vec::new()]];
++        for axis in 0..2 {
++            let mut n = decode_polynomial(&p.endpoints[end][axis][0])?;
++            let d = decode_polynomial(&p.endpoints[end][axis][1])?;
++            let deck: BigInt = p.period_shift[axis]
++                .parse()
++                .map_err(|_| refused("Invalid actual endpoint deck shift"))?;
++            if !cover.wrapped()[axis] && !deck.is_zero() {
++                return Err(refused(
++                    "Endpoint deck shift changes an unwrapped coordinate",
++                ));
++            }
++            let chart = cover.chart()[axis];
++            let period = Q::from_float(chart[1]).unwrap() - Q::from_float(chart[0]).unwrap();
++            let offset = Q::from_integer(deck) * period;
++            n.resize(n.len().max(d.len()), Q::zero());
++            for (i, q) in d.iter().enumerate() {
++                n[i] -= &offset * q;
++            }
++            // Only the proved history deck shift is removed. The canonical
++            // original piece translation remains, including actual shore ends.
++            uv[axis] = [n, d];
++        }
++        let world = arithmetic::surface_expression::evaluate(
++            source.surface(),
++            &f,
++            &root,
++            &uv,
++            self.limits.max_refinements,
++            max_work,
++        )?;
++        Ok(OriginalPeriodicSurfaceTraceEndpoint {
++            parameter: parameter.clone(),
++            uv: p.endpoints[end].clone(),
++            world: world.map(|v| v.map(|p| polynomial(&p))),
++        })
++    }
++    pub fn verify_endpoint(
++        &self,
++        trace: usize,
++        end: usize,
++        endpoint: &OriginalPeriodicSurfaceTraceEndpoint,
++        max_work: usize,
++    ) -> Result<()> {
++        if self.endpoint(trace, end, max_work)? != *endpoint {
++            return Err(refused(
++                "Original surface endpoint coordinates or selected root changed",
++            ));
++        }
++        Ok(())
++    }
+     pub fn owner(&self) -> &Arc<OwnedPeriodicSupportRegions> {
+         &self.owner
+     }
+@@ -196,8 +283,46 @@
+                 o.point(i, &[q.into(), "1".into()]).unwrap();
+             }
+             assert!(o.point(i, &["2".into(), "1".into()]).is_err());
++            for end in 0..2 {
++                let endpoint = o.endpoint(i, end, 100000).unwrap();
++                assert_eq!(endpoint.parameter, t.original.parameters[end]);
++                assert_eq!(endpoint.uv, t.original.endpoints[end]);
++                let f = decode_polynomial(&endpoint.parameter.primitive).unwrap();
++                let root = [
++                    decode_ratio(&endpoint.parameter.interval[0]).unwrap(),
++                    decode_ratio(&endpoint.parameter.interval[1]).unwrap(),
++                ];
++                for axis in 0..2 {
++                    assert!(
++                        arithmetic::event_coordinates::translated_equal(
++                            &decode_polynomial(&endpoint.uv[axis][0]).unwrap(),
++                            &decode_polynomial(&endpoint.uv[axis][1]).unwrap(),
++                            &decode_polynomial(&endpoint.world[axis][0]).unwrap(),
++                            &decode_polynomial(&endpoint.world[axis][1]).unwrap(),
++                            &Q::zero(),
++                            &f,
++                            &root,
++                        )
++                        .unwrap()
++                    );
++                }
++                assert!(
++                    arithmetic::event_coordinates::zero_at(
++                        &decode_polynomial(&endpoint.world[2][0]).unwrap(),
++                        &f,
++                        &root
++                    )
++                    .unwrap()
++                );
++            }
+         }
+         assert!(reversed);
++        assert!(o.endpoint(0, 2, 100000).is_err());
++        assert!(o.endpoint(0, 0, 1).is_err());
++        let mut endpoint = o.endpoint(0, 0, 100000).unwrap();
++        o.verify_endpoint(0, 0, &endpoint, 100000).unwrap();
++        endpoint.world[0][0] = vec![["999".into(), "1".into()]];
++        assert!(o.verify_endpoint(0, 0, &endpoint, 100000).is_err());
+         assert!(o.point(4, &["1".into(), "2".into()]).is_err());
+         assert!(o.point(0, &["1".into(), "0".into()]).is_err());
+         let mut changed = o.clone();
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/surface_expression.rs
+@@ -0,0 +1,337 @@
++//! Exact tensor surface values in one ACTUAL selected real root extension.
++//! Homogeneous basis denominators are shared by order and cancel in world ratios.
++use super::*;
++use nurbs_core::surface::Surface;
++
++struct Context<'a> {
++    f: &'a Poly,
++    root: &'a [Q; 2],
++    refinements: usize,
++    work: usize,
++    max_work: usize,
++}
++impl Context<'_> {
++    fn charge(&mut self, n: usize) -> Result<()> {
++        self.work = self
++            .work
++            .checked_add(n)
++            .filter(|n| *n <= self.max_work)
++            .ok_or_else(|| {
++                refused("Original surface expression exhausted its arithmetic allowance")
++            })?;
++        Ok(())
++    }
++    fn reduce(&mut self, p: Poly) -> Result<Poly> {
++        self.charge(
++            p.len()
++                .checked_mul(self.f.len())
++                .ok_or_else(|| refused("Surface expression work overflow"))?,
++        )?;
++        event_coordinates::modulo(&p, self.f)
++    }
++    fn mul(&mut self, a: &Poly, b: &Poly) -> Result<Poly> {
++        self.charge(
++            a.len()
++                .checked_mul(b.len())
++                .ok_or_else(|| refused("Surface expression product overflow"))?,
++        )?;
++        self.reduce(product(a, b))
++    }
++    fn add(&mut self, a: &Poly, b: &Poly) -> Result<Poly> {
++        self.charge(a.len().max(b.len()))?;
++        let mut p = a.clone();
++        p.resize(a.len().max(b.len()), Q::zero());
++        for (i, b) in b.iter().enumerate() {
++            p[i] += b;
++        }
++        self.reduce(p)
++    }
++    fn scale(&mut self, a: &Poly, q: &Q) -> Result<Poly> {
++        self.charge(a.len())?;
++        self.reduce(a.iter().map(|v| v * q).collect())
++    }
++    fn sign(&mut self, p: &Poly) -> Result<i8> {
++        self.charge(
++            p.len()
++                .checked_add(self.f.len())
++                .ok_or_else(|| refused("Surface expression sign work overflow"))?,
++        )?;
++        event_coordinates::sign_at(p, self.f, self.root, self.refinements)
++    }
++    fn difference(&mut self, n: &Poly, d: &Poly, k: &Q) -> Result<Poly> {
++        let kd = self.scale(d, k)?;
++        self.reduce(sub(n, &kd))
++    }
++    fn basis(&mut self, degree: usize, knots: &[f64], input: &[Poly; 2]) -> Result<Vec<Poly>> {
++        self.charge(knots.len())?;
++        let knots = knots
++            .iter()
++            .map(|v| Q::from_float(*v).ok_or_else(|| refused("Nonfinite original surface knot")))
++            .collect::<Result<Vec<_>>>()?;
++        let mut n = self.reduce(input[0].clone())?;
++        let mut d = self.reduce(input[1].clone())?;
++        match self.sign(&d)? {
++            0 => {
++                return Err(refused(
++                    "Original surface coordinate denominator vanishes at its selected root",
++                ));
++            }
++            -1 => {
++                n = self.scale(&n, &(-Q::one()))?;
++                d = self.scale(&d, &(-Q::one()))?;
++            }
++            _ => {}
++        }
++        let count = knots.len() - degree - 1;
++        let mut signs = Vec::with_capacity(knots.len());
++        for k in &knots {
++            let p = self.difference(&n, &d, k)?;
++            signs.push(self.sign(&p)?);
++        }
++        if signs[degree] < 0 || signs[count] > 0 {
++            return Err(refused(
++                "Algebraic surface coordinate is outside its original closed active domain",
++            ));
++        }
++        let span = if signs[count] == 0 {
++            (degree..count)
++                .rev()
++                .find(|&i| signs[i] > 0 && signs[i + 1] <= 0)
++        } else {
++            (degree..count).find(|&i| signs[i] >= 0 && signs[i + 1] < 0)
++        }
++        .ok_or_else(|| {
++            refused("Algebraic surface coordinate has no original nonempty knot span")
++        })?;
++        let mut values = vec![Vec::new(); knots.len() - 1];
++        values[span] = vec![Q::one()];
++        for order in 1..=degree {
++            let mut next = Vec::with_capacity(values.len() - 1);
++            for i in 0..values.len() - 1 {
++                self.charge(1)?;
++                let mut v = Vec::new();
++                let a = &knots[i + order] - &knots[i];
++                if a > Q::zero() {
++                    let p = self.difference(&n, &d, &knots[i])?;
++                    let p = self.mul(&p, &values[i])?;
++                    v = self.scale(&p, &(Q::one() / a))?;
++                }
++                let b = &knots[i + order + 1] - &knots[i + 1];
++                if b > Q::zero() {
++                    let p = self.difference(&n, &d, &knots[i + order + 1])?;
++                    let p = self.mul(&p, &values[i + 1])?;
++                    let p = self.scale(&p, &(-Q::one() / b))?;
++                    v = self.add(&v, &p)?;
++                }
++                next.push(v);
++            }
++            values = next;
++        }
++        let mut sum = Vec::new();
++        for v in &values {
++            if self.sign(v)? < 0 {
++                return Err(refused("Original algebraic surface basis is negative"));
++            }
++            sum = self.add(&sum, v)?;
++        }
++        let mut power = vec![Q::one()];
++        for _ in 0..degree {
++            power = self.mul(&power, &d)?;
++        }
++        let difference = self.reduce(sub(&sum, &power))?;
++        if values.len() != count || self.sign(&difference)? != 0 {
++            return Err(refused(
++                "Original algebraic surface basis does not partition its source",
++            ));
++        }
++        Ok(values)
++    }
++}
++
++/// The returned coordinate fractions use the SAME primitive and root selector
++/// as the supplied UV expressions. Caller retains original source ownership.
++pub(in crate::profile_certificate) fn evaluate(
++    surface: &Surface,
++    primitive: &Poly,
++    root: &[Q; 2],
++    uv: &[[Poly; 2]; 2],
++    max_refinements: usize,
++    max_work: usize,
++) -> Result<[[Poly; 2]; 3]> {
++    if !(1..=1000000).contains(&max_work)
++        || max_refinements > 512
++        || primitive.len() < 2
++        || primitive.last().is_some_and(Zero::is_zero)
++        || root[0] > root[1]
++    {
++        return Err(refused("Invalid selected-root surface expression context"));
++    }
++    event_coordinates::bounded(primitive)?;
++    event_coordinates::bounded(&root.to_vec())?;
++    let mut c = Context {
++        f: primitive,
++        root,
++        refinements: max_refinements,
++        work: 0,
++        max_work,
++    };
++    c.charge(
++        primitive
++            .len()
++            .checked_pow(3)
++            .ok_or_else(|| refused("Surface root validation work overflow"))?,
++    )?;
++    if gcd(primitive, &derivative(primitive))?.len() > 1
++        || parameter_order::closed_roots(primitive, root)? != 1
++    {
++        return Err(refused(
++            "Surface expression needs one actual square-free selected root",
++        ));
++    }
++    c.charge(
++        surface
++            .knots_u
++            .len()
++            .checked_add(surface.knots_v.len())
++            .ok_or_else(|| refused("Surface knot work overflow"))?,
++    )?;
++    surface.validate()?;
++    let u = c.basis(surface.degree_u, &surface.knots_u, &uv[0])?;
++    let v = c.basis(surface.degree_v, &surface.knots_v, &uv[1])?;
++    let mut h = std::array::from_fn::<_, 4, _>(|_| Vec::new());
++    for (i, a) in u.iter().enumerate() {
++        for (j, b) in v.iter().enumerate() {
++            c.charge(1)?;
++            let w = Q::from_float(surface.weights[i][j])
++                .ok_or_else(|| refused("Nonfinite original surface weight"))?;
++            let p = c.mul(a, b)?;
++            let p = c.scale(&p, &w)?;
++            for axis in 0..3 {
++                let q = Q::from_float(surface.control_points[i][j][axis])
++                    .ok_or_else(|| refused("Nonfinite original surface control"))?;
++                let value = c.scale(&p, &q)?;
++                h[axis] = c.add(&h[axis], &value)?;
++            }
++            h[3] = c.add(&h[3], &p)?;
++        }
++    }
++    if c.sign(&h[3])? <= 0 {
++        return Err(refused(
++            "Original algebraic world denominator is not positive",
++        ));
++    }
++    Ok(std::array::from_fn(|axis| [h[axis].clone(), h[3].clone()]))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn q(n: i64, d: i64) -> Q {
++        Q::new(n.into(), d.into())
++    }
++    fn rational(n: i64, d: i64) -> [Poly; 2] {
++        [vec![q(n, d)], vec![Q::one()]]
++    }
++    fn surface() -> Surface {
++        Surface {
++            degree_u: 1,
++            degree_v: 1,
++            knots_u: vec![0., 0., 1., 1.],
++            knots_v: vec![0., 0., 1., 1.],
++            control_points: (0..2)
++                .map(|i| {
++                    (0..2)
++                        .map(|j| vec![i as f64, j as f64, (i * j) as f64])
++                        .collect()
++                })
++                .collect(),
++            weights: vec![vec![1., 2.], vec![3., 4.]],
++            periodic_u: false,
++            periodic_v: false,
++        }
++    }
++    #[test]
++    fn algebraic_surface_expression_preserves_irrational_weighted_world_values_and_refuses_unknown_contexts()
++     {
++        let f = vec![q(-2, 1), q(0, 1), q(1, 1)];
++        let root = [q(1, 1), q(3, 2)];
++        let uv = [[vec![q(0, 1), q(1, 2)], vec![Q::one()]], rational(1, 3)];
++        let world = evaluate(&surface(), &f, &root, &uv, 128, 100000).unwrap();
++        let denominator = vec![q(4, 1), q(3, 1)];
++        let numerators = [
++            vec![q(0, 1), q(5, 1)],
++            vec![q(2, 1), q(1, 1)],
++            vec![q(0, 1), q(2, 1)],
++        ];
++        for axis in 0..3 {
++            let difference = sub(
++                &product(&world[axis][0], &denominator),
++                &product(&numerators[axis], &world[axis][1]),
++            );
++            assert!(event_coordinates::zero_at(&difference, &f, &root).unwrap());
++        }
++        assert!(evaluate(&surface(), &f, &root, &uv, 128, 1).is_err());
++        assert!(evaluate(&surface(), &f, &[q(2, 1), q(3, 1)], &uv, 128, 100000).is_err());
++        assert!(evaluate(&surface(), &f, &[q(-3, 2), q(-1, 1)], &uv, 128, 100000).is_err());
++        let mut pole = uv.clone();
++        pole[0][1] = f.clone();
++        assert!(evaluate(&surface(), &f, &root, &pole, 128, 100000).is_err());
++        assert!(
++            evaluate(
++                &surface(),
++                &vec![q(0, 1), q(0, 1), q(1, 1)],
++                &[q(0, 1), q(0, 1)],
++                &uv,
++                128,
++                100000
++            )
++            .is_err()
++        );
++    }
++    #[test]
++    fn algebraic_surface_expression_keeps_closed_knot_endpoint_conventions() {
++        let f = vec![q(0, 1), q(1, 1)];
++        let root = [q(0, 1), q(0, 1)];
++        for (uv, expected) in [
++            ([rational(0, 1), rational(0, 1)], [0, 0, 0]),
++            ([rational(1, 1), rational(0, 1)], [1, 0, 0]),
++            ([rational(1, 1), rational(1, 1)], [1, 1, 1]),
++        ] {
++            let world = evaluate(&surface(), &f, &root, &uv, 128, 100000).unwrap();
++            for i in 0..3 {
++                assert_eq!(
++                    at(&world[i][0], &q(0, 1)) / at(&world[i][1], &q(0, 1)),
++                    q(expected[i], 1)
++                );
++            }
++        }
++    }
++    #[test]
++    fn algebraic_surface_expression_keeps_nonclamped_nonbinary_source_basis() {
++        let s = Surface {
++            degree_u: 2,
++            degree_v: 1,
++            knots_u: vec![0., 1., 2., 3., 4., 5.],
++            knots_v: vec![10., 10., 14., 14.],
++            control_points: (0..3)
++                .map(|i| vec![vec![i as f64, 0., 0.], vec![i as f64, 1., 0.]])
++                .collect(),
++            weights: vec![vec![1., 1.], vec![2., 2.], vec![1., 1.]],
++            periodic_u: false,
++            periodic_v: false,
++        };
++        let f = vec![q(0, 1), q(1, 1)];
++        let root = [q(0, 1), q(0, 1)];
++        for (u, x) in [(q(2, 1), q(2, 3)), (q(7, 3), q(28, 31)), (q(3, 1), q(4, 3))] {
++            let uv = [[vec![u], vec![Q::one()]], rational(34, 3)];
++            let world = evaluate(&s, &f, &root, &uv, 128, 100000).unwrap();
++            let expected = [x, q(1, 3), q(0, 1)];
++            for i in 0..3 {
++                assert_eq!(
++                    at(&world[i][0], &q(0, 1)) / at(&world[i][1], &q(0, 1)),
++                    expected[i]
++                );
++            }
++        }
++    }
++}

@@ -38,7 +38,7 @@ fn build_branch_graph(
             "coedgeTrim":component.get("coedgeTrim").cloned().unwrap_or(Value::Null),
             "materialSides":component.get("materialSides").cloned().unwrap_or(json!([1,-1])),
             "junction":component.get("junction").and_then(Value::as_bool).unwrap_or(false),
-            "ownership":component.get("ownership").cloned().unwrap_or(json!("half_open_span_faces"))
+            "ownership":component.get("ownership").cloned().unwrap_or(json!("unproven"))
         }));
     }
     json!({
@@ -46,10 +46,11 @@ fn build_branch_graph(
         "certificate":{
             "context":tolerance.spec_identity(),
             "componentCount":summary.component_count,
-            "allCellsClassified":complete,
-            "oneToOneJoins":true,
-            "noUnresolved":complete,
-            "method":"4d-Bernstein-Krawczyk-continuation"
+            "allCellsClassified":summary.permits_topology_authorship,
+            "geometryCoverageComplete":complete,
+            "oneToOneJoins":summary.permits_topology_authorship,
+            "noUnresolved":summary.permits_topology_authorship,
+            "method":"native_components_without_owned_graph_proof"
         },
         "permitsTopologyAuthorship":summary.permits_topology_authorship
     })
@@ -83,7 +84,7 @@ fn build_uv_arrangements(
         }
     }
     json!({
-        "kind":"rational_curved_dcel",
+        "kind":"candidate_uv_traces",
         "traces":traces,
         "holes":[],
         "closedLoops":summary.closed_loops,
@@ -91,7 +92,7 @@ fn build_uv_arrangements(
         "singularStrata":summary.singular_strata,
         "coverageComplete":complete,
         "context":tolerance.spec_identity(),
-        "permitsTrimClassification":complete
+        "permitsTrimClassification":summary.permits_topology_authorship
     })
 }
 
@@ -105,11 +106,21 @@ pub fn intersect_surface_surface(
 }
 impl value_codec::Serialize for SurfaceSurfaceIntersection {
     fn to_value(&self) -> Value {
-        let components: Vec<Value> = self
+        let mut components: Vec<Value> = self
             .components
             .iter()
             .map(value_codec::Serialize::to_value)
             .collect();
+        if self.coverage_proof == CoverageProof::Unproven {
+            for component in &mut components {
+                component["evidenceScope"] = json!("candidate_only");
+                for key in ["pcurveFirst", "pcurveSecond"] {
+                    if component.get(key).is_some() {
+                        component[key]["correspondence"] = json!("candidate_only");
+                    }
+                }
+            }
+        }
         let unresolved = &self.unresolved;
         let boxes_visited = self.boxes_visited;
         let bernstein_excluded = self.bernstein_excluded;
@@ -125,7 +136,7 @@ impl value_codec::Serialize for SurfaceSurfaceIntersection {
             json!({
                 "granted":false,
                 "revoked":true,
-                "reason":if !unresolved.is_empty(){"unresolved_or_resource_or_conditioning"}else{"incomplete_branch_graph"},
+                "reason":if self.coverage_proof==CoverageProof::Unproven {"coverage_unproven"} else if !self.topology_proven {"branch_ownership_unproven"} else {"unresolved_or_resource_or_conditioning"},
                 "queryOnly":true
             })
         };
@@ -133,11 +144,14 @@ impl value_codec::Serialize for SurfaceSurfaceIntersection {
             "version":VERSION,
             "kind":"surface_surface",
             "coverage":{
-                "method":"4D-Bernstein-hull-exclusion-Krawczyk-continuation",
+                "method":if self.coverage_proof==CoverageProof::Unproven {"candidate_subdivision_and_continuation"} else {self.coverage_proof.label()},
+                "proofScope":self.coverage_proof.label(),
+                "topologyProven":self.topology_proven,
                 "complete":complete,
                 "boxesVisited":boxes_visited,
                 "bernsteinExcluded":bernstein_excluded,
-                "krawczykIsolated":krawczyk_isolated,
+                "krawczykIsolated":0,
+                "candidateSeeds":krawczyk_isolated,
                 "resourceLimit":MAX_BOXES,
                 "missedBranchProof":complete
             },
@@ -145,7 +159,7 @@ impl value_codec::Serialize for SurfaceSurfaceIntersection {
             "branchGraph":branch_graph,
             "uvArrangement":uv,
             "unresolved":unresolved,
-            "rounding":"binary64-nextafter-outward",
+            "rounding":if self.coverage_proof==CoverageProof::Unproven {"candidate_binary64"} else {"original_source_and_checked_binary64"},
             "evidence":tolerance_evidence(tolerance),
             "topologyAuthority":topology_authority,
             "booleanMutationAuthority":false
@@ -177,7 +191,7 @@ impl value_codec::Serialize for ContinuedBranch {
             "geometryEnclosure":self.geometry_enclosure,
             "coedgeTrim":self.coedge_trim,
             "materialSides":[1,-1],
-            "ownership":"half_open_span_faces",
+            "ownership":"unproven",
             "junction":self.junction
         })
     }
@@ -195,6 +209,7 @@ impl value_codec::Serialize for UnresolvedSurfaceIntersection {
         }
         if let Some(classification) = &self.classification {
             diagnostic["classification"] = json!(match classification {
+                UnresolvedClassification::UnprovenReduction => "unproven_reduction",
                 UnresolvedClassification::PoleOrSingular => "pole_or_singular",
                 UnresolvedClassification::NearMissOrIllConditioned =>
                     "near_miss_or_ill_conditioned",
@@ -228,7 +243,7 @@ impl value_codec::Serialize for ExactBranch {
     {"location":location,"uvFirst":self.endpoint_uv[0][0],"uvSecond":self.endpoint_uv[0][1]},
     {"location":location,"uvFirst":self.endpoint_uv[1][0],"uvSecond":self.endpoint_uv[1][1]}],
    "seamWrap":[[0,0],[0,0]],"geometryEnclosure":self.geometry_enclosure,
-   "coedgeTrim":self.coedge_trim,"materialSides":[1,-1],"ownership":"half_open_span_faces"});
+   "coedgeTrim":self.coedge_trim,"materialSides":[1,-1],"ownership":"unproven"});
         if let Some(junction) = self.junction {
             branch["junction"] = json!(junction);
         }
@@ -260,13 +275,13 @@ impl value_codec::Serialize for TangencyBranch {
    "pcurveSecond":{"kind":"point","uv":sample.uv_second,"correspondence":"interval_certified"},
    "endpoints":[{"location":"tangency","uvFirst":sample.uv_first,"uvSecond":sample.uv_second}],
    "seamWrap":[[0,0],[0,0]],"geometryEnclosure":self.geometry_enclosure,
-   "coedgeTrim":self.coedge_trim,"materialSides":[1,-1],"ownership":"half_open_span_faces",
+   "coedgeTrim":self.coedge_trim,"materialSides":[1,-1],"ownership":"unproven",
    "junction":self.junction,"tangentMultiplicity":multiplicity})
     }
 }
 
-/// Coverage verifier for SS reports: Complete requires empty unresolved and
-/// BranchGraph/UV coverage agreement under the same ToleranceContext.
+/// Structural consistency check of a native SS report. Does not replay a
+/// geometric proof from JSON or grant topology/Boolean authority.
 pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
     check(
         report["kind"] == "surface_surface",
@@ -278,6 +293,25 @@ pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
         .as_array()
         .map(|a| a.len())
         .unwrap_or(1);
+    if complete {
+        check(
+            matches!(
+                report["coverage"]["proofScope"].as_str(),
+                Some(
+                    "original_control_hull_disjoint"
+                        | "same_parameter_identity"
+                        | "rectilinear_charts"
+                )
+            ),
+            "Complete SS report lacks an admitted coverage proof scope",
+        )?;
+    }
+    check(
+        report["topologyAuthority"]["granted"] == false
+            && report["branchGraph"]["permitsTopologyAuthorship"] != true
+            && report["uvArrangement"]["permitsTrimClassification"] != true,
+        "SS report lacks an owned topology proof",
+    )?;
     if complete && unresolved != 0 {
         return Err(crate::input(
             "Complete SS report must not retain unresolved parameter boxes",
@@ -304,7 +338,8 @@ pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
         "complete":complete,
         "componentCount":report["components"].as_array().map(|a|a.len()).unwrap_or(0),
         "unresolvedCount":unresolved,
-        "notes":["ss_coverage_verified","no_graph_patch_iso_fixture"]
+        "semanticProofReplayed":false,
+        "notes":["ss_report_structure_verified","no_graph_patch_iso_fixture"]
     }))
 }
 

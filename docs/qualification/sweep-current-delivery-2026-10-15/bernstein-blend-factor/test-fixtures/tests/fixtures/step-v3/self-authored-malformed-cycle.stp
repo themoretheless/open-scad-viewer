@@ -1,0 +1,10 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Redistributable OpenSCAD Viewer cyclic STEP /3 fixture'),'2;1');
+FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'));
+ENDSEC;
+DATA;
+#1=PRODUCT('cycle','cycle','',(#2));
+#2=PRODUCT_CONTEXT('cycle',#1,'mechanical');
+ENDSEC;
+END-ISO-10303-21;

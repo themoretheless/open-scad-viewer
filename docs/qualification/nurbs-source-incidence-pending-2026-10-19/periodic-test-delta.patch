@@ -1,0 +1,119 @@
+--- a/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_support_incidence.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_support_incidence.rs
+@@ -419,3 +419,116 @@
+         assert!(o.vertex_endpoint(0, 100000).is_err());
+     }
+ }
++
++#[cfg(test)]
++mod periodic_tests {
++    use super::super::periodic_support_regions::tests as fixtures;
++    use super::*;
++    use crate::profile_certificate::algebraic_intersections::{decode_polynomial, decode_ratio};
++    fn context(p: &OriginalPeriodicSurfaceTraceEndpoint) -> (Vec<Q>, [Q; 2]) {
++        (
++            decode_polynomial(&p.parameter.primitive).unwrap(),
++            [
++                decode_ratio(&p.parameter.interval[0]).unwrap(),
++                decode_ratio(&p.parameter.interval[1]).unwrap(),
++            ],
++        )
++    }
++    #[test]
++    fn original_surface_incidence_periodic_self_loops_keep_exact_world_seam_vertices() {
++        let signatures = Arc::new(
++            own_periodic_support_signatures(
++                fixtures::cylinder_bands(),
++                ParameterOrderLimits::default(),
++                10000,
++            )
++            .unwrap(),
++        );
++        let search = construct_periodic_support_regions(
++            signatures,
++            ParameterOrderLimits::default(),
++            PeriodicRegionSearchLimits::default(),
++        )
++        .unwrap();
++        assert_eq!(search.stop(), None);
++        assert_eq!(search.paths().len(), 2);
++        let regions = Arc::new(search.regions().unwrap().clone());
++        assert_eq!(regions.components().len(), 2);
++        let traces = Arc::new(
++            own_periodic_support_traces(regions, ParameterOrderLimits::default(), 1000).unwrap(),
++        );
++        let o = own_periodic_support_incidence(traces, 1000).unwrap();
++        assert_eq!(
++            (
++                o.vertices().len(),
++                o.edges().len(),
++                o.loops().len(),
++                o.entities()
++            ),
++            (4, 4, 4, 24)
++        );
++        assert!(o.has_regular_boundary());
++        assert!(o.edges().iter().all(|e| e.vertices[0] == e.vertices[1]));
++        assert!(o.loops().iter().all(|w| w.traces.len() == 1));
++        let levels = [
++            Q::new(1.into(), 4.into()),
++            Q::new(3.into(), 8.into()),
++            Q::new(5.into(), 8.into()),
++            Q::new(3.into(), 4.into()),
++        ];
++        // The first component has oppositely oriented essential rims. Query
++        // both actual shores of each, retaining their distinct root fields.
++        for edge in o.edges().iter().take(2) {
++            let t = &o.owner().traces()[edge.trace];
++            assert!(t.original.source < levels.len());
++            let a = o.owner().endpoint(edge.trace, 0, 100000).unwrap();
++            let b = o.owner().endpoint(edge.trace, 1, 100000).unwrap();
++            for p in [&a, &b] {
++                let (f, root) = context(p);
++                for axis in 0..3 {
++                    let n = decode_polynomial(&p.world[axis][0]).unwrap();
++                    let d = decode_polynomial(&p.world[axis][1]).unwrap();
++                    let expected = if axis == 2 {
++                        levels[t.original.source].clone()
++                    } else {
++                        Q::zero()
++                    };
++                    assert_eq!(
++                        arithmetic::parameter_order::compare_rational(
++                            &f,
++                            [&n, &d],
++                            &root,
++                            &vec![Q::zero(), Q::one()],
++                            [&vec![expected], &vec![Q::one()]],
++                            &[Q::zero(), Q::zero()],
++                            128,
++                            128
++                        )
++                        .unwrap(),
++                        std::cmp::Ordering::Equal
++                    );
++                }
++            }
++            let (f, ar) = context(&a);
++            let (g, br) = context(&b);
++            let an = decode_polynomial(&a.uv[0][0]).unwrap();
++            let ad = decode_polynomial(&a.uv[0][1]).unwrap();
++            let bn = decode_polynomial(&b.uv[0][0]).unwrap();
++            let bd = decode_polynomial(&b.uv[0][1]).unwrap();
++            assert_ne!(
++                arithmetic::parameter_order::compare_rational(
++                    &f,
++                    [&an, &ad],
++                    &ar,
++                    &g,
++                    [&bn, &bd],
++                    &br,
++                    128,
++                    128
++                )
++                .unwrap(),
++                std::cmp::Ordering::Equal
++            );
++        }
++    }
++}

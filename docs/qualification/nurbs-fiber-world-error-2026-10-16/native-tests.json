@@ -1,0 +1,46 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "source-owned continuous world error to one specific original intersection root, not merely proximity to both supports",
+    "actual verified R/scales/q and complete original first-support Jacobian retained and independently replayed",
+    "whole original agreement cells support multiple curve/surface knot spans and source-monotone NURBS clocks",
+    "adaptive local whole-fiber construction tested with both curved supports, rotated frames and original32x32 control grids",
+    "automatic global atlas discovery, owned physical branch assembly and source-bound trim topology remain open"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1447,
+      "failed": 0,
+      "ignored": 0
+    },
+    "ss-integrations": {
+      "suites": 10,
+      "passed": 46,
+      "failed": 0,
+      "ignored": 0
+    },
+    "wasm": "both crates pass",
+    "format": "explicit changed modules/tests pass after preserving concurrent constructor changes",
+    "api_map": "186 modules,200 entries; concurrent radius_transition registered under joining after actual source inspection",
+    "catalog": "198 implemented,2 planned,no errors",
+    "scope_note": "world trace and operator private audits included in full core1384; earlier component/trace stages are superseded for these sources, not additional tests"
+  },
+  "compiled_source_drift": [],
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "670f19aaddb69b1d7c4ac5f9d8b5971879a5489d556f4d467ac46f273b009d18",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/world_trace.rs": "1192d44164a7cc675c2fe2eb9044e6c1e1f5eae9d3f6c8b47a11076842a9c004",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/construct_trace.rs": "8e3eb4e6a030295ecbd2af19281501d53233cda42dc503d2779ad76f43137ff1",
+    "crates/nurbs-core/tests/ss_fiber_world_trace.rs": "abe389b6046e28d981e8941755fe0016f9ec77c9d96dda8c33e27045156b668a",
+    "crates/nurbs-core/tests/ss_construct_trace.rs": "f6b1fd49cada6be4655afbdb6d808e946ced5e649faaa5bc315c0f51318eaec0",
+    "crates/nurbs-core/tests/ss_construct_trace_budget.rs": "be3f3e275fba2d1d24d824dcbf73e6c347acaf8ad74723239ceaeb77af4a14c8",
+    "crates/nurbs-core/src/domains.rs": "f855b8c2b767acf3cee293b4c944cad6157e6ddeb94cbbac004da3afcd2deb6f"
+  }
+}

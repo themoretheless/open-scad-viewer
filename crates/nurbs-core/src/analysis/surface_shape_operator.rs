@@ -75,6 +75,53 @@ pub(crate) fn from_jets(j: &jets::Jets) -> Result<Option<Shape>> {
     }
     Ok(Some(Shape { normal, tensor }))
 }
+/// Recover the world graph derivatives through a proved nonsingular XY chart.
+/// This avoids subtracting independent wide tangent boxes to prove a nearly
+/// planar curvature. No planarity or orthonormality of the proposal is assumed.
+fn from_graph_jets(j:&jets::Jets,frame:([usize;3],[f64;2]))->Result<Option<Shape>> {
+    let (axes,plane)=frame;
+    let (xu,xv,yu,yv)=(j[1][0][0],j[0][1][0],j[1][0][1],j[0][1][1]);
+    let determinant=xu.mul(yv)?.sub(xv.mul(yu)?)?;
+    if determinant.lo<=0.&&determinant.hi>=0. {return Ok(None);}
+    let neg=|x:I|I::new(-x.hi,-x.lo);
+    let divide=|x:I|if determinant.hi<0. {neg(x)?.div(neg(determinant)?)}else{x.div(determinant)};
+    let inverse=[[divide(yv)?,divide(neg(xv)?)?],[divide(neg(yu)?)?,divide(xu)?]];
+    let gradient=std::array::from_fn::<_,2,_>(|a|j[1][0][2].mul(inverse[0][a]).and_then(|x|x.add(j[0][1][2].mul(inverse[1][a])?)));
+    let gradient=[gradient[0].clone()?,gradient[1].clone()?];
+    let mut second=[[I::point(0.);2];2];
+    for a in 0..2 {for b in 0..2 {
+        let (u,v)=(usize::from(a==0)+usize::from(b==0),usize::from(a==1)+usize::from(b==1));
+        second[a][b]=j[u][v][2].sub(gradient[0].mul(j[u][v][0])?)?.sub(gradient[1].mul(j[u][v][1])?)?;
+    }}
+    let mut graph=[[[I::point(0.);3];4];4];
+    graph[1][0][axes[0]]=I::point(1.);graph[0][1][axes[1]]=I::point(1.);
+    graph[1][0][axes[2]]=I::point(plane[0]).add(gradient[0])?;
+    graph[0][1][axes[2]]=I::point(plane[1]).add(gradient[1])?;
+    for a in 0..2 {for b in a..2 {
+        let mut value=I::point(0.);
+        for r in 0..2 {for s in 0..2 {value=value.add(inverse[r][a].mul(second[r][s])?.mul(inverse[s][b])?)?;}}
+        graph[usize::from(a==0)+usize::from(b==0)][usize::from(a==1)+usize::from(b==1)][axes[2]]=value;
+    }}
+    let Some(mut shape)=from_jets(&graph)? else{return Ok(None);};
+    if determinant.hi<0. {
+        for x in &mut shape.normal {*x=neg(*x)?;}
+        for row in &mut shape.tensor {for x in row {*x=neg(*x)?;}}
+    }
+    Ok(Some(shape))
+}
+fn graph_proposal(s:&Surface,edge:crate::surface_join::Boundary,range:[f64;2],reverse:bool)->Option<([usize;3],[f64;2])> {
+    use crate::surface_join::Boundary;
+    let d=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],[s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
+    let (fixed,max)=match edge {Boundary::UMin=>(0,false),Boundary::UMax=>(0,true),Boundary::VMin=>(1,false),Boundary::VMax=>(1,true)};
+    let mut t=range[0]*0.5+range[1]*0.5;if reverse{t=1.-t;}
+    let mut uv=[0.;2];uv[fixed]=d[fixed][usize::from(max)];uv[1-fixed]=d[1-fixed][0]+t*(d[1-fixed][1]-d[1-fixed][0]);
+    let n=s.evaluate(uv[0],uv[1]).ok()?.unit_normal()?;
+    let c=(0..3).max_by(|&a,&b|n[a].abs().total_cmp(&n[b].abs()))?;
+    if n[c]==0. {return None;}
+    let axes=[(c+1)%3,(c+2)%3,c];let plane=[-n[axes[0]]/n[c],-n[axes[1]]/n[c]];
+    plane.iter().all(|x|x.is_finite()).then_some((axes,plane))
+}
+
 /// Local query only: this is not a whole-seam G2 certificate. Automatic needs
 /// a C2 basis at interior knots; explicit sides resolve one-sided jet queries.
 pub fn at(surface: &Surface, parameter: [f64; 2], sides: [Side; 2]) -> Result<Report> {
@@ -123,6 +170,149 @@ pub fn at(surface: &Surface, parameter: [f64; 2], sides: [Side; 2]) -> Result<Re
     report.normal = Some(shape.normal.map(|x| [x.lo, x.hi]));
     report.tensor = Some(shape.tensor.map(|row| row.map(|x| [x.lo, x.hi])));
     Ok(report)
+}
+
+pub struct RegionReport {
+    pub shape: Report,
+    pub cells: usize,
+}
+/// Whole natural-UV rectangle on the original representation, including
+/// degenerate rectangles on interior trim lines. Differentiate original spans
+/// before restriction; no rounded cropped surface is used as evidence.
+pub fn rectangle_bounds(
+    surface: &Surface,
+    query: [[f64; 2]; 2],
+    max_cells: usize,
+) -> Result<RegionReport> {
+    surface.validate()?;
+    crate::check(
+        max_cells <= 100000,
+        "Shape region needs at most 100000 cells",
+    )?;
+    let domains = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    crate::check(
+        !surface.periodic_u
+            && !surface.periodic_v
+            && (0..2).all(|k| {
+                query[k].iter().all(|x| x.is_finite())
+                    && domains[k][0] <= query[k][0]
+                    && query[k][0] <= query[k][1]
+                    && query[k][1] <= domains[k][1]
+            }),
+        "Shape rectangle must lie in a nonperiodic original domain",
+    )?;
+    let missing = |status, cells| RegionReport {
+        shape: Report {
+            status,
+            normal: None,
+            tensor: None,
+        },
+        cells,
+    };
+    for (degree, knots, axis) in [
+        (surface.degree_u, &surface.knots_u, 0),
+        (surface.degree_v, &surface.knots_v, 1),
+    ] {
+        for &node in knots {
+            if domains[axis][0] < node
+                && node < domains[axis][1]
+                && query[axis][0] <= node
+                && node <= query[axis][1]
+                && (degree as isize - knots.iter().filter(|&&k| k == node).count() as isize) < 2
+            {
+                return Ok(missing(Status::ContinuityNotProven, 0));
+            }
+        }
+    }
+    let midpoint = query.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    let frame = surface
+        .evaluate(midpoint[0], midpoint[1])
+        .ok()
+        .and_then(|p| p.unit_normal())
+        .and_then(|n| {
+            let z = (0..3).max_by(|&a, &b| n[a].abs().total_cmp(&n[b].abs()))?;
+            if n[z] == 0. {
+                return None;
+            }
+            let axes = [(z + 1) % 3, (z + 2) % 3, z];
+            let plane = [-n[axes[0]] / n[z], -n[axes[1]] / n[z]];
+            plane.iter().all(|x| x.is_finite()).then_some((axes, plane))
+        });
+    let mut result: Option<Shape> = None;
+    let mut cells = 0;
+    for u in surface.degree_u..surface.control_points.len() {
+        for v in surface.degree_v..surface.control_points[0].len() {
+            let full = [
+                [surface.knots_u[u], surface.knots_u[u + 1]],
+                [surface.knots_v[v], surface.knots_v[v + 1]],
+            ];
+            let clipped =
+                std::array::from_fn(|k| [query[k][0].max(full[k][0]), query[k][1].min(full[k][1])]);
+            if (0..2).any(|k| full[k][0] == full[k][1] || clipped[k][0] > clipped[k][1]) {
+                continue;
+            }
+            if cells == max_cells {
+                return Ok(missing(Status::RegularityNotProven, cells));
+            }
+            cells += 1;
+            let graph = frame
+                .map(|f| {
+                    jets::calculate_partial_stable_graph(surface, [u, v], clipped, [None; 2], f)
+                })
+                .transpose()?;
+            let proposed = if let (Some(f), Some(j)) = (frame, graph.as_ref()) {
+                from_graph_jets(j, f)?
+            } else {
+                None
+            };
+            let shape = match proposed {
+                Some(x) => Some(x),
+                None => from_jets(&jets::calculate_partial_stable(
+                    surface,
+                    [u, v],
+                    clipped,
+                    [None; 2],
+                )?)?,
+            };
+            let Some(shape) = shape else {
+                return Ok(missing(Status::RegularityNotProven, cells));
+            };
+            if let Some(current) = &mut result {
+                for i in 0..3 {
+                    current.normal[i].lo = current.normal[i].lo.min(shape.normal[i].lo);
+                    current.normal[i].hi = current.normal[i].hi.max(shape.normal[i].hi);
+                    for j in 0..3 {
+                        current.tensor[i][j].lo =
+                            current.tensor[i][j].lo.min(shape.tensor[i][j].lo);
+                        current.tensor[i][j].hi =
+                            current.tensor[i][j].hi.max(shape.tensor[i][j].hi);
+                    }
+                }
+            } else {
+                result = Some(shape);
+            }
+        }
+    }
+    let Some(shape) = result else {
+        return Ok(missing(Status::RegularityNotProven, cells));
+    };
+    Ok(RegionReport {
+        shape: Report {
+            status: Status::Available,
+            normal: Some(shape.normal.map(|x| [x.lo, x.hi])),
+            tensor: Some(shape.tensor.map(|r| r.map(|x| [x.lo, x.hi]))),
+        },
+        cells,
+    })
 }
 
 /// Continuous tensor/normal boxes on a normalized boundary subinterval.
@@ -176,9 +366,12 @@ pub fn boundary_bounds(
             });
         }
     }
+    let frame=graph_proposal(surface,edge,range,reverse);
+    let graph=frame.map(|frame|crate::surface_g1::boundary_graph_jets(surface,edge,range,reverse,frame)).transpose()?;
     let mut result: Option<Shape> = None;
-    for j in crate::surface_g1::boundary_jets(surface, edge, range, reverse)? {
-        let Some(shape) = from_jets(&j)? else {
+    for (index,j) in crate::surface_g1::boundary_jets(surface, edge, range, reverse)?.iter().enumerate() {
+        let graph_shape=if let (Some(frame),Some(graph))=(frame,graph.as_ref()) {from_graph_jets(&graph[index],frame)?}else{None};
+        let Some(shape) = (if graph_shape.is_some(){graph_shape}else{from_jets(j)?}) else {
             return Ok(Report {
                 status: Status::RegularityNotProven,
                 normal: None,

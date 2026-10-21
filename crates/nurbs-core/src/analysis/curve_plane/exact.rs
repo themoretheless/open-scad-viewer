@@ -57,7 +57,7 @@ pub(super) fn exact_four_products_zero(terms: &[[f64; 4]]) -> bool {
     }
     positive == negative
 }
-pub(super) fn exact_linear_parameter(c: &Curve, span: usize, t: f64, n: [f64; 3], o: f64) -> bool {
+pub(crate) fn exact_linear_parameter(c: &Curve, span: usize, t: f64, n: [f64; 3], o: f64) -> bool {
     if c.degree != 1 {
         return false;
     }

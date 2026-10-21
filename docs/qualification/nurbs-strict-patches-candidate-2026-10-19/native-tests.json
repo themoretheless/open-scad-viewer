@@ -1,0 +1,54 @@
+{
+  "recorded_at_utc": "2026-10-19T12:10:10.603962+00:00",
+  "candidate": "/private/tmp/nurbs-native-200-strict-patches-20261019",
+  "source_files": 135,
+  "status": "Qualified strict pairwise-disjoint Jordan chart containment and local patch ownership",
+  "native": {
+    "passed": 24,
+    "failed": 0,
+    "ignored": 1,
+    "seconds": 549.67,
+    "session": 92491,
+    "terminal_exit": 0,
+    "names": [
+      "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+      "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+      "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycle_sides::tests::actual_hole_has_distinct_positive_outer_and_negative_inner_source_germs",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_touching_filled_regions_keep_two_cycles_and_one_shared_chart_vertex",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::tests::exact_clockwise_successors_keep_two_touching_material_fans_separate",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::tests::incomplete_or_duplicated_ports_and_walk_exhaustion_never_publish_partial_cycles",
+      "profile_certificate::span_intersections::translated::periodic_chart_strict_patches::tests::inconsistent_containment_or_material_alternation_refuses",
+      "profile_certificate::span_intersections::translated::periodic_chart_strict_patches::tests::nested_island_belongs_to_its_own_patch_inside_an_outer_hole",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::actual_cylinder_difference_does_not_fill_b_only_space_and_grouped_band_keeps_essential_wires",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::boolean_dag_has_operand_semantics_and_rejects_malformed_references",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::dual_periods_distinguish_cylinder_separation_torus_obstruction_and_parity",
+      "profile_certificate::span_intersections::translated::periodic_relative_winding::tests::essential_opposite_wires_retain_separate_relative_values_and_replay_original_sources",
+      "profile_certificate::span_intersections::translated::periodic_replay::tests::bounded_capacity_falls_back_to_full_replay_instead_of_skipping_proofs",
+      "profile_certificate::span_intersections::translated::periodic_replay::tests::failed_source_replays_are_never_promoted_or_memoized",
+      "profile_certificate::span_intersections::translated::periodic_replay::tests::independent_threads_have_independent_fresh_source_operations",
+      "profile_certificate::span_intersections::translated::periodic_replay::tests::one_operation_reuses_only_the_same_pinned_arc_and_nested_scopes",
+      "profile_certificate::span_intersections::translated::periodic_replay::tests::scope_cleanup_releases_pins_after_return_error_and_unwind",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_cylinder_bands_label_both_periodic_sides_and_keep_natural_exterior_empty_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_tangent_hole_uses_higher_germs_and_retains_a_repeated_vertex_walk",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_irrational_quadratic_contacts_have_strict_inside_point_labels_without_rounded_cuts_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_plane_point_labels_replay_and_refuse_cache_and_work_changes_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_one_sided_coincident_rectangle_has_different_chart_inside_labels_across_seam_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_zero_source_torus_point_labels_use_no_invented_sources_and_complete_interval_germs"
+    ]
+  },
+  "wasm": {
+    "passed": true,
+    "terminal_exit": 0
+  },
+  "all_test_modules_typechecked": {
+    "passed": true,
+    "terminal_exit": 0,
+    "session": 21920
+  },
+  "scoped_format_passed": true,
+  "shared_rust_modified": false,
+  "catalog": 198,
+  "target": 200,
+  "scope": "Only simple pairwise-disjoint Jordan chart boundaries. Shared/repeated vertices explicitly refuse. Exact source-bound transverse side witnesses and complete winding matrix determine containment; nearest-parent hierarchy checks transitivity and alternating material, and each positive outer owns its direct negative holes. No general fan-aware patches, world faces, seam sewing or Body claim."
+}

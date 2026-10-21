@@ -4,9 +4,9 @@
 mod boundary_stitched_contact;
 #[path = "source_volume_contact.rs"]
 mod source_volume_contact;
+use crate::face_contact_groups::Certificate as DisjointGroup;
 use crate::{Error, Model, Result, face_domain::FaceDomain};
 use nurbs_core::surface_contact_search::{self, Report as Search};
-pub use crate::face_contact_groups::Certificate as DisjointGroup;
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
     /// Maximum individually classified pairs. Sweep range certificates use
@@ -26,10 +26,11 @@ pub enum SharedBoundary {
     },
     ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
-    BilinearGraph(crate::shared_boundary::bilinear_graph::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
+    BilinearGraph(crate::shared_boundary::bilinear_graph::Certificate),
     JoinedSourceCharts(boundary_stitched_contact::Certificate),
     SourceVolumeBoundary(source_volume_contact::Certificate),
+    OwnedVertex(crate::trimmed_vertex_contact::Certificate),
 }
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -42,8 +43,10 @@ pub struct Pair {
     /// Exact control-hull separation work spent on this pair. Attributed to
     /// the pair so per-pair work adds up to the report totals.
     pub hull_cells: usize,
-    pub source_chart_cells:usize,
-    pub volume_separation:Option<source_volume_contact::Certificate>,
+    /// Charged shared-boundary admission work, including exact vertex contacts.
+    pub boundary_cells: usize,
+    pub source_chart_cells: usize,
+    pub volume_separation: Option<source_volume_contact::Certificate>,
     pub reason: &'static str,
 }
 #[derive(Clone, Debug)]
@@ -66,6 +69,58 @@ pub struct Report {
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
     inspect_with_hulls(model, tolerance_uv, limits, &[])
 }
+/// Scope is exactly the pairs incident to `face`; this cannot certify the
+/// remaining body pairs or self-intersections within any individual face.
+pub struct IncidentReport {
+    pub face:usize,
+    pub pairs:Vec<Pair>,
+    pub total_pairs:usize,
+    pub next_pair:Option<[usize;2]>,
+    pub cells:usize,
+    pub domain_cells:usize,
+    pub all_incident_pairs_classified:bool,
+    pub all_incident_pairs_disjoint:bool,
+    /// Additional exact vertex work; legacy pair-search work is separate.
+    pub vertex_exact_work:u64,
+}
+pub fn inspect_incident(model:&Model,face:usize,tolerance_uv:f64,limits:Limits)->Result<IncidentReport> {
+    if face>=model.faces.len() {return Err(Error::new("BREP_CONTACT_FACE","Incident face index is out of range"));}
+    let mut inspector=Inspector::new(std::sync::Arc::new(model.clone()),tolerance_uv,limits,
+        vec![],vec![],false,false,None)?;
+    inspector.incident=Some(face);
+    inspector.report.total_pairs=model.faces.len()-1;
+    while !inspector.finished() {inspector.advance(64)?;}
+    let r=inspector.finish()?;
+    Ok(IncidentReport {face,pairs:r.pairs,total_pairs:r.total_pairs,next_pair:r.next_pair,
+        cells:r.cells,domain_cells:r.domain_cells,all_incident_pairs_classified:r.all_pairs_classified,
+        all_incident_pairs_disjoint:r.all_pairs_disjoint,vertex_exact_work:0})
+}
+/// Extend the same scoped search with freshly proven exact owned-vertex
+/// contacts. A metric locality bound never promotes the pair's exact status.
+pub fn inspect_incident_with_vertices(model:&Model,face:usize,tolerance_uv:f64,limits:Limits,max_exact:u64)->Result<IncidentReport> {
+    if max_exact>1000000 {return Err(Error::new("BREP_CONTACT_BUDGET","Exact vertex work exceeds its bounded allowance"));}
+    let mut report=inspect_incident(model,face,tolerance_uv,limits)?;
+    for pair in &mut report.pairs {
+        if pair.reason!="pair-unresolved" {continue;}
+        if report.cells==limits.cells||report.domain_cells==limits.domain_cells||report.vertex_exact_work==max_exact {break;}
+        let allowance=(limits.cells-report.cells).min(limits.domain_cells-report.domain_cells).min(100000);
+        let attempt=crate::trimmed_vertex_contact::inspect(model,pair.faces,
+            allowance,max_exact-report.vertex_exact_work)?;
+        report.cells+=attempt.cells;report.vertex_exact_work+=attempt.exact_work;
+        // The vertex primitive has one combined geometry/trim ledger. Charge
+        // all its work to the UV allowance too, rather than omit trim work.
+        report.domain_cells+=attempt.cells;
+        pair.boundary_cells+=attempt.cells;
+        if let Some(c)=attempt.certificate.filter(|c|c.exact_vertex_contact) {
+            pair.boundary=Some(SharedBoundary::OwnedVertex(c));pair.reason="shared-vertex";
+        }
+    }
+    report.all_incident_pairs_classified=report.next_pair.is_none()
+        &&report.pairs.len()==report.total_pairs&&report.pairs.iter().all(|p|
+            p.boundary.is_some()||p.hull_disjoint||p.result.as_ref().is_some_and(|r|r.absence_proven));
+    // Exact vertex contact is a real contact, never a disjointness proof.
+    Ok(report)
+}
 /// Hull certificates are admitted only by the exact boundary embedding audit.
 pub(crate) fn inspect_with_hulls(
     model: &Model,
@@ -84,10 +139,20 @@ pub(crate) fn inspect_with_certificates(
     caps: &[[usize; 3]],
     joint_exact_domain: bool,
 ) -> Result<Report> {
-    inspect_impl(model, tolerance_uv, limits, hulls, caps, !caps.is_empty(),joint_exact_domain)
+    inspect_impl(
+        model,
+        tolerance_uv,
+        limits,
+        hulls,
+        caps,
+        !caps.is_empty(),
+        joint_exact_domain,
+        None,
+    )
 }
 /// Sweep-only exact hull separation, also for closed bodies without caps.
 /// Every plane is proved on actual positive rational control coefficients.
+#[allow(dead_code)]
 pub(crate) fn inspect_with_sweep_certificates(
     model: &Model,
     tolerance_uv: f64,
@@ -96,7 +161,39 @@ pub(crate) fn inspect_with_sweep_certificates(
     caps: &[[usize; 3]],
     joint_exact_domain: bool,
 ) -> Result<Report> {
-    inspect_impl(model, tolerance_uv, limits, hulls, caps, true,joint_exact_domain)
+    inspect_impl(
+        model,
+        tolerance_uv,
+        limits,
+        hulls,
+        caps,
+        true,
+        joint_exact_domain,
+        None,
+    )
+}
+/// Prepared only by the same immutable-model boundary audit. The charged
+/// count includes preparation and any earlier cap separation queries.
+#[allow(dead_code)]
+pub(crate) fn inspect_with_prepared_sweep_certificates(
+    model: &Model,
+    tolerance_uv: f64,
+    limits: Limits,
+    hulls: &[crate::boundary_hull_contact::Certificate],
+    caps: &[[usize; 3]],
+    joint_exact_domain: bool,
+    prepared: (Option<crate::face_contact_groups::Cover>, usize),
+) -> Result<Report> {
+    inspect_impl(
+        model,
+        tolerance_uv,
+        limits,
+        hulls,
+        caps,
+        true,
+        joint_exact_domain,
+        Some(prepared),
+    )
 }
 fn inspect_impl(
     model: &Model,
@@ -106,7 +203,38 @@ fn inspect_impl(
     caps: &[[usize; 3]],
     sweep_hulls: bool,
     joint_exact_domain: bool,
+    prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
 ) -> Result<Report> {
+    let mut inspector = Inspector::new(std::sync::Arc::new(model.clone()), tolerance_uv,
+        limits, hulls.to_vec(), caps.to_vec(), sweep_hulls, joint_exact_domain, prepared)?;
+    while !inspector.finished() { inspector.advance(64)?; }
+    inspector.finish()
+}
+
+/// Owns the exact model and cumulative work ledger throughout pair traversal.
+/// Intermediate steps expose work counts, never a partial positive certificate.
+pub(crate) struct Inspector {
+    model: std::sync::Arc<Model>,
+    limits: Limits,
+    hulls: Vec<crate::boundary_hull_contact::Certificate>,
+    caps: Vec<[usize; 3]>,
+    sweep_hulls: bool,
+    joint_exact_domain: bool,
+    domains: Vec<FaceDomain>,
+    cover: Option<crate::face_contact_groups::Cover>,
+    report: Report,
+    cursor: usize,
+    pending: Vec<usize>,
+    scalar_next: usize,
+    done: bool,
+    failed: bool,
+    incident:Option<usize>,
+}
+impl Inspector {
+    pub(crate) fn new(model: std::sync::Arc<Model>, tolerance_uv: f64, limits: Limits,
+        hulls: Vec<crate::boundary_hull_contact::Certificate>, caps: Vec<[usize; 3]>,
+        sweep_hulls: bool, joint_exact_domain: bool,
+        prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>) -> Result<Self> {
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100_000).contains(&limits.pairs)
         || !(1..=1_000_000).contains(&limits.cells)
@@ -123,9 +251,8 @@ fn inspect_impl(
     }
     // Prepare each chart once, rather than validate/copy the model per pair.
     let domains = (0..model.faces.len())
-        .map(|f| FaceDomain::new(model, f, tolerance_uv))
+        .map(|f| FaceDomain::new(&model, f, tolerance_uv))
         .collect::<Result<Vec<_>>>()?;
-    let source_volume_context=joint_exact_domain.then(||source_volume_contact::Prepared::new(model));
     let n = model.faces.len();
     let total_pairs = n
         .checked_mul(n.saturating_sub(1))
@@ -144,38 +271,105 @@ fn inspect_impl(
         all_pairs_classified: true,
     };
     let cover = if sweep_hulls && n > 1 {
-        let (cover,cells)=crate::face_contact_groups::Cover::prepare(model,limits.cells);
-        out.cells+=cells;out.group_cells+=cells;
+        let (cover, cells) = prepared
+            .unwrap_or_else(|| crate::face_contact_groups::Cover::prepare(&model, limits.cells));
+        out.cells += cells;
+        out.group_cells += cells;
         cover
-    } else {None};
-    for a in 0..n {
-        let mut pending=cover.as_ref().map(|c|vec![c.root]).unwrap_or_default();
-        let mut scalar_next=a+1;
-        loop {
-            let b=if let Some(cover)=&cover {
-                let Some(index)=pending.pop() else {break;};
-                let node=&cover.nodes[index];
-                if node.range[1]<=a+1 {continue;}
-                if node.range[0]>a {
-                    if out.cells==limits.cells {
-                        out.next_pair=Some([a,node.range[0]]);
-                        out.all_pairs_disjoint=false;out.all_pairs_classified=false;
-                        return Ok(out);
+    } else {
+        None
+    };
+        let pending = cover.as_ref().map(|c| vec![c.root]).unwrap_or_default();
+        Ok(Self { model, limits, hulls, caps, sweep_hulls, joint_exact_domain,
+            domains, cover, report: out, cursor: 0, pending, scalar_next: 1, done: n < 2, failed: false, incident:None })
+    }
+    pub(crate) fn finished(&self) -> bool { self.done }
+    /// One unit visits a cover node or attempts the next scalar pair.
+    pub(crate) fn advance(&mut self, max_units: usize) -> Result<usize> {
+        if !(1..=100_000).contains(&max_units) {
+            return Err(Error::new("BREP_CONTACT_STEP", "Use a positive bounded traversal step"));
+        }
+        if self.failed { return Err(Error::new("BREP_CONTACT_FAILED", "Discard a failed traversal before retrying")); }
+        let result = self.advance_inner(max_units);
+        self.failed = result.is_err();
+        result
+    }
+    fn advance_inner(&mut self, max_units: usize) -> Result<usize> {
+        if self.done { return Ok(0); }
+        let model = self.model.as_ref();
+        let source_volume_context = self.joint_exact_domain.then(|| source_volume_contact::Prepared::new(model));
+        let limits = self.limits;
+        let hulls = &self.hulls;
+        let caps = &self.caps;
+        let sweep_hulls = self.sweep_hulls;
+        let joint_exact_domain = self.joint_exact_domain;
+        let domains = &self.domains;
+        let cover = &self.cover;
+        let out = &mut self.report;
+        let cursor = &mut self.cursor;
+        let pending = &mut self.pending;
+        let scalar_next = &mut self.scalar_next;
+        let done = &mut self.done;
+        let n = model.faces.len();
+        let incident=self.incident;
+        let mut used = 0;
+        while *cursor < n && used < max_units {
+            used += 1;
+            let a = *cursor;
+            let b = if let Some(cover) = &cover {
+                let Some(index) = pending.pop() else {
+                    *cursor += 1;
+                    *scalar_next = *cursor + 1;
+                    pending.push(cover.root);
+                    continue;
+                };
+                let node = &cover.nodes[index];
+                if node.range[1] <= a + 1 {
+                    continue;
+                }
+                if node.range[0] > a && node.children.is_some() {
+                    if out.cells == limits.cells {
+                        out.next_pair = Some([a, node.range[0]]);
+                        out.all_pairs_disjoint = false;
+                        out.all_pairs_classified = false;
+                        *done = true;
+                        return Ok(used);
                     }
-                    out.cells+=1;out.group_cells+=1;
-                    if let Some(certificate)=cover.certify(a,index) {
-                        out.grouped_pairs+=certificate.range[1]-certificate.range[0];
+                    out.cells += 1;
+                    out.group_cells += 1;
+                    if let Some(certificate) = cover.certify(a, index) {
+                        out.grouped_pairs += certificate.range[1] - certificate.range[0];
                         out.disjoint_groups.push(certificate);
                         continue;
                     }
                 }
-                if let Some([left,right])=node.children {
-                    pending.push(right);pending.push(left);continue;
+                if let Some([left, right]) = node.children {
+                    pending.push(right);
+                    pending.push(left);
+                    continue;
                 }
                 node.range[0]
             } else {
-                if scalar_next==n {break;}
-                let b=scalar_next;scalar_next+=1;b
+                if let Some(face)=incident {
+                    if a<face {
+                        *cursor+=1;*scalar_next=*cursor+1;
+                        face
+                    }else if a>face {
+                        *cursor=n;continue;
+                    }else {
+                        if *scalar_next==n {*cursor=n;continue;}
+                        let b=*scalar_next;*scalar_next+=1;b
+                    }
+                }else {
+                if *scalar_next == n {
+                    *cursor += 1;
+                    *scalar_next = *cursor + 1;
+                    continue;
+                }
+                let b = *scalar_next;
+                *scalar_next += 1;
+                b
+                }
             };
             if out.pairs.len() == limits.pairs
                 || out.cells == limits.cells
@@ -184,29 +378,53 @@ fn inspect_impl(
                 out.next_pair = Some([a, b]);
                 out.all_pairs_disjoint = false;
                 out.all_pairs_classified = false;
-                return Ok(out);
+                *done = true;
+                        return Ok(used);
             }
             let sa = &model.faces[a].surface;
             let sb = &model.faces[b].surface;
-            let mut boundary = if let Some(c)=caps.iter().find(|c|
-                [c[0].min(c[1]),c[0].max(c[1])]==[a,b]) {
-                Some(SharedBoundary::SweepCap {cap:c[0],wall:c[1],edge:c[2]})
-            } else if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
+            let mut boundary = if let Some(c) = caps
+                .iter()
+                .find(|c| [c[0].min(c[1]), c[0].max(c[1])] == [a, b])
+            {
+                Some(SharedBoundary::SweepCap {
+                    cap: c[0],
+                    wall: c[1],
+                    edge: c[2],
+                })
+            } else if let Some(c) = hulls.iter().find(|c| c.faces == [a, b]) {
                 Some(SharedBoundary::ExactHull(c.clone()))
-            } else if let Some(c) = joint_exact_domain.then(||crate::boundary_hull_contact::certify(model,[a,b])).flatten() {
+            } else if let Some(c) = joint_exact_domain
+                .then(|| crate::boundary_hull_contact::certify(model, [a, b]))
+                .flatten()
+            {
                 // Only the joint embedding audit authorizes this recomputation.
                 // The same individual-pair limit bounds all such attempts,
                 // including pairs beyond the old lexicographic prefix.
                 Some(SharedBoundary::ExactHull(c))
             } else if let Some(c) = crate::shared_boundary::certify(model, [a, b]) {
                 Some(SharedBoundary::PlanarFace(c))
-            } else if let Some(c)=joint_exact_domain.then(||crate::shared_boundary::bilinear_graph::certify(model,[a,b],131072)).flatten() {
+            } else if let Some(c) = joint_exact_domain.then(|| crate::shared_boundary::bilinear_graph::certify(model, [a,b], 131072)).flatten() {
                 Some(SharedBoundary::BilinearGraph(c))
             } else {
                 crate::shared_boundary::certify_opposite(model, [a, b])?
                     .map(SharedBoundary::OppositeSides)
             };
+            let mut boundary_cells = 0;
+            if boundary.is_none() && sweep_hulls && joint_exact_domain {
+                let allowance = (limits.cells - out.cells)
+                    .min(limits.cells_per_pair)
+                    .min(100000);
+                let (certificate, used) =
+                    crate::shared_boundary::certify_opposite_with_budget(model, [a, b], allowance);
+                boundary_cells = used;
+                out.cells += used;
+                if let Some(c) = certificate {
+                    boundary = Some(SharedBoundary::OppositeSides(c));
+                }
+            }
             let periodic = sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v;
+            let pair_allowance = limits.cells_per_pair.saturating_sub(boundary_cells);
             let mut source_chart_cells=0;
             let mut volume_separation=None;
             // Quintic polygon corner charts need a source-volume proof: their
@@ -214,43 +432,62 @@ fn inspect_impl(
             // Try the exact four-wall cell before spending the pair budget on
             // a stitched surface. Other chart families keep their ordering.
             let volume_first=sa.degree_u==1 && sa.degree_v==5 && sb.degree_u==1 && sb.degree_v==5;
-            if volume_first && boundary.is_none()&&!periodic&&joint_exact_domain {
+            if volume_first && boundary.is_none()&&!periodic&&joint_exact_domain&&out.cells<limits.cells {
                 let separated=source_volume_context.as_ref().unwrap().certify([a,b],
-                    (limits.cells-out.cells).min(limits.cells_per_pair))?;
+                    (limits.cells-out.cells).min(pair_allowance))?;
                 source_chart_cells=separated.cells;out.cells+=separated.cells;
                 if let Some(c)=separated.certificate {
                     if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
                     else {volume_separation=Some(c);}
                 }
             }
-            if boundary.is_none()&&volume_separation.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<limits.cells_per_pair {
+            if boundary.is_none()&&volume_separation.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
                 let joined=boundary_stitched_contact::certify(model,[a,b],
-                    (limits.cells-out.cells).min(limits.cells_per_pair-source_chart_cells))?;
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
                 source_chart_cells+=joined.cells;out.cells+=joined.cells;
                 boundary=joined.certificate.map(SharedBoundary::JoinedSourceCharts);
             }
-            if !volume_first&&boundary.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<limits.cells_per_pair {
+            if !volume_first&&boundary.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
                 let separated=source_volume_context.as_ref().unwrap().certify([a,b],
-                    (limits.cells-out.cells).min(limits.cells_per_pair-source_chart_cells))?;
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
                 source_chart_cells+=separated.cells;out.cells+=separated.cells;
                 if let Some(c)=separated.certificate {
                     if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
                     else {volume_separation=Some(c);}
                 }
             }
-            let pair_cells=limits.cells_per_pair-source_chart_cells;
-            // Exact control-hull separation also applies to closed bodies
-            // after the joint boundary, trim and injectivity prerequisites.
-            // The plain face-contact API retains its trim-search accounting.
-            let (hull_disjoint,hull_cells)=if boundary.is_none() && volume_separation.is_none() && !periodic && joint_exact_domain {
-                crate::control_hull_separation::inspect(sa,sb,
-                    (limits.cells-out.cells).min(pair_cells/2).min(64))
-            } else { (false,0) };
-            out.cells+=hull_cells;
-            let result = if boundary.is_some() || hull_disjoint || volume_separation.is_some()
+
+            // Exact control-hull separation is the fast path only for sweep
+            // certification, including closed no-cap bodies: the plain face-contact
+            // API keeps the frozen trim-search work accounting byte-for-byte.
+            let (hull_disjoint, hull_cells) = if boundary.is_none() && volume_separation.is_none() && !periodic && (sweep_hulls || joint_exact_domain) {
+                let allowance = (limits.cells - out.cells)
+                    .min(limits.cells_per_pair.saturating_sub(boundary_cells + source_chart_cells) / 2)
+                    .min(64);
+                let cached = if allowance > 0 {
+                    cover.as_ref().and_then(|c| c.pair_separated(a, b))
+                } else {
+                    None
+                };
+                match cached {
+                    Some(true) => (true, 1),
+                    Some(false) => {
+                        let (separated, work) =
+                            crate::control_hull_separation::inspect(sa, sb, allowance - 1);
+                        (separated, work + 1)
+                    }
+                    None => crate::control_hull_separation::inspect(sa, sb, allowance),
+                }
+            } else {
+                (false, 0)
+            };
+            out.cells += hull_cells;
+            let result = if boundary.is_some()
+                || hull_disjoint
+                || volume_separation.is_some()
                 || periodic
                 || out.cells == limits.cells
-                || hull_cells == pair_cells
+                || boundary_cells + source_chart_cells + hull_cells == limits.cells_per_pair
             {
                 None
             } else {
@@ -263,13 +500,13 @@ fn inspect_impl(
                     sa,
                     sb,
                     [&domains[a].region, &domains[b].region],
-                    (limits.cells - out.cells).min(pair_cells-hull_cells),
+                    (limits.cells - out.cells)
+                        .min(limits.cells_per_pair - boundary_cells - source_chart_cells - hull_cells),
                     (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_pair),
                 )?)
             };
             let reason = match &result {
-                None if hull_disjoint => "pair-disjoint",
-                None if volume_separation.is_some() => "pair-disjoint",
+                None if hull_disjoint || volume_separation.is_some() => "pair-disjoint",
                 None if boundary.is_some() => "shared-boundary",
                 None if sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v => {
                     "periodic-trim-not-supported"
@@ -279,9 +516,12 @@ fn inspect_impl(
                 Some(r) if r.contact.is_some() => "interior-contact",
                 Some(_) => "pair-unresolved",
             };
-            out.all_pairs_classified &=
-                boundary.is_some() || hull_disjoint || volume_separation.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
-            out.all_pairs_disjoint &= hull_disjoint || volume_separation.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
+            out.all_pairs_classified &= boundary.is_some()
+                || hull_disjoint
+                || volume_separation.is_some()
+                || result.as_ref().is_some_and(|r| r.absence_proven);
+            out.all_pairs_disjoint &=
+                hull_disjoint || volume_separation.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
             if let Some(r) = &result {
                 out.cells += r.cells;
                 out.domain_cells += r.domain_cells;
@@ -292,162 +532,31 @@ fn inspect_impl(
                 boundary,
                 hull_disjoint,
                 hull_cells,
+                boundary_cells,
                 source_chart_cells,
                 volume_separation,
                 reason,
             });
         }
+        if *cursor == n {
+            debug_assert_eq!(out.pairs.len() + out.grouped_pairs, out.total_pairs);
+            *done = true;
+        }
+        Ok(used)
     }
-    debug_assert_eq!(out.pairs.len()+out.grouped_pairs,out.total_pairs);
-    Ok(out)
+    pub(crate) fn finish(self) -> Result<Report> {
+        if self.failed { return Err(Error::new("BREP_CONTACT_FAILED", "Discard a failed traversal")); }
+        if !self.done { return Err(Error::new("BREP_CONTACT_PENDING", "Complete pair traversal before requesting its report")); }
+        Ok(self.report)
+    }
 }
+
+
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn partial_annular_separate_pairs_require_complete_search_coverage() {
-        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let before=format!("{model:?}");
-        for [a,b] in [[6,15],[6,23],[9,18],[9,26],[15,23],[18,26]] {
-            let da=crate::face_domain::FaceDomain::new(&model,a,1e-8).unwrap();
-            let db=crate::face_domain::FaceDomain::new(&model,b,1e-8).unwrap();
-            let run=|budget|nurbs_core::surface_contact_search::search_trimmed(
-                &model.faces[a].surface,&model.faces[b].surface,[&da.region,&db.region],budget,1_000_000).unwrap();
-            let partial=run(256);
-            assert!(!partial.absence_proven&&!partial.unresolved.is_empty());
-            let complete=run(1024);
-            assert!(complete.absence_proven&&complete.unresolved.is_empty(),"faces={a}/{b}");
-            assert!(complete.contact.is_none());
-        }
-        assert_eq!(format!("{model:?}"),before);
-    }
-    use super::*;
-    fn limits() -> Limits {
-        Limits {
-            pairs: 100,
-            cells: 10000,
-            domain_cells: 100000,
-            cells_per_pair: 16,
-            domain_cells_per_pair: 1000,
-        }
-    }
-    #[test]
-    fn sweep_groups_partition_all_pairs_and_preserve_bounded_pending_suffix() {
-        let mut model=crate::cuboid([0.;3],[1.;3]).unwrap();
-        let original=model.faces[0].surface.clone();
-        for (i,face) in model.faces.iter_mut().enumerate() {
-            face.surface=original.clone();
-            for row in &mut face.surface.control_points {for p in row {p[0]+=10.*i as f64;}}
-        }
-        for limits in [limits(),Limits {pairs:1,..limits()},Limits {cells:1,..limits()}] {
-            let report=inspect_with_sweep_certificates(&model,1e-8,limits,&[],&[],false).unwrap();
-            assert!(report.cells<=limits.cells && report.pairs.len()<=limits.pairs);
-            let mut covered=report.pairs.iter().map(|p|p.faces).collect::<Vec<_>>();
-            for c in &report.disjoint_groups {
-                assert!(c.range[0]>c.face && c.range[1]<=model.faces.len());
-                for b in c.range[0]..c.range[1] {covered.push([c.face,b]);}
-            }
-            assert_eq!(covered.len(),report.pairs.len()+report.grouped_pairs);
-            covered.sort_unstable();
-            let expected=(0..6).flat_map(|a|(a+1..6).map(move |b|[a,b])).collect::<Vec<_>>();
-            assert_eq!(covered,expected[..covered.len()]);
-            assert_eq!(report.cells,report.group_cells+report.pairs.iter().map(|p|p.hull_cells+p.result.as_ref().map_or(0,|r|r.cells)).sum::<usize>());
-            if let Some(next)=report.next_pair {
-                assert_eq!(next,expected[covered.len()]);assert!(!report.all_pairs_classified);
-            } else {
-                assert_eq!(covered.len(),15);assert!(report.all_pairs_classified);
-                assert!(report.grouped_pairs>0);
-            }
-        }
-    }
-    #[test]
-    fn cube_visits_all_pairs_without_excusing_adjacent_contacts() {
-        let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
-        let r = inspect(&m, 1e-8, limits()).unwrap();
-        assert_eq!(r.total_pairs, 15);
-        assert_eq!(r.pairs.len(), 15);
-        assert!(r.next_pair.is_none());
-        assert!(!r.all_pairs_disjoint);
-        assert!(
-            r.pairs
-                .iter()
-                .all(|p| p.result.as_ref().is_none_or(|r| r.contact.is_none()))
-        );
-        assert!(r.pairs.iter().any(|p| p.reason == "pair-disjoint"));
-        assert_eq!(
-            r.pairs
-                .iter()
-                .filter(|p| p.reason == "shared-boundary")
-                .count(),
-            12
-        );
-        assert!(r.all_pairs_classified);
-    }
-    #[test]
-    fn limits_preserve_exact_unvisited_suffix() {
-        let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
-        // Force actual UV work: an intact cube now needs only shared-edge
-        // certificates and spatial exclusions, consuming no UV cells.
-        for row in &mut m.faces[0].surface.control_points {
-            for p in row {
-                for x in p {
-                    *x += 0.01;
-                }
-            }
-        }
-        for l in [
-            Limits {
-                pairs: 1,
-                ..limits()
-            },
-            Limits {
-                cells: 1,
-                ..limits()
-            },
-            Limits {
-                domain_cells: 1,
-                ..limits()
-            },
-        ] {
-            let r = inspect(&m, 1e-8, l).unwrap();
-            assert!(!r.all_pairs_disjoint);
-            assert!(r.next_pair.is_some());
-            assert!(
-                r.cells <= l.cells && r.domain_cells <= l.domain_cells && r.pairs.len() <= l.pairs
-            );
-            let expected: Vec<_> = (0..6)
-                .flat_map(|a| (a + 1..6).map(move |b| [a, b]))
-                .collect();
-            assert_eq!(r.next_pair, Some(expected[r.pairs.len()]));
-            assert_eq!(
-                r.pairs.iter().map(|p| p.faces).collect::<Vec<_>>(),
-                expected[..r.pairs.len()]
-            );
-        }
-    }
-    #[test]
-    fn a_defect_does_not_stop_later_pairs_from_being_reported() {
-        let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
-        for (f, face) in m.faces.iter_mut().enumerate() {
-            face.surface.control_points = (0..2)
-                .map(|u| {
-                    (0..2)
-                        .map(|v| {
-                            if f == 1 {
-                                vec![u as f64, 0.5, v as f64 - 0.5]
-                            } else {
-                                vec![u as f64, v as f64, f as f64 * 10.]
-                            }
-                        })
-                        .collect()
-                })
-                .collect();
-        }
-        let r = inspect(&m, 1e-8, limits()).unwrap();
-        assert_eq!(r.pairs.len(), 15);
-        assert!(r.next_pair.is_none());
-        assert_eq!(r.pairs[0].faces, [0, 1]);
-        assert_eq!(r.pairs[0].reason, "interior-contact");
-        assert!(r.pairs[1..].iter().all(|p| p.reason == "pair-disjoint"));
-        assert!(!r.all_pairs_disjoint);
-    }
-}
+#[path = "face_contacts/tests/tests_integration.rs"]
+mod tests;
+
+#[path = "face_contacts/frozen_contacts.rs"]
+mod frozen_contacts;
+#[cfg(test)]
+use frozen_contacts::frozen_inspect_impl;

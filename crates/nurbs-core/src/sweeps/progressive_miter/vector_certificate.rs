@@ -35,13 +35,7 @@ pub fn certify_values_traversal(
         if charge > max_cells - out.cells {
             return Ok(out);
         }
-        let mut scalar = law.clone();
-        scalar.control_points = law
-            .control_points
-            .iter()
-            .map(|p| vec![p[axis], 0., 0.])
-            .collect();
-        let result = scalar_certificate::value_traversal(&scalar, traversal, charge)?;
+        let result = scalar_certificate::value_traversal_axis(law, axis, traversal, charge)?;
         out.cells += charge;
         let Some(v) = result else {
             return Ok(out);
@@ -95,13 +89,12 @@ pub fn certify_traversal(
     let mut second = values;
     let mut single_span = true;
     for axis in 0..3 {
-        let mut scalar = law.clone();
-        scalar.control_points = law
-            .control_points
-            .iter()
-            .map(|p| vec![p[axis], 0., 0.])
-            .collect();
-        let r = scalar_certificate::certify_traversal(&scalar, traversal, max_cells - out.cells)?;
+        let r = scalar_certificate::certify_traversal_axis(
+            law,
+            axis,
+            traversal,
+            max_cells - out.cells,
+        )?;
         out.cells += r.cells;
         if r.status != Status::Certified {
             out.reason = r.reason;
@@ -208,13 +201,7 @@ pub fn certify_endpoint_first(
         if out.cells == max_cells {
             return Ok(out);
         }
-        let mut scalar = law.clone();
-        scalar.control_points = law
-            .control_points
-            .iter()
-            .map(|p| vec![p[axis], 0., 0.])
-            .collect();
-        let value = scalar_certificate::endpoint_first(&scalar, at_end, 1)?;
+        let value = scalar_certificate::endpoint_first_axis(law, axis, at_end, 1)?;
         out.cells += 1;
         let Some(value) = value else {
             return Ok(out);
@@ -239,13 +226,8 @@ pub fn certify_first_point(law: &Curve, t: f64, max_cells: usize) -> Result<Poin
     };
     let mut first = [[0.; 2]; 3];
     for axis in 0..3 {
-        let mut scalar = law.clone();
-        scalar.control_points = law
-            .control_points
-            .iter()
-            .map(|p| vec![p[axis], 0., 0.])
-            .collect();
-        let result = scalar_certificate::certify_first_point(&scalar, t, max_cells - out.cells)?;
+        let result =
+            scalar_certificate::certify_first_point_axis(law, axis, t, max_cells - out.cells)?;
         out.cells += result.cells;
         let Some(value) = result.first else {
             return Ok(out);

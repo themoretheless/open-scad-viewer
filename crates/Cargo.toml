@@ -111,6 +111,15 @@ naga = { version = "30", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
 rbench = { version = "0.1.0", git = "https://github.com/themoretheless/rbench", branch = "release" }
 
+brep-intersect = { version = "0.1.0", path = "brep-intersect", default-features = false }
+bridge-analysis = { version = "0.1.0", path = "bridge-analysis", default-features = false }
+bridge-cam = { version = "0.1.0", path = "bridge-cam", default-features = false }
+bridge-codec = { version = "0.1.0", path = "bridge-codec", default-features = false }
+bridge-svg = { version = "0.1.0", path = "bridge-svg", default-features = false }
+cad-step = { version = "0.1.0", path = "cad-step", default-features = false }
+math-compute = { version = "0.1.0", path = "math-compute", default-features = false, package = "osv-math-compute" }
+nurbs-intersect = { version = "0.1.0", path = "nurbs-intersect", default-features = false }
+
 [profile.release]
 opt-level = "s"
 lto = true
@@ -144,13 +153,13 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.brep-core]
-opt-level = 3
+opt-level = "s"
 
 [profile.release.package.planar-geometry]
 opt-level = 3
 
 [profile.release.package.cad-predicates]
-opt-level = 3
+opt-level = "s"
 
 [profile.release.package.sdf-core]
 opt-level = 3
@@ -168,3 +177,9 @@ opt-level = 2
 opt-level = 2
 [profile.release.package.alloc-stdlib]
 opt-level = 2
+
+[profile.release.package.geometry-bridge]
+opt-level = "z"
+
+[profile.release.package.nurbs-core]
+opt-level = "z"

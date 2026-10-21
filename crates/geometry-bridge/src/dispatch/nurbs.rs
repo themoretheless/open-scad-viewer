@@ -93,7 +93,9 @@ fn handle(mut v: Value) -> Result<Value> {
         ),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
-            let profile = match sketch.get("analytic") {
+            let profile = if let Some(path)=sketch.get("editablePath").filter(|p|!p.is_null()) {
+                brep_core::sketch::Profile::Bezier(path2d::authored_path(path)?)
+            } else {match sketch.get("analytic") {
                 Some(analytic)
                     if analytic.get("kind").and_then(Value::as_str) == Some("circle") =>
                 {
@@ -103,7 +105,7 @@ fn handle(mut v: Value) -> Result<Value> {
                     }
                 }
                 _ => brep_core::sketch::Profile::Polygon(field(sketch, "points")?),
-            };
+            }};
             let plane = match sketch.get("plane") {
                 None | Some(Value::Null) => None,
                 Some(plane) => Some([

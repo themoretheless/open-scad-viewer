@@ -18,7 +18,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_all(&mut self) -> PResult<Vec<Statement>> {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity((self.tokens.len() / 8).clamp(4, 256));
         while self.peek().t != TT::Eof {
             result.extend(self.statement()?);
         }

@@ -89,7 +89,7 @@ if(evidenceOnly)report.scope+=' Evidence-only run excludes viewport rendering qu
 report.sourceHashes = Object.fromEntries(await Promise.all([
  'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/services/geometry/brep.ts',
  'src/services/nurbsMiterOwnedBoundary.ts','crates/brep-core/src/sweep_miter_owned.rs','crates/geometry-bridge/src/cad_miter_owned.rs',
- 'crates/nurbs-core/src/sweeps/progressive_sweep.rs','crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs',
+ 'crates/nurbs-core/src/sweeps/progressive_sweep/mod.rs','crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs',
  'src/services/nurbsSectionProjection.ts','src/services/nurbsCircleSectionRepair.ts',
@@ -367,10 +367,10 @@ try {
    entry.assertions.push({case:'source-change',status:'passed',fault:'held worker dispatch'})
    await page.evaluate(()=>window.sweepHoldExact=false)
    await load(source);await toSolid()
-   if(surfaceMode||file==='miter-hollow-body.r'){
+   if(surfaceMode){
     await waitSolidFinished()
     const error=page.locator('.message.error');await error.waitFor()
-    assert.match(await error.innerText(),surfaceMode?/Solid source requires native B-rep bodies/i:/Solid geometry.*boundary embedding/i)
+    assert.match(await error.innerText(),/Solid source requires native B-rep bodies/i)
     assert.equal((await download('unproved-solid-refused')).bodies.length,0)
     entry.assertions.push({case:surfaceMode?'surface-solid-refusal':bodyBoundaryMode?'bounded-closed-body-solid-refusal':'unproved-spatial-solid-refusal',status:'passed'})
     await solid.getByRole('status',{name:'Сохранено в браузере',exact:true,includeHidden:true}).waitFor({state:'attached'})

@@ -5,6 +5,9 @@ use crate::{
     Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef, PredicateContext,
     Reason, Sign, exact_inputs,
 };
+#[path = "planar_bezier_implicit.rs"]
+mod implicit;
+pub use implicit::*;
 type Poly = Vec<Expansion>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlanarReduction {
@@ -35,6 +38,18 @@ pub struct PlanarScalarDecision {
     pub work_used: u64,
     pub context: ContextIdentity,
 }
+/// Exact positive content reduction keeps repeated-root PRS coefficients
+/// small. The bounded integer fast path is optional: wider expansions retain
+/// their exact coefficients and the normal work/precision guards still apply.
+fn primitive_common(
+    values: &mut [Expansion],
+    ctx: &mut PredicateContext<'_>,
+) -> Result<(), Reason> {
+    if values.len() > 24 {
+        return Ok(());
+    }
+    Expansion::reduce_projective(values, ctx)
+}
 fn trim(p: &mut Poly) {
     while p.len() > 1 && p.last().unwrap().sign() == Sign::Zero {
         p.pop();
@@ -45,29 +60,12 @@ fn zero(p: &Poly) -> bool {
 }
 fn normalize(p: &mut Poly, ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
     trim(p);
+    primitive_common(p, ctx)?;
     Expansion::normalize_common(p, ctx)
 }
-const BINOMIAL: [[u64; 17]; 17] = {
-    let mut table = [[0u64; 17]; 17];
-    let mut n = 0;
-    while n < 17 {
-        table[n][0] = 1;
-        let mut k = 1;
-        while k <= n {
-            table[n][k] = table[n - 1][k - 1] + table[n - 1][k];
-            k += 1;
-        }
-        n += 1;
-    }
-    table
-};
 #[inline(always)]
 fn choose(n: usize, k: usize) -> u64 {
-    if n < 17 && k < 17 {
-        BINOMIAL[n][k]
-    } else {
-        (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
-    }
+    crate::binomial_u64(n, k)
 }
 pub(crate) fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     let n = b.len() - 1;
@@ -88,6 +86,25 @@ pub(crate) fn power(b: &[Expansion], ctx: &mut PredicateContext<'_>) -> Result<P
     Ok(out)
 }
 fn homogeneous(p: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<[Poly; 3], Reason> {
+    let mut constant_weight = p[0][2].sign() != Sign::Zero;
+    for row in &p[1..] {
+        if row[2].sub(&p[0][2], ctx)?.sign() != Sign::Zero {
+            constant_weight = false;
+            break;
+        }
+    }
+    if constant_weight {
+        // Cancel only an exactly common nonzero authored weight. The rational
+        // map is polynomial; retaining that scalar through every resultant
+        // product needlessly enlarges exact coefficients.
+        let x = p.iter().map(|v| v[0].clone()).collect::<Vec<_>>();
+        let y = p.iter().map(|v| v[1].clone()).collect::<Vec<_>>();
+        return Ok([
+            power(&x, ctx)?,
+            power(&y, ctx)?,
+            vec![Expansion::scalar(1.)],
+        ]);
+    }
     let x = p
         .iter()
         .map(|p| p[0].mul(&p[2], ctx))
@@ -99,6 +116,7 @@ fn homogeneous(p: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result<[
     let w = p.iter().map(|p| p[2].clone()).collect::<Vec<_>>();
     Ok([power(&x, ctx)?, power(&y, ctx)?, power(&w, ctx)?])
 }
+
 fn mul(a: &Poly, b: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     let mut out = vec![Expansion::scalar(0.); a.len() + b.len() - 1];
     for (i, x) in a.iter().enumerate() {
@@ -173,6 +191,7 @@ fn pseudo_divide(
         let split = q.len();
         let mut both = q;
         both.extend(r);
+        primitive_common(&mut both, ctx)?;
         Expansion::normalize_common(&mut both, ctx)?;
         r = both.split_off(split);
         q = both;
@@ -253,6 +272,9 @@ pub(crate) fn isolate(
     tolerance: f64,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Vec<PlanarScalarRoot>, Reason> {
+    if let Some(roots) = bernstein_endpoint_roots(p, ctx)? {
+        return Ok(roots);
+    }
     let (chain, mut gcd) = square_free_chain(p, ctx)?;
     let mut gcd_chains = Vec::new();
     while gcd.len() > 1 {
@@ -318,6 +340,70 @@ pub(crate) fn isolate(
     }
     Ok(roots)
 }
+// C(n,k)*b_k = sum_{i<=k} a_i*C(n-i,k-i). All factors are
+// exact integers: no division or rounded Bernstein proxy is introduced.
+// One-sided nonzero coefficients exclude every root in the open unit interval.
+fn bernstein_endpoint_roots(
+    p: &Poly,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<Option<Vec<PlanarScalarRoot>>, Reason> {
+    let n = p.len() - 1;
+    if n == 0 || n > 24 {
+        return Ok(None);
+    }
+    let mut sign = Sign::Zero;
+    for k in 0..=n {
+        let mut value = Expansion::scalar(0.);
+        for i in 0..=k {
+            value = value.add(
+                &p[i].mul(&Expansion::integer(choose(n - i, k - i), ctx)?, ctx)?,
+                ctx,
+            )?;
+        }
+        let next = value.sign();
+        if next == Sign::Zero {
+            continue;
+        }
+        if sign != Sign::Zero && sign != next {
+            return Ok(None);
+        }
+        sign = next;
+    }
+    if sign == Sign::Zero {
+        return Ok(None);
+    }
+    let mut roots = Vec::new();
+    let first = p
+        .iter()
+        .position(|x| x.sign() != Sign::Zero)
+        .ok_or(Reason::MissingProof)?;
+    if first > 0 {
+        roots.push(PlanarScalarRoot {
+            interval: [0., 0.],
+            multiplicity: first,
+        });
+    }
+    for k in 0..=n {
+        let mut value = Expansion::scalar(0.);
+        for i in k..=n {
+            value = value.add(
+                &p[i].mul(&Expansion::integer(choose(i, k), ctx)?, ctx)?,
+                ctx,
+            )?;
+        }
+        if value.sign() != Sign::Zero {
+            if k > 0 {
+                roots.push(PlanarScalarRoot {
+                    interval: [1., 1.],
+                    multiplicity: k,
+                });
+            }
+            return Ok(Some(roots));
+        }
+    }
+    Err(Reason::MissingProof)
+}
+
 fn monotone(
     points: &[[Expansion; 3]],
     axis: usize,
@@ -415,7 +501,7 @@ fn straight(points: &[[Expansion; 3]], ctx: &mut PredicateContext<'_>) -> Result
     }
     Ok(monotone(points, 0, ctx)? || monotone(points, 1, ctx)?)
 }
-/// Source rows are Euclidean XY plus positive weight, degree 1..3. Domains
+/// Source rows are Euclidean XY plus positive weight, degree 1..8. Domains
 /// are normalized only by the caller's parameter mapping; no trimmed/fitted
 /// control net is introduced into the predicate's source arena.
 pub fn planar_bezier_scalar_roots(
@@ -424,8 +510,8 @@ pub fn planar_bezier_scalar_roots(
     b: &[[LeafRef; 3]],
     parameter_tolerance: f64,
 ) -> Result<PlanarScalarDecision, InputError> {
-    if !(2..=4).contains(&a.len())
-        || !(2..=4).contains(&b.len())
+    if !(2..=9).contains(&a.len())
+        || !(2..=9).contains(&b.len())
         || !parameter_tolerance.is_finite()
         || parameter_tolerance <= 0.
         || parameter_tolerance >= 1.
@@ -515,179 +601,8 @@ pub fn planar_bezier_scalar_roots(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{Limits, SourceArena, ToleranceContext};
-    fn arbitrary_pair(a: &[[f64; 3]], b: &[[f64; 3]], limits: Limits) -> PlanarScalarOutcome {
-        let source = SourceArena::authored(
-            "planar-projected-root-test",
-            1,
-            a.iter()
-                .chain(b)
-                .flatten()
-                .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
-                .collect(),
-        )
-        .unwrap();
-        let refs = |start: usize, n: usize| {
-            (start..start + n)
-                .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
-                .collect::<Vec<_>>()
-        };
-        let tolerance = ToleranceContext::default_valid();
-        let mut ctx = PredicateContext::new(&source, &tolerance, limits, None);
-        planar_bezier_scalar_roots(&mut ctx, &refs(0, a.len()), &refs(a.len(), b.len()), 1e-12)
-            .unwrap()
-            .outcome
-    }
-    #[test]
-    fn projected_coordinate_retains_multiple_contacts_and_nearby_bifurcations() {
-        let ya = [0., 0., 1., 3.];
-        let yb = [1., -1., 1., 7.];
-        let frame = |i: usize, y: f64| [17. + 10. * i as f64 - y, -9. + 10. * i as f64 + y, 1.];
-        let a = std::array::from_fn::<_, 4, _>(|i| frame(i, ya[i]));
-        for (delta, count, multiplicity) in [
-            (0., 1, 2),
-            (2_f64.powi(-30), 0, 1),
-            (-2_f64.powi(-30), 2, 1),
-        ] {
-            let b = std::array::from_fn::<_, 4, _>(|i| frame(i, yb[i] + delta));
-            let PlanarScalarOutcome::Roots { reduction, roots } =
-                arbitrary_pair(&a, &b, Limits::default())
-            else {
-                panic!("Missing projected reduction")
-            };
-            assert_eq!(reduction, PlanarReduction::CommonProjection);
-            assert_eq!(roots.len(), count);
-            assert!(roots.iter().all(|r| r.multiplicity == multiplicity));
-            if delta == 0. {
-                assert!(roots[0].interval[0] <= 1. / 3. && roots[0].interval[1] >= 1. / 3.)
-            }
-            if count == 2 {
-                assert!(roots[0].interval[1] < roots[1].interval[0])
-            }
-        }
-        let b = std::array::from_fn::<_, 4, _>(|i| frame(i, yb[i]));
-        let mut limits = Limits::default();
-        limits.max_work = 0;
-        assert!(matches!(
-            arbitrary_pair(&a, &b, limits),
-            PlanarScalarOutcome::Indeterminate(Reason::ResourceLimit)
-        ));
-    }
-    #[test]
-    fn common_coordinate_uses_actual_monotonicity_and_original_weights() {
-        let x = [0., 1., 0.9, 1.9];
-        let ya = [0., 0., 1., 3.];
-        let yb = [1., -1., 1., 7.];
-        let mut a = std::array::from_fn::<_, 4, _>(|i| [x[i], ya[i], 1.]);
-        let mut b = std::array::from_fn::<_, 4, _>(|i| [x[i], yb[i], 1.]);
-        let PlanarScalarOutcome::Roots { reduction, roots } =
-            arbitrary_pair(&a, &b, Limits::default())
-        else {
-            panic!("Missing actual monotonicity proof")
-        };
-        assert_eq!(reduction, PlanarReduction::CommonCoordinate(0));
-        assert_eq!(roots.len(), 1);
-        assert_eq!(roots[0].multiplicity, 2);
-        a[1][2] = 100.;
-        a[2][2] = 100.;
-        b[1][2] = 100.;
-        b[2][2] = 100.;
-        assert!(matches!(
-            arbitrary_pair(&a, &b, Limits::default()),
-            PlanarScalarOutcome::NotReducible | PlanarScalarOutcome::Indeterminate(_)
-        ));
-    }
-    fn pair(y: &[f64; 4], limits: Limits) -> PlanarScalarOutcome {
-        let a = (0..4).map(|i| [i as f64, 0., 1.]).collect::<Vec<_>>();
-        let b = (0..4).map(|i| [i as f64, y[i], 1.]).collect::<Vec<_>>();
-        let source = SourceArena::authored(
-            "planar-scalar-test",
-            1,
-            a.iter()
-                .chain(&b)
-                .flatten()
-                .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
-                .collect(),
-        )
-        .unwrap();
-        let refs = |start: usize| {
-            (start..start + 4)
-                .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
-                .collect::<Vec<_>>()
-        };
-        let tolerance = ToleranceContext::default_valid();
-        let mut ctx = PredicateContext::new(&source, &tolerance, limits, None);
-        planar_bezier_scalar_roots(&mut ctx, &refs(0), &refs(4), 1e-12)
-            .unwrap()
-            .outcome
-    }
-    #[test]
-    fn isolates_non_dyadic_multiple_root_and_distinguishes_both_nearby_perturbations() {
-        let PlanarScalarOutcome::Roots { roots, .. } = pair(&[1., -1., 0., 4.], Limits::default())
-        else {
-            panic!("Missing exact reduction")
-        };
-        assert_eq!(roots.len(), 1);
-        assert_eq!(roots[0].multiplicity, 2);
-        assert!(roots[0].interval[0] <= 1. / 3. && roots[0].interval[1] >= 1. / 3.);
-        let delta = 2_f64.powi(-40);
-        let PlanarScalarOutcome::Roots { roots, .. } = pair(
-            &[1. + delta, -1. + delta, delta, 4. + delta],
-            Limits::default(),
-        ) else {
-            panic!("Missing exclusion")
-        };
-        assert!(roots.is_empty());
-        let PlanarScalarOutcome::Roots { roots, .. } = pair(
-            &[1. - delta, -1. - delta, -delta, 4. - delta],
-            Limits::default(),
-        ) else {
-            panic!("Missing separated roots")
-        };
-        assert_eq!(roots.len(), 2);
-        assert!(roots.iter().all(|r| r.multiplicity == 1));
-        assert!(roots[0].interval[1] < roots[1].interval[0]);
-    }
-    #[test]
-    fn fraction_free_sturm_preserves_multiplicity_and_endpoint_ownership() {
-        let source = SourceArena::authored(
-            "sturm-test",
-            1,
-            vec![AuthoredScalar::Binary64Bits(0_f64.to_bits())],
-        )
-        .unwrap();
-        let tolerance = ToleranceContext::default_valid();
-        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
-        for (coefficients, expected) in [
-            (vec![-0.1875, 1., -1.75, 1.], vec![(0.5, 2), (0.75, 1)]),
-            (vec![0., 0., 0., -1., 3., -3., 1.], vec![(0., 3), (1., 3)]),
-            (vec![1., -12., 60., -160., 240., -192., 64.], vec![(0.5, 6)]),
-        ] {
-            let polynomial = coefficients.into_iter().map(Expansion::scalar).collect();
-            let roots = isolate(&polynomial, 1e-12, &mut ctx).unwrap();
-            assert_eq!(roots.len(), expected.len());
-            for (root, (t, m)) in roots.iter().zip(expected) {
-                assert_eq!(root.interval, [t, t]);
-                assert_eq!(root.multiplicity, m);
-            }
-        }
-    }
-    #[test]
-    fn exhausted_predicate_work_never_becomes_a_disjoint_or_coincident_report() {
-        assert!(matches!(
-            pair(
-                &[0.; 4],
-                Limits {
-                    max_work: 0,
-                    ..Limits::default()
-                }
-            ),
-            PlanarScalarOutcome::Indeterminate(Reason::ResourceLimit)
-        ));
-    }
-}
+#[path = "planar_bezier_roots/tests/tests_integration.rs"]
+mod tests;
 
 #[derive(Clone, Debug)]
 pub enum PlanarStationaryOutcome {
@@ -708,7 +623,7 @@ pub fn planar_bezier_stationary_roots(
     axis: usize,
     tolerance: f64,
 ) -> Result<PlanarStationaryDecision, InputError> {
-    if !(2..=4).contains(&source.len())
+    if !(2..=9).contains(&source.len())
         || axis >= 2
         || !tolerance.is_finite()
         || tolerance <= 0.
@@ -754,45 +669,5 @@ pub fn planar_bezier_stationary_roots(
     })
 }
 #[cfg(test)]
-mod stationary_tests {
-    use super::*;
-    use crate::{Limits, SourceArena, ToleranceContext};
-    fn cusp(axis: usize, limits: Limits) -> PlanarStationaryOutcome {
-        let points = [[1., -1., 1.], [-1., 2., 1.], [0., -4., 1.], [4., 8., 1.]];
-        let source = SourceArena::authored(
-            "stationary-cusp-test",
-            1,
-            points
-                .iter()
-                .flatten()
-                .map(|v: &f64| AuthoredScalar::Binary64Bits(v.to_bits()))
-                .collect(),
-        )
-        .unwrap();
-        let refs = (0..4)
-            .map(|i| std::array::from_fn(|k| source.leaf(i * 3 + k).unwrap()))
-            .collect::<Vec<_>>();
-        let tolerance = ToleranceContext::default_valid();
-        let mut ctx = PredicateContext::new(&source, &tolerance, limits, None);
-        planar_bezier_stationary_roots(&mut ctx, &refs, axis, 1e-14)
-            .unwrap()
-            .outcome
-    }
-    #[test]
-    fn stationary_cusp_preserves_distinct_derivative_multiplicities_and_uncertainty() {
-        for (axis, multiplicity) in [(0, 1), (1, 2)] {
-            let PlanarStationaryOutcome::Roots(roots) = cusp(axis, Limits::default()) else {
-                panic!("stationary proof absent")
-            };
-            assert_eq!(roots.len(), 1);
-            assert_eq!(roots[0].multiplicity, multiplicity);
-            assert!(roots[0].interval[0] <= 1. / 3. && roots[0].interval[1] >= 1. / 3.);
-        }
-        let mut limits = Limits::default();
-        limits.max_work = 0;
-        assert!(matches!(
-            cusp(0, limits),
-            PlanarStationaryOutcome::Indeterminate(Reason::ResourceLimit)
-        ));
-    }
-}
+#[path = "planar_bezier_roots/tests/stationary_tests_integration.rs"]
+mod stationary_tests;

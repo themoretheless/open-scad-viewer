@@ -40,10 +40,10 @@ fn test_deviation(original: &Surface, offset: &Surface, distance: f64) -> f64 {
 }
 
 #[test]
-fn plane_offset_is_exact() {
+fn plane_offset_keeps_geometry_without_an_unproved_exact_claim() {
     let p = plane(0.);
     let report = offset(&p, 2., 1e-9).unwrap();
-    assert!(report.exact);
+    assert!(!report.exact, "sampled recognition is not an exact offset proof");
     assert!(report.max_deviation < 1e-10, "{}", report.max_deviation);
     assert!(report.degenerate_regions.is_empty());
     for i in 0..=8 {
@@ -73,7 +73,7 @@ fn sphere_offset_scales_radius() {
     let side = if dot(radial, n) >= 0. { 1. } else { -1. };
     let expected = 5. + side * 1.5;
     let report = offset(&s, 1.5, 1e-6).unwrap();
-    assert!(report.exact);
+    assert!(!report.exact, "sampled recognition is not an exact offset proof");
     assert!(report.max_deviation < 1e-6, "{}", report.max_deviation);
     // Poles are recorded, never fatal.
     for i in 1..10 {
@@ -103,7 +103,7 @@ fn sphere_poles_do_not_panic_and_inward_offset_is_reported() {
 fn cylinder_offset_scales_radius() {
     let s = primitives::cylinder([0.; 3], 3., 4.).unwrap();
     let report = offset(&s, 0.5, 1e-6).unwrap();
-    assert!(report.exact);
+    assert!(!report.exact, "sampled recognition is not an exact offset proof");
     for i in 0..=10 {
         for j in 0..=4 {
             let q = report
@@ -152,7 +152,7 @@ fn saddle_reports_honest_bound() {
 fn negative_distance_flips_side() {
     let p = plane(0.);
     let report = offset(&p, -2., 1e-9).unwrap();
-    assert!(report.exact);
+    assert!(!report.exact, "sampled recognition is not an exact offset proof");
     for i in 0..=4 {
         let q = report.surface.evaluate(0.5, i as f64 / 4.).unwrap().point;
         assert!((q[2] + 2.).abs() < 1e-12);

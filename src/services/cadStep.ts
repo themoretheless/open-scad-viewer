@@ -1,17 +1,18 @@
 import {bodyPoints,type DirectBody} from './directModeling'
 import {inspectPolygonMesh} from './geometry/polygon'
 import {cross3,unit3,dot3} from './directSketchGeometry'
+const UTF8_ENCODER=new TextEncoder()
 /** ISO 10303-21/AP214 faceted BREP in millimetres. No analytic surface reconstruction. */
 export function exportFacetedStep(bodies:DirectBody[]):string{
  if(!bodies.length)throw Error('Select bodies to export.')
- const entities:string[]=[],add=(s:string)=>{entities.push(`#${entities.length+1}=${s};`);return '#'+entities.length},num=(v:number)=>{if(!Number.isFinite(v))throw Error('Invalid STEP coordinate.');const s=String(v);return s.includes('.')||/e/i.test(s)?s.replace('e','E'):s+'.'},tuple=(p:number[])=>'('+p.map(num).join(',')+')'
+ const entities:string[]=[],add=(s:string)=>{entities.push(`#${entities.length+1}=${s};`);return '#'+entities.length},num=(v:number)=>{if(!Number.isFinite(v))throw Error('Invalid STEP coordinate.');const s=String(v);return s.includes('.')||/e/i.test(s)?s.replace('e','E'):s+'.'},tuple=(p:number[])=>`(${num(p[0])},${num(p[1])},${num(p[2])})`
  const app=add("APPLICATION_CONTEXT('automotive_design')");add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,${app})`)
  const pc=add(`PRODUCT_CONTEXT('',${app},'mechanical')`),product=add(`PRODUCT('model','model','',(${pc}))`),formation=add(`PRODUCT_DEFINITION_FORMATION('1','',${product})`),dc=add(`PRODUCT_DEFINITION_CONTEXT('part definition',${app},'design')`),definition=add(`PRODUCT_DEFINITION('design','',${formation},${dc})`),shape=add(`PRODUCT_DEFINITION_SHAPE('','',${definition})`)
  const length=add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))'),angle=add('(NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.))'),solidAngle=add('(NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT())'),uncertainty=add(`UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-6),${length},'distance_accuracy_value','')`),context=add(`(GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((${uncertainty})) GLOBAL_UNIT_ASSIGNED_CONTEXT((${length},${angle},${solidAngle})) REPRESENTATION_CONTEXT('','3D'))`)
  const solids=bodies.map(b=>{
   const r=inspectPolygonMesh(b.mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP export requires closed outward-oriented solids.')
-  const p=bodyPoints(b),points=p.map(p=>add(`CARTESIAN_POINT('',${tuple(p)})`)),faces:string[]=[]
-  for(let i=0;i<b.mesh.indices.length;i+=3){const ids=b.mesh.indices.slice(i,i+3),a=p[ids[0]],u=unit3(p[ids[1]].map((v,k)=>v-a[k])),n=unit3(cross3(u,p[ids[2]].map((v,k)=>v-a[k]))),loop=add(`POLY_LOOP('',(${Array.from(ids,i=>points[i]).join(',')}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[ids[0]]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
+  const p=bodyPoints(b),points=p.map(pt=>add(`CARTESIAN_POINT('',${tuple(pt)})`)),faces:string[]=[]
+  for(let i=0;i<b.mesh.indices.length;i+=3){const i0=b.mesh.indices[i],i1=b.mesh.indices[i+1],i2=b.mesh.indices[i+2],a=p[i0],bPt=p[i1],cPt=p[i2],u=unit3([bPt[0]-a[0],bPt[1]-a[1],bPt[2]-a[2]]),n=unit3(cross3(u,[cPt[0]-a[0],cPt[1]-a[1],cPt[2]-a[2]])),loop=add(`POLY_LOOP('',(${points[i0]},${points[i1]},${points[i2]}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[i0]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
   return add(`FACETED_BREP('${b.name.replace(/[^\x20-\x7e]/g,'_').replace(/'/g,"''")}',${add(`CLOSED_SHELL('',(${faces.join(',')}))`)})`)
  });const representation=add(`FACETED_BREP_SHAPE_REPRESENTATION('',(${solids.join(',')}),${context})`);add(`SHAPE_DEFINITION_REPRESENTATION(${shape},${representation})`)
  return `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Faceted solids'),'2;1');\nFILE_NAME('model.step','${new Date().toISOString()}',(''),(''),'OpenSCAD Viewer','OpenSCAD Viewer','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n${entities.join('\n')}\nENDSEC;\nEND-ISO-10303-21;\n`
@@ -26,9 +27,9 @@ export function importFacetedStep(text:string):DirectBody[]{
  const entity=(id:string,type?:string)=>{const e=entities.get(id);if(!e||type&&e.type!==type)throw Error('Unsupported or missing STEP '+(type??'entity')+' #'+id);return e},refs=(args:string)=>[...args.replace(/'(?:[^']|'')*'/g,"''").matchAll(/#(\d+)/g)].map(m=>m[1])
  const point=(id:string)=>{const args=entity(id,'CARTESIAN_POINT').args,tuple=args.match(/\(([^()]*)\)\s*$/)?.[1];const values=tuple?.split(',').map(v=>Number(v.replace(/D/i,'E'))*scale);if(!values||values.length!==3||!values.every(Number.isFinite))throw Error('Invalid STEP point.');return values}
  const solids=[...entities.values()].filter(e=>e.type==='FACETED_BREP');if(!solids.length)throw Error('No FACETED_BREP solids found.')
- return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=p.join(',');let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(...p)}return i};const shell=entity(refs(solid.args)[0],'CLOSED_SHELL')
-  for(const faceId of refs(shell.args)){const face=entity(faceId);if(!['FACE_SURFACE','FACE'].includes(face.type))throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1],'PLANE');const bound=entity(fr[0]);if(!['FACE_OUTER_BOUND','FACE_BOUND'].includes(bound.type))throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0],'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const normal=unit3(cross3(p[1].map((v,k)=>v-p[0][k]),p[2].map((v,k)=>v-p[0][k])));for(let i=0;i<p.length;i++){if(Math.abs(dot3(p[i].map((v,k)=>v-p[0][k]),normal))>1e-6)throw Error('Nonplanar STEP polygon.');const a=p[i],b=p[(i+1)%p.length],c=p[(i+2)%p.length];if(dot3(cross3(b.map((v,k)=>v-a[k]),c.map((v,k)=>v-b[k])),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0],ids[i],ids[i+1])}
-  const mesh={positions:Float64Array.from(positions),indices:Uint32Array.from(indices)},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
+ return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=`${p[0]},${p[1]},${p[2]}`;let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(p[0],p[1],p[2])}return i};const shell=entity(refs(solid.args)[0],'CLOSED_SHELL')
+  for(const faceId of refs(shell.args)){const face=entity(faceId);if(face.type!=='FACE_SURFACE'&&face.type!=='FACE')throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1],'PLANE');const bound=entity(fr[0]);if(bound.type!=='FACE_OUTER_BOUND'&&bound.type!=='FACE_BOUND')throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0],'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const p0=p[0],p1=p[1],p2=p[2],normal=unit3(cross3([p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]],[p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]]));for(let i=0;i<p.length;i++){const pi=p[i];if(Math.abs((pi[0]-p0[0])*normal[0]+(pi[1]-p0[1])*normal[1]+(pi[2]-p0[2])*normal[2])>1e-6)throw Error('Nonplanar STEP polygon.');const a=pi,b=p[(i+1)%p.length],c=p[(i+2)%p.length];if(dot3(cross3([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[c[0]-b[0],c[1]-b[1],c[2]-b[2]]),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0],ids[i],ids[i+1])}
+  const mesh={positions:new Float64Array(positions),indices:new Uint32Array(indices)},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
  })
 }
 
@@ -49,14 +50,14 @@ const splitStepArgs=(value:string)=>{
   else if(!quote&&c==='(')depth++;else if(!quote&&c===')')depth--;else if(!quote&&c===','&&depth===0){out.push(value.slice(last,i));last=i+1}}
  out.push(value.slice(last));return out.map(field=>field.trim())
 }
-const stepIdentity=(value:string)=>{let hash=2166136261;for(const byte of new TextEncoder().encode(value.replace(/#\d+/g,'#'))){hash^=byte;hash=Math.imul(hash,16777619)}return `step10:${(hash>>>0).toString(16).padStart(8,'0')}`}
+const stepIdentity=(value:string)=>{let hash=2166136261;for(const byte of UTF8_ENCODER.encode(value.replace(/#\d+/g,'#'))){hash^=byte;hash=Math.imul(hash,16777619)}return `step10:${(hash>>>0).toString(16).padStart(8,'0')}`}
 const indexRows=(value:string)=>[...value.matchAll(/\(([\d,\s]+)\)/g)].map(match=>match[1].split(',').map(Number)).filter(row=>row.length>=3&&row.every(Number.isInteger))
 const stripTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>i%2?[row[i+1],row[i],row[i+2]]:[row[i],row[i+1],row[i+2]])
 const fanTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>[row[0],row[i+1],row[i+2]])
 
 /** AP242 tessellated decoder. Presentation remains explicitly tessellated and is never promoted to B-rep. */
 export function importTessellatedStepV10(text:string):TessellatedStepImport{
- if(new TextEncoder().encode(text).byteLength>20_000_000)throw Error('STEP tessellated file exceeds 20 MB.')
+ if(UTF8_ENCODER.encode(text).byteLength>20_000_000)throw Error('STEP tessellated file exceeds 20 MB.')
  if(!/\bTESSELLATED_SHAPE_REPRESENTATION\s*\(/i.test(text))throw Error('No TESSELLATED_SHAPE_REPRESENTATION product found.')
  const entities=new Map<string,{type:string;args:string}>()
  for(const match of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\((.*?)\)\s*;/gis)){
@@ -65,17 +66,30 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
  }
  const number=(value:string)=>Number(value.replace(/[dD]/,'E'))
  const pointLists=new Map<string,number[][]>()
+ const sets:[string,{type:string;args:string}][]=[]
+ let representationArgs='TESSELLATED_SHAPE_REPRESENTATION'
+ let hasRepresentation=false
+ const colorCandidates:[string,{type:string;args:string}][]=[]
+ const layerCandidates:[string,{type:string;args:string}][]=[]
+ const textureCandidates:{type:string;args:string}[]=[]
  for(const [id,entity] of entities){
-  if(entity.type!=='CARTESIAN_POINT_LIST_3D')continue
-  const points=[...entity.args.matchAll(/\(\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*\)/g)]
-    .map(match=>[number(match[1]),number(match[2]),number(match[3])])
-  if(!points.length||points.some(point=>point.some(value=>!Number.isFinite(value))))throw Error(`Invalid CARTESIAN_POINT_LIST_3D #${id}.`)
-  pointLists.set(id,points)
+  const t=entity.type
+  if(t==='CARTESIAN_POINT_LIST_3D'){
+   const points=[...entity.args.matchAll(/\(\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*\)/g)]
+     .map(match=>[number(match[1]),number(match[2]),number(match[3])])
+   if(!points.length||points.some(point=>!Number.isFinite(point[0])||!Number.isFinite(point[1])||!Number.isFinite(point[2])))throw Error(`Invalid CARTESIAN_POINT_LIST_3D #${id}.`)
+   pointLists.set(id,points)
+  }else if(t==='TRIANGULATED_FACE_SET'||t==='COMPLEX_TRIANGULATED_FACE_SET'){
+   sets.push([id,entity])
+  }else if(!hasRepresentation&&t==='TESSELLATED_SHAPE_REPRESENTATION'){
+   hasRepresentation=true;representationArgs=entity.args
+  }
+  if(/COLOUR|STYLE/.test(t))colorCandidates.push([id,entity])
+  if(t==='PRESENTATION_LAYER_ASSIGNMENT')layerCandidates.push([id,entity])
+  if(/TEXTURE.*COORDINATE/.test(t))textureCandidates.push(entity)
  }
- const sets=[...entities.entries()].filter(([,entity])=>['TRIANGULATED_FACE_SET','COMPLEX_TRIANGULATED_FACE_SET'].includes(entity.type))
  if(!sets.length)throw Error('TESSELLATED_SHAPE_REPRESENTATION contains no supported triangulated face set.')
- const representation=[...entities.entries()].find(([,entity])=>entity.type==='TESSELLATED_SHAPE_REPRESENTATION')
- const representationIdentity=stepIdentity(representation?.[1].args??'TESSELLATED_SHAPE_REPRESENTATION')
+ const representationIdentity=stepIdentity(representationArgs)
  const presentations:StepTessellatedPresentation[]=[]
  const bodies=sets.map(([id,entity],ordinal)=>{
   const coordinateId=entity.args.match(/#(\d+)/)?.[1],points=coordinateId&&pointLists.get(coordinateId)
@@ -90,10 +104,10 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
   triples=triples.filter(indices=>indices.every(index=>index>=1&&index<=points.length))
   if(!triples.length)throw Error(`Triangulated face set #${id} has no valid coordinate indices.`)
   const normals=(fields[3]?.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?/g)??[]).map(number).filter(Number.isFinite)
-  const colors=[...entities.entries()].filter(([,candidate])=>/COLOUR|STYLE/.test(candidate.type)
-    &&(candidate.type==='COLOUR_RGB'||candidate.args.includes(`#${id}`))).map(([key])=>`#${key}`)
-  const layers=[...entities.entries()].filter(([,candidate])=>candidate.type==='PRESENTATION_LAYER_ASSIGNMENT'&&candidate.args.includes(`#${id}`)).map(([key])=>`#${key}`)
-  const textureCoordinates=[...entities.values()].filter(candidate=>/TEXTURE.*COORDINATE/.test(candidate.type)&&candidate.args.includes(`#${id}`))
+  const refTag=`#${id}`
+  const colors=colorCandidates.filter(([,candidate])=>candidate.type==='COLOUR_RGB'||candidate.args.includes(refTag)).map(([key])=>`#${key}`)
+  const layers=layerCandidates.filter(([,candidate])=>candidate.args.includes(refTag)).map(([key])=>`#${key}`)
+  const textureCoordinates=textureCandidates.filter(candidate=>candidate.args.includes(refTag))
     .flatMap(candidate=>(candidate.args.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?/g)??[]).map(number).filter(Number.isFinite))
   presentations.push({representationIdentity,itemIdentity:stepIdentity(entity.type+'('+entity.args+')'),primitive,
     normals,colors,layers,textureCoordinates,source:`#${id}=${entity.type}(${entity.args});`})

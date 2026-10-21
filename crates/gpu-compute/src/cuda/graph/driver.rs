@@ -29,29 +29,34 @@ pub struct CudaGraphApi {
 }
 impl CudaGraphApi {
     pub fn load() -> Result<Self, CudaGraphError> {
-        if !unsafe { sys::is_culib_present() } {
-            return Err(CudaGraphError::Unavailable);
-        }
-        let library = unsafe { sys::culib() };
-        macro_rules! get {
-            ($name:literal,$ty:ty) => {{
-                let symbol = unsafe { library.get::<$ty>(concat!($name, "\0").as_bytes()) }
-                    .map_err(|_| CudaGraphError::MissingSymbol($name))?;
-                *symbol
-            }};
-        }
-        Ok(Self {
-            set_context: get!("cuCtxSetCurrent", SetContext),
-            stream_flags: get!("cuStreamGetFlags", StreamFlags),
-            capture_status: get!("cuStreamIsCapturing", CaptureStatus),
-            begin: get!("cuStreamBeginCapture_v2", Begin),
-            end: get!("cuStreamEndCapture", End),
-            instantiate: get!("cuGraphInstantiateWithFlags", Instantiate),
-            upload: get!("cuGraphUpload", ExecStream),
-            launch: get!("cuGraphLaunch", ExecStream),
-            destroy_graph: get!("cuGraphDestroy", DestroyGraph),
-            destroy_exec: get!("cuGraphExecDestroy", DestroyExec),
+        static API: std::sync::OnceLock<Result<CudaGraphApi, CudaGraphError>> =
+            std::sync::OnceLock::new();
+        API.get_or_init(|| {
+            if !unsafe { sys::is_culib_present() } {
+                return Err(CudaGraphError::Unavailable);
+            }
+            let library = unsafe { sys::culib() };
+            macro_rules! get {
+                ($name:literal,$ty:ty) => {{
+                    let symbol = unsafe { library.get::<$ty>(concat!($name, "\0").as_bytes()) }
+                        .map_err(|_| CudaGraphError::MissingSymbol($name))?;
+                    *symbol
+                }};
+            }
+            Ok(Self {
+                set_context: get!("cuCtxSetCurrent", SetContext),
+                stream_flags: get!("cuStreamGetFlags", StreamFlags),
+                capture_status: get!("cuStreamIsCapturing", CaptureStatus),
+                begin: get!("cuStreamBeginCapture_v2", Begin),
+                end: get!("cuStreamEndCapture", End),
+                instantiate: get!("cuGraphInstantiateWithFlags", Instantiate),
+                upload: get!("cuGraphUpload", ExecStream),
+                launch: get!("cuGraphLaunch", ExecStream),
+                destroy_graph: get!("cuGraphDestroy", DestroyGraph),
+                destroy_exec: get!("cuGraphExecDestroy", DestroyExec),
+            })
         })
+        .clone()
     }
 }
 fn check(operation: &'static str, code: sys::CUresult) -> Result<(), CudaGraphError> {

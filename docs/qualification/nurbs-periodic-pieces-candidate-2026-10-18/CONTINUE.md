@@ -1,0 +1,15 @@
+# Exact original periodic source views and transitions
+
+OwnedOriginalPeriodicPieces enumerates ALL candidate integer lattice shores lo+k*(hi-lo) intersecting each original positive-weight homogeneous control hull, not only the two base chart bounds. Exact polynomial identity/root censuses determine actual contacts. Integer tile indices use arbitrary-precision integers; per-cell lattice/event/count/ordering/coverage limits refuse explicitly. Exact native knots and all shore contacts partition every source domain into one-cell pieces.
+
+Every piece retains the ORIGINAL curve/cell and exact algebraic natural cuts, plus an exact rational translation. No translated f64 control net is constructed. A root-free exact witness determines each wrapped axis tile; a shore-valued piece requires the complete source-cell identity. Arbitrary-period and corner crossings are retained. Unwrapped coordinates are unchanged and still need physical-domain admission.
+
+Adjacent pieces of the same source retain period and translation deltas. A transition cannot skip a lattice level. Both actual one-sided source endpoints are independently evaluated in the SAME owned algebraic cut extension, and their translated coordinate difference must equal the exact rational translation delta. Public piece_endpoint returns exact selected-root coordinate definitions and honors the refinement budget. Source-wire closure across different curves, surface seam identity and physical face attachment are not implied by this UV transition proof.
+
+Fresh gates: 128 profile tests and 63 integrations across two binaries; WASM compile passed. Regressions cover multiple crossed periods, simultaneous corner transitions, a rational translation not exactly representable by any f64 value, quadratic irrational lattice cuts, full lattice-shore identity and explicit lattice budget refusal. Cached source-event/cut-origin/translation/transition tampering refuses. Earlier full suites remain historical.
+
+Next reconcile periodic translated source views with the common-carrier/material graph and actual surface seam-identity proofs, including wire/face ownership and mixed periodic closures. General automatic surface intersections remain open. Catalog stays 198/200. Rust isolated; cumulative patch targets the verified original baseline and needs coordinated merging with shared changes.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

@@ -30,7 +30,6 @@ pub(crate) fn push_fixed7(buf: &mut String, v: f64) -> Result<i64> {
 }
 
 fn push_fixed7_exact(buf: &mut String, v: f64) -> i64 {
-    use std::fmt::Write;
     let negative = v.is_sign_negative();
     let bits = v.abs().to_bits();
     let biased = ((bits >> 52) & 0x7ff) as i32;
@@ -64,8 +63,31 @@ fn push_fixed7_exact(buf: &mut String, v: f64) -> i64 {
         // sign whenever the sign bit is set.
         buf.push('-');
     }
-    write!(buf, "{}.{:07}", units / 10_000_000, units % 10_000_000)
-        .expect("writing to a String cannot fail");
+    let int_part = units / 10_000_000;
+    let mut frac = (units % 10_000_000) as u32;
+    let mut int_buf = [0u8; 20];
+    let mut i = 20;
+    let mut n = int_part;
+    loop {
+        i -= 1;
+        int_buf[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 {
+            break;
+        }
+    }
+    let mut frac_buf = [b'.', 0, 0, 0, 0, 0, 0, 0];
+    for j in (1..=7).rev() {
+        frac_buf[j] = b'0' + (frac % 10) as u8;
+        frac /= 10;
+    }
+    buf.reserve(20 - i + 8);
+    // SAFETY: int_buf[i..] and frac_buf contain only ASCII digits and '.'.
+    unsafe {
+        let vec = buf.as_mut_vec();
+        vec.extend_from_slice(&int_buf[i..]);
+        vec.extend_from_slice(&frac_buf);
+    }
     if negative {
         -(units as i64)
     } else {

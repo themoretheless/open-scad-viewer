@@ -12,7 +12,7 @@ import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from './directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
-import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
+import { sampleCurve, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { stringifyMeshJson } from './meshJson'
 import { validateNurbsCurve } from './nurbsCurve'
@@ -26,7 +26,7 @@ export interface DirectSketch { group?: string; id: string; name: string; points
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink }
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink; livePattern?: import('./liveBodyPattern').LiveBodyPattern }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
 export interface DirectInterchangeMetadata {
@@ -76,15 +76,23 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   if(d.blenderProjectId!==undefined&&(typeof d.blenderProjectId!=='string'||!d.blenderProjectId.trim()||d.blenderProjectId.length>100))throw Error('Invalid Blender project identity.')
   if(d.sourceBodies!==undefined&&(!Array.isArray(d.sourceBodies)||d.sourceBodies.length>200))throw Error('Invalid source Body collection.')
   const sourceCount=d.sourceBodies?.length??0
-  const instanceCount=d.bodies.filter(body=>body?.instance).length
+  let instanceCount=0;for(const body of d.bodies)if(body?.instance)instanceCount++
   if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount+sourceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
   d.curves ??= []
   d.surfaces ??= []
   if(d.interchange){
     const step=d.interchange.step
+    const validStepStrings=(values:unknown)=> {
+      if (!Array.isArray(values) || values.length > 1024) return false
+      for (let i = 0; i < values.length; i++) {
+        const value = values[i]
+        if (typeof value !== 'string' || value.length > 4096) return false
+      }
+      return true
+    }
     if(step&&(typeof step.route!=='string'||typeof step.retained!=='boolean'
-      ||![step.refusalBoundary,step.identityLoss,step.metadataLoss,step.definitionIdentities,step.occurrenceIdentities,step.productHierarchy,step.externalReferences]
-        .every(values=>Array.isArray(values)&&values.length<=1024&&values.every(value=>typeof value==='string'&&value.length<=4096)))){
+      ||!validStepStrings(step.refusalBoundary)||!validStepStrings(step.identityLoss)||!validStepStrings(step.metadataLoss)
+      ||!validStepStrings(step.definitionIdentities)||!validStepStrings(step.occurrenceIdentities)||!validStepStrings(step.productHierarchy)||!validStepStrings(step.externalReferences))){
       throw Error('Invalid interchange metadata.')
     }
   }
@@ -99,15 +107,25 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     groupNames.add(g.name)
   }
   const ids = new Set<string>()
-  for (const item of [...d.sketches, ...d.bodies, ...d.curves, ...d.surfaces,...d.sourceBodies??[]]) {
+  const checkObjectIdentity = (item: { id: string; name: string; group?: string }) => {
     if (!item || typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
     if (item.group !== undefined && (typeof item.group !== 'string' || !item.group.length || item.group.length > 100)) throw new Error('Invalid object group.')
     ids.add(item.id)
   }
-  for(const source of d.sourceBodies??[]) {
-    qualifySourceBodyRecord(source)
-    yield
+  for (let i = 0; i < d.sketches.length; i++) checkObjectIdentity(d.sketches[i])
+  for (let i = 0; i < d.bodies.length; i++) checkObjectIdentity(d.bodies[i])
+  for (let i = 0; i < d.curves.length; i++) checkObjectIdentity(d.curves[i])
+  for (let i = 0; i < d.surfaces.length; i++) checkObjectIdentity(d.surfaces[i])
+  const validVec3 = (p: unknown): p is [number, number, number] => Array.isArray(p) && p.length === 3 && finite(p[0]) && finite(p[1]) && finite(p[2])
+  const validPoints2d = (pts: unknown): boolean => {
+    if (!Array.isArray(pts)) return false
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i]
+      if (!Array.isArray(p) || p.length !== 2 || !finite(p[0]) || !finite(p[1])) return false
+    }
+    return true
   }
+  for(const source of d.sourceBodies??[]) {checkObjectIdentity(source);qualifySourceBodyRecord(source);yield}
   for (const s of d.sketches) {
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
     if(s.editablePath!==undefined) Object.assign(s,withEditableSketchPath(s,s.editablePath))
@@ -119,30 +137,37 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     if (s.analytic) { s.points = sampleCurve(s.analytic); s.closed = s.analytic.kind === 'circle' }
     if (s.plane) {
       const {origin,u,v}=s.plane
-      if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
+      if (!validVec3(origin) || !validVec3(u) || !validVec3(v) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
     }
-    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > (s.retainedProfile||s.editablePath?8192:512) || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
+    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > (s.retainedProfile||s.editablePath?8192:512) || (s.closed && s.points.length < 3) || !validPoints2d(s.points)) throw new Error('Invalid sketch.')
     if (s.dimensions !== undefined) {
       if (!Array.isArray(s.dimensions)) throw Error('Invalid sketch dimensions.')
       sketchDimensions(s)
     }
     yield
   }
+  const validUnitChannel = (v: number | undefined) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1)
   for (const b of d.bodies) {
     if(b.material!==undefined&&(!b.material||typeof b.material.name!=='string'||!b.material.name.length||b.material.name.length>100||typeof b.material.color!=='string'||!/^#[0-9a-f]{6}$/i.test(b.material.color)))throw Error('Invalid body material.')
-    if(b.material&&[b.material.metallic,b.material.roughness,b.material.opacity].some(v=>v!==undefined&&(!Number.isFinite(v)||v<0||v>1)))throw Error('Invalid body material.')
+    if(b.material&&(!validUnitChannel(b.material.metallic)||!validUnitChannel(b.material.roughness)||!validUnitChannel(b.material.opacity)))throw Error('Invalid body material.')
     if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
       throw new Error('Invalid body group.')
     }
     // A compact instance omits both caches. Partially supplied caches still fail validation.
     if(b.instance&&b.mesh===undefined&&b.brep===undefined){yield;continue}
     const m = b.mesh
-    if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > MAX_BODY_MESH_COMPONENTS || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > MAX_BODY_MESH_COMPONENTS || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
+    if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > MAX_BODY_MESH_COMPONENTS || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > MAX_BODY_MESH_COMPONENTS || m.indices.length % 3) throw new Error('Invalid body mesh.')
+    const pos = m.positions, idx = m.indices, vertexCount = pos.length / 3
+    for (let i = 0; i < pos.length; i++) if (!finite(pos[i])) throw new Error('Invalid body mesh.')
+    for (let i = 0; i < idx.length; i++) {
+      const v = idx[i]
+      if (!Number.isInteger(v) || v < 0 || v >= vertexCount) throw new Error('Invalid body mesh.')
+    }
     // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
     normalizePolygonMesh(m)
     if (b.brep) {
       ;(inspectedBreps ??= new BrepInspectionCache()).inspect(b.brep)
-      if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
+      if (b.brep.vertices.length === 0 && b.brep.edges.length === 0 && b.brep.loops.length === 0 && b.brep.faces.length === 0 && b.brep.shells.length === 0 && b.brep.bodies.length === 0) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
       if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
       const meshAabb = aabbFromPositions(m.positions)
       const { inner, outer } = aabbFromBrep(b.brep)
@@ -180,7 +205,12 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
     }
     d.bodies=resolveSolidInstances(d,instanceCache).bodies
-    if(d.bodies.some(body=>body.instance&&!body.mesh.positions.every(finite)))throw Error('Instance placement exceeds document coordinate bounds.')
+    for (let i = 0; i < d.bodies.length; i++) {
+      const body = d.bodies[i]
+      if (!body.instance) continue
+      const pos = body.mesh.positions
+      for (let j = 0; j < pos.length; j++) if (!finite(pos[j])) throw Error('Instance placement exceeds document coordinate bounds.')
+    }
   }
   for (const item of d.curves) { validateNurbsCurve(item.curve); if(item.offsetRegion!==undefined&&!validCurveOffsetRegion(item.offsetRegion))throw Error('Invalid offset loop membership.'); if(item.offsetConstruction!==undefined&&!validCurveOffsetConstruction(item.offsetConstruction))throw Error('Invalid offset construction evidence.'); yield }
   for (const item of d.surfaces) {
@@ -268,8 +298,10 @@ interface DirectSnapshot { characters: number; text: string }
 export class DirectHistory {
   private restoreGeneration = 0
   private past: DirectSnapshot[] = []
+  private pastCharacters = 0
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document?:DirectDocument}
+  private futureCharacters = 0
+  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
@@ -291,6 +323,8 @@ export class DirectHistory {
       return {text,characters:text.length}
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
+    this.pastCharacters=this.past.reduce((sum,s)=>sum+s.characters,0)
+    this.futureCharacters=this.future.reduce((sum,s)=>sum+s.characters,0)
     this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
     return id
   }
@@ -299,8 +333,16 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
+    if (this.current.ids) return [...this.current.ids]
     const d=this.current.document??JSON.parse(this.current.text) as DirectDocument
-    return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
+    const ids: string[] = []
+    for (let i = 0; i < d.bodies.length; i++) ids.push(d.bodies[i].id)
+    for (let i = 0; i < d.sketches.length; i++) ids.push(d.sketches[i].id)
+    if (d.curves) for (let i = 0; i < d.curves.length; i++) ids.push(d.curves[i].id)
+    if (d.surfaces) for (let i = 0; i < d.surfaces.length; i++) ids.push(d.surfaces[i].id)
+    for(const source of d.sourceBodies??[])ids.push(source.id)
+    this.current.ids = ids
+    return [...ids]
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
   get snapshotKey() { return this.current.text }
@@ -308,7 +350,7 @@ export class DirectHistory {
   get canRedo() { return this.future.length > 0 }
   get storageStats() {
     return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:this.current.document?1:0,
-      retainedCharacters:this.current.characters+[...this.past,...this.future].reduce((sum,snapshot)=>sum+snapshot.characters,0)}
+      retainedCharacters:this.current.characters+this.pastCharacters+this.futureCharacters}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
     this.commitValidated(parseDirectDocument(stringifyMeshJson(document)),validateChange)
@@ -326,24 +368,24 @@ export class DirectHistory {
     next.blenderProjectId ??= (this.current.document??JSON.parse(this.current.text) as DirectDocument).blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
-    validateChange?.(clone(next))
+    if (validateChange) validateChange(clone(next))
     if(this.current!==base)throw Error('History changed during commit validation.')
     const nextText = serializeDirectDocument(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push({text:this.current.text,characters:this.current.characters})
+    this.pastCharacters += this.current.characters
     // The existing bound counts serialized characters, not actual heap bytes.
     // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
-    let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0)
-    while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
-      retained -= this.past.shift()!.characters
+    while (this.past.length > 80 || (this.past.length > 1 && this.pastCharacters > 16_000_000)) {
+      this.pastCharacters -= this.past.shift()!.characters
     }
-    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []
+    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []; this.futureCharacters = 0
   }
   undo() {
     const d = this.past.at(-1)
     if (d) {
       const document=parseDirectDocument(d.text)
-      this.past.pop();this.future.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      this.past.pop();this.pastCharacters-=d.characters;this.future.push({text:this.current.text,characters:this.current.characters});this.futureCharacters+=this.current.characters;this.current={...d,document}
     }
     return this.document
   }
@@ -351,7 +393,7 @@ export class DirectHistory {
     const d = this.future.at(-1)
     if (d) {
       const document=parseDirectDocument(d.text)
-      this.future.pop();this.past.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+      this.future.pop();this.futureCharacters-=d.characters;this.past.push({text:this.current.text,characters:this.current.characters});this.pastCharacters+=this.current.characters;this.current={...d,document}
     }
     return this.document
   }
@@ -362,7 +404,7 @@ export class DirectHistory {
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
     const document=clone(loaded),text=serializeDirectDocument(document)
-    this.current={document,text,characters:text.length};this.past=[];this.future=[]
+    this.current={document,text,characters:text.length};this.past=[];this.pastCharacters=0;this.future=[];this.futureCharacters=0
     return true
   }
   cancelRestore() { this.restoreGeneration++ }
@@ -381,6 +423,8 @@ export class DirectHistory {
     // Retain the already validated immutable snapshot; materialize a private copy
     // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({text:base.text,characters:base.characters})
+    if(direction==='undo'){this.pastCharacters-=snapshot.characters;this.futureCharacters+=base.characters}
+    else{this.futureCharacters-=snapshot.characters;this.pastCharacters+=base.characters}
     this.current={...snapshot}
     return true
   }
@@ -391,7 +435,40 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
-  return { id, name: sketch.name + ' · 3D', mesh: { positions: Float64Array.from(worldPoints(Array.from({length:built.positions.length/3},(_,i)=>Array.from(built.positions.slice(i*3,i*3+3))),sketch.plane).flat()), indices: built.indices.slice() } }
+  const count = built.positions.length / 3
+  if (count > 300000) throw new Error('Sketch placement point budget exceeded.')
+  const plane = sketch.plane
+  const positions = new Float64Array(built.positions.length)
+  if (!plane) {
+    positions.set(built.positions)
+  } else {
+    const o = plane.origin, u = plane.u, v = plane.v
+    const nx = u[1] * v[2] - u[2] * v[1]
+    const ny = u[2] * v[0] - u[0] * v[2]
+    const nz = u[0] * v[1] - u[1] * v[0]
+    if (
+      !Number.isFinite(o[0]) || !Number.isFinite(o[1]) || !Number.isFinite(o[2]) ||
+      !Number.isFinite(u[0]) || !Number.isFinite(u[1]) || !Number.isFinite(u[2]) ||
+      !Number.isFinite(v[0]) || !Number.isFinite(v[1]) || !Number.isFinite(v[2]) ||
+      !Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nz)
+    ) {
+      throw new Error('Sketch geometry exceeds finite numeric range.')
+    }
+    const src = built.positions
+    for (let j = 0; j < src.length; j += 3) {
+      const x = src[j], y = src[j + 1], z = src[j + 2]
+      const wx = o[0] + x * u[0] + y * v[0] + z * nx
+      const wy = o[1] + x * u[1] + y * v[1] + z * ny
+      const wz = o[2] + x * u[2] + y * v[2] + z * nz
+      if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) {
+        throw new Error('Sketch geometry exceeds finite numeric range.')
+      }
+      positions[j] = wx
+      positions[j + 1] = wy
+      positions[j + 2] = wz
+    }
+  }
+  return { id, name: sketch.name + ' · 3D', mesh: { positions, indices: built.indices.slice() } }
 }
 
 /** Author the sketch extrusion before deriving a display mesh. */

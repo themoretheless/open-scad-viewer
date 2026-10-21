@@ -1,0 +1,54 @@
+{
+  "mode": "write",
+  "written": true,
+  "qualificationClaim": "none",
+  "completedWorkUnits": 0,
+  "plannedWorkUnits": 4740,
+  "changedBindings": [
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-workflow",
+      "previousSha256": "57b1704cc442cd29fa401979fa10797109aac517451fb9674908b879744ebaee",
+      "currentSha256": "6de055e90d2726d03e09ffa6c47372f4b7814663b1205cca601a16390e37d59c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-harness",
+      "previousSha256": "8b5a01101845d3a020d199d6edda5ab3f81f1540f8d30adf4a0588ad988d04b6",
+      "currentSha256": "958983b5625fd64510ee1a81a045ae950c8241654fdd72c640a1c08ca0b6ce7c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-clean-fragment-selector",
+      "previousSha256": "67a0dcce05ebd596b10c9844b0baec5e123f85f38e8d6fc4dde5441367e9ac89",
+      "currentSha256": "178cf5eed9c9df3b46ee85f527176a683a3faa754bebd1c10ff0e4b518b007fb"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-ubuntu-selector",
+      "previousSha256": "b1f674c87a53a8c447ca6ff693790068e8bd1231c6244ee61287f64fca449a94",
+      "currentSha256": "752473b74b547ac0cf53738e8ac27ae7dda781885a73a3793503f2dcad7f197b"
+    },
+    {
+      "kind": "g1-bundle",
+      "id": "g1-qualification-harness-bundle",
+      "previousSha256": "3d690de5f6bdad254964f24cac72f9337d3cd8c07e166e855eb650ca78c0a0d4",
+      "currentSha256": "b0851a82ac4267d254b35211637f60aee8547a46bee171e5222a91f74907c4b0"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "fingerprint",
+      "path": "docs/qualification/g0-toolchain-fingerprints-v88.json",
+      "sha256": "169fdf2c6088625aaba0c88249e7c8aaff152e1a4e42415c4c521d854b5a9cbb",
+      "byteLength": 540629
+    },
+    {
+      "id": "plan",
+      "path": "docs/qualification/semantic-manifold-g1-plan-v105.json",
+      "sha256": "a8845df48ee1c3f77052914179e26f65d0b8e85fd966c2b1e5dbd4a550f8b244",
+      "byteLength": 75564
+    }
+  ],
+  "statusPath": "docs/qualification/g0-v88-g1-v105-refreeze-status-v1.json"
+}

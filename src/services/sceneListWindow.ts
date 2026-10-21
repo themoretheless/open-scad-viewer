@@ -1,12 +1,15 @@
 /** Pixel offsets for a scene list with fixed object rows and taller group headers.
  * Geometry stays in the document; only the range of rendered rows changes. */
 export interface SceneListWindow {start:number;end:number;before:number;after:number;total:number}
-export function sceneRowOffsets(heights:readonly number[],gap=1):number[]{
+export function sceneRowOffsets(heights:readonly (number|{readonly height:number})[],gap=1):number[]{
  if(!Number.isFinite(gap)||gap<0)throw Error('Invalid scene row gap.')
- const offsets=[0]
- for(const height of heights){
+ const offsets=new Array<number>(heights.length+1)
+ offsets[0]=0
+ for(let i=0;i<heights.length;i++){
+  const item=heights[i]
+  const height=typeof item==='number'?item:item.height
   if(!Number.isFinite(height)||height<=0)throw Error('Invalid scene row height.')
-  offsets.push(offsets[offsets.length-1]+height+gap)
+  offsets[i+1]=offsets[i]+height+gap
  }
  return offsets
 }

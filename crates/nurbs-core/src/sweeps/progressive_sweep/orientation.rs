@@ -73,7 +73,10 @@ pub struct Approximation {
 /// Caller-controlled progression: consume one level for preview, stop or resume.
 /// Scale is positive [value,0,0]; twist is signed [radians,0,0]. Each law domain
 /// independently maps to normalized traversal (parameter or arc length).
+pub(super) type StationCache = std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<
+    (usize, usize, usize, u64), (Vec<f64>, Option<f64>)>>>;
 pub struct Sweep<'a> {
+    pub(super) station_cache: StationCache,
     pub(super) profile: &'a Curve,
     pub(super) path: &'a Curve,
     pub(super) scale: &'a Curve,
@@ -264,6 +267,7 @@ impl<'a> Sweep<'a> {
             }
         }
         Ok(Self {
+            station_cache: Default::default(),
             profile,
             path,
             scale,
@@ -296,6 +300,7 @@ impl<'a> Sweep<'a> {
         self.orientation_guide = Some(guide);
         self.contact_point = None;
         self.contact_source = None;
+        if let Ok(mut cache) = self.station_cache.lock() { cache.clear(); }
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
     }
@@ -371,6 +376,7 @@ impl<'a> Sweep<'a> {
             "Authored frames cannot be combined with an orientation guide",
         )?;
         self.frame_laws = Some((longitudinal, transverse));
+        if let Ok(mut cache) = self.station_cache.lock() { cache.clear(); }
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
     }
@@ -407,6 +413,7 @@ impl<'a> Sweep<'a> {
         let identity=axis_scale.control_points.iter().all(|p|p.iter().all(|x|*x==1.))
             && center.control_points.iter().all(|p|p.iter().all(|x|*x==0.));
         self.affine_laws = if identity {None} else {Some((axis_scale, center))};
+        if let Ok(mut cache) = self.station_cache.lock() { cache.clear(); }
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
     }
@@ -443,8 +450,14 @@ impl<'a> Sweep<'a> {
                 tolerance,
                 max_cells,
             } => {
+                let tolerance = tolerance_override.unwrap_or(tolerance);
+                let max_cells = remaining.map_or(max_cells, |r| r.min(max_cells));
+                let key = (curve as *const Curve as usize, count, max_cells, tolerance.to_bits());
+                if let Ok(cache) = self.station_cache.lock() {
+                    if let Some(stations) = cache.get(&key) { return Ok(stations.clone()); }
+                }
                 let division =
-                    crate::curve_measure::divide_by_length(curve, count - 1, tolerance_override.unwrap_or(tolerance), remaining.map_or(max_cells,|r|r.min(max_cells)))?;
+                    crate::curve_measure::divide_by_length(curve, count - 1, tolerance, max_cells)?;
                 check(
                     division.within_tolerance && division.points.len() == count,
                     &format!(
@@ -460,10 +473,11 @@ impl<'a> Sweep<'a> {
                     .iter()
                     .map(|p| p.residual_upper)
                     .fold(0_f64, f64::max);
-                Ok((
-                    division.points.into_iter().map(|p| p.parameter).collect(),
-                    Some(residual),
-                ))
+                let stations = (division.points.into_iter().map(|p| p.parameter).collect(), Some(residual));
+                if let Ok(mut cache) = self.station_cache.lock() {
+                    if cache.len() < 32 { cache.insert(key, stations.clone()); }
+                }
+                Ok(stations)
             }
         }
     }
@@ -501,11 +515,11 @@ impl<'a> Sweep<'a> {
         self.level_with_error_budget(count,cells,products)
     }
     pub(super) fn level_with_error_budget(&self, count: usize, max_cells: usize, max_products: usize) -> Result<Level> {
-        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None)
+        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None,None)
     }
     pub(super) fn level_with_error_budget_and_length(&self,count:usize,max_cells:usize,max_products:usize,
         shared_length:Option<&crate::curve_measure::DivisionReport>,shared_guide:Option<&crate::curve_measure::DivisionReport>,
-        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>)->Result<Level>{
+        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut authored_error::SharedArcPose>)->Result<Level>{
         let (coarse, closed, coarse_residual) = self.sections(count)?;
         let (fine, _, fine_residual) = self.sections(4 * (count - 1) + 1)?;
         let mut error = 0_f64;
@@ -525,7 +539,7 @@ impl<'a> Sweep<'a> {
         let patches = patches(&coarse)?;
         let length_residual_upper = coarse_residual.map(|r| r.max(fine_residual.unwrap()));
         let certificate = if let Some([steps,_,_])=self.spatial_rmf_error_limits {
-            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf)?)
+            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf,shared_pose)?)
         }else if self.frame_laws.is_some() {
             Some(authored_error::patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
         } else if self.contact_source.is_some() {
@@ -540,18 +554,26 @@ impl<'a> Sweep<'a> {
             Some(authored_error::frenet_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
         } else if self.options.orientation==Orientation::RotationMinimizing {
             Some(if !authored_error::original_line(self.path) {
-                authored_error::rmf_planar_patch_error_with_length(self,count,max_cells,max_products,shared_length)?
+                authored_error::rmf_default_patch_error_with_length(self,count,max_cells,max_products,shared_length,shared_rmf,shared_pose)?
             } else {self.rmf_straight_patch_error_bound(count,max_cells,max_products)?})
         } else if self.options.orientation==Orientation::CorrectedFrenet {
-            Some(authored_error::corrected_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+            Some(authored_error::corrected_patch_error_with_shared_arc_pose(self,count,max_cells,max_products,shared_length,shared_pose)?)
         } else {None};
         Ok(Level {
             patches,
             report: LevelReport {
+                // Sampled convergence is necessary, but cannot admit an
+                // unresolved original error in any orientation mode.
                 accepted: error <= self.options.max_deviation
-                    && certificate.as_ref().and_then(|r|r.error_upper).is_none_or(|upper|upper<=self.options.max_deviation)
-                    && (self.spatial_rmf_error_limits.is_none() || certificate.as_ref().is_some_and(|r|
-                        r.status==super::super::progressive_miter::scalar_certificate::Status::Certified && r.within_budget)),
+                    && certificate.as_ref().is_some_and(|r|
+                        r.status==super::super::progressive_miter::scalar_certificate::Status::Certified
+                        && r.within_budget
+                        // Preserve the adaptive grid selected by the original
+                        // enclosure. At the caller's final grid, a stronger
+                        // proved bound may admit formerly refused geometry.
+                        && (count==self.options.max_sections || r.refinement_error_upper
+                            .is_none_or(|upper|upper<=self.options.max_deviation))
+                        && r.error_upper.is_some_and(|upper|upper<=self.options.max_deviation)),
                 sections: count,
                 stations: fine.len(),
                 sampled_control_deviation: error,

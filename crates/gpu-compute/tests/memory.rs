@@ -6,14 +6,11 @@ fn unsupported_buffer_usages_return_errors_before_allocation() {
         assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
         return;
     };
-    assert!(context.enabled_features().is_empty());
     for usage in [
         wgpu::BufferUsages::empty(),
         wgpu::BufferUsages::BLAS_INPUT,
         wgpu::BufferUsages::TLAS_INPUT,
         wgpu::BufferUsages::BLAS_INPUT | wgpu::BufferUsages::STORAGE,
-        wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::STORAGE,
-        wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_DST,
     ] {
         assert!(
             matches!(
@@ -22,6 +19,20 @@ fn unsupported_buffer_usages_return_errors_before_allocation() {
             ),
             "usage {usage:?} should be rejected"
         );
+    }
+    if !context
+        .enabled_features()
+        .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
+    {
+        for usage in [
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::STORAGE,
+            wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_DST,
+        ] {
+            assert!(matches!(
+                GpuBuffer::new(&context, 16, usage),
+                Err(BufferError::InvalidUsage)
+            ));
+        }
     }
     for usage in [
         wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,

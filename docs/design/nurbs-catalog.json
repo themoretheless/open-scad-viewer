@@ -1157,16 +1157,92 @@
     {
       "id": "NURBS-0029",
       "name": "геодезическая",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/geodesic.rs",
+        "crates/nurbs-core/tests/geodesic.rs",
+        "docs/design/nurbs-geodesic.md"
+      ],
+      "remainingQualification": [
+        "initial-value RK4 tracing with local sampled curvature residual; global drift, shortest path and rounding-inclusive endpoint error are not certified",
+        "C0 jets use documented one-sided/finite-difference approximations; poles, boundary exits, numeric limits and accepted-step budget remain explicit",
+        "periodic chart unwrapping, B-rep and viewer/export integration are outside native tracing completion"
+      ],
+      "nativeApi": "nurbs_core::geodesic::trace_geodesic_report"
     },
     {
       "id": "NURBS-0030",
       "name": "пересечение поверхностей",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::ss_intersection::construct_qualified_ss_branches",
+      "evidence": [
+        "crates/nurbs-core/src/intersection/ss_intersection.rs",
+        "crates/nurbs-core/src/intersection/ss_intersection/rectilinear.rs",
+        "crates/nurbs-core/tests/ss_coverage.rs",
+        "crates/brep-core/src/nurbs_ss_general.rs",
+        "crates/brep-core/src/nurbs_ss_general/serialization.rs",
+        "crates/brep-core/src/nurbs_ss_general/tests.rs",
+        "docs/design/nurbs-surface-surface-coverage.md",
+        "crates/brep-core/tests/ss_report_admission.rs",
+        "docs/qualification/nurbs-ss-coverage-2026-10-15/native-tests.json",
+        "docs/design/nurbs-ss-monotone-graph.md",
+        "crates/nurbs-core/tests/ss_graph_coverage.rs",
+        "docs/qualification/nurbs-ss-monotone-graph-2026-10-15/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs",
+        "crates/nurbs-core/tests/ss_transverse_fibers.rs",
+        "docs/qualification/nurbs-ss-fibers-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs",
+        "crates/nurbs-core/tests/ss_fiber_coverage.rs",
+        "docs/qualification/nurbs-ss-fiber-coverage-2026-10-16/native-tests.json",
+        "docs/qualification/nurbs-ss-fiber-atlas-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed.rs",
+        "crates/nurbs-core/tests/ss_mixed_fiber_coverage.rs",
+        "docs/qualification/nurbs-mixed-fiber-cover-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/transition.rs",
+        "crates/nurbs-core/tests/ss_fiber_transition.rs",
+        "crates/nurbs-core/tests/support/ss_mixed_fiber.rs",
+        "docs/qualification/nurbs-fiber-transitions-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/components.rs",
+        "crates/nurbs-core/tests/ss_fiber_components.rs",
+        "docs/qualification/nurbs-fiber-components-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/world_trace.rs",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/construct_trace.rs",
+        "crates/nurbs-core/tests/ss_fiber_world_trace.rs",
+        "crates/nurbs-core/tests/ss_construct_trace.rs",
+        "crates/nurbs-core/tests/ss_construct_trace_budget.rs",
+        "docs/qualification/nurbs-fiber-world-error-2026-10-16/native-tests.json",
+        "docs/qualification/nurbs-discover-atlas-candidate-2026-10-19/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/discovery.rs",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/discovered_components.rs",
+        "crates/nurbs-core/tests/ss_discover_atlas.rs",
+        "crates/nurbs-core/tests/ss_discovered_components.rs",
+        "docs/qualification/nurbs-auto-components-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-ss-main-integration-candidate-2026-10-19/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/physical_branches.rs",
+        "crates/nurbs-core/tests/ss_physical_branches.rs",
+        "docs/design/nurbs-physical-branches-and-sewn-faces.md",
+        "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json",
+        "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs",
+        "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch.rs",
+        "crates/nurbs-core/tests/ss_closed_degenerate.rs",
+        "docs/design/nurbs-closed-degenerate-ss.md",
+        "docs/qualification/nurbs-closed-degenerate-ss-2026-10-19/native-tests.json"
+      ],
+      "partialNativeApi": "nurbs_core::ss_intersection::intersect_surface_surface_report",
+      "previousQualificationNotes": [
+        "Bounded automatic original-source root atlas discovery and automatic parameter connected-component census are now integrated into main Rust. Complete closed4D partition replay, original common-point connections and every cross-component root-box separation are qualified without authored fibers/bridges. Unsupported singular/tangent and exhausted cases remain unresolved. Actual physical branch graph assembly, world embedding/periodic quotient and source-bound trim topology remain.",
+        "Owned specific-root continuous world-error traces and adaptive complete local trace construction are implemented; physical branch graph assembly and source-bound trim topology remain",
+        "Candidate continuation and legacy refined seed counters do not authorize interval coverage; support rank, physical embedding and periodic quotients require their actual independent evidence"
+      ],
+      "nativeDomain": "Complete regular original-root components with one common free coordinate per component and globally injective support rectangles publish open world arcs. Additionally, exact single-span degree1/2 polynomial graphs with matching affine XY and diagonal quadratic height difference publish strictly interior closed ellipses, isolated tangent points, tangent double lines, equal-magnitude crossing lines, empty sets or coincident patches; original-source topology and station enclosures replay independently.",
+      "remainingQualification": [
+        "General closed/mixed-coordinate branches, clipped conics, arbitrary singularities, varying rational weights, multiple spans, noninjective supports and periodic SS quotients remain outside the admitted constructors.",
+        "Transport/editor integration of the sealed Rust owners is separate from native qualification."
+      ],
+      "nativeQualification": {
+        "artifact": "docs/qualification/nurbs-closed-degenerate-ss-2026-10-19/native-tests.json",
+        "rule": "typed Rust API, independent original geometry and invalid-input tests, documented admitted domains/limits/guarantees; no viewer integration claim"
+      }
     },
     {
       "id": "NURBS-0031",
@@ -1934,9 +2010,18 @@
     {
       "id": "NURBS-0050",
       "name": "суперэллипсоид",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/superellipsoid.rs",
+        "crates/nurbs-core/tests/superellipsoid.rs",
+        "docs/design/nurbs-superellipsoid.md"
+      ],
+      "remainingQualification": [
+        "analytic interpolation estimate assumes exact samples; libm and binary64 control/evaluation rounding are not certified and no full within-tolerance certificate is claimed",
+        "surface set is not a closed B-rep solid; pole singularities and octant orientation/topology are explicit",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::superellipsoid::approximate"
     },
     {
       "id": "NURBS-0051",
@@ -2274,9 +2359,19 @@
     {
       "id": "NURBS-0060",
       "name": "поверхность по облаку",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/fitting.rs",
+        "crates/nurbs-core/src/foundation/fitting/cloud_surface.rs",
+        "crates/nurbs-core/tests/cloud_surface.rs",
+        "docs/design/nurbs-cloud-surface.md"
+      ],
+      "remainingQualification": [
+        "conditioned PCA chart and numerical least-squares rank limit applicability; multi-sheet topology and unique reconstruction are not inferred",
+        "outward site residual and coarse two-sided Hausdorff bound concern the returned mathematical surface versus the finite authored cloud, not an unknown continuous source",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::fitting::fit_surface_cloud_certified_report"
     },
     {
       "id": "NURBS-0061",
@@ -2506,16 +2601,41 @@
     {
       "id": "NURBS-0067",
       "name": "closed sweep",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::analytic::progressive_profile_body_with_rmf_policy",
+      "evidence": [
+        "crates/brep-core/src/analytic/rational_loft.rs",
+        "crates/brep-core/tests/closed_sweep_native.rs",
+        "crates/brep-core/tests/rational_section_loft.rs",
+        "docs/design/nurbs-closed-sweep-native.md",
+        "crates/nurbs-core/src/sweeps/framed_sweep.rs",
+        "docs/qualification/nurbs-closed-sweep-2026-10-15/native-tests.json"
+      ],
+      "remainingQualification": [
+        "G1/G2 seam, global embedding and solid certification",
+        "Surface-only framed_sweep has sampled diagnostics, not continuous approximation proof",
+        "Broader STEP exchange qualification"
+      ],
+      "nativeScope": "Closed profile transport with source-owned continuous RMF wall error receipts and periodic B-rep incidence; sampled surface-only mode also available"
     },
     {
       "id": "NURBS-0068",
       "name": "огибающая сфер",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::sphere_envelope::approximate_with_domain_audit",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/sphere_envelope.rs",
+        "crates/nurbs-core/tests/sphere_envelope.rs",
+        "docs/design/nurbs-sphere-envelope.md",
+        "crates/nurbs-core/src/construct/surfaces/sphere_envelope/domain.rs",
+        "docs/qualification/nurbs-sphere-envelope-2026-10-14/native-tests.json"
+      ],
+      "remainingQualification": [
+        "Continuous pathwise approximation and rounding-inclusive error bounds",
+        "Global immersion/self-overlap, singular strata and automatic angular chart changes",
+        "B-rep closure and solid/export qualification"
+      ],
+      "nativeScope": "Regular characteristic-circle canal surfaces with explicit reference normal; audited spanwise feasibility and sampled NURBS approximation"
     },
     {
       "id": "NURBS-0069",
@@ -2564,9 +2684,18 @@
     {
       "id": "NURBS-0070",
       "name": "пружина с профилем",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/profile_spring.rs",
+        "crates/nurbs-core/tests/profile_spring.rs",
+        "docs/design/nurbs-profile-spring.md"
+      ],
+      "remainingQualification": [
+        "continuous real-arithmetic Hermite transport estimate excludes libm/control/evaluation rounding; EstimateReached is not a rounding-inclusive certificate",
+        "self-collision, continuous regularity, caps, manifold/solid and closed-path topology remain outside the profile-spring surface constructor contract",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::profile_spring::approximate"
     },
     {
       "id": "NURBS-0071",
@@ -2711,105 +2840,297 @@
     {
       "id": "NURBS-0075",
       "name": "constant fillet",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/tests/fillet_surfaces.rs",
+        "docs/design/nurbs-fillet-surfaces.md"
+      ],
+      "remainingQualification": [
+        "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
+        "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::offset::fillet_surfaces::rolling_ball_fillet"
     },
     {
       "id": "NURBS-0076",
       "name": "variable fillet",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/tests/fillet_surfaces.rs",
+        "docs/design/nurbs-fillet-surfaces.md"
+      ],
+      "remainingQualification": [
+        "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
+        "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
+        "WASM, Rush, editor and export integration remain outside native completion",
+        "natural-cubic radius positivity is checked per query and sampled by builder, not certified continuously; law uses normalized reference-spine parameter"
+      ],
+      "nativeApi": "nurbs_core::offset::fillet_surfaces::variable_radius_fillet"
     },
     {
       "id": "NURBS-0077",
       "name": "G1 blend",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::surface_blend::g1",
+      "evidence": [
+        "crates/nurbs-core/src/join/surface_blend.rs",
+        "crates/nurbs-core/tests/surface_blend.rs",
+        "docs/design/nurbs-surface-blend.md"
+      ],
+      "remainingQualification": [
+        "homogeneous Hermite construction matches parametric boundary jets in real arithmetic under explicit affine correspondence; binary64 rounding is not certified",
+        "C1/C2 implies G1/G2 only where source charts admit the required regular jets; global strip regularity, injectivity and B-rep incidence are not certified",
+        "nonlinear correspondence, automatic seam phase selection, viewer and export integration remain outside native constructor completion"
+      ]
     },
     {
       "id": "NURBS-0078",
       "name": "G2 blend",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::surface_blend::g2",
+      "evidence": [
+        "crates/nurbs-core/src/join/surface_blend.rs",
+        "crates/nurbs-core/tests/surface_blend.rs",
+        "docs/design/nurbs-surface-blend.md"
+      ],
+      "remainingQualification": [
+        "homogeneous Hermite construction matches parametric boundary jets in real arithmetic under explicit affine correspondence; binary64 rounding is not certified",
+        "C1/C2 implies G1/G2 only where source charts admit the required regular jets; global strip regularity, injectivity and B-rep incidence are not certified",
+        "nonlinear correspondence, automatic seam phase selection, viewer and export integration remain outside native constructor completion"
+      ]
     },
     {
       "id": "NURBS-0079",
       "name": "offset",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/offset/surface_offset.rs",
+        "crates/nurbs-core/src/offset/surface_offset/validity.rs",
+        "crates/nurbs-core/src/offset/surface_offset/deviation.rs",
+        "crates/nurbs-core/tests/surface_offset_assurance.rs",
+        "docs/design/nurbs-surface-offset.md"
+      ],
+      "remainingQualification": [
+        "nonzero offsets expose SampledDeviation assurance; only zero-distance identity has exact=true, primitive recognition is heuristic",
+        "deviation and fold-free radius are sampled numerical estimates; inter-sample/rounding-inclusive error, tolerance attainment and global injectivity are not certified",
+        "degenerate regions, B-rep self-trimming, constant-thickness shell/solid and viewer/export integration remain outside native surface-offset completion"
+      ],
+      "nativeApi": "nurbs_core::surface_offset::offset"
     },
     {
       "id": "NURBS-0080",
       "name": "оболочка заданной толщины",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::shell_thickness::thicken_patch",
+      "evidence": [
+        "crates/brep-core/src/shell_thickness.rs",
+        "crates/brep-core/tests/shell_thickness.rs",
+        "crates/nurbs-core/src/offset/surface_offset.rs",
+        "docs/design/nurbs-patch-shell-thickness.md",
+        "docs/qualification/nurbs-patch-shell-thickness-2026-10-15/native-tests.json"
+      ],
+      "nativeScope": "Closed candidate skins of a full rational Bezier source patch: original cap retained, same-basis normal-offset approximation, four exactly owned ruled sides, all saved-face interval regularity, cyclic vertex links, connected opposite-use shell and continuous saved-boundary agreement. Ideal normal thickness is explicitly sampled, with no continuous/rounding-inclusive or embedded-solid certificate.",
+      "remainingQualification": [
+        "continuous rounding-inclusive ideal-thickness error, general trimmed/multispan/multipatch and existing-solid shelling outside admitted native scope",
+        "global self-intersection, outward material and embedded-solid validity require independent admission",
+        "WASM/editor/export qualification remains separate"
+      ]
     },
     {
       "id": "NURBS-0081",
       "name": "прямозубая",
-      "status": "planned",
-      "nativeApi": null,
+      "status": "native",
+      "nativeApi": "brep_core::gear::gear_with_verified_profile",
       "partialNativeApi": "brep_core::gear::gear_with_report",
       "evidence": [
-        "crates/brep-core/src/gear.rs",
+        "crates/brep-core/src/gear/mod.rs",
+        "crates/brep-core/src/gear/gear_spec.rs",
+        "crates/brep-core/src/gear/gear_with_report.rs",
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/involute_quintic.rs",
-        "docs/design/nurbs-gear-flank.md"
+        "docs/design/nurbs-gear-flank.md",
+        "crates/nurbs-core/src/construct/curves/involute/quintic_certificate.rs",
+        "crates/nurbs-core/tests/involute_certificate.rs",
+        "crates/brep-core/tests/gear_flank.rs",
+        "docs/design/nurbs-involute-rounding.md",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/core-tests.json",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/brep-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/design/nurbs-gear-parameter-certification.md",
+        "crates/nurbs-core/src/sweeps/helical_sweep_certificate.rs",
+        "crates/nurbs-core/tests/helical_sweep_certificate.rs",
+        "docs/design/nurbs-helical-saved-net-certificate.md",
+        "crates/brep-core/src/gear_profile_join.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/design/nurbs-gear-exact-profile-joins.md",
+        "crates/nurbs-core/src/analysis/radial_bounds.rs",
+        "crates/nurbs-core/tests/curve_radial_error.rs",
+        "crates/brep-core/src/gear_arc_radius.rs",
+        "docs/design/nurbs-gear-arc-radial-bounds.md",
+        "crates/nurbs-core/src/construct/curves/primitives/arc_certificate.rs",
+        "crates/nurbs-core/tests/arc_parameter_certificate.rs",
+        "crates/brep-core/src/gear_profile_parameter.rs",
+        "docs/design/nurbs-gear-full-profile-accuracy.md",
+        "crates/brep-core/src/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_verified_profile.rs",
+        "docs/design/nurbs-gear-modular-profile.md",
+        "docs/qualification/nurbs-gear-native-193-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "rounding-inclusive flank error qualification",
-        "root transition and gear-specific independent topology qualification",
-        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
-      ]
+        "global saved-wall and cap embedding, complete independent owned-solid admission; solid_geometry_certified remains false",
+        "packaged WASM/Rush/editor/STEP runtime and exchange qualification remain separate"
+      ],
+      "partialFlankCertificateApi": "nurbs_core::involute::certify_quintic_placed",
+      "nativeScope": "External spur gear: compact original NURBS body candidate with complete exact grouped-profile embedding, winding/material-role nesting, immutable verified source bound to actual model base edges, inclusive nominal profile error <=1e-6 and wall error <=1.01e-4, zero free edges and one owned closed body. Whole-solid geometry is explicitly unqualified."
     },
     {
       "id": "NURBS-0082",
       "name": "косозубая",
-      "status": "planned",
-      "nativeApi": null,
+      "status": "native",
+      "nativeApi": "brep_core::gear::gear_with_verified_profile",
       "partialNativeApi": "brep_core::gear::gear_with_report",
       "evidence": [
-        "crates/brep-core/src/gear.rs",
+        "crates/brep-core/src/gear/mod.rs",
+        "crates/brep-core/src/gear/gear_spec.rs",
+        "crates/brep-core/src/gear/gear_with_report.rs",
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/involute_quintic.rs",
-        "docs/design/nurbs-gear-flank.md"
+        "docs/design/nurbs-gear-flank.md",
+        "crates/nurbs-core/src/construct/curves/involute/quintic_certificate.rs",
+        "crates/nurbs-core/tests/involute_certificate.rs",
+        "crates/brep-core/tests/gear_flank.rs",
+        "docs/design/nurbs-involute-rounding.md",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/core-tests.json",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/brep-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/design/nurbs-gear-parameter-certification.md",
+        "crates/nurbs-core/src/sweeps/helical_sweep_certificate.rs",
+        "crates/nurbs-core/tests/helical_sweep_certificate.rs",
+        "docs/design/nurbs-helical-saved-net-certificate.md",
+        "crates/brep-core/src/gear_profile_join.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/design/nurbs-gear-exact-profile-joins.md",
+        "crates/nurbs-core/src/analysis/radial_bounds.rs",
+        "crates/nurbs-core/tests/curve_radial_error.rs",
+        "crates/brep-core/src/gear_arc_radius.rs",
+        "docs/design/nurbs-gear-arc-radial-bounds.md",
+        "crates/nurbs-core/src/construct/curves/primitives/arc_certificate.rs",
+        "crates/nurbs-core/tests/arc_parameter_certificate.rs",
+        "crates/brep-core/src/gear_profile_parameter.rs",
+        "docs/design/nurbs-gear-full-profile-accuracy.md",
+        "crates/brep-core/src/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_verified_profile.rs",
+        "docs/design/nurbs-gear-modular-profile.md",
+        "docs/qualification/nurbs-gear-native-193-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "rounding-inclusive flank error qualification",
-        "root transition and gear-specific independent topology qualification",
-        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
-      ]
+        "global saved-wall and cap embedding, complete independent owned-solid admission; solid_geometry_certified remains false",
+        "packaged WASM/Rush/editor/STEP runtime and exchange qualification remain separate"
+      ],
+      "partialFlankCertificateApi": "nurbs_core::involute::certify_quintic_placed",
+      "nativeScope": "External signed helical gear: compact original NURBS body candidate with complete exact grouped-profile embedding, winding/material-role nesting, immutable verified source bound to actual model base edges, inclusive nominal profile error <=1e-6 and wall error <=1.01e-4, zero free edges and one owned closed body. Whole-solid geometry is explicitly unqualified."
     },
     {
       "id": "NURBS-0083",
       "name": "шевронная",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::gear::gear_with_verified_profile",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/quintic_certificate.rs",
+        "crates/nurbs-core/tests/involute_certificate.rs",
+        "crates/brep-core/src/gear/mod.rs",
+        "crates/brep-core/src/gear/gear_spec.rs",
+        "crates/brep-core/src/gear/gear_with_report.rs",
+        "crates/brep-core/tests/gear_flank.rs",
+        "docs/design/nurbs-involute-rounding.md",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/core-tests.json",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/brep-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/design/nurbs-gear-parameter-certification.md",
+        "crates/nurbs-core/src/sweeps/helical_sweep_certificate.rs",
+        "crates/nurbs-core/tests/helical_sweep_certificate.rs",
+        "docs/design/nurbs-helical-saved-net-certificate.md",
+        "crates/brep-core/src/gear_profile_join.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/design/nurbs-gear-exact-profile-joins.md",
+        "crates/nurbs-core/src/analysis/radial_bounds.rs",
+        "crates/nurbs-core/tests/curve_radial_error.rs",
+        "crates/brep-core/src/gear_arc_radius.rs",
+        "docs/design/nurbs-gear-arc-radial-bounds.md",
+        "crates/nurbs-core/src/construct/curves/primitives/arc_certificate.rs",
+        "crates/nurbs-core/tests/arc_parameter_certificate.rs",
+        "crates/brep-core/src/gear_profile_parameter.rs",
+        "docs/design/nurbs-gear-full-profile-accuracy.md",
+        "crates/brep-core/src/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_verified_profile.rs",
+        "docs/design/nurbs-gear-modular-profile.md",
+        "docs/qualification/nurbs-gear-native-193-2026-10-15/native-tests.json"
+      ],
+      "partialFlankCertificateApi": "nurbs_core::involute::certify_quintic_placed",
+      "remainingQualification": [
+        "global saved-wall and cap embedding, complete independent owned-solid admission; solid_geometry_certified remains false",
+        "packaged WASM/Rush/editor/STEP runtime and exchange qualification remain separate"
+      ],
+      "nativeScope": "Mirrored two-layer herringbone gear: compact original NURBS body candidate with complete exact grouped-profile embedding, winding/material-role nesting, immutable verified source bound to actual model base edges, inclusive nominal profile error <=1e-6 and wall error <=1.01e-4, zero free edges and one owned closed body. Whole-solid geometry is explicitly unqualified."
     },
     {
       "id": "NURBS-0084",
       "name": "внутренняя",
-      "status": "planned",
-      "nativeApi": null,
+      "status": "native",
+      "nativeApi": "brep_core::gear::gear_with_verified_profile",
       "partialNativeApi": "brep_core::gear::gear_with_report",
       "evidence": [
-        "crates/brep-core/src/gear.rs",
+        "crates/brep-core/src/gear/mod.rs",
+        "crates/brep-core/src/gear/gear_spec.rs",
+        "crates/brep-core/src/gear/gear_with_report.rs",
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/involute_quintic.rs",
-        "docs/design/nurbs-gear-flank.md"
+        "docs/design/nurbs-gear-flank.md",
+        "crates/nurbs-core/src/construct/curves/involute/quintic_certificate.rs",
+        "crates/nurbs-core/tests/involute_certificate.rs",
+        "crates/brep-core/tests/gear_flank.rs",
+        "docs/design/nurbs-involute-rounding.md",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/core-tests.json",
+        "docs/qualification/nurbs-involute-rounding-2026-10-15/brep-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/design/nurbs-gear-parameter-certification.md",
+        "crates/nurbs-core/src/sweeps/helical_sweep_certificate.rs",
+        "crates/nurbs-core/tests/helical_sweep_certificate.rs",
+        "docs/design/nurbs-helical-saved-net-certificate.md",
+        "crates/brep-core/src/gear_profile_join.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/design/nurbs-gear-exact-profile-joins.md",
+        "crates/nurbs-core/src/analysis/radial_bounds.rs",
+        "crates/nurbs-core/tests/curve_radial_error.rs",
+        "crates/brep-core/src/gear_arc_radius.rs",
+        "docs/design/nurbs-gear-arc-radial-bounds.md",
+        "crates/nurbs-core/src/construct/curves/primitives/arc_certificate.rs",
+        "crates/nurbs-core/tests/arc_parameter_certificate.rs",
+        "crates/brep-core/src/gear_profile_parameter.rs",
+        "docs/design/nurbs-gear-full-profile-accuracy.md",
+        "crates/brep-core/src/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_profile_embedding.rs",
+        "crates/brep-core/tests/gear_verified_profile.rs",
+        "docs/design/nurbs-gear-modular-profile.md",
+        "docs/qualification/nurbs-gear-native-193-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "rounding-inclusive flank error qualification",
-        "root transition and gear-specific independent topology qualification",
-        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
-      ]
+        "global saved-wall and cap embedding, complete independent owned-solid admission; solid_geometry_certified remains false",
+        "packaged WASM/Rush/editor/STEP runtime and exchange qualification remain separate"
+      ],
+      "partialFlankCertificateApi": "nurbs_core::involute::certify_quintic_placed",
+      "nativeScope": "Internal ring gear: compact original NURBS body candidate with complete exact grouped-profile embedding, winding/material-role nesting, immutable verified source bound to actual model base edges, inclusive nominal profile error <=1e-6 and wall error <=1.01e-4, zero free edges and one owned closed body. Whole-solid geometry is explicitly unqualified."
     },
     {
       "id": "NURBS-0085",
@@ -2827,113 +3148,305 @@
     {
       "id": "NURBS-0086",
       "name": "коническая шестерня",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::gear::bevel_with_verified_profile",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/spherical.rs",
+        "crates/nurbs-core/tests/spherical_involute.rs",
+        "docs/design/nurbs-straight-bevel-flank.md",
+        "docs/qualification/nurbs-bevel-flank-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/spherical/patches.rs",
+        "docs/qualification/nurbs-bevel-patches-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/spherical/parameters.rs",
+        "crates/nurbs-core/tests/bevel_parameters.rs",
+        "docs/qualification/nurbs-bevel-nominal-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/spherical/teeth.rs",
+        "crates/nurbs-core/tests/bevel_teeth.rs",
+        "docs/qualification/nurbs-bevel-teeth-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/curves/involute/spherical/outline.rs",
+        "crates/nurbs-core/tests/bevel_outline.rs",
+        "docs/qualification/nurbs-bevel-outline-2026-10-16/native-tests.json",
+        "crates/brep-core/src/bevel_profile.rs",
+        "crates/brep-core/src/gear_profile_embedding.rs",
+        "crates/brep-core/src/gear/mod.rs",
+        "crates/brep-core/src/gear/gear_spec.rs",
+        "crates/brep-core/src/gear/gear_with_report.rs",
+        "crates/brep-core/tests/bevel_profile.rs",
+        "docs/qualification/nurbs-bevel-embedding-2026-10-16/native-tests.json",
+        "crates/brep-core/src/bevel_body.rs",
+        "crates/brep-core/tests/bevel_body.rs",
+        "crates/brep-core/tests/bevel_verified.rs",
+        "docs/qualification/nurbs-bevel-body-2026-10-16/native-tests.json"
+      ],
+      "partialNativeApi": "brep_core::gear::bevel_body_candidate",
+      "remainingQualification": [
+        "Global saved-wall/fan-cap embedding and complete independent owned-solid admission; solid_geometry_certified remains false",
+        "Bore/cutter-envelope extensions and packaged WASM/Rush/editor/STEP runtime qualification remain separate"
+      ],
+      "nativeScope": "Straight spherical-involute bevel blank: original exact grouped XY projection proves actual 3D outline embedding; immutable original source matches actual body outer edges; inclusive nominal whole-profile, radial-wall and explicit axis fan-cap error meets caller tolerance (default integration 1e-6); one owned closed body and complete continuous edge/lift closure. No bore, manufacturing envelope or global solid-geometry certificate. Existing native-constructor criterion is unchanged."
     },
     {
       "id": "NURBS-0087",
       "name": "червяк",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::worm::finite_with_certificates",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/worm.rs",
+        "crates/nurbs-core/tests/worm.rs",
+        "docs/design/nurbs-worm-za.md",
+        "docs/qualification/nurbs-worm-patches-2026-10-16/native-tests.json",
+        "crates/brep-core/src/worm.rs",
+        "crates/brep-core/src/thread.rs",
+        "crates/brep-core/src/thread_internal.rs",
+        "crates/brep-core/src/lib.rs",
+        "crates/brep-core/tests/worm.rs",
+        "crates/nurbs-core/tests/worm_trim.rs",
+        "docs/qualification/nurbs-worm-trim-2026-10-16/native-tests.json",
+        "docs/qualification/nurbs-worm-finite-2026-10-16/native-tests.json"
+      ],
+      "partialNativeApi": "nurbs_core::worm::trimmed_patches_certified",
+      "remainingQualification": [
+        "Global saved-wall/cap embedding, complete independent owned-solid admission and combined ideal finite-body error bound remain separate",
+        "Cutter-envelope and conjugate worm-wheel contact plus packaged runtime/export qualification remain separate"
+      ],
+      "nativeScope": "Finite cylindrical ZA worm blank: its own axial-module/diameter-quotient/pressure trapezoid and lead source; inclusive original working-patch error; full affine clipping/UV isotopy and axial error band; exact represented cap profile proofs; every current saved wall bound to original retained surfaces; one owned closed body candidate with complete continuous current boundary agreement. Both hands and multiple starts tested, including axial extent longer than a full lead. No global solid or combined ideal finite-body certificate."
     },
     {
       "id": "NURBS-0088",
       "name": "червячное колесо",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::worm::finite_wheel_with_certificates",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs",
+        "crates/nurbs-core/tests/worm_wheel.rs",
+        "docs/design/nurbs-worm-wheel-envelope.md",
+        "docs/qualification/nurbs-worm-wheel-contact-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs",
+        "crates/nurbs-core/tests/worm_wheel_chart.rs",
+        "docs/qualification/nurbs-worm-wheel-chart-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/interpolation.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/taylor.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/expression.rs",
+        "crates/nurbs-core/tests/worm_wheel_fit.rs",
+        "docs/qualification/nurbs-worm-wheel-fit-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/stock.rs",
+        "crates/nurbs-core/tests/worm_wheel_stock.rs",
+        "docs/qualification/nurbs-worm-wheel-stock-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/root.rs",
+        "crates/nurbs-core/tests/worm_wheel_root.rs",
+        "docs/qualification/nurbs-worm-wheel-root-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_stock.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_tip.rs",
+        "crates/nurbs-core/tests/worm_wheel_axial.rs",
+        "crates/nurbs-core/tests/worm_wheel_axial_stock.rs",
+        "crates/nurbs-core/tests/worm_wheel_axial_tip.rs",
+        "docs/qualification/nurbs-worm-wheel-axial-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_source.rs",
+        "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_network.rs",
+        "crates/nurbs-core/tests/worm_wheel_instances.rs",
+        "crates/brep-core/src/worm/wheel.rs",
+        "crates/brep-core/src/worm/wheel/body.rs",
+        "crates/brep-core/tests/worm_wheel_caps.rs",
+        "docs/qualification/nurbs-worm-wheel-caps-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs"
+      ],
+      "partialNativeApi": "nurbs_core::worm_wheel::fit_axial_stock",
+      "remainingQualification": [
+        "Global saved-wall/cap embedding, complete cutter visibility and complete independent owned-solid admission remain separate; solid_geometry_certified=false",
+        "Combined ideal finite-body error remains None",
+        "Packaged WASM/Rush/editor/STEP runtime qualification remains separate"
+      ],
+      "nativeScope": "Complete finite ZA-generated worm-wheel candidate: all original side families and tooth periods with actual shared world controls, original-source error/rank ownership, two continuously admitted physical planar caps, connected manifold closed B-rep and complete saved boundary agreement. Default40-tooth geometry has independent flux/section volume checks. Explicit resolution, cap-curve/topology/proof limits can refuse other inputs. No global solid/cutter visibility or combined ideal finite-body certificate."
     },
     {
       "id": "NURBS-0089",
       "name": "наружная резьба",
-      "status": "planned",
-      "nativeApi": null,
+      "status": "native",
+      "nativeApi": "brep_core::thread::finite_external_with_certificates",
       "partialNativeApi": "nurbs_core::thread::patches",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/thread.rs",
         "crates/nurbs-core/tests/thread.rs",
-        "docs/design/nurbs-thread-patches.md"
+        "docs/design/nurbs-thread-patches.md",
+        "crates/nurbs-core/src/construct/curves/thread/certificate.rs",
+        "crates/nurbs-core/src/construct/curves/thread/coverage.rs",
+        "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs",
+        "crates/brep-core/src/thread_verified.rs",
+        "crates/brep-core/src/thread_internal.rs",
+        "crates/nurbs-core/tests/thread_certificate.rs",
+        "crates/nurbs-core/tests/thread_trim_coverage.rs",
+        "crates/brep-core/tests/thread_verified.rs",
+        "crates/brep-core/tests/thread_internal.rs",
+        "docs/design/nurbs-finite-thread-certificates.md",
+        "docs/qualification/nurbs-thread-source-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain",
-        "closed external core or internal wall and caps",
-        "rounding-inclusive error qualification and independent solid validation"
-      ]
+        "Global 3D wall/cap embedding and independent owned-solid admission; solid_geometry_certified remains false",
+        "Combined ideal finite-body error, ISO fit classes, rounded roots and runout",
+        "Packaged WASM/Rush/editor/STEP runtime qualification"
+      ],
+      "nativeScope": "Finite external sharp-profile thread with disk caps. Original nominal wall error including rounding, complete affine clipping coverage and stored UV isotopy, immutable source-wall binding, exact cap profile topology and final continuous G0 agreement. Closed body candidate; global solid geometry remains explicitly unqualified."
     },
     {
       "id": "NURBS-0090",
       "name": "внутренняя резьба",
-      "status": "planned",
-      "nativeApi": null,
+      "status": "native",
+      "nativeApi": "brep_core::thread::finite_internal_with_certificates",
       "partialNativeApi": "nurbs_core::thread::patches",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/thread.rs",
         "crates/nurbs-core/tests/thread.rs",
-        "docs/design/nurbs-thread-patches.md"
+        "docs/design/nurbs-thread-patches.md",
+        "crates/nurbs-core/src/construct/curves/thread/certificate.rs",
+        "crates/nurbs-core/src/construct/curves/thread/coverage.rs",
+        "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs",
+        "crates/brep-core/src/thread_verified.rs",
+        "crates/brep-core/src/thread_internal.rs",
+        "crates/nurbs-core/tests/thread_certificate.rs",
+        "crates/nurbs-core/tests/thread_trim_coverage.rs",
+        "crates/brep-core/tests/thread_verified.rs",
+        "crates/brep-core/tests/thread_internal.rs",
+        "docs/design/nurbs-finite-thread-certificates.md",
+        "docs/qualification/nurbs-thread-source-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain",
-        "closed external core or internal wall and caps",
-        "rounding-inclusive error qualification and independent solid validation"
-      ]
+        "Global 3D wall/cap embedding and independent owned-solid admission; solid_geometry_certified remains false",
+        "Combined ideal finite-body error, ISO fit classes, rounded roots and runout",
+        "Packaged WASM/Rush/editor/STEP runtime qualification"
+      ],
+      "nativeScope": "Internal threaded ring with separated cylindrical outer walls and annular caps. Original nominal wall error including rounding, complete affine clipping coverage and stored UV isotopy, immutable source-wall binding, exact cap profile topology and final continuous G0 agreement. Closed body candidate; global solid geometry remains explicitly unqualified."
     },
     {
       "id": "NURBS-0091",
       "name": "кулачок",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/radial_cam.rs",
+        "crates/nurbs-core/tests/radial_cam.rs",
+        "docs/design/nurbs-radial-cam.md"
+      ],
+      "remainingQualification": [
+        "adaptive Hermite error, pressure angle and undercut diagnostics are sampled; continuous error/undercut-free/global topology are not certified",
+        "output is an exactly data-closed planar contour chain, not an extruded/manifold B-rep cam or manufacturing admission",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::radial_cam::profile"
     },
     {
       "id": "NURBS-0092",
       "name": "лопатка",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::blade::build",
+      "evidence": [
+        "crates/brep-core/src/blade.rs",
+        "crates/brep-core/tests/blade.rs",
+        "docs/design/nurbs-blade.md",
+        "docs/qualification/nurbs-blade-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-blade-2026-10-15/native-tests.log"
+      ],
+      "nativeScope": "Capped section-authored geometric blade: symmetric cubic Bezier airfoil, per-section chord/thickness-control/twist/stacking, 2..129 stations. Actual ruled NURBS walls, audited caps and closed owned incidence.",
+      "remainingQualification": [
+        "standardized aerodynamic sections, aerodynamic performance, root/tip blends and global embedding are not qualified",
+        "WASM/editor/STEP integration remains outside native completion"
+      ]
     },
     {
       "id": "NURBS-0093",
       "name": "крыло",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/wing_loft.rs",
+        "crates/nurbs-core/tests/wing_loft.rs",
+        "docs/design/nurbs-wing-loft.md"
+      ],
+      "remainingQualification": [
+        "folding check is sampled; original-surface injectivity and global self-intersection absence are not certified",
+        "tip Dome is a shape treatment without formal G1/G2 proof; root closure/B-rep solid and rounding-inclusive geometry error are outside the wing surface constructor contract",
+        "WASM, Rush, editor and export integration remain outside native completion"
+      ],
+      "nativeApi": "nurbs_core::wing_loft::loft_wing"
     },
     {
       "id": "NURBS-0094",
       "name": "корпус по сечениям",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::rational_section_loft",
+      "evidence": [
+        "crates/brep-core/src/analytic/rational_loft.rs",
+        "crates/brep-core/tests/rational_section_loft.rs",
+        "docs/design/nurbs-body-by-sections.md",
+        "docs/qualification/nurbs-body-sections-2026-10-15/native-tests.json"
+      ],
+      "remainingQualification": [
+        "Global embedding, self-intersection, outwardness and solid geometry remain separate audits",
+        "General rounding-inclusive ideal-profile error and universal STEP exchange qualification"
+      ],
+      "nativeScope": "Retained rational B-rep bodies through authored corresponding sections with validated planar end caps and shared topology"
     },
     {
       "id": "NURBS-0095",
       "name": "купол",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/optical_shapes.rs",
+        "crates/nurbs-core/tests/optical_shapes.rs",
+        "docs/design/nurbs-optical-shapes.md"
+      ],
+      "remainingQualification": [
+        "rational surface construction is exact in real arithmetic; binary64 rounding is not certified",
+        "B-rep incidence, orientation, volume/manifold and export qualification are outside native surface completion"
+      ],
+      "nativeApi": "nurbs_core::optical_shapes::dome"
     },
     {
       "id": "NURBS-0096",
       "name": "линза",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/optical_shapes.rs",
+        "crates/nurbs-core/tests/optical_shapes.rs",
+        "docs/design/nurbs-optical-shapes.md"
+      ],
+      "remainingQualification": [
+        "rational surface construction is exact in real arithmetic; binary64 rounding is not certified",
+        "B-rep incidence, orientation, volume/manifold and export qualification are outside native surface completion",
+        "biconvex/plano-convex minor caps and flat cylinder limit; concave and meniscus optical surfaces are outside this constructor contract"
+      ],
+      "nativeApi": "nurbs_core::optical_shapes::lens"
     },
     {
       "id": "NURBS-0097",
       "name": "гофрированная оболочка",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::bellows::cubic",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/bellows.rs",
+        "crates/nurbs-core/tests/bellows.rs",
+        "docs/design/nurbs-bellows.md"
+      ],
+      "remainingQualification": [
+        "explicit cubic corrugation with radial wall thickness; constant normal thickness is not supplied",
+        "data-matched oriented surface collection, not a B-rep shell with owned incidence/manifold/solid certificate",
+        "binary64 conic/control rounding, viewer and export integration remain outside native completion"
+      ]
     },
     {
       "id": "NURBS-0098",
       "name": "волновая поверхность",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "nurbs_core::wave_surface::cubic",
+      "evidence": [
+        "crates/nurbs-core/src/construct/surfaces/wave_surface.rs",
+        "crates/nurbs-core/tests/wave_surface.rs",
+        "docs/design/nurbs-wave-surface.md"
+      ],
+      "remainingQualification": [
+        "sinusoidal approximation not provided; explicit C1 cubic wave only",
+        "binary64 continuous rounding certificate not provided",
+        "JSON/WASM/TypeScript/Rush/editor and export qualification"
+      ]
     },
     {
       "id": "NURBS-0099",
@@ -2952,9 +3465,20 @@
     {
       "id": "NURBS-0100",
       "name": "trimmed multipatch shell",
-      "status": "planned",
-      "nativeApi": null,
-      "evidence": []
+      "status": "native",
+      "nativeApi": "brep_core::trimmed_shell::assemble",
+      "evidence": [
+        "crates/brep-core/src/trimmed_shell.rs",
+        "crates/brep-core/tests/trimmed_shell.rs",
+        "docs/design/nurbs-trimmed-shell.md",
+        "docs/qualification/nurbs-trimmed-shell-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-trimmed-shell-2026-10-15/native-tests.log"
+      ],
+      "nativeScope": "One explicitly owned connected closed shell from trimmed rational patches. Admission requires continuous boundary agreement, valid trim regions, whole-chart spanwise regularity and closed connected vertex links. Unresolved audits never return an admitted model. No Body is authored.",
+      "remainingQualification": [
+        "automatic sewing, degenerate pole edges and closed edges with identical endpoint IDs are outside this constructor",
+        "global embedding, outward solid orientation, volume, periodic seam inference and WASM/editor/STEP integration are not qualified"
+      ]
     },
     {
       "id": "NURBS-0101",
@@ -4338,54 +4862,68 @@
     {
       "id": "NURBS-0162",
       "name": "пересечение кривой с плоскостью",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
-        "continuous outward root exclusion and strict monotone sign-change isolation implemented and independently tested",
-        "exact coplanar active-control coincidence, monotone interpolated endpoints and simple noninterpolated quadratic knot roots implemented; higher-degree noninterpolated endpoints remain incomplete",
-        "exact weighted and degree-elevated Bernstein midpoint powers and endpoint multiplicity 2..25, plus exact C0 periodic seam event ownership implemented; general tangency classification and higher-degree noninterpolated seam roots remain incomplete"
+        "degree 1..25, positive weights and at most 256 controls; bounded exact arithmetic may return Unresolved on resource or precision exhaustion",
+        "parameter enclosures remain binary64; nonrepresentable roots cannot satisfy arbitrarily small source-parameter tolerances",
+        "WASM, Rush, editor and export integration are outside native completion"
       ],
-      "partialNativeApi": "nurbs_core::curve_plane::inspect",
       "evidence": [
         "crates/nurbs-core/src/analysis/curve_plane.rs",
         "crates/nurbs-core/tests/curve_plane.rs",
-        "docs/design/nurbs-curve-plane.md"
-      ]
+        "docs/design/nurbs-curve-plane.md",
+        "crates/nurbs-core/src/analysis/curve_plane/exact_endpoint.rs",
+        "crates/cad-predicates/src/bspline_plane_incidence.rs",
+        "crates/nurbs-core/src/analysis/curve_plane/quadratic.rs",
+        "crates/cad-predicates/src/bspline_plane_roots.rs",
+        "crates/nurbs-core/src/analysis/curve_plane/sturm.rs"
+      ],
+      "nativeApi": "nurbs_core::curve_plane::inspect"
     },
     {
       "id": "NURBS-0163",
       "name": "пересечение двух пространственных кривых",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
-      "partialNativeApi": "nurbs_core::intersection::intersect_curve_curve_report",
       "evidence": [
-        "crates/nurbs-core/src/intersection.rs",
-        "docs/design/nurbs-curve-curve-audit.md"
+        "crates/nurbs-core/src/intersection/mod.rs",
+        "crates/nurbs-core/src/intersection/curve_curve.rs",
+        "docs/design/nurbs-curve-curve-audit.md",
+        "crates/nurbs-core/src/intersection/planar_curve_curve.rs",
+        "crates/nurbs-core/tests/planar_curve_crossings.rs",
+        "docs/design/nurbs-certified-curve-crossings.md",
+        "docs/qualification/nurbs-certified-curve-crossings-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "original-curve outward interval exclusion implemented; coincidence, existence and contact qualification remain",
-        "independent geometric tests and invalid-input tests",
-        "documented domain, tolerance, degeneracy and resource limits"
-      ]
+        "general nonlinear noncoplanar roots, nonliteral overlap, singular/tangent and knot-boundary contact qualification outside admitted native scope",
+        "adapter/export and topology ownership qualification remain separate"
+      ],
+      "nativeApi": "nurbs_core::intersection::intersect_curve_curve_certified_report",
+      "nativeScope": "Exact checked affine 3D line incidence/separation, complete original positive-rational planar transverse roots with interval Krawczyk existence/uniqueness and spatial localization, and literal same-parameter overlap. General spatial curves, other coincidences, tangencies and boundary/conditioning obligations stay explicit."
     },
     {
       "id": "NURBS-0164",
       "name": "пересечение кривой с поверхностью",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
-        "outward certified plane reduction and general existence/uniqueness proof",
-        "rational and non-affine planar UV inversion and full overlap trimming",
-        "viewer adapters and export qualification"
+        "general nonlinear/clipped surface root existence, rational or nonaffine planar UV inversion and general overlap trim ownership outside admitted native scope",
+        "adapter/export and B-rep topology qualification remain separate"
       ],
-      "partialNativeApi": "nurbs_core::intersection::intersect_curve_surface_report",
       "evidence": [
         "crates/nurbs-core/tests/curve_surface_overlap_regressions.rs",
-        "docs/design/nurbs-curve-surface-intersection-audit.md"
-      ]
+        "docs/design/nurbs-curve-surface-intersection-audit.md",
+        "crates/nurbs-core/src/intersection/certified_curve_plane.rs",
+        "crates/nurbs-core/tests/certified_curve_plane.rs",
+        "docs/design/nurbs-certified-curve-plane.md",
+        "docs/qualification/nurbs-certified-curve-plane-2026-10-15/native-tests.json"
+      ],
+      "nativeApi": "nurbs_core::intersection::intersect_curve_plane_certified_report",
+      "nativeScope": "Complete original positive-rational 3D curve intersection with a containing axis-aligned rectangular affine plane chart: outward scalar Newton existence/uniqueness, exact clamped endpoints, spatial and nonunit UV bounds, subnormal gap exclusion, and full original coincident curve with continuously checked rational UV trace. Clipped/nonaffine/general surfaces retain explicit obligations."
     },
     {
       "id": "NURBS-0165",
@@ -4523,15 +5061,143 @@
     {
       "id": "NURBS-0173",
       "name": "разбиение trim-контура на периодическом шве",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
-      "remainingQualification": [
-        "typed Rust implementation or audit of existing API",
-        "independent geometric tests and invalid-input tests",
-        "documented domain, tolerance, degeneracy and resource limits"
+      "evidence": [
+        "crates/nurbs-core/src/trim/periodic_trim.rs",
+        "crates/nurbs-core/tests/periodic_trim.rs",
+        "docs/design/nurbs-periodic-trim.md",
+        "crates/nurbs-core/src/trim/periodic_trim/chart.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/winding.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/double_chart.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/double_chart/corner.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/isotopy.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/anchor.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/approximate_chart.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/support.rs",
+        "crates/nurbs-core/tests/periodic_trim_support.rs",
+        "crates/nurbs-core/src/analysis/surface_parameter_bounds.rs",
+        "crates/nurbs-core/tests/surface_parameter_bounds.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/surface_chart.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/contact.rs",
+        "crates/nurbs-core/tests/periodic_trim_contacts.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/double_chart/flux.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/contact/coefficient.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/weighted.rs",
+        "crates/nurbs-core/tests/periodic_trim_weighted.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/contact/common_projection.rs",
+        "docs/qualification/nurbs-periodic-common-projection-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-periodic-bspline-germs-2026-10-15/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding.rs",
+        "crates/brep-core/tests/winding_regularization.rs",
+        "docs/design/nurbs-winding-region-regularization.md",
+        "docs/qualification/nurbs-winding-regularization-2026-10-15/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic.rs",
+        "crates/brep-core/tests/periodic_winding_regions.rs",
+        "docs/design/nurbs-periodic-winding-regions.md",
+        "docs/qualification/nurbs-periodic-winding-regions-2026-10-15/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic/approximate.rs",
+        "docs/qualification/nurbs-periodic-weighted-approx-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/trim/periodic_trim/coherent.rs",
+        "crates/nurbs-core/tests/periodic_trim_coherent.rs",
+        "docs/qualification/nurbs-coherent-anchor-2026-10-16/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic/coherent.rs",
+        "docs/qualification/nurbs-coherent-weighted-chart-2026-10-16/native-tests.json",
+        "docs/qualification/nurbs-coherent-affine-reverse-2026-10-16/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface.rs",
+        "crates/brep-core/tests/periodic_surface_regions.rs",
+        "docs/qualification/nurbs-periodic-surface-regions-2026-10-16/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface/faces.rs",
+        "crates/nurbs-core/src/analysis/curve_surface_composition/cell_trace.rs",
+        "crates/nurbs-core/tests/periodic_partition_deviation.rs",
+        "crates/nurbs-core/tests/piecewise_surface_lifts.rs",
+        "crates/nurbs-core/tests/surface_rectangle_injectivity.rs",
+        "docs/qualification/nurbs-periodic-owned-faces-2026-10-16/native-tests.json",
+        "crates/cad-predicates/src/bezier_projective_correspondence.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/coherent/projective.rs",
+        "crates/nurbs-core/tests/periodic_projective_correspondence.rs",
+        "docs/qualification/nurbs-projective-homotopy-2026-10-16/native-tests.json",
+        "crates/brep-core/tests/periodic_projective_regions.rs",
+        "crates/cad-predicates/src/bspline_projective_correspondence.rs",
+        "crates/nurbs-core/tests/periodic_projective_bspline.rs",
+        "docs/qualification/nurbs-projective-bspline-2026-10-16/native-tests.json",
+        "crates/cad-predicates/src/bspline_restriction_identity.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/exact_partition.rs",
+        "crates/nurbs-core/tests/periodic_exact_partition.rs",
+        "docs/qualification/nurbs-exact-partition-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/trim/periodic_trim/exact_chart.rs",
+        "crates/nurbs-core/tests/periodic_exact_contacts.rs",
+        "crates/brep-core/src/profile_certificate/winding/periodic/exact_contacts.rs",
+        "crates/brep-core/tests/periodic_exact_contacts.rs",
+        "docs/qualification/nurbs-exact-contacts-2026-10-16/CONTINUE.md",
+        "crates/nurbs-core/src/trim/periodic_trim/clock.rs",
+        "crates/nurbs-core/src/trim/periodic_trim/exact_chart/mapped.rs",
+        "crates/nurbs-core/tests/periodic_clock_images.rs",
+        "crates/brep-core/src/profile_certificate/winding/periodic/clock_mapped.rs",
+        "crates/brep-core/tests/periodic_clock_regions.rs",
+        "docs/qualification/nurbs-nonlinear-clock-images-2026-10-16/native-tests.json",
+        "crates/brep-core/src/profile_certificate/winding/periodic/face_build.rs",
+        "crates/brep-core/src/profile_certificate/winding/periodic/clock_mapped/faces.rs",
+        "crates/brep-core/src/profile_certificate.rs",
+        "docs/qualification/nurbs-nonlinear-clock-faces-2026-10-16/native-tests.json",
+        "crates/nurbs-core/src/analysis/curve_surface_composition.rs",
+        "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs",
+        "crates/nurbs-core/tests/periodic_image_alias_candidates.rs",
+        "crates/brep-core/src/profile_certificate/winding/periodic/multispan.rs",
+        "crates/brep-core/tests/periodic_multispan_regions.rs",
+        "docs/qualification/nurbs-multispan-image-regions-2026-10-16/native-tests.json",
+        "crates/brep-core/src/profile_certificate/arithmetic/ray_winding.rs",
+        "crates/brep-core/src/profile_certificate/arithmetic.rs",
+        "crates/brep-core/src/profile_certificate/point_winding.rs",
+        "crates/brep-core/src/profile_certificate/linear_arrangement.rs",
+        "crates/brep-core/src/profile_certificate/offset_regions/arrangement.rs",
+        "crates/brep-core/src/profile_certificate/winding/periodic/linear_contacts.rs",
+        "crates/nurbs-core/tests/periodic_corrected_image_graph.rs",
+        "crates/brep-core/tests/point_winding.rs",
+        "crates/brep-core/tests/linear_winding_arrangement.rs",
+        "crates/brep-core/tests/periodic_linear_contacts.rs",
+        "docs/qualification/nurbs-contact-winding-2026-10-16/native-tests.json",
+        "docs/qualification/nurbs-support-regions-candidate-2026-10-18/native-tests.json",
+        "docs/qualification/nurbs-support-regions-candidate-2026-10-18/CONTINUE.md",
+        "docs/qualification/nurbs-auto-regions-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-auto-regions-candidate-2026-10-19/CONTINUE.md",
+        "docs/qualification/nurbs-shore-batch-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-shore-batch-candidate-2026-10-19/CONTINUE.md",
+        "docs/qualification/nurbs-chart-cycles-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-chart-fans-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-chart-fans-candidate-2026-10-19/CONTINUE.md",
+        "docs/qualification/nurbs-chart-canonical-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-cycle-sides-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-strict-patches-candidate-2026-10-19/native-tests.json",
+        "docs/qualification/nurbs-brep-main-integration-candidate-2026-10-19/native-tests.json",
+        "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_boundary_loops.rs",
+        "docs/qualification/nurbs-chart-boundary-loops-candidate-2026-10-19/native-tests.json",
+        "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_loop_winding.rs",
+        "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_fan_patches.rs",
+        "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_sewn_faces.rs",
+        "docs/design/nurbs-physical-branches-and-sewn-faces.md",
+        "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json"
       ],
-      "evidence": []
+      "partialNativeApi": "brep_core::profile_certificate::assemble_periodic_surface_faces",
+      "nativeApi": "brep_core::profile_certificate::own_periodic_sewn_faces",
+      "previousQualificationNotes": [
+        "Owned actual-support faces, complete original-chart local injectivity/rank, continuous world lifts, one/two-axis shared seam edges and cyclic corner vertex ownership are implemented; global cross-face spatial embedding remains separate",
+        "Exact global projective correspondence now covers original clamped multi-span B-spline bases, synchronized candidate pieces and owned weighted regions/faces; exact original Bezier nonlinear clock image compaction, owned weighted UV regions and actual-support correspondence are implemented; physical faces for the exact nonlinear clock proof kind now retain fresh original-support injectivity, continuous lifts, connector sewing and full model replay; source-owned oriented multispan rational image traversals, irrational other-curve knot preimages, weighted regions and actual curved-support faces are implemented; maps outside admitted complete original traversal families remain unqualified",
+        "Within the admitted complete original event/common-relation families, curved original event nodes, physical ports/higher germs/rotations, support-clipped material cycles/lifts and connected material partitions have isolated Rust qualification. Automatic source-qualified material paths now also pass actual plane/cylinder-hole, separated essential bands, point-touching material and noncanonical seam-lift cases; budget exhaustion never proves disconnection. Actual source-bound general physical face publication remains; the qualified135-path graph/chart/core extension is now merged into the shared checkout; physical face publication remains incomplete.",
+        "Exact original chart copies, true native corners/frame intervals, source-bound chart-inside material labels, complete finite source-shore contact census and regular monotone coincident image endpoint proofs certify constant material germs on open native frame intervals in qualified Rust. Local chart cycles with exact higher-germ material fans are now qualified, including point-touching filled components and a tangent hole with a repeated-vertex walk. Exact local cycle winding/material classification is now separately qualified, including strict boundary/outside/work distinctions and bounded operation-local replay reuse; source-bound one-sided orientation witnesses pass22native cases, WASM and all-test typechecking; strict disjoint Jordan containment and local outer/hole patch ownership pass24native cases, WASM and all-test typechecking. Shared/repeated vertices explicitly require a separate fan-aware patch proof. Whole-cycle containment, local patch ownership, source-bound physical face publication/sewing, and final shared-checkout integration remain.",
+        "Current-main compatible Rust integration passed321 distinct brep cases and139 core cases, WASM compilation and all brep test-module typechecking. General fan-aware chart patches and actual world-face publication/sewing remain incomplete; no completion count increase.",
+        "Original weak chart walks now have applied Rust edge-exhaustive vertex-simple graph loop decomposition, original walk/direction ownership, inverse edge locations and shared-vertex contact census;5fresh native cases include actual touching regions and a tangent hole, plus WASM and all brep test-module typecheck. Decomposed-loop winding, contact fan/material patch ownership and actual world-face sewing remain; this graph owner grants no face authority."
+      ],
+      "nativeDomain": "Exact original source/frame loop winding, nonalternating high-germ contacts, complete signed patch nesting, actual support rank/global embedding and oriented auxiliary seam sewing by equality of complete original native intervals. Publishes contact-aware face/vertex/edge/coedge ownership, including two-axis corner quotient.",
+      "remainingQualification": [
+        "Unpaired auxiliary intervals, including authored contours lying exactly on a seam without additional source-bound admission, refuse.",
+        "Contact-aware abstract normalization does not assert a contact-free closed manifold Body. Legacy Model serialization and editor/transport integration remain separate from native completion."
+      ],
+      "nativeQualification": {
+        "artifact": "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json",
+        "rule": "typed Rust API, independent original geometry and invalid-input tests, documented admitted domains/limits/guarantees; no viewer integration claim"
+      }
     },
     {
       "id": "NURBS-0174",
@@ -4675,13 +5341,12 @@
     {
       "id": "NURBS-0182",
       "name": "проверка G2 между поверхностями",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
-        "continuous world-tensor G2 under explicit normalized affine correspondence implemented, including transverse speed/shear/nonlinear parameter freedom",
-        "inferred and validated nonaffine seam correspondence remains unimplemented",
-        "different boundary degrees and knot layouts verified under explicit affine correspondence; inferred general correspondence qualification remains incomplete"
+        "closed-seam phase inference and globally optimal correspondence search are not provided",
+        "trim ownership, topology authorship, WASM/editor/STEP integration are not qualified"
       ],
       "partialNativeApi": "nurbs_core::continuity::inspect_surface_jets_checked_report",
       "evidence": [
@@ -4693,11 +5358,15 @@
         "docs/design/nurbs-surface-shape-operator.md",
         "crates/nurbs-core/src/join/surface_g2.rs",
         "crates/nurbs-core/tests/surface_g2.rs",
-        "docs/design/nurbs-surface-g2-affine.md"
+        "docs/design/nurbs-surface-g2-affine.md",
+        "docs/qualification/nurbs-g2-nonaffine-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-g2-nonaffine-2026-10-15/native-tests.log"
       ],
       "partialGeometricApi": "nurbs_core::surface_shape_operator::at",
       "partialContinuousGeometricApi": "nurbs_core::surface_shape_operator::boundary_bounds",
-      "partialSeamGeometricApi": "nurbs_core::surface_g2::inspect"
+      "partialSeamGeometricApi": "nurbs_core::surface_g2::inspect",
+      "nativeApi": "nurbs_core::surface_g2::inspect_inferred",
+      "nativeScope": "Continuous position, normal and world-curvature tensor inspection with a coherent global orientation; supplied monotone nonaffine maps and inferred endpoint-fixed open-seam correspondence. Candidate search is not proof; all acceptance bounds evaluate original surfaces."
     },
     {
       "id": "NURBS-0183",
@@ -4784,46 +5453,68 @@
     {
       "id": "NURBS-0188",
       "name": "очистка самопересечений offset-контура",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
-        "prove topology transfer from the original continuous NURBS offset to the represented chord arrangement",
-        "handle near tangencies, coincident branches and unresolved topology explicitly",
-        "qualify the end-to-end offset cleanup contract and resource limits"
+        "general smooth original NURBS offset-to-arrangement topology transfer, curved tangencies/coincidence and general source ownership outside admitted orthogonal native scope",
+        "Minkowski erosion/dilation, original-part clearance, machine-tool semantics and adapter/export qualification remain separate"
       ],
-      "partialNativeApi": "nurbs_core::chord_fill_selection::boundary_curves",
       "evidence": [
         "crates/nurbs-core/src/offset/chord/fill_selection.rs",
         "crates/nurbs-core/tests/chord_region.rs",
-        "docs/design/nurbs-offset-region-audit.md"
-      ]
+        "docs/design/nurbs-offset-region-audit.md",
+        "crates/nurbs-core/src/offset/orthogonal_cleanup.rs",
+        "crates/nurbs-core/tests/orthogonal_offset_cleanup.rs",
+        "docs/design/nurbs-orthogonal-offset-cleanup.md",
+        "docs/qualification/nurbs-orthogonal-offset-cleanup-2026-10-15/native-tests.json"
+      ],
+      "nativeApi": "nurbs_core::curve_offset::cleanup_orthogonal_miter_offset",
+      "nativeScope": "Exact original orthogonal affine NURBS line-wire miter offset construction and full source-to-arrangement image/incidence identity, including exact crossings, contacts, coincident multiplicities, independently admitted winding fill and explicit precision/resource/degeneracy refusals. This certifies nominal miter-chain regularization, not general smooth offset topology or Minkowski buffering."
     },
     {
       "id": "NURBS-0189",
       "name": "плоская эквидистантная дорожка обработки",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
-        "typed Rust implementation or audit of existing API",
-        "independent geometric tests and invalid-input tests",
-        "documented domain, tolerance, degeneracy and resource limits"
+        "pockets/holes, full area-removal coverage, offset-region cleanup and motion self-intersection removal are separate operations",
+        "rapid links, plunges, feed/dynamics/G-code, WASM/editor/export integration remain outside this geometric native API"
       ],
-      "evidence": []
+      "nativeApi": "nurbs_core::planar_toolpath::generate",
+      "nativeScope": "Nested planar outside-contour cutter-center paths with original-loop simplicity/winding admission, continuous source-offset/nominal-tolerance bounds, exact stored closure, threshold-driven global original-boundary clearance and all-or-nothing plan admission. Supports either contour orientation and represented miter/bevel connectors.",
+      "evidence": [
+        "crates/nurbs-core/src/offset/machining.rs",
+        "crates/nurbs-core/src/distance/curve_distance/clearance.rs",
+        "crates/nurbs-core/src/distance/curve_distance.rs",
+        "crates/nurbs-core/tests/planar_toolpath.rs",
+        "crates/nurbs-core/tests/curve_clearance.rs",
+        "docs/design/nurbs-planar-toolpath.md",
+        "docs/qualification/nurbs-planar-toolpath-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-planar-toolpath-2026-10-15/native-tests.log"
+      ]
     },
     {
       "id": "NURBS-0190",
       "name": "параллельные сечения поверхности плоскостями",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
-        "typed Rust implementation or audit of existing API",
-        "independent geometric tests and invalid-input tests",
-        "documented domain, tolerance, degeneracy and resource limits"
+        "tangencies, coincident patches, nonmonotone and multi-component section topology remain unresolved",
+        "authored trims, periodic seam ownership, general SS coverage, WASM/editor/STEP integration are not qualified"
       ],
-      "evidence": []
+      "nativeApi": "nurbs_core::parallel_sections::intersect",
+      "nativeScope": "Parallel equations normal dot S = level over the complete original natural chart. Continuous rounding-inclusive approximation of admitted regular monotone parameter graphs, certified whole-image exclusion, explicit full-domain unresolved obligations for all other cases; one shared work budget.",
+      "evidence": [
+        "crates/nurbs-core/src/intersection/parallel_sections.rs",
+        "crates/nurbs-core/tests/parallel_sections.rs",
+        "docs/design/nurbs-parallel-sections.md",
+        "docs/qualification/nurbs-parallel-sections-2026-10-15/native-tests.json",
+        "docs/qualification/nurbs-parallel-sections-2026-10-15/native-tests.log",
+        "docs/qualification/nurbs-parallel-sections-2026-10-15/cargo-check.log"
+      ]
     },
     {
       "id": "NURBS-0191",
@@ -4927,20 +5618,31 @@
     {
       "id": "NURBS-0197",
       "name": "проверка водонепроницаемости набора патчей",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "core-200",
       "category": "Производственные операции",
-      "partialNativeApi": "brep_core::watertight::inspect",
       "evidence": [
         "crates/brep-core/src/watertight.rs",
         "crates/brep-core/tests/watertight.rs",
-        "docs/design/nurbs-watertight-audit.md"
+        "docs/design/nurbs-watertight-audit.md",
+        "crates/nurbs-core/src/analysis/curve_surface_agreement/correspondence.rs",
+        "crates/brep-core/src/watertight/correspondence.rs",
+        "crates/nurbs-core/tests/boundary_correspondence.rs",
+        "crates/brep-core/tests/watertight_correspondence.rs",
+        "docs/design/nurbs-boundary-correspondence.md",
+        "docs/qualification/nurbs-boundary-correspondence-2026-10-15/native-tests.json",
+        "crates/brep-core/src/watertight/linear_patch_set.rs",
+        "crates/brep-core/tests/linear_patch_set.rs",
+        "docs/design/nurbs-linear-patch-closure.md",
+        "docs/qualification/nurbs-linear-patch-closure-2026-10-15/native-tests.json"
       ],
       "remainingQualification": [
-        "continuous seam audit, unique whole-edge affine matches and explicit partial-boundary qualification implemented; automatic partial and nonlinear correspondence remain",
-        "independent geometric tests and invalid-input tests",
-        "documented domain, tolerance, degeneracy and resource limits"
-      ]
+        "general curved automatic partial-overlap matching, closed-seam phases and degenerate boundary images outside the admitted native scope",
+        "parameter bijection, trim simplicity, vertex links, manifold embedding and solid validity require independent qualifications",
+        "WASM/editor/export integration remains separate"
+      ],
+      "nativeApi": "brep_core::watertight::inspect_linear_patch_set",
+      "nativeScope": "Automatic exact image partitions of clamped positive-rational axis-aligned boundaries, including one-to-many partial overlaps and nonlinear rational parameterization; continuous original lift agreement, opposite unique interval uses, explicit open/ambiguous/unsupported results. General full-boundary affine and nonlinear correspondence remain separate available APIs. This is boundary-set seam closure, not a manifold/embedded-solid certificate."
     },
     {
       "id": "NURBS-0198",

@@ -150,13 +150,10 @@ fn clip_against_band(distances: &[f64], dlo: f64, dhi: f64) -> Option<[f64; 2]> 
         lo = lo.min(t);
         hi = hi.max(t);
     };
-    let edges: Vec<([f64; 2], [f64; 2])> = hull
-        .iter()
-        .zip(hull.iter().cycle().skip(1))
-        .map(|(&a, &b)| (a, b))
-        .take(hull.len())
-        .collect();
-    for (a, b) in edges {
+    let hull_len = hull.len();
+    for idx in 0..hull_len {
+        let a = hull[idx];
+        let b = hull[(idx + 1) % hull_len];
         if dlo <= a[1] && a[1] <= dhi {
             admit(a[0]);
         }
@@ -265,7 +262,7 @@ pub(crate) fn clip_pair(
         *budget -= 1;
         let start_a = cur_a;
         let start_b = cur_b;
-        let (ca, wa) = euclidean_controls(a, cur_a)?;
+        let (ca, _wa) = euclidean_controls(a, cur_a)?;
         let (cb, wb) = euclidean_controls(b, cur_b)?;
         match clip_one_direction(&ca, &cb, &wb, cur_b) {
             ClipOutcome::Separated => return Ok(None),
@@ -274,7 +271,7 @@ pub(crate) fn clip_pair(
         }
         // Re-clip in the opposite direction against the (possibly shrunk) box.
         let (ca, wa) = euclidean_controls(a, cur_a)?;
-        let (cb, wb) = euclidean_controls(b, cur_b)?;
+        let (cb, _wb) = euclidean_controls(b, cur_b)?;
         match clip_one_direction(&cb, &ca, &wa, cur_a) {
             ClipOutcome::Separated => return Ok(None),
             ClipOutcome::Indeterminate => {}

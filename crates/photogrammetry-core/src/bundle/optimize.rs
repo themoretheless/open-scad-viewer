@@ -117,9 +117,15 @@ fn inverse_point(mut h: M3, damping: f64) -> Option<M3> {
 
 /// Diagonally normalized Cholesky. Storage is only quadratic in camera count.
 /// Reuses caller-owned buffers so damping retries do not reallocate the system.
-pub(super) fn solve_reduced(h: &mut [f64], rhs: &mut [f64], checkpoints: &mut Checkpoints) -> Option<()> {
+pub(super) fn solve_reduced(
+    h: &mut [f64],
+    rhs: &mut [f64],
+    scales: &mut Vec<f64>,
+    checkpoints: &mut Checkpoints,
+) -> Option<()> {
     let n = rhs.len();
-    let mut scales = vec![0.; n];
+    scales.clear();
+    scales.resize(n, 0.);
     for i in 0..n {
         if !h[i * n + i].is_finite() || h[i * n + i] <= 0. {
             return None;
@@ -176,6 +182,9 @@ pub(super) struct Step {
 pub(super) struct SchurScratch {
     h: Vec<f64>,
     rhs: Vec<f64>,
+    scales: Vec<f64>,
+    inverses: Vec<M3>,
+    products: Vec<[[f64;3];6]>,
 }
 pub(super) fn schur_step(
     linear: &Linearization,
@@ -186,13 +195,18 @@ pub(super) fn schur_step(
     let n = linear.camera_rhs.len();
     scratch.h.clone_from(&linear.camera_hessian);
     scratch.rhs.clone_from(&linear.camera_rhs);
-    let h = &mut scratch.h;
-    let rhs = &mut scratch.rhs;
+    scratch.inverses.clear();
+    scratch.inverses.reserve(linear.points.len());
+    let SchurScratch {
+        h,
+        rhs,
+        scales,
+        inverses,
+        products,
+    } = scratch;
     for i in 0..n {
         h[i * n + i] += damping * h[i * n + i].max(1e-9);
     }
-    let mut inverses = Vec::with_capacity(linear.points.len());
-    let mut products: Vec<[[f64; 3]; 6]> = Vec::new();
     for (index, point) in linear.points.iter().enumerate() {
         if !checkpoints.every(index, 16) {
             return None;
@@ -209,17 +223,20 @@ pub(super) fn schur_step(
         );
         for (a, wa) in cross.iter().enumerate() {
             for i in 0..6 {
-                rhs[wa.column + i] -= (0..3).map(|k| wa.values[i][k] * point_rhs[k]).sum::<f64>();
+                let row = wa.values[i];
+                rhs[wa.column + i] -=
+                    row[0] * point_rhs[0] + row[1] * point_rhs[1] + row[2] * point_rhs[2];
             }
             for (b, wb) in cross.iter().enumerate().take(a + 1) {
                 // Compute the 6x6 contribution contiguously, then subtract it into
                 // the scattered direct and transposed addresses in the same order.
                 let mut block = [[0.; 6]; 6];
+                let pa = &products[a];
                 for i in 0..6 {
+                    let pai = pa[i];
                     for j in 0..6 {
-                        block[i][j] = (0..3)
-                            .map(|k| products[a][i][k] * wb.values[j][k])
-                            .sum::<f64>();
+                        let wbj = wb.values[j];
+                        block[i][j] = pai[0] * wbj[0] + pai[1] * wbj[1] + pai[2] * wbj[2];
                     }
                 }
                 for i in 0..6 {
@@ -234,10 +251,10 @@ pub(super) fn schur_step(
         }
         inverses.push(inverse);
     }
-    solve_reduced(h, rhs, checkpoints)?;
+    solve_reduced(h, rhs, scales, checkpoints)?;
     let cameras = rhs.clone();
     let mut points = Vec::with_capacity(linear.points.len());
-    for (index, (point, inverse)) in linear.points.iter().zip(inverses).enumerate() {
+    for (index, (point, &inverse)) in linear.points.iter().zip(inverses.iter()).enumerate() {
         if !checkpoints.every(index, 128) {
             return None;
         }

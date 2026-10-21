@@ -218,10 +218,21 @@ describe('analytic B-rep native program execution', () => {
     } finally { await result.dispose() }
   })
 
-  it('refuses unsupported elliptical profiles, out-of-plane transforms, twisted/tapered extrusion, and crossing rings', async () => {
+  it('preserves analytic elliptical extrusion volume and closed topology under nonuniform scaling', async () => {
+    for (const scale of [2, 1.0000000001]) {
+      const result = await execute(`linear_extrude(height=2) scale([${scale},1]) circle(2);`)
+      try {
+        const model = solid(result.outputs[0])
+        expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, bodyCount: 1, boundaryEdgeCount: 0 })
+        expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(8 * Math.PI * scale, 7)
+        expect(model.edges.some(edge => edge.curve.weights.some(weight => weight !== 1))).toBe(true)
+        expect(tessellateNurbsBrep(model, 4).report).toMatchObject({ closed: true, degenerateTriangles: 0, nonManifoldEdges: 0, orientationConflicts: 0 })
+      } finally { await result.dispose() }
+    }
+  })
+
+  it('refuses out-of-plane transforms, twisted/tapered extrusion, and crossing rings', async () => {
     for (const body of [
-      'linear_extrude(height=2) scale([2,1]) circle(2);',
-      'linear_extrude(height=2) scale([1.0000000001,1]) circle(2);',
       'linear_extrude(height=2) translate([0,0,1]) square(2);',
       'linear_extrude(height=2,twist=30) square(2);',
       'linear_extrude(height=2,scale=[1,2]) circle(2);',

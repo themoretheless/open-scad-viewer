@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "scope": "original-domain nonlinear selected-boundary correspondence; not complete NURBS-0197 or full workspace qualification",
+  "suiteTests": {
+    "nurbs_core_unit": 1342,
+    "boundary_correspondence": 3,
+    "watertight": 6,
+    "watertight_correspondence": 3,
+    "repaired_embedding_test": 1,
+    "repaired_volume_test": 1
+  },
+  "commands": [
+    "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --lib --test boundary_correspondence",
+    "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test watertight --test watertight_correspondence",
+    "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --lib boundary_embedding::tests::exact_quadrant_sweep_admits_contacts_only_after_joint_prerequisites -- --exact",
+    "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --lib volume_validity::tests::sweep_boundary_proof_precedes_nesting_and_material_orientation -- --exact"
+  ],
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_surface_agreement.rs": "21d19d6aa2b464c5fb14a9b1552f08c0a3bd37f3d234bd0e0bbd2f30b85a859f",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/correspondence.rs": "932879681937718bb7b8a92c6afe52b8302573ef0602ef2cbfbe6e3dc6f33c11",
+    "crates/nurbs-core/src/analysis/curve_surface_composition.rs": "8f7ab67bb60173765cf1c849ebefaaec984a0451f38d5ff0f876c4be6cefa4d4",
+    "crates/nurbs-core/tests/boundary_correspondence.rs": "69291b31c4a065a23ebbaaabd4dd4a07310bed06cbeb45de972efc97e5577c49",
+    "crates/brep-core/src/watertight.rs": "05ff8db4c57971a411a39e895bd446c488ac69478975381b720500bad5ff3074",
+    "crates/brep-core/src/watertight/correspondence.rs": "1f5fed1d334c26abd057c96209c56f33d9bef213f073513d12b6a86e3e963cbd",
+    "crates/brep-core/tests/watertight_correspondence.rs": "9632a9648c74edcda269541e67fb44d732a1884738f7d88670a709b35eee534b",
+    "crates/brep-core/tests/watertight.rs": "94054b2d44c813eb8d4c421fb8f69943223f9d3874aca4cdf5916aa7f0cece66",
+    "crates/nurbs-core/src/join/continuity/station_scale.rs": "e45a12512c412ad613160816cb2288942f548cf730ed51ba20449378f64e9b10",
+    "crates/nurbs-core/src/analysis/surface_linear_monotonicity.rs": "9f56a38da66e51573eaec50688d29239f95518f3206ac9c39777012108f242fd",
+    "crates/brep-core/src/boundary_embedding.rs": "c80d3ec4eab50c1df128bc601b1b5746df4202d81c409710473729eae0d19dda",
+    "crates/brep-core/src/volume_validity.rs": "5bf8ba6131b8a6c95fda2c681df03e38af09df24361ead43dc16452d70d0d0fc"
+  },
+  "originalDomainCorrespondenceCertified": true,
+  "sampledSearchUsedAsProof": false,
+  "roundingOfTrimProxyUsedAsOriginalProof": false,
+  "automaticPartialOverlapQualified": false,
+  "patchSetUniqueCoverageQualified": false,
+  "topologyAuthorshipGranted": false,
+  "fullBrepRegressionPassed": false,
+  "unresolvedBooleanRegressions": 3,
+  "wasmEditorStepQualified": false,
+  "fullBrepRegression": {
+    "passed": false,
+    "testsPassed": 941,
+    "testsFailed": 5,
+    "testsIgnored": 3,
+    "runtimeSeconds": 714.02,
+    "testOnlyRepairsSubsequentlyPassed": [
+      "boundary_embedding::tests::exact_quadrant_sweep_admits_contacts_only_after_joint_prerequisites",
+      "volume_validity::tests::sweep_boundary_proof_precedes_nesting_and_material_orientation"
+    ],
+    "remainingFailures": [
+      "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations",
+      "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+      "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable"
+    ],
+    "note": "Full run compiled before two test-only expectation repairs; both corrected tests rerun individually. Three genuine complete-SS admission refusals remain. The full gate is not marked passed."
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-19",
+  "gitHead": "2a6f4321cfc9f0a306f76a01c94b4d7533e2f22c",
+  "workspace": "shared dirty workspace; no commit/push",
+  "source": {
+    "frozenNative": "/private/tmp/osv-trimmed-branches-topology-source-v2-20261019",
+    "nativeFiles": 3375,
+    "nativeLedgerSha256": "8464acd95d4c4588cd41613b7352d84ae7e3adcc00a346e9ade03a6b0be2e0cf",
+    "receiptSha256": "891b27d86fc7f44d4213d8c1dc5d6519594cbf2565b0f8585667f01c556db3ff",
+    "runtimeLedgerSha256": "791ae1c3d2cd20cf59b2749144fc0c1b6b828ca993683ac0457cb8da1c8a6dc9",
+    "concurrentDraftDifferences": []
+  },
+  "kernel": {
+    "sha256": "b4cd5d582ad11bb4f11aebbc0567f98bbf33df7f8a2d57f3a28a2b1b00cc9e06",
+    "bytes": 12071071,
+    "generatedPublicDistIdentical": true
+  },
+  "checker": {
+    "sha256": "2f33d9a18cebe1826e25983f1e2d7ddf107c82ec9438b29bf1c77495f89df6ac",
+    "source": "crates/brep-core/examples/verify_profile_certificate.rs"
+  },
+  "tests": {
+    "native": 142,
+    "minkowski3d": 23,
+    "profileCertificate": 78,
+    "bezierModeling": 41,
+    "host": 154,
+    "hostFiles": 16,
+    "targetedUi": 5,
+    "uiSkipped": 261,
+    "provider": 303,
+    "providerFiles": 19,
+    "publicModeling": 736,
+    "publicFiles": 100,
+    "publicTimeoutIncreased": false,
+    "publicEvidenceComposite": true,
+    "publicBroadRunGreen": false,
+    "publicBroadPassed": 734,
+    "publicBroadTimeouts": 2,
+    "publicFailuresPassedOnIsolatedRecheck": 2,
+    "applicationTypes": true,
+    "mcpTypes": true,
+    "fullRepositorySuite": false
+  },
+  "corpus": {
+    "newCertificates": 13,
+    "newForgeries": 45,
+    "expectedRefusals": 3,
+    "polyhedralCertificates": 8,
+    "polyhedralForgeries": 32,
+    "planarCertificates": 15,
+    "planarForgeries": 15,
+    "separateRustChecker": true,
+    "legacyProofsReplayed": 9,
+    "legacyForgeriesRejected": 15,
+    "legacyAdmissionRefusalsSkipped": [
+      "f32-thin-collapse",
+      "unproved-curved-trim"
+    ]
+  },
+  "browser": {
+    "source": "Original cylinder with nonrectangular rational cap trims plus mesh cube",
+    "proofFormatVersion": 2,
+    "certificateVersion": 2,
+    "standaloneVerified": true,
+    "approximationTopology": {
+      "boundary": "two-sphere",
+      "filledSet": "closed-three-ball",
+      "includesMeshRounding": true,
+      "kind": "radial-minkowski-homeomorphism",
+      "sourceCenters": [
+        [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "1",
+            "1"
+          ]
+        ],
+        [
+          [
+            "1",
+            "2"
+          ],
+          [
+            "1",
+            "2"
+          ],
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ],
+      "status": "proved"
+    },
+    "roundingTopology": {
+      "identity": true,
+      "pairs": 0,
+      "precision": "f32",
+      "separatedPairs": 0,
+      "sharedEdges": 0,
+      "sharedVertices": 0,
+      "status": "proved",
+      "wholeLinearHomotopy": true
+    },
+    "nominalVolumeMm3": 21.0,
+    "maximumSetDeviationExactMm": [
+      "36028797018963968",
+      "19107155017577319"
+    ],
+    "undoRedoPassed": true,
+    "sourceToleranceVisibleInCompactMode": true,
+    "freshLoadWarningsErrors": 0,
+    "initialOldManifestRefusalFixed": true
+  },
+  "runtimeProvider": {
+    "recordId": "docs/qualification/runtime-provider-b4cd5d582ad1-2026-10-19.json",
+    "versions": [
+      "own-rust-node-v4",
+      "brep-closed-v4"
+    ],
+    "publishedV3ManifestsUnchanged": true,
+    "runtimeAuditPassed": true
+  },
+  "dist": {
+    "artifacts": 175,
+    "assetBytes": 8398635,
+    "rawWasmBytes": 15099352,
+    "packedGeometry": {
+      "file": "dist/assets/geometry-kernel-bytes-DT5kCkUI.js",
+      "bytes": 4087819,
+      "budget": 4100000
+    },
+    "directModeler": {
+      "file": "dist/assets/DirectModeler-WGNpm4i4.js",
+      "bytes": 393370,
+      "budget": 394000
+    },
+    "totalAssetBudget": 8410000
+  },
+  "remainingLimits": [
+    "Degree 1-8, positive weights and finite exact arithmetic/work budgets.",
+    "Pcurves must stay inside the active UV rectangle; no automatic external periodic lifts.",
+    "Original source face images must be exactly C0 sewn; the current analytic sphere equator gap explicitly refuses.",
+    "Approximation topology proof is sufficient radial homeomorphism, not a general proof for higher-genus or non-star-shaped solids.",
+    "Branch graphs do not assert that every downstream Boolean/modeling consumer uses them.",
+    "Proof assistant, arithmetic implementation, compiler/runtime and the topological arguments remain trusted."
+  ]
+}

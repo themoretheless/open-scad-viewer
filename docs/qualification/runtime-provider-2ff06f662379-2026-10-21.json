@@ -1,0 +1,23 @@
+{
+  "schema": "runtime-provider-qualification/1",
+  "state": "complete",
+  "qualified": true,
+  "recordId": "docs/qualification/runtime-provider-2ff06f662379-2026-10-21.json",
+  "corpusVersion": "runtime-provider-2ff06f662379-2026-10-21",
+  "target": "browser-worker/node-mcp",
+  "artifacts": {
+    "wasmSha256": "2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "lockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+    "rustLockfileSha256": "0c68303e41d40ad569ee29e786b134fc6d51753f51bc3e09d3a71421b63bf369",
+    "recordId": "docs/qualification/runtime-provider-2ff06f662379-2026-10-21.json",
+    "corpusVersion": "runtime-provider-2ff06f662379-2026-10-21"
+  },
+  "fullGoalComplete": false,
+  "scope": "Completed finite exact-artifact native, public WASM/worker, Node/MCP and browser lifecycle matrix after manual integration. Not universal CAD geometry coverage or G0/G1 clean qualification.",
+  "qualificationDirectory": "docs/qualification/manual-integration-2026-10-21/final-v6",
+  "qualificationSha256": "419b971f30fc2914e3bb524847549ebe8b07706cb0196507f13c0d24912f88fe",
+  "deliveryState": "installed-verified",
+  "deliveredAtUtc": "2026-10-21T15:33:06.300911+00:00",
+  "verificationReceipt": "docs/qualification/manual-integration-2026-10-21/final-v6/receipt.json"
+}

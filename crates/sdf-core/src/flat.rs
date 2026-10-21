@@ -141,7 +141,27 @@ impl Field {
                     flat.aux
                         .extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
                 }
-                Field::Extrude { .. } | Field::Revolve { .. } | Field::Deform { .. } => {
+                Field::Cylinder { .. }
+                | Field::Gyroid { .. }
+                | Field::SchwarzP { .. }
+                | Field::Diamond { .. }
+                | Field::Extrude { .. }
+                | Field::Revolve { .. }
+                | Field::Deform { .. }
+                | Field::Neovius { .. }
+                | Field::Lidinoid { .. }
+                | Field::SchoenIWP { .. }
+                | Field::Octahedron { .. }
+                | Field::HexPrism { .. }
+                | Field::TriangularPrism { .. }
+                | Field::SmoothIntersection { .. }
+                | Field::ChamferUnion { .. }
+                | Field::ChamferIntersection { .. }
+                | Field::ChamferDifference { .. }
+                | Field::Onion { .. }
+                | Field::Elongate { .. }
+                | Field::Mirror { .. }
+                | Field::Taper { .. } => {
                     return None;
                 }
             }

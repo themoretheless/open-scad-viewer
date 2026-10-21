@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "scope": "Spherical involute and source-bound straight-bevel working flank, not complete bevel gear",
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "tests": {
+    "native-tests": {
+      "passed": 9,
+      "failed_summaries": 0
+    },
+    "involute-regression": {
+      "passed": 2,
+      "failed_summaries": 0
+    }
+  },
+  "total_focused_passed": 11,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/spherical.rs": "3aeafd899d4e71d2356a0b30660551cd38f3bf2437420186188bef6c376b491a",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "1be226e21a11c5ebbbe0af7058c2f59669caac4290e3faacc0f20761ab86bde0",
+    "crates/nurbs-core/tests/spherical_involute.rs": "444ba60047053423663a3897d033f0071832389867cef6f1a1a74766a04c2ebf"
+  },
+  "limitations": [
+    "Surface U control limit 32; fine wide flanks explicitly refused",
+    "Complete nominal tooth profile, multi-patch assembly and owned gear body remain unqualified"
+  ]
+}

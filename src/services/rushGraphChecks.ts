@@ -23,20 +23,29 @@ export function checkRushGraphGeometry(checks: readonly GeometryCheck[], meshes:
     const mesh = flattenExportMeshes(meshes)
     let bodies = 0
     for (const part of mesh.parts) {
-      const parent = Array.from({ length: part.positions.length / 3 }, (_, i) => i)
-      const find = (v: number): number => { while (parent[v] !== v) { parent[v] = parent[parent[v]!]!; v = parent[v]! } return v }
-      const used = new Set<number>()
+      const vCount = part.positions.length / 3
+      const parent = new Int32Array(vCount)
+      for (let i = 0; i < vCount; i++) parent[i] = i
+      const used = new Uint8Array(vCount)
+      const find = (v: number): number => { while (parent[v] !== v) { parent[v] = parent[parent[v]]; v = parent[v] } return v }
       for (let i = 0; i < part.indices.length; i += 3) {
         const a = part.indices[i]!, b = part.indices[i + 1]!, c = part.indices[i + 2]!
-        parent[find(b)] = find(a); parent[find(c)] = find(a)
-        used.add(a); used.add(b); used.add(c)
+        const ra = find(a)
+        parent[find(b)] = ra; parent[find(c)] = ra
+        used[a] = 1; used[b] = 1; used[c] = 1
       }
-      bodies += new Set([...used].map(find)).size
+      for (let i = 0; i < vCount; i++) {
+        if (used[i] && parent[i] === i) bodies++
+      }
     }
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
-    for (const index of mesh.indices) for (let axis = 0; axis < 3; axis++) {
-      const v = mesh.positions[index * 3 + axis]!
-      min[axis] = Math.min(min[axis]!, v); max[axis] = Math.max(max[axis]!, v)
+    const pos = mesh.positions, idx = mesh.indices
+    for (let i = 0; i < idx.length; i++) {
+      const base = idx[i]! * 3
+      const vx = pos[base]!, vy = pos[base + 1]!, vz = pos[base + 2]!
+      if (vx < min[0]) min[0] = vx; if (vx > max[0]) max[0] = vx
+      if (vy < min[1]) min[1] = vy; if (vy > max[1]) max[1] = vy
+      if (vz < min[2]) min[2] = vz; if (vz > max[2]) max[2] = vz
     }
     return checks.map(check => {
       let actual: number | null = null
@@ -64,7 +73,7 @@ export async function evaluateRushGraphGeometry(
     groups.set(source, group)
   })
   const report: GeometryCheckResult[] = new Array(checks.length)
-  for (const [source, group] of groups) {
+  await Promise.all(Array.from(groups, async ([source, group]) => {
     let results: GeometryCheckResult[]
     try {
       const target = source === undefined ? meshes : await buildTarget(source)
@@ -73,7 +82,7 @@ export async function evaluateRushGraphGeometry(
       results = group.map(({check}) => ({...check, actual:null, status:'unknown', reason:error instanceof Error ? error.message : 'Assertion target could not be built'}))
     }
     group.forEach(({index}, offset) => { report[index] = results[offset]! })
-  }
+  }))
   return report
 }
 

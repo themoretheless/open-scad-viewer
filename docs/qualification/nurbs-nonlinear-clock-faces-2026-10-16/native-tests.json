@@ -1,0 +1,73 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "one shared physical face builder after distinct fresh source-proof admission",
+    "nonprojective t\u00b2 source clock alias reaches owned original-support planar and genuinely bilinear curved faces",
+    "duplicate original seam crossing source regions preserve multiplicity2 and sew two opposite original chart connectors into one physical edge",
+    "independent source/model/topology/complete injectivity and boundary agreement replay; corrupt receipts and one-ULP saved vertex damage refuse"
+  ],
+  "gates": {
+    "regional-regressions": {
+      "suites": 6,
+      "passed": 31,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "private-replay": {
+      "suites": 2,
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "curved-and-seam": {
+      "suites": 1,
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0
+    },
+    "wasm": {
+      "finished": true,
+      "exit_code": 0
+    },
+    "api-map": "186 modules, 200 entries; --check passed",
+    "catalog": "198 implemented, 2 planned; no errors",
+    "format": "five changed physical source/test files passed explicit rustfmt --check"
+  },
+  "non_additive_counts": "private-replay log also includes an earlier version of the integration test. Later curved-and-seam supersedes that integration result; regional-regressions includes the same two integration tests before the additional curved-support check. Do not sum overlapping tests.",
+  "historical": "Previous full libraries2486pass/3ignored and Boolean3 preceded this face refactor. This current gate covers six regional integration binaries, relevant private replay and both-crate WASM; it is not a new full integration or full library run.",
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/winding/periodic/face_build.rs": "ff75f37fac660b1aaaa7833a508ba4fd87c45f9b2b6536ffde81467a0183fec9",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface/faces.rs": "a34a1b2ff948acb449b786e0197d457111342a6fdc43f7255242d2cd69ed482f",
+    "crates/brep-core/src/profile_certificate/winding/periodic/clock_mapped.rs": "30b37ce17a50e476a6183b6c4326a6ed152b690e6338096f4306226c49cdf14d",
+    "crates/brep-core/src/profile_certificate/winding/periodic/clock_mapped/faces.rs": "88d2dbfa545d1326ebcc27cc15f1003906c628917138d5127ab7c3fc8d0a966d",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "8840c8d0f9ca12bb79356608db1bc81c3c5d98af7346838a10c84053923b8495",
+    "crates/brep-core/src/profile_certificate/winding.rs": "2da700bfd60ca150d0c366d22ee8162f0a756fbc7e0242392a33e80af6229986",
+    "crates/brep-core/src/profile_certificate.rs": "a40ac2a9111cdaced61bbc1d6a9b5ad378c7dcdd2e7ed5cc046484c5d6bebc71",
+    "crates/brep-core/tests/periodic_clock_regions.rs": "02e1123b5d84845a2b2ea51b6af6fa269fd06013c8583b31dd2155047fe0421e"
+  },
+  "face_builder_preservation": {
+    "original_sha256": "9bd24751b27ca0b9dd725fb24ff3c29b9a64be62d10d9b2abb94625f2dff2ef0",
+    "checked": "All original physical assembly statements and helper functions retained modulo qualified-context field substitutions and rustfmt whitespace."
+  },
+  "remaining": [
+    "arbitrary non-Bezier/nonlinear correspondence beyond admitted original identity families",
+    "general source-owned inter-wire contact regularization",
+    "N0030 automatic complete root atlas discovery, owned physical branch graph and source-bound trim topology"
+  ],
+  "no_claims": [
+    "global cross-face spatial embedding",
+    "closed volume admission",
+    "STEP or viewer delivery"
+  ],
+  "selected_source_hashes_unchanged_after_gates": true
+}

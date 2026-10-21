@@ -22,14 +22,10 @@ pub(super) fn profile_request(v: &Value, profiles: &Value) -> Result<Value> {
             req[target] = value.clone();
         }
     }
-    if let Some(correction) = o.get("capCorrection") {
-        for (source, target) in [
-            ("tolerance", "cap_correction_tolerance"),
-            ("quantum", "cap_correction_quantum"),
-            ("maxWork", "cap_correction_max_work"),
-        ] {
-            if let Some(value) = correction.get(source) {
-                req[target] = value.clone();
+    for (kind,prefix) in [("capCorrection","cap"),("circleCorrection","circle")] {
+        if let Some(correction)=o.get(kind) {
+            for (source,suffix) in [("tolerance","tolerance"),("quantum","quantum"),("maxWork","max_work")] {
+                if let Some(value)=correction.get(source) {req[&format!("{prefix}_correction_{suffix}")]=value.clone();}
             }
         }
     }
@@ -127,14 +123,31 @@ pub(super) fn profile_body_from(
     request["loops"] = v["loops"].clone();
     // Rebuild from the native constructor-owned retained sections. Re-lofting
     // sampled rows here would discard correction and full-boundary evidence.
-    let mut body = call("brep_nurbs_progressive_profile_body", request)?;
+    let annular=&v["options"]["annularCaps"];
+    let operation=if annular.is_null() {"brep_nurbs_progressive_profile_body"} else {
+        for (source,target,default) in [("maxWork","annular_cap_max_work",1000000),
+            ("maxProducts","annular_cap_max_products",100000),("maxPairs","annular_cap_max_pairs",10000),
+            ("maxCells","annular_cap_max_cells",100000),("smoothnessMaxWork","smoothness_max_work",2000000),
+            ("geometricMaxCells","geometric_g2_max_cells",128)] {
+            request[target]=value(annular,source,json!(default));
+        }
+        if yes(annular,"automatic") {"brep_nurbs_progressive_profile_auto_body"} else {"brep_nurbs_progressive_profile_annular_body"}
+    };
+    let original_request=request.clone();
+    let mut body = call(operation, request)?;
     let model = body["model"].clone();
     let closed = yes(&body["approximation"]["report"], "closedPath");
-    let caps = cap_faces(&model, closed)?;
+    let caps=if annular.is_null() {cap_faces(&model,closed)?} else {
+        // The selected exact planar caps come from this fresh source-owned
+        // construction; caller-supplied face selections are never used.
+        body["planarCapFaces"].clone()
+    };
     let volume = call(
         "brep_sweep_volume_audit",
         merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
     )?;
+    body["_progressiveRequest"]=original_request;
+    body["_progressiveOperation"]=json!(operation);
     body["volume"] = volume.clone();
     body["approximation"]["report"]["volume"] = volume.clone();
     body["approximation"]["report"]["wallRegularityCertified"] =
@@ -231,7 +244,12 @@ pub fn stream_next(v: Value) -> Result<Value> {
             json!({"patches":if accepted{state.last["patches"].clone()}else{Value::Null},"profilePatchRanges":if accepted{state.last["profilePatchRanges"].clone()}else{Value::Null},"report":state.last["report"],"levels":state.levels})
         };
         let result = if state.raw {
-            approximation
+            // Preview acceptance may defer the continuous proof. Final raw
+            // construction must run the owning collector with the original
+            // request and budgets before publishing its authoritative report.
+            let operation=if state.miter {"curve_progressive_miter"} else {"surface_progressive_sweep_profiles"};
+            let result=nurbs(operation,state.compiled.clone())?;
+            if state.miter {result} else {evidence::profile(result,&state.compiled,&state.request["options"])?}
         } else if state.miter {
             progressive_miter_from(state.request, Some(approximation))?
         } else {

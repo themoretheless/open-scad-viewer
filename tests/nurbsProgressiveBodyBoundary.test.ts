@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve,type ProgressiveGuidedSurfaceSweepOptions} from '../src/services/nurbsConstructors'
 import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
@@ -23,7 +24,7 @@ it.each(['corrected-frenet-affine-zero-curvature-hollow-body-boundary.r','arc-le
  if(!('nativeGeometry' in built))throw new Error('Missing corrected retained body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,
   budget:file.includes('straight')?.01:.1})
- const retained=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const retained=readNativeGeometryData(built.nativeGeometry).geometry
  if(file.includes('straight')) {
   const poles=retained.faces.slice(0,-2).flatMap((face:any)=>face.surface.controlPoints.flat())
   expect([0,1,2].map(k=>[Math.min(...poles.map((p:number[])=>p[k]!)),Math.max(...poles.map((p:number[])=>p[k]!))]))
@@ -87,7 +88,7 @@ it.each(['arc-length-curved-nonaxial-planar-rmf-body-boundary.r','arc-length-cur
  if(!('nativeGeometry' in built))throw new Error('Missing retained body source')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:file==='arc-length-curved-nonaxial-planar-rmf-body-boundary.r'||file==='arc-length-curved-fixed-normal-body-boundary.r'||file==='arc-length-curved-frenet-body-boundary.r'||file==='arc-length-curved-guided-body-boundary.r'||file==='arc-length-curved-contact-body-boundary.r'||file==='arc-length-curved-planar-rmf-body-boundary.r'?2:file.startsWith('arc-length-curved-')?.2:.01})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toBeNull()
- const retained=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const retained=readNativeGeometryData(built.nativeGeometry).geometry
  if(file==='closed-planar-rmf-body-boundary.r') {
   expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,retained))
    .not.toThrow()
@@ -127,6 +128,6 @@ it.each(['fixed-normal','planar-rmf'])('refuses folded %s material despite a pro
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!('nativeGeometry' in built))throw Error('Missing native body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:2})
- const retained=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const retained=readNativeGeometryData(built.nativeGeometry).geometry
  expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,retained)).toThrow(/Progressive sweep Solid geometry could not be proved/)
 },60000)

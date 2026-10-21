@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {useTransientNotice} from './composables/useTransientNotice'
+import SweepBoundaryBadges from './components/SweepBoundaryBadges.vue'
 import { useEditorFormatting } from './composables/useEditorFormatting'
 import { useEditorResize } from './composables/useEditorResize'
 import VrControls from './components/VrControls.vue'
@@ -286,6 +288,7 @@ const renderingQuality = ref<GeometryQuality>('full')
 const renderedQuality = ref<GeometryQuality>('full')
 const renderedSource = ref('')
 const notice = ref('')
+const showNotice=useTransientNotice(notice)
 const fileName = ref(props.initialWorkspace.fileName)
 const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
   props.initialWorkspaceDurable ? 'saved' : 'error',
@@ -888,7 +891,6 @@ let sharedImportPending = props.initialSharedImportPending
 let restoringWorkspace = false
 let applyingWorkspaceReplacement = false
 let componentActive = true
-let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 const topbarRef = ref<HTMLElement | null>(null)
@@ -1038,7 +1040,6 @@ onUnmounted(() => {
     void persistWorkspaceNow()
   }
   componentActive = false
-  if (noticeTimeout) clearTimeout(noticeTimeout)
   setStorageFailureHandler(null)
   buildCoordinator?.dispose()
   buildCoordinator = null
@@ -2327,11 +2328,7 @@ function isCommandEnabled(id: CommandId): boolean {
 
 const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEditorResize({ mainRef, editorWidth, editorMaxWidth })
 
-function showNotice(message: string) {
-  notice.value = message
-  if (noticeTimeout) clearTimeout(noticeTimeout)
-  noticeTimeout = setTimeout(() => { notice.value = '' }, 2200)
-}
+
 
 </script>
 
@@ -2746,6 +2743,7 @@ function showNotice(message: string) {
             {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
             <span v-if="evidence.errorUpper !== null"> · {{ lang === 'ru' ? 'оценка' : 'bound' }} ≈ {{ evidence.errorUpper > 0 && evidence.errorUpper < 0.000001 ? evidence.errorUpper.toExponential(3) : formatNumber(evidence.errorUpper, 6) }} mm</span>
             <span v-if="evidence.withinBudget === false"> · {{ lang === 'ru' ? 'превышает допуск' : 'exceeds tolerance' }}</span>
+            <SweepBoundaryBadges :lang="lang" :evidence="evidence" />
           </div>
         </div>
         <div v-if="sweepPatchFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">

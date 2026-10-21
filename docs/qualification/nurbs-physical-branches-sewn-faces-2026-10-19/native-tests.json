@@ -1,0 +1,184 @@
+{
+  "recorded_at_utc": "2026-10-19T14:55:51.630175+00:00",
+  "status": "qualified, applied and checked in working main;200native-or-integrated catalog entries",
+  "candidate": "/private/tmp/nurbs-native-200-sewn-faces-main-final-20261019",
+  "native_geometry_candidate": "/private/tmp/nurbs-native-200-periodic-sewn-faces-20261019",
+  "owned_paths": [
+    "crates/nurbs-core/src/intersection/ss_intersection.rs",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs",
+    "crates/brep-core/src/profile_certificate.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_strict_patches.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_cycle_sides.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_winding.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_cycles.rs",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/physical_branches.rs",
+    "crates/nurbs-core/tests/ss_physical_branches.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_loop_winding.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_fan_patches.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_sewn_faces.rs"
+  ],
+  "new_paths": 5,
+  "native_geometry_passed": 14,
+  "native_geometry_exit": 0,
+  "native_geometry_seconds": 657.14,
+  "native_core_passed": 13,
+  "native_core_exit": 0,
+  "parent_loop_winding_passed": 2,
+  "distinct_selected_native_cases": 29,
+  "native_names": {
+    "native-geometry.log": [
+      "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+      "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+      "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_touching_filled_regions_keep_two_cycles_and_one_shared_chart_vertex",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_tangent_hole_uses_higher_germs_and_retains_a_repeated_vertex_walk",
+      "profile_certificate::span_intersections::translated::periodic_chart_fan_patches::tests::actual_touching_material_fans_publish_two_patches_with_one_owned_contact",
+      "profile_certificate::span_intersections::translated::periodic_chart_fan_patches::tests::exact_cyclic_port_alternation_distinguishes_crossing_nested_and_separate_fans",
+      "profile_certificate::span_intersections::translated::periodic_chart_strict_patches::tests::inconsistent_containment_or_material_alternation_refuses",
+      "profile_certificate::span_intersections::translated::periodic_chart_strict_patches::tests::nested_island_belongs_to_its_own_patch_inside_an_outer_hole",
+      "profile_certificate::span_intersections::translated::periodic_chart_fan_patches::tests::actual_tangent_hole_retains_one_patch_negative_hole_and_original_contact",
+      "profile_certificate::span_intersections::translated::periodic_sewn_faces::tests::actual_curved_seam_crossing_keeps_irrational_cuts_and_exact_world_composition",
+      "profile_certificate::span_intersections::translated::periodic_sewn_faces::tests::actual_full_torus_sews_both_axes_and_corners_without_authored_trim_edges",
+      "profile_certificate::span_intersections::translated::periodic_sewn_faces::tests::actual_point_touching_faces_preserve_distinct_original_material_fans",
+      "profile_certificate::span_intersections::translated::periodic_sewn_faces::tests::actual_tangent_hole_keeps_contact_normalization_and_one_material_boundary_walk"
+    ],
+    "native-core.log": [
+      "automatic_empty_set_has_a_complete_source_owned_exclusion_partition",
+      "automatic_original_fiber_needs_no_authored_seed_or_chart_in_either_order",
+      "automatic_nonlinear_original_graph_discovers_its_own_overlapping_charts",
+      "automatic_two_components_cover_both_exact_roots_and_shared_cell_faces",
+      "discovery_budget_or_tangency_never_authorizes_a_partial_atlas",
+      "automatic_empty_and_single_chart_component_census_remain_source_owned",
+      "automatic_nonlinear_component_needs_no_authored_bridge",
+      "automatic_two_root_components_connect_closed_chart_endpoints_and_separate_all_other_pairs",
+      "exact_branch_stations_enclose_independent_analytic_roots_and_reject_unowned_queries",
+      "folded_support_parameter_component_never_becomes_an_embedded_physical_arc",
+      "actual_two_roots_publish_disjoint_world_arcs_and_both_original_trim_projections",
+      "original_empty_intersection_has_no_physical_vertices_or_trim_uses",
+      "nonlinear_original_world_arc_is_not_replaced_by_a_sampled_polyline"
+    ],
+    "native-loop-parent.log": [
+      "profile_certificate::span_intersections::translated::periodic_chart_loop_winding::tests::actual_touching_components_preserve_each_original_cycle_winding",
+      "profile_certificate::span_intersections::translated::periodic_chart_loop_winding::tests::actual_tangent_hole_keeps_negative_inner_loop_and_boundary_contacts"
+    ],
+    "integration-boolean.log": [
+      "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+      "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+      "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations"
+    ]
+  },
+  "integration_boolean_repeated_passed": 3,
+  "integration_boolean_increases_distinct_count": false,
+  "all_core_and_brep_test_module_typecheck_exit": 0,
+  "wasm_core_and_brep_exit": 0,
+  "format_exit": 0,
+  "unrelated_live_minkowski_source_drift_preserved": {
+    "crates/brep-core/src/minkowski3d/curved.rs": {
+      "tested": "88aaf3a95c461ebace26d07311d05ce50b5a6f76f832297175f6e4ec2d2b2b5d",
+      "current": "8d61c1784e572402382d12a7f5894be6fd02bb98f5686e774d61d3404b758158"
+    },
+    "crates/brep-core/src/minkowski3d/curved/atlas.rs": {
+      "tested": "beb18e3adf870ba406e361a6a02b7eb2bc3bb69eb336e9cc6b4020c013fa7ed0",
+      "current": "863b844b72d26707e197ab6666d2918de5624778931e735df63f6e9d8d5a9993"
+    },
+    "crates/brep-core/src/minkowski3d/curved/atlas/bernstein.rs": {
+      "tested": "29f85b0dfac5a1b1db8ab67c65bce9860ee9951106de879073258ba1041504e6",
+      "current": "228d8976b409630126b2bde28b49ba4bf31ee9116a2ca5bd99fd01bb1ef7f0f1"
+    }
+  },
+  "scope_note": "The current-live Minkowski work is outside this NURBS feature qualification; no unrelated source was overwritten. Qualified-final-source is the tested frozen snapshot, not a claim of all live unrelated source identity. Actual working-main all-test-module typecheck and WASM checks also passed after application.",
+  "native_domain": {
+    "NURBS-0030": "Complete original-root components with a common free coordinate per component and both complete support rectangles globally injective; embedded open physical arcs, endpoint selectors, exact procedural trims and station queries",
+    "NURBS-0173": "Noncrossing original germ contacts, complete signed patch nesting, actual source embedding, contact-aware faces and exact matched opposite native auxiliary intervals, including two-axis corner quotient"
+  },
+  "limitations": [
+    "Closed/mixed-coordinate/singular SS branches and noninjective/periodic support quotients are outside the physical arc constructor",
+    "Unpaired auxiliary intervals, including authored boundaries exactly on a seam without extra admission, refuse",
+    "Contact normalization retains distinct topological fans at owned world contacts; no contact-free manifold Body or legacy Model serialization is asserted"
+  ],
+  "formatter_only_runtime_source_delta": "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_strict_patches.rs",
+  "installed_artifacts_replaced": false,
+  "committed": false,
+  "pushed": false,
+  "catalog": {
+    "specified": 200,
+    "integrated": 79,
+    "native": 121,
+    "planned": 0,
+    "native_or_integrated": 200
+  },
+  "applied_main_all_test_module_typecheck_exit": 0,
+  "applied_main_wasm_check_exit": 0,
+  "commands": {
+    "core_native": [
+      "cargo",
+      "test",
+      "-p",
+      "nurbs-core",
+      "--offline",
+      "--locked",
+      "--test",
+      "ss_physical_branches",
+      "--test",
+      "ss_discover_atlas",
+      "--test",
+      "ss_discovered_components"
+    ],
+    "brep_native_filters": [
+      "periodic_chart_fan_patches",
+      "periodic_sewn_faces",
+      "periodic_chart_cycles::actual_fan_tests",
+      "periodic_chart_strict_patches::tests",
+      "nurbs_ss_g6::tests::general_multispan_boolean"
+    ],
+    "main_typecheck": [
+      "cargo",
+      "check",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "nurbs-core",
+      "-p",
+      "brep-core",
+      "--offline",
+      "--locked",
+      "--jobs",
+      "1",
+      "--no-default-features",
+      "--features",
+      "codec",
+      "--tests"
+    ],
+    "main_wasm": [
+      "cargo",
+      "check",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "nurbs-core",
+      "-p",
+      "brep-core",
+      "--offline",
+      "--locked",
+      "--jobs",
+      "1",
+      "--no-default-features",
+      "--features",
+      "codec",
+      "--target",
+      "wasm32-unknown-unknown"
+    ]
+  },
+  "native_test_profile": {
+    "optimization_level": 1,
+    "debug": 0,
+    "incremental": false,
+    "threads": 2,
+    "build_jobs": 1,
+    "priority": "nice10"
+  },
+  "final_source_hash_check_passed": true
+}
