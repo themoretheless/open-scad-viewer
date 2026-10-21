@@ -18,6 +18,11 @@ jobs:
     # A cold workspace build plus whole-shell proofs exceeded 40 minutes on hosted Linux.
     # Match native-smoke execution time; proof work budgets and test coverage stay fixed.
     timeout-minutes: 90
+    # Debug info in the workspace's test binaries exhausts the hosted disk
+    # ("No space left on device"; ld dies with SIGBUS). Tests do not need it.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
     steps:
       # The debug test binaries of the whole workspace plus the restored target
       # cache exhaust the hosted disk; ld then dies with SIGBUS while linking.
