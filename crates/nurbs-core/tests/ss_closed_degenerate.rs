@@ -268,3 +268,211 @@ fn dispatcher_never_masks_exact_work_exhaustion_with_a_larger_marching_or_discov
     .unwrap_err();
     assert_eq!(e.code, "NURBS_RESOURCE_LIMIT");
 }
+
+#[test]
+fn unequal_exact_crossing_slopes_own_complete_original_branches_and_native_clocks() {
+    for (a, b) in [
+        (4., -1.),
+        (1., -4.),
+        (-4., 1.),
+        (-1., 4.),
+        (9., -16.),
+        (-9., 16.),
+    ] {
+        let source = ss::FiberSources::new(
+            &graph(a, b, 0., [[2., 6.], [-4., 4.]]),
+            &graph(0., 0., 0., [[-2., 0.], [8., 16.]]),
+        )
+        .unwrap();
+        let saved = (source.first().clone(), source.second().clone());
+        let owner = own(&source);
+        assert_eq!(owner.kind(), K::CrossingLines);
+        assert!(owner.covers_entire_surfaces());
+        assert_eq!(
+            (
+                owner.vertices().len(),
+                owner.edges().len(),
+                owner.branches().len(),
+                owner.trims().len()
+            ),
+            (5, 4, 2, 8)
+        );
+        assert_eq!(
+            owner
+                .edges()
+                .iter()
+                .filter(|e| e.vertices.contains(&0))
+                .count(),
+            4
+        );
+        for (edge_index, edge) in owner.edges().iter().enumerate() {
+            assert_eq!(edge.multiplicity, 1);
+            for t in [0., 0.125, 0.5, 0.875, 1.] {
+                let station = owner.edge_station(edge_index, t, 1024).unwrap();
+                let xy = station.normalized_uv.map(|v| v[0] * 0.5 + v[1] * 0.5);
+                let residual = a * (xy[0] - 0.5).powi(2) + b * (xy[1] - 0.5).powi(2);
+                assert!(
+                    residual.abs() < 1e-12,
+                    "independent conic equation: {residual}"
+                );
+                for axis in 0..2 {
+                    assert!(
+                        station.normalized_uv[axis][0] >= -1e-12
+                            && station.normalized_uv[axis][1] <= 1. + 1e-12
+                    );
+                    contains(station.world[axis], xy[axis]);
+                }
+                contains(station.first_uv[0], 2. + 4. * xy[0]);
+                contains(station.first_uv[1], -4. + 8. * xy[1]);
+                contains(station.second_uv[0], -2. + 2. * xy[0]);
+                contains(station.second_uv[1], 8. + 8. * xy[1]);
+                contains(station.world[2], 0.);
+            }
+        }
+        owner.reverify().unwrap();
+        let public = ss::construct_qualified_ss_branches(&source, Default::default()).unwrap();
+        assert!(matches!(
+            public,
+            ss::QualifiedSurfaceIntersection::ClosedOrDegenerateGraph(_)
+        ));
+        public.reverify().unwrap();
+        let limits = ss::QuadraticGraphSSLimits {
+            max_operations: owner.operations() - 1,
+        };
+        assert_eq!(
+            ss::qualify_quadratic_graph_ss(&source, limits)
+                .unwrap_err()
+                .code,
+            "NURBS_RESOURCE_LIMIT"
+        );
+        assert_eq!(
+            ss::construct_qualified_ss_branches(
+                &source,
+                ss::QualifiedSSBuildLimits {
+                    quadratic: limits,
+                    ..Default::default()
+                }
+            )
+            .unwrap_err()
+            .code,
+            "NURBS_RESOURCE_LIMIT"
+        );
+        assert_eq!((source.first(), source.second()), (&saved.0, &saved.1));
+    }
+}
+
+#[test]
+fn exact_parallel_factors_keep_each_original_component_and_refuse_unrepresentable_roots() {
+    for (a, b, k, axis) in [
+        (1., 0., -0.0625, 0),
+        (0., 4., -0.25, 1),
+        (-1., 0., 0.0625, 0),
+        (1., 0., -0.25, 0),
+        (2f64.powi(-40), 0., -2f64.powi(-80), 0),
+    ] {
+        let source = pair(a, b, k);
+        let owner = own(&source);
+        assert_eq!(owner.kind(), K::ParallelLineFactors);
+        assert_eq!(
+            (
+                owner.vertices().len(),
+                owner.edges().len(),
+                owner.branches().len(),
+                owner.trims().len()
+            ),
+            (4, 2, 2, 4)
+        );
+        assert!(owner.vertices().iter().all(|v| !v.singular));
+        let radius = (-k / if a != 0. { a } else { b }).sqrt();
+        for (edge, sign) in [-1., 1.].into_iter().enumerate() {
+            assert_eq!(owner.edges()[edge].multiplicity, 1);
+            assert!(!owner.branches()[edge].closed);
+            for t in [0., 0.125, 0.5, 1.] {
+                let station = owner.edge_station(edge, t, 1024).unwrap();
+                contains(station.world[axis], 0.5 + sign * radius);
+                contains(station.world[1 - axis], t);
+                contains(station.world[2], 0.);
+            }
+        }
+        owner.reverify().unwrap();
+        let public = ss::construct_qualified_ss_branches(&source, Default::default()).unwrap();
+        assert!(matches!(
+            public,
+            ss::QualifiedSurfaceIntersection::ClosedOrDegenerateGraph(_)
+        ));
+        let limits = ss::QuadraticGraphSSLimits {
+            max_operations: owner.operations() - 1,
+        };
+        assert_eq!(
+            ss::qualify_quadratic_graph_ss(&source, limits)
+                .unwrap_err()
+                .code,
+            "NURBS_RESOURCE_LIMIT"
+        );
+    }
+    // This input offset is lost while authoring binary64 controls. The owner
+    // must classify those actual original controls, not the intended formula.
+    let rounded = pair(1., 0., -2f64.powi(-80));
+    assert_eq!(rounded.first(), pair(1., 0., 0.).first());
+    assert_eq!(own(&rounded).kind(), K::TangentDoubleLine);
+    let empty = own(&pair(1., 0., -1.5625));
+    assert_eq!(empty.kind(), K::Empty);
+    assert!(
+        empty.vertices().is_empty()
+            && empty.edges().is_empty()
+            && empty.branches().is_empty()
+            && empty.trims().is_empty()
+    );
+    empty.reverify().unwrap();
+    for source in [pair(1., 0., -0.125), pair(9., -1., 0.)] {
+        assert!(ss::qualify_quadratic_graph_ss(&source, Default::default()).is_err());
+    }
+    let mut shifted = graph(1., 0., -0.0625, [[0., 1.]; 2]);
+    for row in &mut shifted.control_points {
+        for p in row {
+            p[2] += 0.75 * p[0] - 0.234375;
+        }
+    }
+    let source = ss::FiberSources::new(&shifted, &graph(0., 0., 0., [[0., 1.]; 2])).unwrap();
+    let one = own(&source);
+    assert_eq!(one.kind(), K::ParallelLineFactors);
+    assert_eq!(
+        (
+            one.vertices().len(),
+            one.edges().len(),
+            one.branches().len()
+        ),
+        (2, 1, 1)
+    );
+    for t in [0., 0.5, 1.] {
+        let station = one.edge_station(0, t, 1024).unwrap();
+        contains(station.world[0], 0.375);
+        contains(station.world[1], t);
+        contains(station.world[2], 0.);
+    }
+    one.reverify().unwrap();
+}
+
+#[test]
+fn linear_uv_factors_retain_the_common_curved_world_height_on_both_original_supports() {
+    for (a, b, k) in [(4., -1., 0.), (1., 0., -0.0625)] {
+        let mut first = graph(a, b, k, [[0., 1.]; 2]);
+        let mut second = graph(0., 0., 0., [[0., 1.]; 2]);
+        for surface in [&mut first, &mut second] {
+            for row in &mut surface.control_points {
+                for point in row {
+                    point[2] += point[0] * point[1];
+                }
+            }
+        }
+        let owner = own(&ss::FiberSources::new(&first, &second).unwrap());
+        for edge in 0..owner.edges().len() {
+            for t in [0., 0.125, 0.5, 0.875, 1.] {
+                let station = owner.edge_station(edge, t, 1024).unwrap();
+                let xy = station.normalized_uv.map(|i| i[0] * 0.5 + i[1] * 0.5);
+                contains(station.world[2], xy[0] * xy[1]);
+            }
+        }
+        owner.reverify().unwrap();
+    }
+}

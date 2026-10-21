@@ -1,0 +1,97 @@
+{
+  "schema": "native-ss-linear-factor-qualification/1",
+  "recordedAt": "2026-10-22",
+  "baseCommit": "49fcc5a367f77a7ec0ba7323436e3ff28572ba7b",
+  "state": "native-checks-complete",
+  "scope": "Single original degree 1/2 polynomial graph charts with a common axis-aligned affine XY grid; exact checked unequal crossing factors and parallel simple factors",
+  "native": {
+    "packages": [
+      "nurbs-core",
+      "cad-predicates",
+      "nurbs-intersect"
+    ],
+    "resultTargets": 158,
+    "passed": 2680,
+    "failed": 0,
+    "ignored": 0,
+    "closedDegenerateTests": 13,
+    "command": "CARGO_BUILD_JOBS=3 CARGO_TARGET_DIR=/private/tmp/osv-nurbs-next-target CARGO_PROFILE_TEST_OPT_LEVEL=1 cargo test --manifest-path crates/Cargo.toml -p nurbs-core -p cad-predicates -p nurbs-intersect --no-fail-fast --offline --locked"
+  },
+  "wasm32": {
+    "checkPassed": true,
+    "command": "cargo check --manifest-path crates/Cargo.toml -p nurbs-core -p nurbs-intersect --target wasm32-unknown-unknown --offline --locked",
+    "packagedRuntimeQualified": false
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "ba4e4e62411e128f2ccd59ad35d43b2e6decc2f5ded9865481bf1c381717e2d9",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/linear_factors.rs": "d28fd0fa00eb86ef5436094da2d1570de7015cfaf0156df5437296e6ad5758c8",
+    "crates/nurbs-core/tests/ss_closed_degenerate.rs": "90b7af51f37cdbf2f1b571b0996a945bd12da4bbf6628fc0d40cf00cc3df5aa5"
+  },
+  "catalog": {
+    "specified": 200,
+    "native": 121,
+    "integrated": 79,
+    "newFigureCount": 0,
+    "auditErrors": []
+  },
+  "remaining": [
+    "General rational and multispan SS coverage",
+    "Boolean topology/body integration of these branches",
+    "Trihedral central surface and closed corner",
+    "General continuous offset and shell qualification",
+    "Simplification and editor/STEP delivery milestones"
+  ],
+  "performanceClaim": "none; coordinated controller/compiler pauses contaminate elapsed time",
+  "publishedGeometryWasmSha256": "2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+  "publishedRuntimeChanged": false,
+  "evidence": {
+    "README.md": {
+      "sha256": "d735dbf2510b6bea621fb59512ee9a75370731e16dec5a923481b7afb6500fb3",
+      "byteLength": 2384
+    },
+    "diagnostics/osv-next-linear-final-target.log": {
+      "sha256": "7863d3a0af6c44eb045ed14c9b90fc9f1ba9c1b62424360475954ec61599fc5c",
+      "byteLength": 14133
+    },
+    "diagnostics/osv-next-unequal-before.log": {
+      "sha256": "254ec1bcb9f95ca1ffa10ef4b6fda1957a9baf0eaa2dcaf6d2e79c3d77c8f888",
+      "byteLength": 14312
+    },
+    "diagnostics/osv-next-unused-quotient-before.log": {
+      "sha256": "7153b116985ba092f76887c8767e79cb094acdb0ecdb9be234d410bfdfdc90fd",
+      "byteLength": 13150
+    },
+    "osv-next-api-map.log": {
+      "sha256": "11ccf54809b3a1061085b3fd61eb20e84b6a18ae7052bc8a78db432620597eea",
+      "byteLength": 50
+    },
+    "osv-next-architecture.log": {
+      "sha256": "de382af0025d9432fb3cf72b3345e7b753f278cd5d1dd74f75187f4a55c69803",
+      "byteLength": 70
+    },
+    "osv-next-catalog.json": {
+      "sha256": "25a31ed76200794f2c226a67d2d279f600601cd106963933e87bf214dcee79da",
+      "byteLength": 139
+    },
+    "osv-next-libraries.log": {
+      "sha256": "9451389ba5836423c2086cd825e76f4b3641a14dc7f0d329c8c58a3d2a61b05e",
+      "byteLength": 236
+    },
+    "osv-next-native-final.log": {
+      "sha256": "fe6092fc2d90c47b1caa56cc0b6ccbab6446cac785904f196ee93d9843395024",
+      "byteLength": 317596
+    },
+    "osv-next-resource-pause-first.json": {
+      "sha256": "8a2216781b5956a8b683c4e0c32161bd1d539155f941d87e57b9cc2e4a77822d",
+      "byteLength": 8200
+    },
+    "osv-next-resource-pause.json": {
+      "sha256": "c114753e2a50f60abee27af27f37cbe5b1043de2e197da3d70fd499c9f0b96c4",
+      "byteLength": 7942
+    },
+    "osv-next-wasm-check.log": {
+      "sha256": "90d396036b814d47123ea8882e43b6fd1540c7bd539fb385118e90ed0ac5978a",
+      "byteLength": 13182
+    }
+  }
+}

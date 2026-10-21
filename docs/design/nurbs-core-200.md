@@ -4,7 +4,7 @@
 
 Нативная готовность требует типизированного Rust API, независимых геометрических проверок, отказов на некорректных данных и описанных ограничений. WASM, TypeScript, Rush и редактор не являются условиями нативной готовности. Приближённая операция обязана явно различать выборочную оценку, непрерывную границу ошибки и учёт округления.
 
-Текущее состояние каталога: 198 реализованных возможностей (79 integrated + 119 native), 2 planned. Рубеж 160 достигнут внутри сохранённого набора 180.
+Текущее состояние JSON-каталога на 2026-10-22: 200 реализованных возможностей (79 integrated + 121 native), 0 planned в данном наборе ограниченных контрактов. Полная квалификация каждой возможности в WASM, UI и STEP учитывается отдельно. Исторические записи 198/200 ниже сохранены как снимки прежнего состояния. Рубеж 160 достигнут внутри сохранённого набора 180.
 
 ## Specific-root world error and local trace construction, 2026-10-16
 
@@ -341,8 +341,8 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0026 | торическая спираль | integrated |
 | NURBS-0027 | торический узел | integrated |
 | NURBS-0028 | пространственная интерполяция | integrated |
-| NURBS-0029 | геодезическая | planned |
-| NURBS-0030 | пересечение поверхностей | planned |
+| NURBS-0029 | геодезическая | native |
+| NURBS-0030 | пересечение поверхностей | native |
 | NURBS-0031 | плоский патч | integrated |
 | NURBS-0032 | билинейный патч | integrated |
 | NURBS-0033 | поверхность Безье | integrated |
@@ -362,7 +362,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0047 | катеноид | integrated |
 | NURBS-0048 | вращение профиля | integrated |
 | NURBS-0049 | винтовая поверхность профиля | integrated |
-| NURBS-0050 | суперэллипсоид | planned |
+| NURBS-0050 | суперэллипсоид | native |
 | NURBS-0051 | extrusion | integrated |
 | NURBS-0052 | ruled | integrated |
 | NURBS-0053 | loft | integrated |
@@ -372,7 +372,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0057 | Gordon | integrated |
 | NURBS-0058 | трёхграничный патч | integrated |
 | NURBS-0059 | многограничное заполнение | integrated |
-| NURBS-0060 | поверхность по облаку | planned |
+| NURBS-0060 | поверхность по облаку | native |
 | NURBS-0061 | труба постоянного радиуса | integrated |
 | NURBS-0062 | переменного радиуса | integrated |
 | NURBS-0063 | profile sweep | integrated |
@@ -382,7 +382,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0067 | closed sweep | native |
 | NURBS-0068 | огибающая сфер | native |
 | NURBS-0069 | лента вдоль пути | integrated |
-| NURBS-0070 | пружина с профилем | planned |
+| NURBS-0070 | пружина с профилем | native |
 | NURBS-0071 | переход круг–круг | integrated |
 | NURBS-0072 | круг–прямоугольник | integrated |
 | NURBS-0073 | эллипс–эллипс | integrated |
@@ -392,14 +392,14 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0077 | G1 blend | native |
 | NURBS-0078 | G2 blend | native |
 | NURBS-0079 | offset | native |
-| NURBS-0080 | оболочка заданной толщины | planned |
-| NURBS-0081 | прямозубая | planned |
-| NURBS-0082 | косозубая | planned |
-| NURBS-0083 | шевронная | planned |
-| NURBS-0084 | внутренняя | planned |
+| NURBS-0080 | оболочка заданной толщины | native |
+| NURBS-0081 | прямозубая | native |
+| NURBS-0082 | косозубая | native |
+| NURBS-0083 | шевронная | native |
+| NURBS-0084 | внутренняя | native |
 | NURBS-0085 | рейка | native |
-| NURBS-0086 | коническая шестерня | planned |
-| NURBS-0087 | червяк | planned |
+| NURBS-0086 | коническая шестерня | native |
+| NURBS-0087 | червяк | native |
 | NURBS-0088 | червячное колесо | native |
 | NURBS-0089 | наружная резьба | native |
 | NURBS-0090 | внутренняя резьба | native |
@@ -474,9 +474,9 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0159 | кривизна и кручение пространственной кривой | native |
 | NURBS-0160 | главные кривизны и направления поверхности | native |
 | NURBS-0161 | параметрические изолинии поверхности | native |
-| NURBS-0162 | пересечение кривой с плоскостью | planned |
-| NURBS-0163 | пересечение двух пространственных кривых | planned |
-| NURBS-0164 | пересечение кривой с поверхностью | planned |
+| NURBS-0162 | пересечение кривой с плоскостью | native |
+| NURBS-0163 | пересечение двух пространственных кривых | native |
+| NURBS-0164 | пересечение кривой с поверхностью | native |
 | NURBS-0165 | пересечение луча с поверхностью | native |
 | NURBS-0166 | проверка самопересечений кривой | native |
 | NURBS-0167 | проверка самопересечений поверхности | native |
@@ -485,7 +485,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0170 | проверка принадлежности UV-точки trim-области | native |
 | NURBS-0171 | trim-область с внутренними отверстиями | native |
 | NURBS-0172 | перенос пространственного контура в UV | native |
-| NURBS-0173 | разбиение trim-контура на периодическом шве | planned |
+| NURBS-0173 | разбиение trim-контура на периодическом шве | native |
 | NURBS-0174 | согласование степеней и узлов сечений | native |
 | NURBS-0175 | согласование ориентации сечений | native |
 | NURBS-0176 | согласование фазы замкнутых сечений | native |
@@ -500,7 +500,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0185 | оценка отклонения поверхности после редактирования | native |
 | NURBS-0186 | плоский offset кривой с допуском | native |
 | NURBS-0187 | стыки offset-контура | native |
-| NURBS-0188 | очистка самопересечений offset-контура | planned |
+| NURBS-0188 | очистка самопересечений offset-контура | native |
 | NURBS-0189 | плоская эквидистантная дорожка обработки | native |
 | NURBS-0190 | параллельные сечения поверхности плоскостями | native |
 | NURBS-0191 | адаптивная тесселяция кривой | native |
@@ -509,7 +509,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0194 | аффинное преобразование рациональной геометрии | native |
 | NURBS-0195 | ограничивающий объём рациональной геометрии | native |
 | NURBS-0196 | проверка ориентации нормалей оболочки | native |
-| NURBS-0197 | проверка водонепроницаемости набора патчей | planned |
+| NURBS-0197 | проверка водонепроницаемости набора патчей | native |
 | NURBS-0198 | сертификат непрерывного отклонения с учётом округления | native |
 | NURBS-0199 | диагностика плохо обусловленной рациональной геометрии | native |
 | NURBS-0200 | нормализация масштаба и единиц геометрии | native |

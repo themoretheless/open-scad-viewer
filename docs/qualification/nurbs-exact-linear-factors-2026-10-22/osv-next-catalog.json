@@ -1,0 +1,10 @@
+{
+  "target": 1200,
+  "specified": 200,
+  "unallocated": 1000,
+  "counts": {
+    "integrated": 79,
+    "native": 121
+  },
+  "errors": []
+}

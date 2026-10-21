@@ -4,6 +4,8 @@ use super::fiber::FiberSources;
 use crate::exact_curve_segments::{exact_add, exact_mul};
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 type Poly = [[f64; 3]; 3];
+#[path = "quadratic_graph/linear_factors.rs"]
+mod linear_factors;
 #[derive(Clone, Copy, Debug)]
 pub struct QuadraticGraphSSLimits {
     pub max_operations: usize,
@@ -53,7 +55,7 @@ impl Work {
         check(q.is_finite(), "Exact graph quotient exceeded range")?;
         check(
             self.mul(q, b)? == a,
-            "Graph center requires an exact binary64 quotient",
+            "Graph identity requires an exact binary64 quotient",
         )?;
         Ok(q)
     }
@@ -89,6 +91,7 @@ pub enum QuadraticGraphSSKind {
     IsolatedTangentPoint,
     TangentDoubleLine,
     CrossingLines,
+    ParallelLineFactors,
     CoincidentPatch,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -349,11 +352,9 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
             });
         }
     } else if a == 0. || b == 0. {
-        check(
-            k == 0. || k > 0.,
-            "Parallel simple-line factors need an algebraic endpoint classifier",
-        )?;
-        if k == 0. {
+        if k < 0. {
+            linear_factors::parallel(&mut d, &mut w)?;
+        } else if k == 0. {
             let axis = if a != 0. { 0 } else { 1 };
             if (0.0..=1.0).contains(&center[axis]) {
                 d.kind = QuadraticGraphSSKind::TangentDoubleLine;
@@ -367,58 +368,7 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
             }
         }
     } else {
-        check(
-            k == 0. && a.abs() == b.abs(),
-            "Indefinite graph requires exact equal-magnitude zero-level factors",
-        )?;
-        check(
-            center.iter().all(|c| 0. < *c && *c < 1.),
-            "Crossing node must lie inside both original patches",
-        )?;
-        d.kind = QuadraticGraphSSKind::CrossingLines;
-        d.vertices.push(OriginalGraphSSVertex {
-            point: OriginalGraphSSPoint::Normalized(center),
-            singular: true,
-        });
-        for sign in [1., -1.] {
-            let lower = if sign > 0. {
-                (-center[0]).max(-center[1])
-            } else {
-                (-center[0]).max(w.add(center[1], -1.)?)
-            };
-            let upper = if sign > 0. {
-                w.add(1., -center[0])?.min(w.add(1., -center[1])?)
-            } else {
-                w.add(1., -center[0])?.min(center[1])
-            };
-            let mut ids = [0usize; 2];
-            let mut endpoints = [[0.; 2]; 2];
-            for (end, t) in [lower, upper].into_iter().enumerate() {
-                let v = w.mul(sign, t)?;
-                let point = [w.add(center[0], t)?, w.add(center[1], v)?];
-                ids[end] = d.vertices.len();
-                endpoints[end] = point;
-                d.vertices.push(OriginalGraphSSVertex {
-                    point: OriginalGraphSSPoint::Normalized(point),
-                    singular: false,
-                });
-            }
-            let edge = d.edges.len();
-            d.edges.push(OriginalGraphSSEdge {
-                vertices: [ids[0], 0],
-                geometry: OriginalGraphSSEdgeGeometry::Segment([endpoints[0], center]),
-                multiplicity: 1,
-            });
-            d.edges.push(OriginalGraphSSEdge {
-                vertices: [0, ids[1]],
-                geometry: OriginalGraphSSEdgeGeometry::Segment([center, endpoints[1]]),
-                multiplicity: 1,
-            });
-            d.branches.push(OriginalGraphSSBranch {
-                edges: vec![edge, edge + 1],
-                closed: false,
-            });
-        }
+        linear_factors::crossing(&mut d, &mut w)?;
     }
     for edge in 0..d.edges.len() {
         for surface in 0..2 {

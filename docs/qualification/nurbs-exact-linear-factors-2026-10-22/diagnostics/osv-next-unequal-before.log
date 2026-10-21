@@ -1,0 +1,369 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-nurbs-next-target/.../wgsl_export
+  |                                        ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling typenum v1.20.1
+   Compiling libc v0.2.189
+   Compiling const-oid v0.10.2
+   Compiling value-codec v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/value-codec)
+   Compiling hybrid-array v0.4.15
+   Compiling cpufeatures v0.3.1
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling cfg-if v1.0.4
+   Compiling osv-math v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/math-core)
+   Compiling cad-predicates v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/cad-predicates)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling rustc-hash v2.1.1
+   Compiling brep-topology v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/brep-topology)
+   Compiling geometry-ops v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/geometry-ops)
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/.codex/worktrees/nurbs-next-priorities/open-scad-viewer/crates/nurbs-core)
+warning: unused import: `Parameters`
+   --> nurbs-core/src/construct/curves/thread.rs:800:15
+    |
+800 | use patches::{Parameters,parameters};
+    |               ^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `axial_fitting::axial_source`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:742:5
+    |
+742 | use axial_fitting::axial_source;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_packing::same_scalar_bits`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:755:5
+    |
+755 | use grid_packing::same_scalar_bits;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_packing::same_row_bits`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:756:5
+    |
+756 | use grid_packing::same_row_bits;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::saved_regular`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:763:5
+    |
+763 | use grid_verification::saved_regular;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::interpolation_error`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:764:5
+    |
+764 | use grid_verification::interpolation_error;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::node`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:765:5
+    |
+765 | use grid_verification::node;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::norm`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:767:5
+    |
+767 | use grid_verification::norm;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::sixth_power`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:768:5
+    |
+768 | use grid_verification::sixth_power;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `box_of`
+ --> nurbs-core/src/foundation/fitting.rs:4:57
+  |
+4 |     Curve, Result, Surface, ToleranceContext, binomial, box_of, check, context, distance, interval,
+  |                                                         ^^^^^^
+
+warning: unused import: `initial_coordinates_owned::coordinates_in_basis`
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:772:5
+    |
+772 | use initial_coordinates_owned::coordinates_in_basis;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `arc_frame_owned::closed_frenet_position_seam`
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:783:5
+    |
+783 | use arc_frame_owned::closed_frenet_position_seam;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `sections::*`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:502:5
+    |
+502 | use sections::*;
+    |     ^^^^^^^^^^^
+
+warning: unused import: `fillet_construction::variable_radius_sections`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:740:5
+    |
+740 | use fillet_construction::variable_radius_sections;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `section_geometry::march_direction`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:748:5
+    |
+748 | use section_geometry::march_direction;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `surface_distance::rectangle_bounds`
+ --> nurbs-core/src/intersection/surface_contact_search.rs:9:5
+  |
+9 |     surface_distance::rectangle_bounds,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rectangle_control_query_prepared` is never used
+   --> nurbs-core/src/distance/surface_distance.rs:642:15
+    |
+642 | pub(crate) fn rectangle_control_query_prepared(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `quarter_angle` is never read
+   --> nurbs-core/src/construct/curves/thread/patches.rs:152:16
+    |
+147 | pub(super) struct Parameters {
+    |                   ---------- field in this struct
+...
+152 |     pub(super) quarter_angle: f64,
+    |                ^^^^^^^^^^^^^
+    |
+    = note: `Parameters` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `surface_homogeneous_controls` is never used
+   --> nurbs-core/src/analysis/curve_surface_composition.rs:202:4
+    |
+202 | fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Interval;4]>>,[f64;2])> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_cubic` is never used
+   --> nurbs-core/src/offset/fillet_surfaces.rs:144:4
+    |
+144 | fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
+    |    ^^^^^^^^^^^^^
+
+warning: function `march_direction` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:101:15
+    |
+101 | pub(super) fn march_direction(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `trace_spine` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:184:15
+    |
+184 | pub(super) fn trace_spine(
+    |               ^^^^^^^^^^^
+
+warning: function `polish_with_law` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:216:15
+    |
+216 | pub(super) fn polish_with_law(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `stations` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:253:15
+    |
+253 | pub(super) fn stations(
+    |               ^^^^^^^^
+
+warning: function `arc_section` is never used
+ --> nurbs-core/src/offset/fillet_surfaces/sections.rs:5:15
+  |
+5 | pub(super) fn arc_section(sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
+  |               ^^^^^^^^^^^
+
+warning: function `normal_curvature` is never used
+  --> nurbs-core/src/offset/fillet_surfaces/sections.rs:33:15
+   |
+33 | pub(super) fn normal_curvature(surface: &Surface, uv: [f64; 2], dir: [f64; 3]) -> Result<Option<f64>> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `g2_section` is never used
+  --> nurbs-core/src/offset/fillet_surfaces/sections.rs:54:15
+   |
+54 | pub(super) fn g2_section(m: &Marcher<'_>, sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
+   |               ^^^^^^^^^^
+
+warning: function `assemble` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:112:15
+    |
+112 | pub(super) fn assemble(
+    |               ^^^^^^^^
+
+warning: function `build_report` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:143:15
+    |
+143 | pub(super) fn build_report(
+    |               ^^^^^^^^^^^^
+
+warning: enum `SectionKind` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:231:17
+    |
+231 | pub(super) enum SectionKind {
+    |                 ^^^^^^^^^^^
+
+warning: function `prepare` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:236:15
+    |
+236 | pub(super) fn prepare<'a>(
+    |               ^^^^^^^
+
+warning: function `reachability_warnings` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:247:15
+    |
+247 | pub(super) fn reachability_warnings(a: &Surface, b: &Surface, sa: f64, sb: f64, r_max: f64) -> Vec<String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:569:15
+    |
+569 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `admit_coincidence` is never used
+  --> nurbs-core/src/intersection/../intersection/curve_curve/box_certification.rs:84:15
+   |
+84 | pub(super) fn admit_coincidence(
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 51 warnings (run `cargo fix --lib -p nurbs-core` to apply 18 suggestions)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 12s
+     Running tests/ss_closed_degenerate.rs (/private/tmp/osv-nurbs-next-target/debug/build/nurbs-core/0307f78b8b52e3d1/out/ss_closed_degenerate-0307f78b8b52e3d1)
+
+running 1 test
+test unequal_exact_crossing_slopes_own_complete_original_branches_and_native_clocks ... FAILED
+
+failures:
+
+---- unequal_exact_crossing_slopes_own_complete_original_branches_and_native_clocks stdout ----
+
+thread 'unequal_exact_crossing_slopes_own_complete_original_branches_and_native_clocks' (31083574) panicked at nurbs-core/tests/ss_closed_degenerate.rs:38:59:
+called `Result::unwrap()` on an `Err` value: Error { code: "NURBS_INVALID_INPUT", message: "Indefinite graph requires exact equal-magnitude zero-level factors" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    unequal_exact_crossing_slopes_own_complete_original_branches_and_native_clocks
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p nurbs-core --test ss_closed_degenerate`
