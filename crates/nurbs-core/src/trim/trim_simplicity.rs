@@ -48,6 +48,40 @@ fn bezier(c: &Curve) -> bool {
         && c.knots[..=c.degree].iter().all(|k| *k == c.knots[c.degree])
         && c.knots[n..].iter().all(|k| *k == c.knots[n])
 }
+// Positive-weight rational B-splines stay in the convex hull of their actual
+// control points. Strict coordinate ordering proves separation without a
+// distance subdivision, including multi-span curves. No rounded subtraction.
+fn control_boxes_separated(a: &Curve, b: &Curve) -> bool {
+    (0..2).any(|k| {
+        let amin = a
+            .control_points
+            .iter()
+            .map(|p| p[k])
+            .fold(f64::INFINITY, f64::min);
+        let amax = a
+            .control_points
+            .iter()
+            .map(|p| p[k])
+            .fold(f64::NEG_INFINITY, f64::max);
+        let bmin = b
+            .control_points
+            .iter()
+            .map(|p| p[k])
+            .fold(f64::INFINITY, f64::min);
+        let bmax = b
+            .control_points
+            .iter()
+            .map(|p| p[k])
+            .fold(f64::NEG_INFINITY, f64::max);
+        amax < bmin || bmax < amin
+    })
+}
+fn span_count(c: &Curve) -> usize {
+    c.knots[c.degree..=c.control_points.len()]
+        .windows(2)
+        .filter(|w| w[0] < w[1])
+        .count()
+}
 fn projection_delta(
     a: &[f64],
     b: &[f64],
@@ -90,10 +124,323 @@ fn monotone(c: &Curve) -> bool {
                 .all(|w| projection_delta(&w[1], &w[0], direction).is_some_and(|r| r.lo >= 0.))
     }
 }
-// A common strictly signed coordinate derivative over every original knot
-// span proves global injectivity of a continuous rational B-spline. Blossom
-// extraction encloses the original coefficients; no fitted/decomposed curve
-// is used as proof. Exhausting this sufficient test leaves the result unproven.
+// Two-arc lens: both endpoints are shared. A separating chord proves that
+// the open interior of one positive-weight Bezier arc stays strictly on one
+// side, while the other arc stays in the opposite closed half-plane. Together
+// with the independent injectivity proof this excludes all extra contacts.
+fn lens_separated(a: &Curve, b: &Curve) -> bool {
+    use crate::distance_bounds::Interval as I;
+    let start = &a.control_points[0];
+    let end = a.control_points.last().unwrap();
+    let side = |p: &Vec<f64>| -> Result<I> {
+        if p == start || p == end {
+            return Ok(I::point(0.));
+        }
+        let dx = I::point(end[0]).sub(I::point(start[0]))?;
+        let dy = I::point(end[1]).sub(I::point(start[1]))?;
+        let x = I::point(p[0]).sub(I::point(start[0]))?;
+        let y = I::point(p[1]).sub(I::point(start[1]))?;
+        dx.mul(y)?.sub(dy.mul(x)?)
+    };
+    let Ok(sa) = a
+        .control_points
+        .iter()
+        .map(side)
+        .collect::<Result<Vec<_>>>()
+    else {
+        return false;
+    };
+    let Ok(sb) = b
+        .control_points
+        .iter()
+        .map(side)
+        .collect::<Result<Vec<_>>>()
+    else {
+        return false;
+    };
+    let positive = |v: &[I]| v.iter().all(|x| x.lo >= 0.);
+    let negative = |v: &[I]| v.iter().all(|x| x.hi <= 0.);
+    (positive(&sa) && sa.iter().any(|x| x.lo > 0.) && negative(&sb))
+        || (negative(&sa) && sa.iter().any(|x| x.hi < 0.) && positive(&sb))
+        || (positive(&sb) && sb.iter().any(|x| x.lo > 0.) && negative(&sa))
+        || (negative(&sb) && sb.iter().any(|x| x.hi < 0.) && positive(&sa))
+}
+// Positive rational B-spline bases preserve the order of scalar poles.
+// Strict progress on every nonempty local knot block excludes flat spans;
+// interior multiplicity <= degree preserves continuity between those spans.
+// These checks concern ORIGINAL coefficients, not rounded decomposition pieces.
+fn injective(c: &Curve) -> bool {
+    if bezier(c) {
+        return monotone(c);
+    }
+    let n = c.control_points.len();
+    let d = c.domain();
+    if c.periodic
+        || !c.knots[..=c.degree].iter().all(|&t| t == d[0])
+        || !c.knots[n..].iter().all(|&t| t == d[1])
+    {
+        return false;
+    }
+    let mut at = 0;
+    while at < c.knots.len() {
+        let value = c.knots[at];
+        let mut end = at + 1;
+        while end < c.knots.len() && c.knots[end] == value {
+            end += 1;
+        }
+        if d[0] < value && value < d[1] && end - at > c.degree {
+            return false;
+        }
+        at = end;
+    }
+    (0..2).any(|k| {
+        let increasing = c.control_points[0][k] < c.control_points[n - 1][k];
+        let decreasing = c.control_points[0][k] > c.control_points[n - 1][k];
+        (increasing || decreasing)
+            && c.control_points.windows(2).all(|p| {
+                if increasing {
+                    p[0][k] <= p[1][k]
+                } else {
+                    p[0][k] >= p[1][k]
+                }
+            })
+            && (c.degree..n)
+                .filter(|&i| c.knots[i] < c.knots[i + 1])
+                .all(|i| {
+                    if increasing {
+                        c.control_points[i - c.degree][k] < c.control_points[i][k]
+                    } else {
+                        c.control_points[i - c.degree][k] > c.control_points[i][k]
+                    }
+                })
+    })
+}
+fn control_cones_separated(a: &Curve, b: &Curve, join: &[f64]) -> bool {
+    // Directions are proposals only. Admit a separator only when outward
+    // interval signs separate EVERY non-join pole of both original curves.
+    // Positive rational Bernstein weights then separate their open images.
+    // Normalizing proposals avoids dependence on tangent control lengths.
+    for pa in a
+        .control_points
+        .iter()
+        .filter(|p| p.as_slice() != join)
+        .take(16)
+    {
+        for pb in b
+            .control_points
+            .iter()
+            .filter(|p| p.as_slice() != join)
+            .take(16)
+        {
+            let va = [pa[0] - join[0], pa[1] - join[1]];
+            let vb = [pb[0] - join[0], pb[1] - join[1]];
+            let la = va[0].hypot(va[1]);
+            let lb = vb[0].hypot(vb[1]);
+            if !(la > 0. && lb > 0. && la.is_finite() && lb.is_finite()) {
+                continue;
+            }
+            let direction = [va[0] / la - vb[0] / lb, va[1] / la - vb[1] / lb];
+            let sides = |c: &Curve, positive: bool| {
+                c.control_points
+                    .iter()
+                    .filter(|p| p.as_slice() != join)
+                    .all(|p| {
+                        projection_delta(p, join, direction)
+                            .is_some_and(|r| if positive { r.lo > 0. } else { r.hi < 0. })
+                    })
+            };
+            if sides(a, true) && sides(b, false) {
+                return true;
+            }
+        }
+    }
+    false
+}
+fn adjacent_separated(a: &Curve, b: &Curve, join: &[f64]) -> bool {
+    // One open curve lies strictly on one side of a coordinate line through
+    // the common endpoint; the other lies on the opposite closed half-plane.
+    // Strict positive Bernstein factors exclude every interior return to it.
+    (0..2).any(|k| {
+        [1., -1.].iter().any(|&sign| {
+            let side = |p: &Vec<f64>| {
+                if sign > 0. {
+                    p[k] > join[k]
+                } else {
+                    p[k] < join[k]
+                }
+            };
+            let opposite = |p: &Vec<f64>| {
+                if sign > 0. {
+                    p[k] <= join[k]
+                } else {
+                    p[k] >= join[k]
+                }
+            };
+            let strict = |c: &Curve| {
+                let strict_poles = c
+                    .control_points
+                    .iter()
+                    .filter(|p| p.as_slice() != join)
+                    .all(side)
+                    && c.control_points.iter().any(side);
+                // Every positive-weight Bernstein basis is strictly positive
+                // in the open Bezier interval. Weak one-sided poles and one
+                // strict pole therefore exclude an interior return, including
+                // tangential joins whose adjacent handle lies on the line.
+                // A general B-spline does not have this global positivity.
+                strict_poles
+                    || (bezier(c)
+                        && c.control_points.iter().all(|p| {
+                            if sign > 0. {
+                                p[k] >= join[k]
+                            } else {
+                                p[k] <= join[k]
+                            }
+                        })
+                        && c.control_points.iter().any(side))
+            };
+            (strict(a) && b.control_points.iter().all(opposite))
+                || (strict(b) && a.control_points.iter().all(opposite))
+        })
+    }) || control_cones_separated(a, b, join)
+        || {
+            // Arbitrary separating direction, admitted only by outward interval
+            // signs. Handles rotated rational arcs without snapping coefficients.
+            let (a_control, b_control) = if a.control_points.last().unwrap().as_slice() == join {
+                (
+                    &a.control_points[a.control_points.len() - 2],
+                    &b.control_points[1],
+                )
+            } else {
+                (
+                    &b.control_points[b.control_points.len() - 2],
+                    &a.control_points[1],
+                )
+            };
+            let direction = [b_control[0] - a_control[0], b_control[1] - a_control[1]];
+            let sides = |c: &Curve, positive: bool| {
+                c.control_points
+                    .iter()
+                    .filter(|p| p.as_slice() != join)
+                    .all(|p| {
+                        projection_delta(p, join, direction)
+                            .is_some_and(|r| if positive { r.lo > 0. } else { r.hi < 0. })
+                    })
+            };
+            (sides(a, true) && sides(b, false)) || (sides(a, false) && sides(b, true))
+        }
+}
+
+/// Sufficient whole-curve proof that two authored planar Bezier curves meet
+/// only at their exactly shared clamped endpoints. False means unproven.
+pub fn prove_endpoint_contacts_only(a: &Curve, b: &Curve) -> Result<bool> {
+    a.validate()?;
+    b.validate()?;
+    if !bezier(a)
+        || !bezier(b)
+        || a.control_points[0].len() != 2
+        || b.control_points[0].len() != 2
+        || !injective(a)
+        || !injective(b)
+    {
+        return Ok(false);
+    }
+    let b_start = &b.control_points[0];
+    let b_end = b.control_points.last().unwrap();
+    let a_start = &a.control_points[0];
+    let a_end = a.control_points.last().unwrap();
+    let s0 = a_start == b_start || a_start == b_end;
+    let s1 = a_end == b_start || a_end == b_end;
+    Ok(match (s0, s1) {
+        (true, false) => adjacent_separated(a, b, a_start),
+        (false, true) => adjacent_separated(a, b, a_end),
+        (true, true) => lens_separated(a, b),
+        (false, false) => false,
+    })
+}
+
+#[cfg(test)]
+#[path = "trim_simplicity/tests/tangent_join_tests_integration.rs"]
+mod tangent_join_tests;
+pub fn inspect(
+    curves: &[Curve],
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<Report> {
+    check(
+        (2..=256).contains(&curves.len())
+            && (1..=100000).contains(&max_pairs)
+            && (1..=100000).contains(&max_cells)
+            && tolerance_uv.is_finite()
+            && tolerance_uv > 0.,
+        "Trim simplicity requires 2..256 curves, positive tolerance and bounded work",
+    )?;
+    let exact_joins = trim_domain::exact_loop_joins(curves)?;
+    let mut cells = 0;
+    let injective = curves.iter().map(|c| {
+        if injective(c) { Ok(true) } else { monotone_spans(c, &mut cells, max_cells) }
+    }).collect::<Result<Vec<_>>>()?;
+    let n = curves.len();
+    let total_pairs = n * (n - 1) / 2;
+    let mut out = Report {
+        proven_simple: false,
+        exact_joins,
+        injective,
+        pairs: Vec::with_capacity(total_pairs.min(max_pairs)),
+        total_pairs,
+        cells,
+    };
+    if exact_joins != Some(true) || out.injective.iter().any(|v| !*v) {
+        return Ok(out);
+    }
+    for a in 0..n {
+        for b in a + 1..n {
+            if out.pairs.len() == max_pairs {
+                return Ok(out);
+            }
+            let adjacent = b == a + 1 || (a == 0 && b == n - 1);
+            let proven = if n == 2 {
+                bezier(&curves[a]) && bezier(&curves[b]) && lens_separated(&curves[a], &curves[b])
+            } else if adjacent {
+                let join = if b == a + 1 {
+                    curves[b].control_points[0].as_slice()
+                } else {
+                    curves[0].control_points[0].as_slice()
+                };
+                n > 2 && adjacent_separated(&curves[a], &curves[b], join)
+            } else if out.cells < max_cells && control_boxes_separated(&curves[a], &curves[b]) {
+                out.cells += 1;
+                true
+            } else if out.cells < max_cells {
+                let remaining = max_cells - out.cells;
+                let initial = span_count(&curves[a]) * span_count(&curves[b]);
+                let budget = (remaining / (out.total_pairs - out.pairs.len()))
+                    .max(initial)
+                    .min(remaining);
+                if budget < initial {
+                    false
+                } else {
+                    let r = curve_distance::distance(&curves[a], &curves[b], tolerance_uv, budget)?;
+                    out.cells += r.cells;
+                    r.distance_interval_mm[0] > 0.
+                }
+            } else {
+                false
+            };
+            out.pairs.push(Pair {
+                curves: [a, b],
+                proven,
+            });
+        }
+    }
+    out.proven_simple = out.pairs.iter().all(|p| p.proven);
+    Ok(out)
+}
+#[cfg(test)]
+#[path = "trim_simplicity/tests/tests_integration.rs"]
+mod tests;
+
 fn monotone_spans(c: &Curve, cells: &mut usize, max_cells: usize) -> Result<bool> {
     if c.periodic {
         return Ok(false);
@@ -144,290 +491,7 @@ fn monotone_spans(c: &Curve, cells: &mut usize, max_cells: usize) -> Result<bool
     }
     Ok(false)
 }
-fn adjacent_separated(a: &Curve, b: &Curve, join: &[f64]) -> bool {
-    // One open curve lies strictly on one side of a coordinate line through
-    // the common endpoint; the other lies on the opposite closed half-plane.
-    // Strict positive Bernstein factors exclude every interior return to it.
-    (0..2).any(|k| {
-        [1., -1.].iter().any(|&sign| {
-            let side = |p: &Vec<f64>| {
-                if sign > 0. {
-                    p[k] > join[k]
-                } else {
-                    p[k] < join[k]
-                }
-            };
-            let opposite = |p: &Vec<f64>| {
-                if sign > 0. {
-                    p[k] <= join[k]
-                } else {
-                    p[k] >= join[k]
-                }
-            };
-            let strict = |c: &Curve| {
-                c.control_points
-                    .iter()
-                    .filter(|p| p.as_slice() != join)
-                    .all(side)
-                    && c.control_points.iter().any(side)
-            };
-            (strict(a) && b.control_points.iter().all(opposite))
-                || (strict(b) && a.control_points.iter().all(opposite))
-        })
-    }) || {
-        // Arbitrary separating direction, admitted only by outward interval
-        // signs. Handles rotated rational arcs without snapping coefficients.
-        let (a_control, b_control) = if a.control_points.last().unwrap().as_slice() == join {
-            (
-                &a.control_points[a.control_points.len() - 2],
-                &b.control_points[1],
-            )
-        } else {
-            (
-                &b.control_points[b.control_points.len() - 2],
-                &a.control_points[1],
-            )
-        };
-        let mut directions = vec![[b_control[0] - a_control[0], b_control[1] - a_control[1]]];
-        // Unequal adjacent edge lengths can put the raw control difference
-        // on the same side of both curves. Normalize only to propose another
-        // separating plane; outward signs below remain the proof.
-        let away = |p: &[f64]| {
-            let v = [p[0] - join[0], p[1] - join[1]];
-            let length = v[0].hypot(v[1]);
-            (length.is_finite() && length > 0.).then(|| [v[0] / length, v[1] / length])
-        };
-        if let (Some(a), Some(b)) = (away(a_control), away(b_control)) {
-            directions.push([b[0] - a[0], b[1] - a[1]]);
-        }
-        directions.into_iter().any(|direction| {
-            let sides = |c: &Curve, positive: bool| {
-                c.control_points
-                    .iter()
-                    .filter(|p| p.as_slice() != join)
-                    .all(|p| {
-                        projection_delta(p, join, direction)
-                            .is_some_and(|r| if positive { r.lo > 0. } else { r.hi < 0. })
-                    })
-            };
-            (sides(a, true) && sides(b, false)) || (sides(a, false) && sides(b, true))
-        })
-    }
-}
-pub fn inspect(
-    curves: &[Curve],
-    tolerance_uv: f64,
-    max_pairs: usize,
-    max_cells: usize,
-) -> Result<Report> {
-    check(
-        (2..=256).contains(&curves.len())
-            && (1..=100000).contains(&max_pairs)
-            && (1..=100000).contains(&max_cells)
-            && tolerance_uv.is_finite()
-            && tolerance_uv > 0.,
-        "Trim simplicity requires 2..256 curves, positive tolerance and bounded work",
-    )?;
-    let exact_joins = trim_domain::exact_loop_joins(curves)?;
-    let mut cells = 0;
-    let injective = curves
-        .iter()
-        .map(|c| {
-            if bezier(c) && monotone(c) {
-                Ok(true)
-            } else {
-                monotone_spans(c, &mut cells, max_cells)
-            }
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let n = curves.len();
-    let mut out = Report {
-        proven_simple: false,
-        exact_joins,
-        injective,
-        pairs: Vec::new(),
-        total_pairs: n * (n - 1) / 2,
-        cells,
-    };
-    if exact_joins != Some(true) || out.injective.iter().any(|v| !*v) {
-        return Ok(out);
-    }
-    for a in 0..n {
-        for b in a + 1..n {
-            if out.pairs.len() == max_pairs {
-                return Ok(out);
-            }
-            let adjacent = b == a + 1 || (a == 0 && b == n - 1);
-            // Two-curve loops have two shared endpoints and need a stronger
-            // certificate than this single-join half-plane proof.
-            let proven = if adjacent {
-                let join = if b == a + 1 {
-                    curves[b].control_points[0].as_slice()
-                } else {
-                    curves[0].control_points[0].as_slice()
-                };
-                n > 2 && adjacent_separated(&curves[a], &curves[b], join)
-            } else if out.cells < max_cells {
-                let budget = ((max_cells - out.cells) / (out.total_pairs - out.pairs.len())).max(1);
-                match curve_distance::prove_separation(&curves[a], &curves[b], tolerance_uv, budget) {
-                    Ok(r) => {
-                        out.cells += r.cells;
-                        r.distance_interval_mm[0] > 0.
-                    }
-                    Err(error) if error.code == "NURBS_RESOURCE_LIMIT" => false,
-                    Err(error) => return Err(error),
-                }
-            } else {
-                false
-            };
-            out.pairs.push(Pair {
-                curves: [a, b],
-                proven,
-            });
-        }
-    }
-    out.proven_simple = out.pairs.iter().all(|p| p.proven);
-    Ok(out)
-}
+
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn insufficient_initial_span_pairs_leave_trim_simplicity_unproved() {
-        let corners = [[0.,0.],[2.,0.],[2.,2.],[0.,2.]];
-        let curves = (0..4).map(|i| {
-            let a = corners[i]; let b = corners[(i+1)%4];
-            let steps = if i%2==0 {4} else {1};
-            Curve::from_polyline((0..=steps).map(|j| {
-                let t = j as f64/steps as f64;
-                vec![a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])]
-            }).collect()).unwrap()
-        }).collect::<Vec<_>>();
-        let before = format!("{curves:?}");
-        let short = inspect(&curves,1e-8,100,32).unwrap();
-        assert!(short.injective.iter().all(|v|*v));
-        assert!(!short.proven_simple);
-        assert!(short.cells<=32);
-        assert!(inspect(&curves,1e-8,100,10000).unwrap().proven_simple);
-        assert_eq!(format!("{curves:?}"),before);
-    }
-    fn polygon(p: &[[f64; 2]]) -> Vec<Curve> {
-        (0..p.len())
-            .map(|i| {
-                Curve::from_polyline(vec![p[i].to_vec(), p[(i + 1) % p.len()].to_vec()]).unwrap()
-            })
-            .collect()
-    }
-    #[test]
-    fn multispan_rational_boundary_preserves_original_definition() {
-        let curve = Curve {
-            degree: 2,
-            knots: vec![0., 0., 0., 0.5, 1., 1., 1.],
-            control_points: vec![vec![0., 0.], vec![0.5, -0.5], vec![1.5, -0.5], vec![2., 0.]],
-            weights: vec![1., 0.8, 1.2, 1.],
-            periodic: false,
-        };
-        let mut curves = polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]]);
-        curves[0] = curve;
-        let before = format!("{curves:?}");
-        let r = inspect(&curves, 1e-8, 100, 10000).unwrap();
-        assert!(r.proven_simple);
-        assert!(r.cells > 0 && r.cells <= 10000);
-        let reversed = curves
-            .iter()
-            .rev()
-            .map(Curve::reverse)
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        assert!(inspect(&reversed, 1e-8, 100, 10000).unwrap().proven_simple);
-        assert_eq!(format!("{curves:?}"), before);
-        assert!(!inspect(&curves, 1e-8, 100, 1).unwrap().proven_simple);
-    }
-    #[test]
-    fn multispan_returning_boundary_never_receives_injectivity_proof() {
-        let curve =
-            Curve::from_polyline(vec![vec![0., 0.], vec![2., 0.], vec![1., 0.], vec![3., 0.]])
-                .unwrap();
-        let mut curves = polygon(&[[0., 0.], [3., 0.], [3., 2.], [0., 2.]]);
-        curves[0] = curve;
-        let r = inspect(&curves, 1e-8, 100, 10000).unwrap();
-        assert!(!r.proven_simple);
-        assert!(!r.injective[0]);
-    }
-    #[test]
-    fn square_bowtie_and_incomplete_work_are_distinct() {
-        let square = polygon(&[[0., 0.], [1., 0.], [1., 1.], [0., 1.]]);
-        assert!(inspect(&square, 1e-8, 100, 1000).unwrap().proven_simple);
-        let crossed = polygon(&[[0., 0.], [1., 1.], [0., 1.], [1., 0.]]);
-        assert!(!inspect(&crossed, 1e-8, 100, 1000).unwrap().proven_simple);
-        let r = inspect(&square, 1e-8, 1, 1000).unwrap();
-        assert!(!r.proven_simple);
-        assert_eq!(r.pairs.len(), 1);
-        assert_eq!(r.total_pairs, 6);
-    }
-    #[test]
-    fn coincident_edges_and_small_work_never_bypass_pair_checks() {
-        let retraced = polygon(&[[0., 0.], [1., 0.], [0., 0.], [0., 1.]]);
-        assert!(!inspect(&retraced, 1e-8, 100, 1000).unwrap().proven_simple);
-        let square = polygon(&[[0., 0.], [1., 0.], [1., 1.], [0., 1.]]);
-        let r = inspect(&square, 1e-8, 100, 1).unwrap();
-        assert!(!r.proven_simple);
-        assert!(r.cells <= 1);
-        assert_eq!(r.pairs.len(), 6);
-        let mut gap = square.clone();
-        gap[1].control_points[0][1] = 1e-12;
-        let r = inspect(&gap, 1e-6, 100, 1000).unwrap();
-        assert!(!r.proven_simple);
-        assert_eq!(r.exact_joins, Some(false));
-    }
-    #[test]
-    fn rational_quarter_arcs_form_a_simple_loop() {
-        let points = [
-            [[1., 0.], [1., 1.], [0., 1.]],
-            [[0., 1.], [-1., 1.], [-1., 0.]],
-            [[-1., 0.], [-1., -1.], [0., -1.]],
-            [[0., -1.], [1., -1.], [1., 0.]],
-        ];
-        let curves = points
-            .iter()
-            .map(|p| Curve {
-                degree: 2,
-                knots: vec![0., 0., 0., 1., 1., 1.],
-                control_points: p.iter().map(|v| v.to_vec()).collect(),
-                weights: vec![1., 0.5_f64.sqrt(), 1.],
-                periodic: false,
-            })
-            .collect::<Vec<_>>();
-        let before = format!("{curves:?}");
-        let r = inspect(&curves, 1e-8, 100, 10000).unwrap();
-        assert!(r.proven_simple);
-        assert!(r.cells <= 10000);
-        assert_eq!(format!("{curves:?}"), before);
-    }
-    #[test]
-    fn rotated_rational_arcs_use_interval_separating_directions() {
-        let points = [
-            [[1., 0.], [1., 1.], [0., 1.]],
-            [[0., 1.], [-1., 1.], [-1., 0.]],
-            [[-1., 0.], [-1., -1.], [0., -1.]],
-            [[0., -1.], [1., -1.], [1., 0.]],
-        ];
-        for angle in [0.13_f64, 0.61, 1.17, 2.31] {
-            let (sin, cos) = angle.sin_cos();
-            let curves = points
-                .iter()
-                .map(|points| Curve {
-                    degree: 2,
-                    knots: vec![0., 0., 0., 1., 1., 1.],
-                    control_points: points
-                        .iter()
-                        .map(|p| vec![cos * p[0] - sin * p[1], sin * p[0] + cos * p[1]])
-                        .collect(),
-                    weights: vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.],
-                    periodic: false,
-                })
-                .collect::<Vec<_>>();
-            assert!(inspect(&curves, 1e-10, 100, 10000).unwrap().proven_simple);
-        }
-    }
-}
+#[path = "trim_simplicity/tests/multispan_regressions_integration.rs"]
+mod multispan_regressions;

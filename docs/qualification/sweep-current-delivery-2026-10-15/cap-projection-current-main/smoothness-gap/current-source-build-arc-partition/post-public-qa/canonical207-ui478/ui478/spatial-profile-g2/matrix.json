@@ -1,0 +1,4602 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-16T00:20:24.764Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.",
+  "nativeCancelProbe": true,
+  "nativeRunningCancelProbe": true,
+  "unbudgetedSourceMode": false,
+  "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+  "artifactProvenance": {
+    "sha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+    "byteLength": 11226519,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-xXo3qa5A.js"
+    ],
+    "workerModuleProvenance": [
+      {
+        "entry": "geometry.worker-xXo3qa5A.js",
+        "modules": [
+          "assets/geometry.worker-xXo3qa5A.js",
+          "assets/rolldown-runtime-mLt-WK_h.js",
+          "assets/rushGraphNurbsCompiler-BxKjQ5Ai.js",
+          "assets/meshTopology-otB2PpaV.js",
+          "assets/openScadTextRuntime-CQ6ZYJZq.js",
+          "assets/rushFrontend-LCK5kYF6.js",
+          "assets/exactSolidRuntime-BAnrK2Yz.js",
+          "assets/worker-wasm-packing-C4RfKZQj.js",
+          "assets/language-kernel-bytes-MByPGPJx.js",
+          "assets/geometry-kernel-bytes-C9m3NEtI.js",
+          "assets/harfbuzz-bytes-WXP1aMo5.js",
+          "assets/wasm-brotli-bytes-Bmmsw5O9.js"
+        ],
+        "matchedModules": [
+          "assets/meshTopology-otB2PpaV.js"
+        ],
+        "unresolvedDynamicImports": 0
+      }
+    ]
+  },
+  "appSourceSha256": "d16b0643c28565dff203721f8b5fe29f2f71889b8f33c4d4d0330e4ba9202e49",
+  "distIndexSha256": "e3989d256186298dbddd5199e4c9af90d6c1034ee6c5208d1d886e491d444307",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "5654d6fdb6e6561c7a7e7ca52b6c4a46e78b19d8f092b3d3525f58195f307e9b",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 26.438,
+            "lastSampleToProfileEndMs": 0.901,
+            "profileReceivedAtEpochMs": 1792110031040,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110031040,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 932,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "5654d6fdb6e6561c7a7e7ca52b6c4a46e78b19d8f092b3d3525f58195f307e9b",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 31.112,
+            "lastSampleToProfileEndMs": 0.229,
+            "profileReceivedAtEpochMs": 1792110034679,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110034679,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 936,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.214,
+            "lastSampleToProfileEndMs": 1.439,
+            "profileReceivedAtEpochMs": 1792110038646,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110038646,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2013,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.947,
+            "lastSampleToProfileEndMs": 0.056,
+            "profileReceivedAtEpochMs": 1792110043518,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110043518,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 2009,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 1,
+        "geometrySha256": "8d32cf515616c0764a083ccaa95f940d4e07064e419324ff526751cfd193c9cb",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "965136950b72c3ff77dd41ff655970ea555eb978298d73be66eb7e4476af6e41",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 25.018,
+            "lastSampleToProfileEndMs": 0.414,
+            "profileReceivedAtEpochMs": 1792110067701,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110067701,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 965,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "965136950b72c3ff77dd41ff655970ea555eb978298d73be66eb7e4476af6e41",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 28.658,
+            "lastSampleToProfileEndMs": 0.7,
+            "profileReceivedAtEpochMs": 1792110072191,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110072191,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 964,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.717,
+            "lastSampleToProfileEndMs": 0.286,
+            "profileReceivedAtEpochMs": 1792110076992,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110076992,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2009,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.716,
+            "lastSampleToProfileEndMs": 0.29,
+            "profileReceivedAtEpochMs": 1792110082596,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110082596,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 2007,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "956d7d50eae64aa589d00ad5a35db9dec492171072e2b0942cd1090e90cba689",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "06b8a675dbd4748712daff5b8b7b2d6ade0b6076c6e0f583c8d6a291a7acc9cc",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 26.184,
+            "lastSampleToProfileEndMs": 0.074,
+            "profileReceivedAtEpochMs": 1792110113466,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110113466,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 986,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "06b8a675dbd4748712daff5b8b7b2d6ade0b6076c6e0f583c8d6a291a7acc9cc",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 28.606,
+            "lastSampleToProfileEndMs": 0.059,
+            "profileReceivedAtEpochMs": 1792110118004,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110118004,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 988,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.209,
+            "lastSampleToProfileEndMs": 0.135,
+            "profileReceivedAtEpochMs": 1792110122860,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110122860,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2005,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 24.374,
+            "lastSampleToProfileEndMs": 1.467,
+            "profileReceivedAtEpochMs": 1792110128505,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110128505,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 2010,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "d8da91a3ab4df0cd9bd9da5f7f95777f05052b0b3a7ec75c467ac158720b9f88",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "e897371989021702656f4c9bb30f07ce610ec97c9f30705e80d88793e5e9f7c9",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 33.923,
+            "lastSampleToProfileEndMs": 0.059,
+            "profileReceivedAtEpochMs": 1792110157693,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110157693,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 925,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "e897371989021702656f4c9bb30f07ce610ec97c9f30705e80d88793e5e9f7c9",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 30.486,
+            "lastSampleToProfileEndMs": 0.631,
+            "profileReceivedAtEpochMs": 1792110161182,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110161182,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 924,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.515,
+            "lastSampleToProfileEndMs": 0.826,
+            "profileReceivedAtEpochMs": 1792110164972,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110164972,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1821,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.57,
+            "lastSampleToProfileEndMs": 0.097,
+            "profileReceivedAtEpochMs": 1792110169514,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110169514,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 1808,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 1,
+        "geometrySha256": "6c2d76483d9f536d4fd653276b6c1194656289e8b2add552234a6891dd124de4",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "3aac70777ef1422759be3d9e6790e7ddbde9837f6da54e7978589b589c7fe38e",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.428,
+            "lastSampleToProfileEndMs": 0.372,
+            "profileReceivedAtEpochMs": 1792110192625,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110192625,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 979,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "3aac70777ef1422759be3d9e6790e7ddbde9837f6da54e7978589b589c7fe38e",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 30.765,
+            "lastSampleToProfileEndMs": 1.324,
+            "profileReceivedAtEpochMs": 1792110197119,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110197119,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 1056,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 23.649,
+            "lastSampleToProfileEndMs": 0.647,
+            "profileReceivedAtEpochMs": 1792110201863,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110201863,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2005,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 12,
+            "profileDurationMs": 23.518,
+            "lastSampleToProfileEndMs": 0.432,
+            "profileReceivedAtEpochMs": 1792110207596,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110207596,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 2014,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "0337c96a9c2ca4f100737926a60772daab871aec1dd3746cfc0285b18715abc0",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "69a5855a392324975b795c932e4dd7208e671b19aba9e0d8b1c192dd3e6e55b8",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 26.148,
+            "lastSampleToProfileEndMs": 0.387,
+            "profileReceivedAtEpochMs": 1792110234151,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110234151,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 198,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "69a5855a392324975b795c932e4dd7208e671b19aba9e0d8b1c192dd3e6e55b8",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 30.209,
+            "lastSampleToProfileEndMs": 0.302,
+            "profileReceivedAtEpochMs": 1792110236438,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110236438,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 194,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 22.989,
+            "lastSampleToProfileEndMs": 0.395,
+            "profileReceivedAtEpochMs": 1792110239014,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110239014,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 651,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.266,
+            "lastSampleToProfileEndMs": 0.189,
+            "profileReceivedAtEpochMs": 1792110241934,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110241934,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 642,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "3e8bd92c9a4565d37ace27b92f23a5adbd868cec4f7466219f8dd094a5f34263",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "b5e01c316687a3f3b67ffcb91999906fade518b5cb255d1498d71601cd59513f",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 26.189,
+            "lastSampleToProfileEndMs": 0.807,
+            "profileReceivedAtEpochMs": 1792110262443,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110262443,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 144,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "b5e01c316687a3f3b67ffcb91999906fade518b5cb255d1498d71601cd59513f",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 30.268,
+            "lastSampleToProfileEndMs": 0.398,
+            "profileReceivedAtEpochMs": 1792110264592,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110264592,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 146,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.134,
+            "lastSampleToProfileEndMs": 0.414,
+            "profileReceivedAtEpochMs": 1792110267048,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110267048,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 450,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 24.441,
+            "lastSampleToProfileEndMs": 0.183,
+            "profileReceivedAtEpochMs": 1792110269650,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110269650,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 446,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "42d317e99a4968175f4c2883b7b8bec2dc2b7958be3b2c2ea9ea00094ec35876",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "6068e04ceb59d1045289c89461add92d3d5ce81187932f0856946e61c9c7be0c",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.967,
+            "lastSampleToProfileEndMs": 0.445,
+            "profileReceivedAtEpochMs": 1792110291373,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110291373,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 567,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "6068e04ceb59d1045289c89461add92d3d5ce81187932f0856946e61c9c7be0c",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 32.551,
+            "lastSampleToProfileEndMs": 0.173,
+            "profileReceivedAtEpochMs": 1792110294914,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110294914,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 561,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.446,
+            "lastSampleToProfileEndMs": 0.102,
+            "profileReceivedAtEpochMs": 1792110298763,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110298763,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1581,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.221,
+            "lastSampleToProfileEndMs": 0.154,
+            "profileReceivedAtEpochMs": 1792110303494,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110303494,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 1545,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 4,
+        "geometrySha256": "bf7bbe619f3ce84cddaac72eabf00c5d255632a1fbed834d34aac0a8ce820119",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "21598b7f492f4db0ca12e7a61c58bf119f6ef421a0078b4f98d16567dd6af059",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 17,
+            "profileDurationMs": 26.263,
+            "lastSampleToProfileEndMs": 0.05,
+            "profileReceivedAtEpochMs": 1792110328440,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110328440,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 114,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "21598b7f492f4db0ca12e7a61c58bf119f6ef421a0078b4f98d16567dd6af059",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 31.232,
+            "lastSampleToProfileEndMs": 1.32,
+            "profileReceivedAtEpochMs": 1792110330765,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110330765,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 132,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 14,
+            "nativeSampleCount": 11,
+            "profileDurationMs": 22.819,
+            "lastSampleToProfileEndMs": 1.358,
+            "profileReceivedAtEpochMs": 1792110333423,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110333423,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 683,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.698,
+            "lastSampleToProfileEndMs": 0.205,
+            "profileReceivedAtEpochMs": 1792110336526,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110336526,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 674,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 4,
+        "geometrySha256": "68c598760c997ea2c11e8652489d1d6e095ab1ee32c7174a48c01104cf4d63a8",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "4d2f591a89dbe5389e21a60d8803066b0b6989d560635175180e8993987de7fa",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 25.829,
+            "lastSampleToProfileEndMs": 0.458,
+            "profileReceivedAtEpochMs": 1792110357979,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110357979,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 421,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "4d2f591a89dbe5389e21a60d8803066b0b6989d560635175180e8993987de7fa",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 33.286,
+            "lastSampleToProfileEndMs": 0.229,
+            "profileReceivedAtEpochMs": 1792110360624,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110360624,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 429,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.462,
+            "lastSampleToProfileEndMs": 1.479,
+            "profileReceivedAtEpochMs": 1792110363605,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110363605,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1409,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 25.414,
+            "lastSampleToProfileEndMs": 0.989,
+            "profileReceivedAtEpochMs": 1792110367351,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110367351,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 1413,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 2,
+        "geometrySha256": "7b79f0bd711062270a608041d8606a627d609f3a9dc0158c9e5876d0e8d53912",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "5135f6496ca44a7cebb48433f9917b069b52f7fe1023855c02dcf69a780bbe24",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 27.776,
+            "lastSampleToProfileEndMs": 0.744,
+            "profileReceivedAtEpochMs": 1792110385847,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110385847,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 260,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "5135f6496ca44a7cebb48433f9917b069b52f7fe1023855c02dcf69a780bbe24",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 34.654,
+            "lastSampleToProfileEndMs": 0.528,
+            "profileReceivedAtEpochMs": 1792110388086,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110388086,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 262,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 14,
+            "nativeSampleCount": 10,
+            "profileDurationMs": 22.558,
+            "lastSampleToProfileEndMs": 1.114,
+            "profileReceivedAtEpochMs": 1792110390714,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110390714,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 978,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.45,
+            "lastSampleToProfileEndMs": 0.371,
+            "profileReceivedAtEpochMs": 1792110393758,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110393758,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 977,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 2,
+        "geometrySha256": "acef222f574f55d422d3a3ce2f3e8c64342f33bf1c7b6232243271c5661f65f4",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "5654d6fdb6e6561c7a7e7ca52b6c4a46e78b19d8f092b3d3525f58195f307e9b",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 34.023,
+            "lastSampleToProfileEndMs": 0.247,
+            "profileReceivedAtEpochMs": 1792110412741,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110412741,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 940,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "5654d6fdb6e6561c7a7e7ca52b6c4a46e78b19d8f092b3d3525f58195f307e9b",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 31.096,
+            "lastSampleToProfileEndMs": 0.061,
+            "profileReceivedAtEpochMs": 1792110416393,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110416393,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 925,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 23.728,
+            "lastSampleToProfileEndMs": 0.77,
+            "profileReceivedAtEpochMs": 1792110420323,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110420323,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2008,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "8af17e9e9d27e5c21f28db8f154957a9839ee407b79146f635b00d3dfbfad2e7",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.857,
+            "lastSampleToProfileEndMs": 0.792,
+            "profileReceivedAtEpochMs": 1792110425114,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110425114,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 2009,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 1,
+        "geometrySha256": "8d32cf515616c0764a083ccaa95f940d4e07064e419324ff526751cfd193c9cb",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "965136950b72c3ff77dd41ff655970ea555eb978298d73be66eb7e4476af6e41",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 26.236,
+            "lastSampleToProfileEndMs": 0.103,
+            "profileReceivedAtEpochMs": 1792110449307,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110449307,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 953,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "965136950b72c3ff77dd41ff655970ea555eb978298d73be66eb7e4476af6e41",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 30.044,
+            "lastSampleToProfileEndMs": 1.577,
+            "profileReceivedAtEpochMs": 1792110453790,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110453790,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 990,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.217,
+            "lastSampleToProfileEndMs": 0.384,
+            "profileReceivedAtEpochMs": 1792110458648,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110458648,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2006,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "bad8f6f92c5163ca7258a855ca8f9d37185485c1e61551e7c79810d28d823140",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 25.249,
+            "lastSampleToProfileEndMs": 0.744,
+            "profileReceivedAtEpochMs": 1792110464255,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110464255,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 2007,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "956d7d50eae64aa589d00ad5a35db9dec492171072e2b0942cd1090e90cba689",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "06b8a675dbd4748712daff5b8b7b2d6ade0b6076c6e0f583c8d6a291a7acc9cc",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 17,
+            "profileDurationMs": 26.234,
+            "lastSampleToProfileEndMs": 0.073,
+            "profileReceivedAtEpochMs": 1792110495718,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110495718,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 990,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "06b8a675dbd4748712daff5b8b7b2d6ade0b6076c6e0f583c8d6a291a7acc9cc",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 29.119,
+            "lastSampleToProfileEndMs": 0.437,
+            "profileReceivedAtEpochMs": 1792110500355,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110500355,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 990,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.827,
+            "lastSampleToProfileEndMs": 0.512,
+            "profileReceivedAtEpochMs": 1792110505234,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110505234,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2010,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "c8a2c8fccaf3f001c7e0c34699309042e3325c63fabbe9c6b0cb24887eb67c53",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 14,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 22.695,
+            "lastSampleToProfileEndMs": 1.012,
+            "profileReceivedAtEpochMs": 1792110511167,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110511167,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 2011,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "d8da91a3ab4df0cd9bd9da5f7f95777f05052b0b3a7ec75c467ac158720b9f88",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "e897371989021702656f4c9bb30f07ce610ec97c9f30705e80d88793e5e9f7c9",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 25.256,
+            "lastSampleToProfileEndMs": 0.71,
+            "profileReceivedAtEpochMs": 1792110540181,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110540181,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 911,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "e897371989021702656f4c9bb30f07ce610ec97c9f30705e80d88793e5e9f7c9",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 30.385,
+            "lastSampleToProfileEndMs": 1.538,
+            "profileReceivedAtEpochMs": 1792110543763,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110543763,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 927,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 23.594,
+            "lastSampleToProfileEndMs": 0.777,
+            "profileReceivedAtEpochMs": 1792110547563,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110547563,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1826,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "0442ad2b7c29bba6fcab53dff6cb3e330cb644b0397d1355d3f2d532c0471ca1",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.728,
+            "lastSampleToProfileEndMs": 0.547,
+            "profileReceivedAtEpochMs": 1792110552087,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110552087,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 1834,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 1,
+        "geometrySha256": "6c2d76483d9f536d4fd653276b6c1194656289e8b2add552234a6891dd124de4",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "3aac70777ef1422759be3d9e6790e7ddbde9837f6da54e7978589b589c7fe38e",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 12,
+            "profileDurationMs": 26.05,
+            "lastSampleToProfileEndMs": 0.188,
+            "profileReceivedAtEpochMs": 1792110574563,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110574563,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 1007,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "3aac70777ef1422759be3d9e6790e7ddbde9837f6da54e7978589b589c7fe38e",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 30.111,
+            "lastSampleToProfileEndMs": 0.666,
+            "profileReceivedAtEpochMs": 1792110578849,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110578849,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 990,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.062,
+            "lastSampleToProfileEndMs": 0.273,
+            "profileReceivedAtEpochMs": 1792110583513,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110583513,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 2006,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "19dfa41a98836644273a0259326ef5dbd1eb7953e320ea96e4d930c12c4d31c2",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 24.981,
+            "lastSampleToProfileEndMs": 0.042,
+            "profileReceivedAtEpochMs": 1792110588952,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110588952,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 2011,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "0337c96a9c2ca4f100737926a60772daab871aec1dd3746cfc0285b18715abc0",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "69a5855a392324975b795c932e4dd7208e671b19aba9e0d8b1c192dd3e6e55b8",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 25.454,
+            "lastSampleToProfileEndMs": 0.835,
+            "profileReceivedAtEpochMs": 1792110616318,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110616318,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 199,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "69a5855a392324975b795c932e4dd7208e671b19aba9e0d8b1c192dd3e6e55b8",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 30.309,
+            "lastSampleToProfileEndMs": 0.328,
+            "profileReceivedAtEpochMs": 1792110619062,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110619062,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 197,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.255,
+            "lastSampleToProfileEndMs": 1.411,
+            "profileReceivedAtEpochMs": 1792110621703,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110621703,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 629,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "ffcee5d776f458536d1361822e2fd3283a8924bb8e7544f447def47e12d3ede6",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.719,
+            "lastSampleToProfileEndMs": 0.642,
+            "profileReceivedAtEpochMs": 1792110624625,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110624625,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 655,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "3e8bd92c9a4565d37ace27b92f23a5adbd868cec4f7466219f8dd094a5f34263",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "b5e01c316687a3f3b67ffcb91999906fade518b5cb255d1498d71601cd59513f",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 26.049,
+            "lastSampleToProfileEndMs": 0.576,
+            "profileReceivedAtEpochMs": 1792110646938,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110646938,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 145,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "b5e01c316687a3f3b67ffcb91999906fade518b5cb255d1498d71601cd59513f",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 29.963,
+            "lastSampleToProfileEndMs": 0.409,
+            "profileReceivedAtEpochMs": 1792110649123,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110649123,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 125,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.266,
+            "lastSampleToProfileEndMs": 0.387,
+            "profileReceivedAtEpochMs": 1792110651549,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110651549,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 451,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "24433be7a7365484c89b5d5a717587547b1772cd8edad03e1353fb08472c5208",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.784,
+            "lastSampleToProfileEndMs": 0.747,
+            "profileReceivedAtEpochMs": 1792110654184,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110654184,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 452,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 2,
+        "geometrySha256": "42d317e99a4968175f4c2883b7b8bec2dc2b7958be3b2c2ea9ea00094ec35876",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "6068e04ceb59d1045289c89461add92d3d5ce81187932f0856946e61c9c7be0c",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 25.613,
+            "lastSampleToProfileEndMs": 1.086,
+            "profileReceivedAtEpochMs": 1792110676241,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110676241,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 573,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "6068e04ceb59d1045289c89461add92d3d5ce81187932f0856946e61c9c7be0c",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 32.385,
+            "lastSampleToProfileEndMs": 0.597,
+            "profileReceivedAtEpochMs": 1792110679772,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110679772,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 567,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 23.05,
+            "lastSampleToProfileEndMs": 0.25,
+            "profileReceivedAtEpochMs": 1792110683604,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110683604,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1566,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "19e431f9ba5845958d0171b738e8e98e1afbca0252a6fc11d15a41d10211eff3",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.692,
+            "lastSampleToProfileEndMs": 0.157,
+            "profileReceivedAtEpochMs": 1792110688274,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110688274,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 1561,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 4,
+        "geometrySha256": "bf7bbe619f3ce84cddaac72eabf00c5d255632a1fbed834d34aac0a8ce820119",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "21598b7f492f4db0ca12e7a61c58bf119f6ef421a0078b4f98d16567dd6af059",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.998,
+            "lastSampleToProfileEndMs": 0.195,
+            "profileReceivedAtEpochMs": 1792110714529,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110714529,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 112,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "21598b7f492f4db0ca12e7a61c58bf119f6ef421a0078b4f98d16567dd6af059",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 13,
+            "profileDurationMs": 31.541,
+            "lastSampleToProfileEndMs": 0.42,
+            "profileReceivedAtEpochMs": 1792110716865,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110716865,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 113,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.671,
+            "lastSampleToProfileEndMs": 0.352,
+            "profileReceivedAtEpochMs": 1792110719510,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110719510,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 673,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "992581ec79c80080fef951e6cd301680d9b5c911475505c1a5d073a97c57abe0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 23.593,
+            "lastSampleToProfileEndMs": 0.417,
+            "profileReceivedAtEpochMs": 1792110722582,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110722582,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 674,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 1024,
+        "shells": 4,
+        "geometrySha256": "68c598760c997ea2c11e8652489d1d6e095ab1ee32c7174a48c01104cf4d63a8",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "4d2f591a89dbe5389e21a60d8803066b0b6989d560635175180e8993987de7fa",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 29.438,
+            "lastSampleToProfileEndMs": 0.18,
+            "profileReceivedAtEpochMs": 1792110745266,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110745266,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 0,
+          "workerDestroyedAfterMs": 420,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "4d2f591a89dbe5389e21a60d8803066b0b6989d560635175180e8993987de7fa",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 34.802,
+            "lastSampleToProfileEndMs": 0.124,
+            "profileReceivedAtEpochMs": 1792110747926,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110747926,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 421,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.266,
+            "lastSampleToProfileEndMs": 0.13,
+            "profileReceivedAtEpochMs": 1792110750877,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110750877,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1416,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "eefeb161a4f0db27b12d83bf24bc35bd861e749f56e3376f34d7ba30297d948d",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 24.603,
+            "lastSampleToProfileEndMs": 1.023,
+            "profileReceivedAtEpochMs": 1792110754606,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110754606,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 1415,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 2,
+        "geometrySha256": "7b79f0bd711062270a608041d8606a627d609f3a9dc0158c9e5876d0e8d53912",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "actual-retained-profile-G2-station-C0",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "5135f6496ca44a7cebb48433f9917b069b52f7fe1023855c02dcf69a780bbe24",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 26.21,
+            "lastSampleToProfileEndMs": 0.076,
+            "profileReceivedAtEpochMs": 1792110773835,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110773835,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 264,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "5135f6496ca44a7cebb48433f9917b069b52f7fe1023855c02dcf69a780bbe24",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 34.74,
+            "lastSampleToProfileEndMs": 0.517,
+            "profileReceivedAtEpochMs": 1792110776089,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110776089,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 259,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.281,
+            "lastSampleToProfileEndMs": 1.33,
+            "profileReceivedAtEpochMs": 1792110778626,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1792110778626,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 967,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "d4455783359c38bde366b1380a1dab72aec562022e3a1fb9f5afcea84ee43ea0",
+          "nativeStack": {
+            "geometryWasmSha256": "cffa125ff73808c84735ccb26434e4dd6dfd0c2178258ed2719035b2114e1256",
+            "abiRequestFunctionIndex": 112,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 24.328,
+            "lastSampleToProfileEndMs": 1.433,
+            "profileReceivedAtEpochMs": 1792110781677,
+            "profileProcessingMs": 1,
+            "observedAtEpochMs": 1792110781678,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 3,
+          "workerDestroyedAfterMs": 956,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "solid": {
+        "faces": 512,
+        "shells": 2,
+        "geometrySha256": "acef222f574f55d422d3a3ce2f3e8c64342f33bf1c7b6232243271c5661f65f4",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body continuous retained-patch error is unproved or exceeds budget"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "selection": {
+    "startAt": null,
+    "fullInventory": [
+      "1440:closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "1440:closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "1440:closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "1440:closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "1440:closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "600:closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "600:closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "600:closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "600:closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "600:closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "1440:closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "1440:closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "1440:closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "1440:closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "1440:closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "600:closed-spatial-rmf-affine-body-certified-profile-g2.r",
+      "600:closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r",
+      "600:closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r",
+      "600:closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r",
+      "600:closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r",
+      "600:closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "d16b0643c28565dff203721f8b5fe29f2f71889b8f33c4d4d0330e4ba9202e49",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "d0dabdd91f97f063d80c75dda7923edf29ecfefdb49d7658ba2e2d43f41203ba",
+    "src/services/nurbsMiterOwnedBoundary.ts": "49ddaf3bc8d52808bb6145cb51f152ea3c4c2896630d8ca16b5f943d073ccc66",
+    "crates/brep-core/src/sweep_miter_owned.rs": "18047f304c3cb23c5fdbf04faf9c63a71aed680463e4c67279a49d742c8be033",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "eb9e3bfc0ecbdb15d7f92df057e611fa54e405e7c2c22fd739a666c6c3a2ab7a",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0eb093f47c20fe1bbf5eec49b7abc7feb792d44d08b8e830659cf6e7bdbeb576",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/endpoint_jets.rs": "135d591c132d388d3e75bef488a672d528181b8db07334575419c91d61c85a18",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "88e1afd8cf6f05886815e9de96b91571acf40ff115546300fc0cb644cc6c7595",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "0735cf878360f6a682308eb366b4398e8934e40238deacdfbf9dcaa8820ccd1d",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "3367a492955feb1fe398d4de9028d9d9b140e9a7288fc87996dd12b1d6f82e7b",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "8d589872e9c3ca56b797fdde258b6a84b4842cba6c21b58d01854c9907c8077a",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "6f3342449c22f9c160e2518f2a856070d0e5e571e7ff9899eff4609370ccf5b0",
+    "src/generated/geometry-kernels/bytes.ts": "e9ca24a7df5b57d53d8622837b95931377cd4c752aca65297f99a432a55c971f",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "d3e2e35d3ec86af6ba2f921b7c0fa848748f19170bdd0779f507dd4d06559a87",
+    "scripts/worker-wasm-fingerprint.mjs": "960ca4a0600b9d8f2dd963071bdea77bff94b2a207ade42827dccfca1363d224",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580",
+    "scripts/sweep-body-matrix-sources.mjs": "44fea9d6821b944aad209847283a863d6439abf261bd682a879fba54a06a12a0",
+    "scripts/corrected-c2-sources.mjs": "544dca5d66840336e9f96741b3a0d033930cc612e0f7a6a06e8e362a8b110f85",
+    "crates/geometry-bridge/src/brep.rs": "bd6fa094313a71f74ea38a023134181d24c74130465e031a235c41af8413f563",
+    "crates/brep-core/src/face_contact_groups.rs": "0c44f471a5938e51cdb0d07a3bb462df3d2dde82b99dab9ebc5af558927bf978",
+    "crates/brep-core/src/face_contacts.rs": "b9e17bf6828f9ac168a15f44156fc681f23d30326efa8c3258e6dea627574c87",
+    "crates/brep-core/src/boundary_embedding.rs": "c80d3ec4eab50c1df128bc601b1b5746df4202d81c409710473729eae0d19dda",
+    "crates/brep-core/src/sweep_cap_contacts.rs": "b914d79e75a5ff57758556cf86c145c134db78eaf1b97ce3d9d15143027ee861",
+    "crates/brep-core/src/shell_nesting.rs": "78a446067366beb6fb811c55291ad8678f583e7f7f37deb23c7d08b02931309d",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "bbf157beaeaebdaf8113a0525d1638521e27bc5dadb77fe9731f52b3605938d4",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/corrected_regular.rs": "c1931a0d33066c25f87bf0c2297785232dc8c08aff1ac213d8ed120e7a8597e7",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_pose.rs": "99074d8cb2dc68963f5dc3c0936843c342ca89bcc64af3d78f03bb4166bd967c",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/profile_domain.rs": "bb19058dcb98446d6f81ff78dc55bb1b68a379bb8f5eb31f224ac27bc64abdf6",
+    "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/frenet_path_values.rs": "5d1ecba191affcac4e31e890ca1c676dfde407b16ca40dc946447fe5b92a68c1"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

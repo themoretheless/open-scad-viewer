@@ -5,6 +5,7 @@ use super::{
 };
 use crate::foundation::guards::Budget;
 
+#[allow(dead_code)]
 pub(super) enum PlanarIntersection {
     Empty,
     Overlap(OverlapRegion),

@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "scope": "nurbs-linear-patch-closure-2026-10-15",
+  "suiteTests": {
+    "linear_patch_set": 3,
+    "watertight": 6,
+    "watertight_correspondence": 3
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/watertight/linear_patch_set.rs": "9ede8805dfe2714f034256696452e48a401dd17ad4b08c5234513f5e5407db69",
+    "crates/brep-core/tests/linear_patch_set.rs": "90d4ad309891f51abbae6daedd2b554d372b41fcba60f43f8b30dcb47a74874d",
+    "crates/brep-core/src/watertight.rs": "492c6bb4eb046ab545ac9e8f42e9c0d4f8dee3007b9d029f842574e24a7df28d"
+  },
+  "solidEmbeddingQualified": false,
+  "generalSSOwnedTopologyQualified": false,
+  "wasmEditorStepQualified": false
+}

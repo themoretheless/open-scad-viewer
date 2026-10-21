@@ -5,7 +5,7 @@ const props=defineProps<{items:readonly T[]}>()
 defineSlots<{default(props:{item:T;position:number;total:number;style:{height:string;marginBottom:string;flexShrink:number;boxSizing:'border-box'}}):unknown}>()
 const list=ref<HTMLUListElement|null>(null),top=ref(0),viewport=ref(600),focused=ref<string|null>(null)
 let container:HTMLElement|null=null,observer:ResizeObserver|undefined
-const offsets=computed(()=>sceneRowOffsets(props.items.map(row=>row.height)))
+const offsets=computed(()=>sceneRowOffsets(props.items))
 const range=computed(()=>props.items.length<=100?{start:0,end:props.items.length}:sceneListWindow(offsets.value,top.value,viewport.value))
 const pieces=computed(()=>{
  const indices=new Set<number>()

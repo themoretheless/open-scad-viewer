@@ -64,13 +64,16 @@ const focusedSourceId = ref<number | null>(null)
 onBeforeUnmount(clearActiveSourceHighlight)
 watch(query, clearActiveSourceHighlight)
 watch(() => props.meshes, meshes => {
-  const availableSourceIds = new Set(
-    meshes.flatMap(mesh => (mesh.sources ?? []).map(source => source.sourceId)),
-  )
+  if (hoveredSourceId.value === null && focusedSourceId.value === null) return
+  const availableSourceIds = new Set<number>()
+  for (const mesh of meshes) {
+    if (!mesh.sources) continue
+    for (const source of mesh.sources) availableSourceIds.add(source.sourceId)
+  }
   if ((hoveredSourceId.value !== null && !availableSourceIds.has(hoveredSourceId.value))
       || (focusedSourceId.value !== null && !availableSourceIds.has(focusedSourceId.value))) {
     clearActiveSourceHighlight()
-  } else if (hoveredSourceId.value !== null || focusedSourceId.value !== null) {
+  } else {
     // setMeshes() replaces GPU buffers, so a still-active DOM row must restore
     // its overlay even though pointerenter/focus does not fire again.
     emitActiveSourceHighlight()
@@ -80,10 +83,13 @@ watch(() => props.meshes, meshes => {
 const filteredMeshes = computed(() => {
   const needle = normalize(query.value.trim())
   if (!needle) return props.meshes
-  return props.meshes.filter(mesh => normalize([
-    mesh.name,
-    ...(mesh.sources ?? []).map(source => source.label ?? ''),
-  ].join(' ')).includes(needle))
+  return props.meshes.filter(mesh => {
+    if (normalize(mesh.name).includes(needle)) return true
+    if (!mesh.sources?.length) return false
+    const parts = [mesh.name]
+    for (const source of mesh.sources) if (source.label) parts.push(source.label)
+    return normalize(parts.join(' ')).includes(needle)
+  })
 })
 
 const filteredHasSelection = computed(() => filteredMeshes.value.some(mesh => isSelected(mesh)))
@@ -94,8 +100,14 @@ watch(filteredMeshes, meshes => {
 }, { immediate: true })
 
 const allExpanded = computed(() => {
-  const expandable = filteredMeshes.value.filter(mesh => mesh.sources?.length)
-  return expandable.length > 0 && expandable.every(mesh => expandedIds.value.has(mesh.id))
+  let hasExpandable = false
+  const expanded = expandedIds.value
+  for (const mesh of filteredMeshes.value) {
+    if (!mesh.sources?.length) continue
+    hasExpandable = true
+    if (!expanded.has(mesh.id)) return false
+  }
+  return hasExpandable
 })
 
 onBeforeUpdate(() => { rowRefs.value = [] })
@@ -220,8 +232,14 @@ function closeSearch() {
   panelRef.value?.focus({ preventScroll: true })
 }
 
+const countFormatterCache = new Map<string, Intl.NumberFormat>()
 function formatCount(value: number) {
-  return value.toLocaleString(props.locale)
+  let fmt = countFormatterCache.get(props.locale)
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(props.locale)
+    countFormatterCache.set(props.locale, fmt)
+  }
+  return fmt.format(value)
 }
 
 function colorStyle(color: SceneMeshRow['color'] | SourceProvenanceRow['color']) {
@@ -459,287 +477,4 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
   </aside>
 </template>
 
-<style scoped>
-.outliner {
-  width: min(304px, 100%);
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: var(--text, #eef0f5);
-  background: color-mix(in srgb, var(--surface, #1a1c22) 96%, transparent);
-  border: 1px solid var(--border, #30343e);
-  border-radius: 9px;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
-  outline: none;
-}
-
-.panel-header,
-.section-label,
-.mesh-row,
-.search-wrap,
-.panel-footer { flex: 0 0 auto; }
-
-.panel-header {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 5px 7px 5px 10px;
-  background: color-mix(in srgb, var(--surface-raised, #22252d) 66%, var(--surface, #1a1c22));
-  border-bottom: 1px solid var(--border, #30343e);
-}
-
-.title-wrap,
-.header-actions,
-.search-wrap,
-.section-label,
-.mesh-row,
-.mesh-name { display: flex; align-items: center; }
-
-.title-wrap { min-width: 0; gap: 7px; }
-.title-wrap h2 { margin: 0; font-size: 0.78rem; font-weight: 720; letter-spacing: 0.01em; }
-.count,
-.section-count {
-  color: var(--text-dim, #a4a9b5);
-  font: 650 0.62rem/1 ui-monospace, monospace;
-}
-
-.count {
-  min-width: 18px;
-  padding: 3px 5px;
-  text-align: center;
-  background: var(--surface, #1a1c22);
-  border: 1px solid var(--border, #30343e);
-  border-radius: 999px;
-}
-
-.header-actions { gap: 2px; }
-button { color: inherit; font: inherit; }
-.icon-button,
-.disclosure,
-.visibility-button {
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  color: var(--text-dim, #a4a9b5);
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.icon-button { width: 27px; height: 27px; }
-.icon-button svg,
-.search-wrap svg,
-.disclosure svg,
-.visibility-button svg,
-.mesh-icon,
-.source-list svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.45; }
-.icon-button:hover,
-.disclosure:hover,
-.visibility-button:hover { color: var(--text, #eef0f5); background: var(--hover, #2a2e38); }
-
-.search-wrap {
-  gap: 6px;
-  min-height: 36px;
-  padding: 5px 7px 5px 10px;
-  color: var(--text-dim, #a4a9b5);
-  border-bottom: 1px solid var(--border, #30343e);
-}
-
-.search-wrap > svg { flex: 0 0 auto; }
-.search-wrap input {
-  min-width: 0;
-  flex: 1;
-  padding: 3px 0;
-  color: var(--text, #eef0f5);
-  background: transparent;
-  border: 0;
-  outline: 0;
-  font-size: 0.72rem;
-}
-.search-wrap input::placeholder { color: var(--text-dim, #a4a9b5); }
-.search-wrap input::-webkit-search-cancel-button { display: none; }
-.search-wrap button {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  color: var(--text-dim, #a4a9b5);
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.search-wrap kbd {
-  padding: 2px 4px;
-  color: var(--text-dim, #a4a9b5);
-  background: var(--surface-raised, #22252d);
-  border: 1px solid var(--border, #30343e);
-  border-radius: 4px;
-  font: 0.56rem/1 ui-monospace, monospace;
-}
-
-.section-label {
-  gap: 5px;
-  min-height: 27px;
-  padding: 4px 9px;
-  color: var(--text-dim, #a4a9b5);
-  background: color-mix(in srgb, var(--surface-raised, #22252d) 35%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--border, #30343e) 72%, transparent);
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
-}
-.chevron { color: var(--text, #eef0f5); font-size: 0.76rem; }
-.section-count { margin-left: auto; }
-
-.mesh-list {
-  min-height: 76px;
-  flex: 1;
-  overflow: auto;
-  padding-block: 3px;
-  scrollbar-width: thin;
-}
-
-.mesh-item { border-inline: 2px solid transparent; }
-.mesh-item.selected {
-  background: color-mix(in srgb, var(--accent, #559dff) 17%, transparent);
-  border-left-color: var(--accent, #559dff);
-}
-.mesh-item.preselected { background: color-mix(in srgb, var(--accent, #559dff) 8%, var(--hover, #2a2e38)); }
-.mesh-item.muted { opacity: 0.52; }
-.mesh-item.muted.selected { opacity: 0.78; }
-
-.mesh-row { min-height: 33px; padding: 2px 5px 2px 3px; }
-.disclosure { width: 22px; height: 27px; flex: 0 0 22px; }
-.disclosure-spacer { width: 22px; flex: 0 0 22px; }
-.visibility-button { width: 25px; height: 27px; flex: 0 0 25px; }
-
-.material-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
-  margin-inline: 3px 5px;
-  background: var(--accent, #559dff);
-  border: 1px solid color-mix(in srgb, white 55%, transparent);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
-}
-
-.mesh-name {
-  min-width: 0;
-  min-height: 27px;
-  flex: 1;
-  gap: 5px;
-  padding: 2px 4px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  cursor: default;
-}
-.mesh-name:hover { background: color-mix(in srgb, var(--hover, #2a2e38) 75%, transparent); }
-.mesh-name:focus-visible,
-.icon-button:focus-visible,
-.disclosure:focus-visible,
-.visibility-button:focus-visible,
-.search-wrap button:focus-visible,
-.source-list button:focus-visible {
-  outline: 2px solid var(--focus, #8ec1ff);
-  outline-offset: -1px;
-}
-.mesh-icon { flex: 0 0 auto; color: color-mix(in srgb, var(--accent, #559dff) 72%, var(--text, #eef0f5)); }
-.mesh-label {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  color: var(--text, #eef0f5);
-  font-size: 0.72rem;
-  font-weight: 570;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.selected .mesh-label { font-weight: 700; }
-.state-glyph { color: var(--text-dim, #a4a9b5); font-size: 0.68rem; }
-.triangle-count,
-.source-triangles {
-  flex: 0 0 auto;
-  color: var(--text-dim, #a4a9b5);
-  font: 0.57rem/1 ui-monospace, monospace;
-}
-
-.source-list { margin: 0; padding: 0 4px 3px 33px; list-style: none; }
-.source-list li { position: relative; }
-.source-list button {
-  position: relative;
-  width: 100%;
-  min-height: 31px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 5px 3px 8px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.source-list button:hover { background: var(--hover, #2a2e38); }
-.source-list svg { flex: 0 0 auto; color: var(--text-dim, #a4a9b5); }
-.source-rail {
-  position: absolute;
-  left: -12px;
-  top: -7px;
-  width: 12px;
-  height: 23px;
-  border-left: 1px solid color-mix(in srgb, var(--border, #30343e) 85%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--border, #30343e) 85%, transparent);
-  border-bottom-left-radius: 5px;
-}
-.source-dot { width: 7px; height: 7px; flex-basis: 7px; margin: 0 1px 0 0; opacity: 0.8; }
-.source-copy { min-width: 0; flex: 1; display: grid; gap: 1px; }
-.source-copy > span {
-  overflow: hidden;
-  color: var(--text, #eef0f5);
-  font-size: 0.65rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.source-copy small { color: var(--text-dim, #a4a9b5); font: 0.55rem/1.2 ui-monospace, monospace; }
-
-.empty-state {
-  margin: 0;
-  padding: 26px 14px;
-  color: var(--text-dim, #a4a9b5);
-  font-size: 0.7rem;
-  text-align: center;
-}
-.panel-footer {
-  min-height: 25px;
-  padding: 6px 9px;
-  overflow: hidden;
-  color: var(--text-dim, #a4a9b5);
-  background: color-mix(in srgb, var(--surface-raised, #22252d) 45%, transparent);
-  border-top: 1px solid var(--border, #30343e);
-  font-size: 0.56rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 680px) {
-  .outliner { width: 100%; max-height: 42dvh; border-radius: 8px; }
-  .panel-footer { display: none; }
-}
-
-@media (pointer: coarse) {
-  .disclosure, .visibility-button, .icon-button, .search-wrap button { min-width: 44px; min-height: 44px; }
-  .mesh-name, .source-list button { min-height: 44px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { scroll-behavior: auto !important; }
-}
-</style>
+<style scoped src="./SceneOutliner.css"></style>

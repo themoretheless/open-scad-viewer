@@ -52,36 +52,44 @@ pub enum Value<'a> {
 }
 
 impl<'a> Value<'a> {
+    #[inline]
     pub fn string(s: impl Into<String>) -> Self {
         Self::Str(Rc::from(s.into().as_str()))
     }
+    #[inline]
     pub fn vector(items: Vec<Value<'a>>) -> Self {
         Self::Vector(Rc::new(items))
     }
+    #[inline]
     pub fn is_undef(&self) -> bool {
         matches!(self, Self::Undef)
     }
+    #[inline]
     pub fn as_number(&self) -> Option<f64> {
         match self {
             Self::Number(v) => Some(*v),
             _ => None,
         }
     }
+    #[inline]
     pub fn as_vector(&self) -> Option<&Rc<Vec<Value<'a>>>> {
         match self {
             Self::Vector(items) => Some(items),
             _ => None,
         }
     }
+    #[inline]
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::Str(s) => Some(s),
             _ => None,
         }
     }
+    #[inline]
     pub fn is_function(&self) -> bool {
         matches!(self, Self::Function(_))
     }
+    #[inline]
     pub fn range(&self) -> Option<(f64, f64, f64)> {
         match self {
             Self::Range { start, step, end } => Some((*start, *step, *end)),
@@ -303,14 +311,14 @@ pub fn materialize_range<'a>(
     end: f64,
     ctx: &mut SemanticsContext<'_, 'a>,
 ) -> EvalResult<Vec<Value<'a>>> {
-    let output: Vec<Value<'a>> = Vec::new();
-    if step == 0.0 || ![start, step, end].iter().all(|v| v.is_finite()) {
+    if step == 0.0 || !(start.is_finite() && step.is_finite() && end.is_finite()) {
         (ctx.warn)("Invalid range bounds produce an empty range".to_string());
-        return ctx.register(output, "range");
+        return ctx.register(Vec::new(), "range");
     }
     let forward = step > 0.0;
     let epsilon = 1.0_f64.max(start.abs()).max(end.abs()) * 1e-12;
-    let mut output = output;
+    let est = (((end - start) / step).floor() as isize + 1).clamp(0, ctx.max_range_items as isize) as usize;
+    let mut output: Vec<Value<'a>> = Vec::with_capacity(est);
     let mut value = start;
     while if forward {
         value <= end + epsilon
@@ -445,8 +453,7 @@ pub(super) fn multiply<'a>(
         return Ok(Value::vector(ctx.register(scaled, "scaled vector")?));
     }
     if let (Some(l), Some(r)) = (numeric_vector(left), numeric_vector(right)) {
-        let (l, r) = (l.clone(), r.clone());
-        if let Some(result) = dot(&l, &r) {
+        if let Some(result) = dot(l, r) {
             return Ok(Value::Number(result));
         }
         (ctx.warn)(format!(
@@ -457,7 +464,6 @@ pub(super) fn multiply<'a>(
         return Ok(Value::Undef);
     }
     if let (Some(l), Some(r)) = (numeric_matrix(left), numeric_vector(right)) {
-        let (l, r) = (l.clone(), r.clone());
         if l.iter()
             .any(|row| row.as_vector().map_or(0, |v| v.len()) != r.len())
         {
@@ -466,8 +472,11 @@ pub(super) fn multiply<'a>(
         }
         let mut out = Vec::with_capacity(l.len());
         for row in l.iter() {
-            let row_values = row.as_vector().cloned().unwrap_or_default();
-            out.push(Value::Number(dot(&row_values, &r).unwrap_or(f64::NAN)));
+            let d = row
+                .as_vector()
+                .and_then(|rv| dot(rv, r))
+                .unwrap_or(f64::NAN);
+            out.push(Value::Number(d));
         }
         return Ok(Value::vector(ctx.register(out, "matrix-vector product")?));
     }

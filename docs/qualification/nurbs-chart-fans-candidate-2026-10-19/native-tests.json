@@ -1,0 +1,36 @@
+{
+  "recorded_at_utc": "2026-10-18T23:09:03.465246+00:00",
+  "status": "Isolated chart-local cycles qualified,14 parent cases plus2 appended actual fan cases;not face publication",
+  "candidate": "/private/tmp/nurbs-native-200-chart-fans-20261019",
+  "parent": "/private/tmp/nurbs-native-200-chart-cycles-20261019",
+  "source_files": 131,
+  "production_and_all14_existing_test_bodies_byte_identical": true,
+  "native": {
+    "additional_passed": 2,
+    "failed": 0,
+    "seconds": 1395.18,
+    "session": 80445,
+    "terminal_exit": 0,
+    "names": [
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_touching_filled_regions_keep_two_cycles_and_one_shared_chart_vertex",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::actual_fan_tests::actual_tangent_hole_uses_higher_germs_and_retains_a_repeated_vertex_walk"
+    ],
+    "inherited_parent_passed": 14,
+    "inherited_qualification": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/nurbs-chart-cycles-candidate-2026-10-19/native-tests.json",
+    "disjoint_total": 16,
+    "scope": "Two native phases on byte-identical production;not16fresh cases on the appended source"
+  },
+  "wasm": {
+    "passed": true,
+    "terminal_exit": 0
+  },
+  "format": {
+    "passed": true,
+    "terminal_exit": 0
+  },
+  "shared_rust_modified": false,
+  "catalog": 198,
+  "target": 200,
+  "owned_running_jobs": [],
+  "scope_limit": "Local chart cycles only. No outer/hole containment,local face patches,world sewing,manifold or Body claim. Point-touching fans and repeated tangent-hole vertex explicitly retained."
+}

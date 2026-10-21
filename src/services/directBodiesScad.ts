@@ -1,7 +1,13 @@
 import type { DirectBody, DirectDocument } from './directModeling'
 
 export function bodyPoints(b: DirectBody): number[][] {
-  return Array.from({ length: b.mesh.positions.length / 3 }, (_, i) => Array.from(b.mesh.positions.slice(i * 3, i * 3 + 3)))
+  const pos = b.mesh.positions
+  const count = pos.length / 3
+  const out = new Array<number[]>(count)
+  for (let i = 0, j = 0; i < count; i++, j += 3) {
+    out[i] = [pos[j], pos[j + 1], pos[j + 2]]
+  }
+  return out
 }
 
 /** Kernel-free SCAD text for the bodies; kept out of directModeling so history
@@ -10,7 +16,12 @@ export function directBodiesScad(document: DirectDocument): string {
   if(document.sourceBodies?.length)throw Error('SCAD export cannot yet tessellate exact source bodies. Keep the native document.')
   return document.bodies.map(b => {
     // OpenSCAD polyhedron uses clockwise faces, opposite the kernel's outward CCW mesh.
-    const faces = Array.from({ length: b.mesh.indices.length / 3 }, (_, i) => Array.from(b.mesh.indices.slice(i * 3, i * 3 + 3)).reverse())
+    const idx = b.mesh.indices
+    const faceCount = idx.length / 3
+    const faces = new Array<[number, number, number]>(faceCount)
+    for (let i = 0, j = 0; i < faceCount; i++, j += 3) {
+      faces[i] = [idx[j + 2], idx[j + 1], idx[j]]
+    }
     return `polyhedron(points=${JSON.stringify(bodyPoints(b))},faces=${JSON.stringify(faces)},convexity=10);`
   }).join('\n')
 }

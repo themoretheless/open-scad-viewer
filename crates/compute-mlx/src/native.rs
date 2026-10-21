@@ -305,15 +305,24 @@ impl MlxBackend {
         }
         Ok(())
     }
-    fn dimensions(shape: &Shape) -> Result<Vec<i32>, MlxError> {
+    fn check_shape_limits(shape: &Shape) -> Result<(), MlxError> {
         if shape.numel() > isize::MAX as usize / 4 || shape.rank() > i32::MAX as usize {
             return Err(MlxError::TooLarge);
         }
-        shape
-            .dims()
-            .iter()
-            .map(|&n| i32::try_from(n).map_err(|_| MlxError::TooLarge))
-            .collect()
+        for &n in shape.dims() {
+            if n > i32::MAX as usize {
+                return Err(MlxError::TooLarge);
+            }
+        }
+        Ok(())
+    }
+    fn dimensions(shape: &Shape) -> Result<Vec<i32>, MlxError> {
+        Self::check_shape_limits(shape)?;
+        let mut dims = Vec::with_capacity(shape.rank());
+        for &n in shape.dims() {
+            dims.push(n as i32);
+        }
+        Ok(dims)
     }
     fn output(
         &self,
@@ -322,7 +331,7 @@ impl MlxBackend {
         dtype: MlxDtype,
         record: impl FnOnce(&Api, *mut Handle) -> i32,
     ) -> Result<MlxTensor, MlxError> {
-        Self::dimensions(&shape)?;
+        Self::check_shape_limits(&shape)?;
         let raw = native(
             operation,
             self.context.api.call(|a| unsafe {

@@ -18,7 +18,6 @@ import { exportNurbsStl, tessellateNurbsSurface, thickenNurbsMesh } from '../geo
 import { meshToNurbs, meshToNurbsBrep, meshToSdf, meshToSubdivision, tessellateNurbsPatches } from '../geometry/reconstruction'
 import { stringifyMeshJson } from '../meshJson'
 import { tessellateSubdivision } from '../geometry/subdivision'
-
 export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resolveSweep?:SweepResolver,resolveBody?:BodyResolver,resolveMiter?:MiterResolver) {
     if (!['build', 'evaluate', 'export'].includes(request.action) || (request.evaluations?.length ?? 0) > 64)
         throw new Error('Invalid NURBS request or evaluation budget exceeded.');
@@ -485,6 +484,7 @@ export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsReques
                 case 'mesh_boolean':
                     result = { kind: 'mesh', data: booleanPolygonMeshes(needMesh(n.inputs[0]), needMesh(n.inputs[1]), n.operation, n.relative_tolerance === undefined ? {} : { relativeTolerance: n.relative_tolerance }) };
                     break;
+                case 'brep_smooth_sweep_stations': throw new Error('Owned progressive station reconstruction requires the Rush evaluator');
                 case 'thicken':
                     result = { kind: 'mesh', data: thickenNurbsMesh(needMesh(n.input), n.vector) };
                     break;

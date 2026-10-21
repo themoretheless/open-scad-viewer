@@ -26,6 +26,13 @@ export type {
   StepIdentityReport,
 }
 
+const FACETED_BREP_RE = /\bFACETED_BREP\s*\(/i
+const ADVANCED_FACE_RE = /\bADVANCED_FACE\s*\(/i
+const MANIFOLD_OR_VOIDS_RE = /\b(?:MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS)\s*\(/i
+const STEP_V3_REFUSE_RE = /\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i
+const STEP_V4_REFUSE_RE = /\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL|EXTERNALLY_DEFINED_)\b/i
+const STEP_V9_REFUSE_RE = /\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|CONSTRUCTIVE_SOLID_GEOMETRY_REPRESENTATION)\b/i
+
 /** Export a bicubic open-face B-rep as B_SPLINE STEP (open shell). */
 export function exportNurbsStepFreeform(model: NurbsBrep): AnalyticStepExport {
   return callGeometryRust('brep_nurbs_export_step_freeform', { model })
@@ -36,12 +43,12 @@ export function exportNurbsStepFreeform(model: NurbsBrep): AnalyticStepExport {
  * Refuses MANIFOLD_SOLID_BREP, FACETED-only, STL/OBJ, constructor graphs without B_SPLINE.
  */
 export function importNurbsStepFreeform(text: string): AnalyticStepImport {
-  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+  if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
     throw new Error(
       'Freeform NURBS STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
     )
   }
-  if (/\bMANIFOLD_SOLID_BREP\s*\(/i.test(text) || /\bBREP_WITH_VOIDS\s*\(/i.test(text)) {
+  if (MANIFOLD_OR_VOIDS_RE.test(text)) {
     throw new Error(
       'nurbs-step-bicubic-face/1 refuses MANIFOLD_SOLID_BREP; use importNurbsStepSolid or importAnalyticStep',
     )
@@ -56,7 +63,7 @@ export function exportNurbsStepTrimmed(model: NurbsBrep): AnalyticStepExport {
 
 /** Import trimmed bicubic open-face STEP; refuses solids. */
 export function importNurbsStepTrimmed(text: string): AnalyticStepImport {
-  if (/\bMANIFOLD_SOLID_BREP\s*\(/i.test(text) || /\bBREP_WITH_VOIDS\s*\(/i.test(text)) {
+  if (MANIFOLD_OR_VOIDS_RE.test(text)) {
     throw new Error(
       'nurbs-step-trimmed-bicubic/1 refuses MANIFOLD_SOLID_BREP; use importNurbsStepSolid',
     )
@@ -71,7 +78,7 @@ export function exportNurbsStepSolid(model: NurbsBrep): AnalyticStepExport {
 
 /** Import freeform solid STEP (cuboid / bump / planar cavity). */
 export function importNurbsStepSolid(text: string): AnalyticStepImport {
-  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+  if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
     throw new Error(
       'Freeform NURBS solid importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
     )
@@ -86,7 +93,7 @@ export function exportNurbsStepSolidV2(model: NurbsBrep): AnalyticStepExportV2 {
 
 /** Strict successor import with SI, placement, pcurve and identity reporting. */
 export function importNurbsStepSolidV2(text: string): AnalyticStepImportV2 {
-  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+  if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
     throw new Error(
       'Freeform NURBS solid importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
     )
@@ -121,7 +128,7 @@ export function exportDirectStepV3(model: NurbsBrep): DirectStepV3Export {
 
 /** Direct bounded `step-interchange/3` topology import with explicit identity reporting. */
 export function importDirectStepV3(text: string): DirectStepV3Import {
-  if (/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i.test(text)) {
+  if (STEP_V3_REFUSE_RE.test(text)) {
     throw new Error('step-interchange/3 refuses faceted, tessellated, CSG, and open-shell roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v3', { text })
@@ -143,7 +150,7 @@ export const exportDirectStepV4=(model:NurbsBrep):DirectStepV4Export=>
 
 /** `/4` additionally admits exact endpoint point selectors and finite rational analytic carriers. */
 export function importDirectStepV4(text:string):DirectStepV4Import {
-  if (/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL|EXTERNALLY_DEFINED_)\b/i.test(text)) {
+  if (STEP_V4_REFUSE_RE.test(text)) {
     throw new Error('step-interchange/4 refuses faceted, tessellated, CSG, open-shell, and external-reference roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v4',{text})
@@ -167,7 +174,7 @@ export const exportDirectStepV5=(model:NurbsBrep):DirectStepV5Export=>
 
 /** Strict selected-product AP242 import; never falls back to orphan units or bodies. */
 export function importDirectStepV5(text:string):DirectStepV5Import {
-  if (/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL|EXTERNALLY_DEFINED_)\b/i.test(text)) {
+  if (STEP_V4_REFUSE_RE.test(text)) {
     throw new Error('step-interchange/5 refuses faceted, tessellated, CSG, open-shell, and external-reference roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v5',{text})
@@ -194,7 +201,7 @@ export const exportDirectStepV6=(model:NurbsBrep):DirectStepV6Export=>
 
 /** AP242 pole-safe, assembly-aware affine successor. External documents must be resolved explicitly first. */
 export function importDirectStepV6(text:string):DirectStepV6Import {
-  if(/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i.test(text)){
+  if(STEP_V3_REFUSE_RE.test(text)){
     throw Error('step-interchange/6 refuses faceted, tessellated, CSG, and open-shell roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v6',{text})
@@ -215,7 +222,7 @@ export const exportDirectStepV7=(model:NurbsBrep):DirectStepV7Export=>
 
 /** `/7` keeps the native bounded direct graph separate from bundle validation and composition. */
 export function importDirectStepV7(text:string):DirectStepV7Import {
-  if(/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i.test(text)){
+  if(STEP_V3_REFUSE_RE.test(text)){
     throw Error('step-interchange/7 refuses faceted, tessellated, CSG, and open-shell roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v7',{text})
@@ -249,7 +256,7 @@ export interface DirectStepV8Import extends Omit<DirectStepV7Import,'certificate
 export const exportDirectStepV8=(model:NurbsBrep):DirectStepV8Export=>
   callGeometryRust('brep_nurbs_export_step_v8',{model})
 export function importDirectStepV8(text:string):DirectStepV8Import {
-  if(/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i.test(text)){
+  if(STEP_V3_REFUSE_RE.test(text)){
     throw Error('step-interchange/8 refuses faceted, tessellated, CSG, and open-shell roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v8',{text})
@@ -268,7 +275,7 @@ export interface DirectStepV9Import extends Omit<DirectStepV8Import,'certificate
 export const exportDirectStepV9=(model:NurbsBrep):DirectStepV9Export=>
   callGeometryRust('brep_nurbs_export_step_v9',{model})
 export function importDirectStepV9(text:string):DirectStepV9Import {
-  if(/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|CONSTRUCTIVE_SOLID_GEOMETRY_REPRESENTATION)\b/i.test(text)){
+  if(STEP_V9_REFUSE_RE.test(text)){
     throw Error('step-interchange/9 direct B-rep route refuses faceted, tessellated, and procedural/CSG product roots')
   }
   return callGeometryRust('brep_nurbs_import_step_v9',{text})

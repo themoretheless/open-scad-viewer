@@ -1,11 +1,11 @@
-//! Certified bounded general NURBS surface/surface intersection.
+//! Bounded surface/surface candidates with explicit qualified coverage scopes.
 //!
-//! Isolates complete 4D parameter solution strata with outward-rounded
-//! Bernstein/interval hull exclusion, Krawczyk uniqueness on terminals,
-//! subdivision, and predictor-corrector continuation. Reports carry
-//! ToleranceContext evidence, CoedgeTrim maps, BranchGraph components, and
-//! revoke topology authority whenever unresolved/resource/conditioning bands
-//! remain. Does not use the graph-patch iso fixture.
+//! Original-control hull separation, literal parameter identity and checked
+//! rectilinear reductions carry explicit coverage proofs. Other reductions and
+//! continuation return candidates, not a missed-branch or topology certificate.
+//! Owned branch/trim graph authority remains a separate unproved obligation.
+//! Uniform original-source Krawczyk fibers qualify local parameter graphs;
+//! they do not themselves authorize complete surface/surface coverage.
 use crate::foundation::guards::{Budget, require_finite_point};
 use crate::intersection::{
     ContactClass, MAX_BOXES, MAX_SPANS, UnresolvedReason, admit_surface, coedge_trim, context,
@@ -41,19 +41,38 @@ pub use serialization::{intersect_surface_surface, ss_resource_probe, verify_ss_
 #[path = "ss_intersection/report.rs"]
 mod report;
 use report::mark_junctions;
-pub use report::{SurfaceSurfaceComponent, SurfaceSurfaceIntersection, TangencyBranch};
+pub use report::{
+    CoverageProof, SurfaceSurfaceComponent, SurfaceSurfaceIntersection, TangencyBranch,
+};
+
+mod rectilinear;
+mod fiber;
+mod fiber_coverage;
+pub use fiber_coverage::{
+    FiberTraceBuildLimits, FiberTraceBuild, construct_fiber_trace,
+    FiberWorldTraceLimits, FiberWorldTraceResult, QualifiedFiberWorldTrace, qualify_fiber_world_trace,
+    FiberBridgeSpec, FiberSeparation, QualifiedFiberComponents, FiberComponentsResult, connect_mixed_fiber_cover,
+    FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation, qualify_fiber_transition,
+    MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
+    cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
+    CoverageLimits, FiberAtlasCoverageResult, FiberCoverageKind, FiberCoverageNode,
+    FiberCoverageReport, FiberCoverageResult, FiberCoverageStatus, QualifiedFiberAtlasCoverage,
+    QualifiedFiberCoverage, cover_fiber_atlas_box, cover_fiber_atlas_surfaces,
+    cover_fiber_box, cover_fiber_surfaces,
+};
+pub use fiber::{FiberOperator, FiberAxis, FiberLimits, FiberReport, FiberSources, FiberStatus, FiberResult, QualifiedFiber, FiberContraction};
+pub(crate) use rectilinear::rectangle_chart;
+pub use rectilinear::rectangular_trace_proposal;
 
 const TRANSVERSE_SINE: f64 = 1e-8;
 const MAX_CONTINUATION: usize = 512;
 const MAX_BRANCHES: usize = 256;
 
 fn grids_excluded_ss(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>]) -> bool {
-    let flat_a: Vec<[f64; 4]> = a.iter().flatten().copied().collect();
-    let flat_b: Vec<[f64; 4]> = b.iter().flatten().copied().collect();
     let ra = {
         let mut lo = [f64::INFINITY; 3];
         let mut hi = [f64::NEG_INFINITY; 3];
-        for p in &flat_a {
+        for p in a.iter().flatten() {
             for axis in 0..3 {
                 let x = p[axis] / p[3];
                 lo[axis] = lo[axis].min(next_down(x));
@@ -65,7 +84,7 @@ fn grids_excluded_ss(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>]) -> bool {
     let rb = {
         let mut lo = [f64::INFINITY; 3];
         let mut hi = [f64::NEG_INFINITY; 3];
-        for p in &flat_b {
+        for p in b.iter().flatten() {
             for axis in 0..3 {
                 let x = p[axis] / p[3];
                 lo[axis] = lo[axis].min(next_down(x));
@@ -75,32 +94,6 @@ fn grids_excluded_ss(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>]) -> bool {
         [lo, hi]
     };
     (0..3).any(|axis| ra[1][axis] < rb[0][axis] || rb[1][axis] < ra[0][axis])
-}
-
-fn proportional_grids(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>], tol: f64) -> bool {
-    if a.len() != b.len() || a.is_empty() || a[0].len() != b[0].len() {
-        return false;
-    }
-    let mut scale = None;
-    for (ra, rb) in a.iter().zip(b) {
-        for (pa, pb) in ra.iter().zip(rb) {
-            for axis in 0..4 {
-                if pa[axis].abs() <= tol && pb[axis].abs() <= tol {
-                    continue;
-                }
-                if pa[axis].abs() <= tol || pb[axis].abs() <= tol {
-                    return false;
-                }
-                let ratio = pa[axis] / pb[axis];
-                match scale {
-                    None => scale = Some(ratio),
-                    Some(s) if (ratio - s).abs() > tol.max(s.abs() * 1e-9) => return false,
-                    _ => {}
-                }
-            }
-        }
-    }
-    scale.is_some()
 }
 
 type PlaneCarrier = ([f64; 3], f64, [f64; 3], [f64; 3]);
@@ -382,18 +375,60 @@ pub fn intersect_surface_surface_report(
     let mut krawczyk_isolated = 0_usize;
     let mut used_seeds: Vec<([f64; 2], [f64; 2])> = Vec::new();
 
-    // Exact planar reduction when both charts are affine planes.
+    // These proofs use original authored controls, not rounded subdivision
+    // grids, fitted carriers or tolerance-based proximity.
+    if let Some((components, proof)) = rectilinear::reduce(first, second)
+        .or_else(|| rectilinear::graph_plane(first, second))
+    {
+        if proof == CoverageProof::Unproven {
+            let a = surface_domain(first);
+            let b = surface_domain(second);
+            unresolved.push(UnresolvedSurfaceIntersection {
+                parameter_box: Some([
+                    a[0][0], a[0][1], a[1][0], a[1][1], b[0][0], b[0][1], b[1][0], b[1][1],
+                ]),
+                reason: UnresolvedReason::ConditioningBoundary,
+                classification: Some(UnresolvedClassification::UnprovenReduction),
+            });
+        }
+        return Ok(SurfaceSurfaceIntersection {
+            coverage_proof: proof,
+            topology_proven: false,
+            components,
+            unresolved,
+            boxes_visited: 1,
+            bernstein_excluded: usize::from(proof == CoverageProof::ControlHullDisjoint),
+            krawczyk_isolated: 0,
+            tolerance,
+        });
+    }
+
+    // Even when candidate processing consumes every numerical work cell, its
+    // residual tests do not prove global coverage. Retain that full obligation.
+    let a = surface_domain(first);
+    let b = surface_domain(second);
+    unresolved.push(UnresolvedSurfaceIntersection {
+        parameter_box: Some([
+            a[0][0], a[0][1], a[1][0], a[1][1], b[0][0], b[0][1], b[1][0], b[1][1],
+        ]),
+        reason: UnresolvedReason::ConditioningBoundary,
+        classification: Some(UnresolvedClassification::UnprovenReduction),
+    });
+
+    // Legacy planar/iso reductions are candidates until their original-domain
+    // coverage and parameter maps are independently proved.
+
     if let Some(planar) = plane_plane_line(first, second, dist_floor)? {
         match planar {
             PlanarIntersection::Empty => {}
-            PlanarIntersection::Overlap(region) => {
-                components.push(SurfaceSurfaceComponent::Overlap(region))
-            }
+            PlanarIntersection::Overlap(_) => {}
             PlanarIntersection::Curve(branch) => {
                 components.push(SurfaceSurfaceComponent::Exact(branch))
             }
         }
         return Ok(SurfaceSurfaceIntersection {
+            coverage_proof: CoverageProof::Unproven,
+            topology_proven: false,
             components,
             unresolved,
             boxes_visited: boxes_visited.max(1),
@@ -407,6 +442,8 @@ pub fn intersect_surface_surface_report(
         && let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)?
     {
         return Ok(SurfaceSurfaceIntersection {
+            coverage_proof: CoverageProof::Unproven,
+            topology_proven: false,
             components: iso
                 .into_iter()
                 .map(SurfaceSurfaceComponent::Exact)
@@ -425,6 +462,8 @@ pub fn intersect_surface_surface_report(
             component.swap_supports();
         }
         return Ok(SurfaceSurfaceIntersection {
+            coverage_proof: CoverageProof::Unproven,
+            topology_proven: false,
             components: iso
                 .into_iter()
                 .map(SurfaceSurfaceComponent::Exact)
@@ -458,8 +497,8 @@ pub fn intersect_surface_surface_report(
     // by initial cells plus two children per counted box, so the guard only
     // fires if the bookkeeping above is ever broken. MAX_BOXES itself keeps
     // its existing unresolved-entry semantics.
-    let mut guard = Budget::new(MAX_SPANS + 2 * MAX_BOXES + 1, 37, u64::MAX)?
-        .guard("ssi_subdivision");
+    let mut guard =
+        Budget::new(MAX_SPANS + 2 * MAX_BOXES + 1, 37, u64::MAX)?.guard("ssi_subdivision");
     while let Some((uv, st, ha, hb, depth)) = pending.pop_front() {
         guard.tick()?;
         guard.check()?;
@@ -482,22 +521,6 @@ pub fn intersect_surface_surface_report(
         };
         if grids_excluded_ss(&ha, &hb) {
             bernstein_excluded += 1;
-            continue;
-        }
-        if proportional_grids(&ha, &hb, dist_floor) {
-            components.push(SurfaceSurfaceComponent::Overlap(OverlapRegion {
-                first_uv_box: uv,
-                second_uv_box: st,
-                geometry_enclosure: enclosure_of(
-                    point3(
-                        &first
-                            .evaluate((uv[0] + uv[1]) * 0.5, (uv[2] + uv[3]) * 0.5)?
-                            .point,
-                    )?,
-                    dist_floor,
-                ),
-                coedge_trim: coedge_trim([uv[0], uv[1]], [st[0], st[1]], [[0, 0], [0, 0]]),
-            }));
             continue;
         }
         let width = (uv[1] - uv[0])
@@ -657,6 +680,8 @@ pub fn intersect_surface_surface_report(
     mark_junctions(&mut components, floor);
 
     Ok(SurfaceSurfaceIntersection {
+        coverage_proof: CoverageProof::Unproven,
+        topology_proven: false,
         components,
         unresolved,
         boxes_visited: boxes_visited,
@@ -692,7 +717,9 @@ mod guard_tests {
         let a = plane(0.);
         let mut b = plane(0.5);
         b.control_points[0][0][2] = f64::NAN;
-        let err = intersect_surface_surface_report(&a, &b, None).err().expect("invalid intersection input must fail");
+        let err = intersect_surface_surface_report(&a, &b, None)
+            .err()
+            .expect("invalid intersection input must fail");
         assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
     }
 
@@ -713,8 +740,9 @@ mod guard_tests {
 
     #[test]
     fn marching_guard_matches_continuation_cap() {
-        let mut guard =
-            Budget::with_iterations(MAX_CONTINUATION).unwrap().guard("ssi_marching");
+        let mut guard = Budget::with_iterations(MAX_CONTINUATION)
+            .unwrap()
+            .guard("ssi_marching");
         for _ in 0..MAX_CONTINUATION {
             guard.tick().unwrap();
         }
@@ -723,3 +751,13 @@ mod guard_tests {
         assert!(err.contains("ssi_marching"));
     }
 }
+
+pub use fiber_coverage::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryNode,FiberDiscoveryResult,QualifiedDiscoveredFiberAtlas,discover_fiber_box,discover_fiber_surfaces,DiscoveredComponentLimits,OriginalFiberPointConnection,QualifiedDiscoveredFiberComponents,DiscoveredFiberComponentsResult,connect_discovered_fiber_atlas};
+
+pub use fiber_coverage::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
+
+mod quadratic_graph;
+pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, OriginalGraphSSPoint, OriginalGraphSSVertex, OriginalGraphSSEdgeGeometry, OriginalGraphSSEdge, OriginalGraphSSBranch, OriginalGraphSSTrim, OriginalGraphSSStation, QualifiedQuadraticGraphSS, qualify_quadratic_graph_ss};
+
+mod qualified_dispatch;
+pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};

@@ -44,18 +44,9 @@ pub(crate) fn section_jacobian(
     domain: [[f64; 2]; 2],
 ) -> Result<[[I; 2]; 3]> {
     let (p, q) = (s.degree_u, s.degree_v);
-    let mut net = crate::curve_surface_composition::surface_net_on(s, span, domain)?;
-    // Translation does not change derivatives. Reducing the numerator's
-    // magnitude improves the rational quotient bound without changing geometry.
-    let origin = &s.control_points[span[0] - p][span[1] - q];
-    for row in &mut net {
-        for h in row {
-            for k in 0..3 {
-                h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
-            }
-        }
-    }
-    homogeneous_section_jacobian(&net,[p,q],domain)
+    let origin=&s.control_points[span[0]-p][span[1]-q];
+    let net=crate::curve_surface_composition::surface_net_on_centered(s,span,domain,[origin[0],origin[1],origin[2]])?;
+    jacobian_from_net(&net, [p, q], domain)
 }
 fn homogeneous_section_jacobian(net:&[Vec<[I;4]>],degrees:[usize;2],domain:[[f64;2];2])->Result<[[I;2];3]>{
     let [p,q]=degrees;
@@ -238,225 +229,8 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
     Ok(Some(bounds))
 }
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn polar_jacobian_bounds_contain_independent_rational_coordinate_derivatives() {
-        // x=2, y=2u/(1+u), z=-3v/(1+2v), from separable weights.
-        let s = Surface {
-            degree_u: 1, degree_v: 1,
-            knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
-            control_points: (0..2).map(|i| (0..2).map(|j| vec![2.,i as f64,-(j as f64)]).collect()).collect(),
-            weights: vec![vec![1.,3.],vec![2.,6.]], periodic_u: false, periodic_v: false,
-        };
-        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
-        for i in 0..4 { for j in 0..4 {
-            let domain=[[i as f64/4.,(i+1) as f64/4.],[j as f64/4.,(j+1) as f64/4.]];
-            let bounds=polar_section_jacobian(&s,[1,1],domain,coordinates).unwrap().unwrap();
-            for u in domain[0] { for v in domain[1] {
-                let y=2.*u/(1.+u);let dy=2./(1.+u).powi(2);
-                let expected=[[2.*dy/(4.+y*y),0.],[y*dy/(4.+y*y).sqrt(),3./(1.+2.*v).powi(2)]];
-                for row in 0..2 { for axis in 0..2 {
-                    let b=bounds[row][axis];let value=expected[row][axis];
-                    assert!(b.lo<=value && value<=b.hi,"{row}/{axis}: {b:?} excludes {value}");
-                }}
-            }}
-        }}
-    }
-    #[test]
-    fn polar_projection_requires_global_coverage_continuity_and_two_independent_parameters() {
-        let mut s = Surface {
-            degree_u: 1, degree_v: 1,
-            knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
-            control_points: (0..2).map(|i| (0..2).map(|j| vec![2.,i as f64,-(j as f64)]).collect()).collect(),
-            weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
-        };
-        let coordinates = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
-        let before = format!("{s:?}");
-        assert!(certify_polar_projection(&s,coordinates,4,16).unwrap().is_some());
-        assert!(certify_polar_projection(&s,coordinates,4,15).unwrap().is_none());
-        assert!(certify_polar_projection(&s,coordinates,0,16).is_err());
-        assert!(certify_polar_projection(&s,coordinates,4,0).is_err());
-        let mut invalid = coordinates; invalid[0][0] = f64::NAN;
-        assert!(certify_polar_projection(&s,invalid,4,16).is_err());
-        let mut wrong_branch = coordinates; wrong_branch[0][0] = -1.;
-        assert!(certify_polar_projection(&s,wrong_branch,4,16).unwrap().is_none());
-        assert_eq!(format!("{s:?}"),before);
-        s.control_points[1] = s.control_points[0].clone();
-        assert!(certify_polar_projection(&s,coordinates,4,16).unwrap().is_none());
-        let row = |y| vec![vec![2.,y,0.],vec![2.,y,-1.]];
-        s.control_points = vec![row(0.),row(1.),row(0.)];
-        s.weights = vec![vec![1.;2];3]; s.knots_u = vec![0.,0.,0.5,1.,1.];
-        // Locally invertible halves overlap. No collection of local proofs
-        // may be promoted to a proof of this complete folded chart.
-        assert!(certify_polar_projection(&s,coordinates,4,32).unwrap().is_none());
-        s.control_points = vec![row(0.),row(1.),row(0.),row(1.)];
-        s.weights = vec![vec![1.;2];4]; s.knots_u = vec![0.,0.,0.5,0.5,1.,1.];
-        assert!(certify_polar_projection(&s,coordinates,4,32).is_err());
-    }
-
-    fn graph() -> Surface {
-        Surface {
-            degree_u: 2,
-            degree_v: 2,
-            knots_u: vec![0., 0., 0., 1., 1., 1.],
-            knots_v: vec![0., 0., 0., 1., 1., 1.],
-            control_points: (0..3)
-                .map(|i| {
-                    (0..3)
-                        .map(|j| vec![i as f64 / 2., j as f64 / 2., (i * j) as f64])
-                        .collect()
-                })
-                .collect(),
-            weights: vec![vec![1.; 3]; 3],
-            periodic_u: false,
-            periodic_v: false,
-        }
-    }
-    #[test]
-    fn perspective_projection_requires_a_nonzero_denominator_and_full_global_coverage(){
-        let basis=[[1.,0.,0.,0.],[0.,1.,0.,0.]];
-        let mut s=graph();let before=format!("{s:?}");
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],16).unwrap().is_some());
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],15).unwrap().is_none());
-        for d in [[0.,0.,0.,0.],[0.,0.,0.,-1.],[1.,0.,0.,-0.5],[1.,0.,0.,0.]]{
-            assert!(certify_projective_projection(&s,basis,d,16).unwrap().is_none());
-        }
-        assert_eq!(format!("{s:?}"),before);
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],0).is_err());
-        assert!(certify_projective_projection(&s,[[f64::NAN,0.,0.,0.],basis[1]],[0.,0.,0.,1.],16).is_err());
-        s.degree_u=1;s.knots_u=vec![0.,0.,0.5,1.,1.];
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_some());
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],31).unwrap().is_none());
-        for p in &mut s.control_points[2]{p[0]=0.;}
-        // Each side is locally invertible, but the complete folded chart isn't.
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_none());
-        s.periodic_u=true;
-        s.knots_u=vec![-1.,0.,1.,2.,3.];
-        s.control_points[2]=s.control_points[0].clone();s.weights[2]=s.weights[0].clone();
-        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_none());
-    }
-    #[test]
-    fn diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage(){
-        let mut s=Surface{degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![vec![vec![2.,0.,0.],vec![2.,0.,4.]],vec![vec![2.,2.,0.],vec![2.,2.,4.]],vec![vec![0.,2.,0.],vec![0.,2.,4.]]],
-            weights:vec![vec![1.;2],vec![std::f64::consts::FRAC_1_SQRT_2;2],vec![1.;2]],periodic_u:false,periodic_v:false};
-        let basis=[[-1.,1.,0.],[0.,0.,1.]];
-        assert!(!certify(&s,10).unwrap().proven);
-        let q=certify_linear_projection(&s,basis,16).unwrap();assert!(q.is_some(),"{q:?}");
-        assert!(certify_linear_projection(&s,basis,15).unwrap().is_none());
-        for row in &mut s.control_points{for p in row{p[2]=0.;}}
-        assert!(certify_linear_projection(&s,basis,16).unwrap().is_none());
-    }
-    #[test]
-    fn normal_bounds_cover_graph_derivatives_and_do_not_collapse_at_points() {
-        // S(u,v)=(u,v,4uv), hence (Su cross Sv).d = -4v*dx-4u*dy+dz.
-        let s=graph();
-        for domain in [[[0.,1.],[0.,1.]],[[0.2,0.4],[0.3,0.7]],[[0.25,0.25],[0.5,0.5]]] {
-            for direction in [[0.,0.,1.],[0.3,-0.2,0.7],[0.,0.,-1.]] {
-                let b=normal_direction_bounds(&s,domain,direction,10).unwrap().unwrap();
-                for u in domain[0] {for v in domain[1] {
-                    let value=-4.*v*direction[0]-4.*u*direction[1]+direction[2];
-                    assert!(b[0]<=value && value<=b[1], "{b:?}: {value}");
-                }}
-                if direction[2]==1. {assert!(b[0]>0.);}
-                if direction[2]==-1. {assert!(b[1]<0.);}
-            }
-        }
-    }
-    #[test]
-    fn rational_normal_bounds_contain_an_independent_separable_formula() {
-        let s=Surface {degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
-            weights:vec![vec![1.,3.],vec![2.,6.]],periodic_u:false,periodic_v:false};
-        // x=2u/(1+u), y=3v/(1+2v); normal Z is dx/du * dy/dv.
-        for i in 0..10 {for j in 0..10 {
-            let domain=[[i as f64/10.,(i+1) as f64/10.],[j as f64/10.,(j+1) as f64/10.]];
-            let b=normal_direction_bounds(&s,domain,[0.,0.,1.],1).unwrap().unwrap();
-            for u in domain[0] {for v in domain[1] {
-                let z=6./((1.+u).powi(2)*(1.+2.*v).powi(2));
-                assert!(b[0]<=z && z<=b[1]);
-            }}
-        }}
-    }
-    #[test]
-    fn normal_bounds_keep_both_knot_sides_and_refuse_partial_coverage() {
-        let mut s=graph();s.degree_u=1;s.knots_u=vec![0.,0.,0.5,1.,1.];
-        for p in &mut s.control_points[2] {p[0]=0.;}
-        let d=[[0.5,0.5],[0.3,0.7]];
-        assert!(normal_direction_bounds(&s,d,[0.,0.,1.],1).unwrap().is_none());
-        let b=normal_direction_bounds(&s,d,[0.,0.,1.],2).unwrap().unwrap();
-        assert!(b[0]<0. && b[1]>0.);
-        assert!(normal_direction_bounds(&s,[[-1.,0.],[0.,1.]],[0.,0.,1.],2).is_err());
-    }
-    #[test]
-    fn nonlinear_graph_and_vertical_rotation_are_globally_injective() {
-        let mut s = graph();
-        let r = certify(&s, 10).unwrap();
-        assert!(r.proven);
-        assert_eq!(r.projection, Some([0, 1]));
-        assert!(r.contraction_upper.unwrap() < 1e-10);
-        for row in &mut s.control_points {
-            for p in row {
-                p.swap(1, 2);
-            }
-        }
-        assert!(certify(&s, 10).unwrap().proven);
-    }
-    #[test]
-    fn folded_and_collapsed_charts_never_claim_injectivity() {
-        let mut s = graph();
-        for (i, row) in s.control_points.iter_mut().enumerate() {
-            for p in row {
-                p[0] = [1., -1., 1.][i];
-                p[2] = 0.;
-            }
-        }
-        assert!(!certify(&s, 10).unwrap().proven);
-        for row in &mut s.control_points {
-            for p in row {
-                p[0] = 0.;
-            }
-        }
-        assert!(!certify(&s, 10).unwrap().proven);
-    }
-    #[test]
-    fn clamped_pole_reports_missing_quotient_proof_without_spending_budget() {
-        let mut s = graph();
-        let pole = s.control_points[0][0].clone();
-        for p in &mut s.control_points[0] { *p = pole.clone(); }
-        for (j, w) in s.weights[0].iter_mut().enumerate() { *w = 1. + j as f64; }
-        let result = certify(&s, 10).unwrap();
-        assert!(!result.proven);
-        assert_eq!(result.spans, 0);
-        assert_eq!(result.reason, "collapsed-boundary-requires-quotient-proof");
-        // Close but distinct controls cannot be classified as an exact pole.
-        s.control_points[0][1][0] += 1e-10;
-        assert_ne!(certify(&s, 10).unwrap().reason,
-            "collapsed-boundary-requires-quotient-proof");
-    }
-    #[test]
-    fn all_spans_must_pass_the_same_global_test() {
-        let mut s = graph();
-        s.degree_u = 1;
-        s.knots_u = vec![0., 0., 0.3, 1., 1.];
-        let partial = certify(&s, 1).unwrap();
-        assert!(!partial.proven);
-        assert_eq!(partial.reason, "work-limit");
-        let r = certify(&s, 2).unwrap();
-        assert!(r.proven);
-        assert_eq!(r.spans, 2);
-        // Both individual spans are regular; their union folds back on itself.
-        for p in &mut s.control_points[2] {
-            p[0] = 0.;
-            p[2] = 0.;
-        }
-        for p in &mut s.control_points[1] {
-            p[2] = 0.;
-        }
-        assert!(!certify(&s, 2).unwrap().proven);
-    }
-}
+#[path = "surface_injectivity/tests/tests_integration.rs"]
+mod tests;
 
 pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
     [[1.,1.,0.],[0.,0.,1.]],[[1.,-1.,0.],[0.,0.,1.]],
@@ -748,3 +522,144 @@ fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
         rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent-rows[2][axis]*anchor;rows
     })
 }
+
+pub(crate) fn jacobian_from_net(
+    net: &[Vec<[I; 4]>],
+    degrees: [usize; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<[[I; 2]; 3]> {
+    let [p, q] = degrees;
+    let values: [I; 4] = std::array::from_fn(|k| hull(net.iter().flatten().map(|h| h[k])));
+    let denominator = values[3].mul(values[3])?;
+    let mut result = [[I::point(0.); 2]; 3];
+    for axis in 0..2 {
+        let degree = [p, q][axis];
+        if domain[axis][0] == domain[axis][1] {
+            continue;
+        }
+        let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
+        let mut diffs = Vec::with_capacity((p + 1) * (q + 1));
+        for i in 0..=p {
+            for j in 0..=q {
+                if (axis == 0 && i == p) || (axis == 1 && j == q) {
+                    continue;
+                }
+                let a = net[i][j];
+                let b = net[i + usize::from(axis == 0)][j + usize::from(axis == 1)];
+                let mut d = [I::point(0.); 4];
+                for k in 0..4 {
+                    d[k] = b[k].sub(a[k])?.mul(I::point(degree as f64))?.div(width)?;
+                }
+                diffs.push(d);
+            }
+        }
+        let d: [I; 4] = std::array::from_fn(|k| hull(diffs.iter().map(|h| h[k])));
+        for k in 0..3 {
+            result[k][axis] = d[k]
+                .mul(values[3])?
+                .sub(values[k].mul(d[3])?)?
+                .div(denominator)?;
+        }
+    }
+    Ok(result)
+}
+
+pub fn certify_on(s: &Surface, domain: [[f64; 2]; 2], max_spans: usize) -> Result<Report> {
+    certify_on_refined(s, domain, max_spans, 0)
+}
+
+pub fn certify_on_refined(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_spans: usize,
+    max_depth: usize,
+) -> Result<Report> {
+    s.validate()?;
+    check(
+        max_spans > 0 && max_spans <= 100_000,
+        "Injectivity span budget must be in 1..100000",
+    )?;
+    check(max_depth <= 6, "Injectivity refinement depth must be 0..6")?;
+    let report = Report {
+        proven: false,
+        projection: None,
+        linear_projection: None,
+        projective_projection: None,
+        polar_projection: None,
+        contraction_upper: None,
+        spans: 0,
+        reason: "projection-not-proven",
+    };
+    for axis in 0..2 {
+        let (k, d, n) = if axis == 0 {
+            (&s.knots_u, s.degree_u, s.control_points.len())
+        } else {
+            (&s.knots_v, s.degree_v, s.control_points[0].len())
+        };
+        check(
+            domain[axis].iter().all(|x| x.is_finite())
+                && domain[axis][0] < domain[axis][1]
+                && domain[axis][0] >= k[d]
+                && domain[axis][1] <= k[n],
+            "Injectivity rectangle must be noncollapsed and inside the original surface domain",
+        )?;
+    }
+    let us =
+        crate::certificates::audit::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
+    let vs = crate::certificates::audit::nonempty_spans(
+        &s.knots_v,
+        s.degree_v,
+        s.control_points[0].len(),
+    );
+    let mut cover = Vec::new();
+    for &u in &us {
+        for &v in &vs {
+            let section = [
+                [
+                    domain[0][0].max(s.knots_u[u]),
+                    domain[0][1].min(s.knots_u[u + 1]),
+                ],
+                [
+                    domain[1][0].max(s.knots_v[v]),
+                    domain[1][1].min(s.knots_v[v + 1]),
+                ],
+            ];
+            if section.iter().all(|r| r[0] < r[1]) {
+                cover.push(([u, v], section));
+            }
+        }
+    }
+    certify_original_cover(s, cover, report, max_spans, max_depth, "rectangle-projection-contraction")
+}
+
+fn certify_original_cover(
+    s: &Surface,
+    cover: Vec<([usize; 2], [[f64; 2]; 2])>,
+    report: Report,
+    max_spans: usize,
+    max_depth: usize,
+    success_reason: &'static str,
+) -> Result<Report> {
+    Ok(certify_original_cover_with_projection(
+        s,
+        cover,
+        report,
+        max_spans,
+        max_depth,
+        success_reason,
+        false,
+        [1., 1.],
+    )?
+    .0)
+}
+
+
+
+mod shared_boundary;
+pub use shared_boundary::certify_shared_natural_boundary;
+mod seam_glued;
+pub use seam_glued::{GluedRectangleReport,certify_seam_glued_rectangle};
+
+#[path = "surface_injectivity/original_cover.rs"]
+mod original_cover;
+use original_cover::certify_original_cover_with_projection;

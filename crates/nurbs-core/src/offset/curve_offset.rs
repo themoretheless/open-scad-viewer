@@ -446,3 +446,7 @@ pub(crate) fn fit_offset_sites(sites: &[[f64; 3]], tolerance_mm: f64) -> Result<
 #[cfg(test)]
 #[path = "tests/curve_offset.rs"]
 mod tests;
+
+#[path = "orthogonal_cleanup.rs"]
+mod orthogonal_cleanup;
+pub use orthogonal_cleanup::{CleanupStop, CleanupLimits, OrthogonalCleanup, cleanup_orthogonal_miter_offset};

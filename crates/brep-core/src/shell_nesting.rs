@@ -50,11 +50,16 @@ pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f
             .collect::<std::collections::HashSet<_>>();
         let mut groups = std::collections::HashMap::<usize, Vec<_>>::new();
         for group in &pairs.disjoint_groups {
-            if group.axis < 3 && group.range[0] > group.face
-                && if group.first_before_range {
-                    group.first_bounds[group.axis][1] < group.range_bounds[group.axis][0]
-                } else { group.range_bounds[group.axis][1] < group.first_bounds[group.axis][0] }
-            {
+            // These are fresh original-pole certificates from this invocation.
+            // Oblique groups carry their outward-rounded projected intervals;
+            // they prove the same strict separation as coordinate groups.
+            let separated=if group.axis<3 {
+                if group.first_before_range {group.first_bounds[group.axis][1]<group.range_bounds[group.axis][0]}
+                else {group.range_bounds[group.axis][1]<group.first_bounds[group.axis][0]}
+            }else{group.projection.as_ref().is_some_and(|p|
+                if group.first_before_range {p.first_bounds[1]<p.range_bounds[0]}
+                else {p.range_bounds[1]<p.first_bounds[0]})};
+            if group.range[0]>group.face && separated {
                 groups.entry(group.face).or_default().push(group.range);
             }
         }

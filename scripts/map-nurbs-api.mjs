@@ -11,9 +11,14 @@ const library = read('crates/nurbs-core/src/lib.rs').replace(/pub use ([\w:]+)::
 // moved modules; their public module re-exports retain the original flat API.
 const exports = [...library.matchAll(/^pub use ((?:crate::)?[\w:]+)(?: as (\w+))?;/gm)]
 const moduleExports = exports.filter(([_, path]) => {
-  const source = path.replace(/^crate::/, '').replaceAll('::', '/')
-  return existsSync(resolve(root, 'crates/nurbs-core/src', source + '.rs')) ||
-    existsSync(resolve(root, 'crates/nurbs-core/src', source, 'mod.rs'))
+  const parts=path.replace(/^crate::/,'').split('::')
+  const source=parts.join('/'),name=parts.at(-1)
+  const parent='crates/nurbs-core/src/'+parts.slice(0,-1).join('/')
+  const parentFile=[parent+'.rs',parent+'/mod.rs'].find(p=>existsSync(resolve(root,p)))
+  const moduleExists=existsSync(resolve(root,'crates/nurbs-core/src',source+'.rs')) ||
+    existsSync(resolve(root,'crates/nurbs-core/src',source,'mod.rs'))
+  return moduleExists && !!parentFile &&
+    new RegExp(`\\bpub\\s+mod\\s+${name}\\s*[;{]`).test(read(parentFile))
 })
 const parents = new Set(moduleExports.map(([_, path]) => path.replace(/^crate::/, '').split('::')[0]))
 const catalogModules = new Set(Object.values(domains).flat())

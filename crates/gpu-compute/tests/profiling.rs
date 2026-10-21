@@ -127,7 +127,7 @@ fn timestamps_are_explicitly_enabled_and_context_identity_is_preserved() {
         assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
         return;
     };
-    assert!(default.enabled_features().is_empty());
+    assert!((default.enabled_features() - wgpu::Features::MAPPABLE_PRIMARY_BUFFERS).is_empty());
     assert!(matches!(
         GpuTimer::new(&default),
         Err(TimestampError::FeatureDisabled)

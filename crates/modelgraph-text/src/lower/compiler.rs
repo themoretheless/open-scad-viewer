@@ -21,51 +21,7 @@ impl Compiler {
         let V::Array(items)=value else { return Err(crate::error("Loft references require nested arrays")); };
         Ok(J::Array(items.into_iter().map(|v|self.loft_references(v,depth-1)).collect::<R<Vec<_>>>()?))
     }
-    pub(super) fn geometry(&mut self, v: V) -> R<String> {
-        match v {
-            V::Array(a) => {
-                let inputs = a
-                    .into_iter()
-                    .map(|v| self.geometry(v))
-                    .collect::<R<Vec<_>>>()?;
-                let g = self.add(json!({"op":"group","inputs":inputs}))?;
-                let id = self.geometry(g)?;
-                self.collections.insert(id.clone());
-                Ok(id)
-            }
-            V::Json(j) if j.get("geometry").is_some() => Ok(s(&j, "geometry").into()),
-            V::Json(j) if empty_value_sequence(&j["sequence"]) => {
-                let value = self.geometry(V::Array(Vec::new()))?;
-                let protected =
-                    self.protect(V::Json(json!({"geometry":value})), &[j["sequence"].clone()])?;
-                self.geometry(protected)
-            }
-            V::Json(j) if empty_match_sequence(&j["sequence"]) => {
-                let sequence = &j["sequence"];
-                let empty = self.geometry(V::Array(Vec::new()))?;
-                let mut arms = Vec::new();
-                for original in arr(sequence, "arms") {
-                    let mut arm = original.clone();
-                    let input = if s(&arm["body"], "op") != "list" {
-                        let protected = self
-                            .protect(V::Json(json!({"geometry":&empty})), &[arm["body"].clone()])?;
-                        self.geometry(protected)?
-                    } else {
-                        empty.clone()
-                    };
-                    arm.as_object_mut().unwrap().remove("body");
-                    arm["input"] = json!(input);
-                    arms.push(arm);
-                }
-                let value =
-                    self.add(json!({"op":"match","value":&sequence["input"],"arms":arms}))?;
-                let id = self.geometry(value)?;
-                self.collections.insert(id.clone());
-                Ok(id)
-            }
-            _ => Err(crate::error("Expected geometry")),
-        }
-    }
+
     fn mark(&mut self, v: &J) {
         if let Some(id) = v["param"].as_str() {
             if let Some(p) = self.parameters.iter_mut().find(|p| s(p, "id") == id) {
@@ -778,6 +734,14 @@ impl Compiler {
             {
                 for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
+                }
+            }
+            if name=="brep_miter_sweep" {
+                for key in ["max_deviation","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}
+                }
+                if node.get("max_deviation").is_none() && ["circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"].iter().any(|key|node.get(*key).is_some()) {
+                    return Err(crate::error("Direct miter circle correction requires max_deviation"));
                 }
             }
             if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("miter_limit")) {node["miter_limit"]=raw(args.remove(at).1)?;}
@@ -1887,3 +1851,6 @@ impl Compiler {
         format!("{prefix}{}", self.check_serial)
     }
 }
+
+#[path = "compiler/geometry_reference.rs"]
+mod geometry_reference;

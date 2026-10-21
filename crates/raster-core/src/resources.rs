@@ -4,7 +4,7 @@ use crate::uniform::{
     MORPH_BYTE_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS, ObjectUniform,
     STYLE_BYTE_OFFSET,
 };
-use gpu_compute::{pack_f32, pack_u32, wgpu};
+use gpu_compute::{create_buffer_initialized, f32_le_bytes, u32_le_bytes, wgpu};
 
 /// A drawable mesh: interleaved position+normal vertices, u32 triangle
 /// indices, an object uniform buffer and an optional morph source buffer
@@ -125,22 +125,26 @@ impl Rasterizer {
 
     /// Uploads per-instance records (one [`ObjectUniform`] per instance).
     pub fn create_instance_pool(&self, records: &[ObjectUniform]) -> InstancePool {
-        let mut floats = vec![0.0f32; records.len() * OBJECT_UNIFORM_FLOATS];
-        for (i, record) in records.iter().enumerate() {
-            let slot = &mut floats[i * OBJECT_UNIFORM_FLOATS..(i + 1) * OBJECT_UNIFORM_FLOATS];
-            let slot: &mut [f32; OBJECT_UNIFORM_FLOATS] =
-                slot.try_into().expect("instance record slot");
-            record.write_f32(slot);
-        }
-        let buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("raster instance pool"),
-            size: (floats.len() * 4).max(4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.context
-            .queue
-            .write_buffer(&buffer, 0, &pack_f32(&floats));
+        let buffer = create_buffer_initialized(
+            &self.context.device,
+            &wgpu::BufferDescriptor {
+                label: Some("raster instance pool"),
+                size: (records.len() as u64 * OBJECT_UNIFORM_BYTES).max(4),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: true,
+            },
+            |mut mapping| {
+                for (i, record) in records.iter().enumerate() {
+                    let mut floats = [0.0; OBJECT_UNIFORM_FLOATS];
+                    record.write_f32(&mut floats);
+                    let offset = i * OBJECT_UNIFORM_BYTES as usize;
+                    mapping
+                        .slice(offset..offset + OBJECT_UNIFORM_BYTES as usize)
+                        .copy_from_slice(&f32_le_bytes(&floats));
+                }
+            },
+        )
+        .expect("raster instance initialization failed");
         let bind_group = self
             .context
             .device
@@ -206,20 +210,25 @@ impl Rasterizer {
     fn write_uniform_field(&self, buffer: &wgpu::Buffer, byte_offset: u64, floats: &[f32; 4]) {
         self.context
             .queue
-            .write_buffer(buffer, byte_offset, &pack_f32(floats));
+            .write_buffer(buffer, byte_offset, &f32_le_bytes(floats));
     }
 
     fn upload_vertex_data(&self, floats: &[f32], label: &str) -> wgpu::Buffer {
-        let buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(label),
-            size: (floats.len() * 4).max(4) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.context
-            .queue
-            .write_buffer(&buffer, 0, &pack_f32(floats));
-        buffer
+        self.upload_bytes(&f32_le_bytes(floats), label, wgpu::BufferUsages::VERTEX)
+    }
+
+    fn upload_bytes(&self, bytes: &[u8], label: &str, usage: wgpu::BufferUsages) -> wgpu::Buffer {
+        create_buffer_initialized(
+            &self.context.device,
+            &wgpu::BufferDescriptor {
+                label: Some(label),
+                size: bytes.len().max(4) as u64,
+                usage: usage | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: true,
+            },
+            |mapping| mapping.into_slice(..bytes.len()).copy_from_slice(bytes),
+        )
+        .expect("raster buffer initialization failed")
     }
 
     fn upload_geometry(
@@ -228,15 +237,11 @@ impl Rasterizer {
         indices: &[u32],
     ) -> (wgpu::Buffer, wgpu::Buffer, u32) {
         let vertex_buffer = self.upload_vertex_data(vertices, "raster mesh vertices");
-        let index_buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("raster mesh indices"),
-            size: (indices.len() * 4).max(4) as u64,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.context
-            .queue
-            .write_buffer(&index_buffer, 0, &pack_u32(indices));
+        let index_buffer = self.upload_bytes(
+            &u32_le_bytes(indices),
+            "raster mesh indices",
+            wgpu::BufferUsages::INDEX,
+        );
         (vertex_buffer, index_buffer, indices.len() as u32)
     }
 
@@ -245,17 +250,13 @@ impl Rasterizer {
     }
 
     fn upload_object_uniform(&self, uniform: &ObjectUniform) -> (wgpu::Buffer, wgpu::BindGroup) {
-        let uniform_buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("raster object uniform"),
-            size: OBJECT_UNIFORM_BYTES,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
         let mut floats = [0.0f32; OBJECT_UNIFORM_FLOATS];
         uniform.write_f32(&mut floats);
-        self.context
-            .queue
-            .write_buffer(&uniform_buffer, 0, &pack_f32(&floats));
+        let uniform_buffer = self.upload_bytes(
+            &f32_le_bytes(&floats),
+            "raster object uniform",
+            wgpu::BufferUsages::UNIFORM,
+        );
         let bind_group = self
             .context
             .device

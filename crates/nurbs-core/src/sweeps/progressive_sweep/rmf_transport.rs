@@ -21,9 +21,22 @@ pub struct RmfNormalCell {
     pub endpoint_radius_upper: f64,
     /// Original normalized-traversal speed, used for fresh arc-length bounds.
     pub speed: [f64; 2],
+    planar_basis: Option<PlanarBasis>,
+}
+#[derive(Clone, Debug)]
+struct PlanarBasis {
+    axis: Option<usize>,
+    binormal: Vec3,
+    parallel: I,
+    transverse: I,
+    longitudinal: I,
+    radius: f64,
 }
 #[derive(Clone, Debug)]
 pub struct OriginalRmfTransportReport {
+    source_jets: Option<super::source_jets::SourceJets>,
+    correction_phases: Option<Vec<[f64; 2]>>,
+    correction_rate: Option<I>,
     pub status: Status,
     pub cells: usize,
     pub exact_work: u64,
@@ -51,8 +64,56 @@ fn encode(v: Vec3) -> [[f64; 2]; 3] {
 fn point(v: [f64; 3]) -> Vec3 {
     v.map(I::point)
 }
-fn unit(v: Vec3) -> Result<Vec3> {
-    div(v, norm(v)?)
+pub(super) fn unit(v: Vec3) -> Result<Vec3> {
+    let mut result = div(v, norm(v)?)?;
+    for axis in 0..3 {
+        let mut minimum = I::point(0.);
+        let mut maximum = I::point(0.);
+        for k in 0..3 {
+            if k != axis {
+                let lo = if v[k].lo <= 0. && v[k].hi >= 0. {
+                    0.
+                } else {
+                    v[k].lo.abs().min(v[k].hi.abs())
+                };
+                let hi = v[k].lo.abs().max(v[k].hi.abs());
+                minimum = minimum.add(I::point(lo).mul(I::point(lo))?)?;
+                maximum = maximum.add(I::point(hi).mul(I::point(hi))?)?;
+            }
+        }
+        // x/sqrt(x²+s) increases with x>=0 and decreases with s>=0.
+        // Keep the shared x in numerator and denominator, rather than
+        // dividing independently boxed velocity and speed intervals.
+        let ratio = |x: f64, s: f64| -> Result<I> {
+            let q = I::point(x).mul(I::point(x))?.add(I::point(s))?;
+            let denominator = I::new(
+                q.lo.max(0.).sqrt().next_down().max(0.),
+                q.hi.sqrt().next_up(),
+            )?;
+            I::point(x).div(denominator)
+        };
+        let bound = (|| -> Result<(f64, f64)> {
+            let s_min = minimum.lo.max(0.);
+            let s_max = maximum.hi.max(0.);
+            if v[axis].lo >= 0. {
+                Ok((ratio(v[axis].lo, s_max)?.lo, ratio(v[axis].hi, s_min)?.hi))
+            } else if v[axis].hi <= 0. {
+                Ok((
+                    -ratio(-v[axis].lo, s_min)?.hi,
+                    -ratio(-v[axis].hi, s_max)?.lo,
+                ))
+            } else {
+                Ok((-ratio(-v[axis].lo, s_min)?.hi, ratio(v[axis].hi, s_min)?.hi))
+            }
+        })();
+        if let Ok((lo, hi)) = bound {
+            result[axis] = I::new(
+                result[axis].lo.max(lo).max(-1.),
+                result[axis].hi.min(hi).min(1.),
+            )?;
+        }
+    }
+    Ok(result)
 }
 fn midpoint(v: Vec3) -> [f64; 3] {
     v.map(|x| x.lo * 0.5 + x.hi * 0.5)
@@ -77,10 +138,10 @@ fn initial(
     Ok((first.cells, value.ok()))
 }
 
-/// C1 Cartesian source knots and fresh whole-cell velocity/acceleration are
-/// mandatory. Steps are dyadic in normalized traversal; source domain mapping
+/// Continuous source position/unit tangent and whole-cell velocity/acceleration are
+/// mandatory. A dyadic traversal grid is refined around original source knots; domain mapping
 /// and derivative factors are outward rounded. Partial covers are discarded.
-/// Closed mode additionally proves original endpoint C1 and encloses holonomy;
+/// Closed mode additionally proves original position/tangent identity and encloses holonomy;
 /// distribution of that correction over the retained sweep is still separate.
 pub fn certify_original_rmf_transport(
     path: &Curve,
@@ -121,221 +182,7 @@ pub(crate) fn certify_original_rmf_transport_shared(
     )
 }
 
-fn certify_original_rmf_transport_impl(
-    path: &Curve,
-    normal: [f64; 3],
-    steps: usize,
-    max_cells: usize,
-    max_exact_work: u64,
-    closed: bool,
-    shared_work: Option<usize>,
-) -> Result<OriginalRmfTransportReport> {
-    path.validate()?;
-    check(
-        path.control_points.iter().all(|p| p.len() == 3)
-            && normal.iter().all(|v| v.is_finite())
-            && steps.is_power_of_two()
-            && (2..=16384).contains(&steps)
-            && max_cells <= 100000
-            && max_exact_work <= 1000000,
-        "Invalid original RMF transport limits",
-    )?;
-    let mut out = OriginalRmfTransportReport {
-        status: Status::Unresolved,
-        cells: 0,
-        exact_work: 0,
-        cover: None,
-        closing_angle: None,
-        arc_corrected_normals: None,
-        arc_corrected_binormals: None,
-        reason: Some("rmf-original-C1-unproved"),
-        continuous_bound: false,
-        solid_certified: false,
-    };
-    let knots = endpoint_jets::certify_knots(path, 1, max_exact_work)?;
-    out.exact_work = knots.exact_work;
-    if !knots.certified {
-        return Ok(out);
-    }
-    if closed {
-        let seam = endpoint_jets::certify(path, 1, max_exact_work - out.exact_work)?;
-        out.exact_work += seam.exact_work;
-        if !seam.certified {
-            out.reason = Some("rmf-original-closed-C1-unproved");
-            return Ok(out);
-        }
-    }
-    let max_cells = match shared_work {
-        Some(total) => {
-            max_cells.min(total.checked_sub(out.exact_work as usize).ok_or_else(|| {
-                crate::resource("RMF exact source work exceeded shared allowance")
-            })?)
-        }
-        None => max_cells,
-    };
-    out.reason = Some("rmf-initial-normal-unproved");
-    let (work, seed) = initial(path, normal, max_cells)?;
-    out.cells += work;
-    let Some((t0, n0)) = seed else {
-        return Ok(out);
-    };
-    let [a, b] = path.domain();
-    let width = I::point(b).sub(I::point(a))?;
-    let h = I::point(1. / steps as f64);
-    let mut center = midpoint(n0);
-    let mut radius = norm(sub(n0, point(center))?)?.hi;
-    let mut cover = Vec::with_capacity(steps);
-    for index in 0..steps {
-        out.reason = Some("rmf-original-jet-work-unproved");
-        let traversal = [
-            index as f64 / steps as f64,
-            (index + 1) as f64 / steps as f64,
-        ];
-        let jets =
-            vector_certificate::certify_traversal(path, traversal, max_cells - out.cells, false)?;
-        out.cells += jets.cells;
-        if jets.status != Status::Certified {
-            return Ok(out);
-        }
-        if out.cells == max_cells {
-            return Ok(out);
-        }
-        out.cells += 1; // whole rotation/error propagation cell, under same owner
-        out.reason = Some("rmf-original-speed-or-propagation-unproved");
-        let step = (|| -> Result<(RmfNormalCell, [f64; 3], f64)> {
-            let v = scale(decode(jets.first.unwrap())?, width)?;
-            let acceleration = scale(decode(jets.second.unwrap())?, width.mul(width)?)?;
-            let speed = norm(v)?;
-            let speed_square = speed.mul(speed)?;
-            let omega = div(cross(v, acceleration)?, speed_square)?;
-            let reference = point(midpoint(omega));
-            let c = point(center);
-            let c_length = norm(c)?;
-            // Duhamel: ||U_variable c-U_reference c|| <= h*delta_omega*||c||.
-            let variation = h.mul(norm(sub(omega, reference)?)?)?.mul(c_length)?;
-            // Constant skew flow: retain the quadratic Taylor term.
-            // Every derivative of exp(t A)c has norm <= |omega0|^k |c|
-            // because A is skew and exp(t A) is an isometry. The integral
-            // third-order remainder needs no exponential inflation.
-            let w = norm(reference)?;
-            let h2 = h.mul(h)?;
-            let w2 = w.mul(w)?;
-            let remainder = h2
-                .mul(h)?
-                .mul(w2.mul(w)?)?
-                .mul(c_length)?
-                .div(I::point(6.))?;
-            let first = cross(reference, c)?;
-            let second = cross(reference, first)?;
-            let exact_quadratic = add(
-                add(c, scale(first, h)?)?,
-                scale(second, h2.mul(I::point(0.5))?)?,
-            )?;
-            let next = midpoint(exact_quadratic);
-            let rounding = norm(sub(exact_quadratic, point(next))?)?;
-            let next_radius = I::point(radius)
-                .add(variation)?
-                .add(remainder)?
-                .add(rounding)?
-                .hi;
-            // Whole-cell motion from c: ||U(t)c-c|| <= h*sup|omega|*||c||.
-            let tube_radius = I::point(radius)
-                .add(h.mul(norm(omega)?)?.mul(c_length)?)?
-                .hi;
-            Ok((
-                RmfNormalCell {
-                    traversal,
-                    normal: encode(ball(center, tube_radius)?),
-                    tangent: encode(div(v, speed)?),
-                    endpoint_normal: encode(ball(next, next_radius)?),
-                    endpoint_radius_upper: next_radius,
-                    speed: [speed.lo, speed.hi],
-                },
-                next,
-                next_radius,
-            ))
-        })();
-        let Ok((cell, next, next_radius)) = step else {
-            return Ok(out);
-        };
-        center = next;
-        radius = next_radius;
-        cover.push(cell);
-    }
-    if closed {
-        out.reason = Some("rmf-closing-angle-work-unproved");
-        if out.cells == max_cells {
-            return Ok(out);
-        }
-        out.cells += 1;
-        let end = ball(center, radius)?;
-        let sine = dot_tight(t0, cross(end, n0)?)?;
-        let cosine = dot_tight(end, n0)?;
-        let angle =
-            trigonometric_certificate::certify_atan2([sine.lo, sine.hi], [cosine.lo, cosine.hi])?
-                .unwrap_or_else(|| {
-                    // The proved original C1 closure identifies the endpoint
-                    // tangents. Bishop transport preserves the unit normal
-                    // perpendicular to that tangent, so the true sine/cosine
-                    // pair lies on the unit circle and atan2 is defined.
-                    // Its principal value always belongs to [-pi, pi], even
-                    // when this enclosure crosses the negative-axis cut.
-                    // Preserve both branches; downstream error admission must
-                    // account for the whole conservative correction image.
-                    let pi = std::f64::consts::PI.next_up();
-                    [-pi, pi]
-                });
-        // Original arc-length distribution, independently of sampled chords.
-        // No partial corrected cover survives insufficient work.
-        out.reason = Some("rmf-arc-correction-work-unproved");
-        let mut total = I::point(0.);
-        for cell in &cover {
-            if out.cells == max_cells {
-                return Ok(out);
-            }
-            out.cells += 1;
-            total = total.add(I::new(cell.speed[0], cell.speed[1])?.mul(h)?)?;
-        }
-        let mut prefix = I::point(0.);
-        let mut corrected = Vec::with_capacity(steps);
-        let mut binormals = Vec::with_capacity(steps);
-        for cell in &cover {
-            if out.cells == max_cells {
-                return Ok(out);
-            }
-            out.cells += 1;
-            let length = I::new(cell.speed[0], cell.speed[1])?.mul(h)?;
-            let next_prefix = prefix.add(length)?;
-            // Every partial length in this cell lies between the proved
-            // previous prefix lower bound and next prefix upper bound.
-            let fraction = I::new(prefix.lo.max(0.), next_prefix.hi)?
-                .div(total)?
-                .intersect(0., 1.)?;
-            let phase = I::new(angle[0], angle[1])?.mul(fraction)?;
-            let trig = trigonometric_certificate::certify([phase.lo, phase.hi])?;
-            let n = decode(cell.normal)?;
-            let t = decode(cell.tangent)?;
-            let cosine = I::new(trig.cos[0], trig.cos[1])?;
-            let sine = I::new(trig.sin[0], trig.sin[1])?;
-            // Full Rodrigues formula: interval N and T must not silently
-            // assume an exact dot product from their rounded enclosures.
-            let rotated = add(
-                add(scale(n, cosine)?, scale(cross(t, n)?, sine)?)?,
-                scale(t, dot_tight(t, n)?.mul(I::point(1.).sub(cosine)?)?)?,
-            )?;
-            binormals.push(encode(cross(t, rotated)?));
-            corrected.push(encode(rotated));
-            prefix = next_prefix;
-        }
-        out.closing_angle = Some(angle);
-        out.arc_corrected_normals = Some(corrected);
-        out.arc_corrected_binormals = Some(binormals);
-    }
-    out.status = Status::Certified;
-    out.reason = None;
-    out.cover = Some(cover);
-    Ok(out)
-}
+
 /// Fresh source relative section images in (normal, binormal, tangent)
 /// coordinates. No position, scalar/affine law, retained-wall or cap proof is
 /// implied. A caller must account for those separately before admission.
@@ -424,6 +271,183 @@ pub(super) fn frame_values(
     use super::super::progressive_miter::{
         authored_frame_certificate as frame, scalar_certificate,
     };
+    let mut out = frame_axes(transport, traversal, max_cells, None)?;
+    if out.status != Status::Certified {
+        return Ok(out);
+    }
+    let charge = (twist.degree..twist.control_points.len())
+        .filter(|&i| twist.knots[i] < twist.knots[i + 1])
+        .count();
+    let theta = if charge <= max_cells - out.cells {
+        out.cells += charge;
+        scalar_certificate::value_traversal(twist, station, charge)?
+    } else {
+        None
+    };
+    let Some(theta) = theta else {
+        return Ok(frame::ValuesReport {
+            status: Status::Unresolved,
+            cells: out.cells,
+            longitudinal: None,
+            transverse: None,
+            binormal: None,
+        });
+    };
+    let trig = trigonometric_certificate::certify(theta)?;
+    let c = I::new(trig.cos[0], trig.cos[1])?;
+    let s = I::new(trig.sin[0], trig.sin[1])?;
+    let n = decode(out.transverse.unwrap())?;
+    let b = decode(out.binormal.unwrap())?;
+    out.transverse = Some(encode(add(scale(n, c)?, scale(b, s)?)?));
+    out.binormal = Some(encode(sub(scale(b, c)?, scale(n, s)?)?));
+    Ok(out)
+}
+
+/// `prepared_first` comes from this same immutable source query, already
+/// charged by the owning caller. It encloses every intersected source cell.
+/// Exact original pole coplanarity; a small nonzero determinant still refuses.
+fn exact_pole_plane(poles: &[Vec<f64>], budget: usize) -> Result<(usize, Option<Vec3>)> {
+    use cad_predicates::{
+        AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
+    };
+    let mut cells = 0;
+    let point_at = |i: usize| point(std::array::from_fn(|k| poles[i][k]));
+    let mut basis = None;
+    for i in 1..poles.len() {
+        for j in i + 1..poles.len() {
+            if cells == budget {
+                return Ok((cells, None));
+            }
+            cells += 1;
+            if let Ok(normal) = unit(cross(
+                sub(point_at(i), point_at(0))?,
+                sub(point_at(j), point_at(0))?,
+            )?) {
+                basis = Some((i, j, normal));
+                break;
+            }
+        }
+        if basis.is_some() {
+            break;
+        }
+    }
+    let Some((i, j, normal)) = basis else {
+        return Ok((cells, None));
+    };
+    // A rounded candidate is only a proposal. Exact dot identities on every
+    // original pole certify that represented plane before normalization.
+    let u = std::array::from_fn::<_, 3, _>(|k| poles[i][k] - poles[0][k]);
+    let v = std::array::from_fn::<_, 3, _>(|k| poles[j][k] - poles[0][k]);
+    let candidate = [
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0],
+    ];
+    if candidate.iter().all(|x| x.is_finite()) && candidate.iter().any(|x| *x != 0.) {
+        let mut exact = true;
+        for pole in poles.iter().skip(1) {
+            if budget - cells < 6 {
+                return Ok((cells, None));
+            }
+            cells += 6;
+            let terms = std::array::from_fn::<_, 6, _>(|k| {
+                if k < 3 {
+                    (candidate[k], pole[k])
+                } else {
+                    (-candidate[k - 3], poles[0][k - 3])
+                }
+            });
+            if crate::exact_products::sum_sign(&terms) != std::cmp::Ordering::Equal {
+                exact = false;
+                break;
+            }
+        }
+        if exact {
+            if let Ok(normal) = unit(point(candidate)) {
+                return Ok((cells, Some(normal)));
+            }
+        }
+    }
+    let values = poles
+        .iter()
+        .flatten()
+        .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("rmf-original-span-plane", 1, values) else {
+        return Ok((cells, None));
+    };
+    let refs = |i: usize| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap());
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(
+        &source,
+        &tolerance,
+        Limits {
+            max_work: (budget - cells) as u64,
+            ..Limits::default()
+        },
+        None,
+    );
+    for k in 1..poles.len() {
+        if k == i || k == j {
+            continue;
+        }
+        let result = cad_predicates::orient3d(&mut ctx, refs(0), refs(i), refs(j), refs(k));
+        if !matches!(result.map(|d| d.outcome), Ok(Outcome::Sign(Sign::Zero))) {
+            return Ok((cells + ctx.work_used() as usize, None));
+        }
+    }
+    Ok((cells + ctx.work_used() as usize, Some(normal)))
+}
+
+pub(super) fn frame_axes(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    max_cells: usize,
+    prepared_first: Option<[[f64; 2]; 3]>,
+) -> Result<super::super::progressive_miter::authored_frame_certificate::ValuesReport> {
+    frame_axes_impl(transport, traversal, max_cells, prepared_first, true, None)
+}
+#[cfg(test)]
+pub(super) fn original_frame_axes(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    max_cells: usize,
+    prepared_first: Option<[[f64; 2]; 3]>,
+) -> Result<super::super::progressive_miter::authored_frame_certificate::ValuesReport> {
+    frame_axes_impl(transport, traversal, max_cells, prepared_first, false, None)
+}
+/// Source axes and original correction share the same charged cover traversal.
+/// Partial axes never publish a partial phase enclosure.
+pub(super) fn original_frame_with_correction(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    budget: usize,
+    first: Option<[[f64; 2]; 3]>,
+) -> Result<(
+    super::super::progressive_miter::authored_frame_certificate::ValuesReport,
+    Option<(I, I)>,
+)> {
+    let mut phase = None;
+    let frame = frame_axes_impl(transport, traversal, budget, first, false, Some(&mut phase))?;
+    let correction = if frame.status != Status::Certified {
+        None
+    } else if transport.arc_corrected_normals.is_none() {
+        Some((I::point(0.), I::point(0.)))
+    } else {
+        phase.zip(transport.correction_rate)
+    };
+    Ok((frame, correction))
+}
+
+fn frame_axes_impl(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    max_cells: usize,
+    prepared_first: Option<[[f64; 2]; 3]>,
+    corrected: bool,
+    mut phase_image: Option<&mut Option<I>>,
+) -> Result<super::super::progressive_miter::authored_frame_certificate::ValuesReport> {
+    use super::super::progressive_miter::authored_frame_certificate as frame;
     let mut axes: Option<[Vec3; 3]> = None;
     let mut cells = 0;
     let unresolved = |cells| frame::ValuesReport {
@@ -448,18 +472,96 @@ pub(super) fn frame_values(
             return Ok(unresolved(cells));
         }
         cells += 1;
-        let t = decode(cell.tangent)?;
-        let n = decode(
+        let mut t = decode(cell.tangent)?;
+        let fresh_correction = transport
+            .correction_phases
+            .as_ref()
+            .filter(|_| corrected)
+            .map(|phases| phases[i]);
+        let mut n = decode(
             transport
                 .arc_corrected_normals
                 .as_ref()
+                .filter(|_| corrected && fresh_correction.is_none())
                 .map_or(cell.normal, |v| v[i]),
         )?;
-        let b = if let Some(v) = transport.arc_corrected_binormals.as_ref() {
+        // Restrict the original planar Bishop identity to this query. Closed
+        // holonomy images remain owned by the separate corrected cover.
+        if !corrected || transport.arc_corrected_normals.is_none() || fresh_correction.is_some() {
+            if let (Some(basis), Some(source)) = (&cell.planar_basis, &transport.source_jets) {
+                let interval = [
+                    traversal[0].max(cell.traversal[0]),
+                    traversal[1].min(cell.traversal[1]),
+                ];
+                if interval != cell.traversal {
+                    let first = if let Some(first) = prepared_first {
+                        first
+                    } else {
+                        let original = source.query(interval, max_cells - cells)?;
+                        cells += original.cells;
+                        let Some(jets) = original.jets else {
+                            return Ok(unresolved(cells));
+                        };
+                        jets[1]
+                    };
+                    let restricted = (|| -> Result<(Vec3, Vec3)> {
+                        let mut velocity = decode(first)?;
+                        if let Some(axis) = basis.axis {
+                            velocity[axis] = I::point(0.);
+                        }
+                        let t = unit(velocity)?;
+                        let axis = basis.binormal;
+                        let n = add(
+                            add(
+                                add(
+                                    scale(axis, basis.parallel)?,
+                                    scale(cross(axis, t)?, basis.transverse)?,
+                                )?,
+                                scale(t, basis.longitudinal)?,
+                            )?,
+                            [I::new(-basis.radius, basis.radius)?; 3],
+                        )?;
+                        Ok((t, n))
+                    })();
+                    if let Ok((restricted_t, restricted_n)) = restricted {
+                        t = restricted_t;
+                        n = restricted_n;
+                    }
+                }
+            }
+        }
+        let b = if let Some(phase) = fresh_correction {
+            // Rotate the restricted original source image by the already
+            // charged whole-cell original arc phase. No sampled chord phase
+            // or exact orthogonality of interval boxes is assumed.
+            let trig = trigonometric_certificate::certify(phase)?;
+            let c = I::new(trig.cos[0], trig.cos[1])?;
+            let s = I::new(trig.sin[0], trig.sin[1])?;
+            n = add(
+                add(scale(n, c)?, scale(cross(t, n)?, s)?)?,
+                scale(t, dot_tight(t, n)?.mul(I::point(1.).sub(c)?)?)?,
+            )?;
+            cross(t, n)?
+        } else if let Some(v) = transport
+            .arc_corrected_binormals
+            .as_ref()
+            .filter(|_| corrected)
+        {
             decode(v[i])?
         } else {
             cross(t, n)?
         };
+        if let (Some(image), Some(phases)) = (
+            phase_image.as_deref_mut(),
+            transport.correction_phases.as_ref(),
+        ) {
+            let phase = I::new(phases[i][0], phases[i][1])?;
+            *image = Some(if let Some(old) = *image {
+                I::new(old.lo.min(phase.lo), old.hi.max(phase.hi))?
+            } else {
+                phase
+            });
+        }
         let value = [t, n, b];
         if let Some(old) = axes.as_mut() {
             for a in 0..3 {
@@ -477,29 +579,66 @@ pub(super) fn frame_values(
     let Some([t, n, b]) = axes else {
         return Ok(unresolved(cells));
     };
-    let charge = (twist.degree..twist.control_points.len())
-        .filter(|&i| twist.knots[i] < twist.knots[i + 1])
-        .count();
-    if charge > max_cells - cells {
-        return Ok(unresolved(cells));
-    }
-    let theta = scalar_certificate::value_traversal(twist, station, charge)?;
-    cells += charge;
-    let Some(theta) = theta else {
-        return Ok(unresolved(cells));
-    };
-    let trig = trigonometric_certificate::certify(theta)?;
-    let c = I::new(trig.cos[0], trig.cos[1])?;
-    let sin = I::new(trig.sin[0], trig.sin[1])?;
-    let rotated_n = add(scale(n, c)?, scale(b, sin)?)?;
-    let rotated_b = sub(scale(b, c)?, scale(n, sin)?)?;
     Ok(frame::ValuesReport {
         status: Status::Certified,
         cells,
         longitudinal: Some(encode(t)),
-        transverse: Some(encode(rotated_n)),
-        binormal: Some(encode(rotated_b)),
+        transverse: Some(encode(n)),
+        binormal: Some(encode(b)),
     })
+}
+
+/// Original holonomy phase and its derivative per original arc length.
+/// A query is complete only after every intersecting cover cell is charged.
+#[cfg(test)]
+pub(super) fn correction_image(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    budget: usize,
+) -> Result<(usize, Option<(I, I)>)> {
+    if transport.status != Status::Certified {
+        return Ok((0, None));
+    }
+    if transport.arc_corrected_normals.is_none() {
+        return Ok((0, Some((I::point(0.), I::point(0.)))));
+    }
+    let (Some(cover), Some(phases), Some(rate)) = (
+        &transport.cover,
+        &transport.correction_phases,
+        transport.correction_rate,
+    ) else {
+        return Ok((0, None));
+    };
+    let mut cells = 0;
+    let mut image: Option<I> = None;
+    for (cell, phase) in cover.iter().zip(phases) {
+        if cell.traversal[1] < traversal[0] || cell.traversal[0] > traversal[1] {
+            continue;
+        }
+        if cells == budget {
+            return Ok((cells, None));
+        }
+        cells += 1;
+        let phase = I::new(phase[0], phase[1])?;
+        image = Some(if let Some(old) = image {
+            I::new(old.lo.min(phase.lo), old.hi.max(phase.hi))?
+        } else {
+            phase
+        });
+    }
+    Ok((cells, image.map(|phase| (phase, rate))))
+}
+
+pub(super) fn source_jets(
+    transport: &OriginalRmfTransportReport,
+    traversal: [f64; 2],
+    budget: usize,
+) -> Result<Option<super::source_jets::Report>> {
+    transport
+        .source_jets
+        .as_ref()
+        .map(|source| source.query(traversal, budget))
+        .transpose()
 }
 
 pub(super) fn relative_values(
@@ -526,5 +665,9 @@ pub(super) fn relative_values(
 }
 
 #[cfg(test)]
-#[path="tests/rmf_transport.rs"]
-pub(super) mod tests;
+#[path = "rmf_transport/tests/tests_fixtures.rs"]
+pub(super) mod tests ;
+
+#[path = "rmf_transport/bishop_integration.rs"]
+mod bishop_integration;
+use bishop_integration::certify_original_rmf_transport_impl;

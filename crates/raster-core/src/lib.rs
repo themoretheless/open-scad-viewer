@@ -20,9 +20,14 @@ pub mod codegen;
 pub mod generated_layouts;
 pub mod layout;
 pub mod pipeline;
+pub mod postprocess;
 pub mod rasterizer;
 pub mod readback;
 pub mod resources;
 pub mod shaders;
 pub mod uniform;
 pub mod variants;
+
+pub use postprocess::{
+    CullingStats, compute_ssao_ao, evaluate_culling_stats, sobel_edge_outline,
+};

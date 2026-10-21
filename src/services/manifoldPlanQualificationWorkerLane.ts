@@ -122,6 +122,8 @@ export class ManifoldPlanQualificationWorkerLane {
   private lastTerminatedWorkerEpoch = 0
   private workersStarted = 0
   private workersTerminated = 0
+  private lastSource: string | null = null
+  private lastSourceSha256 = ''
 
   constructor(options: ManifoldPlanQualificationWorkerLaneOptions = {}) {
     this.usesDefaultWorker = options.workerFactory === undefined
@@ -169,13 +171,19 @@ export class ManifoldPlanQualificationWorkerLane {
     )
     const workerEpoch = this.nextEpoch++
     const jobId = this.nextJobId++
+    let sourceSha256 = this.lastSourceSha256
+    if (source !== this.lastSource) {
+      sourceSha256 = sha256Hex(source)
+      this.lastSource = source
+      this.lastSourceSha256 = sourceSha256
+    }
     const request: McpManifoldPlanQualificationRequest = Object.freeze({
       protocolVersion: MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION,
       type: 'evaluate',
       workerEpoch,
       jobId,
       source,
-      sourceSha256: sha256Hex(source),
+      sourceSha256,
       quality,
       identity: MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY,
     })

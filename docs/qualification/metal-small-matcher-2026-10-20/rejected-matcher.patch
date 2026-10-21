@@ -1,0 +1,235 @@
+diff --git a/crates/photogrammetry-core/src/gpu/matching.rs b/crates/photogrammetry-core/src/gpu/matching.rs
+index 51605559a..5c9189503 100644
+--- a/crates/photogrammetry-core/src/gpu/matching.rs
++++ b/crates/photogrammetry-core/src/gpu/matching.rs
+@@ -41,6 +41,7 @@ pub struct ColBest {
+ struct Buffers {
+     row_capacity: usize,
+     col_capacity: usize,
++    small_input: Option<(wgpu::Buffer, usize)>,
+     params: wgpu::Buffer,
+     descriptors_a: wgpu::Buffer,
+     descriptors_b: wgpu::Buffer,
+@@ -54,6 +55,8 @@ struct Buffers {
+ pub struct GpuMatcher {
+     device: wgpu::Device,
+     queue: wgpu::Queue,
++    #[cfg(test)]
++    disable_small_updates: bool,
+     rows_kernel: Kernel,
+     cols_kernel: Kernel,
+     /// The workgroup size baked into the compiled pipelines, chosen per
+@@ -104,6 +107,8 @@ impl GpuMatcher {
+         Self {
+             device: context.device.clone(),
+             queue: context.queue.clone(),
++            #[cfg(test)]
++            disable_small_updates: false,
+             rows_kernel,
+             cols_kernel,
+             workgroup_size,
+@@ -165,24 +170,46 @@ impl GpuMatcher {
+         let col_bytes = (cols as u64) * 8;
+         let buffers = self.buffers.borrow();
+         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+-        self.queue.write_buffer(
+-            &buffers.params,
+-            0,
+-            &[
+-                rows.to_ne_bytes(),
+-                cols.to_ne_bytes(),
+-                0u32.to_ne_bytes(),
+-                0u32.to_ne_bytes(),
+-            ]
+-            .concat(),
+-        );
+-        if !packed_a.is_empty() {
+-            self.queue
+-                .write_buffer(&buffers.descriptors_a, 0, &packed_a);
+-        }
+-        if !packed_b.is_empty() {
+-            self.queue
+-                .write_buffer(&buffers.descriptors_b, 0, &packed_b);
++        if let Some((input, header_bytes)) = &buffers.small_input {
++            // All three inputs are read-only, with disjoint aligned bindings.
++            // Fill unused A capacity too: B's binding offset is capacity-based.
++            let mut header = [0u8; 4096];
++            header[..4].copy_from_slice(&rows.to_le_bytes());
++            header[4..8].copy_from_slice(&cols.to_le_bytes());
++            let padding = [0u8; 4096];
++            gpu_compute::write_small_parts(
++                &self.queue,
++                input,
++                0,
++                [
++                    &header[..*header_bytes],
++                    &packed_a,
++                    &padding[..buffers.row_capacity * 512 - packed_a.len()],
++                    &packed_b,
++                ]
++                .into_iter(),
++            )
++            .map_err(|e| gpu_compute::ReadbackError::Device(e.to_string()))?;
++        } else {
++            self.queue.write_buffer(
++                &buffers.params,
++                0,
++                &[
++                    rows.to_ne_bytes(),
++                    cols.to_ne_bytes(),
++                    0u32.to_ne_bytes(),
++                    0u32.to_ne_bytes(),
++                ]
++                .concat(),
++            );
++            if !packed_a.is_empty() {
++                self.queue
++                    .write_buffer(&buffers.descriptors_a, 0, &packed_a);
++            }
++            if !packed_b.is_empty() {
++                self.queue
++                    .write_buffer(&buffers.descriptors_b, 0, &packed_b);
++            }
+         }
+ 
+         let mut encoder = self
+@@ -263,24 +290,60 @@ impl GpuMatcher {
+         let device = &self.device;
+         let row_capacity = row_count.max(1);
+         let col_capacity = col_count.max(1);
+-        let params = device.create_buffer(&wgpu::BufferDescriptor {
+-            label: Some("match_params"),
+-            size: 16,
+-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+-            mapped_at_creation: false,
+-        });
+-        let descriptors_a = device.create_buffer(&wgpu::BufferDescriptor {
+-            label: Some("match_da"),
+-            size: (row_capacity * 128 * 4) as u64,
+-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+-            mapped_at_creation: false,
+-        });
+-        let descriptors_b = device.create_buffer(&wgpu::BufferDescriptor {
+-            label: Some("match_db"),
+-            size: (col_capacity * 128 * 4) as u64,
+-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+-            mapped_at_creation: false,
+-        });
++        let header_bytes = (device.limits().min_storage_buffer_offset_alignment as usize).max(16);
++        let total = header_bytes.checked_add(
++            row_capacity
++                .saturating_add(col_capacity)
++                .saturating_mul(512),
++        );
++        let allowed = {
++            #[cfg(test)]
++            {
++                !self.disable_small_updates
++            }
++            #[cfg(not(test))]
++            {
++                true
++            }
++        };
++        let small_input = if allowed && total.is_some_and(|n| n <= 4096) {
++            Some((
++                device.create_buffer(&wgpu::BufferDescriptor {
++                    label: Some("match small inputs"),
++                    size: total.unwrap() as u64,
++                    usage: wgpu::BufferUsages::UNIFORM
++                        | wgpu::BufferUsages::STORAGE
++                        | wgpu::BufferUsages::COPY_DST,
++                    mapped_at_creation: false,
++                }),
++                header_bytes,
++            ))
++        } else {
++            None
++        };
++        let (params, descriptors_a, descriptors_b) = if let Some((buffer, _)) = &small_input {
++            (buffer.clone(), buffer.clone(), buffer.clone())
++        } else {
++            let params = device.create_buffer(&wgpu::BufferDescriptor {
++                label: Some("match_params"),
++                size: 16,
++                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
++                mapped_at_creation: false,
++            });
++            let descriptors_a = device.create_buffer(&wgpu::BufferDescriptor {
++                label: Some("match_da"),
++                size: (row_capacity * 128 * 4) as u64,
++                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
++                mapped_at_creation: false,
++            });
++            let descriptors_b = device.create_buffer(&wgpu::BufferDescriptor {
++                label: Some("match_db"),
++                size: (col_capacity * 128 * 4) as u64,
++                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
++                mapped_at_creation: false,
++            });
++            (params, descriptors_a, descriptors_b)
++        };
+         let rows_out = device.create_buffer(&wgpu::BufferDescriptor {
+             label: Some("match_rows_out"),
+             size: (row_capacity * 12) as u64,
+@@ -305,21 +368,42 @@ impl GpuMatcher {
+             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+             mapped_at_creation: false,
+         });
++        fn input_binding(
++            buffer: &wgpu::Buffer,
++            offset: usize,
++            size: usize,
++        ) -> wgpu::BindingResource<'_> {
++            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
++                buffer,
++                offset: offset as u64,
++                size: std::num::NonZeroU64::new(size as u64),
++            })
++        }
+         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+             label: Some("match_descriptors"),
+             layout: self.rows_kernel.bind_group_layout(),
+             entries: &[
+                 wgpu::BindGroupEntry {
+                     binding: 0,
+-                    resource: params.as_entire_binding(),
++                    resource: input_binding(&params, 0, 16),
+                 },
+                 wgpu::BindGroupEntry {
+                     binding: 1,
+-                    resource: descriptors_a.as_entire_binding(),
++                    resource: input_binding(
++                        &descriptors_a,
++                        small_input.as_ref().map_or(0, |(_, h)| *h),
++                        row_capacity * 512,
++                    ),
+                 },
+                 wgpu::BindGroupEntry {
+                     binding: 2,
+-                    resource: descriptors_b.as_entire_binding(),
++                    resource: input_binding(
++                        &descriptors_b,
++                        small_input
++                            .as_ref()
++                            .map_or(0, |(_, h)| *h + row_capacity * 512),
++                        col_capacity * 512,
++                    ),
+                 },
+                 wgpu::BindGroupEntry {
+                     binding: 3,
+@@ -334,6 +418,7 @@ impl GpuMatcher {
+         *self.buffers.borrow_mut() = Some(Buffers {
+             row_capacity,
+             col_capacity,
++            small_input,
+             params,
+             descriptors_a,
+             descriptors_b,
+@@ -800,3 +885,6 @@ mod tests {
+         );
+     }
+ }
++
++#[cfg(test)]
++mod small_batch_tests;

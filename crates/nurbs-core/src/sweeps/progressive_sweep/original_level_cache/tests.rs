@@ -1,0 +1,86 @@
+use super::*;
+use crate::progressive_sweep::{Orientation, constant_vector_law};
+fn options() -> Options { Options {normal:[1.,0.,0.],orientation:Orientation::Fixed,
+    spacing:Spacing::Parameter,initial_sections:3,max_sections:33,max_deviation:0.01} }
+fn clear() { CACHE.with(|c|c.borrow_mut().clear()); }
+fn bounded() { CACHE.with(|c| { let c=c.borrow();assert!(c.len()<=MAX_ENTRIES);
+    assert!(c.iter().map(|e|e.words).sum::<usize>()<=MAX_WORDS);
+    assert!(c.iter().all(|e|e.key.len()<=MAX_KEY_WORDS)); }); }
+#[test]
+fn exact_levels_keep_charges_owned_output_and_iterator_progression() {
+    clear(); let profiles=vec![crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap()];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let mut multi=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap();
+    let before=multi.next_sections;
+    for count in [3,5,9,17,33,3,9,33] {
+        let original=multi.preview_uncached(count).unwrap();assert!(original.report.continuous_bound);
+        let mut first=multi.preview_at(count).unwrap();
+        assert_eq!(format!("{original:?}"),format!("{first:?}"));
+        assert_eq!(multi.next_sections,before);
+        let k=key(&multi,count).unwrap();assert!(get(&k).is_some());
+        first.patches[0].control_points[0][0][0]+=100.;
+        assert_eq!(format!("{original:?}"),format!("{:?}",multi.preview_at(count).unwrap()));
+        bounded();
+    }
+    let original=multi.preview_uncached(3).unwrap();
+    assert_eq!(format!("{original:?}"),format!("{:?}",multi.next().unwrap().unwrap()));
+    assert!(multi.next().is_none());
+    // Even an internal stale slot cannot bypass the public count guard.
+    let k=key(&multi,2).unwrap();put(k,&original);assert!(multi.preview_at(2).is_err());
+}
+#[test]
+fn source_laws_frames_anchors_and_work_policies_have_distinct_keys() {
+    clear();let profiles=vec![crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap()];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let original=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap();
+    original.preview_at(3).unwrap();let baseline=key(&original,3).unwrap();
+    let mut changed_profile=profiles[0].clone();changed_profile.control_points[0][0]=1_f64.next_up();
+    let mut changed_path=path.clone();changed_path.weights[0]=0.75;
+    let axes=constant_vector_law([1.,2.,1.]).unwrap();let center=constant_vector_law([0.,0.1,0.]).unwrap();
+    let mut variants=Vec::new();
+    macro_rules! changed { ($m:ident, $body:expr) => {{ let mut $m=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap(); $body; variants.push(key(&$m,3).unwrap()); }}; }
+    changed!(m, m.sweeps[0].profile=&changed_profile);
+    changed!(m, m.sweeps[0].path=&changed_path);
+    changed!(m, m.sweeps[0].scale=&twist);
+    changed!(m, m.sweeps[0].twist=&scale);
+    changed!(m, m.sweeps[0].affine_laws=Some((&axes,&center)));
+    changed!(m, m.sweeps[0].frame_laws=Some((&axes,&center)));
+    changed!(m, m.sweeps[0].orientation_guide=Some(&path));
+    changed!(m, m.sweeps[0].contact_point=Some([0.;3]));
+    changed!(m, m.sweeps[0].contact_source=Some((&profiles[0],0.5)));
+    changed!(m, m.sweeps[0].spatial_rmf_error_limits=Some([512,1,1]));
+    changed!(m, m.sweeps[0].options.normal[1]=-0.);
+    changed!(m, m.options.max_deviation=0.02);
+    changed!(m, m.sweeps[0].options.spacing=Spacing::ArcLength{tolerance:0.01,max_cells:100});
+    changed!(m, m.sweeps[0].options.orientation=Orientation::RotationMinimizing);
+    for k in variants { assert_ne!(k,baseline); assert!(get(&k).is_none()); }
+    let rmf_options=Options {orientation:Orientation::RotationMinimizing,..options()};
+    let high=MultiSweep::new(&profiles,&path,&scale,&twist,rmf_options).unwrap()
+        .with_spatial_rmf_error_limits(512,10000,1000000).unwrap();
+    high.preview_at(3).unwrap();
+    let low=MultiSweep::new(&profiles,&path,&scale,&twist,rmf_options).unwrap()
+        .with_spatial_rmf_error_limits(512,1,1).unwrap();
+    assert!(get(&key(&low,3).unwrap()).is_none());
+    assert_eq!(format!("{:?}",low.preview_uncached(3)),format!("{:?}",low.preview_at(3)));
+}
+#[test]
+fn storage_and_key_limits_refuse_oversized_or_unproved_entries() {
+    clear();let profiles=vec![crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap()];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let multi=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap();
+    let level=multi.preview_at(3).unwrap();
+    for i in 0..30 {put(vec![i;MAX_KEY_WORDS],&level);bounded();}
+    let mut moderate=level.clone();moderate.patches.resize(1000,level.patches[0].clone());
+    for i in 100..120 {put(vec![i],&moderate);bounded();}
+    CACHE.with(|c|assert!(c.borrow().len()<MAX_ENTRIES));
+    let mut partial=level.clone();partial.report.continuous_bound=false;
+    put(vec![999],&partial);assert!(get(&[999]).is_none());
+    let mut huge=level.clone();huge.patches.resize(30000,level.patches[0].clone());
+    put(vec![1000],&huge);assert!(get(&[1000]).is_none());bounded();
+    let mut oversized=profiles[0].clone();oversized.control_points[0].resize(MAX_KEY_WORDS+1,0.);
+    let mut changed=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap();
+    changed.sweeps[0].profile=&oversized;assert!(key(&changed,3).is_none());
+}

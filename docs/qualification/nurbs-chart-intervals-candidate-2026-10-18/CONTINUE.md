@@ -1,0 +1,15 @@
+# Exact original chart-shore interval partition
+
+OwnedOriginalChartIntervals creates one complete natural-parameter partition per original UV curve. It merges exact native knots, every finite chart-shore root and both endpoints of every shore-coincident original cell, retaining all provenance. Equality/order uses selected algebraic values, not floating enclosures alone. Every consecutive positive interval owns exactly one original knot cell and both full source-domain endpoints remain covered.
+
+A rational witness is chosen strictly between proven separated algebraic bound enclosures. For each wrapped axis the interval is classified Below, LowerShore, Interior, UpperShore or Above. The exact homogeneous shore root census proves the OPEN interval is root-free, so the witness determines the whole interval class; a shore-valued witness requires a full-cell polynomial identity. Unwrapped axes remain explicitly unclassified (None). This preserves the original NURBS and algebraic parameter cuts; no rounded subcurve/control net is created. Sorting, cell coverage and refinement work have explicit refusal budgets.
+
+The shore producer now independently checks closed-root census count, one root per interval, source-domain bounds and disjoint root ownership after isolation. Missing or duplicate roots refuse. Replay checks source cuts, provenance, interval coverage, cell indices and classes.
+
+Fresh gates: 127 profile tests and 58 integration tests across two binaries; WASM compile passed. New regressions cover irrational seam cuts, tangent intervals staying on the same side, whole-cell shore intervals, merged corner/native-knot provenance, and a mixed along-shore then off-shore source. Private audits reject omitted intervals/origins, forged cell/class and incomplete/duplicate root censuses. Earlier full suites remain historical.
+
+Next reconcile this chart subdivision with common-carrier aliases and filled-region edges, own periodic crossing transitions and exact translated source expressions, then attach the unified regions to physical periodic topology. Source partitioning alone is not a general periodic trim quotient. Automatic general surface intersections remain open. Catalog 198/200. Rust isolated; cumulative patch against verified original baseline, not current shared checkout.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

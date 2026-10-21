@@ -35,13 +35,15 @@ it.each(['fixed','fixed_normal','frenet'] as const)('certifies original %s arc-l
  expect(level.report.accepted).toBe(level.report.continuousErrorUpper!<=level.report.budget)
 })
 
-it.each(['rmf'] as const)('keeps curved %s transport without a straight-source certificate',orientation=>{
+it.each(['rmf'] as const)('certifies curved %s transport using the original general RMF bound',orientation=>{
  const profile=bezierNurbsCurve([[1,0,0],[2,0,0]])
  const path=bezierNurbsCurve([[0,0,0],[0,0,5],[1,0,10]])
  const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}
  const level=previewProgressiveNurbsProfiles([profile],path,law,{...law,values:[0,0]},
   {normal:[1,0,0],orientation,initialSections:3,maxSections:3,maxDeviation:1},3)
- expect(level.report).toMatchObject({continuousBound:false,roundingCertified:false,continuousErrorUpper:null,errorCertificateReason:'source-plane-coefficients-nonzero'})
+ expect(level.report).toMatchObject({accepted:true,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
+ expect(level.report.continuousErrorUpper).toBeGreaterThan(0)
+ expect(level.report.continuousErrorUpper).toBeLessThanOrEqual(1)
 })
 
 it.each(['fixed_normal','frenet'] as const)('does not promote partial %s profile certificates to the whole union',orientation=>{
@@ -59,7 +61,7 @@ it.each(['fixed_normal','frenet'] as const)('does not promote partial %s profile
 })
 
 
-it('certifies original rational straight RMF affine transport and rejects a curved source',()=>{
+it('certifies original rational straight and nearly straight RMF affine transport',()=>{
  const profile=bezierNurbsCurve([[1,0,0],[2,0,1]],[1,2])
  const path=bezierNurbsCurve([[0,0,0],[0,0,10]],[1,2])
  const scale={degree:1,knots:[0,0,1,1],values:[1,2],weights:[1,1]}
@@ -71,8 +73,12 @@ it('certifies original rational straight RMF affine transport and rejects a curv
  expect(level.report).toMatchObject({accepted:true,continuousBound:true,roundingCertified:true})
  expect(level.report.continuousErrorUpper).toBeLessThanOrEqual(.01)
  const near=bezierNurbsCurve([[0,0,0],[2**-1022,0,5],[0,0,10]])
- const refused=previewProgressiveNurbsProfiles([profile],near,scale,twist,options,129)
- expect(refused.report).toMatchObject({continuousBound:false,continuousErrorUpper:null,errorCertificateReason:'source-plane-coefficients-nonzero'})
+ const curved=previewProgressiveNurbsProfiles([profile],near,scale,twist,options,129)
+ expect(curved.report).toMatchObject({accepted:true,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
+ expect(curved.report.continuousErrorUpper).toBeGreaterThan(0)
+ expect(curved.report.continuousErrorUpper).toBeLessThanOrEqual(options.maxDeviation)
+ const exhausted=previewProgressiveNurbsProfiles([profile],near,scale,twist,{...options,errorMaxCells:0,errorMaxProducts:1000000,rmfTransportSteps:512},129)
+ expect(exhausted.report).toMatchObject({accepted:false,continuousBound:false,continuousErrorUpper:null})
  const arc=previewProgressiveNurbsProfiles([profile],path,scale,twist,{...options,spacing:'arc_length',maxSections:3},3)
  expect(arc.report).toMatchObject({continuousBound:true,roundingCertified:true,errorCertificateReason:null,accepted:false})
  expect(arc.report.continuousErrorUpper!).toBeGreaterThan(options.maxDeviation)

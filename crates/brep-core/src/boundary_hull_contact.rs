@@ -75,7 +75,13 @@ fn contact_controls(model:&Model,face:usize)->Vec<&[f64]>{
     surface
 }
 /// Input must be structurally valid. Does not establish its prerequisites.
+mod extended_support;
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
+    certify_original(model,faces).or_else(|| extended_support::certify(model,faces).map(|c|Certificate {
+        faces:c.faces,contact_enclosure:c.hull_intersection,edges:c.edges,vertex:c.vertex,joined_proof:None
+    }))
+}
+fn certify_original(model:&Model, faces:[usize;2])->Option<Certificate>{
     certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces)).or_else(||certify_joined_charts(model,faces))
 }
 fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{

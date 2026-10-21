@@ -53,7 +53,7 @@ pub use program::ComputeProgram;
 pub use readback::Readback;
 pub use reduction::{Reduction, reduce_f32};
 pub use runtime::ComputeRuntime;
-pub use scratch::{ScratchArray, ScratchPool};
+pub use scratch::{ScratchArray, ScratchPool, ScratchPoolStats};
 pub use tensor::{GpuLowTensor, GpuTensor, TensorComputeError};
 pub use tensor_core;
 

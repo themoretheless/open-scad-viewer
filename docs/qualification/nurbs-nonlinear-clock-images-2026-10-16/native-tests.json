@@ -1,0 +1,82 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1449,
+      "failed": 0,
+      "ignored": 0
+    },
+    "periodic-core": {
+      "suites": 14,
+      "passed": 133,
+      "failed": 0,
+      "ignored": 0
+    },
+    "periodic-brep": {
+      "suites": 5,
+      "passed": 25,
+      "failed": 0,
+      "ignored": 0
+    },
+    "surface-integration": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "wasm": {
+      "finished": true
+    },
+    "surface-replay": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "api-map": "186 public modules, 200 entries; check passed",
+    "catalog": "198 implemented, 2 planned; no errors",
+    "format": "seven changed source/test files passed",
+    "final-libraries": {
+      "suites": 3,
+      "passed": 2486,
+      "failed": 0,
+      "ignored": 3,
+      "exit_code": 0
+    },
+    "boolean": {
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        "crossing_cylinders",
+        "off_axis_sphere_through_a_cylinder_wall",
+        "torus_through_a_box_corner_region"
+      ],
+      "note": "included in final three-library gate; not additional tests"
+    }
+  },
+  "scope": [
+    "exact original positive rational Bezier nonlinear image clocks; source degree <=8 and clock degree <=8",
+    "actual raw original-partition chart edge compaction with signed source contributions and full owned candidate nonzero regions",
+    "fresh actual supporting-surface correspondence; original chart domain and requested seam identities",
+    "physical sewn faces, arbitrary non-Bezier maps and general inter-wire contacts remain open"
+  ],
+  "source_sha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/clock.rs": "12ec4fe12f3e995b34da1e0e251bd7aca97bcd945ebcd94b9ee0098871cb3ad5",
+    "crates/nurbs-core/src/trim/periodic_trim/exact_chart.rs": "4d11ec60c43cc6dfdb0acb63987deb0d32e7ea47fac511ba2dbb83929a41cba8",
+    "crates/nurbs-core/src/trim/periodic_trim/exact_chart/mapped.rs": "970e1ea34a9483c482dac696fd88bdbdb88ced6c5a03e7519ac2e9e69207b57b",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "7348270c696df49ae2eb35881ab9ff150bb7f0a82612870b55b4673be3ead556",
+    "crates/nurbs-core/tests/periodic_clock_images.rs": "a3a7d5ca364baabf5b05cd6835f55667655206d47075cc386cb094e38291b12f",
+    "crates/brep-core/src/profile_certificate/winding/periodic/clock_mapped.rs": "850af55ab0258bc7a9835ec741f9439dabd6b2264c7ed9786d147916cbee2f7a",
+    "crates/brep-core/tests/periodic_clock_regions.rs": "a863f03be55a4ece392a9c0672d4f295b5d8eccc9b22b4b55378d8cbd14480f3"
+  },
+  "historical_gates": "Earlier broad 3523 pass / 3 ignored remains historical; current final gate is three full libraries, not all integration binaries.",
+  "selected_source_hashes_unchanged_after_final_gate": true
+}

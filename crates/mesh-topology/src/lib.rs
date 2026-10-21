@@ -16,7 +16,7 @@ pub use edges::{
     extract_semantic_edges_cooperative,
 };
 pub use indexed::{EdgeCounts, EdgeUses};
-pub use inspection::Inspection;
+pub use inspection::{Inspection, connected_components_count, genus};
 pub use math_core::{Error, Result};
 pub use view::MeshView;
 

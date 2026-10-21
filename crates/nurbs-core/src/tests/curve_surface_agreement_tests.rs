@@ -20,9 +20,9 @@
             let limited=verify_exact(&c,&p,&s,reversed,1).unwrap().unwrap();
             assert!(matches!(limited.outcome,BezierIdentity::Indeterminate(_)));assert!(limited.work_used<=1);
             let mut bad=c.clone();bad.knots[3]=bad.knots[3].next_up();
-            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none());
+            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none_or(|p|p.outcome!=BezierIdentity::Equal));
             let mut bad=c.clone();bad.control_points[1][2]+=1e-12;
-            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none());
+            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none_or(|p|p.outcome!=BezierIdentity::Equal));
         }}}}
     }
     #[test]

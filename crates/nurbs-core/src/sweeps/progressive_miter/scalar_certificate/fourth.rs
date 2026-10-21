@@ -8,6 +8,13 @@ fn refuse(out:&mut FourthReport,reason:&'static str){
 }
 pub fn certify_fourth_traversal(c:&Curve,traversal:[f64;2],max_cells:usize)->Result<FourthReport>{
     let lower=certify_third_traversal(c,traversal,max_cells)?;
+    certify_fourth_traversal_with_lower(c,0,traversal,max_cells,lower)
+}
+pub(in crate::sweeps::progressive_miter) fn certify_fourth_traversal_axis(c:&Curve,axis:usize,traversal:[f64;2],max_cells:usize)->Result<FourthReport>{
+    let lower=certify_third_traversal_axis(c,axis,traversal,max_cells)?;
+    certify_fourth_traversal_with_lower(c,axis,traversal,max_cells,lower)
+}
+fn certify_fourth_traversal_with_lower(c:&Curve,axis:usize,traversal:[f64;2],max_cells:usize,lower:ThirdReport)->Result<FourthReport>{
     let mut out=FourthReport {base:lower.base,third:lower.third,fourth:None};
     if out.base.status!=Status::Certified {return Ok(out);}
     let [a,b]=c.domain();
@@ -23,18 +30,18 @@ pub fn certify_fourth_traversal(c:&Curve,traversal:[f64;2],max_cells:usize)->Res
             // narrow restriction must not divide tiny rounded pole differences.
             let a=c.knots[span];let b=c.knots[span+1];
             let width=Interval::point(b).sub(Interval::point(a))?;
-            let controls=crate::curve_distance::restricted_controls(c,span,Interval::new(a,b)?)?;
+            let controls=crate::curve_distance::restricted_controls_axis(c,axis,span,Interval::new(a,b)?)?;
             let local=Interval::new(l,h)?.sub(Interval::point(a))?.div(width)?.intersect(0.,1.)?;
             let mut n=controls.iter().map(|p|p[0]).collect::<Vec<_>>();
-            let mut w=controls.iter().map(|p|p[3]).collect::<Vec<_>>();
-            let evaluate=|v|first_point::evaluate(v,local);
-            let weight=evaluate(w.clone())?;
+            let mut w=controls.iter().map(|p|p[1]).collect::<Vec<_>>();
+            let evaluate=|v:&[Interval]|restricted_hull(v,local);
+            let weight=evaluate(&w)?;
             let mut ns=[Interval::point(0.);5];let mut ws=ns;
-            ns[0]=evaluate(n.clone())?;ws[0]=weight;
+            ns[0]=evaluate(&n)?;ws[0]=weight;
             for k in 1..=4 {
                 n=derivative(&n,c.degree.saturating_sub(k-1),width)?;
                 w=derivative(&w,c.degree.saturating_sub(k-1),width)?;
-                ns[k]=evaluate(n.clone())?;ws[k]=evaluate(w.clone())?;
+                ns[k]=evaluate(&n)?;ws[k]=evaluate(&w)?;
             }
             // Leibniz recurrence N=R*W, retaining all rational terms.
             let choose=[[1.,0.,0.,0.,0.],[1.,1.,0.,0.,0.],[1.,2.,1.,0.,0.],[1.,3.,3.,1.,0.],[1.,4.,6.,4.,1.]];

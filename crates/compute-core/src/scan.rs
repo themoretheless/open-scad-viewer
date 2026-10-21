@@ -54,7 +54,9 @@ impl<'a> ScanPlan<'a> {
         output: &GpuArray<u32>,
         normalize: bool,
     ) -> Result<Self, ComputeError> {
-        let mut plan = Self { steps: Vec::new() };
+        let mut plan = Self {
+            steps: Vec::with_capacity(4),
+        };
         if !input.is_empty() {
             plan.level(runtime, input, output, normalize)?;
         }
@@ -130,7 +132,9 @@ impl<'a> ScanPlan<'a> {
         input: &GpuArray<u32>,
         local: &GpuArray<u32>,
     ) -> Result<(Self, GpuArray<u32>, u32), ComputeError> {
-        let mut plan = Self { steps: Vec::new() };
+        let mut plan = Self {
+            steps: Vec::with_capacity(4),
+        };
         let kernel = &runtime.scan.blocks;
         let block_size = kernel.workgroup_size() * ITEMS_PER_LANE;
         let blocks = input.len.div_ceil(block_size);

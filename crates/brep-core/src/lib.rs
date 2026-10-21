@@ -37,6 +37,9 @@ pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
 pub mod gear;
+pub mod worm;
+/// Section-authored geometric blades.
+pub mod blade;
 mod imprint_assembly;
 mod sphere_mate;
 pub mod tolerant_boolean;
@@ -44,6 +47,8 @@ pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
 mod body_edit;
 pub mod boundary_agreement;
 pub mod watertight;
+/// Authored trimmed patch networks with continuous admission audits.
+pub mod trimmed_shell;
 pub mod boundary_embedding;
 pub mod boundary_hull_contact;
 pub mod close_topology;
@@ -54,6 +59,20 @@ pub mod face_contacts;
 pub mod face_domain;
 pub mod face_injectivity;
 pub mod iges_interchange_v2;
+pub mod edge_partition;
+pub mod face_crossings;
+pub mod face_window;
+pub mod face_cut;
+pub mod face_replacement;
+pub mod region_replacement;
+pub mod fillet_contact;
+pub mod fillet_radius;
+pub mod contact_trim;
+pub mod contact_bind;
+pub mod contact_graft;
+pub mod corner_close;
+pub mod radius_transition_body;
+pub mod contact_end;
 pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
@@ -78,16 +97,26 @@ pub mod shell_relation;
 pub mod shell_nesting;
 pub mod shell_orientation;
 pub mod ray_parity;
+pub mod bezier_profile;
+pub mod profile_certificate;
+pub mod minkowski3d;
 pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod profile_imprint;
+pub mod boundary_contact_tube;
+pub mod trimmed_edge_contact;
+pub mod trimmed_vertex_contact;
 pub mod sweep_cap_contacts;
 pub mod sweep_retained_caps;
 pub mod sweep_retained_walls;
 pub mod sweep_retained_charts;
 pub mod sweep_retained_decomposition;
 pub mod sweep_smoothness;
+pub mod rounded_patch_network;
+pub mod shell_thickness;
+pub mod wall_clearance;
+pub mod wall_opposition;
 pub mod sweep_miter_layout;
 pub mod sweep_station_reconstruction;
 pub mod sweep_affine_boundary;
@@ -1414,120 +1443,7 @@ fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
         periodic: false,
     }
 }
-/// Construct an exact six-face NURBS box with shared edges, not six loose patches.
-pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
-    require(
-        (0..3).all(|i| {
-            min[i].is_finite()
-                && max[i].is_finite()
-                && max[i] > min[i]
-                && min[i].abs() <= 1e6
-                && max[i].abs() <= 1e6
-        }),
-        "Invalid box bounds",
-    )?;
-    let vertices = [
-        [0, 0, 0],
-        [1, 0, 0],
-        [1, 1, 0],
-        [0, 1, 0],
-        [0, 0, 1],
-        [1, 0, 1],
-        [1, 1, 1],
-        [0, 1, 1],
-    ]
-    .map(|p| Vertex {
-        point: std::array::from_fn(|i| if p[i] == 0 { min[i] } else { max[i] }),
-    })
-    .to_vec();
-    let mut m = Model(
-        brep_topology::Model {
-            vertices,
-            edges: vec![],
-            loops: vec![],
-            faces: vec![],
-            shells: vec![],
-            bodies: vec![],
-            tolerance_mm: 1e-7,
-        },
-        TopologyIds::default(),
-    );
-    let mut edges = BTreeMap::new();
-    for corners in [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ] {
-        let mut coedges = vec![];
-        let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-        for i in 0..4 {
-            let a = corners[i];
-            let b = corners[(i + 1) % 4];
-            let key = (a.min(b), a.max(b));
-            let edge = *edges.entry(key).or_insert_with(|| {
-                let id = m.0.edges.len();
-                m.0.edges.push(Edge {
-                    degenerate: false,
-                    vertices: [key.0, key.1],
-                    curve: line(
-                        m.0.vertices[key.0].point.to_vec(),
-                        m.0.vertices[key.1].point.to_vec(),
-                    ),
-                });
-                id
-            });
-            coedges.push(Coedge {
-                edge,
-                reversed: a > b,
-                pcurve: line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
-            });
-        }
-        let outer = m.0.loops.len();
-        m.0.loops.push(Loop { coedges });
-        m.0.faces.push(Face {
-            surface: Surface {
-                degree_u: 1,
-                degree_v: 1,
-                knots_u: vec![0., 0., 1., 1.],
-                knots_v: vec![0., 0., 1., 1.],
-                control_points: vec![
-                    vec![
-                        m.0.vertices[corners[0]].point.to_vec(),
-                        m.0.vertices[corners[3]].point.to_vec(),
-                    ],
-                    vec![
-                        m.0.vertices[corners[1]].point.to_vec(),
-                        m.0.vertices[corners[2]].point.to_vec(),
-                    ],
-                ],
-                weights: vec![vec![1., 1.], vec![1., 1.]],
-                periodic_u: false,
-                periodic_v: false,
-            },
-            outer,
-            holes: vec![],
-        });
-    }
-    m.0.shells.push(Shell {
-        faces: (0..6)
-            .map(|face| FaceUse {
-                face,
-                reversed: false,
-            })
-            .collect(),
-        closed: true,
-    });
-    m.0.bodies.push(Body {
-        outer_shell: 0,
-        inner_shells: vec![],
-    });
-    m.rebuild_topology_ids();
-    m.validate()?;
-    Ok(m)
-}
+
 #[cfg(test)]
 mod tests;
 
@@ -1677,3 +1593,11 @@ pub(crate) mod source_planar_flux;
 pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
 
 pub mod wall_search;
+
+pub mod retained_annular_cap;
+
+pub mod topology_reference;
+
+#[path = "cuboid_primitive.rs"]
+mod cuboid_primitive;
+pub use cuboid_primitive::cuboid;

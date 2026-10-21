@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,previewProgressiveMiterNurbsProfiles,streamProgressiveMiterNurbsProfiles,inspectProgressiveMiterCapProjection,inspectProgressiveMiterIdealCapDomains,miterNurbsProfileSections,type NurbsScaleLaw,type NurbsVectorLaw} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/services/nurbsCurve'
@@ -162,7 +163,7 @@ it('preserves authored miter frames from Rush into actual Solid admission',async
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it.each(['miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guide-affine-hollow-corrected.r'])('admits authored-axis guide affine Rush %s with explicit combined provenance',async(file)=>{
@@ -176,7 +177,7 @@ it.each(['miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guid
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousErrorMethod:'interval-authored-axis-guide-frame-interpolation',continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('admits combined authored frame affine Rush bodies into Solid',async()=>{
@@ -192,7 +193,7 @@ it('admits combined authored frame affine Rush bodies into Solid',async()=>{
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,affineLawsApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('admits guide affine Rush bodies into Solid',async()=>{
@@ -207,7 +208,7 @@ it('admits guide affine Rush bodies into Solid',async()=>{
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:false,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('certifies closed hollow affine shells and admits the actual body into Solid',async()=>{
@@ -247,7 +248,7 @@ it('preserves affine miter dimensions and certificates from Rush into the native
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,affineLawsApplied:true,continuousBound:true,retainedCorrespondence:{exact:true},retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('transports affine miter laws with independent domains and certified refinement',()=>{
@@ -446,7 +447,7 @@ it('retains cap-pair evidence in the open Rush construction report',async()=>{
  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:false,globalEmbeddingCertified:false,volume:{solidGeometryCertified:expect.any(Boolean),orientations:expect.any(Array)},embedding:{solidGeometryCertified:false,pairs:expect.any(Array)},retainedWallCharts:{globalEmbeddingCertified:false,charts:expect.any(Array)},capPairs:{globalEmbeddingCertified:false,unresolvedPairs:[],audit:{pairs:{allPairsSeparated:true,separatedPairs:1}}}})
  expect('nativeGeometry' in built).toBe(true)
  if('nativeGeometry' in built) {
-  const snapshot=JSON.parse(built.nativeGeometry.geometryJson)
+  const snapshot=readNativeGeometryData(built.nativeGeometry)
   expect(snapshot.sweepEvidence.volume).toEqual((built.report.construction?.[node.id] as {volume:unknown}).volume)
   expect(snapshot.sweepEvidence.continuousBound).toBe(true)
  }
@@ -509,8 +510,8 @@ it('composes correction with authored wall error and refuses an oversized combin
  expect(report.retainedWallErrorUpper).toBeGreaterThanOrEqual(report.sectionCorrection.wallDisplacementUpper)
  expect(report.retainedWallErrorUpper).toBeGreaterThanOrEqual(report.certifiedErrorUpper)
  expect(report.retainedWallErrorUpper).toBeLessThanOrEqual(.3)
- expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.retainedWallErrorUpper).toBe(report.retainedWallErrorUpper)
- expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.capProjection.normalDots).toHaveLength(2)
+ expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.retainedWallErrorUpper).toBe(report.retainedWallErrorUpper)
+ expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.capProjection.normalDots).toHaveLength(2)
  expect(()=>buildOwnNurbs(compileRushFrontend(source.replace('max_deviation: 0.3mm','max_deviation: 0.01mm')).document,{action:'build'})).toThrow('retained wall error exceeds max_deviation')
 })
 
@@ -561,8 +562,8 @@ it('transports original ideal material domains and preserves them in Rush eviden
   const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
   const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
   expect(built.report.construction![node.id]).toMatchObject({idealCapDomains:{idealCapDomainsCertified:true,continuousBound:false}})
-  expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.idealCapDomains.idealCapDomainsCertified).toBe(true)
-  const payload=JSON.parse(built.nativeGeometry!.geometryJson)
+  expect(readNativeGeometryData(built.nativeGeometry!).sweepEvidence.idealCapDomains.idealCapDomainsCertified).toBe(true)
+  const payload=readNativeGeometryData(built.nativeGeometry!)
   const bounds=payload.sweepEvidence.filledCapErrorUpper as [number,number]
   expect(bounds).toHaveLength(2)
   expect(payload.sweepEvidence.boundaryErrorUpper).toBeGreaterThanOrEqual(payload.sweepEvidence.retainedWallErrorUpper)

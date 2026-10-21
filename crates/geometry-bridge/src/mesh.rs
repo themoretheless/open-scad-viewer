@@ -684,7 +684,7 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
 /// Commands may delete the source solid without invalidating this snapshot.
 fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
     let mut groups = std::collections::BTreeMap::new();
-    let mut ids = Vec::new();
+    let mut ids = Vec::with_capacity(m.indices.len() / 3);
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
     for t in m.indices.as_chunks::<3>().0 {
         let a = m.point(t[0])?;
@@ -706,10 +706,10 @@ fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
             (n[2] * 1e7).round() as i64,
             (d / scale * 1e7).round() as i64,
         ];
-        let next = groups.len();
+        let next = groups.len() as u32;
         ids.push(*groups.entry(key).or_insert(next));
     }
-    Ok(ids.into_iter().map(|v| v as u32).collect())
+    Ok(ids)
 }
 
 /// A detached export snapshot. Its vectors remain valid until the JS lease is freed.

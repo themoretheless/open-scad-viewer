@@ -134,13 +134,16 @@ export function buildDxfQueryPaths(
     if (layer !== '' && segment.layer !== layer) continue
     const start = align(segment.start)
     const end = align(segment.end)
+    const startKey = gridKeyForPoint(start)
+    const endKey = gridKeyForPoint(end)
     const index = lines.length
-    grid.get(gridKeyForPoint(start))!.push(index)
-    grid.get(gridKeyForPoint(end))!.push(index)
-    lines.push({ points: [start, end], disabled: false })
+    grid.get(startKey)!.push(index)
+    grid.get(endKey)!.push(index)
+    lines.push({ points: [start, end], keys: [startKey, endKey], disabled: false })
   }
 
-  const enabled = new Set(lines.map((_, index) => index))
+  const enabled = new Set<number>()
+  for (let i = 0; i < lines.length; i++) enabled.add(i)
   const paths: OpenScadImportPoint2[][] = []
   const follow = (initialLine: number, initialPoint: 0 | 1): OpenScadImportPoint2[] => {
     let currentLine = initialLine
@@ -148,20 +151,23 @@ export function buildDxfQueryPaths(
     const path: OpenScadImportPoint2[] = [lines[currentLine].points[currentPoint]]
     while (true) {
       const otherPoint = currentPoint === 0 ? 1 : 0
-      const reference = lines[currentLine].points[otherPoint]
+      const line = lines[currentLine]
+      const reference = line.points[otherPoint]
+      const referenceKey = line.keys[otherPoint]
       path.push(reference)
-      lines[currentLine].disabled = true
+      line.disabled = true
       enabled.delete(currentLine)
       let nextLine: number | undefined
       let nextPoint: 0 | 1 = 0
-      for (const candidate of grid.get(gridKeyForPoint(reference)) ?? []) {
-        if (lines[candidate].disabled) continue
-        if (gridKeyForPoint(lines[candidate].points[0]) === gridKeyForPoint(reference)) {
+      for (const candidate of grid.get(referenceKey) ?? []) {
+        const candLine = lines[candidate]
+        if (candLine.disabled) continue
+        if (candLine.keys[0] === referenceKey) {
           nextLine = candidate
           nextPoint = 0
           break
         }
-        if (gridKeyForPoint(lines[candidate].points[1]) === gridKeyForPoint(reference)) {
+        if (candLine.keys[1] === referenceKey) {
           nextLine = candidate
           nextPoint = 1
           break
@@ -177,11 +183,19 @@ export function buildDxfQueryPaths(
   while (enabled.size > 0) {
     let initial: readonly [number, 0 | 1] | undefined
     for (const lineIndex of enabled) {
+      const lineKeys = lines[lineIndex].keys
       for (const endpoint of [0, 1] as const) {
-        const point = lines[lineIndex].points[endpoint]
-        const hasNeighbor = (grid.get(gridKeyForPoint(point)) ?? []).some(candidate => (
-          candidate !== lineIndex && !lines[candidate].disabled
-        ))
+        const cell = grid.get(lineKeys[endpoint])
+        let hasNeighbor = false
+        if (cell) {
+          for (let i = 0; i < cell.length; i++) {
+            const candidate = cell[i]
+            if (candidate !== lineIndex && !lines[candidate].disabled) {
+              hasNeighbor = true
+              break
+            }
+          }
+        }
         if (!hasNeighbor) {
           initial = [lineIndex, endpoint]
           break

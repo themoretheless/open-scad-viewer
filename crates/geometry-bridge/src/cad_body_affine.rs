@@ -359,3 +359,33 @@ mod instance_tests {
         assert!(instance_transform(invalid).is_err());
     }
 }
+
+pub fn live_pattern(v: Value) -> Result<Value> {
+    use geometry_ops::live_pattern::{Pattern, placements};
+    let p: Value = field(&v, "pattern")?;
+    let axis = match (p["kind"].as_str(), p["axis"].as_str()) {
+        (Some("grid"), _) => 2,
+        (_, Some("x")) => 0,
+        (_, Some("y")) => 1,
+        (_, Some("z")) => 2,
+        _ => return Err(input("Invalid pattern axis")),
+    };
+    let pattern = match p["kind"].as_str() {
+        Some("grid") => Pattern::Grid {
+            rows: field(&p, "rows")?,
+            columns: field(&p, "columns")?,
+            spacing: field(&p, "spacing")?,
+        },
+        Some("radial") => Pattern::Radial {
+            count: field(&p, "count")?,
+            axis,
+            center: field(&p, "center")?,
+        },
+        Some("mirror") => Pattern::Mirror {
+            axis,
+            center: field(&p, "center")?,
+        },
+        _ => return Err(input("Unknown live pattern kind")),
+    };
+    encode(placements(pattern)?)
+}

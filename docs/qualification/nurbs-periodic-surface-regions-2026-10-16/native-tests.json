@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-16",
+  "scope": "Owned supporting-surface correspondence for coherent periodic candidate UV regions; not face or solid qualification",
+  "catalog": {
+    "implemented": 195,
+    "planned": 5
+  },
+  "tests": {
+    "core-tests": {
+      "passed": 99,
+      "failed_summaries": 0
+    },
+    "native-tests": {
+      "passed": 18,
+      "failed_summaries": 0
+    },
+    "boolean-tests": {
+      "passed": 3,
+      "failed_summaries": 0
+    },
+    "replay-tests": {
+      "passed": 5,
+      "failed_summaries": 0
+    }
+  },
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/support.rs": "10bb2c694cb3b1057ffdeb23ffeb75ffb844281d39495f79373b23af5672724e",
+    "crates/nurbs-core/tests/periodic_trim_support.rs": "8d5ee6015573e2cbd164e62f82c3e36e93aa2f1f7ce55c652f90077c3df2d5c7",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface.rs": "9df3fe6e9afbc5848bae6b50599ffcf7d082b48c6242e68860a8210d0b3bd4ab",
+    "crates/brep-core/tests/periodic_surface_regions.rs": "87974c3f4e15c0c25ff455fa2fe4c57ec7d2580c87367f09ddd67ed0d7516884"
+  },
+  "total_focused_passed": 125
+}

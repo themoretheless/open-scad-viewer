@@ -36,16 +36,58 @@ fn simplify_closed(
     tolerance: f64,
     budget: &mut Budget,
 ) -> Result<Vec<[f64; 2]>> {
-    let mut ring = points.to_vec();
-    ring.push(points[0]);
-    let mut simplified = douglas_peucker(&ring, tolerance, budget)?;
-    if simplified.len() >= 2 && simplified.first() == simplified.last() {
-        simplified.pop();
+    let n = points.len();
+    let ring_len = n + 1;
+    let mut keep = vec![false; ring_len];
+    keep[0] = true;
+    keep[ring_len - 1] = true;
+    let mut stack = Vec::with_capacity(32);
+    stack.push((0usize, ring_len - 1));
+    let at = |idx: usize| -> [f64; 2] {
+        if idx < n { points[idx] } else { points[0] }
+    };
+    while let Some((start, end)) = stack.pop() {
+        let seg_len = end - start + 1;
+        if seg_len <= 2 {
+            continue;
+        }
+        budget.add(seg_len)?;
+        let first = at(start);
+        let last = at(end);
+        let dx = last[0] - first[0];
+        let dy = last[1] - first[1];
+        let len = (dx * dx + dy * dy).sqrt();
+        let mut max_d = 0.0;
+        let mut index = start;
+        for i in start + 1..end {
+            let point = at(i);
+            let d = if len == 0.0 {
+                dist(point, first)
+            } else {
+                ((point[0] - first[0]) * dy - (point[1] - first[1]) * dx).abs() / len
+            };
+            if d > max_d {
+                max_d = d;
+                index = i;
+            }
+        }
+        if max_d > tolerance && index > start {
+            keep[index] = true;
+            stack.push((index, end));
+            stack.push((start, index));
+        }
     }
-    if simplified.len() < 3 {
+    let count = keep[..n].iter().filter(|&&k| k).count();
+    if count < 3 {
         Ok(points.to_vec())
     } else {
-        Ok(simplified)
+        let mut out = Vec::with_capacity(count);
+        for (p, &k) in points.iter().zip(&keep[..n]) {
+            if k {
+                out.push(*p);
+            }
+        }
+        Ok(out)
     }
 }
 
@@ -54,43 +96,51 @@ fn douglas_peucker(
     tolerance: f64,
     budget: &mut Budget,
 ) -> Result<Vec<[f64; 2]>> {
-    if points.len() <= 2 {
+    let n = points.len();
+    if n <= 2 {
         return Ok(points.to_vec());
     }
-    budget.add(points.len())?;
-    let first = points[0];
-    let last = points[points.len() - 1];
-    let mut max_d = 0.0;
-    let mut index = 0;
-    for (i, point) in points
-        .iter()
-        .enumerate()
-        .skip(1)
-        .take(points.len().saturating_sub(2))
-    {
-        let d = perpendicular_distance(*point, first, last);
-        if d > max_d {
-            max_d = d;
-            index = i;
+    let mut keep = vec![false; n];
+    keep[0] = true;
+    keep[n - 1] = true;
+    let mut stack = Vec::with_capacity(32);
+    stack.push((0usize, n - 1));
+    while let Some((start, end)) = stack.pop() {
+        let seg_len = end - start + 1;
+        if seg_len <= 2 {
+            continue;
+        }
+        budget.add(seg_len)?;
+        let first = points[start];
+        let last = points[end];
+        let dx = last[0] - first[0];
+        let dy = last[1] - first[1];
+        let len = (dx * dx + dy * dy).sqrt();
+        let mut max_d = 0.0;
+        let mut index = start;
+        for (offset, point) in points[start + 1..end].iter().enumerate() {
+            let d = if len == 0.0 {
+                dist(*point, first)
+            } else {
+                ((point[0] - first[0]) * dy - (point[1] - first[1]) * dx).abs() / len
+            };
+            if d > max_d {
+                max_d = d;
+                index = start + 1 + offset;
+            }
+        }
+        if max_d > tolerance && index > start {
+            keep[index] = true;
+            stack.push((index, end));
+            stack.push((start, index));
         }
     }
-    if max_d > tolerance && index > 0 {
-        let left = douglas_peucker(&points[..=index], tolerance, budget)?;
-        let right = douglas_peucker(&points[index..], tolerance, budget)?;
-        let mut out = left;
-        out.extend_from_slice(&right[1..]);
-        Ok(out)
-    } else {
-        Ok(vec![first, last])
+    let count = keep.iter().filter(|&&k| k).count();
+    let mut out = Vec::with_capacity(count);
+    for (p, &k) in points.iter().zip(&keep) {
+        if k {
+            out.push(*p);
+        }
     }
-}
-
-fn perpendicular_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
-    let dx = b[0] - a[0];
-    let dy = b[1] - a[1];
-    let len = dx.hypot(dy);
-    if len == 0.0 {
-        return dist(p, a);
-    }
-    ((p[0] - a[0]) * dy - (p[1] - a[1]) * dx).abs() / len
+    Ok(out)
 }

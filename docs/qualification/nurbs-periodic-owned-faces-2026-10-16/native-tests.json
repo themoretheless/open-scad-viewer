@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-16",
+  "catalog_completed": 198,
+  "catalog_target": 200,
+  "promoted_entries": [],
+  "scope": "Owned unchanged-support sheet faces for admitted coherent periodic UV regions, full world-edge agreement, original local injectivity/rank and one/two-axis seam/corner ownership. General nonlinear alias/contact admission remains open.",
+  "tests": {
+    "kernel_integration": {
+      "passed": 114,
+      "log": "final-native-regressions.log",
+      "terminal_summaries": 10
+    },
+    "owned_faces": {
+      "passed": 7,
+      "log": "final-owned-faces-tests.log",
+      "terminal_summaries": 1
+    },
+    "injectivity_unit": {
+      "passed": 17,
+      "log": "injectivity-unit-current.log",
+      "terminal_summaries": 1
+    },
+    "agreement_unit": {
+      "passed": 16,
+      "log": "agreement-unit-current.log",
+      "terminal_summaries": 1
+    },
+    "boolean": {
+      "passed": 3,
+      "log": "boolean-current.log",
+      "terminal_summaries": 1
+    },
+    "winding": {
+      "passed": 15,
+      "log": "winding-regressions.log",
+      "terminal_summaries": 2
+    }
+  },
+  "unique_passed": 172,
+  "wasm_check": "final-wasm.log",
+  "fixtures": {
+    "tube": {
+      "faces": 2,
+      "edges": 4,
+      "vertices": 3,
+      "shared_seam_edges": 1
+    },
+    "rational_cylinder": {
+      "faces": 2,
+      "shared_seam_edges": 1,
+      "uv_error_upper": 3.9412917374193144e-15,
+      "deviation_cells_per_source": 6
+    },
+    "torus": {
+      "domains": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "faces": 4,
+      "edges": 9,
+      "vertices": 6,
+      "shared_seam_edges": 4,
+      "corner_fan_edges": 4
+    }
+  },
+  "global_spatial_embedding_certified": false,
+  "source_sha256": {
+    "crates/nurbs-core/src/analysis/surface_injectivity.rs": "24782d554b3ed28945172fd629e09cdae8ab801af8638add8901fcbbeae35951",
+    "crates/nurbs-core/src/analysis/curve_deviation.rs": "60016327dbffd3b036a85fdab0f7e32787d2032ec4d70b53d5704444dad73883",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement.rs": "36165439a3ecf6058e0ddccea72e53de46d6551acd4f85379c5b349d74ab549d",
+    "crates/nurbs-core/src/analysis/curve_surface_composition.rs": "1e560f9976b0f6a8fa301c03d7c7c785d16904aad9069d1a19add70a9ca588f2",
+    "crates/nurbs-core/src/analysis/curve_surface_composition/cell_trace.rs": "309b0a9eb1ba1d9bcd5f05e847d9777867ced19f97ab50a486a8a87810e3d4cf",
+    "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs": "69080aa86642002d550aead80b78156e4dfb9edab63759b71db6fe1e7024f8aa",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "60abf0b9a1a4cc4aab0cfc0a496edb1d760ea249d8a27127c0af2e36cca29a8d",
+    "crates/nurbs-core/tests/surface_rectangle_injectivity.rs": "75485605516f7316d34ffd34d01b198f8f9ea1fc819cdc6f3cbdd18931eb177a",
+    "crates/nurbs-core/tests/piecewise_surface_lifts.rs": "bd2888990e359b6ce38d167b350bb57a9cc204f7852160c96596e64fa41c72ed",
+    "crates/nurbs-core/tests/periodic_partition_deviation.rs": "d1e24cede794978849939352821a29cb801c76117d9b8e514463cf15b70059e3",
+    "crates/nurbs-core/tests/periodic_trim_support.rs": "c616abdfddc60af21c8e28f58bdadc3647c67a6a3a002c221c4a6af64fbbad27",
+    "crates/brep-core/src/profile_certificate.rs": "49089ff9722fd74986b7faa9e919278b99c11519c4a600c1bd04fa4173b1be43",
+    "crates/brep-core/src/profile_certificate/winding.rs": "cbc4e0047650ca1923a4d80d7c5f94bde5de7b9f8bb2bbc6166045e857b480df",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "cf07f64946a9d4ac240f89f5b88d6fa5d77e94faf403d0cab6ddc9ead0fe0a57",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent.rs": "d212d130da4e3124f431ced08ae1166b33fa9e3c174161801514187e64b6fb1b",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface.rs": "cab149e4e0648e6057f3b770f1f8fc47d27d79513e2c1c4304fe75a78a9d3d73",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent/surface/faces.rs": "9bd24751b27ca0b9dd725fb24ff3c29b9a64be62d10d9b2abb94625f2dff2ef0",
+    "crates/brep-core/tests/periodic_surface_regions.rs": "e59b522e49013fb39cc2eb456a2641877466bb9288da2891cc40f026f714295a"
+  },
+  "limitations": [
+    "Nonlinear original-source alias correspondence beyond normalized exact affine/reverse functions",
+    "General inter-wire contacts and regularization",
+    "Nonlinear pcurve proposals crossing multiple supporting knot cells or exceeding available composed degree",
+    "Unproved local projection, ambiguous/nonlinear generated connectors, collapsed edges and exhausted proof allowances refuse construction"
+  ],
+  "evidence_note": "Focused current-source checks, not a full-repository test run. Earlier failed fixture assumptions and incomplete proposal paths are preserved in the historical logs; final logs cover the repairs."
+}

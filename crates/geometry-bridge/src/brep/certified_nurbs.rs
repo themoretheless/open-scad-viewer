@@ -5,11 +5,14 @@ pub(super) fn nurbs_with_freeform_note(
     segments: usize,
     freeform_note: FreeformTessNote,
 ) -> Result<Tessellation> {
+    nurbs_with_schedule(model, segments, freeform_note, true)
+}
+pub(super) fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freeform_note:FreeformTessNote,reduce_linear_rulings:bool)->Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));
     }
-    let mut registry = EdgeSamplingRegistry::new(model, segments)?;
+    let mut registry = EdgeSamplingRegistry::new(model, segments, reduce_linear_rulings)?;
     let mut face_ids = Vec::new();
     let mut closed_triangles = Vec::new();
     for shell in &model.shells {
@@ -35,7 +38,7 @@ pub(super) fn nurbs_with_freeform_note(
                         .map_err(|error|input(format!("Face {} refinement: {}",use_.face,error.message)))?,
                 )?
             };
-            registry.append(face, use_, built, &mut face_ids)?;
+            registry.append(face, use_, built, &mut face_ids, model.tolerance_mm, reduce_linear_rulings)?;
             closed_triangles.resize(face_ids.len(), shell.closed);
         }
     }
@@ -99,7 +102,7 @@ pub fn certified_nurbs(
             "Requested two-sided analytic deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
         ))?;
     let deviation = brep_core::analysis::certified_tessellation_deviation(model, segments)?;
-    let tessellation = nurbs(model, segments)?;
+    let tessellation = nurbs_with_schedule(model, segments, FreeformTessNote::SampledUncertified, false)?;
     if tessellation.built.mesh.indices.len() / 3 > max_triangles {
         return Err(nurbs_core::Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",

@@ -141,29 +141,35 @@ export function transformLoadedGeometry(
         return [x, y] as const
       })),
     }))
-    const centerX = options.center ? (minX + maxX) / 2 : 0
-    const centerY = options.center ? (minY + maxY) / 2 : 0
-    return geometry2D(source.format, regions.map(region => ({
-      ...region,
-      contours: region.contours.map(contour => contour.map(point => [point[0] - centerX, point[1] - centerY] as const)),
-    })))
-  }
-  const vertices = [...source.vertices]
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
-  for (let offset = 0; offset < vertices.length; offset += 3) {
-    minX = Math.min(minX, vertices[offset]); maxX = Math.max(maxX, vertices[offset])
-    minY = Math.min(minY, vertices[offset + 1]); maxY = Math.max(maxY, vertices[offset + 1])
-    minZ = Math.min(minZ, vertices[offset + 2]); maxZ = Math.max(maxZ, vertices[offset + 2])
-  }
-  if (options.center) {
-    const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
-    for (let offset = 0; offset < vertices.length; offset += 3) {
-      vertices[offset] -= centerX
-      vertices[offset + 1] -= centerY
-      vertices[offset + 2] -= centerZ
+    if (options.center) {
+      const centerX = (minX + maxX) / 2
+      const centerY = (minY + maxY) / 2
+      return geometry2D(source.format, regions.map(region => ({
+        ...region,
+        contours: region.contours.map(contour => contour.map(point => [point[0] - centerX, point[1] - centerY] as const)),
+      })))
     }
+    return geometry2D(source.format, regions)
   }
-  return geometry3D(source.format, vertices, [...source.triangles])
+  if (!options.center) {
+    return cloneGeometry(source)
+  }
+  const srcVertices = source.vertices
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    if (x < minX) minX = x; if (x > maxX) maxX = x
+    if (y < minY) minY = y; if (y > maxY) maxY = y
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+  }
+  const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
+  const vertices = new Float64Array(srcVertices.length)
+  for (let offset = 0; offset < srcVertices.length; offset += 3) {
+    vertices[offset] = srcVertices[offset] - centerX
+    vertices[offset + 1] = srcVertices[offset + 1] - centerY
+    vertices[offset + 2] = srcVertices[offset + 2] - centerZ
+  }
+  return geometry3D(source.format, vertices, source.triangles)
 }
 
 export function resolveImportAsset(

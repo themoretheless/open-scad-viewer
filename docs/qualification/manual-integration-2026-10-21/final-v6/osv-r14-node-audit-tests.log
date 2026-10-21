@@ -1,0 +1,39 @@
+✔ new oversized file fails, pinned file may shrink but not grow (0.781666ms)
+✔ upward crate dependency is a layering violation (0.180542ms)
+✔ update only lowers pins and drops fixed violations (12.070416ms)
+✔ historical executor exemption requires exact archived bytes, including short edits (3.148042ms)
+✔ counts emitted bytes separately from repeated original sources (18.097042ms)
+✔ refuses a build without attribution rather than reporting no duplicates (0.861667ms)
+✔ binds streaming bytes exactly, rejecting equal-size drift and truncation (0.519875ms)
+✔ rejects packed payload copies across chunks and within one chunk (0.627916ms)
+✔ packs a valid module with an exact roundtrip and stable fingerprints (3.8015ms)
+✔ rejects malformed modules and oversized raw input (0.120542ms)
+✔ rejects modules with external imports (0.096708ms)
+✔ reports all drift without rewriting archives or evidence (5.864ms)
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+wasm-opt cache write skipped: EEXIST: file already exists, mkdir '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/wasm-cache-test-ChXFn3/file'
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+✔ reuses validated bytes and invalidates input, tool and flags independently (5.079875ms)
+✔ damaged or mismatched entries are replaced without trusting their bytes (2.729583ms)
+✔ does not cache optimizer failure or invalid output (0.596167ms)
+✔ unwritable cache location does not discard a valid optimization (0.569084ms)
+✔ oversized cache entry is a miss and is repaired (0.938958ms)
+wasm-opt cache hit: 78433d107e9125c0c85c7870b85d9e03515335a68bce1b9ee64c25ab51efd14a
+✔ concurrent misses publish one complete entry without scratch leftovers (13.561959ms)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt cache hit: 3c998a1eb7143d04b426cd16c8b6f20c466e890d7d250d90f120c088fb4bb42a
+[parse exception: expected list (at 1:0)]
+Fatal: error parsing wasm (try --debug for more info)
+✔ repeated optimization preserves Cargo input and produces identical runnable bytes (336.215583ms)
+✔ optimizer failure is catchable and does not alter the input (123.178166ms)
+✔ explicit native optimizer rejects missing or unrecognized tools before changing Cargo input (38.417959ms)
+﹣ native and bundled optimizers agree on executable fixture bytes (0.059208ms) # SKIP
+ℹ tests 22
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 674.608958

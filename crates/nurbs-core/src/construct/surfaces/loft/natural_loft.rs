@@ -83,13 +83,15 @@ fn construct(sections: &[Curve], parameters: &[f64], boundary: Boundary) -> Resu
     let mut points = Vec::with_capacity(aligned.control_points.len());
     let mut weights = Vec::with_capacity(aligned.control_points.len());
     let mut knots_v = Vec::new();
+    let mut xyz = Vec::with_capacity(sections.len());
+    let mut scalar = Vec::with_capacity(sections.len());
     for (i, (row, wr)) in aligned
         .control_points
         .iter()
         .zip(&aligned.weights)
         .enumerate()
     {
-        let mut xyz = Vec::with_capacity(row.len());
+        xyz.clear();
         for (p, w) in row.iter().zip(wr) {
             let h: [f64; 3] = std::array::from_fn(|k| p[k] * w);
             check(
@@ -98,7 +100,8 @@ fn construct(sections: &[Curve], parameters: &[f64], boundary: Boundary) -> Resu
             )?;
             xyz.push(h);
         }
-        let scalar: Vec<[f64; 3]> = wr.iter().map(|&w| [w, 0., 0.]).collect();
+        scalar.clear();
+        scalar.extend(wr.iter().map(|&w| [w, 0., 0.]));
         let tangents = match &boundary {
             Boundary::Clamped(t) => Some(*t),
             Boundary::ControlTangents(t) => Some([t[0][i], t[1][i]]),

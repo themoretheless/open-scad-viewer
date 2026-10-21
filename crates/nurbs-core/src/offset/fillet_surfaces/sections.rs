@@ -1,3 +1,4 @@
+use crate::primitives;
 use super::*;
 
 /// Exact rational circular arc section from contact A to contact B.
@@ -205,6 +206,7 @@ pub(super) fn build_report(
     }
     match assemble(sections, &spine, &stations_s) {
         Ok((surface, deviation)) => Ok(FilletReport {
+            contact_pcurves: None,
             surface: Some(surface),
             failure: None,
             spine,

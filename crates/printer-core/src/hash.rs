@@ -1,30 +1,24 @@
 //! Small hashes used on the wire (Bambu MD5, Moonraker SHA-256 checksum).
 
-use std::fmt::Write;
-
-/// Lowercase hex MD5 (RFC 1321).
-pub fn md5_hex(data: &[u8]) -> String {
+fn md5_state(data: &[u8]) -> [u32; 4] {
+    #[inline(always)]
     fn f(x: u32, y: u32, z: u32) -> u32 {
         (x & y) | (!x & z)
     }
+    #[inline(always)]
     fn g(x: u32, y: u32, z: u32) -> u32 {
         (x & z) | (y & !z)
     }
+    #[inline(always)]
     fn h(x: u32, y: u32, z: u32) -> u32 {
         x ^ y ^ z
     }
+    #[inline(always)]
     fn ii(x: u32, y: u32, z: u32) -> u32 {
         y ^ (x | !z)
     }
-    let bit_len = (data.len() as u64).wrapping_mul(8);
-    let mut msg = data.to_vec();
-    msg.push(0x80);
-    while msg.len() % 64 != 56 {
-        msg.push(0);
-    }
-    msg.extend_from_slice(&bit_len.to_le_bytes());
-    let mut state = [0x67452301u32, 0xefcdab89, 0x98badcfe, 0x10325476];
-    for chunk in msg.as_chunks::<64>().0 {
+    #[inline(always)]
+    fn compress(state: &mut [u32; 4], chunk: &[u8; 64]) {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
             *word = u32::from_le_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap());
@@ -48,14 +42,14 @@ pub fn md5_hex(data: &[u8]) -> String {
             0xeb86d391,
         ];
         for i in 0..64 {
-            let (fun, g_idx) = match i {
-                0..=15 => (f as fn(u32, u32, u32) -> u32, i),
-                16..=31 => (g as fn(u32, u32, u32) -> u32, (5 * i + 1) % 16),
-                32..=47 => (h as fn(u32, u32, u32) -> u32, (3 * i + 5) % 16),
-                _ => (ii as fn(u32, u32, u32) -> u32, (7 * i) % 16),
+            let (val, g_idx) = match i {
+                0..=15 => (f(b, c, d), i),
+                16..=31 => (g(b, c, d), (5 * i + 1) % 16),
+                32..=47 => (h(b, c, d), (3 * i + 5) % 16),
+                _ => (ii(b, c, d), (7 * i) % 16),
             };
             let temp = a
-                .wrapping_add(fun(b, c, d))
+                .wrapping_add(val)
                 .wrapping_add(x[g_idx])
                 .wrapping_add(K[i])
                 .rotate_left(S[i])
@@ -70,41 +64,88 @@ pub fn md5_hex(data: &[u8]) -> String {
         state[2] = state[2].wrapping_add(c);
         state[3] = state[3].wrapping_add(d);
     }
-    let mut out = String::with_capacity(32);
-    for word in state {
-        for byte in word.to_le_bytes() {
-            let _ = write!(out, "{byte:02x}");
+
+    let mut state = [0x67452301u32, 0xefcdab89, 0x98badcfe, 0x10325476];
+    let (chunks, rem) = data.as_chunks::<64>();
+    for chunk in chunks {
+        compress(&mut state, chunk);
+    }
+    let bit_len = (data.len() as u64).wrapping_mul(8);
+    let mut tail = [0u8; 128];
+    tail[..rem.len()].copy_from_slice(rem);
+    tail[rem.len()] = 0x80;
+    if rem.len() < 56 {
+        tail[56..64].copy_from_slice(&bit_len.to_le_bytes());
+        compress(&mut state, tail[..64].try_into().unwrap());
+    } else {
+        tail[120..128].copy_from_slice(&bit_len.to_le_bytes());
+        compress(&mut state, tail[..64].try_into().unwrap());
+        compress(&mut state, tail[64..128].try_into().unwrap());
+    }
+    state
+}
+
+#[inline]
+fn format_hex_words<const N: usize>(words: [u32; N], le: bool, upper: bool) -> String {
+    let table: &[u8; 16] = if upper {
+        b"0123456789ABCDEF"
+    } else {
+        b"0123456789abcdef"
+    };
+    let mut out = Vec::with_capacity(N * 8);
+    for word in words {
+        let bytes = if le {
+            word.to_le_bytes()
+        } else {
+            word.to_be_bytes()
+        };
+        for byte in bytes {
+            out.push(table[(byte >> 4) as usize]);
+            out.push(table[(byte & 0x0f) as usize]);
         }
     }
-    out
+    // SAFETY: `table` contains only valid ASCII hex digits.
+    String::from_utf8(out).unwrap()
+}
+
+/// Lowercase hex MD5 (RFC 1321).
+pub fn md5_hex(data: &[u8]) -> String {
+    format_hex_words(md5_state(data), true, false)
 }
 
 /// Uppercase hex MD5 as observed in Bambu `project_file` payloads.
 pub fn md5_hex_upper(data: &[u8]) -> String {
-    md5_hex(data).to_ascii_uppercase()
+    format_hex_words(md5_state(data), true, true)
 }
 
 /// Lowercase hex SHA-256.
 pub fn sha256_hex(data: &[u8]) -> String {
     // Compact public-domain style SHA-256 (FIPS 180-4).
+    #[inline(always)]
     fn rotr(x: u32, n: u32) -> u32 {
         x.rotate_right(n)
     }
+    #[inline(always)]
     fn ch(x: u32, y: u32, z: u32) -> u32 {
         (x & y) ^ (!x & z)
     }
+    #[inline(always)]
     fn maj(x: u32, y: u32, z: u32) -> u32 {
         (x & y) ^ (x & z) ^ (y & z)
     }
+    #[inline(always)]
     fn bsig0(x: u32) -> u32 {
         rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22)
     }
+    #[inline(always)]
     fn bsig1(x: u32) -> u32 {
         rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25)
     }
+    #[inline(always)]
     fn ssig0(x: u32) -> u32 {
         rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3)
     }
+    #[inline(always)]
     fn ssig1(x: u32) -> u32 {
         rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10)
     }
@@ -120,24 +161,8 @@ pub fn sha256_hex(data: &[u8]) -> String {
         0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
         0xc67178f2,
     ];
-    let bit_len = (data.len() as u64).wrapping_mul(8);
-    let mut msg = data.to_vec();
-    msg.push(0x80);
-    while msg.len() % 64 != 56 {
-        msg.push(0);
-    }
-    msg.extend_from_slice(&bit_len.to_be_bytes());
-    let mut h = [
-        0x6a09e667u32,
-        0xbb67ae85,
-        0x3c6ef372,
-        0xa54ff53a,
-        0x510e527f,
-        0x9b05688c,
-        0x1f83d9ab,
-        0x5be0cd19,
-    ];
-    for chunk in msg.as_chunks::<64>().0 {
+    #[inline(always)]
+    fn compress(h: &mut [u32; 8], chunk: &[u8; 64]) {
         let mut w = [0u32; 64];
         for i in 0..16 {
             w[i] = u32::from_be_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap());
@@ -175,13 +200,34 @@ pub fn sha256_hex(data: &[u8]) -> String {
         h[6] = h[6].wrapping_add(g);
         h[7] = h[7].wrapping_add(hh);
     }
-    let mut out = String::with_capacity(64);
-    for word in h {
-        for byte in word.to_be_bytes() {
-            let _ = write!(out, "{byte:02x}");
-        }
+
+    let mut h = [
+        0x6a09e667u32,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19,
+    ];
+    let (chunks, rem) = data.as_chunks::<64>();
+    for chunk in chunks {
+        compress(&mut h, chunk);
     }
-    out
+    let bit_len = (data.len() as u64).wrapping_mul(8);
+    let mut tail = [0u8; 128];
+    tail[..rem.len()].copy_from_slice(rem);
+    tail[rem.len()] = 0x80;
+    if rem.len() < 56 {
+        tail[56..64].copy_from_slice(&bit_len.to_be_bytes());
+        compress(&mut h, tail[..64].try_into().unwrap());
+    } else {
+        tail[120..128].copy_from_slice(&bit_len.to_be_bytes());
+        compress(&mut h, tail[..64].try_into().unwrap());
+        compress(&mut h, tail[64..128].try_into().unwrap());
+    }
+    format_hex_words(h, false, false)
 }
 
 #[cfg(test)]

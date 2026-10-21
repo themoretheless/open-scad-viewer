@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "completedOn": "2026-10-16",
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_coherent": 4,
+    "periodic_trim_contacts": 28,
+    "periodic_trim_support": 13,
+    "periodic_trim_weighted": 6
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/coherent.rs": "3d3f2f8ed7745c7d1095a2f9ee989dece3ee1cea22c0ed7f2b393190660f049d",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "e537f029b1554a867caa5795fa4ec634ce9a6a821e7ceda57139768d50a74acb",
+    "crates/nurbs-core/tests/periodic_trim_coherent.rs": "431901a18f0e7e89051ddd8eb7d376107cda2feb256de451f20555e083af8271",
+    "crates/nurbs-core/src/trim/periodic_trim/anchor.rs": "10d66882aa3363e76c1b901acc52d485637c184d7a21adca2f9a31d5d11e38aa",
+    "crates/nurbs-core/src/trim/periodic_trim/isotopy.rs": "6665aa665fb8122decc232a7f3788b8a710699648e6171ba885c566ce8890332"
+  },
+  "scope": "Exact copy-coherent same-parameter rational families, quotient isotopy and independently queried full original anchor winding. No ordinary embedding claim for coincident copies or combined weighted graph/face admission.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "positiveGlobalWeightScalesProvedWithExactProducts": true,
+  "quotientEmbeddingNotRelabelledAsFullSourceEmbedding": true,
+  "originalMultiplicityWindingQueried": true,
+  "classificationBudgetShared": true,
+  "combinedWeightedChartIntegrationQualified": false,
+  "ownedSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false
+}

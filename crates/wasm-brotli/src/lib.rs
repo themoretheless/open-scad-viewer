@@ -8,8 +8,8 @@ const OUTPUT_LIMIT: usize = 16 * 1024 * 1024;
 const ENCODED_LIMIT: usize = 5 + (INPUT_LIMIT + 4).div_ceil(4) * 5;
 const ALPHABET: &[u8; 85] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-const fn ranks() -> [u8; 128] {
-    let mut table = [255; 128];
+const fn ranks() -> [u8; 256] {
+    let mut table = [255; 256];
     let mut i = 0;
     while i < 85 {
         table[ALPHABET[i] as usize] = i as u8;
@@ -17,7 +17,7 @@ const fn ranks() -> [u8; 128] {
     }
     table
 }
-const RANKS: [u8; 128] = ranks();
+const RANKS: [u8; 256] = ranks();
 static INPUT: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 static OUTPUT: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 
@@ -42,49 +42,73 @@ pub extern "C" fn prepare_encoded(size: usize) -> usize {
     input.resize(size, 0);
     input.as_mut_ptr() as usize
 }
+#[inline]
 fn word(bytes: &[u8]) -> Option<u32> {
-    let mut value = 0u32;
-    for &byte in bytes {
-        let rank = *RANKS.get(byte as usize)?;
-        if rank == 255 {
-            return None;
-        }
-        value = value.checked_mul(85)?.checked_add(rank as u32)?
+    let &[b0, b1, b2, b3, b4] = bytes else {
+        return None;
+    };
+    let r0 = RANKS[b0 as usize];
+    let r1 = RANKS[b1 as usize];
+    let r2 = RANKS[b2 as usize];
+    let r3 = RANKS[b3 as usize];
+    let r4 = RANKS[b4 as usize];
+    if (r0 | r1 | r2 | r3 | r4) == 255 {
+        return None;
     }
-    Some(value)
+    let value = ((((r0 as u64 * 85 + r1 as u64) * 85 + r2 as u64) * 85 + r3 as u64) * 85)
+        + r4 as u64;
+    u32::try_from(value).ok()
 }
-fn decode_base85(input: &[u8]) -> Option<Vec<u8>> {
+fn decode_base85_into(input: &[u8], output: &mut Vec<u8>) -> bool {
     if input.len() < 5 || input.len() > ENCODED_LIMIT {
-        return None;
+        return false;
     }
-    let size = word(&input[..5])? as usize;
+    let Some(size_u32) = word(&input[..5]) else {
+        return false;
+    };
+    let size = size_u32 as usize;
     if size <= 4 || size > INPUT_LIMIT + 4 || input.len() != 5 + size.div_ceil(4) * 5 {
-        return None;
+        return false;
     }
-    let mut output = Vec::with_capacity(size);
+    output.clear();
+    output.reserve(size);
     let full_end = 5 + (size / 4) * 5;
     for group in input[5..full_end].as_chunks::<5>().0 {
-        output.extend_from_slice(&word(group)?.to_be_bytes());
+        let Some(w) = word(group) else {
+            return false;
+        };
+        output.extend_from_slice(&w.to_be_bytes());
     }
     let tail = size % 4;
     if tail != 0 {
-        let bytes = word(&input[full_end..])?.to_be_bytes();
+        let Some(w) = word(&input[full_end..]) else {
+            return false;
+        };
+        let bytes = w.to_be_bytes();
         if bytes[tail..].iter().any(|&byte| byte != 0) {
-            return None;
+            return false;
         }
         output.extend_from_slice(&bytes[..tail]);
     }
-    Some(output)
+    true
 }
+#[cfg(test)]
+fn decode_base85(input: &[u8]) -> Option<Vec<u8>> {
+    let mut output = Vec::new();
+    decode_base85_into(input, &mut output).then_some(output)
+}
+
+static PACKAGE: Mutex<Vec<u8>> = Mutex::new(Vec::new());
 
 /// Decode the length-prefixed base85 package and its complete Brotli stream.
 #[unsafe(no_mangle)]
 pub extern "C" fn decode_encoded() -> u64 {
     let input = INPUT.lock().unwrap();
-    let Some(package) = decode_base85(&input) else {
+    let mut package = PACKAGE.lock().unwrap();
+    if !decode_base85_into(&input, &mut package) || package.len() < 4 {
         return 0;
-    };
-    let size = u32::from_le_bytes(package[..4].try_into().unwrap()) as usize;
+    }
+    let size = u32::from_le_bytes([package[0], package[1], package[2], package[3]]) as usize;
     if size > OUTPUT_LIMIT {
         return 0;
     }

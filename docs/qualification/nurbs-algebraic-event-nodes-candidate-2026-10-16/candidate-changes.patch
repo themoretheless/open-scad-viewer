@@ -1,0 +1,619 @@
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/event_coordinates.rs
+@@ -0,0 +1,118 @@
++//! Exact source event coordinates in a checked real algebraic root extension.
++//! Denominators stay symbolic: no inversion at unrelated complex roots is needed.
++use super::*;
++use algebraic_events as roots;
++fn bounded(p: &Poly) -> Result<()> {
++    if p.len() > 513
++        || p.iter()
++            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
++    {
++        return Err(refused("Original algebraic coordinate allowance exceeded"));
++    }
++    Ok(())
++}
++fn modulo(p: &Poly, f: &Poly) -> Result<Poly> {
++    bounded(p)?;
++    let r = divide(p, f)?.1;
++    bounded(&r)?;
++    Ok(r)
++}
++fn compose(p: &Poly, t: &Poly, f: &Poly) -> Result<Poly> {
++    p.iter().rev().try_fold(Vec::new(), |v, c| {
++        let mut r = modulo(&product(&v, t), f)?;
++        if r.is_empty() {
++            r.push(c.clone());
++        } else {
++            r[0] += c;
++        }
++        let r = trim(r);
++        bounded(&r)?;
++        Ok(r)
++    })
++}
++pub(in crate::profile_certificate) fn first_parameter(t: &Poly, k: u8) -> Poly {
++    sub(
++        &vec![Q::zero(), Q::one()],
++        &t.iter()
++            .map(|q| q * Q::from_integer(k.into()))
++            .collect::<Poly>(),
++    )
++}
++pub(in crate::profile_certificate) fn zero_at(p: &Poly, f: &Poly, root: &[Q; 2]) -> Result<bool> {
++    if p.is_empty() {
++        return Ok(true);
++    }
++    let g = gcd(p, f)?;
++    Ok(g.len() > 1 && roots::count(&g, &root[0], &root[1])? == 1)
++}
++pub(in crate::profile_certificate) fn equals_one(
++    p: &Poly,
++    f: &Poly,
++    root: &[Q; 2],
++) -> Result<bool> {
++    zero_at(&sub(p, &[Q::one()]), f, root)
++}
++pub(in crate::profile_certificate) fn coordinates(
++    a: &[[Q; 3]],
++    b: &[[Q; 3]],
++    domains: [[Q; 2]; 2],
++    f: &Poly,
++    t: &Poly,
++    k: u8,
++    root: &[Q; 2],
++) -> Result<([Poly; 2], [[Poly; 2]; 2])> {
++    if f.len() < 2 || k > 16 {
++        return Err(refused("Invalid original algebraic event primitive"));
++    }
++    bounded(f)?;
++    bounded(t)?;
++    let s = first_parameter(t, k);
++    let parameters = std::array::from_fn(|axis| {
++        let local = if axis == 0 { &s } else { t };
++        let mut p = local
++            .iter()
++            .map(|q| q * (&domains[axis][1] - &domains[axis][0]))
++            .collect::<Poly>();
++        if p.is_empty() {
++            p.push(domains[axis][0].clone());
++        } else {
++            p[0] += &domains[axis][0];
++        }
++        trim(p)
++    });
++    for p in &parameters {
++        bounded(p)?;
++    }
++    let left = [
++        compose(&power(a, 0), &s, f)?,
++        compose(&power(a, 1), &s, f)?,
++        compose(&power(a, 2), &s, f)?,
++    ];
++    let right = [
++        compose(&power(b, 0), t, f)?,
++        compose(&power(b, 1), t, f)?,
++        compose(&power(b, 2), t, f)?,
++    ];
++    if zero_at(&left[2], f, root)? || zero_at(&right[2], f, root)? {
++        return Err(refused("Actual event coordinate denominator vanishes"));
++    }
++    for axis in 0..2 {
++        let difference = modulo(
++            &sub(
++                &product(&left[axis], &right[2]),
++                &product(&right[axis], &left[2]),
++            ),
++            f,
++        )?;
++        if !zero_at(&difference, f, root)? {
++            return Err(refused("Original source event world coordinates disagree"));
++        }
++    }
++    Ok((
++        parameters,
++        [
++            [left[0].clone(), left[2].clone()],
++            [left[1].clone(), left[2].clone()],
++        ],
++    ))
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes.rs
+@@ -0,0 +1,244 @@
++//! Source-owned algebraic event positions. Exact factors/maps stay attached to
++//! both ORIGINAL cells; rounded event parameter enclosures are not node identity.
++use super::super::algebraic_intersections::{ExactPolynomial, polynomial};
++use super::*;
++use arithmetic::event_coordinates as coordinates;
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct AlgebraicEventPosition {
++    /// Coefficients in ascending primitive-root powers, exact ratios.
++    pub primitive: ExactPolynomial,
++    pub isolating_interval: [ExactRatio; 2],
++    /// Actual natural-domain parameters of the original two NURBS sources.
++    pub parameters: [ExactPolynomial; 2],
++    /// Each coordinate is numerator(alpha)/denominator(alpha). No rounded point.
++    pub position: [[ExactPolynomial; 2]; 2],
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct AlgebraicEventNode {
++    pub source_cells: [usize; 2],
++    pub pair: usize,
++    pub factor: Option<usize>,
++    pub root: usize,
++    pub stationary: bool,
++    pub exact: AlgebraicEventPosition,
++}
++#[derive(Clone, Debug)]
++pub struct CurveEventNodes {
++    sources: [Curve; 2],
++    census: SpanIntersectionCertificate,
++    nodes: Vec<AlgebraicEventNode>,
++}
++fn make(
++    a: &Cell,
++    b: &Cell,
++    f: &Vec<Q>,
++    t: &Vec<Q>,
++    k: u8,
++    interval: &[Q; 2],
++    pair: usize,
++    source_cells: [usize; 2],
++    factor: Option<usize>,
++    root: usize,
++    stationary: bool,
++) -> Result<AlgebraicEventNode> {
++    let (parameters, position) = coordinates::coordinates(
++        &a.net,
++        &b.net,
++        [a.domain.clone(), b.domain.clone()],
++        f,
++        t,
++        k,
++        interval,
++    )?;
++    Ok(AlgebraicEventNode {
++        source_cells,
++        pair,
++        factor,
++        root,
++        stationary,
++        exact: AlgebraicEventPosition {
++            primitive: polynomial(f),
++            isolating_interval: interval.clone().map(|q| ratio(&q)),
++            parameters: parameters.map(|p| polynomial(&p)),
++            position: position.map(|p| p.map(|q| polynomial(&q))),
++        },
++    })
++}
++fn assemble(
++    a: &Curve,
++    b: &Curve,
++    c: &SpanIntersectionCertificate,
++) -> Result<Vec<AlgebraicEventNode>> {
++    verify_span_intersections(a, b, c)?;
++    let x = cells(a)?;
++    let y = cells(b)?;
++    let mut nodes = Vec::new();
++    for (pair, p) in c.pairs.iter().enumerate() {
++        let a = &x[p.first];
++        let b = &y[p.second];
++        if matches!(p.kind.as_str(), "events" | "stationary") {
++            for (fi, f) in decode_factors(&p.factors)?.iter().enumerate() {
++                let Some(t) = &f.map else {
++                    continue;
++                };
++                for (ri, r) in f.roots.iter().enumerate() {
++                    if !matches!(r.kind.as_str(), "event" | "diagonal") {
++                        continue;
++                    }
++                    let stationary = r.kind == "diagonal";
++                    let s = coordinates::first_parameter(t, p.shear);
++                    // Same exact half-open original knot ownership as the
++                    // complete source census. No float midpoint deduplication.
++                    if !stationary
++                        && ((p.first + 1 < x.len()
++                            && coordinates::equals_one(&s, &f.polynomial, &r.interval)?)
++                            || (p.second + 1 < y.len()
++                                && coordinates::equals_one(t, &f.polynomial, &r.interval)?))
++                    {
++                        continue;
++                    }
++                    nodes.push(make(
++                        a,
++                        b,
++                        &f.polynomial,
++                        t,
++                        p.shear,
++                        &r.interval,
++                        pair,
++                        [p.first, p.second],
++                        Some(fi),
++                        ri,
++                        stationary,
++                    )?);
++                }
++            }
++        } else if p.kind == "range" {
++            for (ri, e) in range(a, b, p.axis as usize)?.2.into_iter().enumerate() {
++                if (e.first[0] == Q::one() && p.first + 1 < x.len())
++                    || (e.second[0] == Q::one() && p.second + 1 < y.len())
++                {
++                    continue;
++                }
++                // Endpoint events use alpha=0 with constant natural maps.
++                // s=alpha-k*t cannot encode an independent constant s, so
++                // restrict source cells exactly to that endpoint before make.
++                let point_net = |n: &Vec<[Q; 3]>, v: &Q| {
++                    let h = if v.is_zero() {
++                        n[0].clone()
++                    } else {
++                        n.last().unwrap().clone()
++                    };
++                    vec![h.clone(), h]
++                };
++                let first = &a.domain[0] + (&a.domain[1] - &a.domain[0]) * &e.first[0];
++                let second = &b.domain[0] + (&b.domain[1] - &b.domain[0]) * &e.second[0];
++                let aa = Cell {
++                    net: point_net(&a.net, &e.first[0]),
++                    domain: [first.clone(), first],
++                };
++                let bb = Cell {
++                    net: point_net(&b.net, &e.second[0]),
++                    domain: [second.clone(), second],
++                };
++                nodes.push(make(
++                    &aa,
++                    &bb,
++                    &vec![Q::zero(), Q::one()],
++                    &vec![Q::zero()],
++                    0,
++                    &[Q::zero(), Q::zero()],
++                    pair,
++                    [p.first, p.second],
++                    None,
++                    ri,
++                    false,
++                )?);
++            }
++        }
++        if nodes.len() > 4096 {
++            return Err(refused("Original algebraic event node allowance exceeded"));
++        }
++    }
++    Ok(nodes)
++}
++impl CurveEventNodes {
++    pub fn sources(&self) -> &[Curve; 2] {
++        &self.sources
++    }
++    pub fn census(&self) -> &SpanIntersectionCertificate {
++        &self.census
++    }
++    pub fn nodes(&self) -> &[AlgebraicEventNode] {
++        &self.nodes
++    }
++    /// Complete original pair/cell proof replay, all event selections and exact
++    /// symbolic natural parameters and shared original point definitions.
++    pub fn reverify_source(&self) -> Result<()> {
++        let fresh = assemble(&self.sources[0], &self.sources[1], &self.census)?;
++        if self.nodes != fresh {
++            return Err(refused(
++                "Original algebraic event nodes were omitted or rebound",
++            ));
++        }
++        Ok(())
++    }
++}
++/// Own every isolated/stationary original event with exact algebraic point
++/// coordinates. The full original census (including overlap receipts) is saved;
++/// overlap branches are not falsely converted into isolated nodes. Nodes from
++/// different pair owners still need independently proved identity/port merging
++/// before a global arrangement or physical topology can be claimed.
++pub fn own_curve_event_nodes(
++    a: &Curve,
++    b: &Curve,
++    census: &SpanIntersectionCertificate,
++) -> Result<CurveEventNodes> {
++    let nodes = assemble(a, b, census)?;
++    let owner = CurveEventNodes {
++        sources: [a.clone(), b.clone()],
++        census: census.clone(),
++        nodes,
++    };
++    owner.reverify_source()?;
++    Ok(owner)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn algebraic_node_replay_rejects_rebound_geometry_parameters_and_census() {
++        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![1., 1.], vec![2., 0.]]).unwrap();
++        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
++        let owner = own_curve_event_nodes(&a, &b, &c).unwrap();
++        owner.reverify_source().unwrap();
++        let mut bad = owner.clone();
++        bad.nodes.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.parameters[0] = vec![["0".into(), "1".into()]];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.position[0][1].clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.isolating_interval[1] = ["1".into(), "1".into()];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.primitive.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].source_cells = [1, 0];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].stationary = true;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.census.pairs.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        bad.sources[0].control_points[1][0] = 1_f64.next_up();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- a/crates/brep-core/src/profile_certificate/arithmetic.rs
++++ b/crates/brep-core/src/profile_certificate/arithmetic.rs
+@@ -44,6 +44,7 @@
+ }
+ mod algebraic;
+ pub(super) mod ray_winding;
++pub(super) mod event_coordinates;
+ pub(super) mod bivariate;
+ pub(super) mod algebraic_events;
+ pub(super) use algebraic::endpoint_only;
+--- a/crates/brep-core/src/profile_certificate/span_intersections.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections.rs
+@@ -1,6 +1,8 @@
+ //! Complete per-knot-span census of isolated and coincident curve components.
+ //! Algebraic source cells never pass through rounded temporary NURBS controls.
+ use super::*;
++mod event_nodes;
++pub use event_nodes::{AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes};
+ use algebraic_intersections::{ExactRatio, decode_factors, encode_factors, outward, ratio};
+ use arithmetic::algebraic_events as engine;
+ #[derive(Clone, Debug, PartialEq)]
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -18,7 +18,7 @@
+ mod algebraic_intersections;
+ mod arithmetic;
+ mod intersections;
+-pub use algebraic_intersections::{
++pub use algebraic_intersections::{ExactRatio, ExactPolynomial, 
+     AlgebraicFactorWitness, AlgebraicIntersectionCertificate, AlgebraicRootWitness,
+     VerifiedAlgebraicIntersections, certify_algebraic_intersections,
+     verify_algebraic_intersections,
+@@ -27,7 +27,7 @@
+ mod image_agreement;
+ pub use image_agreement::{CurveImageCertificate,ImageCoverageWitness,ImageRelationWitness,VerifiedCurveImage,certify_curve_image_agreement,verify_curve_image_agreement};
+ mod span_intersections;
+-pub use span_intersections::{SpanPairCertificate,SpanIntersectionCertificate,VerifiedSpanIntersections,VerifiedCurveOverlap,certify_span_intersections,verify_span_intersections};
++pub use span_intersections::{AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes, SpanPairCertificate,SpanIntersectionCertificate,VerifiedSpanIntersections,VerifiedCurveOverlap,certify_span_intersections,verify_span_intersections};
+ mod nonlinear;
+ pub use agreement::{
+     CurveAgreementCertificate, VerifiedCurveAgreement, certify_curve_agreement,
+--- /dev/null
++++ b/crates/brep-core/tests/curve_event_nodes.rs
+@@ -0,0 +1,207 @@
++use brep_core::profile_certificate as p;
++use num_rational::BigRational as Q;
++use num_traits::{One, Zero};
++use nurbs_core::curve::Curve;
++fn eval(poly: &p::ExactPolynomial, t: &Q) -> Q {
++    poly.iter().rev().fold(Q::zero(), |v, c| {
++        v * t + Q::new(c[0].parse().unwrap(), c[1].parse().unwrap())
++    })
++}
++fn own(a: &Curve, b: &Curve, self_pair: bool) -> p::CurveEventNodes {
++    let c = p::certify_span_intersections(a, b, self_pair, 1e-12).unwrap();
++    let n = p::own_curve_event_nodes(a, b, &c).unwrap();
++    n.reverify_source().unwrap();
++    n
++}
++#[test]
++fn irrational_source_intersections_own_exact_positions_and_natural_parameters() {
++    let a = Curve {
++        degree: 2,
++        knots: vec![2., 2., 2., 6., 6., 6.],
++        control_points: vec![vec![-2., 0.], vec![0., 4.], vec![2., 0.]],
++        weights: vec![1.; 3],
++        periodic: false,
++    };
++    let mut b = Curve::from_polyline(vec![vec![-3., 1.], vec![3., 1.]]).unwrap();
++    for k in &mut b.knots {
++        *k = 10. + 6. * *k;
++    }
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 2);
++    for n in owner.nodes() {
++        assert!(!n.stationary);
++        assert!(n.factor.is_some());
++        assert_ne!(n.exact.isolating_interval[0], n.exact.isolating_interval[1]);
++        let decode = |q: &p::ExactRatio| Q::new(q[0].parse().unwrap(), q[1].parse().unwrap());
++        let mid = (decode(&n.exact.isolating_interval[0]) + decode(&n.exact.isolating_interval[1]))
++            / Q::from_integer(2.into());
++        let y = eval(&n.exact.position[1][0], &mid) / eval(&n.exact.position[1][1], &mid);
++        assert_eq!(y, Q::one());
++        let u = eval(&n.exact.parameters[0], &mid);
++        let v = eval(&n.exact.parameters[1], &mid);
++        assert!(u > Q::from_integer(2.into()) && u < Q::from_integer(6.into()));
++        assert!(v > Q::from_integer(10.into()) && v < Q::from_integer(16.into()));
++        // These are symbolic source parameters, not f64 event midpoints.
++        assert!(n.exact.parameters[0].len() > 1 && n.exact.position[0][0].len() > 1);
++    }
++    let mut changed = a;
++    changed.control_points[1][1] = 4_f64.next_up();
++    assert!(p::own_curve_event_nodes(&changed, &b, owner.census()).is_err());
++}
++#[test]
++fn endpoint_nodes_bind_original_endpoint_parameters_without_false_primitive_motion() {
++    let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![1., 1.], vec![2., 0.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    let n = &owner.nodes()[0];
++    assert!(n.factor.is_none());
++    for axis in 0..2 {
++        assert_eq!(
++            eval(&n.exact.position[axis][0], &Q::zero())
++                / eval(&n.exact.position[axis][1], &Q::zero()),
++            Q::one()
++        );
++    }
++    assert_eq!(eval(&n.exact.parameters[0], &Q::zero()), Q::one());
++    assert_eq!(eval(&n.exact.parameters[1], &Q::zero()), Q::zero());
++}
++#[test]
++fn stationary_original_germs_and_overlap_census_are_kept_distinct() {
++    let c = Curve {
++        degree: 3,
++        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
++        control_points: vec![vec![-1., 0.], vec![1., 0.], vec![-1., 0.], vec![1., 0.]],
++        weights: vec![1.; 4],
++        periodic: false,
++    };
++    let owner = own(&c, &c, true);
++    assert_eq!(owner.nodes().len(), 1);
++    assert!(owner.nodes()[0].stationary);
++    let a = Curve::from_polyline(vec![vec![0., 0.], vec![2., 0.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![1., 0.], vec![3., 0.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert!(owner.nodes().is_empty());
++    assert!(owner.census().pairs.iter().any(|p| p.kind == "overlap"));
++    assert!(
++        !p::verify_span_intersections(&a, &b, owner.census())
++            .unwrap()
++            .overlaps()
++            .is_empty()
++    );
++}
++#[test]
++fn exact_original_knot_ownership_does_not_repeat_a_shared_endpoint_event() {
++    let a = Curve::from_polyline(vec![vec![-1., -1.], vec![0., 0.], vec![1., 1.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![-1., 1.], vec![0., 0.], vec![1., -1.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    assert_eq!(owner.nodes()[0].source_cells, [1, 1]);
++}
++
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++fn midpoint(n: &p::AlgebraicEventNode) -> Q {
++    let d = |q: &p::ExactRatio| Q::new(q[0].parse().unwrap(), q[1].parse().unwrap());
++    (d(&n.exact.isolating_interval[0]) + d(&n.exact.isolating_interval[1]))
++        / Q::from_integer(2.into())
++}
++#[test]
++fn separated_primitive_fibers_preserve_distinct_source_traversals_at_one_point() {
++    for rotated in [false, true] {
++        let mut a = curve(vec![vec![0., 0.], vec![0., 1.]]);
++        let mut b = curve(vec![vec![0.75, 0.5], vec![-1.25, 0.5], vec![0.75, 0.5]]);
++        if rotated {
++            for c in [&mut a, &mut b] {
++                for p in &mut c.control_points {
++                    let (x, y) = (p[0], p[1]);
++                    p[0] = x - y + 32.;
++                    p[1] = 2. * x + y - 16.;
++                }
++            }
++        }
++        let owner = own(&a, &b, false);
++        assert_eq!(owner.nodes().len(), 2);
++        assert!(owner.census().pairs.iter().any(|p| p.shear > 0));
++        let expected = if rotated {
++            [Q::new(63.into(), 2.into()), Q::new((-31).into(), 2.into())]
++        } else {
++            [Q::zero(), Q::new(1.into(), 2.into())]
++        };
++        let mut traversal = Vec::new();
++        for n in owner.nodes() {
++            let root = midpoint(n);
++            for axis in 0..2 {
++                assert_eq!(
++                    eval(&n.exact.position[axis][0], &root)
++                        / eval(&n.exact.position[axis][1], &root),
++                    expected[axis]
++                );
++            }
++            assert_eq!(
++                eval(&n.exact.parameters[0], &root),
++                Q::new(1.into(), 2.into())
++            );
++            traversal.push(eval(&n.exact.parameters[1], &root));
++        }
++        traversal.sort();
++        assert_eq!(
++            traversal,
++            vec![Q::new(1.into(), 4.into()), Q::new(3.into(), 4.into())]
++        );
++    }
++}
++#[test]
++fn self_intersection_and_rational_coordinate_denominators_keep_exact_identity() {
++    let a = curve(vec![
++        vec![3., -1.5],
++        vec![-1., 3.5],
++        vec![-1., -3.5],
++        vec![3., 1.5],
++    ]);
++    let owner = own(&a, &a, true);
++    assert_eq!(owner.nodes().len(), 1);
++    assert!(!owner.nodes()[0].stationary);
++    let mut a = curve(vec![vec![-2., 0.], vec![0., 4.], vec![2., 0.]]);
++    a.weights = vec![1., 2., 1.];
++    let b = curve(vec![vec![-3., 1.], vec![3., 1.]]);
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 2);
++    for n in owner.nodes() {
++        let root = midpoint(n);
++        assert_eq!(
++            eval(&n.exact.position[1][0], &root) / eval(&n.exact.position[1][1], &root),
++            Q::one()
++        );
++        assert_ne!(eval(&n.exact.position[1][1], &root), Q::one());
++    }
++}
++
++#[test]
++fn a_nonbinary_rational_parameter_stays_symbolic_instead_of_becoming_a_midpoint() {
++    let a = curve(vec![vec![0., 0.], vec![3., 3.]]);
++    let b = curve(vec![vec![0., 1.], vec![3., 1.]]);
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    let n = &owner.nodes()[0];
++    let third = Q::new(1.into(), 3.into());
++    assert!(eval(&n.exact.primitive, &third).is_zero());
++    assert_ne!(n.exact.isolating_interval[0], n.exact.isolating_interval[1]);
++    // A rational dyadic midpoint cannot be the actual parameter 1/3.
++    let mid = midpoint(n);
++    assert_ne!(eval(&n.exact.parameters[0], &mid), third);
++    for axis in 0..2 {
++        assert_eq!(
++            eval(&n.exact.position[axis][0], &mid) / eval(&n.exact.position[axis][1], &mid),
++            Q::one()
++        );
++    }
++}

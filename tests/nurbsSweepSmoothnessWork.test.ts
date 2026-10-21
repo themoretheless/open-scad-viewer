@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve} from '../src/services/nurbsConstructors'
 import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
@@ -28,10 +29,18 @@ it('retains nonuniform station G2 when sharp rational profile joins refuse',()=>
  expect(proof.totalExactWork).toBeLessThanOrEqual(2000000)
  expect(proof.profile.seams).toHaveLength(proof.edgeIds.length)
  expect(proof.profile.unresolvedSeams).toHaveLength(proof.edgeIds.length)
- expect(proof.profile.seams.slice(1).every(s=>!s.certified&&!s.exactIdentity&&!s.regularityCertified&&s.work===0)).toBe(true)
+ expect(proof.profile.seams.some(s=>s.work>0&&s.reason==='constant-projective-jet-relation-different')).toBe(true)
+ expect(proof.profile.seams.every(s=>!s.certified&&!s.exactIdentity&&
+  (s.work>0&&s.reason==='constant-projective-jet-relation-different'||s.work===0&&s.reason==='seam-audit-skipped-after-refusal'))).toBe(true)
  const short=inspectMiterProfileSmoothness(model,caps,proof.totalExactWork-1)
+ // The profile audit consumes the shared allowance first; one less unit
+ // leaves the later station proof incomplete.
  expect(short.station.stationG2Certified).toBe(false)
+ expect(short.profileG1Certified).toBe(false)
  expect(short.totalExactWork).toBeLessThanOrEqual(proof.totalExactWork-1)
+ const shortStation=inspectMiterProfileSmoothness(model,caps,proof.station.exactWork-1)
+ expect(shortStation.station.stationG2Certified).toBe(false)
+ expect(shortStation.totalExactWork).toBeLessThanOrEqual(proof.station.exactWork-1)
  expect(inspectMiterProfileSmoothness(model,caps,0)).toMatchObject({profileG1Certified:false,station:{stationG1Certified:false,stationG2Certified:false}})
  expect(JSON.stringify(model)).toBe(before)
 })
@@ -57,7 +66,7 @@ it('carries sharp-profile/nonuniform-station G2 through ordinary Rush, viewport 
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true,
   profileG1Certified:false,profileG2Certified:false,stationG1Certified:true,stationG2Certified:true,
   stationContinuity:'G2',capContinuity:'C0'})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.faces).toHaveLength(194)
  const before=JSON.stringify(model),caps=[model.faces.length-2,model.faces.length-1]
  expect(inspectMiterProfileSmoothness(model,caps).station.stationG2Certified).toBe(true)

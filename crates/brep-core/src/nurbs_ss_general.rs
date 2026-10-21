@@ -22,6 +22,7 @@ pub enum GeneralBranchKind {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TraceCorrespondence {
+    CandidateOnly,
     ExactAffine,
     IntervalCertified,
 }
@@ -103,11 +104,23 @@ pub fn branch_graph_from_surface_intersection(
                     [
                         Line {
                             endpoints: b.first_trace,
-                            correspondence: TraceCorrespondence::ExactAffine,
+                            correspondence: if report.coverage_proof
+                                == nurbs_core::ss_intersection::CoverageProof::Unproven
+                            {
+                                TraceCorrespondence::CandidateOnly
+                            } else {
+                                TraceCorrespondence::ExactAffine
+                            },
                         },
                         Line {
                             endpoints: b.second_trace,
-                            correspondence: TraceCorrespondence::ExactAffine,
+                            correspondence: if report.coverage_proof
+                                == nurbs_core::ss_intersection::CoverageProof::Unproven
+                            {
+                                TraceCorrespondence::CandidateOnly
+                            } else {
+                                TraceCorrespondence::ExactAffine
+                            },
                         },
                     ],
                     b.samples.as_slice(),
@@ -179,12 +192,13 @@ pub fn branch_graph_from_surface_intersection(
         components,
         context: context.spec_identity(),
         complete,
-        permits_topology_authorship: complete,
+        permits_topology_authorship: report.summary().permits_topology_authorship,
         boolean_mutation_authority: false,
         missed_branch_proof: complete,
     })
 }
-/// Independent coverage audit for general SS BranchGraph consumers.
+/// Check structural coverage consistency for SS BranchGraph consumers.
+/// This does not replay original geometry or prove branch ownership.
 pub fn verify_general_ss_branch_graph(
     graph: &GeneralBranchGraph,
     context: &ToleranceContext,

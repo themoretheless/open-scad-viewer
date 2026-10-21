@@ -5,10 +5,12 @@
 //! surfaces: seed pairs come from sampling [`super::surface_offset::offset`]
 //! results, then a least-norm Newton predictor-corrector marches the exact
 //! implicit offset map `A(u,v) + r·sa·nA − B(s,t) − r·sb·nB = 0` with a
-//! curvature-adaptive step. Cross sections are exact rational circular arcs
-//! (rolling-ball / variable / chordal), G2 quintic Bézier sections, or
+//! curvature-adaptive step. Cross sections are rational circular proposals with original coordinate-plane
+//! contact constraints (rolling-ball / variable / chordal), G2 quintic Bézier sections, or
 //! tangent cubic hold-line sections, skinned by
-//! [`crate::natural_loft::interpolate`].
+//! [`crate::natural_loft::interpolate`]. Variable G2 proposals on curved supports
+//! use bounded quintic station interpolation with matched UV proposals. Neither
+//! interpolation method certifies contact, radius or whole-seam G2.
 //!
 //! Graceful failure: geometric breakdowns never panic and never abort with a
 //! bare error; they return a [`FilletReport`] whose `failure` field carries
@@ -20,10 +22,12 @@ use crate::{
     foundation::guards::{Budget, require_finite_at, require_finite_f64, require_finite_point},
     natural_loft,
     offset::surface_offset::{offset, offset_validity},
-    primitives,
     surface::Surface,
 };
 use math_core::{dot, norm};
+mod station_hermite;
+mod station_radius;
+pub use station_radius::{StationRadiusReport, linear_at_stations};
 
 /// Seed sampling grid side per offset surface.
 const SEED_GRID: usize = 9;
@@ -134,6 +138,52 @@ mod radius_law;
 pub use radius_law::{RadiusLaw};
 
 
+
+/// Natural cubic spline scalar interpolation (Thomas solve, budgeted by the
+/// 64-point validation cap).
+fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
+    let n = points.len();
+    let clamped = t.clamp(points[0].0, points[n - 1].0);
+    // Second derivatives m[i]; natural boundary m[0] = m[n-1] = 0. Thomas
+    // forward sweep over the interior rows of the tridiagonal system.
+    let mut m_stack = [0.; 64];
+    let mut cp_stack = [0.; 64];
+    let mut dp_stack = [0.; 64];
+    let mut m_heap;
+    let mut cp_heap;
+    let mut dp_heap;
+    let interior = n.saturating_sub(2);
+    let (m, cp, dp): (&mut [f64], &mut [f64], &mut [f64]) = if n <= 64 {
+        (&mut m_stack[..n], &mut cp_stack[..interior], &mut dp_stack[..interior])
+    } else {
+        m_heap = vec![0.; n];
+        cp_heap = vec![0.; interior];
+        dp_heap = vec![0.; interior];
+        (&mut m_heap, &mut cp_heap, &mut dp_heap)
+    };
+    for row in 0..interior {
+        let i = row + 1;
+        let h0 = points[i].0 - points[i - 1].0;
+        let h1 = points[i + 1].0 - points[i].0;
+        let rhs = 6. * ((points[i + 1].1 - points[i].1) / h1 - (points[i].1 - points[i - 1].1) / h0);
+        let denom = if row == 0 {
+            2. * (h0 + h1)
+        } else {
+            2. * (h0 + h1) - h0 * cp[row - 1]
+        };
+        cp[row] = h1 / denom;
+        dp[row] = (rhs - if row == 0 { 0. } else { h0 * dp[row - 1] }) / denom;
+    }
+    for row in (0..interior).rev() {
+        m[row + 1] = dp[row] - cp[row] * m[row + 2];
+    }
+    let i = (1..n).find(|&i| clamped <= points[i].0).unwrap_or(n - 1);
+    let h = points[i].0 - points[i - 1].0;
+    let a = (points[i].0 - clamped) / h;
+    let b = 1. - a;
+    a * points[i - 1].1 + b * points[i].1 + ((a.powi(3) - a) * m[i - 1] + (b.powi(3) - b) * m[i]) * h * h / 6.
+}
+
 /// Shared fillet options.
 #[derive(Clone, Copy, Debug)]
 pub struct FilletOptions {
@@ -233,6 +283,9 @@ pub struct FilletFailure {
 
 /// Fillet outcome: a built surface, or a detailed failure, plus evidence.
 pub struct FilletReport {
+    /// Authored UV contact proposals using the same station interpolation as the skin.
+    /// These are unqualified until the original-support lifts pass.
+    pub contact_pcurves: Option<[Curve; 2]>,
     /// The fillet surface (`None` iff `failure` is set).
     pub surface: Option<Surface>,
     pub failure: Option<FilletFailure>,
@@ -243,8 +296,8 @@ pub struct FilletReport {
     /// Non-fatal diagnostics: reachability excess, polish fallbacks, etc.
     pub warnings: Vec<String>,
     /// Sampled estimate of the skin's deviation from the true pipe of radius
-    /// `r(t)` around the spine (sections themselves are exact by construction;
-    /// this measures only the inter-section skin).
+    /// `r(t)` around the spine. Section and inter-section radius accuracy require
+    /// an independent whole-skin coefficient proof.
     pub skin_deviation_estimate: f64,
     /// True when the spine closed into a loop and was cut at the seed.
     pub closed_spine: bool,
@@ -254,6 +307,7 @@ impl FilletReport {
     fn failed(reason: FailureReason, t: Option<f64>, detail: impl Into<String>, warnings: Vec<String>) -> Self {
         Self {
             surface: None,
+            contact_pcurves: None,
             failure: Some(FilletFailure { reason, t, detail: detail.into() }),
             spine: Vec::new(),
             radius_range: [0.; 2],
@@ -349,22 +403,26 @@ impl<'a> Marcher<'a> {
 
     /// Least-norm Newton on the 3×4 underdetermined system.
     fn refine(&self, seed: [f64; 4], r: f64) -> Result<Option<([f64; 4], [f64; 3])>> {
-        let finish = |x: [f64; 4]| -> Result<Option<([f64; 4], [f64; 3])>> {
-            let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
-            let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
-            let center = scale(
-                add(add(pa, scale(na, r * self.sa)), add(pb, scale(nb, r * self.sb))),
-                0.5,
-            );
-            Ok(Some((x, center)))
-        };
+        Ok(self.refine_with_contacts(seed, r)?.map(|(x, center, _, _)| (x, center)))
+    }
+
+    fn refine_with_contacts(
+        &self,
+        seed: [f64; 4],
+        r: f64,
+    ) -> Result<Option<([f64; 4], [f64; 3], [f64; 3], [f64; 3])>> {
         let mut x = seed;
         let mut budget = Budget::with_iterations(NEWTON_ITERS + 1)?.guard("fillet_newton");
         for _ in 0..NEWTON_ITERS {
             budget.tick()?;
-            let Some(f) = self.value(&x, r)? else { return Ok(None) };
+            let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
+            let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
+            let ca = add(pa, scale(na, r * self.sa));
+            let cb = add(pb, scale(nb, r * self.sb));
+            let f = sub(ca, cb);
             if norm(f) <= self.tol {
-                return finish(x);
+                let center = scale(add(ca, cb), 0.5);
+                return Ok(Some((x, center, pa, pb)));
             }
             let Some(j) = self.jacobian(&x, r)? else { return Ok(None) };
             let mut jjt = [[0.; 3]; 3];
@@ -389,9 +447,14 @@ impl<'a> Marcher<'a> {
                 return Ok(None);
             }
         }
-        let Some(f) = self.value(&x, r)? else { return Ok(None) };
+        let Some((pa, na)) = point_normal(self.a, x[0], x[1])? else { return Ok(None) };
+        let Some((pb, nb)) = point_normal(self.b, x[2], x[3])? else { return Ok(None) };
+        let ca = add(pa, scale(na, r * self.sa));
+        let cb = add(pb, scale(nb, r * self.sb));
+        let f = sub(ca, cb);
         if norm(f) <= self.tol {
-            finish(x)
+            let center = scale(add(ca, cb), 0.5);
+            Ok(Some((x, center, pa, pb)))
         } else {
             Ok(None)
         }
@@ -439,279 +502,248 @@ mod sections;
 use sections::*;
 
 
-/// Rolling-ball fillet of constant `radius` between two NURBS surfaces.
-///
-/// The spine is the intersection of the two offset surfaces; sections are
-/// exact circular arcs of `radius` tangent to both supports at the contact
-/// points (the projections of the ball center onto the supports).
-pub fn rolling_ball_fillet(
-    a: &Surface,
-    b: &Surface,
-    radius: f64,
-    options: &FilletOptions,
-) -> Result<FilletReport> {
-    variable_radius_fillet(a, b, RadiusLaw::Constant(radius), options)
-}
 
-/// Variable-radius fillet: the radius follows `law` along the normalized
-/// spine arc parameter. Radii must stay positive (validated); when the
-/// sampled maximum exceeds a support's certified fold-free reach a warning
-/// names the limiting radius and location.
-pub fn variable_radius_fillet(
-    a: &Surface,
-    b: &Surface,
-    law: RadiusLaw,
-    options: &FilletOptions,
-) -> Result<FilletReport> {
-    law.validate()?;
-    let (m, sa, sb) = prepare(a, b, options)?;
-    let [r_min, r_max, r_mean] = law.sampled_range();
-    let minimum = minimum_radius(a, b, m.tol);
-    if r_min < minimum {
-        return Ok(FilletReport::failed(
-            FailureReason::RadiusBelowMinimum { radius: r_min, minimum },
-            None,
-            format!("law minimum radius {r_min:.3e} is below the numerical minimum {minimum:.3e}"),
-            Vec::new(),
-        ));
+
+
+/// Re-polish each raw point with the radius of the final law at its measured
+/// normalized arc position (variable-radius second pass).
+fn polish_with_law(
+    m: &Marcher<'_>,
+    points: &mut [RawPoint],
+    law: &RadiusLaw,
+    warnings: &mut Vec<String>,
+) -> Result<Option<FilletFailure>> {
+    let length = points.last().map(|p| p.s).unwrap_or(0.);
+    if length <= 0. {
+        return Ok(Some(FilletFailure {
+            reason: FailureReason::MarchingDiverged,
+            t: Some(0.),
+            detail: "spine has no extent".into(),
+        }));
     }
-    let warnings = reachability_warnings(a, b, sa, sb, r_max);
-    let (mut raw, seed, closed) = trace_spine(&m, r_mean, options.max_march_steps)?;
-    if seed.is_none() {
-        return Ok(FilletReport::failed(
-            FailureReason::SeedNotFound,
-            None,
-            "no converging intersection of the two offset surfaces (wrong side selectors, or the ball of this radius never touches both supports)",
-            warnings,
-        ));
-    }
-    let mut warnings = warnings;
-    if !matches!(law, RadiusLaw::Constant(_)) {
-        if let Some(failure) = polish_with_law(&m, &mut raw, &law, &mut warnings)? {
-            return Ok(FilletReport {
-                surface: None,
-                failure: Some(failure),
-                spine: Vec::new(),
-                radius_range: [0.; 2],
-                warnings,
-                skin_deviation_estimate: 0.,
-                closed_spine: false,
-            });
+    for p in points.iter_mut() {
+        let t = (p.s / length).clamp(0., 1.);
+        let r = law.evaluate(t);
+        match m.refine(p.x, r)? {
+            Some((x, center)) if m.inside(&x) => {
+                p.x = x;
+                p.center = center;
+                if let (Some((pa, _)), Some((pb, _))) = (
+                    point_normal(m.a, x[0], x[1])?,
+                    point_normal(m.b, x[2], x[3])?,
+                ) {
+                    p.contact_a = pa;
+                    p.contact_b = pb;
+                }
+            }
+            _ => warnings.push(format!("polish with r({t:.4}) = {r:.6} did not converge; kept first-pass point")),
         }
     }
-    build_report(&m, &raw, &law, options, warnings, closed, SectionKind::Arc)
+    Ok(None)
 }
 
-/// Chordal fillet: the chord `chord` between the two contact points is fixed;
-/// the radius is recovered station-wise as `r = c / (2 sin(φ/2))` from the
-/// local dihedral angle `φ` between the oriented support normals.
-pub fn chordal_fillet(
-    a: &Surface,
-    b: &Surface,
-    chord: f64,
-    options: &FilletOptions,
-) -> Result<ChordalFilletReport> {
-    require_finite_f64(chord, "chord")?;
-    check(chord > 0., "Chordal fillet chord must be positive")?;
-    let (m, _, _) = prepare(a, b, options)?;
-    let minimum = minimum_radius(a, b, m.tol);
-    if chord * 0.5 < minimum {
-        let report = FilletReport::failed(
-            FailureReason::RadiusBelowMinimum { radius: chord * 0.5, minimum },
-            None,
-            "chord is below the numerical minimum for this surface pair",
-            Vec::new(),
-        );
-        return Ok(ChordalFilletReport { fillet: report, radius_range: [0.; 2], dihedral_range: [0.; 2] });
+/// Resample the raw spine polyline into `n` arc-length-uniform stations and
+/// polish each at its own radius.
+fn stations(
+    m: &Marcher<'_>,
+    points: &[RawPoint],
+    n: usize,
+    law: &RadiusLaw,
+) -> Result<Vec<SpineSample>> {
+    (0..n)
+        .map(|k| station_at(m, points, k as f64 / (n - 1) as f64, law))
+        .collect()
+}
+
+fn station_at(
+    m: &Marcher<'_>,
+    points: &[RawPoint],
+    t: f64,
+    law: &RadiusLaw,
+) -> Result<SpineSample> {
+    let length = points.last().map(|p| p.s).unwrap_or(0.);
+    let mut span = 0;
+    let target = t * length;
+    while span + 1 < points.len() && points[span + 1].s < target {
+        span += 1;
     }
-    let warnings = Vec::new();
-    // First pass: guess radius from a 60° dihedral, measure the true angles.
-    let guess = chord / (2. * (std::f64::consts::FRAC_PI_3).sin());
-    let (raw, seed, _) = trace_spine(&m, guess, options.max_march_steps)?;
-    if seed.is_none() || raw.len() < 2 {
-        let report = FilletReport::failed(
-            FailureReason::SeedNotFound,
-            None,
-            "no converging offset intersection for the chordal seed pass",
-            warnings,
-        );
-        return Ok(ChordalFilletReport { fillet: report, radius_range: [0.; 2], dihedral_range: [0.; 2] });
+    let (p0, p1) = (&points[span], &points[(span + 1).min(points.len() - 1)]);
+    let w = if p1.s > p0.s {
+        ((target - p0.s) / (p1.s - p0.s)).clamp(0., 1.)
+    } else {
+        0.
+    };
+    let mut x = [0.; 4];
+    for i in 0..4 {
+        x[i] = p0.x[i] + w * (p1.x[i] - p0.x[i]);
     }
-    let n = options.max_sections.clamp(2, MAX_SECTIONS);
-    let probe_law = RadiusLaw::Constant(guess);
-    let probes = stations(&m, &raw, n, &probe_law)?;
-    let mut law_points = Vec::with_capacity(n);
-    let mut dihedral_range = [f64::INFINITY, f64::NEG_INFINITY];
-    for sample in &probes {
-        let na = point_normal(m.a, sample.uv_a[0], sample.uv_a[1])?.map(|(_, n)| n);
-        let nb = point_normal(m.b, sample.uv_b[0], sample.uv_b[1])?.map(|(_, n)| n);
-        let (Some(na), Some(nb)) = (na, nb) else {
-            let report = FilletReport::failed(
-                FailureReason::MarchingDiverged,
-                Some(sample.t),
-                "normal unavailable at a chordal probe station",
-                warnings,
-            );
-            return Ok(ChordalFilletReport { fillet: report, radius_range: [0.; 2], dihedral_range: [0.; 2] });
-        };
-        let phi = angle_between(scale(na, m.sa), scale(nb, m.sb));
-        dihedral_range[0] = dihedral_range[0].min(phi);
-        dihedral_range[1] = dihedral_range[1].max(phi);
-        let half = (phi * 0.5).sin();
-        if half <= 1e-9 {
-            let report = FilletReport::failed(
-                FailureReason::SectionSelfIntersection,
-                Some(sample.t),
-                format!("dihedral angle {phi:.6} rad cannot carry a finite chordal radius"),
-                warnings,
-            );
-            return Ok(ChordalFilletReport { fillet: report, radius_range: [0.; 2], dihedral_range });
+    let r = law.evaluate(t);
+    let (x, center, ca, cb) = match m.refine(x, r)? {
+        Some((rx, rc)) if m.inside(&rx) => {
+            let ca = point_normal(m.a, rx[0], rx[1])?
+                .map(|(p, _)| p)
+                .unwrap_or(p0.contact_a);
+            let cb = point_normal(m.b, rx[2], rx[3])?
+                .map(|(p, _)| p)
+                .unwrap_or(p0.contact_b);
+            (rx, rc, ca, cb)
         }
-        law_points.push((sample.t, chord / (2. * half)));
-    }
-    let law = RadiusLaw::Spline(law_points);
-    let [r_min, r_max, _] = law.sampled_range();
-    let radius_range = [r_min, r_max];
-    let fillet = variable_radius_fillet(a, b, law, options)?;
-    Ok(ChordalFilletReport { fillet, radius_range, dihedral_range })
+        _ => (
+            x,
+            add(p0.center, scale(sub(p1.center, p0.center), w)),
+            add(p0.contact_a, scale(sub(p1.contact_a, p0.contact_a), w)),
+            add(p0.contact_b, scale(sub(p1.contact_b, p0.contact_b), w)),
+        ),
+    };
+    Ok(SpineSample {
+        t,
+        center,
+        contact_a: ca,
+        contact_b: cb,
+        radius: r,
+        uv_a: [x[0], x[1]],
+        uv_b: [x[2], x[3]],
+    })
 }
 
-/// G2 fillet: same rolling-ball spine, but each section is a quintic Bézier
-/// with position, tangent and curvature matched to both support normal
-/// sections at the contacts (true curvature continuity across the contact
-/// curves, unlike the G1 rolling ball).
-pub fn g2_fillet(
-    a: &Surface,
-    b: &Surface,
-    radius: f64,
-    options: &FilletOptions,
-) -> Result<FilletReport> {
-    require_finite_f64(radius, "radius")?;
-    check(radius > 0., "G2 fillet radius must be positive")?;
-    let (m, sa, sb) = prepare(a, b, options)?;
-    let minimum = minimum_radius(a, b, m.tol);
-    if radius < minimum {
-        return Ok(FilletReport::failed(
-            FailureReason::RadiusBelowMinimum { radius, minimum },
-            None,
-            format!("radius {radius:.3e} below the numerical minimum {minimum:.3e}"),
-            Vec::new(),
-        ));
+
+
+/// Signed normal curvature of `surface` at `uv` in the unit direction `dir`
+/// (Meusnier; sign relative to the `S_u × S_v` normal).
+fn normal_curvature(surface: &Surface, uv: [f64; 2], dir: [f64; 3]) -> Result<Option<f64>> {
+    let e = surface.evaluate(uv[0], uv[1])?;
+    let (Some(n), Some((su, sv)), Some((suu, suv, svv))) =
+        (e.unit_normal(), e.first_derivatives(), e.second_derivatives())
+    else {
+        return Ok(None);
+    };
+    let (ee, ff, gg) = (dot(su, su), dot(su, sv), dot(sv, sv));
+    let det = ee * gg - ff * ff;
+    if det <= 1e-300 {
+        return Ok(None);
     }
-    let warnings = reachability_warnings(a, b, sa, sb, radius);
-    let law = RadiusLaw::Constant(radius);
-    let (raw, seed, closed) = trace_spine(&m, radius, options.max_march_steps)?;
-    if seed.is_none() {
-        return Ok(FilletReport::failed(
-            FailureReason::SeedNotFound,
-            None,
-            "no converging intersection of the two offset surfaces",
-            warnings,
-        ));
-    }
-    build_report(&m, &raw, &law, options, warnings, closed, SectionKind::G2)
+    let (ru, rv) = (dot(dir, su), dot(dir, sv));
+    let alpha = (gg * ru - ff * rv) / det;
+    let beta = (-ff * ru + ee * rv) / det;
+    let (ll, mm, nn) = (dot(suu, n), dot(suv, n), dot(svv, n));
+    Ok(Some(ll * alpha * alpha + 2. * mm * alpha * beta + nn * beta * beta))
 }
+
+
+
+/// Skin the sections and estimate the inter-section deviation from the true
+/// pipe of radius `r(t)` around the spine.
+fn assemble(
+    sections: Vec<Curve>,
+    spine: &[SpineSample],
+    stations_s: &[f64],
+) -> Result<(Surface, f64)> {
+    let params: Vec<f64> = stations_s.to_vec();
+    let surface = natural_loft::interpolate(&sections, &params)?;
+    let deviation = estimate_skin_deviation(&surface, spine, stations_s)?;
+    Ok((surface, deviation))
+}
+
+fn estimate_skin_deviation(
+    surface: &Surface,
+    spine: &[SpineSample],
+    stations_s: &[f64],
+) -> Result<f64> {
+    let params = stations_s;
+    // Deviation estimate: mid-span samples against the spine chord.
+    let mut deviation = 0_f64;
+    let (du, dv) = domain(&surface);
+    for k in 0..spine.len().saturating_sub(1) {
+        let v_mid = (stations_s[k] + stations_s[k + 1]) * 0.5;
+        let v =
+            dv[0] + (dv[1] - dv[0]) * (v_mid - params[0]) / (params[params.len() - 1] - params[0]);
+        let r_mid = (spine[k].radius + spine[k + 1].radius) * 0.5;
+        for &u_frac in &[0.25, 0.5, 0.75] {
+            let u = du[0] + (du[1] - du[0]) * u_frac;
+            let Ok(e) = surface.evaluate(u, v) else {
+                continue;
+            };
+            let p = e.point;
+            let c0 = spine[k].center;
+            let c1 = spine[k + 1].center;
+            let axis = sub(c1, c0);
+            let len2 = dot(axis, axis);
+            let w = if len2 > 1e-300 {
+                (dot(sub(p, c0), axis) / len2).clamp(0., 1.)
+            } else {
+                0.
+            };
+            let nearest = add(c0, scale(axis, w));
+            deviation = deviation.max((norm(sub(p, nearest)) - r_mid).abs());
+        }
+    }
+    Ok(deviation)
+}
+
+
+
+#[derive(Clone, Copy, PartialEq)]
+enum SectionKind {
+    Arc,
+    G2,
+}
+
+fn prepare<'a>(
+    a: &'a Surface,
+    b: &'a Surface,
+    options: &FilletOptions,
+) -> Result<(Marcher<'a>, f64, f64)> {
+    a.validate()?;
+    b.validate()?;
+    let (sa, sb) = options.validated()?;
+    Ok((Marcher::new(a, b, sa, sb, options.tolerance), sa, sb))
+}
+
+fn reachability_warnings(a: &Surface, b: &Surface, sa: f64, sb: f64, r_max: f64) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if let Some(w) = reachability_warning("support A", a, r_max * sa) {
+        warnings.push(w);
+    }
+    if let Some(w) = reachability_warning("support B", b, r_max * sb) {
+        warnings.push(w);
+    }
+    warnings
+}
+
+
+
+
+
+
+
+
+
+
 
 mod projection;
 use projection::*;
 
 
-/// Simplified hold-line fillet: sections are tangent cubics through the given
-/// hold-line points on the two supports (tangent to both supports at the hold
-/// points). Both hold lines are resampled by arc length for a consistent
-/// station correspondence. The spine/radius fields of the report are not
-/// meaningful here; `radius_range` is `[0, 0]`.
-pub fn hold_line_fillet(
-    a: &Surface,
-    b: &Surface,
-    line_a: &[[f64; 3]],
-    line_b: &[[f64; 3]],
-    options: &FilletOptions,
-) -> Result<FilletReport> {
-    a.validate()?;
-    b.validate()?;
-    options.validated()?;
-    let n = line_a.len().min(line_b.len()).clamp(2, MAX_SECTIONS).min(options.max_sections.max(2));
-    let stations_a = resample_polyline(line_a, n)?;
-    let stations_b = resample_polyline(line_b, n)?;
-    let warnings = Vec::new();
-    let mut sections = Vec::with_capacity(n);
-    let mut spine = Vec::with_capacity(n);
-    for k in 0..n {
-        let t = k as f64 / (n - 1) as f64;
-        let pa = project_point(a, stations_a[k], options.tolerance)?;
-        let pb = project_point(b, stations_b[k], options.tolerance)?;
-        let (Some((uva, pa_pt, na)), Some((uvb, pb_pt, nb))) = (pa, pb) else {
-            return Ok(FilletReport::failed(
-                FailureReason::MarchingDiverged,
-                Some(t),
-                format!("hold-line station {k} does not project onto its support within tolerance"),
-                warnings,
-            ));
-        };
-        let chord = sub(pb_pt, pa_pt);
-        let chord_len = norm(chord);
-        if chord_len <= 1e-12 {
-            return Ok(FilletReport::failed(
-                FailureReason::SectionSelfIntersection,
-                Some(t),
-                "hold-line station contacts coincide",
-                warnings,
-            ));
-        }
-        // Tangent directions: chord projected into each support tangent plane.
-        let ta = unit(sub(chord, scale(na, dot(chord, na))));
-        let tb = unit(sub(chord, scale(nb, dot(chord, nb))));
-        let (Some(ta), Some(tb)) = (ta, tb) else {
-            return Ok(FilletReport::failed(
-                FailureReason::SectionSelfIntersection,
-                Some(t),
-                "hold-line chord is normal to a support; no tangent cubic exists",
-                warnings,
-            ));
-        };
-        let handle = chord_len / 3.;
-        let p1 = add(pa_pt, scale(ta, handle));
-        let p2 = sub(pb_pt, scale(tb, handle));
-        let curve = Curve {
-            degree: 3,
-            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-            control_points: vec![pa_pt.to_vec(), p1.to_vec(), p2.to_vec(), pb_pt.to_vec()],
-            weights: vec![1.; 4],
-            periodic: false,
-        };
-        curve.validate()?;
-        sections.push(curve);
-        spine.push(SpineSample {
-            t,
-            center: scale(add(pa_pt, pb_pt), 0.5),
-            contact_a: pa_pt,
-            contact_b: pb_pt,
-            radius: 0.,
-            uv_a: uva,
-            uv_b: uvb,
-        });
-    }
-    let params: Vec<f64> = (0..n).map(|k| k as f64).collect();
-    match natural_loft::interpolate(&sections, &params) {
-        Ok(surface) => Ok(FilletReport {
-            surface: Some(surface),
-            failure: None,
-            spine,
-            radius_range: [0.; 2],
-            warnings,
-            skin_deviation_estimate: 0.,
-            closed_spine: false,
-        }),
-        Err(e) => Ok(FilletReport::failed(
-            FailureReason::AssemblyFailed,
-            None,
-            format!("natural loft of hold-line sections failed: {e}"),
-            warnings,
-        )),
-    }
-}
+
 
 #[cfg(test)]
-#[path = "tests/fillet_surfaces.rs"]
+#[path = "fillet_surfaces/tests/tests_integration.rs"]
 mod tests;
+
+#[path = "fillet_surfaces/fillet_construction.rs"]
+mod fillet_construction;
+pub use fillet_construction::hold_line_fillet;
+pub use fillet_construction::chordal_fillet;
+pub use fillet_construction::rolling_ball_fillet;
+pub use fillet_construction::variable_radius_fillet;
+pub use fillet_construction::variable_g2_fillet;
+use fillet_construction::variable_radius_sections;
+pub use fillet_construction::g2_fillet;
+use fillet_construction::build_report;
+
+#[path = "fillet_surfaces/section_geometry.rs"]
+mod section_geometry;
+use section_geometry::g2_section;
+use section_geometry::arc_section;
+use section_geometry::march_direction;
+use section_geometry::trace_spine;

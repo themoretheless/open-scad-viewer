@@ -1,0 +1,7 @@
+# Owned original common-image components
+
+OwnedOriginalOverlapComponents now owns the original pair event owner and every verified common-image cell component. Each record retains its original pair/cell indices, monotone projection, exact image range, two source-owned algebraic endpoint nodes, and both source travel directions. Full source replay recomputes all geometry and metadata; omitted/reversed/rebound components and endpoint/direction tampering refuse. Independent nonlinear clocks remain intact. Signed per-source integer contributions use checked arithmetic and caller-supplied wire labels. This is not a globally normalized winding value.
+
+Fresh gates: 104 profile tests and 13 integration tests across two binaries, WASM compile, and public NURBS module mapping. Regressions cover partial/reversed overlaps, a nonlinear original clock with irrational boundary, a curved quadratic common image, separation and endpoint-only contact. Prior broader integration suites are historical and not counted.
+
+Next: global third-source contact subdivision, exact contributor correspondence and common-carrier partition/merging before graph port order. The existing global atlas still explicitly refuses overlaps; do not simply remove that guard. Mixed shore/source chart cuts and general automatic surface-intersection atlas remain unfinished. Catalog stays 198/200. Rust remains isolated and shared baseline verified. Cumulative patch applies against baseline, not after earlier patches.

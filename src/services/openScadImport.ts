@@ -445,6 +445,7 @@ export interface ResolvedDxfQueryTransform {
 export const DXF_QUERY_GRID_RESOLUTION = 1 / 1024
 
 export interface DxfQueryPathLine {
+  readonly keys: readonly [string,string]
   readonly points: readonly [OpenScadImportPoint2, OpenScadImportPoint2]
   disabled: boolean
 }

@@ -1,0 +1,3575 @@
+--- a/crates/brep-core/src/profile_certificate.rs
++++ b/crates/brep-core/src/profile_certificate.rs
+@@ -18,7 +18,7 @@
+ mod algebraic_intersections;
+ mod arithmetic;
+ mod intersections;
+-pub use algebraic_intersections::{
++pub use algebraic_intersections::{ExactRatio, ExactPolynomial, 
+     AlgebraicFactorWitness, AlgebraicIntersectionCertificate, AlgebraicRootWitness,
+     VerifiedAlgebraicIntersections, certify_algebraic_intersections,
+     verify_algebraic_intersections,
+@@ -27,7 +27,7 @@
+ mod image_agreement;
+ pub use image_agreement::{CurveImageCertificate,ImageCoverageWitness,ImageRelationWitness,VerifiedCurveImage,certify_curve_image_agreement,verify_curve_image_agreement};
+ mod span_intersections;
+-pub use span_intersections::{SpanPairCertificate,SpanIntersectionCertificate,VerifiedSpanIntersections,VerifiedCurveOverlap,certify_span_intersections,verify_span_intersections};
++pub use span_intersections::{BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, OwnedBranchNeighbourhood, own_branch_neighbourhood, ContactPortOrderLimits, OriginalContactPort, OwnedContactPortOrder, own_original_contact_port_order, try_own_event_branch, LeadingBranchRay, OwnedEventBranch, own_event_branch, ContactAtlasLimits, ContactOccurrence, SourceContactParameter, OriginalContactAtlas, assemble_original_contact_atlas, EventParameterRef, ParameterOrderLimits, QualifiedParameterOrder, compare_event_parameters, AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes, SpanPairCertificate,SpanIntersectionCertificate,VerifiedSpanIntersections,VerifiedCurveOverlap,certify_span_intersections,verify_span_intersections};
+ mod nonlinear;
+ pub use agreement::{
+     CurveAgreementCertificate, VerifiedCurveAgreement, certify_curve_agreement,
+--- a/crates/brep-core/src/profile_certificate/arithmetic.rs
++++ b/crates/brep-core/src/profile_certificate/arithmetic.rs
+@@ -44,6 +44,11 @@
+ }
+ mod algebraic;
+ pub(super) mod ray_winding;
++pub(super) mod event_coordinates;
++pub(super) mod parameter_order;
++pub(super) mod branch_germ;
++pub(super) mod branch_neighbourhood;
++pub(super) mod branch_slice;
+ pub(super) mod bivariate;
+ pub(super) mod algebraic_events;
+ pub(super) use algebraic::endpoint_only;
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/branch_germ.rs
+@@ -0,0 +1,109 @@
++//! First nonzero ORIGINAL rational derivative germ at an algebraic parameter.
++use super::*;
++use event_coordinates as exact;
++pub(in crate::profile_certificate) fn leading(
++    net: &[[Q; 3]],
++    domain: &[Q; 2],
++    parameter: &Poly,
++    f: &Poly,
++    root: &[Q; 2],
++    direction: i8,
++    max_refinements: usize,
++) -> Result<(usize, [Poly; 2], [i8; 2])> {
++    if domain[0] >= domain[1]
++        || net.iter().any(|h| h[2] <= Q::zero())
++        || !matches!(direction, -1 | 1)
++    {
++        return Err(refused(
++            "Original branch requires a positive-weight nonempty source cell",
++        ));
++    }
++    let local = sub(parameter, &[domain[0].clone()])
++        .into_iter()
++        .map(|v| v / (&domain[1] - &domain[0]))
++        .collect::<Poly>();
++    let mut d = [power(net, 0), power(net, 1), power(net, 2)];
++    let initial = [
++        exact::compose(&d[0], &local, f)?,
++        exact::compose(&d[1], &local, f)?,
++        exact::compose(&d[2], &local, f)?,
++    ];
++    if exact::zero_at(&initial[2], f, root)? {
++        return Err(refused("Original rational germ denominator vanishes"));
++    }
++    for order in 1..net.len() {
++        d = d.map(|p| derivative(&p));
++        let w = exact::compose(&d[2], &local, f)?;
++        let mut leading = [Vec::new(), Vec::new()];
++        for axis in 0..2 {
++            leading[axis] = exact::modulo(
++                &sub(
++                    &product(&exact::compose(&d[axis], &local, f)?, &initial[2]),
++                    &product(&initial[axis], &w),
++                ),
++                f,
++            )?;
++            if direction < 0 && order % 2 == 1 {
++                for v in &mut leading[axis] {
++                    *v = -v.clone();
++                }
++            }
++        }
++        let signs = [
++            exact::sign_at(&leading[0], f, root, max_refinements)?,
++            exact::sign_at(&leading[1], f, root, max_refinements)?,
++        ];
++        if signs != [0, 0] {
++            return Ok((order, leading, signs));
++        }
++    }
++    Err(refused(
++        "Original branch is constant or has no finite nonzero germ",
++    ))
++}
++
++/// First nonzero coordinate displacement sign, including terms beyond the
++/// leading vector. Zero means the actual coordinate is locally constant.
++pub(in crate::profile_certificate) fn component_sign(
++    net: &[[Q; 3]],
++    domain: &[Q; 2],
++    parameter: &Poly,
++    f: &Poly,
++    root: &[Q; 2],
++    direction: i8,
++    axis: usize,
++    max_refinements: usize,
++) -> Result<i8> {
++    if axis > 1 {
++        return Err(refused("Invalid original germ component"));
++    }
++    let local = sub(parameter, &[domain[0].clone()])
++        .iter()
++        .map(|q| q / (&domain[1] - &domain[0]))
++        .collect::<Poly>();
++    let mut x = power(net, axis);
++    let mut w = power(net, 2);
++    let x0 = exact::compose(&x, &local, f)?;
++    let w0 = exact::compose(&w, &local, f)?;
++    for order in 1..net.len() {
++        x = derivative(&x);
++        w = derivative(&w);
++        let mut n = exact::modulo(
++            &sub(
++                &product(&exact::compose(&x, &local, f)?, &w0),
++                &product(&x0, &exact::compose(&w, &local, f)?),
++            ),
++            f,
++        )?;
++        if direction < 0 && order % 2 == 1 {
++            for q in &mut n {
++                *q = -q.clone();
++            }
++        }
++        let s = exact::sign_at(&n, f, root, max_refinements)?;
++        if s != 0 {
++            return Ok(s);
++        }
++    }
++    Ok(0)
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/branch_neighbourhood.rs
+@@ -0,0 +1,131 @@
++//! Exact contact-free monotone source branch neighbourhood, before a rational cut.
++use super::*;
++use event_coordinates as exact;
++use parameter_order::{closed_roots, range, refine};
++#[derive(Clone)]
++pub(in crate::profile_certificate) struct ParameterValue {
++    pub primitive: Poly,
++    pub value: Poly,
++    pub interval: [Q; 2],
++}
++#[derive(Clone, Debug, PartialEq)]
++pub(in crate::profile_certificate) struct Neighbourhood {
++    pub root: [Q; 2],
++    pub parameter_box: [Q; 2],
++    pub cut: Q,
++    pub cut_point: [Q; 2],
++    pub contact_critical: bool,
++    pub steps: usize,
++}
++pub(super) fn local(p: &Poly, domain: &[Q; 2]) -> Poly {
++    sub(p, &[domain[0].clone()])
++        .iter()
++        .map(|q| q / (&domain[1] - &domain[0]))
++        .collect()
++}
++pub(super) fn box_at(p: &Poly, f: &Poly, r: &[Q; 2]) -> Result<[Q; 2]> {
++    if exact::zero_at(p, f, r)? {
++        return Ok([Q::zero(), Q::zero()]);
++    }
++    if exact::equals_one(p, f, r)? {
++        return Ok([Q::one(), Q::one()]);
++    }
++    let b = range(p, r);
++    Ok([b[0].clone().max(Q::zero()), b[1].clone().min(Q::one())])
++}
++pub(in crate::profile_certificate) fn prove(
++    net: &[[Q; 3]],
++    domain: &[Q; 2],
++    contact: ParameterValue,
++    mut neighbour: Option<ParameterValue>,
++    direction: i8,
++    axis: usize,
++    axis_sign: i8,
++    max_steps: usize,
++) -> Result<Neighbourhood> {
++    if axis > 1
++        || !matches!(direction, -1 | 1)
++        || !matches!(axis_sign, -1 | 1)
++        || max_steps == 0
++        || max_steps > 512
++        || domain[0] >= domain[1]
++        || net.iter().any(|h| h[2] <= Q::zero())
++    {
++        return Err(refused(
++            "Invalid original monotone branch neighbourhood context",
++        ));
++    }
++    let powers = [power(net, 0), power(net, 1), power(net, 2)];
++    let critical = sub(
++        &product(&derivative(&powers[axis]), &powers[2]),
++        &product(&powers[axis], &derivative(&powers[2])),
++    );
++    if critical.is_empty() {
++        return Err(refused("Selected branch coordinate is constant"));
++    }
++    let p = local(&contact.value, domain);
++    let mut root = contact.interval.clone();
++    let contact_critical = exact::zero_at(
++        &exact::compose(&critical, &p, &contact.primitive)?,
++        &contact.primitive,
++        &root,
++    )?;
++    let mut cut = if direction > 0 { Q::one() } else { Q::zero() };
++    for step in 1..=max_steps {
++        let b = box_at(&p, &contact.primitive, &root)?;
++        if b[0] > b[1] {
++            return Err(refused(
++                "Original contact parameter enclosure leaves its actual source cell",
++            ));
++        }
++        if (direction > 0 && b[1] < cut) || (direction < 0 && b[0] > cut) {
++            cut =
++                (cut + if direction > 0 {
++                    b[1].clone()
++                } else {
++                    b[0].clone()
++                }) / Q::from_integer(2.into());
++            let natural = &domain[0] + (&domain[1] - &domain[0]) * &cut;
++            let separated = neighbour.as_ref().is_none_or(|n| {
++                let r = range(&n.value, &n.interval);
++                if direction > 0 {
++                    natural < r[0]
++                } else {
++                    natural > r[1]
++                }
++            });
++            let hull = [b[0].clone().min(cut.clone()), b[1].clone().max(cut.clone())];
++            if separated && closed_roots(&critical, &hull)? == usize::from(contact_critical) {
++                let sign = at(&critical, &cut).cmp(&Q::zero());
++                let expected = if axis_sign * direction > 0 {
++                    std::cmp::Ordering::Greater
++                } else {
++                    std::cmp::Ordering::Less
++                };
++                if sign == expected {
++                    let w = at(&powers[2], &cut);
++                    if w <= Q::zero() {
++                        return Err(refused("Original cut denominator is not positive"));
++                    }
++                    return Ok(Neighbourhood {
++                        root,
++                        parameter_box: b,
++                        cut: natural,
++                        cut_point: [at(&powers[0], &cut) / &w, at(&powers[1], &cut) / w],
++                        contact_critical,
++                        steps: step,
++                    });
++                }
++            }
++        }
++        if step < max_steps {
++            refine(&contact.primitive, &mut root)?;
++            if let Some(n) = &mut neighbour {
++                refine(&n.primitive, &mut n.interval)?;
++            }
++        }
++    }
++    Err(refused(
++        "Original contact-free monotone neighbourhood remains unproven within allowance",
++    ))
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/branch_slice.rs
+@@ -0,0 +1,140 @@
++//! Intrinsic tangent ordering on a common exact rational coordinate slice.
++//! Inputs are contact-free monotone neighbourhoods of the same owned point.
++use super::*;
++use branch_neighbourhood::{ParameterValue, box_at, local};
++use event_coordinates as exact;
++use parameter_order::{fraction_range, refine};
++#[derive(Clone)]
++pub(in crate::profile_certificate) struct SliceBranch {
++    pub net: Vec<[Q; 3]>,
++    pub domain: [Q; 2],
++    pub contact: ParameterValue,
++    pub cut: Q,
++    pub cut_point: [Q; 2],
++    pub direction: i8,
++}
++struct Value {
++    f: Poly,
++    root: [Q; 2],
++    numerator: Poly,
++    denominator: Poly,
++}
++fn choose(
++    a: &SliceBranch,
++    b: &SliceBranch,
++    axis: usize,
++    sign: i8,
++    max_refinements: usize,
++) -> Result<Q> {
++    let p = local(&a.contact.value, &a.domain);
++    let f = &a.contact.primitive;
++    let n = exact::compose(&power(&a.net, axis), &p, f)?;
++    let d = exact::compose(&power(&a.net, 2), &p, f)?;
++    let mut root = a.contact.interval.clone();
++    let end = if sign > 0 {
++        a.cut_point[axis].clone().min(b.cut_point[axis].clone())
++    } else {
++        a.cut_point[axis].clone().max(b.cut_point[axis].clone())
++    };
++    for step in 0..=max_refinements {
++        if let Some(r) = fraction_range(&n, &d, &root) {
++            if sign > 0 && r[1] < end {
++                return Ok((&r[1] + end) / Q::from_integer(2.into()));
++            }
++            if sign < 0 && r[0] > end {
++                return Ok((&r[0] + end) / Q::from_integer(2.into()));
++            }
++        }
++        if step < max_refinements {
++            refine(f, &mut root)?;
++        }
++    }
++    Err(refused(
++        "Common original tangent slice remains unproven within allowance",
++    ))
++}
++fn value(a: &SliceBranch, axis: usize, q: &Q, max_refinements: usize) -> Result<Value> {
++    let powers = [power(&a.net, 0), power(&a.net, 1), power(&a.net, 2)];
++    let h = sub(
++        &powers[axis],
++        &powers[2].iter().map(|v| v * q).collect::<Poly>(),
++    );
++    if h.is_empty() {
++        return Err(refused(
++            "Original monotone slice coordinate became constant",
++        ));
++    }
++    let mut candidates =
++        algebraic_events::isolates(&h, Q::zero(), Q::one(), &Q::new(1.into(), 1024.into()))?;
++    let p = local(&a.contact.value, &a.domain);
++    let mut contact = a.contact.interval.clone();
++    let cut = (&a.cut - &a.domain[0]) / (&a.domain[1] - &a.domain[0]);
++    for step in 0..=max_refinements {
++        let b = box_at(&p, &a.contact.primitive, &contact)?;
++        let selected = candidates
++            .iter()
++            .filter(|r| {
++                if a.direction > 0 {
++                    r[0] > b[1] && r[1] < cut
++                } else {
++                    r[1] < b[0] && r[0] > cut
++                }
++            })
++            .collect::<Vec<_>>();
++        if selected.len() > 1 {
++            return Err(refused("Original monotone branch has multiple slice roots"));
++        }
++        if let Some(root) = selected.first() {
++            return Ok(Value {
++                f: h,
++                root: (*root).clone(),
++                numerator: powers[1 - axis].clone(),
++                denominator: powers[2].clone(),
++            });
++        }
++        if step < max_refinements {
++            refine(&a.contact.primitive, &mut contact)?;
++            for r in &mut candidates {
++                refine(&h, r)?;
++            }
++        }
++    }
++    Err(refused(
++        "Unique original branch slice root remains unproven within allowance",
++    ))
++}
++pub(in crate::profile_certificate) fn compare(
++    a: SliceBranch,
++    b: SliceBranch,
++    axis: usize,
++    sign: i8,
++    refinements: usize,
++    matrix: usize,
++) -> Result<std::cmp::Ordering> {
++    if axis > 1 || !matches!(sign, -1 | 1) {
++        return Err(refused("Invalid original tangent slice axis"));
++    }
++    let q = choose(&a, &b, axis, sign, refinements)?;
++    let a = value(&a, axis, &q, refinements)?;
++    let b = value(&b, axis, &q, refinements)?;
++    let result = parameter_order::compare_rational(
++        &a.f,
++        [&a.numerator, &a.denominator],
++        &a.root,
++        &b.f,
++        [&b.numerator, &b.denominator],
++        &b.root,
++        refinements,
++        matrix,
++    )?;
++    if result == std::cmp::Ordering::Equal {
++        return Err(refused(
++            "Original contact-free tangent slices are not separated",
++        ));
++    }
++    Ok(if (axis == 0 && sign > 0) || (axis == 1 && sign < 0) {
++        result
++    } else {
++        result.reverse()
++    })
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/event_coordinates.rs
+@@ -0,0 +1,156 @@
++//! Exact source event coordinates in a checked real algebraic root extension.
++//! Denominators stay symbolic: no inversion at unrelated complex roots is needed.
++use super::*;
++use algebraic_events as roots;
++pub(super) fn bounded(p: &Poly) -> Result<()> {
++    if p.len() > 513
++        || p.iter()
++            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
++    {
++        return Err(refused("Original algebraic coordinate allowance exceeded"));
++    }
++    Ok(())
++}
++pub(super) fn modulo(p: &Poly, f: &Poly) -> Result<Poly> {
++    bounded(p)?;
++    let r = divide(p, f)?.1;
++    bounded(&r)?;
++    Ok(r)
++}
++pub(super) fn compose(p: &Poly, t: &Poly, f: &Poly) -> Result<Poly> {
++    p.iter().rev().try_fold(Vec::new(), |v, c| {
++        let mut r = modulo(&product(&v, t), f)?;
++        if r.is_empty() {
++            r.push(c.clone());
++        } else {
++            r[0] += c;
++        }
++        let r = trim(r);
++        bounded(&r)?;
++        Ok(r)
++    })
++}
++pub(in crate::profile_certificate) fn first_parameter(t: &Poly, k: u8) -> Poly {
++    sub(
++        &vec![Q::zero(), Q::one()],
++        &t.iter()
++            .map(|q| q * Q::from_integer(k.into()))
++            .collect::<Poly>(),
++    )
++}
++pub(in crate::profile_certificate) fn zero_at(p: &Poly, f: &Poly, root: &[Q; 2]) -> Result<bool> {
++    if p.is_empty() {
++        return Ok(true);
++    }
++    let g = gcd(p, f)?;
++    Ok(g.len() > 1 && roots::count(&g, &root[0], &root[1])? == 1)
++}
++pub(in crate::profile_certificate) fn equals_one(
++    p: &Poly,
++    f: &Poly,
++    root: &[Q; 2],
++) -> Result<bool> {
++    zero_at(&sub(p, &[Q::one()]), f, root)
++}
++pub(in crate::profile_certificate) fn coordinates(
++    a: &[[Q; 3]],
++    b: &[[Q; 3]],
++    domains: [[Q; 2]; 2],
++    f: &Poly,
++    t: &Poly,
++    k: u8,
++    root: &[Q; 2],
++) -> Result<([Poly; 2], [[Poly; 2]; 2])> {
++    if f.len() < 2 || k > 16 {
++        return Err(refused("Invalid original algebraic event primitive"));
++    }
++    bounded(f)?;
++    bounded(t)?;
++    let s = first_parameter(t, k);
++    let parameters = std::array::from_fn(|axis| {
++        let local = if axis == 0 { &s } else { t };
++        let mut p = local
++            .iter()
++            .map(|q| q * (&domains[axis][1] - &domains[axis][0]))
++            .collect::<Poly>();
++        if p.is_empty() {
++            p.push(domains[axis][0].clone());
++        } else {
++            p[0] += &domains[axis][0];
++        }
++        trim(p)
++    });
++    for p in &parameters {
++        bounded(p)?;
++    }
++    let left = [
++        compose(&power(a, 0), &s, f)?,
++        compose(&power(a, 1), &s, f)?,
++        compose(&power(a, 2), &s, f)?,
++    ];
++    let right = [
++        compose(&power(b, 0), t, f)?,
++        compose(&power(b, 1), t, f)?,
++        compose(&power(b, 2), t, f)?,
++    ];
++    if zero_at(&left[2], f, root)? || zero_at(&right[2], f, root)? {
++        return Err(refused("Actual event coordinate denominator vanishes"));
++    }
++    for axis in 0..2 {
++        let difference = modulo(
++            &sub(
++                &product(&left[axis], &right[2]),
++                &product(&right[axis], &left[2]),
++            ),
++            f,
++        )?;
++        if !zero_at(&difference, f, root)? {
++            return Err(refused("Original source event world coordinates disagree"));
++        }
++    }
++    Ok((
++        parameters,
++        [
++            [left[0].clone(), left[2].clone()],
++            [left[1].clone(), left[2].clone()],
++        ],
++    ))
++}
++
++/// Sign at one ACTUAL isolated real root, never sign at its midpoint.
++pub(in crate::profile_certificate) fn sign_at(
++    p: &Poly,
++    f: &Poly,
++    root: &[Q; 2],
++    max_refinements: usize,
++) -> Result<i8> {
++    if zero_at(p, f, root)? {
++        return Ok(0);
++    }
++    let mut i = root.clone();
++    for step in 0..=max_refinements {
++        let r = p.iter().rev().fold([Q::zero(), Q::zero()], |v, c| {
++            let q = [&v[0] * &i[0], &v[0] * &i[1], &v[1] * &i[0], &v[1] * &i[1]];
++            [q.iter().min().unwrap() + c, q.iter().max().unwrap() + c]
++        });
++        if r[0] > Q::zero() {
++            return Ok(1);
++        }
++        if r[1] < Q::zero() {
++            return Ok(-1);
++        }
++        if step < max_refinements && i[0] != i[1] {
++            let m = (&i[0] + &i[1]) / Q::from_integer(2.into());
++            if at(f, &m).is_zero() {
++                i = [m.clone(), m];
++            } else if roots::count(f, &i[0], &m)? == 1 {
++                i[1] = m;
++            } else {
++                i[0] = m;
++            }
++        }
++    }
++    Err(refused(
++        "Original algebraic sign remains unproven within allowance",
++    ))
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/arithmetic/parameter_order.rs
+@@ -0,0 +1,426 @@
++//! Exact comparison of selected algebraic images; overlapping intervals alone
++//! never grant equality. Common value factors plus a unique selected root do.
++use super::*;
++use algebraic_events as roots;
++use event_coordinates as coordinates;
++use std::cmp::Ordering;
++fn bound(p: &Poly) -> Result<()> {
++    if p.len() > 513
++        || p.iter()
++            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
++    {
++        return Err(refused(
++            "Algebraic parameter comparison arithmetic allowance exceeded",
++        ));
++    }
++    Ok(())
++}
++fn reduced(p: &Poly, f: &Poly) -> Result<Poly> {
++    bound(p)?;
++    let r = divide(p, f)?.1;
++    bound(&r)?;
++    Ok(r)
++}
++fn compose(p: &Poly, t: &Poly, f: &Poly) -> Result<Poly> {
++    p.iter().rev().try_fold(Vec::new(), |v, c| {
++        let mut r = reduced(&product(&v, t), f)?;
++        if r.is_empty() {
++            r.push(c.clone());
++        } else {
++            r[0] += c;
++        }
++        Ok(trim(r))
++    })
++}
++fn image_polynomial(f: &Poly, p: &Poly, max_matrix: usize) -> Result<Poly> {
++    if p.len() <= 1 {
++        return Ok(vec![-p.first().cloned().unwrap_or_else(Q::zero), Q::one()]);
++    }
++    if f.len() + p.len() - 2 > max_matrix {
++        return Err(refused(
++            "Algebraic value eliminant matrix allowance exceeded",
++        ));
++    }
++    // Q[value][alpha]: eliminate alpha from F(alpha), value-P(alpha).
++    let a = f.iter().map(|q| trim(vec![q.clone()])).collect::<Vec<_>>();
++    let mut b = p.iter().map(|q| trim(vec![-q.clone()])).collect::<Vec<_>>();
++    b[0] = vec![-p[0].clone(), Q::one()];
++    let h = bivariate::resultant(&a, &b)?;
++    bound(&h)?;
++    if h.len() < 2 {
++        return Err(refused("Algebraic value has no finite eliminant"));
++    }
++    let mut h = quotient(&h, &gcd(&h, &derivative(&h))?)?;
++    let lead = h.last().cloned().unwrap();
++    for q in &mut h {
++        *q /= &lead;
++    }
++    Ok(h)
++}
++pub(super) fn range(p: &Poly, i: &[Q; 2]) -> [Q; 2] {
++    p.iter().rev().fold([Q::zero(), Q::zero()], |v, c| {
++        let q = [&v[0] * &i[0], &v[0] * &i[1], &v[1] * &i[0], &v[1] * &i[1]];
++        [q.iter().min().unwrap() + c, q.iter().max().unwrap() + c]
++    })
++}
++pub(super) fn refine(f: &Poly, i: &mut [Q; 2]) -> Result<()> {
++    if i[0] == i[1] {
++        return Ok(());
++    }
++    let m = (&i[0] + &i[1]) / Q::from_integer(2.into());
++    if at(f, &m).is_zero() {
++        *i = [m.clone(), m];
++    } else if roots::count(f, &i[0], &m)? == 1 {
++        i[1] = m;
++    } else {
++        i[0] = m;
++    }
++    Ok(())
++}
++pub(super) fn closed_roots(f: &Poly, i: &[Q; 2]) -> Result<usize> {
++    if i[0] == i[1] {
++        return Ok(usize::from(at(f, &i[0]).is_zero()));
++    }
++    Ok(roots::count(f, &i[0], &i[1])?
++        + usize::from(at(f, &i[0]).is_zero())
++        + usize::from(at(f, &i[1]).is_zero()))
++}
++pub(in crate::profile_certificate) fn compare(
++    f: &Poly,
++    p: &Poly,
++    a: &[Q; 2],
++    g: &Poly,
++    q: &Poly,
++    b: &[Q; 2],
++    max_refinements: usize,
++    max_matrix: usize,
++) -> Result<Ordering> {
++    bound(f)?;
++    bound(g)?;
++    let p = reduced(p, f)?;
++    let q = reduced(q, g)?;
++    if f == g && p == q {
++        let intersection = [
++            a[0].clone().max(b[0].clone()),
++            a[1].clone().min(b[1].clone()),
++        ];
++        if intersection[0] <= intersection[1] && closed_roots(f, &intersection)? == 1 {
++            return Ok(Ordering::Equal);
++        }
++    }
++    if p.len() <= 1
++        && coordinates::zero_at(
++            &sub(&q, &[p.first().cloned().unwrap_or_else(Q::zero)]),
++            g,
++            b,
++        )?
++    {
++        return Ok(Ordering::Equal);
++    }
++    if q.len() <= 1
++        && coordinates::zero_at(
++            &sub(&p, &[q.first().cloned().unwrap_or_else(Q::zero)]),
++            f,
++            a,
++        )?
++    {
++        return Ok(Ordering::Equal);
++    }
++    let (mut a, mut b) = (a.clone(), b.clone());
++    let mut common: Option<Poly> = None;
++    let mut equality_possible = false;
++    let mut attempted_eliminant = false;
++    for step in 0..=max_refinements {
++        let x = range(&p, &a);
++        let y = range(&q, &b);
++        if x[1] < y[0] {
++            return Ok(Ordering::Less);
++        }
++        if x[0] > y[1] {
++            return Ok(Ordering::Greater);
++        }
++        if x[0] == x[1] && y[0] == y[1] {
++            return Ok(x[0].cmp(&y[0]));
++        }
++        if !attempted_eliminant && (step >= 8 || step == max_refinements) {
++            attempted_eliminant = true;
++            // An eliminant budget refusal does not prevent independently
++            // proving strict order by refined original root enclosures.
++            if let (Ok(left), Ok(right)) = (
++                image_polynomial(f, &p, max_matrix),
++                image_polynomial(g, &q, max_matrix),
++            ) {
++                let h = gcd(&left, &right)?;
++                equality_possible = h.len() > 1
++                    && coordinates::zero_at(&compose(&h, &p, f)?, f, &a)?
++                    && coordinates::zero_at(&compose(&h, &q, g)?, g, &b)?;
++                common = Some(h);
++            }
++        }
++        if equality_possible {
++            let interval = [
++                x[0].clone().min(y[0].clone()),
++                x[1].clone().max(y[1].clone()),
++            ];
++            // Both selected values are roots of the SAME exact polynomial;
++            // exactly one root in their joint enclosure proves identity.
++            if closed_roots(common.as_ref().unwrap(), &interval)? == 1 {
++                return Ok(Ordering::Equal);
++            }
++        }
++        if step < max_refinements {
++            refine(f, &mut a)?;
++            refine(g, &mut b)?;
++        }
++    }
++    Err(refused(
++        "Original algebraic parameter order remains unproven within allowance",
++    ))
++}
++
++fn prepare_fraction(f: &Poly, n: &Poly, d: &Poly, root: &[Q; 2]) -> Result<(Poly, Poly, Poly)> {
++    bound(f)?;
++    bound(n)?;
++    bound(d)?;
++    if coordinates::zero_at(d, f, root)? {
++        return Err(refused("Selected algebraic fraction denominator vanishes"));
++    }
++    // Remove poles at OTHER roots before eliminating value*D-N. The selected
++    // original root is retained; no illegal inversion in a reducible quotient.
++    let factor = quotient(f, &gcd(f, d)?)?;
++    if closed_roots(&factor, root)? != 1 {
++        return Err(refused(
++            "Algebraic fraction lost its selected original root",
++        ));
++    }
++    Ok((factor.clone(), reduced(n, &factor)?, reduced(d, &factor)?))
++}
++fn constant_fraction(f: &Poly, n: &Poly, d: &Poly, root: &[Q; 2]) -> Result<Option<Q>> {
++    let index = d
++        .iter()
++        .position(|q| !q.is_zero())
++        .ok_or_else(|| refused("Zero algebraic fraction denominator"))?;
++    let value = n.get(index).cloned().unwrap_or_else(Q::zero) / &d[index];
++    let difference = sub(n, &d.iter().map(|q| q * &value).collect::<Poly>());
++    Ok(coordinates::zero_at(&difference, f, root)?.then_some(value))
++}
++pub(super) fn fraction_range(n: &Poly, d: &Poly, i: &[Q; 2]) -> Option<[Q; 2]> {
++    let x = range(n, i);
++    let y = range(d, i);
++    if y[0] <= Q::zero() && y[1] >= Q::zero() {
++        return None;
++    }
++    let q = [&x[0] / &y[0], &x[0] / &y[1], &x[1] / &y[0], &x[1] / &y[1]];
++    Some([
++        q.iter().min().unwrap().clone(),
++        q.iter().max().unwrap().clone(),
++    ])
++}
++fn fraction_image(f: &Poly, n: &Poly, d: &Poly, max_matrix: usize) -> Result<Poly> {
++    let degree = n.len().max(d.len()).saturating_sub(1);
++    if f.len() - 1 + degree > max_matrix {
++        return Err(refused(
++            "Algebraic fraction eliminant matrix allowance exceeded",
++        ));
++    }
++    let a = f.iter().map(|q| trim(vec![q.clone()])).collect::<Vec<_>>();
++    let b = (0..=degree)
++        .map(|i| {
++            trim(vec![
++                -n.get(i).cloned().unwrap_or_else(Q::zero),
++                d.get(i).cloned().unwrap_or_else(Q::zero),
++            ])
++        })
++        .collect::<Vec<_>>();
++    let h = bivariate::resultant(&a, &b)?;
++    bound(&h)?;
++    if h.len() < 2 {
++        return Err(refused("Algebraic fraction has no finite value eliminant"));
++    }
++    let mut h = quotient(&h, &gcd(&h, &derivative(&h))?)?;
++    let lead = h.last().cloned().unwrap();
++    for q in &mut h {
++        *q /= &lead;
++    }
++    Ok(h)
++}
++fn compose_fraction(h: &Poly, n: &Poly, d: &Poly, f: &Poly) -> Result<Poly> {
++    let Some(last) = h.last() else {
++        return Ok(Vec::new());
++    };
++    let mut v = vec![last.clone()];
++    let mut power_d = vec![Q::one()];
++    for c in h[..h.len() - 1].iter().rev() {
++        power_d = reduced(&product(&power_d, d), f)?;
++        v = reduced(
++            &sub(
++                &product(&v, n),
++                &power_d.iter().map(|q| -q * c).collect::<Poly>(),
++            ),
++            f,
++        )?;
++    }
++    Ok(v)
++}
++pub(in crate::profile_certificate) fn compare_rational(
++    f: &Poly,
++    x: [&Poly; 2],
++    a: &[Q; 2],
++    g: &Poly,
++    y: [&Poly; 2],
++    b: &[Q; 2],
++    max_refinements: usize,
++    max_matrix: usize,
++) -> Result<Ordering> {
++    let (f, n, d) = prepare_fraction(f, x[0], x[1], a)?;
++    let (g, m, e) = prepare_fraction(g, y[0], y[1], b)?;
++    let ca = constant_fraction(&f, &n, &d, a)?;
++    let cb = constant_fraction(&g, &m, &e, b)?;
++    if let (Some(a), Some(b)) = (&ca, &cb) {
++        return Ok(a.cmp(b));
++    }
++    if let Some(c) = &ca {
++        if coordinates::zero_at(&sub(&m, &e.iter().map(|q| q * c).collect::<Poly>()), &g, b)? {
++            return Ok(Ordering::Equal);
++        }
++    }
++    if let Some(c) = &cb {
++        if coordinates::zero_at(&sub(&n, &d.iter().map(|q| q * c).collect::<Poly>()), &f, a)? {
++            return Ok(Ordering::Equal);
++        }
++    }
++    if f == g {
++        let intersection = [
++            a[0].clone().max(b[0].clone()),
++            a[1].clone().min(b[1].clone()),
++        ];
++        if intersection[0] <= intersection[1]
++            && closed_roots(&f, &intersection)? == 1
++            && coordinates::zero_at(&sub(&product(&n, &e), &product(&m, &d)), &f, &intersection)?
++        {
++            return Ok(Ordering::Equal);
++        }
++    }
++    let (mut a, mut b) = (a.clone(), b.clone());
++    let mut attempted = false;
++    let mut common = None;
++    for step in 0..=max_refinements {
++        let x = ca
++            .as_ref()
++            .map(|c| [c.clone(), c.clone()])
++            .or_else(|| fraction_range(&n, &d, &a));
++        let y = cb
++            .as_ref()
++            .map(|c| [c.clone(), c.clone()])
++            .or_else(|| fraction_range(&m, &e, &b));
++        if let (Some(x), Some(y)) = (x, y) {
++            if x[1] < y[0] {
++                return Ok(Ordering::Less);
++            }
++            if x[0] > y[1] {
++                return Ok(Ordering::Greater);
++            }
++            if x[0] == x[1] && y[0] == y[1] {
++                return Ok(x[0].cmp(&y[0]));
++            }
++            if !attempted && (step >= 8 || step == max_refinements) {
++                attempted = true;
++                if let (Ok(left), Ok(right)) = (
++                    fraction_image(&f, &n, &d, max_matrix),
++                    fraction_image(&g, &m, &e, max_matrix),
++                ) {
++                    let h = gcd(&left, &right)?;
++                    if h.len() > 1
++                        && coordinates::zero_at(&compose_fraction(&h, &n, &d, &f)?, &f, &a)?
++                        && coordinates::zero_at(&compose_fraction(&h, &m, &e, &g)?, &g, &b)?
++                    {
++                        common = Some(h);
++                    }
++                }
++            }
++            if let Some(h) = &common {
++                if closed_roots(
++                    h,
++                    &[
++                        x[0].clone().min(y[0].clone()),
++                        x[1].clone().max(y[1].clone()),
++                    ],
++                )? == 1
++                {
++                    return Ok(Ordering::Equal);
++                }
++            }
++        }
++        if step < max_refinements {
++            refine(&f, &mut a)?;
++            refine(&g, &mut b)?;
++        }
++    }
++    Err(refused(
++        "Original algebraic fraction order remains unproven within allowance",
++    ))
++}
++
++#[cfg(test)]
++mod rational_tests {
++    use super::*;
++    #[test]
++    fn unrelated_primitive_poles_do_not_destroy_a_valid_selected_fraction() {
++        let f = vec![-Q::one(), Q::zero(), Q::one()];
++        let n = vec![Q::zero(), Q::one(), Q::one()];
++        let d = vec![Q::one(), Q::one()];
++        let g = vec![Q::zero(), Q::one()];
++        let one = vec![Q::one()];
++        assert_eq!(
++            compare_rational(
++                &f,
++                [&n, &d],
++                &[Q::one(), Q::one()],
++                &g,
++                [&one, &one],
++                &[Q::zero(), Q::zero()],
++                0,
++                1
++            )
++            .unwrap(),
++            Ordering::Equal
++        );
++        assert!(
++            compare_rational(
++                &f,
++                [&n, &d],
++                &[-Q::one(), -Q::one()],
++                &g,
++                [&one, &one],
++                &[Q::zero(), Q::zero()],
++                0,
++                1
++            )
++            .is_err()
++        );
++    }
++    #[test]
++    fn rational_images_in_distinct_real_extensions_have_checked_value_identity() {
++        let q = |n: i64, d: i64| Q::new(n.into(), d.into());
++        let f = vec![q(-2, 1), Q::zero(), Q::one()];
++        let n = vec![Q::one(), Q::one()];
++        let d = vec![-Q::one(), Q::one()];
++        let g = vec![-Q::one(), q(-2, 1), Q::one()];
++        let m = vec![Q::zero(), Q::zero(), Q::one()];
++        let one = vec![Q::one()];
++        assert_eq!(
++            compare_rational(
++                &f,
++                [&n, &d],
++                &[Q::one(), q(3, 2)],
++                &g,
++                [&m, &one],
++                &[q(2, 1), q(5, 2)],
++                192,
++                64
++            )
++            .unwrap(),
++            Ordering::Equal
++        );
++    }
++}
+--- a/crates/brep-core/src/profile_certificate/span_intersections.rs
++++ b/crates/brep-core/src/profile_certificate/span_intersections.rs
+@@ -1,6 +1,8 @@
+ //! Complete per-knot-span census of isolated and coincident curve components.
+ //! Algebraic source cells never pass through rounded temporary NURBS controls.
+ use super::*;
++mod event_nodes;
++pub use event_nodes::{BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, OwnedBranchNeighbourhood, own_branch_neighbourhood, ContactPortOrderLimits, OriginalContactPort, OwnedContactPortOrder, own_original_contact_port_order, try_own_event_branch, LeadingBranchRay, OwnedEventBranch, own_event_branch, ContactAtlasLimits, ContactOccurrence, SourceContactParameter, OriginalContactAtlas, assemble_original_contact_atlas, EventParameterRef, ParameterOrderLimits, QualifiedParameterOrder, compare_event_parameters, AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes};
+ use algebraic_intersections::{ExactRatio, decode_factors, encode_factors, outward, ratio};
+ use arithmetic::algebraic_events as engine;
+ #[derive(Clone, Debug, PartialEq)]
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes.rs
+@@ -0,0 +1,265 @@
++//! Source-owned algebraic event positions. Exact factors/maps stay attached to
++//! both ORIGINAL cells; rounded event parameter enclosures are not node identity.
++use super::super::algebraic_intersections::{ExactPolynomial, polynomial};
++use super::*;
++mod atlas;
++mod branches;
++mod neighbourhood;
++pub use neighbourhood::{
++    BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, OwnedBranchNeighbourhood,
++    own_branch_neighbourhood,
++};
++mod port_order;
++pub use branches::{LeadingBranchRay, OwnedEventBranch, own_event_branch, try_own_event_branch};
++pub use port_order::{
++    ContactPortOrderLimits, OriginalContactPort, OwnedContactPortOrder,
++    own_original_contact_port_order,
++};
++mod parameter_order;
++use arithmetic::event_coordinates as coordinates;
++pub use atlas::{
++    ContactAtlasLimits, ContactOccurrence, OriginalContactAtlas, SourceContactParameter,
++    assemble_original_contact_atlas,
++};
++pub use parameter_order::{
++    EventParameterRef, ParameterOrderLimits, QualifiedParameterOrder, compare_event_parameters,
++};
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct AlgebraicEventPosition {
++    /// Coefficients in ascending primitive-root powers, exact ratios.
++    pub primitive: ExactPolynomial,
++    pub isolating_interval: [ExactRatio; 2],
++    /// Actual natural-domain parameters of the original two NURBS sources.
++    pub parameters: [ExactPolynomial; 2],
++    /// Each coordinate is numerator(alpha)/denominator(alpha). No rounded point.
++    pub position: [[ExactPolynomial; 2]; 2],
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct AlgebraicEventNode {
++    pub source_cells: [usize; 2],
++    pub pair: usize,
++    pub factor: Option<usize>,
++    pub root: usize,
++    pub stationary: bool,
++    pub exact: AlgebraicEventPosition,
++}
++#[derive(Clone, Debug)]
++pub struct CurveEventNodes {
++    sources: [Curve; 2],
++    census: SpanIntersectionCertificate,
++    nodes: Vec<AlgebraicEventNode>,
++}
++fn make(
++    a: &Cell,
++    b: &Cell,
++    f: &Vec<Q>,
++    t: &Vec<Q>,
++    k: u8,
++    interval: &[Q; 2],
++    pair: usize,
++    source_cells: [usize; 2],
++    factor: Option<usize>,
++    root: usize,
++    stationary: bool,
++) -> Result<AlgebraicEventNode> {
++    let (parameters, position) = coordinates::coordinates(
++        &a.net,
++        &b.net,
++        [a.domain.clone(), b.domain.clone()],
++        f,
++        t,
++        k,
++        interval,
++    )?;
++    Ok(AlgebraicEventNode {
++        source_cells,
++        pair,
++        factor,
++        root,
++        stationary,
++        exact: AlgebraicEventPosition {
++            primitive: polynomial(f),
++            isolating_interval: interval.clone().map(|q| ratio(&q)),
++            parameters: parameters.map(|p| polynomial(&p)),
++            position: position.map(|p| p.map(|q| polynomial(&q))),
++        },
++    })
++}
++fn assemble(
++    a: &Curve,
++    b: &Curve,
++    c: &SpanIntersectionCertificate,
++) -> Result<Vec<AlgebraicEventNode>> {
++    verify_span_intersections(a, b, c)?;
++    let x = cells(a)?;
++    let y = cells(b)?;
++    let mut nodes = Vec::new();
++    for (pair, p) in c.pairs.iter().enumerate() {
++        let a = &x[p.first];
++        let b = &y[p.second];
++        if matches!(p.kind.as_str(), "events" | "stationary") {
++            for (fi, f) in decode_factors(&p.factors)?.iter().enumerate() {
++                let Some(t) = &f.map else {
++                    continue;
++                };
++                for (ri, r) in f.roots.iter().enumerate() {
++                    if !matches!(r.kind.as_str(), "event" | "diagonal") {
++                        continue;
++                    }
++                    let stationary = r.kind == "diagonal";
++                    let s = coordinates::first_parameter(t, p.shear);
++                    // Same exact half-open original knot ownership as the
++                    // complete source census. No float midpoint deduplication.
++                    if !stationary
++                        && ((p.first + 1 < x.len()
++                            && coordinates::equals_one(&s, &f.polynomial, &r.interval)?)
++                            || (p.second + 1 < y.len()
++                                && coordinates::equals_one(t, &f.polynomial, &r.interval)?))
++                    {
++                        continue;
++                    }
++                    nodes.push(make(
++                        a,
++                        b,
++                        &f.polynomial,
++                        t,
++                        p.shear,
++                        &r.interval,
++                        pair,
++                        [p.first, p.second],
++                        Some(fi),
++                        ri,
++                        stationary,
++                    )?);
++                }
++            }
++        } else if p.kind == "range" {
++            for (ri, e) in range(a, b, p.axis as usize)?.2.into_iter().enumerate() {
++                if (e.first[0] == Q::one() && p.first + 1 < x.len())
++                    || (e.second[0] == Q::one() && p.second + 1 < y.len())
++                {
++                    continue;
++                }
++                // Endpoint events use alpha=0 with constant natural maps.
++                // s=alpha-k*t cannot encode an independent constant s, so
++                // restrict source cells exactly to that endpoint before make.
++                let point_net = |n: &Vec<[Q; 3]>, v: &Q| {
++                    let h = if v.is_zero() {
++                        n[0].clone()
++                    } else {
++                        n.last().unwrap().clone()
++                    };
++                    vec![h.clone(), h]
++                };
++                let first = &a.domain[0] + (&a.domain[1] - &a.domain[0]) * &e.first[0];
++                let second = &b.domain[0] + (&b.domain[1] - &b.domain[0]) * &e.second[0];
++                let aa = Cell {
++                    net: point_net(&a.net, &e.first[0]),
++                    domain: [first.clone(), first],
++                };
++                let bb = Cell {
++                    net: point_net(&b.net, &e.second[0]),
++                    domain: [second.clone(), second],
++                };
++                nodes.push(make(
++                    &aa,
++                    &bb,
++                    &vec![Q::zero(), Q::one()],
++                    &vec![Q::zero()],
++                    0,
++                    &[Q::zero(), Q::zero()],
++                    pair,
++                    [p.first, p.second],
++                    None,
++                    ri,
++                    false,
++                )?);
++            }
++        }
++        if nodes.len() > 4096 {
++            return Err(refused("Original algebraic event node allowance exceeded"));
++        }
++    }
++    Ok(nodes)
++}
++impl CurveEventNodes {
++    pub fn sources(&self) -> &[Curve; 2] {
++        &self.sources
++    }
++    pub fn census(&self) -> &SpanIntersectionCertificate {
++        &self.census
++    }
++    pub fn nodes(&self) -> &[AlgebraicEventNode] {
++        &self.nodes
++    }
++    /// Complete original pair/cell proof replay, all event selections and exact
++    /// symbolic natural parameters and shared original point definitions.
++    pub fn reverify_source(&self) -> Result<()> {
++        let fresh = assemble(&self.sources[0], &self.sources[1], &self.census)?;
++        if self.nodes != fresh {
++            return Err(refused(
++                "Original algebraic event nodes were omitted or rebound",
++            ));
++        }
++        Ok(())
++    }
++}
++/// Own every isolated/stationary original event with exact algebraic point
++/// coordinates. The full original census (including overlap receipts) is saved;
++/// overlap branches are not falsely converted into isolated nodes. Nodes from
++/// different pair owners still need independently proved identity/port merging
++/// before a global arrangement or physical topology can be claimed.
++pub fn own_curve_event_nodes(
++    a: &Curve,
++    b: &Curve,
++    census: &SpanIntersectionCertificate,
++) -> Result<CurveEventNodes> {
++    let nodes = assemble(a, b, census)?;
++    let owner = CurveEventNodes {
++        sources: [a.clone(), b.clone()],
++        census: census.clone(),
++        nodes,
++    };
++    owner.reverify_source()?;
++    Ok(owner)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn algebraic_node_replay_rejects_rebound_geometry_parameters_and_census() {
++        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![1., 1.], vec![2., 0.]]).unwrap();
++        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
++        let owner = own_curve_event_nodes(&a, &b, &c).unwrap();
++        owner.reverify_source().unwrap();
++        let mut bad = owner.clone();
++        bad.nodes.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.parameters[0] = vec![["0".into(), "1".into()]];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.position[0][1].clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.isolating_interval[1] = ["1".into(), "1".into()];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].exact.primitive.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].source_cells = [1, 0];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.nodes[0].stationary = true;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.census.pairs.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        bad.sources[0].control_points[1][0] = 1_f64.next_up();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/atlas.rs
+@@ -0,0 +1,306 @@
++//! Complete original isolated/stationary event grouping through shared exact
++//! source parameters. Different traversals remain distinct in source ordering.
++use super::*;
++use std::{cmp::Ordering, sync::Arc};
++#[derive(Clone, Copy, Debug)]
++pub struct ContactAtlasLimits {
++    pub parameters: ParameterOrderLimits,
++    pub max_events: usize,
++    pub max_comparisons: usize,
++}
++impl Default for ContactAtlasLimits {
++    fn default() -> Self {
++        Self {
++            parameters: ParameterOrderLimits::default(),
++            max_events: 4096,
++            max_comparisons: 16384,
++        }
++    }
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct ContactOccurrence {
++    pub pair: usize,
++    pub node: usize,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct SourceContactParameter {
++    pub occurrence: usize,
++    pub side: usize,
++}
++#[derive(Clone, Debug)]
++pub struct OriginalContactAtlas {
++    sources: Vec<Curve>,
++    pairs: Vec<[usize; 2]>,
++    owners: Vec<Arc<CurveEventNodes>>,
++    width: f64,
++    limits: ContactAtlasLimits,
++    occurrences: Vec<ContactOccurrence>,
++    groups: Vec<Vec<usize>>,
++    ordered: Vec<Vec<Vec<SourceContactParameter>>>,
++    comparisons: usize,
++}
++fn root(parent: &mut [usize], mut i: usize) -> usize {
++    while parent[i] != i {
++        parent[i] = parent[parent[i]];
++        i = parent[i];
++    }
++    i
++}
++fn link(parent: &mut [usize], a: usize, b: usize) {
++    let a = root(parent, a);
++    let b = root(parent, b);
++    parent[a.max(b)] = a.min(b);
++}
++fn build(
++    sources: &[Curve],
++    pairs: &[[usize; 2]],
++    owners: &[Arc<CurveEventNodes>],
++    width: f64,
++    l: ContactAtlasLimits,
++) -> Result<(
++    Vec<ContactOccurrence>,
++    Vec<Vec<usize>>,
++    Vec<Vec<Vec<SourceContactParameter>>>,
++    usize,
++)> {
++    if !width.is_finite()
++        || !(1e-18..=1e-3).contains(&width)
++        || l.parameters.max_refinements > 512
++        || !(1..=128).contains(&l.parameters.max_resultant_size)
++        || sources.len() > 32
++        || l.max_events > 4096
++        || l.max_events == 0
++        || l.max_comparisons > 65536
++        || pairs.len() != sources.len() * (sources.len() + 1) / 2
++        || pairs.len() != owners.len()
++    {
++        return Err(refused(
++            "Invalid original contact atlas source census or allowance",
++        ));
++    }
++    let mut expected = Vec::new();
++    for i in 0..sources.len() {
++        for j in i..sources.len() {
++            expected.push([i, j]);
++        }
++    }
++    if pairs != expected {
++        return Err(refused(
++            "Original contact atlas omits or reorders a source pair",
++        ));
++    }
++    let mut occurrences = Vec::new();
++    for (pair, (ids, owner)) in pairs.iter().zip(owners).enumerate() {
++        owner.reverify_source()?;
++        if owner.sources != [sources[ids[0]].clone(), sources[ids[1]].clone()]
++            || owner.census.self_pair != (ids[0] == ids[1])
++            || owner.census.maximum_parameter_width != width
++        {
++            return Err(refused(
++                "Contact pair is not bound to its actual original sources",
++            ));
++        }
++        if owner.census.pairs.iter().any(|p| p.kind == "overlap") {
++            return Err(refused(
++                "Common curve branches need source-owned overlap assembly before an isolated atlas",
++            ));
++        }
++        for node in 0..owner.nodes.len() {
++            if occurrences.len() == l.max_events {
++                return Err(refused("Original contact event allowance exhausted"));
++            }
++            occurrences.push(ContactOccurrence { pair, node });
++        }
++    }
++    let mut ordered = vec![Vec::<Vec<SourceContactParameter>>::new(); sources.len()];
++    let mut parent = (0..occurrences.len()).collect::<Vec<_>>();
++    let mut comparisons = 0;
++    for (index, o) in occurrences.iter().enumerate() {
++        for side in 0..2 {
++            let curve = pairs[o.pair][side];
++            let candidate = SourceContactParameter {
++                occurrence: index,
++                side,
++            };
++            let mut lo = 0;
++            let mut hi = ordered[curve].len();
++            let mut same = None;
++            while lo < hi {
++                if comparisons == l.max_comparisons {
++                    return Err(refused("Original parameter comparison allowance exhausted"));
++                }
++                comparisons += 1;
++                let mid = lo + (hi - lo) / 2;
++                let previous = ordered[curve][mid][0];
++                let p = occurrences[previous.occurrence];
++                let order = compare_event_parameters(
++                    owners[o.pair].clone(),
++                    EventParameterRef {
++                        node: o.node,
++                        source: side,
++                    },
++                    owners[p.pair].clone(),
++                    EventParameterRef {
++                        node: p.node,
++                        source: previous.side,
++                    },
++                    l.parameters,
++                )?
++                .ordering();
++                match order {
++                    Ordering::Less => hi = mid,
++                    Ordering::Greater => lo = mid + 1,
++                    Ordering::Equal => {
++                        same = Some(mid);
++                        break;
++                    }
++                }
++            }
++            if let Some(position) = same {
++                link(&mut parent, index, ordered[curve][position][0].occurrence);
++                ordered[curve][position].push(candidate);
++            } else {
++                ordered[curve].insert(lo, vec![candidate]);
++            }
++        }
++    }
++    let mut groups = Vec::<Vec<usize>>::new();
++    let mut ids = std::collections::BTreeMap::new();
++    for i in 0..occurrences.len() {
++        let root = root(&mut parent, i);
++        let id = *ids.entry(root).or_insert_with(|| {
++            groups.push(Vec::new());
++            groups.len() - 1
++        });
++        groups[id].push(i);
++    }
++    Ok((occurrences, groups, ordered, comparisons))
++}
++impl OriginalContactAtlas {
++    pub fn sources(&self) -> &[Curve] {
++        &self.sources
++    }
++    pub fn pairs(&self) -> &[[usize; 2]] {
++        &self.pairs
++    }
++    pub fn owners(&self) -> &[Arc<CurveEventNodes>] {
++        &self.owners
++    }
++    pub fn occurrences(&self) -> &[ContactOccurrence] {
++        &self.occurrences
++    }
++    /// Groups of exact coincident isolated/stationary event occurrences, linked
++    /// by their actual shared original parameter. No spatial proximity merge.
++    pub fn groups(&self) -> &[Vec<usize>] {
++        &self.groups
++    }
++    /// Per original curve: strictly ordered parameter groups. A single physical
++    /// event may occur at several DIFFERENT traversal parameters here.
++    pub fn ordered_parameters(&self) -> &[Vec<Vec<SourceContactParameter>>] {
++        &self.ordered
++    }
++    pub fn comparisons_used(&self) -> usize {
++        self.comparisons
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let (occurrences, groups, ordered, comparisons) = build(
++            &self.sources,
++            &self.pairs,
++            &self.owners,
++            self.width,
++            self.limits,
++        )?;
++        if occurrences != self.occurrences
++            || groups != self.groups
++            || ordered != self.ordered
++            || comparisons != self.comparisons
++        {
++            return Err(refused(
++                "Original contact occurrence, parameter order or node partition changed",
++            ));
++        }
++        Ok(())
++    }
++}
++/// Complete all-original-curve-pair isolated/stationary atlas. Source parameter
++/// identity links event occurrences into point groups while retaining distinct
++/// traversals, including self intersections. Every unordered source pair and
++/// every actual knot-cell pair is independently checked. Common-component
++/// branches explicitly refuse here; their ownership is not inferred from an
++/// empty isolated-event list. This is not cyclic port order, carrier cuts,
++/// filled-region topology or physical face admission.
++pub fn assemble_original_contact_atlas(
++    sources: &[Curve],
++    width: f64,
++    limits: ContactAtlasLimits,
++) -> Result<OriginalContactAtlas> {
++    if sources.len() > 32 {
++        return Err(refused("Original contact source allowance exceeded"));
++    }
++    let mut pairs = Vec::new();
++    let mut owners = Vec::new();
++    for i in 0..sources.len() {
++        for j in i..sources.len() {
++            let c = certify_span_intersections(&sources[i], &sources[j], i == j, width)?;
++            owners.push(Arc::new(own_curve_event_nodes(
++                &sources[i],
++                &sources[j],
++                &c,
++            )?));
++            pairs.push([i, j]);
++        }
++    }
++    let (occurrences, groups, ordered, comparisons) =
++        build(sources, &pairs, &owners, width, limits)?;
++    Ok(OriginalContactAtlas {
++        sources: sources.to_vec(),
++        pairs,
++        owners,
++        limits,
++        width,
++        occurrences,
++        groups,
++        ordered,
++        comparisons,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn original_contact_partition_replays_all_pairs_ordered_parameters_and_work() {
++        let a = Curve::from_polyline(vec![vec![-1., -1.], vec![1., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![-1., 1.], vec![1., -1.]]).unwrap();
++        let owner =
++            assemble_original_contact_atlas(&[a, b], 1e-12, ContactAtlasLimits::default()).unwrap();
++        owner.reverify_source().unwrap();
++        let mut bad = owner.clone();
++        bad.groups.clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.groups[0].push(0);
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.ordered[0].clear();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.pairs.pop();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.occurrences[0].node = 99;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.comparisons += 1;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.width = 1e-10;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.limits.parameters.max_refinements = 513;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        Arc::make_mut(&mut bad.owners[1]).nodes.clear();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/branches.rs
+@@ -0,0 +1,196 @@
++//! Actual incoming/outgoing source cells and exact leading branch rays.
++use super::super::super::algebraic_intersections::{decode_polynomial, decode_ratio};
++use super::*;
++use arithmetic::{branch_germ, event_coordinates as exact};
++use std::sync::Arc;
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct LeadingBranchRay {
++    pub primitive: ExactPolynomial,
++    pub isolating_interval: [ExactRatio; 2],
++    /// Scaled derivative numerators; the omitted common denominator is positive.
++    /// These prove the leading RAY, not a parameter-invariant higher-order angle.
++    pub numerator: [ExactPolynomial; 2],
++    pub signs: [i8; 2],
++    pub order: usize,
++}
++#[derive(Clone, Debug)]
++pub struct OwnedEventBranch {
++    owner: Arc<CurveEventNodes>,
++    reference: EventParameterRef,
++    direction: i8,
++    max_refinements: usize,
++    cell: usize,
++    ray: LeadingBranchRay,
++}
++fn derive(
++    owner: &CurveEventNodes,
++    r: EventParameterRef,
++    direction: i8,
++    max_refinements: usize,
++) -> Result<Option<(usize, LeadingBranchRay)>> {
++    if r.source > 1
++        || r.node >= owner.nodes.len()
++        || !matches!(direction, -1 | 1)
++        || max_refinements > 512
++    {
++        return Err(refused(
++            "Invalid original event branch reference or allowance",
++        ));
++    }
++    owner.reverify_source()?;
++    let node = &owner.nodes[r.node];
++    let e = &node.exact;
++    let f = decode_polynomial(&e.primitive)?;
++    let parameter = decode_polynomial(&e.parameters[r.source])?;
++    let root = [
++        decode_ratio(&e.isolating_interval[0])?,
++        decode_ratio(&e.isolating_interval[1])?,
++    ];
++    let source = cells(&owner.sources[r.source])?;
++    let mut i = node.source_cells[r.source];
++    let at = |value: &Q| {
++        let mut p = parameter.clone();
++        if p.is_empty() {
++            p.push(-value.clone());
++        } else {
++            p[0] -= value;
++        }
++        exact::zero_at(&p, &f, &root)
++    };
++    if direction < 0 && at(&source[i].domain[0])? {
++        if i == 0 {
++            return Ok(None);
++        }
++        i -= 1;
++    } else if direction > 0 && at(&source[i].domain[1])? {
++        if i + 1 == source.len() {
++            return Ok(None);
++        }
++        i += 1;
++    }
++    let (order, numerator, signs) = branch_germ::leading(
++        &source[i].net,
++        &source[i].domain,
++        &parameter,
++        &f,
++        &root,
++        direction,
++        max_refinements,
++    )?;
++    Ok(Some((
++        i,
++        LeadingBranchRay {
++            primitive: e.primitive.clone(),
++            isolating_interval: e.isolating_interval.clone(),
++            numerator: numerator.map(|p| polynomial(&p)),
++            signs,
++            order,
++        },
++    )))
++}
++impl OwnedEventBranch {
++    pub fn owner(&self) -> &Arc<CurveEventNodes> {
++        &self.owner
++    }
++    pub fn reference(&self) -> EventParameterRef {
++        self.reference
++    }
++    pub fn direction(&self) -> i8 {
++        self.direction
++    }
++    pub fn source_cell(&self) -> usize {
++        self.cell
++    }
++    pub fn ray(&self) -> &LeadingBranchRay {
++        &self.ray
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let derived = derive(
++            &self.owner,
++            self.reference,
++            self.direction,
++            self.max_refinements,
++        )?;
++        let (cell, ray) = derived
++            .ok_or_else(|| refused("Original owned branch disappeared from its natural domain"))?;
++        if cell != self.cell || ray != self.ray {
++            return Err(refused(
++                "Original branch cell or leading germ receipt changed",
++            ));
++        }
++        Ok(())
++    }
++}
++/// Own an actual source branch at a certified original contact. Incoming at an
++/// internal knot uses the previous actual cell, outgoing the next/right cell;
++/// outside-domain branches refuse. Stationary/cusp jets are not replaced by an
++/// arbitrary tangent. Equal leading rays still need intrinsic tangent-branch
++/// ordering before cyclic contact topology can be claimed.
++pub fn own_event_branch(
++    owner: Arc<CurveEventNodes>,
++    reference: EventParameterRef,
++    direction: i8,
++    max_refinements: usize,
++) -> Result<OwnedEventBranch> {
++    let (cell, ray) = derive(&owner, reference, direction, max_refinements)?
++        .ok_or_else(|| refused("Requested branch lies outside the original natural domain"))?;
++    Ok(OwnedEventBranch {
++        owner,
++        reference,
++        direction,
++        max_refinements,
++        cell,
++        ray,
++    })
++}
++
++/// None is published only after exact proof that the requested side is outside
++/// the actual natural domain; budget/proof failures remain Err.
++pub fn try_own_event_branch(
++    owner: Arc<CurveEventNodes>,
++    reference: EventParameterRef,
++    direction: i8,
++    max_refinements: usize,
++) -> Result<Option<OwnedEventBranch>> {
++    Ok(
++        derive(&owner, reference, direction, max_refinements)?.map(|(cell, ray)| {
++            OwnedEventBranch {
++                owner,
++                reference,
++                direction,
++                max_refinements,
++                cell,
++                ray,
++            }
++        }),
++    )
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn original_branch_replay_rejects_changed_cell_sign_order_and_direction() {
++        let a = Curve::from_polyline(vec![vec![-1., 0.], vec![0., 0.], vec![0., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![-1., -1.], vec![1., 1.]]).unwrap();
++        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
++        let nodes = Arc::new(own_curve_event_nodes(&a, &b, &c).unwrap());
++        let owner =
++            own_event_branch(nodes, EventParameterRef { node: 0, source: 0 }, -1, 192).unwrap();
++        let mut bad = owner.clone();
++        bad.cell = 1;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.ray.signs = [1, 0];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.ray.order = 2;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.direction = 1;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        bad.ray.numerator[0].clear();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/neighbourhood.rs
+@@ -0,0 +1,239 @@
++//! Actual source branch cut before every other contact and coordinate critical root.
++use super::super::super::algebraic_intersections::{decode_polynomial, decode_ratio};
++use super::*;
++use arithmetic::branch_neighbourhood::{self as math, ParameterValue};
++use std::sync::Arc;
++#[derive(Clone, Copy, Debug)]
++pub struct BranchNeighbourhoodLimits {
++    pub germ_refinements: usize,
++    pub max_steps: usize,
++}
++impl Default for BranchNeighbourhoodLimits {
++    fn default() -> Self {
++        Self {
++            germ_refinements: 192,
++            max_steps: 128,
++        }
++    }
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct BranchNeighbourhoodRecord {
++    pub refined_primitive_root: [ExactRatio; 2],
++    /// Local cell parameter bounds, not rounded natural-parameter cuts.
++    pub local_contact_box: [ExactRatio; 2],
++    pub natural_cut: ExactRatio,
++    pub cut_position: [ExactRatio; 2],
++    pub contact_coordinate_critical: bool,
++    pub steps: usize,
++}
++#[derive(Clone, Debug)]
++pub struct OwnedBranchNeighbourhood {
++    atlas: Arc<OriginalContactAtlas>,
++    source: usize,
++    parameter_group: usize,
++    direction: i8,
++    axis: usize,
++    limits: BranchNeighbourhoodLimits,
++    branch: OwnedEventBranch,
++    record: BranchNeighbourhoodRecord,
++}
++fn value(
++    atlas: &OriginalContactAtlas,
++    source: usize,
++    group: usize,
++) -> Result<(Arc<CurveEventNodes>, EventParameterRef, ParameterValue)> {
++    let r = atlas.ordered_parameters()[source][group][0];
++    let o = atlas.occurrences()[r.occurrence];
++    let owner = atlas.owners()[o.pair].clone();
++    let reference = EventParameterRef {
++        node: o.node,
++        source: r.side,
++    };
++    let e = &owner.nodes()[o.node].exact;
++    let p = ParameterValue {
++        primitive: decode_polynomial(&e.primitive)?,
++        value: decode_polynomial(&e.parameters[r.side])?,
++        interval: [
++            decode_ratio(&e.isolating_interval[0])?,
++            decode_ratio(&e.isolating_interval[1])?,
++        ],
++    };
++    Ok((owner, reference, p))
++}
++fn derive(
++    atlas: &OriginalContactAtlas,
++    source: usize,
++    group: usize,
++    direction: i8,
++    axis: usize,
++    l: BranchNeighbourhoodLimits,
++) -> Result<(OwnedEventBranch, BranchNeighbourhoodRecord)> {
++    if source >= atlas.sources().len()
++        || group >= atlas.ordered_parameters()[source].len()
++        || !matches!(direction, -1 | 1)
++        || axis > 1
++        || l.germ_refinements > 512
++        || l.max_steps == 0
++        || l.max_steps > 512
++    {
++        return Err(refused(
++            "Invalid original branch neighbourhood reference or allowance",
++        ));
++    }
++    atlas.reverify_source()?;
++    let (owner, r, contact) = value(atlas, source, group)?;
++    let branch = own_event_branch(owner, r, direction, l.germ_refinements)?;
++    let axis_sign = branch.ray().signs[axis];
++    if axis_sign == 0 {
++        return Err(refused(
++            "Neighbourhood coordinate needs a nonzero original leading ray",
++        ));
++    }
++    let neighbour = if direction > 0 {
++        if group + 1 < atlas.ordered_parameters()[source].len() {
++            Some(value(atlas, source, group + 1)?.2)
++        } else {
++            None
++        }
++    } else if group > 0 {
++        Some(value(atlas, source, group - 1)?.2)
++    } else {
++        None
++    };
++    let actual = cells(&atlas.sources()[source])?;
++    let cell = &actual[branch.source_cell()];
++    let proof = math::prove(
++        &cell.net,
++        &cell.domain,
++        contact,
++        neighbour,
++        direction,
++        axis,
++        axis_sign,
++        l.max_steps,
++    )?;
++    let record = BranchNeighbourhoodRecord {
++        refined_primitive_root: proof.root.map(|q| ratio(&q)),
++        local_contact_box: proof.parameter_box.map(|q| ratio(&q)),
++        natural_cut: ratio(&proof.cut),
++        cut_position: proof.cut_point.map(|q| ratio(&q)),
++        contact_coordinate_critical: proof.contact_critical,
++        steps: proof.steps,
++    };
++    Ok((branch, record))
++}
++impl OwnedBranchNeighbourhood {
++    pub fn atlas(&self) -> &Arc<OriginalContactAtlas> {
++        &self.atlas
++    }
++    pub fn source(&self) -> usize {
++        self.source
++    }
++    pub fn parameter_group(&self) -> usize {
++        self.parameter_group
++    }
++    pub fn direction(&self) -> i8 {
++        self.direction
++    }
++    pub fn axis(&self) -> usize {
++        self.axis
++    }
++    pub fn branch(&self) -> &OwnedEventBranch {
++        &self.branch
++    }
++    pub fn record(&self) -> &BranchNeighbourhoodRecord {
++        &self.record
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let (branch, record) = derive(
++            &self.atlas,
++            self.source,
++            self.parameter_group,
++            self.direction,
++            self.axis,
++            self.limits,
++        )?;
++        if record != self.record
++            || branch.reference() != self.branch.reference()
++            || branch.source_cell() != self.branch.source_cell()
++            || branch.direction() != self.branch.direction()
++            || branch.ray() != self.branch.ray()
++            || branch.owner().sources() != self.branch.owner().sources()
++            || branch.owner().census() != self.branch.owner().census()
++        {
++            return Err(refused(
++                "Original monotone branch neighbourhood source or cut receipt changed",
++            ));
++        }
++        self.branch.reverify_source()
++    }
++}
++/// Own a strictly monotone original coordinate graph from an actual contact
++/// to an exact rational cut, before the nearest other original contact and any
++/// other coordinate critical point. Full root census is used, not sampled
++/// derivatives. Endpoint-stationary germs are admitted without changing the
++/// source curve. This does not alone order two tangent branches or publish faces.
++pub fn own_branch_neighbourhood(
++    atlas: Arc<OriginalContactAtlas>,
++    source: usize,
++    parameter_group: usize,
++    direction: i8,
++    axis: usize,
++    limits: BranchNeighbourhoodLimits,
++) -> Result<OwnedBranchNeighbourhood> {
++    let (branch, record) = derive(&atlas, source, parameter_group, direction, axis, limits)?;
++    Ok(OwnedBranchNeighbourhood {
++        atlas,
++        source,
++        parameter_group,
++        direction,
++        axis,
++        limits,
++        branch,
++        record,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn local_original_graph_replays_cut_position_critical_census_and_allowance() {
++        let a = Curve {
++            degree: 2,
++            knots: vec![0., 0., 0., 1., 1., 1.],
++            control_points: vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]],
++            weights: vec![1.; 3],
++            periodic: false,
++        };
++        let b = Curve::from_polyline(vec![vec![-4., 1.5], vec![4., 1.5]]).unwrap();
++        let atlas = Arc::new(
++            assemble_original_contact_atlas(&[a, b], 1e-12, ContactAtlasLimits::default()).unwrap(),
++        );
++        let owner =
++            own_branch_neighbourhood(atlas, 0, 0, 1, 1, BranchNeighbourhoodLimits::default())
++                .unwrap();
++        owner.reverify_source().unwrap();
++        let mut bad = owner.clone();
++        bad.record.natural_cut = ["1".into(), "1".into()];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.record.cut_position[0] = ["99".into(), "1".into()];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.record.local_contact_box[0] = ["0".into(), "1".into()];
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.record.contact_coordinate_critical = true;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.record.steps += 1;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.axis = 0;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        bad.limits.max_steps = 1;
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/parameter_order.rs
+@@ -0,0 +1,141 @@
++//! Owned ordering/identity of actual shared ORIGINAL source parameters.
++use super::super::super::algebraic_intersections::{decode_polynomial, decode_ratio};
++use super::*;
++use std::{cmp::Ordering, sync::Arc};
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct EventParameterRef {
++    pub node: usize,
++    pub source: usize,
++}
++#[derive(Clone, Copy, Debug)]
++pub struct ParameterOrderLimits {
++    /// Rounds: at most one bisection of each original primitive root per round.
++    /// Complete original census replay has its own existing allowances.
++    pub max_refinements: usize,
++    /// Maximum Sylvester matrix size for each individual value eliminant.
++    pub max_resultant_size: usize,
++}
++impl Default for ParameterOrderLimits {
++    fn default() -> Self {
++        Self {
++            max_refinements: 192,
++            max_resultant_size: 64,
++        }
++    }
++}
++#[derive(Clone, Debug)]
++pub struct QualifiedParameterOrder {
++    owners: [Arc<CurveEventNodes>; 2],
++    refs: [EventParameterRef; 2],
++    limits: ParameterOrderLimits,
++    order: Ordering,
++}
++fn decide(
++    owners: &[Arc<CurveEventNodes>; 2],
++    r: [EventParameterRef; 2],
++    l: ParameterOrderLimits,
++) -> Result<Ordering> {
++    if l.max_refinements > 512
++        || !(1..=128).contains(&l.max_resultant_size)
++        || r.iter()
++            .zip(owners)
++            .any(|(r, o)| r.source > 1 || r.node >= o.nodes.len())
++    {
++        return Err(refused(
++            "Invalid original event parameter reference or comparison allowance",
++        ));
++    }
++    owners[0].reverify_source()?;
++    owners[1].reverify_source()?;
++    if owners[0].sources[r[0].source] != owners[1].sources[r[1].source] {
++        return Err(refused(
++            "Parameter ordering requires the same actual original source definition",
++        ));
++    }
++    let a = &owners[0].nodes[r[0].node].exact;
++    let b = &owners[1].nodes[r[1].node].exact;
++    let interval = |i: &[ExactRatio; 2]| -> Result<[Q; 2]> {
++        Ok([decode_ratio(&i[0])?, decode_ratio(&i[1])?])
++    };
++    arithmetic::parameter_order::compare(
++        &decode_polynomial(&a.primitive)?,
++        &decode_polynomial(&a.parameters[r[0].source])?,
++        &interval(&a.isolating_interval)?,
++        &decode_polynomial(&b.primitive)?,
++        &decode_polynomial(&b.parameters[r[1].source])?,
++        &interval(&b.isolating_interval)?,
++        l.max_refinements,
++        l.max_resultant_size,
++    )
++}
++impl QualifiedParameterOrder {
++    pub fn ordering(&self) -> Ordering {
++        self.order
++    }
++    pub fn owners(&self) -> &[Arc<CurveEventNodes>; 2] {
++        &self.owners
++    }
++    pub fn references(&self) -> [EventParameterRef; 2] {
++        self.refs
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        if self.order != decide(&self.owners, self.refs, self.limits)? {
++            return Err(refused("Original parameter identity/order receipt changed"));
++        }
++        Ok(())
++    }
++}
++/// Exact ordering on one shared actual curve. Each algebraic value stays bound
++/// to its full original event census. Equality requires a common exact value
++/// polynomial and a unique common selected root; overlapping intervals are
++/// insufficient. Different source definitions refuse rather than granting a
++/// caller assertion of source identity. Failure never becomes Equal.
++pub fn compare_event_parameters(
++    first: Arc<CurveEventNodes>,
++    a: EventParameterRef,
++    second: Arc<CurveEventNodes>,
++    b: EventParameterRef,
++    limits: ParameterOrderLimits,
++) -> Result<QualifiedParameterOrder> {
++    let owners = [first, second];
++    let refs = [a, b];
++    let order = decide(&owners, refs, limits)?;
++    Ok(QualifiedParameterOrder {
++        owners,
++        refs,
++        limits,
++        order,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn parameter_order_receipt_replays_actual_sources_bindings_and_decision() {
++        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![1., 1.], vec![2., 0.]]).unwrap();
++        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
++        let nodes = Arc::new(own_curve_event_nodes(&a, &b, &c).unwrap());
++        let r = EventParameterRef { node: 0, source: 0 };
++        let owner =
++            compare_event_parameters(nodes.clone(), r, nodes, r, ParameterOrderLimits::default())
++                .unwrap();
++        owner.reverify_source().unwrap();
++        let mut bad = owner.clone();
++        bad.order = Ordering::Less;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.refs[0].source = 1;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.refs[0].node = 99;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.limits.max_refinements = 513;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner;
++        Arc::make_mut(&mut bad.owners[0]).nodes[0].exact.parameters[0].clear();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/port_order.rs
+@@ -0,0 +1,286 @@
++//! Original-source cyclic branch order, with exact intrinsic tangent slices.
++use super::super::super::algebraic_intersections::{decode_polynomial, decode_ratio};
++use super::*;
++mod intrinsic;
++use std::{cmp::Ordering, sync::Arc};
++#[derive(Clone, Copy, Debug)]
++pub struct ContactPortOrderLimits {
++    pub algebraic: ParameterOrderLimits,
++    pub max_ports: usize,
++    pub max_comparisons: usize,
++    pub max_neighbourhood_steps: usize,
++}
++impl Default for ContactPortOrderLimits {
++    fn default() -> Self {
++        Self {
++            algebraic: ParameterOrderLimits::default(),
++            max_ports: 256,
++            max_comparisons: 4096,
++            max_neighbourhood_steps: 128,
++        }
++    }
++}
++#[derive(Clone, Debug)]
++pub struct OriginalContactPort {
++    pub source: usize,
++    pub parameter_group: usize,
++    pub direction: i8,
++    branch: OwnedEventBranch,
++}
++impl OriginalContactPort {
++    pub fn branch(&self) -> &OwnedEventBranch {
++        &self.branch
++    }
++}
++#[derive(Clone, Debug)]
++pub struct OwnedContactPortOrder {
++    atlas: Arc<OriginalContactAtlas>,
++    group: usize,
++    limits: ContactPortOrderLimits,
++    ports: Vec<OriginalContactPort>,
++    comparisons: usize,
++}
++fn quadrant(ray: &LeadingBranchRay) -> usize {
++    let [x, y] = ray.signs;
++    if x > 0 && y >= 0 {
++        0
++    } else if y > 0 && x <= 0 {
++        1
++    } else if x < 0 && y <= 0 {
++        2
++    } else {
++        3
++    }
++}
++fn compare(
++    a: &LeadingBranchRay,
++    b: &LeadingBranchRay,
++    l: ParameterOrderLimits,
++) -> Result<Ordering> {
++    let q = quadrant(a).cmp(&quadrant(b));
++    if q != Ordering::Equal {
++        return Ok(q);
++    }
++    if a.signs[0] == 0 || b.signs[0] == 0 {
++        return Ok(match (a.signs[0] == 0, b.signs[0] == 0) {
++            (true, true) => Ordering::Equal,
++            (true, false) => Ordering::Less,
++            _ => Ordering::Greater,
++        });
++    }
++    let interval = |p: &[ExactRatio; 2]| -> Result<[Q; 2]> {
++        Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?])
++    };
++    let ax = decode_polynomial(&a.numerator[0])?;
++    let ay = decode_polynomial(&a.numerator[1])?;
++    let bx = decode_polynomial(&b.numerator[0])?;
++    let by = decode_polynomial(&b.numerator[1])?;
++    arithmetic::parameter_order::compare_rational(
++        &decode_polynomial(&a.primitive)?,
++        [&ay, &ax],
++        &interval(&a.isolating_interval)?,
++        &decode_polynomial(&b.primitive)?,
++        [&by, &bx],
++        &interval(&b.isolating_interval)?,
++        l.max_refinements,
++        l.max_resultant_size,
++    )
++}
++fn build(
++    atlas: &OriginalContactAtlas,
++    group: usize,
++    l: ContactPortOrderLimits,
++) -> Result<(Vec<OriginalContactPort>, usize)> {
++    if group >= atlas.groups().len()
++        || l.max_ports == 0
++        || l.max_ports > 4096
++        || l.max_comparisons > 65536
++        || l.max_neighbourhood_steps == 0
++        || l.max_neighbourhood_steps > 512
++        || l.algebraic.max_refinements > 512
++        || !(1..=128).contains(&l.algebraic.max_resultant_size)
++    {
++        return Err(refused("Invalid original contact port group or allowance"));
++    }
++    atlas.reverify_source()?;
++    let members = atlas.groups()[group]
++        .iter()
++        .copied()
++        .collect::<std::collections::BTreeSet<_>>();
++    let mut ports = Vec::<OriginalContactPort>::new();
++    let mut comparisons = 0;
++    for (source, parameters) in atlas.ordered_parameters().iter().enumerate() {
++        for (parameter_group, refs) in parameters.iter().enumerate() {
++            let r = refs[0];
++            if !members.contains(&r.occurrence) {
++                continue;
++            }
++            let occurrence = atlas.occurrences()[r.occurrence];
++            for direction in [-1, 1] {
++                let Some(branch) = try_own_event_branch(
++                    atlas.owners()[occurrence.pair].clone(),
++                    EventParameterRef {
++                        node: occurrence.node,
++                        source: r.side,
++                    },
++                    direction,
++                    l.algebraic.max_refinements,
++                )?
++                else {
++                    continue;
++                };
++                if ports.len() == l.max_ports {
++                    return Err(refused("Original contact port allowance exhausted"));
++                }
++                let candidate = OriginalContactPort {
++                    source,
++                    parameter_group,
++                    direction,
++                    branch,
++                };
++                let (mut lo, mut hi) = (0, ports.len());
++                while lo < hi {
++                    if comparisons == l.max_comparisons {
++                        return Err(refused(
++                            "Original cyclic port comparison allowance exhausted",
++                        ));
++                    }
++                    comparisons += 1;
++                    let mid = lo + (hi - lo) / 2;
++                    match compare(candidate.branch.ray(), ports[mid].branch.ray(), l.algebraic)? {
++                        Ordering::Less => hi = mid,
++                        Ordering::Greater => lo = mid + 1,
++                        Ordering::Equal => {
++                            match intrinsic::compare(atlas, &candidate, &ports[mid], l)? {
++                                Ordering::Less => hi = mid,
++                                Ordering::Greater => lo = mid + 1,
++                                Ordering::Equal => {
++                                    return Err(refused(
++                                        "Intrinsic original tangent branches are not separated",
++                                    ));
++                                }
++                            }
++                        }
++                    }
++                }
++                ports.insert(lo, candidate);
++            }
++        }
++    }
++    if ports.is_empty() {
++        return Err(refused("Original contact has no owned incident branch"));
++    }
++    // Leading +X rays can approach the cut from below (angle 2pi-ε).
++    // Move that exact below-axis prefix to the end for canonical CCW order.
++    let mut below = 0;
++    for port in &ports {
++        if port.branch.ray().signs != [1, 0]
++            || intrinsic::transverse_sign(port, l.algebraic.max_refinements)? >= 0
++        {
++            break;
++        }
++        below += 1;
++    }
++    ports.rotate_left(below);
++    Ok((ports, comparisons))
++}
++impl OwnedContactPortOrder {
++    pub fn atlas(&self) -> &Arc<OriginalContactAtlas> {
++        &self.atlas
++    }
++    pub fn group(&self) -> usize {
++        self.group
++    }
++    /// Counterclockwise from the positive X ray, retaining original traversal
++    /// parameter groups and both actual source-domain directions.
++    pub fn ports(&self) -> &[OriginalContactPort] {
++        &self.ports
++    }
++    pub fn comparisons_used(&self) -> usize {
++        self.comparisons
++    }
++    pub fn reverify_source(&self) -> Result<()> {
++        let (fresh, comparisons) = build(&self.atlas, self.group, self.limits)?;
++        let same = fresh.len() == self.ports.len()
++            && fresh.iter().zip(&self.ports).all(|(a, b)| {
++                a.source == b.source
++                    && a.parameter_group == b.parameter_group
++                    && a.direction == b.direction
++                    && a.branch.reference() == b.branch.reference()
++                    && a.branch.direction() == b.branch.direction()
++                    && a.branch.source_cell() == b.branch.source_cell()
++                    && a.branch.ray() == b.branch.ray()
++                    && a.branch.owner().sources() == b.branch.owner().sources()
++                    && a.branch.owner().census() == b.branch.owner().census()
++            });
++        if !same || comparisons != self.comparisons {
++            return Err(refused(
++                "Original cyclic port source/germ order receipt changed",
++            ));
++        }
++        for port in &self.ports {
++            port.branch.reverify_source()?;
++        }
++        Ok(())
++    }
++}
++/// Own cyclic contact branch order from complete original event/parameter
++/// ownership and exact first-nonzero algebraic germs. Rational slopes compare
++/// by checked selected-root eliminants; no sampled angles. Same leading rays
++/// use contact-free original monotone neighbourhoods and a common exact slice.
++/// Original carrier cuts, filled faces and supporting-surface sewing remain
++/// separate requirements.
++pub fn own_original_contact_port_order(
++    atlas: Arc<OriginalContactAtlas>,
++    group: usize,
++    limits: ContactPortOrderLimits,
++) -> Result<OwnedContactPortOrder> {
++    let (ports, comparisons) = build(&atlas, group, limits)?;
++    Ok(OwnedContactPortOrder {
++        atlas,
++        group,
++        limits,
++        ports,
++        comparisons,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn cyclic_port_receipt_rejects_missing_permuted_and_detached_source_branches() {
++        let a = Curve::from_polyline(vec![vec![-1., -1.], vec![1., 1.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![-1., 1.], vec![1., -1.]]).unwrap();
++        let atlas = Arc::new(
++            assemble_original_contact_atlas(&[a, b], 1e-12, ContactAtlasLimits::default()).unwrap(),
++        );
++        let owner =
++            own_original_contact_port_order(atlas, 0, ContactPortOrderLimits::default()).unwrap();
++        let mut bad = owner.clone();
++        bad.ports.pop();
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.ports.swap(0, 1);
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.ports[0].source = 99;
++        assert!(bad.reverify_source().is_err());
++        let mut bad = owner.clone();
++        bad.comparisons += 1;
++        assert!(bad.reverify_source().is_err());
++        // Translation preserves these rays and primitive parameter intervals;
++        // source binding must still reject inheriting a different contact.
++        let a = Curve::from_polyline(vec![vec![9., 9.], vec![11., 11.]]).unwrap();
++        let b = Curve::from_polyline(vec![vec![9., 11.], vec![11., 9.]]).unwrap();
++        let other = Arc::new(
++            assemble_original_contact_atlas(&[a, b], 1e-12, ContactAtlasLimits::default()).unwrap(),
++        );
++        let other =
++            own_original_contact_port_order(other, 0, ContactPortOrderLimits::default()).unwrap();
++        assert_eq!(owner.ports[0].branch.ray(), other.ports[0].branch.ray());
++        let mut bad = owner;
++        bad.ports[0].branch = other.ports[0].branch.clone();
++        assert!(bad.reverify_source().is_err());
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/src/profile_certificate/span_intersections/event_nodes/port_order/intrinsic.rs
+@@ -0,0 +1,92 @@
++//! Intrinsic same-ray order; source parameter speed never selects topology.
++use super::*;
++use arithmetic::{branch_neighbourhood::ParameterValue, branch_slice::SliceBranch};
++fn data(graph: &OwnedBranchNeighbourhood) -> Result<SliceBranch> {
++    let branch = graph.branch();
++    let r = branch.reference();
++    let node = &branch.owner().nodes()[r.node].exact;
++    let actual = cells(&graph.atlas().sources()[graph.source()])?;
++    let cell = &actual[branch.source_cell()];
++    let record = graph.record();
++    Ok(SliceBranch {
++        net: cell.net.clone(),
++        domain: cell.domain.clone(),
++        direction: graph.direction(),
++        contact: ParameterValue {
++            primitive: decode_polynomial(&node.primitive)?,
++            value: decode_polynomial(&node.parameters[r.source])?,
++            interval: [
++                decode_ratio(&record.refined_primitive_root[0])?,
++                decode_ratio(&record.refined_primitive_root[1])?,
++            ],
++        },
++        cut: decode_ratio(&record.natural_cut)?,
++        cut_point: [
++            decode_ratio(&record.cut_position[0])?,
++            decode_ratio(&record.cut_position[1])?,
++        ],
++    })
++}
++pub(super) fn compare(
++    atlas: &OriginalContactAtlas,
++    a: &OriginalContactPort,
++    b: &OriginalContactPort,
++    l: ContactPortOrderLimits,
++) -> Result<Ordering> {
++    let axis = usize::from(a.branch.ray().signs[0] == 0);
++    let sign = a.branch.ray().signs[axis];
++    if sign == 0 || b.branch.ray().signs[axis] != sign {
++        return Err(refused(
++            "Tangent ports have incompatible actual leading directions",
++        ));
++    }
++    let limits = BranchNeighbourhoodLimits {
++        germ_refinements: l.algebraic.max_refinements,
++        max_steps: l.max_neighbourhood_steps,
++    };
++    let atlas = Arc::new(atlas.clone());
++    let a = own_branch_neighbourhood(
++        atlas.clone(),
++        a.source,
++        a.parameter_group,
++        a.direction,
++        axis,
++        limits,
++    )?;
++    let b = own_branch_neighbourhood(
++        atlas,
++        b.source,
++        b.parameter_group,
++        b.direction,
++        axis,
++        limits,
++    )?;
++    arithmetic::branch_slice::compare(
++        data(&a)?,
++        data(&b)?,
++        axis,
++        sign,
++        l.algebraic.max_refinements,
++        l.algebraic.max_resultant_size,
++    )
++}
++pub(super) fn transverse_sign(port: &OriginalContactPort, max_refinements: usize) -> Result<i8> {
++    let branch = &port.branch;
++    let r = branch.reference();
++    let node = &branch.owner().nodes()[r.node].exact;
++    let actual = cells(&branch.owner().sources()[r.source])?;
++    let cell = &actual[branch.source_cell()];
++    arithmetic::branch_germ::component_sign(
++        &cell.net,
++        &cell.domain,
++        &decode_polynomial(&node.parameters[r.source])?,
++        &decode_polynomial(&node.primitive)?,
++        &[
++            decode_ratio(&node.isolating_interval[0])?,
++            decode_ratio(&node.isolating_interval[1])?,
++        ],
++        branch.direction(),
++        1,
++        max_refinements,
++    )
++}
+--- /dev/null
++++ b/crates/brep-core/tests/branch_neighbourhood.rs
+@@ -0,0 +1,83 @@
++use brep_core::profile_certificate as p;
++use num_rational::BigRational as Q;
++use nurbs_core::curve::Curve;
++use std::sync::Arc;
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++fn q(r: &p::ExactRatio) -> Q {
++    Q::new(r[0].parse().unwrap(), r[1].parse().unwrap())
++}
++#[test]
++fn original_neighbourhood_stops_before_the_next_contact_and_coordinate_turn() {
++    let a = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let b = curve(vec![vec![-4., 1.5], vec![4., 1.5]]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[a, b], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap(),
++    );
++    let graph = p::own_branch_neighbourhood(
++        atlas.clone(),
++        0,
++        0,
++        1,
++        1,
++        p::BranchNeighbourhoodLimits::default(),
++    )
++    .unwrap();
++    graph.reverify_source().unwrap();
++    assert!(q(&graph.record().natural_cut) < Q::new(1.into(), 2.into()));
++    assert!(!graph.record().contact_coordinate_critical);
++    assert!(graph.record().steps > 1);
++    assert!(
++        p::own_branch_neighbourhood(
++            atlas,
++            0,
++            0,
++            1,
++            1,
++            p::BranchNeighbourhoodLimits {
++                max_steps: 1,
++                ..p::BranchNeighbourhoodLimits::default()
++            }
++        )
++        .is_err()
++    );
++}
++#[test]
++fn stationary_cusp_sides_have_actual_monotone_neighbourhoods_on_both_sides() {
++    let c = curve(vec![
++        vec![3., -1.],
++        vec![-1., 1.],
++        vec![-1., -1.],
++        vec![3., 1.],
++    ]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[c], 1e-12, p::ContactAtlasLimits::default()).unwrap(),
++    );
++    let a = p::own_branch_neighbourhood(
++        atlas.clone(),
++        0,
++        0,
++        -1,
++        0,
++        p::BranchNeighbourhoodLimits::default(),
++    )
++    .unwrap();
++    let b = p::own_branch_neighbourhood(atlas, 0, 0, 1, 0, p::BranchNeighbourhoodLimits::default())
++        .unwrap();
++    a.reverify_source().unwrap();
++    b.reverify_source().unwrap();
++    assert!(a.record().contact_coordinate_critical && b.record().contact_coordinate_critical);
++    assert!(q(&a.record().natural_cut) < Q::new(1.into(), 2.into()));
++    assert!(q(&b.record().natural_cut) > Q::new(1.into(), 2.into()));
++    assert!(q(&a.record().cut_position[1]) < Q::from_integer(0.into()));
++    assert!(q(&b.record().cut_position[1]) > Q::from_integer(0.into()));
++}
+--- /dev/null
++++ b/crates/brep-core/tests/curve_event_nodes.rs
+@@ -0,0 +1,207 @@
++use brep_core::profile_certificate as p;
++use num_rational::BigRational as Q;
++use num_traits::{One, Zero};
++use nurbs_core::curve::Curve;
++fn eval(poly: &p::ExactPolynomial, t: &Q) -> Q {
++    poly.iter().rev().fold(Q::zero(), |v, c| {
++        v * t + Q::new(c[0].parse().unwrap(), c[1].parse().unwrap())
++    })
++}
++fn own(a: &Curve, b: &Curve, self_pair: bool) -> p::CurveEventNodes {
++    let c = p::certify_span_intersections(a, b, self_pair, 1e-12).unwrap();
++    let n = p::own_curve_event_nodes(a, b, &c).unwrap();
++    n.reverify_source().unwrap();
++    n
++}
++#[test]
++fn irrational_source_intersections_own_exact_positions_and_natural_parameters() {
++    let a = Curve {
++        degree: 2,
++        knots: vec![2., 2., 2., 6., 6., 6.],
++        control_points: vec![vec![-2., 0.], vec![0., 4.], vec![2., 0.]],
++        weights: vec![1.; 3],
++        periodic: false,
++    };
++    let mut b = Curve::from_polyline(vec![vec![-3., 1.], vec![3., 1.]]).unwrap();
++    for k in &mut b.knots {
++        *k = 10. + 6. * *k;
++    }
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 2);
++    for n in owner.nodes() {
++        assert!(!n.stationary);
++        assert!(n.factor.is_some());
++        assert_ne!(n.exact.isolating_interval[0], n.exact.isolating_interval[1]);
++        let decode = |q: &p::ExactRatio| Q::new(q[0].parse().unwrap(), q[1].parse().unwrap());
++        let mid = (decode(&n.exact.isolating_interval[0]) + decode(&n.exact.isolating_interval[1]))
++            / Q::from_integer(2.into());
++        let y = eval(&n.exact.position[1][0], &mid) / eval(&n.exact.position[1][1], &mid);
++        assert_eq!(y, Q::one());
++        let u = eval(&n.exact.parameters[0], &mid);
++        let v = eval(&n.exact.parameters[1], &mid);
++        assert!(u > Q::from_integer(2.into()) && u < Q::from_integer(6.into()));
++        assert!(v > Q::from_integer(10.into()) && v < Q::from_integer(16.into()));
++        // These are symbolic source parameters, not f64 event midpoints.
++        assert!(n.exact.parameters[0].len() > 1 && n.exact.position[0][0].len() > 1);
++    }
++    let mut changed = a;
++    changed.control_points[1][1] = 4_f64.next_up();
++    assert!(p::own_curve_event_nodes(&changed, &b, owner.census()).is_err());
++}
++#[test]
++fn endpoint_nodes_bind_original_endpoint_parameters_without_false_primitive_motion() {
++    let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![1., 1.], vec![2., 0.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    let n = &owner.nodes()[0];
++    assert!(n.factor.is_none());
++    for axis in 0..2 {
++        assert_eq!(
++            eval(&n.exact.position[axis][0], &Q::zero())
++                / eval(&n.exact.position[axis][1], &Q::zero()),
++            Q::one()
++        );
++    }
++    assert_eq!(eval(&n.exact.parameters[0], &Q::zero()), Q::one());
++    assert_eq!(eval(&n.exact.parameters[1], &Q::zero()), Q::zero());
++}
++#[test]
++fn stationary_original_germs_and_overlap_census_are_kept_distinct() {
++    let c = Curve {
++        degree: 3,
++        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
++        control_points: vec![vec![-1., 0.], vec![1., 0.], vec![-1., 0.], vec![1., 0.]],
++        weights: vec![1.; 4],
++        periodic: false,
++    };
++    let owner = own(&c, &c, true);
++    assert_eq!(owner.nodes().len(), 1);
++    assert!(owner.nodes()[0].stationary);
++    let a = Curve::from_polyline(vec![vec![0., 0.], vec![2., 0.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![1., 0.], vec![3., 0.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert!(owner.nodes().is_empty());
++    assert!(owner.census().pairs.iter().any(|p| p.kind == "overlap"));
++    assert!(
++        !p::verify_span_intersections(&a, &b, owner.census())
++            .unwrap()
++            .overlaps()
++            .is_empty()
++    );
++}
++#[test]
++fn exact_original_knot_ownership_does_not_repeat_a_shared_endpoint_event() {
++    let a = Curve::from_polyline(vec![vec![-1., -1.], vec![0., 0.], vec![1., 1.]]).unwrap();
++    let b = Curve::from_polyline(vec![vec![-1., 1.], vec![0., 0.], vec![1., -1.]]).unwrap();
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    assert_eq!(owner.nodes()[0].source_cells, [1, 1]);
++}
++
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++fn midpoint(n: &p::AlgebraicEventNode) -> Q {
++    let d = |q: &p::ExactRatio| Q::new(q[0].parse().unwrap(), q[1].parse().unwrap());
++    (d(&n.exact.isolating_interval[0]) + d(&n.exact.isolating_interval[1]))
++        / Q::from_integer(2.into())
++}
++#[test]
++fn separated_primitive_fibers_preserve_distinct_source_traversals_at_one_point() {
++    for rotated in [false, true] {
++        let mut a = curve(vec![vec![0., 0.], vec![0., 1.]]);
++        let mut b = curve(vec![vec![0.75, 0.5], vec![-1.25, 0.5], vec![0.75, 0.5]]);
++        if rotated {
++            for c in [&mut a, &mut b] {
++                for p in &mut c.control_points {
++                    let (x, y) = (p[0], p[1]);
++                    p[0] = x - y + 32.;
++                    p[1] = 2. * x + y - 16.;
++                }
++            }
++        }
++        let owner = own(&a, &b, false);
++        assert_eq!(owner.nodes().len(), 2);
++        assert!(owner.census().pairs.iter().any(|p| p.shear > 0));
++        let expected = if rotated {
++            [Q::new(63.into(), 2.into()), Q::new((-31).into(), 2.into())]
++        } else {
++            [Q::zero(), Q::new(1.into(), 2.into())]
++        };
++        let mut traversal = Vec::new();
++        for n in owner.nodes() {
++            let root = midpoint(n);
++            for axis in 0..2 {
++                assert_eq!(
++                    eval(&n.exact.position[axis][0], &root)
++                        / eval(&n.exact.position[axis][1], &root),
++                    expected[axis]
++                );
++            }
++            assert_eq!(
++                eval(&n.exact.parameters[0], &root),
++                Q::new(1.into(), 2.into())
++            );
++            traversal.push(eval(&n.exact.parameters[1], &root));
++        }
++        traversal.sort();
++        assert_eq!(
++            traversal,
++            vec![Q::new(1.into(), 4.into()), Q::new(3.into(), 4.into())]
++        );
++    }
++}
++#[test]
++fn self_intersection_and_rational_coordinate_denominators_keep_exact_identity() {
++    let a = curve(vec![
++        vec![3., -1.5],
++        vec![-1., 3.5],
++        vec![-1., -3.5],
++        vec![3., 1.5],
++    ]);
++    let owner = own(&a, &a, true);
++    assert_eq!(owner.nodes().len(), 1);
++    assert!(!owner.nodes()[0].stationary);
++    let mut a = curve(vec![vec![-2., 0.], vec![0., 4.], vec![2., 0.]]);
++    a.weights = vec![1., 2., 1.];
++    let b = curve(vec![vec![-3., 1.], vec![3., 1.]]);
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 2);
++    for n in owner.nodes() {
++        let root = midpoint(n);
++        assert_eq!(
++            eval(&n.exact.position[1][0], &root) / eval(&n.exact.position[1][1], &root),
++            Q::one()
++        );
++        assert_ne!(eval(&n.exact.position[1][1], &root), Q::one());
++    }
++}
++
++#[test]
++fn a_nonbinary_rational_parameter_stays_symbolic_instead_of_becoming_a_midpoint() {
++    let a = curve(vec![vec![0., 0.], vec![3., 3.]]);
++    let b = curve(vec![vec![0., 1.], vec![3., 1.]]);
++    let owner = own(&a, &b, false);
++    assert_eq!(owner.nodes().len(), 1);
++    let n = &owner.nodes()[0];
++    let third = Q::new(1.into(), 3.into());
++    assert!(eval(&n.exact.primitive, &third).is_zero());
++    assert_ne!(n.exact.isolating_interval[0], n.exact.isolating_interval[1]);
++    // A rational dyadic midpoint cannot be the actual parameter 1/3.
++    let mid = midpoint(n);
++    assert_ne!(eval(&n.exact.parameters[0], &mid), third);
++    for axis in 0..2 {
++        assert_eq!(
++            eval(&n.exact.position[axis][0], &mid) / eval(&n.exact.position[axis][1], &mid),
++            Q::one()
++        );
++    }
++}
+--- /dev/null
++++ b/crates/brep-core/tests/event_branch_germs.rs
+@@ -0,0 +1,120 @@
++use brep_core::profile_certificate as p;
++use nurbs_core::curve::Curve;
++use std::sync::Arc;
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++fn owner(a: &Curve, b: &Curve, self_pair: bool) -> Arc<p::CurveEventNodes> {
++    let c = p::certify_span_intersections(a, b, self_pair, 1e-12).unwrap();
++    Arc::new(p::own_curve_event_nodes(a, b, &c).unwrap())
++}
++fn branch(
++    o: Arc<p::CurveEventNodes>,
++    node: usize,
++    source: usize,
++    direction: i8,
++) -> p::OwnedEventBranch {
++    let g = p::own_event_branch(o, p::EventParameterRef { node, source }, direction, 192).unwrap();
++    g.reverify_source().unwrap();
++    g
++}
++#[test]
++fn original_polynomial_and_rational_branches_have_exact_incoming_outgoing_signs() {
++    for rational in [false, true] {
++        let mut a = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++        if rational {
++            a.weights = vec![1., 2., 1.];
++        }
++        for k in &mut a.knots {
++            *k = 2. + 4. * *k;
++        }
++        let b = curve(vec![vec![-4., 1.5], vec![4., 1.5]]);
++        let o = owner(&a, &b, false);
++        assert_eq!(o.nodes().len(), 2);
++        assert_eq!(branch(o.clone(), 0, 0, 1).ray().signs, [1, 1]);
++        assert_eq!(branch(o.clone(), 0, 0, -1).ray().signs, [-1, -1]);
++        assert_eq!(branch(o.clone(), 1, 0, 1).ray().signs, [1, -1]);
++        assert_eq!(branch(o.clone(), 1, 0, -1).ray().signs, [-1, 1]);
++        assert_eq!(branch(o.clone(), 0, 1, 1).ray().signs, [1, 0]);
++        assert_eq!(branch(o, 0, 1, -1).ray().signs, [-1, 0]);
++    }
++}
++#[test]
++fn higher_order_stationary_germs_are_not_replaced_by_arbitrary_tangents() {
++    let c = curve(vec![
++        vec![-1., 0.],
++        vec![1., 0.],
++        vec![-1., 0.],
++        vec![1., 0.],
++    ]);
++    let o = owner(&c, &c, true);
++    for (direction, sign) in [(-1, -1), (1, 1)] {
++        let g = branch(o.clone(), 0, 0, direction);
++        assert_eq!(g.ray().order, 3);
++        assert_eq!(g.ray().signs, [sign, 0]);
++    }
++    let cusp = curve(vec![
++        vec![3., -1.],
++        vec![-1., 1.],
++        vec![-1., -1.],
++        vec![3., 1.],
++    ]);
++    let o = owner(&cusp, &cusp, true);
++    let incoming = branch(o.clone(), 0, 0, -1);
++    let outgoing = branch(o, 0, 0, 1);
++    assert_eq!(incoming.ray().order, 2);
++    assert_eq!(outgoing.ray().order, 2);
++    assert_eq!(incoming.ray().signs, [1, 0]);
++    assert_eq!(outgoing.ray().signs, [1, 0]);
++    // Same leading ray is deliberately NOT a certificate of identical branches.
++    assert_eq!(incoming.ray().numerator, outgoing.ray().numerator);
++}
++#[test]
++fn knot_contact_incoming_uses_previous_original_cell_and_outgoing_uses_right() {
++    let a = Curve::from_polyline(vec![vec![-1., 0.], vec![0., 0.], vec![0., 1.]]).unwrap();
++    let b = curve(vec![vec![-1., -1.], vec![1., 1.]]);
++    let o = owner(&a, &b, false);
++    assert_eq!(o.nodes().len(), 1);
++    assert_eq!(o.nodes()[0].source_cells[0], 1);
++    let incoming = branch(o.clone(), 0, 0, -1);
++    let outgoing = branch(o, 0, 0, 1);
++    assert_eq!(incoming.source_cell(), 0);
++    assert_eq!(incoming.ray().signs, [-1, 0]);
++    assert_eq!(outgoing.source_cell(), 1);
++    assert_eq!(outgoing.ray().signs, [0, 1]);
++}
++#[test]
++fn natural_domain_ends_refuse_nonexistent_branches_even_when_stationary() {
++    let c = curve(vec![vec![0., 0.], vec![0., 0.], vec![1., 1.]]);
++    let o = owner(&c, &c, true);
++    assert_eq!(branch(o.clone(), 0, 0, 1).ray().order, 2);
++    assert!(p::own_event_branch(o, p::EventParameterRef { node: 0, source: 0 }, -1, 192).is_err());
++}
++
++#[test]
++fn optional_branch_omits_only_actual_domain_ends_not_unproved_algebraic_signs() {
++    let c = curve(vec![vec![0., 0.], vec![0., 0.], vec![1., 1.]]);
++    let o = owner(&c, &c, true);
++    assert!(
++        p::try_own_event_branch(o, p::EventParameterRef { node: 0, source: 0 }, -1, 192)
++            .unwrap()
++            .is_none()
++    );
++    let a = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let y = 3_f64.next_down();
++    let b = curve(vec![vec![-4., y], vec![4., y]]);
++    let census = p::certify_span_intersections(&a, &b, false, 1e-3).unwrap();
++    let o = Arc::new(p::own_curve_event_nodes(&a, &b, &census).unwrap());
++    let r = p::EventParameterRef { node: 0, source: 0 };
++    assert!(p::try_own_event_branch(o.clone(), r, 1, 0).is_err());
++    let branch = p::try_own_event_branch(o, r, 1, 192).unwrap().unwrap();
++    branch.reverify_source().unwrap();
++    assert_eq!(branch.ray().signs, [1, 1]);
++}
+--- /dev/null
++++ b/crates/brep-core/tests/event_parameter_order.rs
+@@ -0,0 +1,153 @@
++use brep_core::profile_certificate as p;
++use nurbs_core::curve::Curve;
++use std::{cmp::Ordering, sync::Arc};
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++fn owner(a: &Curve, b: &Curve, width: f64) -> Arc<p::CurveEventNodes> {
++    let c = p::certify_span_intersections(a, b, false, width).unwrap();
++    Arc::new(p::own_curve_event_nodes(a, b, &c).unwrap())
++}
++fn compare(
++    a: Arc<p::CurveEventNodes>,
++    i: usize,
++    sa: usize,
++    b: Arc<p::CurveEventNodes>,
++    j: usize,
++    sb: usize,
++    limits: p::ParameterOrderLimits,
++) -> p::QualifiedParameterOrder {
++    let q = p::compare_event_parameters(
++        a,
++        p::EventParameterRef {
++            node: i,
++            source: sa,
++        },
++        b,
++        p::EventParameterRef {
++            node: j,
++            source: sb,
++        },
++        limits,
++    )
++    .unwrap();
++    q.reverify_source().unwrap();
++    q
++}
++#[test]
++fn different_primitive_extensions_identify_the_same_original_irrational_parameter() {
++    let source = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let horizontal = curve(vec![vec![-4., 1.5], vec![4., 1.5]]);
++    // x=6v²-3, y=x²/3. Original parameter u=v² at the
++    // intersections y=3/2, so this pair needs a different primitive extension.
++    let nonlinear = curve(vec![
++        vec![-3., 3.],
++        vec![-3., 3.],
++        vec![-2., 1.],
++        vec![0., -3.],
++        vec![3., 3.],
++    ]);
++    let a = owner(&source, &horizontal, 1e-12);
++    let b = owner(&source, &nonlinear, 1e-12);
++    assert_eq!(a.nodes().len(), 2);
++    assert_eq!(b.nodes().len(), 2);
++    assert!(b.census().pairs.iter().any(|p| p.shear > 0));
++    assert_ne!(a.nodes()[0].exact.primitive, b.nodes()[0].exact.primitive);
++    let limits = p::ParameterOrderLimits::default();
++    assert_eq!(
++        compare(a.clone(), 0, 0, b.clone(), 0, 0, limits).ordering(),
++        Ordering::Equal
++    );
++    assert_eq!(
++        compare(a.clone(), 1, 0, b.clone(), 1, 0, limits).ordering(),
++        Ordering::Equal
++    );
++    assert_eq!(
++        compare(a.clone(), 0, 0, b.clone(), 1, 0, limits).ordering(),
++        Ordering::Less
++    );
++    assert_eq!(
++        compare(a, 1, 0, b, 0, 0, limits).ordering(),
++        Ordering::Greater
++    );
++}
++#[test]
++fn overlapping_enclosures_do_not_merge_one_ulp_different_source_events() {
++    let source = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let a = owner(&source, &curve(vec![vec![-4., 1.5], vec![4., 1.5]]), 1e-3);
++    let y = 1.5_f64.next_up();
++    let b = owner(&source, &curve(vec![vec![-4., y], vec![4., y]]), 1e-3);
++    assert_eq!(
++        a.nodes()[0].exact.isolating_interval,
++        b.nodes()[0].exact.isolating_interval
++    );
++    let limits = p::ParameterOrderLimits::default();
++    assert_eq!(
++        compare(a.clone(), 0, 0, b.clone(), 0, 0, limits).ordering(),
++        Ordering::Less
++    );
++    assert_eq!(
++        compare(a.clone(), 1, 0, b.clone(), 1, 0, limits).ordering(),
++        Ordering::Greater
++    );
++    let insufficient = p::ParameterOrderLimits {
++        max_refinements: 0,
++        ..limits
++    };
++    assert!(
++        p::compare_event_parameters(
++            a,
++            p::EventParameterRef { node: 0, source: 0 },
++            b,
++            p::EventParameterRef { node: 0, source: 0 },
++            insufficient
++        )
++        .is_err()
++    );
++}
++#[test]
++fn one_shared_point_keeps_different_traversal_parameters_separate() {
++    let a = curve(vec![vec![0., 0.], vec![0., 1.]]);
++    let b = curve(vec![vec![0.75, 0.5], vec![-1.25, 0.5], vec![0.75, 0.5]]);
++    let owner = owner(&a, &b, 1e-12);
++    assert_eq!(owner.nodes().len(), 2);
++    let limits = p::ParameterOrderLimits::default();
++    assert_eq!(
++        compare(owner.clone(), 0, 0, owner.clone(), 1, 0, limits).ordering(),
++        Ordering::Equal
++    );
++    assert_eq!(
++        compare(owner.clone(), 0, 1, owner.clone(), 1, 1, limits).ordering(),
++        Ordering::Less
++    );
++    assert!(
++        p::compare_event_parameters(
++            owner.clone(),
++            p::EventParameterRef { node: 0, source: 0 },
++            owner.clone(),
++            p::EventParameterRef { node: 0, source: 1 },
++            limits
++        )
++        .is_err()
++    );
++    assert!(
++        p::compare_event_parameters(
++            owner.clone(),
++            p::EventParameterRef {
++                node: 99,
++                source: 0
++            },
++            owner,
++            p::EventParameterRef { node: 0, source: 0 },
++            limits
++        )
++        .is_err()
++    );
++}
+--- /dev/null
++++ b/crates/brep-core/tests/original_contact_atlas.rs
+@@ -0,0 +1,105 @@
++use brep_core::profile_certificate as p;
++use nurbs_core::curve::Curve;
++use std::cmp::Ordering;
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++#[test]
++fn complete_three_curve_census_merges_exact_triple_nodes_from_distinct_primitives() {
++    let source = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let horizontal = curve(vec![vec![-4., 1.5], vec![4., 1.5]]);
++    let nonlinear = curve(vec![
++        vec![-3., 3.],
++        vec![-3., 3.],
++        vec![-2., 1.],
++        vec![0., -3.],
++        vec![3., 3.],
++    ]);
++    let limits = p::ContactAtlasLimits::default();
++    let sources = vec![source, horizontal, nonlinear];
++    let atlas = p::assemble_original_contact_atlas(&sources, 1e-12, limits).unwrap();
++    atlas.reverify_source().unwrap();
++    assert_eq!(atlas.pairs().len(), 6);
++    assert_eq!(atlas.occurrences().len(), 7);
++    assert_eq!(atlas.groups().iter().filter(|g| g.len() == 3).count(), 2);
++    assert_eq!(atlas.groups().len(), 3); // two triple nodes + original stationary endpoint
++    assert_eq!(
++        atlas
++            .ordered_parameters()
++            .iter()
++            .map(Vec::len)
++            .collect::<Vec<_>>(),
++        [2, 2, 3]
++    );
++    assert!(atlas.comparisons_used() > 0);
++    let insufficient = p::ContactAtlasLimits {
++        max_comparisons: atlas.comparisons_used() - 1,
++        ..limits
++    };
++    assert!(p::assemble_original_contact_atlas(&sources, 1e-12, insufficient).is_err());
++}
++#[test]
++fn a_self_node_keeps_two_distinct_ordered_source_parameters() {
++    let source = curve(vec![
++        vec![3., -1.5],
++        vec![-1., 3.5],
++        vec![-1., -3.5],
++        vec![3., 1.5],
++    ]);
++    let atlas =
++        p::assemble_original_contact_atlas(&[source], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap();
++    atlas.reverify_source().unwrap();
++    assert_eq!(atlas.groups().len(), 1);
++    assert_eq!(atlas.occurrences().len(), 1);
++    assert_eq!(atlas.ordered_parameters()[0].len(), 2);
++    let params = &atlas.ordered_parameters()[0];
++    let a = params[0][0];
++    let b = params[1][0];
++    let oa = atlas.occurrences()[a.occurrence];
++    let ob = atlas.occurrences()[b.occurrence];
++    let proof = p::compare_event_parameters(
++        atlas.owners()[oa.pair].clone(),
++        p::EventParameterRef {
++            node: oa.node,
++            source: a.side,
++        },
++        atlas.owners()[ob.pair].clone(),
++        p::EventParameterRef {
++            node: ob.node,
++            source: b.side,
++        },
++        p::ParameterOrderLimits::default(),
++    )
++    .unwrap();
++    assert_eq!(proof.ordering(), Ordering::Less);
++}
++#[test]
++fn overlap_branches_and_partial_event_budget_do_not_become_empty_isolated_atlases() {
++    let a = curve(vec![vec![0., 0.], vec![2., 0.]]);
++    let b = curve(vec![vec![1., 0.], vec![3., 0.]]);
++    assert!(
++        p::assemble_original_contact_atlas(&[a, b], 1e-12, p::ContactAtlasLimits::default())
++            .is_err()
++    );
++    let a = curve(vec![vec![-2., 0.], vec![0., 4.], vec![2., 0.]]);
++    let b = curve(vec![vec![-3., 1.], vec![3., 1.]]);
++    assert!(
++        p::assemble_original_contact_atlas(
++            &[a, b],
++            1e-12,
++            p::ContactAtlasLimits {
++                max_events: 1,
++                ..p::ContactAtlasLimits::default()
++            }
++        )
++        .is_err()
++    );
++}
+--- /dev/null
++++ b/crates/brep-core/tests/original_contact_port_order.rs
+@@ -0,0 +1,321 @@
++use brep_core::profile_certificate as p;
++use nurbs_core::curve::Curve;
++use std::sync::Arc;
++fn curve(points: Vec<Vec<f64>>) -> Curve {
++    let degree = points.len() - 1;
++    Curve {
++        degree,
++        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        weights: vec![1.; points.len()],
++        control_points: points,
++        periodic: false,
++    }
++}
++#[test]
++fn exact_six_port_triple_order_retains_original_sources_and_traversals() {
++    let a = curve(vec![vec![-3., 0.], vec![0., 6.], vec![3., 0.]]);
++    let b = curve(vec![vec![-4., 1.5], vec![4., 1.5]]);
++    let c = curve(vec![
++        vec![-3., 3.],
++        vec![-3., 3.],
++        vec![-2., 1.],
++        vec![0., -3.],
++        vec![3., 3.],
++    ]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[a, b, c], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap(),
++    );
++    for (group, expected) in [
++        (0, vec![(1, 1), (0, 1), (2, -1), (1, -1), (0, -1), (2, 1)]),
++        (1, vec![(1, 1), (2, 1), (0, -1), (1, -1), (2, -1), (0, 1)]),
++    ] {
++        let order = p::own_original_contact_port_order(
++            atlas.clone(),
++            group,
++            p::ContactPortOrderLimits::default(),
++        )
++        .unwrap();
++        order.reverify_source().unwrap();
++        assert_eq!(
++            order
++                .ports()
++                .iter()
++                .map(|p| (p.source, p.direction))
++                .collect::<Vec<_>>(),
++            expected
++        );
++        assert!(order.ports().iter().all(|p| p.branch().ray().order == 1));
++    }
++    let endpoint =
++        p::own_original_contact_port_order(atlas, 2, p::ContactPortOrderLimits::default()).unwrap();
++    endpoint.reverify_source().unwrap();
++    assert_eq!(endpoint.ports().len(), 1);
++    assert_eq!(endpoint.ports()[0].branch().ray().order, 2);
++}
++#[test]
++fn self_contact_has_four_owned_ports_at_two_distinct_parameters() {
++    let c = curve(vec![
++        vec![3., -1.5],
++        vec![-1., 3.5],
++        vec![-1., -3.5],
++        vec![3., 1.5],
++    ]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[c], 1e-12, p::ContactAtlasLimits::default()).unwrap(),
++    );
++    let order =
++        p::own_original_contact_port_order(atlas, 0, p::ContactPortOrderLimits::default()).unwrap();
++    order.reverify_source().unwrap();
++    assert_eq!(
++        order
++            .ports()
++            .iter()
++            .map(|p| (p.parameter_group, p.direction))
++            .collect::<Vec<_>>(),
++        [(1, 1), (0, 1), (1, -1), (0, -1)]
++    );
++}
++#[test]
++fn tangent_contacts_and_cusps_have_intrinsic_order_while_partial_work_refuses() {
++    let a = curve(vec![vec![-3., 9.], vec![0., -9.], vec![3., 9.]]);
++    let b = curve(vec![
++        vec![-3., 29.25],
++        vec![-1.5, -60.75],
++        vec![0., 125.25],
++        vec![1.5, -60.75],
++        vec![3., 29.25],
++    ]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[a, b], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap(),
++    );
++    assert_eq!(atlas.groups().len(), 2);
++    for (group, expected) in [
++        (0, vec![(1, -1), (0, -1), (0, 1), (1, 1)]),
++        (1, vec![(0, 1), (1, 1), (1, -1), (0, -1)]),
++    ] {
++        let order = p::own_original_contact_port_order(
++            atlas.clone(),
++            group,
++            p::ContactPortOrderLimits::default(),
++        )
++        .unwrap();
++        order.reverify_source().unwrap();
++        assert_eq!(
++            order
++                .ports()
++                .iter()
++                .map(|p| (p.source, p.direction))
++                .collect::<Vec<_>>(),
++            expected
++        );
++    }
++    let cusp = curve(vec![
++        vec![3., -1.],
++        vec![-1., 1.],
++        vec![-1., -1.],
++        vec![3., 1.],
++    ]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[cusp], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap(),
++    );
++    let order =
++        p::own_original_contact_port_order(atlas, 0, p::ContactPortOrderLimits::default()).unwrap();
++    order.reverify_source().unwrap();
++    assert_eq!(
++        order
++            .ports()
++            .iter()
++            .map(|p| p.direction)
++            .collect::<Vec<_>>(),
++        [1, -1]
++    );
++    let a = curve(vec![vec![-1., -1.], vec![1., 1.]]);
++    let b = curve(vec![vec![-1., 1.], vec![1., -1.]]);
++    let atlas = Arc::new(
++        p::assemble_original_contact_atlas(&[a, b], 1e-12, p::ContactAtlasLimits::default())
++            .unwrap(),
++    );
++    let limits = p::ContactPortOrderLimits {
++        max_comparisons: 0,
++        ..p::ContactPortOrderLimits::default()
++    };
++    assert!(p::own_original_contact_port_order(atlas, 0, limits).is_err());
++}
++
++#[test]
++fn cusp_axis_rotations_preserve_intrinsic_order_and_positive_x_cut() {
++    for rotation in 0..4 {
++        let mut c = curve(vec![
++            vec![3., -1.],
++            vec![-1., 1.],
++            vec![-1., -1.],
++            vec![3., 1.],
++        ]);
++        for p in &mut c.control_points {
++            let (x, y) = (p[0], p[1]);
++            let q = match rotation {
++                0 => [x, y],
++                1 => [-y, x],
++                2 => [-x, -y],
++                _ => [y, -x],
++            };
++            p[0] = q[0];
++            p[1] = q[1];
++        }
++        let atlas = Arc::new(
++            p::assemble_original_contact_atlas(&[c], 1e-12, p::ContactAtlasLimits::default())
++                .unwrap(),
++        );
++        let order =
++            p::own_original_contact_port_order(atlas, 0, p::ContactPortOrderLimits::default())
++                .unwrap();
++        order.reverify_source().unwrap();
++        let expected = if rotation == 0 {
++            vec![1, -1]
++        } else {
++            vec![-1, 1]
++        };
++        assert_eq!(
++            order
++                .ports()
++                .iter()
++                .map(|p| p.direction)
++                .collect::<Vec<_>>(),
++            expected
++        );
++    }
++}
++#[test]
++fn intrinsic_tangent_order_is_invariant_under_quartic_to_degree_eight_clock_change() {
++    let choose = |n: usize, k: usize| -> i64 {
++        if k > n {
++            return 0;
++        }
++        let mut v = 1;
++        for j in 0..k {
++            v = v * (n - j) as i64 / (j + 1) as i64;
++        }
++        v
++    };
++    let a = curve(vec![vec![-14., 980.], vec![0., -980.], vec![14., 980.]]);
++    for nonlinear in [false, true] {
++        let (degree, power) = if nonlinear {
++            (
++                8,
++                vec![49000, 0, -772240, 0, 3845520, 0, -6146560, 0, 3073280],
++            )
++        } else {
++            (4, vec![49000, -772240, 3845520, -6146560, 3073280])
++        };
++        let points = (0..=degree)
++            .map(|i| {
++                let y = power
++                    .iter()
++                    .enumerate()
++                    .filter(|(k, _)| *k <= i)
++                    .map(|(k, &c)| {
++                        let n = c * choose(i, k);
++                        let d = choose(degree, k);
++                        assert_eq!(n % d, 0);
++                        n / d
++                    })
++                    .sum::<i64>();
++                let x = if nonlinear {
++                    (i * (i.saturating_sub(1)) / 2) as i64 - 14
++                } else {
++                    7 * i as i64 - 14
++                };
++                vec![x as f64, y as f64]
++            })
++            .collect();
++        let b = curve(points);
++        let atlas = Arc::new(
++            p::assemble_original_contact_atlas(
++                &[a.clone(), b],
++                1e-12,
++                p::ContactAtlasLimits::default(),
++            )
++            .unwrap(),
++        );
++        for (group, expected) in [
++            (0, vec![(1, -1), (0, -1), (0, 1), (1, 1)]),
++            (1, vec![(0, 1), (1, 1), (1, -1), (0, -1)]),
++        ] {
++            let order = p::own_original_contact_port_order(
++                atlas.clone(),
++                group,
++                p::ContactPortOrderLimits::default(),
++            )
++            .unwrap();
++            order.reverify_source().unwrap();
++            assert_eq!(
++                order
++                    .ports()
++                    .iter()
++                    .map(|p| (p.source, p.direction))
++                    .collect::<Vec<_>>(),
++                expected
++            );
++        }
++    }
++}
++
++#[test]
++fn tangent_order_survives_frame_rotation_and_requires_actual_local_monotonicity() {
++    let base = [
++        vec![(1, -1), (0, -1), (0, 1), (1, 1)],
++        vec![(0, 1), (1, 1), (1, -1), (0, -1)],
++    ];
++    for rotation in 0..4 {
++        let mut a = curve(vec![vec![-3., 9.], vec![0., -9.], vec![3., 9.]]);
++        let mut b = curve(vec![
++            vec![-3., 29.25],
++            vec![-1.5, -60.75],
++            vec![0., 125.25],
++            vec![1.5, -60.75],
++            vec![3., 29.25],
++        ]);
++        for c in [&mut a, &mut b] {
++            for p in &mut c.control_points {
++                let (x, y) = (p[0], p[1]);
++                let q = match rotation {
++                    0 => [x, y],
++                    1 => [-y, x],
++                    2 => [-x, -y],
++                    _ => [y, -x],
++                };
++                p[0] = q[0];
++                p[1] = q[1];
++            }
++        }
++        let atlas = Arc::new(
++            p::assemble_original_contact_atlas(&[a, b], 1e-12, p::ContactAtlasLimits::default())
++                .unwrap(),
++        );
++        for group in 0..2 {
++            let order = p::own_original_contact_port_order(
++                atlas.clone(),
++                group,
++                p::ContactPortOrderLimits::default(),
++            )
++            .unwrap();
++            order.reverify_source().unwrap();
++            let actual = order
++                .ports()
++                .iter()
++                .map(|p| (p.source, p.direction))
++                .collect::<Vec<_>>();
++            assert!((0..4).any(|shift| (0..4).all(|i| actual[i] == base[group][(i + shift) % 4])));
++        }
++        if rotation == 1 {
++            let limits = p::ContactPortOrderLimits {
++                max_neighbourhood_steps: 1,
++                ..p::ContactPortOrderLimits::default()
++            };
++            assert!(p::own_original_contact_port_order(atlas, 0, limits).is_err());
++        }
++    }
++}

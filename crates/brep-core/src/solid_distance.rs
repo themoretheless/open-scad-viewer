@@ -137,6 +137,19 @@ mod tests{
             pairs:100,contact_pairs:1000,cells:100000,domain_cells:1000000}
     }
     #[test]
+    fn tiny_exact_sphere_keeps_certified_material_orientation() {
+        let mut model=crate::analytic::sphere(0.000011444091796875).unwrap();
+        let offset=2.+2.*0.000011444091796875;
+        for v in &mut model.vertices {v.point[0]+=offset;}
+        for e in &mut model.edges {for p in &mut e.curve.control_points {p[0]+=offset;}}
+        for f in &mut model.faces {for p in f.surface.control_points.iter_mut().flatten() {p[0]+=offset;}}
+        let r=volume_validity::inspect(&model,1e-8,limits().validity).unwrap();
+        for o in &r.orientations { for a in &o.attempts {
+            eprintln!("outward={:?} method={} normal={:?} parity={:?} unresolved={:?}",a.outward,a.normal_method,a.normal_dot_direction,a.ray.parity,a.ray.unresolved);
+        }}
+        assert!(r.proven,"boundary={} nesting={:?}",r.boundary.proven,r.nesting.map(|n|n.roles_consistent));
+    }
+    #[test]
     fn separated_exact_spheres_keep_the_analytic_gap_and_original_surface_witnesses(){
         let a=crate::analytic::sphere(3.).unwrap();let mut b=a.clone();
         for v in &mut b.vertices{v.point[0]+=8.;}

@@ -1,3 +1,4 @@
+use super::certified_nurbs::nurbs_with_schedule;
 use super::*;
 use std::collections::BTreeSet;
 
@@ -393,4 +394,68 @@ fn shared_edge_registry_gives_identical_indices_to_adjacent_faces() {
         }
     }
     let _ = positions;
+}
+
+#[test]
+fn rotated_concave_holed_boolean_retains_closed_mesh() {
+    let text=include_str!("../../../tests/fixtures/rotated-concave-holed-intersection.json");
+    let v:value_codec::Value=value_codec::from_str(text).unwrap();
+    let model:brep_core::Model=value_codec::from_value(v).unwrap();
+    // These retained faces are planar; their exact planar certificate is valid
+    // for both display schedules. Both retain the closed boundary.
+    if let Ok(sampled)=nurbs_with_schedule(&model,2,FreeformTessNote::SampledUncertified,false) {
+        assert!(model.faces.iter().all(|f| f.surface.degree_u == 1 && f.surface.degree_v == 1));
+        assert!(sampled.built.mesh.inspect().unwrap().closed);
+    }
+    for segments in [1,2,4,8,16,32] {
+        let result=nurbs(&model,segments).unwrap();
+        let report=result.built.mesh.inspect().unwrap();
+        assert!(report.closed); assert_eq!(report.degenerate_triangles,0);
+        assert_eq!(report.non_manifold_edges,0); assert_eq!(report.orientation_conflicts,0);
+        assert!((report.signed_volume_mm3-23.).abs()<1e-6);
+    }
+}
+
+#[test]
+fn curved_cusp_prism_mesh_keeps_shared_edges_and_authored_geometry() {
+    let cubic = |points: &[[f64; 2]]| nurbs_core::curve::Curve {
+        degree: 3, knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: points.iter().map(|p| p.to_vec()).collect(),
+        weights: vec![1.; 4], periodic: false,
+    };
+    let a = cubic(&[[0., 0.], [2., 0.], [4., 2.], [6., 6.]]);
+    let b = cubic(&[[0., 0.], [2., 0.], [6., 2.], [12., 12.]]);
+    let closing = nurbs_core::curve::Curve {
+        degree: 1, knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![12., 12.], vec![6., 6.]],
+        weights: vec![1.; 2], periodic: false,
+    };
+    for rotated in [false, true] {
+        let mut wire = vec![b.clone(), closing.clone(), a.reverse().unwrap()];
+        if rotated {
+            for c in &mut wire { for p in &mut c.control_points {
+                let (x, y) = (p[0], p[1]);
+                p[0] = 17. + x - y; p[1] = -9. + x + y;
+            }}
+        }
+        let normalized = brep_core::bezier_profile::normalize(&[wire], 1e-7).unwrap();
+        let model = brep_core::prism::extrude(&normalized, 0., 3.).unwrap();
+        let before = value_codec::to_string(&model).unwrap();
+        for detail in [1, 2, 3, 4, 8, 16, 32] {
+            let tess = nurbs(&model, detail).unwrap_or_else(|e|
+                panic!("cusp rotated={rotated} detail={detail}: {e}"));
+            let report = &tess.built.report;
+            assert!(report.closed);
+            assert_eq!(components(&tess.built.mesh), 1);
+            assert_eq!(report.orientation_conflicts, 0);
+            assert_eq!(report.non_manifold_edges, 0);
+            assert_eq!(report.degenerate_triangles, 0);
+            assert_eq!(tess.face_ids.iter().copied().collect::<BTreeSet<_>>().len(), model.faces.len());
+            if detail == 32 {
+                let exact = if rotated { 75.6 } else { 37.8 };
+                assert!((report.signed_volume_mm3 - exact).abs() / exact < 0.003);
+            }
+            assert_eq!(value_codec::to_string(&model).unwrap(), before);
+        }
+    }
 }

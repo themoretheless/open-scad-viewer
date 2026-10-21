@@ -1,5 +1,6 @@
 //! Planar trimmed-face definitions from exact closed curve chains; no shell claim.
 use crate::{planar_trim, prism};
+mod exact_profile;
 use nurbs_core::{
     Error, Result,
     curve::Curve,
@@ -97,7 +98,9 @@ fn author_caps(caps: Vec<Cap>, tolerance: f64) -> Result<(crate::Model, usize)> 
 /// Validate simple analytic material-left loops and construct planar caps for
 /// each connected component. Inputs must have exact closed ordered endpoints
 /// and all original Z controls equal z_plane. Lines/circular arcs are admitted
-/// by the existing planar arrangement path. Agreement budget is shared globally.
+/// by the existing planar arrangement path. Higher-degree boundaries use the
+/// exact profile owner (one outer followed by holes, bounded to 128 source spans).
+/// The original curves are retained; agreement budget is shared globally.
 pub fn build(
     loops: &[Vec<Curve>],
     z_plane: f64,
@@ -116,6 +119,9 @@ pub fn build(
         ));
     }
     let projected = project_loops(loops, z_plane)?;
+    if loops.iter().flatten().any(|curve| curve.degree > 2) {
+        return exact_profile::build(loops, &projected, z_plane, tolerance, max_verification_cells);
+    }
     let components = planar_trim::components(&projected, tolerance)?;
     construct_caps(
         loops,

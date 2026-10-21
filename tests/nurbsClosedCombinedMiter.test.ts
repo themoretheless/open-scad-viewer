@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {it,expect} from 'vitest'
 import {circleNurbsCurve,progressiveMiterNurbsProfiles,type NurbsVectorLaw} from '../src/services/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/services/nurbsCurve'
@@ -36,7 +37,7 @@ it('preserves closed combined mode through Rush and actual Solid admission',asyn
  const node=graph.document.nodes.find(node=>node.op==='brep_progressive_miter_sweep')!
  const built=await buildOwnNurbsAsync(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,seamContinuity:'C0',continuousBound:true,volume:{solidGeometryCertified:true}})
- const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true,boundaryErrorWithinBudget:true})

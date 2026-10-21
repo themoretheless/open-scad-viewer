@@ -53,11 +53,24 @@ impl RadiusLaw {
 
     /// Evaluate the law at `t` (clamped to the control range for splines).
     pub fn evaluate(&self, t: f64) -> f64 {
+        if !t.is_finite() || self.validate().is_err() {
+            return f64::NAN;
+        }
         match self {
             RadiusLaw::Constant(r) => *r,
             RadiusLaw::Linear { start, end } => start + (end - start) * t.clamp(0., 1.),
             RadiusLaw::Spline(points) => natural_cubic(points, t),
         }
+    }
+
+    /// Evaluate a validated law and reject nonpositive spline overshoot.
+    pub fn evaluate_checked(&self, t: f64) -> Result<f64> {
+        self.validate()?;
+        require_finite_f64(t, "radius_law_query")?;
+        let radius = self.evaluate(t);
+        check(radius.is_finite() && radius > 0.,
+            "Radius law evaluated to a nonpositive or nonfinite radius")?;
+        Ok(radius)
     }
 
     /// `[min, max, mean]` over a budgeted uniform sample.

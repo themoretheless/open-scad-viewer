@@ -25,3 +25,9 @@ export function miterLawMatrixSource(mode:MiterLawMatrixMode):string {
  if(!mode.guided)source=source.replace(/^\s*orientation_guide:.*\n/gm,'').replace(/^rail = [\s\S]*?\)\n/m,'')
  return source
 }
+
+/** Explicit requested profile repair; preserves the original law matrix and error budget. */
+export function miterLawMatrixSmoothSource(mode:MiterLawMatrixMode):string {
+ return miterLawMatrixSource(mode).replace('max_deviation:',
+  'circle_correction_tolerance: 0.000000001mm,circle_correction_quantum: 0.0000000000009094947017729282mm,circle_correction_max_work: 1000000,max_deviation:')
+}

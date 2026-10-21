@@ -30,6 +30,7 @@ pub enum BooleanOp {
 }
 
 impl From<BooleanOp> for boolean::Operation {
+    #[inline]
     fn from(op: BooleanOp) -> Self {
         match op {
             BooleanOp::Union => boolean::Operation::Union,
@@ -56,6 +57,33 @@ pub struct BooleanOutcome {
     pub operand_repairs: [Option<RepairReport>; 2],
     /// Manifold report computed on the returned mesh (strictly manifold).
     pub output_report: ManifoldReport,
+}
+
+impl BooleanOutcome {
+    /// Borrow or convert the boolean result into a `polygon_core::Mesh`.
+    pub fn to_mesh(&self) -> Mesh {
+        Mesh {
+            positions: self.positions.clone(),
+            indices: self.indices.clone(),
+            uv: None,
+        }
+    }
+    /// Total surface area of the manifold boolean result.
+    pub fn surface_area(&self) -> f64 {
+        self.to_mesh().surface_area()
+    }
+    /// Signed enclosed volume of the manifold boolean result.
+    pub fn volume(&self) -> f64 {
+        self.to_mesh().volume()
+    }
+    /// Volume-weighted center of mass of the manifold boolean result.
+    pub fn center_of_mass(&self) -> [f64; 3] {
+        self.to_mesh().center_of_mass()
+    }
+    /// 3x3 inertia tensor relative to `center_of_mass()` (assuming unit density).
+    pub fn inertia_tensor(&self) -> [[f64; 3]; 3] {
+        self.to_mesh().inertia_tensor()
+    }
 }
 
 /// Why a guaranteed-manifold boolean failed.
@@ -216,6 +244,12 @@ mod tests {
         let out = boolean_manifold(&ap, &ai, &bp, &bi, BooleanOp::Union).unwrap();
         assert!(out.output_report.is_manifold());
         assert!(out.operand_repairs.iter().all(|r| r.is_none()));
+        assert!((out.volume() - 1.875).abs() < 1e-9);
+        assert!(out.surface_area() > 6.0);
+        let com = out.center_of_mass();
+        assert!((com[0] - 0.75).abs() < 1e-9);
+        assert!((com[1] - 0.75).abs() < 1e-9);
+        assert!((com[2] - 0.75).abs() < 1e-9);
     }
 
     #[test]

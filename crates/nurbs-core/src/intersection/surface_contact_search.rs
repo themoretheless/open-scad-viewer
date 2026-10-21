@@ -168,14 +168,16 @@ fn search_impl(
     // Unified guard backing the max_cells work limit (item 1065); it fires
     // only if the cell bookkeeping above is ever broken.
     let mut guard = Budget::with_iterations(max_cells)?.guard("surface_contact_search");
+    let mut prepared_a=surface_contact::PreparedSurface::new(a)?;
+    let mut prepared_b=surface_contact::PreparedSurface::new(b)?;
     while cells < max_cells {
         guard.tick()?;
         guard.check()?;
         let Some(cell) = queue.pop_front() else { break };
         cells += 1;
-        let aa = rectangle_bounds(a, cell[0])?;
-        let bb = rectangle_bounds(b, cell[1])?;
-        if (0..3).any(|k| aa[k][1] < bb[k][0] || bb[k][1] < aa[k][0]) {
+        let aa = prepared_a.bounds(cell[0])?;
+        let bb = prepared_b.bounds(cell[1])?;
+        if (0..3).any(|k| aa[k].hi < bb[k].lo || bb[k].hi < aa[k].lo) {
             continue;
         }
         if control_hulls
@@ -207,7 +209,7 @@ fn search_impl(
         for axis in 0..2 {
             let fixed = cell[0][axis][0] * 0.5 + cell[0][axis][1] * 0.5;
             if let surface_contact::Verdict::Witness(w) =
-                surface_contact::certify(a, b, axis, fixed, probe[0][1 - axis], probe[1])?
+                surface_contact::certify_prepared(&mut prepared_a, &mut prepared_b, axis, fixed, probe[0][1-axis], probe[1])?
             {
                 if classify([w.first_uv, w.second_uv], &mut domain_cells)?
                     == crate::trim_domain::Location::Inside

@@ -55,6 +55,7 @@ const rank118=new Int16Array(128).fill(-1)
 const digits118=String.fromCharCode(22,23,24,25,26,28,29,30,31,127)+digits108
 for(let i=0;i<digits118.length;i++)rank118[digits118.charCodeAt(i)]=i
 export function decodeBase91(text,maximum=4*1024*1024+4){
+ if(text.startsWith('bKx:'))return decodeSeptBase118(text,maximum)
  const dense=text.startsWith('bBx:'),extended=text.startsWith('bAx:'),control=text.startsWith('b95:'),tabbed=text.startsWith('b94:'),widest=text.startsWith('b93:'),wide=text.startsWith('b92:'),base=dense?118:extended?108:control?95:tabbed?94:widest?93:wide?92:91,threshold=base*base-8193
  const digits=dense?rank118:extended?rank108:control?rank95:tabbed?rank94:widest?rank93:wide?rank92:rank,variable=dense||extended||control||tabbed||widest||wide||text.startsWith('b9v:')
  if(!/^b(?:91|9v|92|93|94|95|Ax|Bx):[0-9a-f]{8}/.test(text)||text.length>12+2*Math.ceil(maximum*8/13))throw Error('Base91 size limit')
@@ -70,4 +71,36 @@ export function decodeBase91(text,maximum=4*1024*1024+4){
  }
  if(offset!==size||value!==0)throw Error('Noncanonical base91 padding')
  return out
+}
+
+const septDigits=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92+String.fromCharCode(22,23,24,25,26,28,29,30,31,127)
+function decodeSeptBase118(text,maximum){
+ if(!/^bKx:[0-9a-f]{8}/.test(text)||text.length>12+7*Math.ceil(maximum*8/48)||(text.length-12)%7)throw Error('Base118 size mismatch')
+ const size=parseInt(text.slice(4,12),16)
+ if(size>maximum)throw Error('Base118 size limit')
+ const out=new Uint8Array(size),threshold=118n**7n-2n**48n-1n
+ let value=0n,bits=0,offset=0
+ for(let i=12;i<text.length;i+=7){
+  if(offset===size)throw Error('Base118 trailing word')
+  let word=0n,power=1n
+  for(let j=0;j<7;j++){const digit=septDigits.indexOf(text[i+j]);if(digit<0)throw Error('Invalid base118 digit');word+=BigInt(digit)*power;power*=118n}
+  const width=word%(2n**48n)>threshold?48:49
+  value+=word<<BigInt(bits);bits+=width
+  while(bits>=8&&offset<size){out[offset++]=Number(value&255n);value>>=8n;bits-=8}
+ }
+ if(offset!==size||value!==0n)throw Error('Noncanonical base118 padding')
+ return out
+}
+export function encodeSeptBase118(bytes){
+ if(bytes.length>0xffffffff)throw Error('Base91 size overflow')
+ const digits=septDigits
+ const threshold=118n**7n-2n**48n-1n,parts=['bKx:',bytes.length.toString(16).padStart(8,'0')]
+ let bits=0,value=0n
+ const emit=word=>{for(let j=0;j<7;j++){parts.push(digits[Number(word%118n)]);word/=118n}}
+ for(const byte of bytes){
+  value+=BigInt(byte)<<BigInt(bits);bits+=8
+  if(bits>48){const width=value%(2n**48n)>threshold?48:49;emit(value%(2n**BigInt(width)));value>>=BigInt(width);bits-=width}
+ }
+ if(bits)emit(value)
+ return parts.join('')
 }

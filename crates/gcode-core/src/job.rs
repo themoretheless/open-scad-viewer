@@ -82,7 +82,9 @@ impl JobProfile {
 }
 
 fn travel_xy(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (b[0] - a[0]).hypot(b[1] - a[1])
+    let dx = b[0] - a[0];
+    let dy = b[1] - a[1];
+    (dx * dx + dy * dy).sqrt()
 }
 
 /// Serialize a machine job: heat, optional home, absolute E, retract on long travels.
@@ -264,7 +266,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
     if gcode.len() > MAX_OUTPUT_BYTES {
         return Err(invalid("GCODE_OUTPUT_LIMIT", "G-code job exceeds 4 MiB"));
     }
-    if gcode.lines().next() != Some(format!("; {JOB_DIALECT}").as_str()) {
+    if gcode.lines().next().and_then(|line| line.strip_prefix("; ")) != Some(JOB_DIALECT) {
         return Err(invalid(
             "GCODE_DIALECT",
             "Not an open-scad-viewer print job",

@@ -10,9 +10,16 @@ export function withEditableSketchPath(sketch: DirectSketch, path: BezierPathJso
   }
   if (!path || typeof path.closed !== 'boolean' || !Array.isArray(path.segments) ||
       path.segments.length < 1 || path.segments.length > 128) throw Error('Editable paths require 1–128 segments.')
-  const controlPoints = [path.start, ...path.segments.flatMap(s => s.type === 'cubic' ? [s.c1, s.c2, s.to] : [s.to])]
-  if (!controlPoints.every(p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isFinite(v) && Math.abs(v) <= 1e6))) {
-    throw Error('Invalid editable path control point.')
+  const validPt = (p: unknown): boolean =>
+    Array.isArray(p) && p.length === 2 &&
+    typeof p[0] === 'number' && Number.isFinite(p[0]) && Math.abs(p[0]) <= 1e6 &&
+    typeof p[1] === 'number' && Number.isFinite(p[1]) && Math.abs(p[1]) <= 1e6
+  if (!validPt(path.start)) throw Error('Invalid editable path control point.')
+  for (let i = 0; i < path.segments.length; i++) {
+    const s = path.segments[i]
+    if (!s || (s.type === 'cubic' ? (!validPt(s.c1) || !validPt(s.c2) || !validPt(s.to)) : !validPt(s.to))) {
+      throw Error('Invalid editable path control point.')
+    }
   }
   const points = (path.closed ? pathToRing(path, SKETCH_PATH_TOLERANCE_MM) : flattenPath(path, SKETCH_PATH_TOLERANCE_MM)) as Point2[]
   if (points.length > 8192 || points.length < (path.closed ? 3 : 2)) throw Error('Editable path exceeds the sketch sample budget or is degenerate.')
@@ -21,5 +28,9 @@ export function withEditableSketchPath(sketch: DirectSketch, path: BezierPathJso
 
 /** Topological anchors, never the display tessellation vertices. */
 export function editablePathAnchors(path: BezierPathJson): Point2[] {
-  return [path.start, ...path.segments.slice(0, path.closed ? -1 : undefined).map(s => s.to)] as Point2[]
+  const end = path.closed ? Math.max(0, path.segments.length - 1) : path.segments.length
+  const out = new Array<Point2>(1 + end)
+  out[0] = path.start as Point2
+  for (let i = 0; i < end; i++) out[i + 1] = path.segments[i].to as Point2
+  return out
 }

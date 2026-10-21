@@ -127,7 +127,7 @@ impl<'a> Reduction<'a> {
             "reduction input is too small"
         );
         let mut source = input.clone();
-        let mut passes = Vec::new();
+        let mut passes = Vec::with_capacity(4);
         let output;
         loop {
             // At WG=1 each group must consume at least two elements to make

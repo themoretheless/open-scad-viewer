@@ -1,0 +1,51 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "focused_unique_tests": 28,
+  "scopes": {
+    "ss_coverage": 7,
+    "ss_fiber_coverage": 7,
+    "ss_transverse_fibers": 7,
+    "ss_graph_coverage": 3,
+    "corruption_replay": 1,
+    "former_boolean_failures": 3
+  },
+  "wasm": "nurbs-core and brep-core pass",
+  "full_native_suite": {
+    "library": {
+      "passed": 2394,
+      "ignored": 3,
+      "failed": 0,
+      "log": "full-native-library.log"
+    },
+    "doctests": {
+      "passed": 2,
+      "failed": 0,
+      "log": "doctests.log"
+    },
+    "integration": {
+      "suites": 194,
+      "passed": 952,
+      "failed": 0,
+      "ignored": 0,
+      "exit_code": 0,
+      "scope": "Complete integration snapshot built before projective correspondence changes; new runtime covered by later focused/library gates"
+    }
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "0a4507ed735306abe4c417c22dc6d418482d6b37a8207af63c5db0f5594b91c6",
+    "crates/nurbs-core/tests/ss_fiber_coverage.rs": "d89cb9edc4dc900d8ffdefa4b3d343007f995fcab9933cdda22c76aed92824a0"
+  },
+  "limitations": [
+    "same free axis and complete free interval",
+    "disjoint unknown tube interiors",
+    "parameter root coverage only",
+    "no physical branch/trim graph authority"
+  ]
+}

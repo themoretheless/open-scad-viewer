@@ -292,3 +292,76 @@ mod tests {
         assert!(preview(&over).is_err());
     }
 }
+
+pub fn plan_annular(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+) -> Result<Plan> {
+    plan_impl(loops, sites, closed, initial, maximum, true)
+}
+
+fn plan_impl(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+    annular: bool,
+) -> Result<Plan> {
+    require(
+        (1..=16).contains(&loops.len()) && loops.iter().all(|r| !r.is_empty()),
+        "Miter body needs 1..16 nonempty loops",
+    )?;
+    let profiles: usize = loops.iter().map(Vec::len).sum();
+    require(
+        profiles <= 64,
+        "Progressive miter body exceeds its site/span budget",
+    )?;
+    require(
+        if closed {
+            (3..=16).contains(&sites)
+        } else {
+            (2..=17).contains(&sites)
+        },
+        "Miter needs 2..17 open or 3..16 cyclic sites",
+    )?;
+    let edges = sites - usize::from(!closed);
+    let mut spans = 0;
+    for curve in loops.iter().flatten() {
+        spans += curve.decompose()?.len();
+        require(
+            spans <= 64,
+            "Progressive miter body exceeds its site/span budget",
+        )?;
+    }
+    require(
+        spans > 0,
+        "Progressive miter body exceeds its site/span budget",
+    )?;
+    let cap_faces = if closed {
+        0
+    } else if annular && loops.len() == 2 {
+        spans
+    } else {
+        2
+    };
+    let max_steps = maximum
+        .min(1024 / edges)
+        .min((MAX_FACES - cap_faces) / (edges * spans));
+    require(
+        max_steps >= initial,
+        "Progressive miter initial steps exceed face budget",
+    )?;
+    require(
+        initial >= 1 && initial <= max_steps,
+        "Miter refinement steps must be ordered within the body face budget",
+    )?;
+    Ok(Plan {
+        edges,
+        spans,
+        max_steps,
+    })
+}

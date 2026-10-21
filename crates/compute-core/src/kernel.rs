@@ -349,6 +349,16 @@ impl Kernel {
         bind_group: &wgpu::BindGroup,
         groups: u32,
     ) {
+        self.record_in_pass_with_pipeline_state(pass, bind_group, groups, true);
+    }
+
+    pub(crate) fn record_in_pass_with_pipeline_state(
+        &self,
+        pass: &mut wgpu::ComputePass<'_>,
+        bind_group: &wgpu::BindGroup,
+        groups: u32,
+        bind_pipeline: bool,
+    ) {
         assert!(
             (1..=self.max_groups).contains(&groups),
             "{}: workgroup count {} outside 1..={}",
@@ -356,7 +366,9 @@ impl Kernel {
             groups,
             self.max_groups
         );
-        pass.set_pipeline(&self.pipeline);
+        if bind_pipeline {
+            pass.set_pipeline(&self.pipeline);
+        }
         pass.set_bind_group(0, bind_group, &[]);
         pass.dispatch_workgroups(groups, 1, 1);
     }

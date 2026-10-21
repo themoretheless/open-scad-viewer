@@ -42,12 +42,15 @@ export function exportAnalyticStep(model: NurbsBrep): AnalyticStepExport {
   return callGeometryRust('brep_nurbs_export_step', { model })
 }
 
+const FACETED_BREP_RE = /\bFACETED_BREP\s*\(/i
+const ADVANCED_FACE_RE = /\bADVANCED_FACE\s*\(/i
+
 /**
  * Import analytic STEP (surfaces + AXIS2 + CIRCLE rings → constructors).
  * Refuses FACETED-only / STL / OBJ / incomplete graphs.
  */
 export function importAnalyticStep(text: string): AnalyticStepImport {
-  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+  if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
     throw new Error(
       'Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
     )
@@ -65,7 +68,7 @@ export function exportAnalyticStepV2(model: NurbsBrep): AnalyticStepExportV2 {
  * opaque 128-bit IDs; metadata-free third-party input reports identity loss.
  */
 export function importAnalyticStepV2(text: string): AnalyticStepImportV2 {
-  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+  if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
     throw new Error(
       'Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
     )

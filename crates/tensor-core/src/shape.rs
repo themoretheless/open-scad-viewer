@@ -35,6 +35,9 @@ impl Shape {
     /// Align trailing axes; equal dimensions or a dimension of one can match.
     /// In particular, broadcasting dimensions zero and one produces zero.
     pub fn broadcast(&self, other: &Self) -> Result<Self, TensorError> {
+        if self.dims == other.dims {
+            return Ok(self.clone());
+        }
         Self::new(broadcast_dims(&self.dims, &other.dims)?)
     }
 
@@ -50,13 +53,25 @@ impl Shape {
     }
 
     pub fn validate_axes(&self, axes: &[usize]) -> Result<(), TensorError> {
-        let mut seen = vec![false; self.rank()];
+        let rank = self.rank();
+        if rank <= 64 {
+            let mut seen_mask = 0u64;
+            for &axis in axes {
+                if axis >= rank {
+                    return Err(TensorError::AxisOutOfBounds { axis, rank });
+                }
+                let bit = 1u64 << axis;
+                if seen_mask & bit != 0 {
+                    return Err(TensorError::DuplicateAxis { axis });
+                }
+                seen_mask |= bit;
+            }
+            return Ok(());
+        }
+        let mut seen = vec![false; rank];
         for &axis in axes {
             let Some(present) = seen.get_mut(axis) else {
-                return Err(TensorError::AxisOutOfBounds {
-                    axis,
-                    rank: self.rank(),
-                });
+                return Err(TensorError::AxisOutOfBounds { axis, rank });
             };
             if *present {
                 return Err(TensorError::DuplicateAxis { axis });
@@ -71,18 +86,16 @@ impl Shape {
     /// and errors are validated by `reduction_shape` and `mean_shape`.
     pub fn reduce(&self, axes: &[usize], keep_dims: bool) -> Result<Self, TensorError> {
         self.validate_axes(axes)?;
-        let dims = self
-            .dims
-            .iter()
-            .enumerate()
-            .filter_map(|(axis, &dim)| {
-                if axes.contains(&axis) {
-                    keep_dims.then_some(1)
-                } else {
-                    Some(dim)
+        let mut dims = Vec::with_capacity(self.rank());
+        for (axis, &dim) in self.dims.iter().enumerate() {
+            if axes.contains(&axis) {
+                if keep_dims {
+                    dims.push(1);
                 }
-            })
-            .collect::<Vec<_>>();
+            } else {
+                dims.push(dim);
+            }
+        }
         Self::new(dims)
     }
 
@@ -91,17 +104,21 @@ impl Shape {
             return Err(TensorError::InvalidPermutation);
         }
         self.validate_axes(axes)?;
-        Self::new(axes.iter().map(|&axis| self.dims[axis]).collect::<Vec<_>>())
+        let mut dims = Vec::with_capacity(axes.len());
+        for &axis in axes {
+            dims.push(self.dims[axis]);
+        }
+        Self::new(dims)
     }
 }
 
 fn broadcast_dims(left: &[usize], right: &[usize]) -> Result<Vec<usize>, TensorError> {
     let rank = left.len().max(right.len());
-    let mut dims = vec![1; rank];
-    for (axis, dim) in dims.iter_mut().enumerate() {
+    let mut dims = Vec::with_capacity(rank);
+    for axis in 0..rank {
         let a = axis.checked_sub(rank - left.len()).map_or(1, |i| left[i]);
         let b = axis.checked_sub(rank - right.len()).map_or(1, |i| right[i]);
-        *dim = if a == b || b == 1 {
+        let dim = if a == b || b == 1 {
             a
         } else if a == 1 {
             b
@@ -111,6 +128,7 @@ fn broadcast_dims(left: &[usize], right: &[usize]) -> Result<Vec<usize>, TensorE
                 right: right.to_vec(),
             });
         };
+        dims.push(dim);
     }
     Ok(dims)
 }

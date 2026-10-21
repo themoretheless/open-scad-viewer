@@ -98,13 +98,10 @@ fn proportional_homogeneous(a: &[[f64; 4]], b: &[[f64; 4]], tol: f64) -> bool {
 }
 
 fn collinear_direction(h: &[[f64; 4]]) -> Option<[f64; 3]> {
-    let points: Vec<[f64; 3]> = h
-        .iter()
-        .map(|p| [p[0] / p[3], p[1] / p[3], p[2] / p[3]])
-        .collect();
-    let origin = points[0];
+    let origin = [h[0][0] / h[0][3], h[0][1] / h[0][3], h[0][2] / h[0][3]];
     let mut direction = None;
-    for point in &points[1..] {
+    for p in &h[1..] {
+        let point = [p[0] / p[3], p[1] / p[3], p[2] / p[3]];
         let d = [
             point[0] - origin[0],
             point[1] - origin[1],
@@ -234,6 +231,117 @@ fn push_point(report: &mut CurveCurveReport, component: CcComponent) {
 mod box_certification;
 use box_certification::*;
 
+fn admit_coincidence(
+    input: &CurveIntersectionBox<'_>,
+    report: &mut CurveCurveReport,
+) -> Result<bool> {
+    let CurveIntersectionBox {
+        first,
+        second,
+        ta,
+        tb,
+        ha,
+        hb,
+        floor,
+    } = *input;
+    if proportional_homogeneous(ha, hb, floor.max(1e-12)) {
+        let pa = point3(&first.evaluate(ta[0])?.point)?;
+        let pb = point3(&first.evaluate(ta[1])?.point)?;
+        let qa = point3(&second.evaluate(tb[0])?.point)?;
+        let qb = point3(&second.evaluate(tb[1])?.point)?;
+        let forward = distance(&pa, &qa) + distance(&pb, &qb)
+            <= distance(&pa, &qb) + distance(&pb, &qa) + floor;
+        let reversed = !forward;
+        let (sb0, sb1) = if reversed {
+            (tb[1], tb[0])
+        } else {
+            (tb[0], tb[1])
+        };
+        report.components.push(CcComponent {
+            kind: CurveCurveComponentKind::Overlap,
+            first: ta[0],
+            second: sb0,
+            first_interval: ta,
+            second_interval: if reversed { [tb[0], tb[1]] } else { tb },
+            point: pa,
+            residual: 0.,
+            contact: ContactClass::Coincident,
+            multiplicity: u32::MAX,
+            orientation: if reversed { -1 } else { 1 },
+            reversed,
+            first_wrap: 0,
+            second_wrap: 0,
+            enclosure: enclosure_of(pa, floor),
+            coedge_trim: Some(coedge_trim(ta, [sb0, sb1], [[0, 0], [0, 0]])),
+        });
+        return Ok(true);
+    }
+    let (Some(da), Some(db)) = (collinear_direction(ha), collinear_direction(hb)) else {
+        return Ok(false);
+    };
+    if norm3(cross3(da, db)) > 1e-8 {
+        return Ok(false);
+    }
+    let origin = [
+        ha[0][0] / ha[0][3],
+        ha[0][1] / ha[0][3],
+        ha[0][2] / ha[0][3],
+    ];
+    let dir = da;
+    let mut a_params = ta.map(|t| {
+        let p = point3(&first.evaluate(t).unwrap().point).unwrap();
+        (t, project_line_parameter(p, origin, dir))
+    });
+    let mut b_params = tb.map(|u| {
+        let p = point3(&second.evaluate(u).unwrap().point).unwrap();
+        (u, project_line_parameter(p, origin, dir))
+    });
+    a_params.sort_by(|a, b| a.1.total_cmp(&b.1));
+    b_params.sort_by(|a, b| a.1.total_cmp(&b.1));
+    let lo = a_params[0].1.max(b_params[0].1);
+    let hi = a_params[1].1.min(b_params[1].1);
+    if !hi.is_finite() || hi <= lo + floor {
+        return Ok(false);
+    }
+    // Invert endpoints by linear blend in source parameter (degree-1 exact; higher monotone collinear).
+    let invert = |params: &[(f64, f64)], s: f64| {
+        let (t0, s0) = params[0];
+        let (t1, s1) = params[1];
+        if (s1 - s0).abs() <= floor {
+            t0
+        } else {
+            t0 + (t1 - t0) * ((s - s0) / (s1 - s0))
+        }
+    };
+    let t0 = invert(&a_params, lo);
+    let t1 = invert(&a_params, hi);
+    let u0 = invert(&b_params, lo);
+    let u1 = invert(&b_params, hi);
+    let reversed = (u1 - u0).signum() != (t1 - t0).signum() && (u1 - u0).abs() > floor;
+    let point = point3(&first.evaluate(t0)?.point)?;
+    report.components.push(CcComponent {
+        kind: CurveCurveComponentKind::Overlap,
+        first: t0,
+        second: u0,
+        first_interval: [t0.min(t1), t0.max(t1)],
+        second_interval: [u0.min(u1), u0.max(u1)],
+        point,
+        residual: 0.,
+        contact: ContactClass::Coincident,
+        multiplicity: u32::MAX,
+        orientation: if reversed { -1 } else { 1 },
+        reversed,
+        first_wrap: 0,
+        second_wrap: 0,
+        enclosure: enclosure_of(point, floor),
+        coedge_trim: Some(coedge_trim(
+            [t0.min(t1), t0.max(t1)],
+            [u0.min(u1), u0.max(u1)],
+            [[0, 0], [0, 0]],
+        )),
+    });
+    Ok(true)
+}
 
 fn resolve_cc_box(input: &CurveIntersectionBox<'_>, report: &mut CurveCurveReport) -> Result<()> {
     let CurveIntersectionBox {
@@ -519,16 +627,12 @@ pub(crate) fn intersect_curve_curve_report_with_clip_bounded(
             continue;
         }
         report.boxes_visited += 1;
-        let (pieces, ha, hb) = match (ha, hb) {
-            (Some(ha), Some(hb)) => (None, ha, hb),
+        let (untouched, ha, hb) = match (ha, hb) {
+            (Some(ha), Some(hb)) => (false, ha, hb),
             _ => {
                 let pa = first_open.trim(ta[0], ta[1])?;
                 let pb = second_open.trim(tb[0], tb[1])?;
-                (
-                    Some((pa.clone(), pb.clone())),
-                    homogeneous4(&pa)?,
-                    homogeneous4(&pb)?,
-                )
+                (true, homogeneous4(&pa)?, homogeneous4(&pb)?)
             }
         };
         let box_input = CurveIntersectionBox {
@@ -544,12 +648,11 @@ pub(crate) fn intersect_curve_curve_report_with_clip_bounded(
         // Coincidence admission only on untouched original span pairs: both
         // bisected children and clip-shrunk boxes carry depth >= 1, and their
         // re-trimmed tiny hulls can collapse into false proportional matches.
-        if let Some((pa, pb)) = &pieces
+        if untouched
             && depth == 0
             && !excluded
             && admit_coincidence(&box_input, &mut report)?
         {
-            let _ = (pa, pb);
             continue;
         }
         if excluded {
@@ -669,51 +772,5 @@ pub(crate) fn intersect_curve_curve_report_with_clip_bounded(
 }
 
 #[cfg(test)]
-mod guard_tests {
-    use super::*;
-
-    fn bezier(points: &[[f64; 3]]) -> Curve {
-        let n = points.len();
-        Curve {
-            degree: n - 1,
-            knots: [vec![0.; n], vec![1.; n]].concat(),
-            control_points: points.iter().map(|p| p.to_vec()).collect(),
-            weights: vec![1.; n],
-            periodic: false,
-        }
-    }
-
-    #[test]
-    fn nan_control_point_is_rejected_at_the_boundary() {
-        let a = bezier(&[[0., 0., 0.], [1., 1., 0.]]);
-        let mut b = bezier(&[[0., 1., 0.], [1., 0., 0.]]);
-        b.control_points[1][0] = f64::NAN;
-        let err = intersect_curve_curve_report(&a, &b, None).err().expect("invalid intersection input must fail");
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-    }
-
-    #[test]
-    fn crossing_pair_resolves_with_guards_active() {
-        // The unified guards must not perturb the certified result.
-        let a = bezier(&[[0., 0., 0.], [2., 2., 0.]]);
-        let b = bezier(&[[0., 2., 0.], [2., 0., 0.]]);
-        let r = intersect_curve_curve_report(&a, &b, None).unwrap();
-        assert_eq!(r.report.components.len(), 1);
-        assert!(r.report.unresolved.is_empty());
-        let c = &r.report.components[0];
-        assert!((c.first - 0.5).abs() < 1e-9 && (c.second - 0.5).abs() < 1e-9);
-        assert!(c.point.iter().all(|v| v.is_finite()));
-    }
-
-    #[test]
-    fn krawczyk_newton_guard_matches_iteration_cap() {
-        // Guard sized exactly at the Newton cap: 12 ticks pass, the 13th fails.
-        let mut guard = Budget::with_iterations(12).unwrap().guard("cc_krawczyk_newton");
-        for _ in 0..12 {
-            guard.tick().unwrap();
-        }
-        let err = guard.tick().unwrap_err();
-        assert_eq!(err.code, crate::RESOURCE_LIMIT, "{err:?}");
-        assert!(err.contains("cc_krawczyk_newton"));
-    }
-}
+#[path = "curve_curve/tests/guard_tests_integration.rs"]
+mod guard_tests;

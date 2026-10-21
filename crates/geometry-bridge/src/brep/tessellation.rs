@@ -1,3 +1,7 @@
+#[path="../brep_cusp_sampling.rs"]
+mod cusp_sampling;
+#[path="../brep_planar_slivers.rs"]
+mod planar_slivers;
 use super::*;
 
 pub struct Tessellation {
@@ -89,9 +93,9 @@ impl value_codec::Serialize for Tessellation {
     }
 }
 pub(crate) fn weld(mesh: Mesh, tolerance: f64) -> Result<Mesh> {
-    let mut positions = Vec::<f64>::new();
+    let mut positions = Vec::<f64>::with_capacity(mesh.positions.len());
     let mut cells = BTreeMap::<[i64; 3], Vec<usize>>::new();
-    let mut remap = vec![];
+    let mut remap = Vec::with_capacity(mesh.positions.len()/3);
     for p in mesh.positions.as_chunks::<3>().0 {
         let cell = [
             (p[0] / tolerance).floor() as i64,
@@ -257,18 +261,47 @@ pub(super) struct EdgeSamplingRegistry {
     pub(super) edges: Vec<Vec<usize>>,
 }
 impl EdgeSamplingRegistry {
-    pub(super) fn new(model: &brep_core::Model, segments: usize) -> Result<Self> {
+    pub(super) fn new(model: &brep_core::Model, segments: usize, reduce_linear_rulings: bool) -> Result<Self> {
         let mut schedule = vec![1; model.edges.len()];
+        let mut parallel_edges = Vec::new();
         for face in &model.faces {
             let curved = !is_affine_plane(&face.surface, model.tolerance_mm);
+            // Reduced rulings require the same exact trim admission as the
+            // rectangular mesher. General interior refinement cannot split
+            // these shared boundary edges to recover its UV length target.
+            let pairs = if reduce_linear_rulings {
+                rectangular_parallel_edges(model, face)?
+            } else {Vec::new()};
+            // A nonplanar bilinear patch has straight rulings in both axes;
+            // dropping both schedules would remove all interior refinement.
+            let reduce_face_rulings = !pairs.is_empty()
+                && !(curved && face.surface.degree_u==1 && face.surface.degree_v==1);
+            parallel_edges.extend(pairs);
             for &wire in std::iter::once(&face.outer).chain(&face.holes) {
                 for coedge in &model.loops[wire].coedges {
-                    if curved || model.edges[coedge.edge].curve.degree > 1 {
+                    let edge=&model.edges[coedge.edge];
+                    if (curved || edge.curve.degree > 1)
+                        && !(reduce_face_rulings && exact_linear_ruling(&face.surface,coedge,edge)) {
                         schedule[coedge.edge] = segments;
                     }
                 }
             }
         }
+        // A shared edge can be densified by its other incident face. Propagate
+        // that schedule across opposite sides before creating any positions;
+        // rectangular meshing must not synthesize private boundary samples.
+        loop {
+            let mut changed = false;
+            for &[a,b] in &parallel_edges {
+                let divisions = schedule[a].max(schedule[b]);
+                changed |= schedule[a] != divisions || schedule[b] != divisions;
+                schedule[a] = divisions; schedule[b] = divisions;
+            }
+            if !changed {break;}
+        }
+        // A distinct curved cusp can have coincident chords on a uniform
+        // parameter grid. Refine its shared schedule before allocating positions.
+        cusp_sampling::refine(model,&mut schedule,&parallel_edges)?;
         let count = model.vertices.len() + schedule.iter().map(|n| n - 1).sum::<usize>();
         if count > 60000 {
             return Err(input("B-rep boundary sampling exceeds 60000 positions"));
@@ -439,13 +472,15 @@ impl EdgeSamplingRegistry {
         &mut self,
         face: &brep_core::Face,
         use_: &brep_core::FaceUse,
-        built: FaceMesh,
+        mut built: FaceMesh,
         face_ids: &mut Vec<usize>,
+        model_tolerance_mm: f64,
+        allow_preview_retriangulation: bool,
     ) -> Result<()> {
         let mut remap = Vec::with_capacity(built.uv.len());
-        for (uv, shared) in built.uv.iter().zip(built.shared) {
+        for (uv, shared) in built.uv.iter().zip(&built.shared) {
             remap.push(if let Some(position) = shared {
-                position
+                *position
             } else {
                 let index = self.mesh.positions.len() / 3;
                 if index >= 60000 {
@@ -457,6 +492,19 @@ impl EdgeSamplingRegistry {
                 index
             });
         }
+        if is_affine_plane(&face.surface, 0.) && face.surface.weights.iter().flatten()
+            .all(|w| *w == face.surface.weights[0][0]) {
+            let points: Vec<[f64;3]> = remap.iter().map(|&i| {
+                let p = &self.mesh.positions[3*i..3*i+3]; [p[0],p[1],p[2]]
+            }).collect();
+            repair_collinear_triangles(&mut built, &points);
+        }
+        if allow_preview_retriangulation && is_affine_plane(&face.surface, model_tolerance_mm) {
+            let points: Vec<[f64;3]> = remap.iter().map(|&i| {
+                let p = &self.mesh.positions[3*i..3*i+3]; [p[0],p[1],p[2]]
+            }).collect();
+            planar_slivers::repair(&mut built, &points);
+        }
         for triangle in built.triangles {
             let mut mapped = triangle.map(|i| remap[i]);
             if use_.reversed {
@@ -466,7 +514,7 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         if face_ids.len() > 20000 {
-            return Err(input(format!("B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",use_.face,face_ids.len())));
+            return Err(input("B-rep tessellation exceeds 20000 triangles"));
         }
         Ok(())
     }
@@ -592,4 +640,139 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
 }
 pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
     nurbs_with_freeform_note(model, segments, FreeformTessNote::SampledUncertified)
+}
+
+fn rectangular_parallel_edges(model: &brep_core::Model, face: &brep_core::Face)
+    -> Result<Vec<[usize;2]>> {
+    let coedges=&model.loops[face.outer].coedges;
+    if coedges.len()!=4 || rectangular_trim_domain(model,face)?.is_none()
+        || coedges.iter().any(|c|model.edges[c.edge].degenerate) {return Ok(Vec::new());}
+    let mut horizontal=Vec::new(); let mut vertical=Vec::new();
+    for c in coedges {
+        let p=&c.pcurve.control_points;
+        if p[0][1]==p[1][1] {horizontal.push(c.edge);} else {vertical.push(c.edge);}
+    }
+    if horizontal.len()!=2 || vertical.len()!=2 {return Ok(Vec::new());}
+    Ok(vec![[horizontal[0],horizontal[1]],[vertical[0],vertical[1]]])
+}
+
+fn exact_linear_ruling(surface: &Surface, coedge: &brep_core::Coedge, edge: &brep_core::Edge) -> bool {
+    let p=&coedge.pcurve;
+    let curve=&edge.curve;
+    if edge.degenerate || p.degree!=1 || p.control_points.len()!=2
+        || p.weights[0]!=p.weights[1] || curve.degree!=1
+        || curve.control_points.len()!=2 || curve.weights[0]!=curve.weights[1] {
+        return false;
+    }
+    let a=&p.control_points[0];let b=&p.control_points[1];
+    let u = a[1]==b[1] && a[0]!=b[0] && surface.degree_u==1
+        && !surface.periodic_u && surface.control_points.len()==2
+        && surface.knots_u.len()==4 && surface.knots_u[0]==surface.knots_u[1]
+        && surface.knots_u[2]==surface.knots_u[3]
+        && surface.weights[0]==surface.weights[1];
+    let v = a[0]==b[0] && a[1]!=b[1] && surface.degree_v==1
+        && !surface.periodic_v && surface.control_points.iter().all(|row|row.len()==2)
+        && surface.knots_v.len()==4 && surface.knots_v[0]==surface.knots_v[1]
+        && surface.knots_v[2]==surface.knots_v[3]
+        && surface.weights.iter().all(|row|row[0]==row[1]);
+    u || v
+}
+
+fn repair_collinear_triangles(mesh: &mut FaceMesh, points: &[[f64;3]]) {
+    let normal = |a:usize,b:usize,c:usize| represented_triangle_cross(points[a],points[b],points[c]);
+    let Some(n)=mesh.triangles.iter().filter_map(|t|normal(t[0],t[1],t[2]))
+        .find(|n|*n!=[0;3]) else {return;};
+    let axis=(0..3).max_by_key(|&i|n[i].unsigned_abs()).unwrap();
+    let area=|a,b,c|normal(a,b,c).map(|n|n[axis].signum());
+    loop {
+        let mut replacement=None;
+        'search: for (i,t) in mesh.triangles.iter().enumerate() {
+            if normal(t[0],t[1],t[2])!=Some([0;3]) {continue;}
+            for k in 0..3 {
+                let [a,b,c]=[t[k],t[(k+1)%3],t[(k+2)%3]];
+                let [pa,pb,pc]=[points[a],points[b],points[c]];
+                let Some(j)=(0..3).find(|&j|pa[j]!=pb[j]) else {continue;};
+                if a==b || a==c || b==c || !(pa[j].min(pb[j])<pc[j] && pc[j]<pa[j].max(pb[j])) {continue;}
+                let neighbors:Vec<_>=mesh.triangles.iter().enumerate()
+                    .filter(|(_,q)|q.contains(&a)&&q.contains(&b)).collect();
+                if neighbors.len()!=2 {continue;}
+                let Some((j,q))=neighbors.into_iter().find(|(j,_)|*j!=i) else {continue;};
+                let Some(&d)=q.iter().find(|&&v|v!=a&&v!=b) else {continue;};
+                let forward=(0..3).any(|l|q[l]==a&&q[(l+1)%3]==b);
+                let (u,v)=if forward {(a,b)} else {(b,a)};
+                let Some(sign)=area(q[0],q[1],q[2]) else {continue;};
+                let first=[u,c,d];let second=[c,v,d];
+                if sign==0 || area(first[0],first[1],first[2])!=Some(sign)
+                    || area(second[0],second[1],second[2])!=Some(sign) {continue;}
+                replacement=Some((i,j,first,second));break 'search;
+            }
+        }
+        let Some((i,j,first,second))=replacement else {return;};
+        mesh.triangles[i]=first;mesh.triangles[j]=second;
+    }
+}
+
+fn rectangular_trim_domain(model: &brep_core::Model, face: &brep_core::Face) -> Result<Option<[f64; 4]>> {
+    let coedges = &model.loops[face.outer].coedges;
+    let corners = model.loop_uv(face.outer, 1)?;
+    let min_u = corners
+        .iter()
+        .map(|point| point[0])
+        .fold(f64::INFINITY, f64::min);
+    let max_u = corners
+        .iter()
+        .map(|point| point[0])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_v = corners
+        .iter()
+        .map(|point| point[1])
+        .fold(f64::INFINITY, f64::min);
+    let max_v = corners
+        .iter()
+        .map(|point| point[1])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let rectangular = face.holes.is_empty()
+        && corners.len() >= 4
+        && coedges.iter().all(|c| {
+            c.pcurve.degree == 1
+                && c.pcurve.control_points.len() == 2
+                && c.pcurve.weights.iter().all(|w| *w == c.pcurve.weights[0])
+                && {
+                    let a = &c.pcurve.control_points[0];
+                    let b = &c.pcurve.control_points[1];
+                    (a[0] == b[0] || a[1] == b[1])
+                        && [a, b].iter().all(|p| {
+                            p[0] == min_u || p[0] == max_u || p[1] == min_v || p[1] == max_v
+                        })
+                }
+        })
+        && max_u > min_u
+        && max_v > min_v;
+    Ok(rectangular.then_some([min_u, max_u, min_v, max_v]))
+}
+
+fn represented_triangle_cross(a: [f64;3], b: [f64;3], c: [f64;3]) -> Option<[i128;3]> {
+    let points=[a,b,c]; let mut parts=[[(0i128,0i32);3];3]; let mut exponent=i32::MAX;
+    for i in 0..3 {for j in 0..3 {
+        let x=points[i][j]; if !x.is_finite() {return None;}
+        let bits=x.to_bits(); let field=((bits>>52)&2047) as i32;
+        let mut mantissa=bits&((1u64<<52)-1);
+        let mut e=if field==0 {-1074} else {mantissa|=1u64<<52;field-1075};
+        if mantissa!=0 {let shift=mantissa.trailing_zeros();mantissa>>=shift;e+=shift as i32;exponent=exponent.min(e);}
+        let signed=if bits>>63==0 {mantissa as i128} else {-(mantissa as i128)};
+        parts[i][j]=(signed,e);
+    }}
+    if exponent==i32::MAX {return Some([0;3]);}
+    let mut p=[[0i128;3];3];
+    for i in 0..3 {for j in 0..3 {let (m,e)=parts[i][j];if m==0 {continue;}
+        let shift=u32::try_from(e-exponent).ok()?;if shift>126 {return None;}
+        p[i][j]=m.checked_mul(1i128.checked_shl(shift)?)?;
+    }}
+    let mut ab=[0i128;3];let mut ac=[0i128;3];
+    for j in 0..3 {ab[j]=p[1][j].checked_sub(p[0][j])?;ac[j]=p[2][j].checked_sub(p[0][j])?;}
+    Some([
+        ab[1].checked_mul(ac[2])?.checked_sub(ab[2].checked_mul(ac[1])?)?,
+        ab[2].checked_mul(ac[0])?.checked_sub(ab[0].checked_mul(ac[2])?)?,
+        ab[0].checked_mul(ac[1])?.checked_sub(ab[1].checked_mul(ac[0])?)?,
+    ])
 }

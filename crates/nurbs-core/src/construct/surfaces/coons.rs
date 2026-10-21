@@ -51,17 +51,19 @@ pub fn normalize_endpoint_weights(curve: &Curve) -> Result<Curve> {
         f0.is_finite() && f1.is_finite(),
         "Corner weight normalization scale overflow",
     )?;
-    let mut controls: Vec<Vec<f64>> = Vec::new();
-    let mut weights = Vec::new();
-    let mut knots = Vec::new();
+    let expected_controls = (breaks.len() - 1) * degree + 1;
+    let mut controls: Vec<Vec<f64>> = Vec::with_capacity(expected_controls);
+    let mut weights = Vec::with_capacity(expected_controls);
+    let mut knots = Vec::with_capacity(expected_controls + degree + 1);
     for segment in clamped.decompose()? {
         let [left, right] = segment.domain();
         let c = segment.definition();
         let scalar = |t: f64| f0 * (1. - (t - a) / (b - a)) + f1 * ((t - a) / (b - a));
         let factors = [scalar(left), scalar(right)];
         let first = controls.is_empty();
+        let dim = c.control_points[0].len();
         for k in (if first { 0 } else { 1 })..=degree {
-            let mut h = vec![0_f64; c.control_points[0].len() + 1];
+            let mut h = [0_f64; 4];
             for (index, factor) in [
                 (k, factors[0] * (degree - k) as f64 / degree as f64),
                 (k.wrapping_sub(1), factors[1] * k as f64 / degree as f64),
@@ -70,18 +72,17 @@ pub fn normalize_endpoint_weights(curve: &Curve) -> Result<Curve> {
                     continue;
                 }
                 let w = c.weights[index] * factor;
-                for axis in 0..h.len() - 1 {
+                for axis in 0..dim {
                     h[axis] += c.control_points[index][axis] * w;
                 }
-                let last = h.len() - 1;
-                h[last] += w;
+                h[dim] += w;
             }
-            let w = *h.last().unwrap();
+            let w = h[dim];
             check(
                 w.is_finite() && w > 0.,
                 "Corner weight normalization produced invalid weights",
             )?;
-            controls.push(h[..h.len() - 1].iter().map(|v| v / w).collect());
+            controls.push(h[..dim].iter().map(|v| v / w).collect());
             weights.push(w);
         }
         if knots.is_empty() {
@@ -155,12 +156,13 @@ pub fn patch(boundaries: &[Curve]) -> Result<Surface> {
     // trim() clamps every active domain, so endpoint control points are the
     // exact rational endpoints. Evaluation would multiply/divide their weights
     // and can manufacture different rounded positions for identical corners.
-    let endpoint = |c: &Curve, end: usize| {
-        if end == 0 {
-            c.control_points[0].clone()
+    let endpoint = |c: &Curve, end: usize| -> [f64; 3] {
+        let p = if end == 0 {
+            &c.control_points[0]
         } else {
-            c.control_points.last().unwrap().clone()
-        }
+            c.control_points.last().unwrap()
+        };
+        [p[0], p[1], p[2]]
     };
     let corners = [
         endpoint(&curves[0], 0),
@@ -208,11 +210,11 @@ pub fn patch(boundaries: &[Curve]) -> Result<Surface> {
         curves[1].weights[0],
         *curves[1].weights.last().unwrap(),
     ];
-    let corners: Vec<Vec<f64>> = corners
-        .iter()
-        .zip(corner_weights)
-        .map(|(p, w)| vec![p[0] * w, p[1] * w, p[2] * w, w])
-        .collect();
+    let corners: [[f64; 4]; 4] = std::array::from_fn(|i| {
+        let p = corners[i];
+        let w = corner_weights[i];
+        [p[0] * w, p[1] * w, p[2] * w, w]
+    });
     let u = loft_aligned(&curves[..2])?;
     let v = loft_aligned(&curves[2..])?;
     let nu = u.control_points.len();
@@ -220,31 +222,29 @@ pub fn patch(boundaries: &[Curve]) -> Result<Surface> {
     let greville = |knots: &[f64], degree: usize, i: usize| {
         knots[i + 1..=i + degree].iter().sum::<f64>() / degree as f64
     };
-    let homogeneous: Vec<Vec<Vec<f64>>> = (0..nu)
+    let homogeneous: Vec<Vec<[f64; 4]>> = (0..nu)
         .map(|i| {
             let x = greville(&u.knots_u, u.degree_u, i);
             (0..nv)
                 .map(|j| {
                     let y = greville(&v.knots_u, v.degree_u, j);
-                    (0..4)
-                        .map(|k| {
-                            let h = |s: &Surface, i: usize, j: usize| {
-                                if k == 3 {
-                                    s.weights[i][j]
-                                } else {
-                                    s.control_points[i][j][k] * s.weights[i][j]
-                                }
-                            };
-                            (1. - y) * h(&u, i, 0)
-                                + y * h(&u, i, 1)
-                                + (1. - x) * h(&v, j, 0)
-                                + x * h(&v, j, 1)
-                                - ((1. - x) * (1. - y) * corners[0][k]
-                                    + x * (1. - y) * corners[1][k]
-                                    + (1. - x) * y * corners[2][k]
-                                    + x * y * corners[3][k])
-                        })
-                        .collect()
+                    std::array::from_fn(|k| {
+                        let h = |s: &Surface, i: usize, j: usize| {
+                            if k == 3 {
+                                s.weights[i][j]
+                            } else {
+                                s.control_points[i][j][k] * s.weights[i][j]
+                            }
+                        };
+                        (1. - y) * h(&u, i, 0)
+                            + y * h(&u, i, 1)
+                            + (1. - x) * h(&v, j, 0)
+                            + x * h(&v, j, 1)
+                            - ((1. - x) * (1. - y) * corners[0][k]
+                                + x * (1. - y) * corners[1][k]
+                                + (1. - x) * y * corners[2][k]
+                                + x * y * corners[3][k])
+                    })
                 })
                 .collect()
         })

@@ -1,3 +1,5 @@
+import {createG2RunoutSurface} from './geometricG2'
+import {executeDirectTransaction} from './directTransactions'
 import {restoreSourceBody} from './sourceBody'
 import {qualifyNurbsOffsetContacts} from './nurbsOffsetContactQualification'
 import {fitNurbsOffsetEnvelope} from './nurbsOffsetEnvelopeFit'
@@ -57,6 +59,14 @@ import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidRequest,type MainSo
 
 async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
+case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
+case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
+case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
+case 'animationSample':return (await import('./assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
+case 'drawingPdf':return (await import('./drawingSheets')).vectorDrawingPdf(job.sheets)
+case 'drawingSheets':return (await import('./drawingSheets')).createDrawingSheets(job.bodies,job.options)
+case 'transaction':return executeDirectTransaction(job.document,job.script)
+
     case 'sourceBodyRestore':return restoreSourceBody(job.options)
     case 'sketchSnaps':return sketchSnapGeometry([job.sketch])
     case 'bodySnaps':return bodySnapGeometry(job.body)
@@ -133,6 +143,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
 }
 
 export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {
+  let kernelWarm=false
   const timing=new Map<number,{warmupMs:number;executeMs:number;prepareMs:number}>()
   return createWorkerHandler<MainSolidRequest,MainSolidResponse,MainSolidResults[keyof MainSolidResults]>(post,{
     validate:(value)=>{
@@ -143,7 +154,7 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},
     beforeExecute:async request=>{
-      if(request.traceTiming!==true){await warmGeometryKernel();return}
+      if(request.traceTiming!==true){if(!kernelWarm){await warmGeometryKernel();kernelWarm=true;}return}
       const entry={warmupMs:0,executeMs:0,prepareMs:0};timing.set(request.id,entry);const start=performance.now();try{await warmGeometryKernel()}finally{entry.warmupMs=performance.now()-start}
     },
     execute:async request=>{

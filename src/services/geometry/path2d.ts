@@ -401,3 +401,5 @@ export const sampleGradient = (
     angle: opts.angle,
     spread: opts.spread ?? 'pad',
   })
+
+export const normalizePathRings=(rings:PathPoint[][],fillRule:PathFillRule='evenodd')=>call<PathPoint[][]>('normalize_rings',{rings,fillRule})

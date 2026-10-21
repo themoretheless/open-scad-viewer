@@ -1,0 +1,11 @@
+# Exact original multi-span translated finite/common census
+
+OwnedTranslatedSpanIntersections owns unchanged original Curves, exact rational offsets and the complete original knot-cell pair census. Homogeneous cells shift exactly; original parameter domains remain unchanged. Independent verification rebuilds source cells, binds canonical rational translations and source bits, and checks every pair including separation, stationary, finite events and monotone nonlinear/projective common components. Source-cell verifier body is shared with the prior zero-shift path. The original APIs retain their unchanged source key and input behavior.
+
+Regressions include partial multi-span one-third overlap with exact image endpoints, omitted/changed common relation refusal, changed translation binding refusal, source self-copy mismatch refusal, original natural finite-event parameters, noncollinear reversed quadratic shared image under nonrepresentable offset, and partial nonlinear source clocks. Fresh gates:135 profile and72 integration tests; WASM compile.
+
+This is a full-knot-cell census within existing admitted correspondence families. Algebraic periodic piece-bound clipping, common components outside those families, material incidence and physical face publication are not claimed. Catalog198/200. Rust remains isolated; cumulative patch targets cryptographically recovered original baseline; coordinated merging with current shared changes remains required.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

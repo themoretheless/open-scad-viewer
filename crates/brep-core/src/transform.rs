@@ -232,16 +232,12 @@ pub fn profile(
             "A 2D B-rep transform must be numerically nonsingular",
         ));
     }
-    if crate::planar_trim::validate(loops, tolerance).is_ok()
-        && loops.iter().flatten().any(|curve| curve.degree > 1)
-        && ((na * na + nc * nc - nb * nb - nd * nd).abs() > 16. * f64::EPSILON
-            || (na * nb + nc * nd).abs() > 16. * f64::EPSILON)
-    {
-        return Err(unsupported(
-            "Nonuniform scale/shear of circular profiles requires unsupported elliptical trims",
-        ));
+    let general = loops.iter().flatten().any(|c| crate::bezier_profile::requires_general(c,tolerance));
+    if general {
+        crate::bezier_profile::validate_profile(loops, tolerance)?;
+    } else {
+        crate::planar_trim::validate(loops, tolerance)?;
     }
-    crate::profile_region::validate(loops, tolerance)?;
     let mut result = loops.to_vec();
     for wire in &mut result {
         for curve in wire.iter_mut() {
@@ -257,7 +253,11 @@ pub fn profile(
             }
         }
     }
-    crate::profile_region::validate(&result, tolerance)?;
+    if result.iter().flatten().any(|c| crate::bezier_profile::requires_general(c,tolerance)) {
+        crate::bezier_profile::validate_profile(&result, tolerance)?;
+    } else {
+        crate::planar_trim::validate(&result, tolerance)?;
+    }
     Ok(result)
 }
 
@@ -284,10 +284,11 @@ mod profile_tests {
         }
         let mut shear = matrix;
         shear[4] = 1.;
-        assert_eq!(
-            profile(&loops, shear, 1e-7).unwrap_err().code,
-            "BREP_UNSUPPORTED_PROFILE_TRANSFORM"
-        );
+        let sheared = profile(&loops, shear, 1e-7).unwrap();
+        assert!((crate::bezier_profile::signed_area(&sheared[0],1e-7).unwrap()-36.*std::f64::consts::PI).abs()<1e-5);
+        assert!(sheared[0].iter().all(|c|c.degree==2));
+        crate::profile_certificate::verify(&sheared,1e-7,
+            &crate::profile_certificate::certify(&sheared,1e-7).unwrap()).unwrap();
         let mut lifted = matrix;
         lifted[14] = 1.;
         assert!(profile(&loops, lifted, 1e-7).is_err());

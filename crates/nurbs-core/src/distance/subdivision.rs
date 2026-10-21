@@ -241,7 +241,7 @@ mod guard_tests {
         fn upper(&self) -> Option<f64> {
             Some(1.)
         }
-        fn split(&mut self, cell: ()) -> Result<Split<()>> {
+        fn split(&mut self, _cell: ()) -> Result<Split<()>> {
             Ok(Split::Children([Some(((), 0.)), Some(((), 0.))]))
         }
     }

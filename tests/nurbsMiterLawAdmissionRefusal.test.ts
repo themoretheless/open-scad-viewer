@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {miterLawMatrixModes,miterLawMatrixSource} from '../scripts/miter-law-matrix-sources'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -9,7 +10,7 @@ it.each(miterLawMatrixModes)('refuses exhausted or changed actual miter bodies i
  const built=await buildOwnNurbsAsync(compileRushFrontend(miterLawMatrixSource(mode)).document,
   {action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing actual native miter body')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  const saved=JSON.stringify(model),caps=mode.closed?[]:[model.faces.length-2,model.faces.length-1]
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)?.solidGeometryCertified).toBe(true)
  expect(()=>inspectSweepVolume(model,caps,{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxExactWork:0})).toThrow(/Exact boundary work/)

@@ -4,6 +4,14 @@ export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
   {
     "sha256": "14ab9ca344465d272de4d402118b88a138ff574dd29dad9cbabe86ffbc4368a4",
     "byteLength": 12142979
+  },
+  {
+    "sha256": "b009f02f131014a271a2140a892590c409f23d865c66eb21ffa94352edd8a844",
+    "byteLength": 13749770
+  },
+  {
+    "sha256": "2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+    "byteLength": 13751449
   }
 ])
 export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {
@@ -15,5 +23,5 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
   "wasmSha256": packagedArtifact.sha256,
   "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
   "lockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
-  "rustLockfileSha256": "db822b6ec328b4b32ec4ca1b386ddef0ecc94c190ada4734873f2cbccd9248b7"
+  "rustLockfileSha256": "0c68303e41d40ad569ee29e786b134fc6d51753f51bc3e09d3a71421b63bf369"
 })

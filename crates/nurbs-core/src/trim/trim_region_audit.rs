@@ -24,7 +24,7 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
         && (1..=100000).contains(&max_pairs) && (1..=100000).contains(&max_cells)
         && (1..=1000000).contains(&max_domain_cells) && tolerance_uv.is_finite() && tolerance_uv>0.,
         "Trim region audit requires 1..16 loops, at most 256 curves, positive tolerance and bounded work")?;
-    let mut out=Report{valid:None,reason:"loop-simplicity-unproven",loops:Vec::new(),winding:vec![None;loops.len()],pairs:0,cells:0,domain_cells:0,problem_loops:None};
+    let mut out=Report{valid:None,reason:"loop-simplicity-unproven",loops:Vec::with_capacity(loops.len()),winding:vec![None;loops.len()],pairs:0,cells:0,domain_cells:0,problem_loops:None};
     for (i,l) in loops.iter().enumerate(){
         if out.pairs==max_pairs || out.cells==max_cells {return Ok(out);}
         let r=trim_simplicity::inspect(l,tolerance_uv,max_pairs-out.pairs,((max_cells-out.cells)/(loops.len()-i+1)).max(1))?;

@@ -6,3 +6,6 @@ pub mod surface_g1;
 pub mod surface_g2;
 pub mod multipatch_g1;
 pub mod periodic_seam;
+
+pub mod surface_blend;
+pub mod radius_transition;

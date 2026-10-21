@@ -82,7 +82,15 @@ fn inspect_metric(
     check(independent, "Linear projection rows must be independent")?;
     let projected_surface = exact_projected_surface(s, projection);
     let working = projected_surface.as_ref().unwrap_or(s);
-    let station_split = exact_station_split(working);
+    let station_split = exact_station_split(working).map(|(r,p)|(r,p,1))
+        .or_else(|| {
+            let transposed=crate::surface_edit::transpose(working).ok()?;
+            let (r,p)=exact_station_split(&transposed)?;
+            Some((crate::surface_edit::transpose(&r).ok()?,crate::surface_edit::transpose(&p).ok()?,0))
+        });
+    let mut working_span=jets::FirstStableSpanCache::new(working);
+    let mut split_spans=station_split.as_ref().map(|(relative,position,_)|
+        (jets::FirstStableSpanCache::new(relative),jets::FirstStableSpanCache::new(position)));
     let mut out = Report {
         certified: false,
         cells: 0,
@@ -151,17 +159,16 @@ fn inspect_metric(
             // Differentiate the original homogeneous span before restricting
             // its value image. Query-cell differences amplify interval widths
             // on small translated rational walls and waste the shared budget.
-            let derivatives = if let Some((relative, position)) = &station_split {
-                let r = jets::calculate_partial_stable(relative, span, domain, [None; 2])?;
-                let p = jets::calculate_partial_stable(position, span, domain, [None; 2])?;
-                let mut dv = r[0][1];
-                for k in 0..3 {
-                    dv[k] = dv[k].add(p[0][1][k])?;
-                }
-                [r[1][0], dv]
+            let derivatives = if let Some((relative,position))=&mut split_spans {
+                let r=relative.calculate(span,domain)?;
+                let p=position.calculate(span,domain)?;
+                let mut derivatives=[r[1],r[2]];
+                let axis=station_split.as_ref().unwrap().2;
+                for k in 0..3 {derivatives[axis][k]=derivatives[axis][k].add(p[axis+1][k])?;}
+                derivatives
             } else {
-                let j = jets::calculate_partial_stable(working, span, domain, [None; 2])?;
-                [j[1][0], j[0][1]]
+                let j=working_span.calculate(span,domain)?;
+                [j[1],j[2]]
             };
             let mut projected = [[I::point(0.); 2]; 2];
             for row in 0..2 {
@@ -190,14 +197,14 @@ fn inspect_metric(
             // independent outward enclosures of the same Jacobian. Neither
             // dominates for every retained chart. Intersect them rather than
             // losing the tighter enclosure on corrected miter walls.
-            let restricted = jets::calculate(working, span, domain, None)?;
+            let restricted = jets::calculate_first(working,span,domain)?;
             for row in 0..2 {
                 for axis in 0..2 {
                     let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
                     let derivative = if axis == 0 {
-                        restricted[1][0]
+                        restricted[1]
                     } else {
-                        restricted[0][1]
+                        restricted[2]
                     };
                     let other = if projected_surface.is_some() {
                         derivative[row].div(width)?
@@ -266,7 +273,7 @@ fn inspect_metric(
 }
 /// Exact comparisons of retained corner controls only propose a projection.
 /// The full outward proof remains mandatory; no corner sample certifies a chart.
-pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+fn inspect_candidate_original(s: &Surface, max_cells: usize) -> Result<Report> {
     s.validate()?;
     if let Some((polynomial, parameterization)) = polynomial_profile_image(s)? {
         let mut report = inspect_candidate_projected(&polynomial, max_cells)?;
@@ -709,3 +716,49 @@ fn exact_station_split(s: &Surface) -> Option<(Surface, Surface)> {
 #[cfg(test)]
 #[path = "surface_linear_monotonicity/tests.rs"]
 mod retained_route_tests;
+
+pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+    // Preserve every already successful original proposal and its work/report.
+    // A finer integer dual map is only a proposal after the original cover
+    // failed; acceptance still proves the same full-domain outward inequality.
+    let mut report = inspect_candidate_original(s, max_cells)?;
+    for resolution in [32., 64.] {
+        if report.certified || report.cells == max_cells { break; }
+        let Some(projection) = midpoint_projection_at_resolution(s, resolution)? else { break; };
+        if projection == report.projection { continue; }
+        let mut next = inspect_with_depth(s, projection, max_cells - report.cells, 14)?;
+        next.cells += report.cells;
+        report = next;
+    }
+    Ok(report)
+}
+fn midpoint_projection_at_resolution(s: &Surface, resolution: f64) -> Result<Option<[[i8; 3]; 2]>> {
+    // Midpoint tangents propose dual directions. Every actual acceptance still
+    // requires one fixed integer map's whole-domain outward interval proof.
+    let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];
+    let v = 0.5 * s.knots_v[s.degree_v] + 0.5 * s.knots_v[s.control_points[0].len()];
+    let Some((du, dv)) = s.evaluate(u, v)?.first_derivatives() else {
+        return Ok(None);
+    };
+    let dot = |a: [f64; 3], b: [f64; 3]| (0..3).map(|k| a[k] * b[k]).sum::<f64>();
+    let uu = dot(du, du);
+    let uv = dot(du, dv);
+    let vv = dot(dv, dv);
+    let dual: [[f64; 3]; 2] = [
+        std::array::from_fn(|k| vv * du[k] - uv * dv[k]),
+        std::array::from_fn(|k| uu * dv[k] - uv * du[k]),
+    ];
+    let mut candidate = [[0_i8; 3]; 2];
+    for row in 0..2 {
+        let scale = dual[row].iter().map(|x| x.abs()).fold(0., f64::max);
+        if !scale.is_finite() || scale <= 0. {
+            return Ok(None);
+        }
+        candidate[row] = dual[row].map(|x| (resolution * x / scale).round() as i8);
+    }
+    let independent = (0..3).any(|k| {
+        candidate[0][k] as i16 * candidate[1][(k + 1) % 3] as i16
+            != candidate[1][k] as i16 * candidate[0][(k + 1) % 3] as i16
+    });
+    Ok(independent.then_some(candidate))
+}

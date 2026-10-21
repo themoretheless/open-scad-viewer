@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-16",
+  "scope": "Pointwise original ZA worm-wheel envelope contact roots, not complete envelope sheet or wheel body",
+  "focused_tests_passed": 12,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "9d695056f557043d780f48e458a0af2279af64ccff43eedd9c94e195d1da4435",
+    "crates/nurbs-core/tests/worm_wheel.rs": "ab510ea61b0cd477a074778dac33f786033f23967066a99ed0468d214b38b22c",
+    "crates/nurbs-core/src/construct/surfaces.rs": "fa75594c369452ad120d7e98a39a704e0530da5d8cd9555a2b1b553fcf86bb45",
+    "crates/nurbs-core/src/lib.rs": "b93a2b3709afeffd1db2f26aafac2f3b5dd007a59eb54c7149a12bc511a80804",
+    "crates/nurbs-core/src/domains.rs": "c776aadc35203cde3c7ad57503b57ba281693b77451a20f0e8a449ab6ccbb7df"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "cases": [
+    "Both original flanks and worm hands",
+    "Independent source-normal, relative velocity and wheel-frame positions",
+    "Independent finite-difference generating-motion triple product",
+    "Original multi-start phase source binding",
+    "Complete simple root pair sign/derivative replay",
+    "Strict exclusion and unresolved tangent neighborhoods",
+    "Missing/overlapping/changed root bracket refusals",
+    "ZA source-patch and trim regressions"
+  ],
+  "unqualified": [
+    "Two-dimensional branch coverage and regularity",
+    "NURBS envelope fitting",
+    "Full tooth/stock/root/tip outline, original embedding and wheel B-rep"
+  ]
+}

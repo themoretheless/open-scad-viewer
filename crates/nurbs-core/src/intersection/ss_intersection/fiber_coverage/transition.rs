@@ -1,0 +1,288 @@
+//! Original-source local overlap between two uniform parameter-root charts.
+//! This does not census every overlap or identify a physical world branch.
+use super::*;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TransitionOrientation {
+    Forward,
+    Reverse,
+}
+#[derive(Clone, Debug)]
+pub struct QualifiedFiberTransition {
+    first: QualifiedFiber,
+    second: QualifiedFiber,
+    bridge: QualifiedFiber,
+    endpoints: [FiberReport; 2],
+    images: [[f64; 2]; 2],
+    orientation: TransitionOrientation,
+    rectangles: usize,
+    max_rectangles: usize,
+}
+impl QualifiedFiberTransition {
+    pub fn first(&self) -> &QualifiedFiber {
+        &self.first
+    }
+    pub fn second(&self) -> &QualifiedFiber {
+        &self.second
+    }
+    pub fn bridge(&self) -> &QualifiedFiber {
+        &self.bridge
+    }
+    /// Enclosures of the second chart's free coordinate at the two actual
+    /// endpoints of the bridge's first-chart free interval.
+    pub fn endpoint_images(&self) -> [[f64; 2]; 2] {
+        self.images
+    }
+    pub fn orientation(&self) -> TransitionOrientation {
+        self.orientation
+    }
+    pub fn rectangles(&self) -> usize {
+        self.rectangles
+    }
+    pub(super) fn matches(&self, other: &Self) -> bool {
+        let same = |a: &QualifiedFiber, b: &QualifiedFiber| {
+            a.source().first() == b.source().first()
+                && a.source().second() == b.source().second()
+                && a.domain() == b.domain()
+                && a.free_axis() == b.free_axis()
+                && a.report() == b.report()
+                && a.limits().max_rectangles == b.limits().max_rectangles
+                && a.limits().preconditioner == b.limits().preconditioner
+        };
+        same(&self.first, &other.first)
+            && same(&self.second, &other.second)
+            && same(&self.bridge, &other.bridge)
+            && self.endpoints == other.endpoints
+            && self.images == other.images
+            && self.orientation == other.orientation
+            && self.rectangles == other.rectangles
+            && self.max_rectangles == other.max_rectangles
+    }
+    pub fn reverify(&self) -> Result<()> {
+        let fresh = qualify_fiber_transition(
+            &self.first,
+            &self.second,
+            self.bridge.domain(),
+            self.max_rectangles,
+        )?;
+        let other = fresh
+            .transition
+            .ok_or_else(|| crate::input("Original local chart transition remains unproved"))?;
+        check(
+            other.bridge.source().first() == self.bridge.source().first()
+                && other.bridge.source().second() == self.bridge.source().second()
+                && other.bridge.free_axis() == self.bridge.free_axis()
+                && other.bridge.report() == self.bridge.report()
+                && other.endpoints == self.endpoints
+                && other.images == self.images
+                && other.orientation == self.orientation
+                && other.rectangles == self.rectangles,
+            "Original chart transition source, endpoint orientation or shared work changed",
+        )
+    }
+}
+pub struct FiberTransitionResult {
+    transition: Option<QualifiedFiberTransition>,
+    reason: &'static str,
+    rectangles: usize,
+}
+impl FiberTransitionResult {
+    pub fn transition(&self) -> Option<&QualifiedFiberTransition> {
+        self.transition.as_ref()
+    }
+    pub fn into_transition(self) -> Option<QualifiedFiberTransition> {
+        self.transition
+    }
+    pub fn reason(&self) -> &'static str {
+        self.reason
+    }
+    pub fn rectangles(&self) -> usize {
+        self.rectangles
+    }
+}
+/// Prove a nonempty continuous local overlap using the ACTUAL ordered sources.
+/// The entire proposed bridge box must lie in both original qualified charts;
+/// a fresh uniform unique-root proof uses the first chart's free axis. Hence
+/// every bridge root belongs to both charts. Uniqueness in the second chart
+/// makes its free coordinate injective along this connected bridge. Continuity
+/// and disjoint original endpoint enclosures establish the orientation of this
+/// local coordinate bijection onto its actual image (not the whole second chart).
+/// All source replays, bridge and endpoint queries share one rectangle budget.
+/// This is not a complete pairwise overlap census or physical branch topology.
+pub fn qualify_fiber_transition(
+    first: &QualifiedFiber,
+    second: &QualifiedFiber,
+    domain: Box4,
+    max_rectangles: usize,
+) -> Result<FiberTransitionResult> {
+    check(
+        (1..=100000).contains(&max_rectangles),
+        "Invalid shared original transition work allowance",
+    )?;
+    check(
+        first.source().first() == second.source().first()
+            && first.source().second() == second.source().second(),
+        "Transition charts must share actual ordered original surfaces",
+    )?;
+    check(
+        (0..4).all(|a| {
+            domain[a].iter().all(|v| v.is_finite())
+                && domain[a][0] < domain[a][1]
+                && first.domain()[a][0] <= domain[a][0]
+                && domain[a][1] <= first.domain()[a][1]
+                && second.domain()[a][0] <= domain[a][0]
+                && domain[a][1] <= second.domain()[a][1]
+        }),
+        "Transition needs a nonempty complete box inside both actual root charts",
+    )?;
+    let mut out = FiberTransitionResult {
+        transition: None,
+        reason: "source-replay-unproven",
+        rectangles: 0,
+    };
+    let mut work = Work {
+        used: 0,
+        max: max_rectangles,
+    };
+    for f in [first, second] {
+        if replay_fiber(f, &mut work).is_err() {
+            out.rectangles = work.used;
+            return Ok(out);
+        }
+    }
+    out.reason = "uniform-original-bridge-unproven";
+    let Some(result) = run(first, domain, &mut work)? else {
+        out.rectangles = work.used;
+        return Ok(out);
+    };
+    let Some(bridge) = result.into_fiber() else {
+        out.rectangles = work.used;
+        return Ok(out);
+    };
+    let free = first.free_axis().index();
+    let target = second.free_axis().index();
+    let target_index = (free != target).then(|| {
+        (0..4)
+            .filter(|&k| k != free)
+            .position(|k| k == target)
+            .unwrap()
+    });
+    let mut endpoints = Vec::with_capacity(2);
+    let mut images = Vec::with_capacity(2);
+    for t in domain[free] {
+        let mut at = domain;
+        at[free] = [t; 2];
+        let Some(r) = run(&bridge, at, &mut work)? else {
+            out.reason = "endpoint-work-unproven";
+            out.rectangles = work.used;
+            return Ok(out);
+        };
+        let report = r.report();
+        if report.status != FiberStatus::UniformUniqueRoot {
+            out.reason = "original-endpoint-image-unproven";
+            out.rectangles = work.used;
+            return Ok(out);
+        }
+        let Some(root) = report.root_image else {
+            out.rectangles = work.used;
+            return Ok(out);
+        };
+        let image = match target_index {
+            None => [t; 2],
+            Some(index) => root[index],
+        };
+        images.push(image);
+        endpoints.push(report.clone());
+    }
+    out.rectangles = work.used;
+    out.reason = "endpoint-orientation-unproven";
+    let orientation = if images[0][1] < images[1][0] {
+        TransitionOrientation::Forward
+    } else if images[1][1] < images[0][0] {
+        TransitionOrientation::Reverse
+    } else {
+        return Ok(out);
+    };
+    out.reason = "qualified-original-local-chart-transition";
+    out.transition = Some(QualifiedFiberTransition {
+        first: first.clone(),
+        second: second.clone(),
+        bridge,
+        endpoints: endpoints.try_into().unwrap(),
+        images: images.try_into().unwrap(),
+        orientation,
+        rectangles: work.used,
+        max_rectangles,
+    });
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn cached_original_transition_and_endpoint_claims_require_fresh_replay() {
+        let a = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0.25, 0., 0.], vec![0.25, 1., 0.]],
+                vec![vec![0.5, 0., 0.], vec![0.5, 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let b = Surface {
+            control_points: vec![
+                vec![vec![0., 0.5, -1.], vec![0., 0.5, 1.]],
+                vec![vec![1., 0.5, -1.], vec![1., 0.5, 1.]],
+            ],
+            ..a.clone()
+        };
+        let src = FiberSources::new(&a, &b).unwrap();
+        let first = src
+            .certify(
+                [[0., 1.], [0.25, 0.75], [0.125, 0.625], [0.25, 0.75]],
+                FiberAxis::FirstU,
+                FiberLimits::default(),
+            )
+            .unwrap()
+            .into_fiber()
+            .unwrap();
+        let second = src
+            .certify(
+                [[0.125, 0.875], [0.25, 0.75], [0.3125, 0.4375], [0.25, 0.75]],
+                FiberAxis::SecondU,
+                FiberLimits::default(),
+            )
+            .unwrap()
+            .into_fiber()
+            .unwrap();
+        let domain = [[0.375, 0.625], [0.25, 0.75], [0.3125, 0.4375], [0.25, 0.75]];
+        let owner = qualify_fiber_transition(&first, &second, domain, 100000)
+            .unwrap()
+            .into_transition()
+            .unwrap();
+        owner.reverify().unwrap();
+        let mut bad = owner.clone();
+        bad.orientation = TransitionOrientation::Reverse;
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        bad.rectangles -= 1;
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        bad.images[0][0] -= 0.01;
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        bad.endpoints[0].rectangles += 1;
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        bad.bridge = first.clone();
+        assert!(bad.reverify().is_err());
+        let mut bad = owner;
+        bad.first = second;
+        assert!(bad.reverify().is_err());
+    }
+}

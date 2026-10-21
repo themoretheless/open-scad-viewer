@@ -1,0 +1,29 @@
+
+ RUN  v4.1.11 /private/tmp/osv-push-integration-20261021
+
+ ❯ |node| tests/nurbsFixedPatchError.test.ts (22 tests | 1 failed) 1245ms
+   × certifies original rational straight and nearly straight RMF affine transport 79ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/nurbsFixedPatchError.test.ts > certifies original rational straight and nearly straight RMF affine transport
+NurbsCurveError: RMF error budgets require rmf_transport_steps
+ ❯ decodeNurbsResult src/services/geometry/kernel.ts:161:118
+    159| export function decodeNurbsResult<T>(result:unknown):T{
+    160|  const envelope=result as {ok:boolean;value:T;error:{code:string;messa…
+    161|  if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURB…
+       |                                                                                                                      ^
+    162|  return envelope.value
+    163| }
+ ❯ callGeometryRust src/services/geometry/kernel.ts:168:10
+ ❯ previewProgressiveNurbsProfiles src/services/nurbsConstructors.ts:209:236
+ ❯ tests/nurbsFixedPatchError.test.ts:80:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 23 passed (24)
+   Start at  19:11:15
+   Duration  2.45s (transform 1.70s, setup 0ms, import 2.00s, tests 2.61s, environment 0ms)
+

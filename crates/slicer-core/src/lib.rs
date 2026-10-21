@@ -77,6 +77,25 @@ pub enum PathRole {
     Outline,
     Inset,
     Hatch,
+    SolidSkin,
+    Bridge,
+    Support,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum InfillPattern {
+    #[default]
+    Rectilinear,
+    Grid,
+    Triangles,
+    Concentric,
+    Honeycomb,
+    Gyroid,
+    HilbertCurve,
+    ArchimedeanChords,
+    CrossHatch,
+    TriHexagon,
+    CubicSubdivision,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -192,7 +211,7 @@ fn inset_rings(source: &Rings, distance: f64, budget: &mut Budget) -> Result<Rin
     if source.is_empty() {
         return Ok(Vec::new());
     }
-    let mut bands = Vec::new();
+    let mut bands = Vec::with_capacity(source.len());
     let tolerance = (distance * 0.01).min(0.01);
     let options = StrokeOptions {
         width: 2.0 * distance,
@@ -221,142 +240,21 @@ fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) -> Toolpath {
     }
 }
 
-fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpath>> {
-    let mut min_y = f64::INFINITY;
-    let mut max_y = f64::NEG_INFINITY;
-    for point in source.iter().flatten() {
-        min_y = min_y.min(point[1]);
-        max_y = max_y.max(point[1]);
-    }
-    if source.is_empty() || max_y - min_y < spacing * 0.25 {
-        return Ok(Vec::new());
-    }
-    let start = min_y + spacing * 0.5;
-    let end = max_y - spacing * 0.25;
-    if start > end {
-        return Ok(Vec::new());
-    }
-    let intervals = ((end - start) / spacing).floor();
-    if !intervals.is_finite() || intervals >= MAX_HATCH_LINES as f64 {
-        return Err(invalid(
-            "TOOLPATH_HATCH_LIMIT",
-            "Toolpath hatch exceeds 65536 scan lines",
-        ));
-    }
-    let line_count = intervals as usize + 1;
-    let edges = point_count(source);
-    let row_work = edges
-        .checked_mul(1 + edges.max(1).ilog2() as usize)
-        .ok_or_else(budget_error)?;
-    budget.work(line_count.checked_mul(row_work).ok_or_else(budget_error)?)?;
-    // Scanline active edge table: index every non-horizontal edge once by its
-    // lower endpoint, then rows only visit edges that can actually cross them.
-    // The eligibility rule `(a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1])`
-    // is exactly `min_y <= y < max_y`, and the intersection formula, winding
-    // sign and grouping below are unchanged, so spans stay bit-identical to
-    // the naive per-row scan over all edges.
-    struct HatchEdge {
-        a: [f64; 2],
-        b: [f64; 2],
-        min_y: f64,
-        max_y: f64,
-        winding: i32,
-    }
-    let mut sorted_edges = Vec::new();
-    for ring in source {
-        for i in 0..ring.len() {
-            let a = ring[i];
-            let b = ring[(i + 1) % ring.len()];
-            if a[1] == b[1] {
-                continue;
-            }
-            sorted_edges.push(HatchEdge {
-                a,
-                b,
-                min_y: a[1].min(b[1]),
-                max_y: a[1].max(b[1]),
-                winding: if b[1] > a[1] { -1_i32 } else { 1_i32 },
-            });
-        }
-    }
-    sorted_edges.sort_by(|x, y| x.min_y.total_cmp(&y.min_y));
-    let mut active: Vec<usize> = Vec::new();
-    let mut paths = Vec::new();
-    let mut previous_y = None;
-    let mut next_edge = 0;
-    for row in 0..line_count {
-        // Index-based placement avoids accumulated roundoff and non-advancing
-        // floating-point additions. The budget counts every attempted row.
-        let y = spacing.mul_add(row as f64, start);
-        if !y.is_finite() || previous_y.is_some_and(|previous| y <= previous) {
-            return Err(invalid(
-                "TOOLPATH_INVALID_SETTINGS",
-                "Hatch spacing does not advance coordinates",
-            ));
-        }
-        previous_y = Some(y);
-        if y > end {
-            break;
-        }
-        while next_edge < sorted_edges.len() && sorted_edges[next_edge].min_y <= y {
-            active.push(next_edge);
-            next_edge += 1;
-        }
-        active.retain(|&index| y < sorted_edges[index].max_y);
-        let mut hits = Vec::new();
-        for &index in &active {
-            let edge = &sorted_edges[index];
-            let (a, b) = (edge.a, edge.b);
-            let t = (y - a[1]) / (b[1] - a[1]);
-            let x = (b[0] - a[0]).mul_add(t, a[0]);
-            if !valid_coordinate(x) {
-                return Err(invalid(
-                    "TOOLPATH_INVALID_GEOMETRY",
-                    "Non-finite hatch intersection",
-                ));
-            }
-            hits.push((x, edge.winding));
-        }
-        hits.sort_by(|a, b| a.0.total_cmp(&b.0));
-        // Sweep signed crossings so holes, disconnected islands and touching
-        // boundaries share the same nonzero fill rule as the wall geometry.
-        let mut winding = 0_i32;
-        let mut span_start = 0.0;
-        let mut index = 0;
-        let row_start = paths.len();
-        while index < hits.len() {
-            let x = hits[index].0;
-            let old_winding = winding;
-            while index < hits.len() && hits[index].0 == x {
-                winding += hits[index].1;
-                index += 1;
-            }
-            if old_winding == 0 && winding != 0 {
-                span_start = x;
-            } else if old_winding != 0 && winding == 0 && x > span_start {
-                budget.points(2)?;
-                paths.push(Toolpath {
-                    role: PathRole::Hatch,
-                    points: vec![[span_start, y], [x, y]],
-                    closed: false,
-                });
-            }
-        }
-        if winding != 0 {
-            return Err(invalid(
-                "TOOLPATH_INVALID_GEOMETRY",
-                "Unbalanced hatch boundary",
-            ));
-        }
-        if row % 2 == 1 {
-            paths[row_start..].reverse();
-            for path in &mut paths[row_start..] {
-                path.points.reverse();
-            }
-        }
-    }
-    Ok(paths)
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /// Offset contours and hatch one already-computed layer section. Contours use
 /// nonzero winding (outer boundaries and holes have opposite orientations).
@@ -364,6 +262,73 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
 pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result<ToolpathLayer> {
     require_settings(settings)?;
     plan_layer_with_budget(section, settings, &mut Budget::default())
+}
+
+/// Plan one layer with an explicit [`InfillPattern`] (`Grid`, `Triangles`, `Concentric`, or `Rectilinear`)
+/// and optional solid top/bottom skin hatching at `line_width_mm` pitch.
+pub fn plan_layer_with_pattern(
+    section: &LayerSection,
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    solid_skin: bool,
+) -> Result<ToolpathLayer> {
+    require_settings(settings)?;
+    let mut budget = Budget::default();
+    require_section(section, &mut budget)?;
+    budget.arrangement(point_count(&section.contours))?;
+    let source = rings::nonzero(&section.contours)?;
+    budget.points(point_count(&source))?;
+    let mut paths = Vec::new();
+    for wall in 0..settings.wall_count {
+        let inset = (wall as f64 + 0.5) * settings.line_width_mm;
+        let offset = inset_rings(&source, inset, &mut budget)?;
+        let role = if wall == 0 {
+            PathRole::Outline
+        } else {
+            PathRole::Inset
+        };
+        for ring in &offset {
+            budget.points(ring.len())?;
+            paths.push(path_from_ring(role, ring, true));
+        }
+        if offset.is_empty() {
+            break;
+        }
+    }
+    let remaining = inset_rings(
+        &source,
+        settings.wall_count as f64 * settings.line_width_mm,
+        &mut budget,
+    )?;
+    if solid_skin {
+        paths.extend(hatch_angled(
+            &remaining,
+            settings.line_width_mm,
+            std::f64::consts::FRAC_PI_4,
+            PathRole::SolidSkin,
+            &mut budget,
+        )?);
+    } else if pattern == InfillPattern::CubicSubdivision {
+        paths.extend(generate_cubic_infill(
+            &remaining,
+            settings.infill_spacing_mm,
+            section.z_mm,
+            PathRole::Hatch,
+            &mut budget,
+        )?);
+    } else {
+        paths.extend(generate_infill(
+            &remaining,
+            settings.infill_spacing_mm,
+            pattern,
+            PathRole::Hatch,
+            &mut budget,
+        )?);
+    }
+    Ok(ToolpathLayer {
+        z_mm: section.z_mm,
+        paths,
+    })
 }
 
 fn plan_layer_with_budget(
@@ -464,111 +429,86 @@ where
     Ok(layers)
 }
 
-fn machine_profile(settings: &ToolpathSettings) -> gcode_core::MachineProfile {
-    gcode_core::MachineProfile {
-        layer_height_mm: settings.layer_height_mm,
-        line_width_mm: settings.line_width_mm,
-        print_feedrate_mm_s: settings.feedrate_mm_s,
-        travel_feedrate_mm_s: settings.travel_feedrate_mm_s,
-        filament_diameter_mm: settings.filament_diameter_mm,
-    }
-}
-
-fn planned_layers(layers: &[ToolpathLayer]) -> Result<Vec<gcode_core::PlannedLayerRef<'_>>> {
-    if layers.len() > MAX_LAYERS {
+/// Parallel counterpart to [`schedule_layers`] for thread-safe section providers (`F: Fn(f64) -> Result<LayerSection> + Sync`).
+/// Evaluates sections and layer toolpaths across hardware threads while enforcing the exact same
+/// cumulative `Budget` (`MAX_PLAN_POINTS`, `MAX_PLAN_WORK`) and layer ordering as [`schedule_layers`].
+pub fn schedule_layers_parallel<F>(
+    section_at: F,
+    z_min: f64,
+    z_max: f64,
+    settings: &ToolpathSettings,
+) -> Result<Vec<ToolpathLayer>>
+where
+    F: Fn(f64) -> Result<LayerSection> + Sync,
+{
+    require_settings(settings)?;
+    if !valid_coordinate(z_min) || !valid_coordinate(z_max) || z_max <= z_min {
         return Err(invalid(
-            "TOOLPATH_LAYER_LIMIT",
-            "Toolpath plan exceeded 2048 layers",
+            "TOOLPATH_INVALID_RANGE",
+            "Layer range must be finite, increasing and within +/-1000000 mm",
         ));
     }
-    // Public callers can supply their own plans. Bound the compatibility view
-    // before allocating; gcode-core performs the complete numeric validation.
-    // The views borrow the toolpath points, so this no longer deep-copies
-    // the plan for emit/volume; the optimizer path still owns its copy
-    // because path optimization rewrites the geometry in place.
-    let mut budget = Budget::default();
-    for layer in layers {
-        budget.points(layer.paths.len())?;
-        for path in &layer.paths {
-            budget.points(path.points.len())?;
+    let mut heights = Vec::new();
+    for index in 0..=MAX_LAYERS {
+        let z = settings.layer_height_mm.mul_add(index as f64, z_min);
+        if !z.is_finite() || heights.last().is_some_and(|&previous| z <= previous) {
+            return Err(invalid(
+                "TOOLPATH_INVALID_RANGE",
+                "Layer height does not advance Z",
+            ));
+        }
+        if z >= z_max {
+            break;
+        }
+        if index == MAX_LAYERS {
+            return Err(invalid(
+                "TOOLPATH_LAYER_LIMIT",
+                "Toolpath plan exceeded 2048 sampled layers",
+            ));
+        }
+        heights.push(z);
+    }
+    let per_layer = math_core::par_try_map(&heights, 2, |&z| {
+        let section = section_at(z)?;
+        if section.z_mm != z {
+            return Err(invalid(
+                "TOOLPATH_INVALID_HEIGHT",
+                "Section Z does not match the requested sample plane",
+            ));
+        }
+        let mut local_budget = Budget::default();
+        let layer = plan_layer_with_budget(&section, settings, &mut local_budget)?;
+        Ok((layer, local_budget))
+    })?;
+    let mut total_budget = Budget::default();
+    let mut layers = Vec::new();
+    for (layer, local_budget) in per_layer {
+        total_budget.points(local_budget.points)?;
+        total_budget.work(local_budget.work)?;
+        if !layer.paths.is_empty() {
+            layers.push(layer);
         }
     }
-    Ok(layers
-        .iter()
-        .map(|layer| gcode_core::PlannedLayerRef {
-            z_mm: layer.z_mm,
-            paths: layer
-                .paths
-                .iter()
-                .map(|path| gcode_core::PlannedPathRef {
-                    points: &path.points,
-                    closed: path.closed,
-                })
-                .collect(),
-        })
-        .collect())
+    Ok(layers)
 }
 
-fn gcode_error(error: gcode_core::Error) -> Error {
-    error
-}
 
-/// One encoding of a planned toolpath. Not the only possible machine dialect.
-pub fn emit_gcode(layers: &[ToolpathLayer], settings: &ToolpathSettings) -> Result<String> {
-    require_settings(settings)?;
-    gcode_core::emit_ref(&planned_layers(layers)?, &machine_profile(settings)).map_err(gcode_error)
-}
 
-fn optimize_input(layers: &[ToolpathLayer]) -> Result<gcode_optimize::OptimizeInput> {
-    Ok(gcode_optimize::from_toolpaths(layers.iter().map(|layer| {
-        (
-            layer.z_mm,
-            layer
-                .paths
-                .iter()
-                .map(|path| (path.points.clone(), path.closed))
-                .collect::<Vec<_>>(),
-        )
-    })))
-}
 
-/// Preview dialect after path optimization (still not a printer job).
-pub fn emit_optimized_gcode(
-    layers: &[ToolpathLayer],
-    settings: &ToolpathSettings,
-    optimize: &OptimizeSettings,
-) -> Result<String> {
-    require_settings(settings)?;
-    let input = optimize_input(layers)?;
-    gcode_optimize::emit_optimized(input, &machine_profile(settings), optimize).map_err(gcode_error)
-}
 
-/// Machine job dialect: heat, retract, start/end after path optimization.
-pub fn emit_job_gcode(
-    layers: &[ToolpathLayer],
-    job: &JobProfile,
-    optimize: &OptimizeSettings,
-) -> Result<String> {
-    require_settings_from_job(job)?;
-    let input = optimize_input(layers)?;
-    gcode_optimize::emit_optimized_job(input, job, optimize).map_err(gcode_error)
-}
 
-/// Thick `.gcode.3mf` with job G-code and optional mesh body.
-pub fn emit_job_gcode_3mf(
-    layers: &[ToolpathLayer],
-    job: &JobProfile,
-    optimize: &OptimizeSettings,
-    mesh: Option<&MeshBody>,
-) -> Result<Vec<u8>> {
-    require_settings_from_job(job)?;
-    let input = optimize_input(layers)?;
-    gcode_optimize::emit_optimized_gcode_3mf_job(input, job, optimize, mesh).map_err(gcode_error)
-}
 
-fn require_settings_from_job(job: &JobProfile) -> Result<()> {
-    job.validate().map_err(gcode_error)
-}
+
+
+
+
+
+
+
+
+
+
+
 
 /// Build a [`JobProfile`] from toolpath settings and optional job overrides already validated.
 pub fn job_profile(settings: &ToolpathSettings, job: JobProfile) -> Result<JobProfile> {
@@ -605,185 +545,210 @@ pub fn deposited_volume_mm3(layers: &[ToolpathLayer], settings: &ToolpathSetting
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[path = "tests/tests_integration.rs"]
+mod tests;
 
-    /// Pre-AET reference implementation: every row scans every edge.
-    /// Kept as the equivalence oracle for the active edge table in `hatch`.
-    fn hatch_naive(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpath>> {
-        let mut min_y = f64::INFINITY;
-        let mut max_y = f64::NEG_INFINITY;
-        for point in source.iter().flatten() {
-            min_y = min_y.min(point[1]);
-            max_y = max_y.max(point[1]);
-        }
-        if source.is_empty() || max_y - min_y < spacing * 0.25 {
-            return Ok(Vec::new());
-        }
-        let start = min_y + spacing * 0.5;
-        let end = max_y - spacing * 0.25;
-        if start > end {
-            return Ok(Vec::new());
-        }
-        let intervals = ((end - start) / spacing).floor();
-        if !intervals.is_finite() || intervals >= MAX_HATCH_LINES as f64 {
-            return Err(invalid(
-                "TOOLPATH_HATCH_LIMIT",
-                "Toolpath hatch exceeds 65536 scan lines",
-            ));
-        }
-        let line_count = intervals as usize + 1;
-        let mut paths = Vec::new();
-        let mut previous_y = None;
-        for row in 0..line_count {
-            let y = spacing.mul_add(row as f64, start);
-            if !y.is_finite() || previous_y.is_some_and(|previous| y <= previous) {
-                return Err(invalid(
-                    "TOOLPATH_INVALID_SETTINGS",
-                    "Hatch spacing does not advance coordinates",
-                ));
-            }
-            previous_y = Some(y);
-            if y > end {
-                break;
-            }
-            let mut hits = Vec::new();
-            for ring in source {
-                for i in 0..ring.len() {
-                    let a = ring[i];
-                    let b = ring[(i + 1) % ring.len()];
-                    if (a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1]) {
-                        let t = (y - a[1]) / (b[1] - a[1]);
-                        let x = (b[0] - a[0]).mul_add(t, a[0]);
-                        if !valid_coordinate(x) {
-                            return Err(invalid(
-                                "TOOLPATH_INVALID_GEOMETRY",
-                                "Non-finite hatch intersection",
-                            ));
-                        }
-                        hits.push((x, if b[1] > a[1] { -1_i32 } else { 1_i32 }));
-                    }
-                }
-            }
-            hits.sort_by(|a, b| a.0.total_cmp(&b.0));
-            let mut winding = 0_i32;
-            let mut span_start = 0.0;
-            let mut index = 0;
-            let row_start = paths.len();
-            while index < hits.len() {
-                let x = hits[index].0;
-                let old_winding = winding;
-                while index < hits.len() && hits[index].0 == x {
-                    winding += hits[index].1;
-                    index += 1;
-                }
-                if old_winding == 0 && winding != 0 {
-                    span_start = x;
-                } else if old_winding != 0 && winding == 0 && x > span_start {
-                    budget.points(2)?;
-                    paths.push(Toolpath {
-                        role: PathRole::Hatch,
-                        points: vec![[span_start, y], [x, y]],
-                        closed: false,
-                    });
-                }
-            }
-            if winding != 0 {
-                return Err(invalid(
-                    "TOOLPATH_INVALID_GEOMETRY",
-                    "Unbalanced hatch boundary",
-                ));
-            }
-            if row % 2 == 1 {
-                paths[row_start..].reverse();
-                for path in &mut paths[row_start..] {
-                    path.points.reverse();
-                }
-            }
-        }
-        Ok(paths)
-    }
+/// Configuration for curvature / surface-normal adaptive layer thickness.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VariableLayerConfig {
+    pub min_layer_height_mm: f64,
+    pub max_layer_height_mm: f64,
+}
 
-    /// Deterministic xorshift64* so the equivalence test needs no rand crate.
-    struct Rng(u64);
-    impl Rng {
-        fn next(&mut self) -> u64 {
-            self.0 ^= self.0 >> 12;
-            self.0 ^= self.0 << 25;
-            self.0 ^= self.0 >> 27;
-            self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
+impl Default for VariableLayerConfig {
+    fn default() -> Self {
+        Self {
+            min_layer_height_mm: 0.08,
+            max_layer_height_mm: 0.28,
         }
-        /// Coarse grid values make scan lines regularly hit exact vertex
-        /// heights, stressing the half-open `min_y <= y < max_y` rule.
-        fn coordinate(&mut self) -> f64 {
-            (self.next() % 41) as f64 * 0.25 - 5.0
-        }
-    }
-
-    /// Star-shaped (hence simple) ring: sorted angles, random radii, but with
-    /// y coordinates snapped to the coarse grid for vertex-height hits.
-    fn random_ring(rng: &mut Rng, center: [f64; 2], vertices: usize) -> Vec<[f64; 2]> {
-        let mut ring = Vec::with_capacity(vertices);
-        for i in 0..vertices {
-            let angle = 2.0 * std::f64::consts::PI * i as f64 / vertices as f64;
-            let radius = 0.5 + (rng.next() % 20) as f64 * 0.25;
-            let x = center[0] + radius * angle.cos();
-            // Snap y to the grid; keep x raw so crossings are non-degenerate.
-            let y = ((center[1] + radius * angle.sin()) * 4.0).round() / 4.0;
-            ring.push([x, y]);
-        }
-        ring
-    }
-
-    #[test]
-    fn hatch_active_edge_table_matches_naive_oracle() {
-        let mut rng = Rng(0x1234_5678_9ABC_DEF1);
-        for case in 0..200 {
-            let mut rings: Rings = Vec::new();
-            let ring_count = 1 + (rng.next() % 3) as usize;
-            for _ in 0..ring_count {
-                let center = [rng.coordinate(), rng.coordinate()];
-                let vertices = 3 + (rng.next() % 10) as usize;
-                rings.push(random_ring(&mut rng, center, vertices));
-            }
-            // Spacings that do and do not land on the 0.25 y grid.
-            for spacing in [0.25, 0.5, 0.75, 1.0, 0.3, 2.0] {
-                let expected = hatch_naive(&rings, spacing, &mut Budget::default());
-                let actual = hatch(&rings, spacing, &mut Budget::default());
-                match (expected, actual) {
-                    (Ok(expected), Ok(actual)) => assert_eq!(
-                        actual, expected,
-                        "case {case} spacing {spacing}: AET hatch diverged from naive scan"
-                    ),
-                    (expected, actual) => assert_eq!(
-                        actual.is_err(),
-                        expected.is_err(),
-                        "case {case} spacing {spacing}: error mismatch"
-                    ),
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn hatch_handles_hole_and_touching_rows() {
-        // Square with a square hole, spacing lands exactly on vertex heights.
-        let rings: Rings = vec![
-            vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]],
-            vec![[1., 1.], [1., 3.], [3., 3.], [3., 1.]],
-        ];
-        let expected = hatch_naive(&rings, 1.0, &mut Budget::default()).unwrap();
-        let actual = hatch(&rings, 1.0, &mut Budget::default()).unwrap();
-        assert_eq!(actual, expected);
-        assert!(!actual.is_empty());
-        // Degenerate inputs keep working: empty rings and flat rings.
-        assert!(hatch(&Rings::new(), 1.0, &mut Budget::default())
-            .unwrap()
-            .is_empty());
-        let flat: Rings = vec![vec![[0., 1.], [2., 1.], [1., 1.5]]];
-        assert_eq!(
-            hatch(&flat, 1.0, &mut Budget::default()).unwrap(),
-            hatch_naive(&flat, 1.0, &mut Budget::default()).unwrap()
-        );
     }
 }
+
+/// Computes an adaptive sequence of Z sample heights in `[z_min, z_max)` driven by
+/// `max_abs_normal_z(z)` ($\max |n_z| \in [0, 1]$ on the slice contour):
+/// vertical walls ($|n_z| \approx 0$) use `max_layer_height_mm`, while shallow / horizontal
+/// slopes ($|n_z| \to 1$) smoothly step down to `min_layer_height_mm`.
+pub fn schedule_adaptive_heights<F>(
+    z_min: f64,
+    z_max: f64,
+    config: &VariableLayerConfig,
+    mut max_abs_normal_z: F,
+) -> Result<Vec<f64>>
+where
+    F: FnMut(f64) -> f64,
+{
+    if !valid_coordinate(z_min)
+        || !valid_coordinate(z_max)
+        || z_max <= z_min
+        || !config.min_layer_height_mm.is_finite()
+        || !config.max_layer_height_mm.is_finite()
+        || config.min_layer_height_mm < gcode_core::COORDINATE_RESOLUTION_MM
+        || config.max_layer_height_mm < config.min_layer_height_mm
+    {
+        return Err(invalid(
+            "TOOLPATH_INVALID_RANGE",
+            "Invalid adaptive layer height range or settings",
+        ));
+    }
+    let mut heights = Vec::with_capacity(
+        (((z_max - z_min) / config.min_layer_height_mm).ceil() as usize + 1).min(MAX_LAYERS),
+    );
+    let mut z = z_min;
+    for _ in 0..MAX_LAYERS {
+        if z >= z_max {
+            break;
+        }
+        heights.push(z);
+        let nz = max_abs_normal_z(z).abs().clamp(0.0, 1.0);
+        let dz = config.max_layer_height_mm
+            - nz * (config.max_layer_height_mm - config.min_layer_height_mm);
+        let next_z = z + dz.max(config.min_layer_height_mm);
+        if !next_z.is_finite() || next_z <= z {
+            return Err(invalid(
+                "TOOLPATH_INVALID_RANGE",
+                "Adaptive layer height did not advance Z",
+            ));
+        }
+        z = next_z;
+    }
+    if z < z_max && heights.len() >= MAX_LAYERS {
+        return Err(invalid(
+            "TOOLPATH_LAYER_LIMIT",
+            "Adaptive layer schedule exceeded 2048 layers",
+        ));
+    }
+    Ok(heights)
+}
+
+/// Configuration for automatic overhang and support toolpath generation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SupportConfig {
+    /// Horizontal expansion threshold beyond which upper-layer material is considered an overhang.
+    pub overhang_offset_mm: f64,
+    /// Line spacing for support hatching.
+    pub support_spacing_mm: f64,
+}
+
+impl Default for SupportConfig {
+    fn default() -> Self {
+        Self {
+            overhang_offset_mm: 0.4,
+            support_spacing_mm: 2.5,
+        }
+    }
+}
+
+
+
+/// Closed 2D contour loop (`Vec<[f64; 2]>`) in millimeter coordinates.
+pub type Contour = Vec<[f64; 2]>;
+
+/// Bed-adhesion brim configuration for the first print layer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BrimConfig {
+    pub width_mm: f64,
+    pub line_spacing_mm: f64,
+}
+
+impl Default for BrimConfig {
+    fn default() -> Self {
+        Self {
+            width_mm: 4.0,
+            line_spacing_mm: 0.4,
+        }
+    }
+}
+
+/// Generates concentric outward-offset bed-adhesion brim loops around `outer_loops`
+/// spanning `width_mm` at pitch `line_spacing_mm`.
+pub fn generate_brim(
+    outer_loops: &[Contour],
+    width_mm: f64,
+    line_spacing_mm: f64,
+) -> Result<Vec<Contour>> {
+    if !width_mm.is_finite()
+        || width_mm <= 0.0
+        || !line_spacing_mm.is_finite()
+        || line_spacing_mm < gcode_core::COORDINATE_RESOLUTION_MM
+    {
+        return Err(invalid(
+            "TOOLPATH_INVALID_SETTINGS",
+            "Brim width_mm and line_spacing_mm must be finite and positive",
+        ));
+    }
+    if outer_loops.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut budget = Budget::default();
+    let norm = rings::nonzero(&outer_loops.to_vec())?;
+    let ring_count = ((width_mm / line_spacing_mm).round() as usize).clamp(1, 64);
+    let mut brim_loops = Vec::new();
+    for step in 1..=ring_count {
+        let distance = (step as f64 - 0.5) * line_spacing_mm;
+        let expanded = outset_rings(&norm, distance, &mut budget)?;
+        for ring in expanded {
+            let mut area2 = 0.0;
+            for i in 0..ring.len() {
+                let a = ring[i];
+                let b = ring[(i + 1) % ring.len()];
+                area2 += a[0] * b[1] - b[0] * a[1];
+            }
+            if area2 > 0.0 {
+                brim_loops.push(ring);
+            }
+        }
+    }
+    Ok(brim_loops)
+}
+
+fn outset_rings(source: &Rings, distance: f64, budget: &mut Budget) -> Result<Rings> {
+    if source.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut bands = Vec::with_capacity(source.len());
+    let tolerance = (distance * 0.01).min(0.01);
+    let options = StrokeOptions {
+        width: 2.0 * distance,
+        ..Default::default()
+    };
+    for ring in source {
+        budget.arrangement(ring.len().saturating_mul(6))?;
+        let path = BezierPath::from_polyline(ring, true)?;
+        for contour in stroke::outline_stroke_tol(&path, &options, tolerance)? {
+            let band = contour.to_ring(tolerance)?;
+            budget.points(band.len())?;
+            bands.push(band);
+        }
+    }
+    budget.arrangement(point_count(source).saturating_add(point_count(&bands)))?;
+    let result = rings::planar(source, &bands, "union")?;
+    budget.points(point_count(&result))?;
+    Ok(result)
+}
+
+#[path = "infill_planning.rs"]
+mod infill_planning;
+use infill_planning::generate_infill;
+use infill_planning::hatch;
+pub use infill_planning::plan_layers_with_skins_and_supports;
+
+#[path = "infill_curves.rs"]
+mod infill_curves;
+use infill_curves::hatch_angled;
+use infill_curves::generate_cubic_infill;
+use infill_curves::point_in_rings;
+use infill_curves::hilbert_d2xy;
+use infill_curves::generate_hilbert_infill;
+use infill_curves::generate_archimedean_infill;
+
+#[path = "gcode_emission.rs"]
+mod gcode_emission;
+use gcode_emission::machine_profile;
+use gcode_emission::planned_layers;
+use gcode_emission::gcode_error;
+pub use gcode_emission::emit_gcode;
+pub use gcode_emission::emit_optimized_gcode;
+pub use gcode_emission::emit_job_gcode;
+pub use gcode_emission::emit_job_gcode_3mf;
+use gcode_emission::require_settings_from_job;
+use gcode_emission::optimize_input;

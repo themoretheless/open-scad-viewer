@@ -12,16 +12,44 @@ pub fn empty() -> Mesh {
     }
 }
 pub fn join(meshes: &[Mesh]) -> Result<Mesh> {
-    join_refs(&meshes.iter().collect::<Vec<_>>())
+    let mut total_pos = 0;
+    let mut total_idx = 0;
+    for m in meshes {
+        m.validate()?;
+        total_pos += m.positions.len();
+        total_idx += m.indices.len();
+    }
+    let mut out = Mesh {
+        positions: Vec::with_capacity(total_pos),
+        indices: Vec::with_capacity(total_idx),
+        uv: None,
+    };
+    for m in meshes {
+        let base = out.positions.len() / 3;
+        out.positions.extend_from_slice(&m.positions);
+        out.indices.extend(m.indices.iter().map(|i| i + base));
+    }
+    out.validate()?;
+    Ok(out)
 }
 /// Borrowing variant of [`join`]: avoids deep-cloning operands at call sites
 /// that only hold references.
 pub fn join_refs(meshes: &[&Mesh]) -> Result<Mesh> {
-    let mut out = empty();
+    let mut total_pos = 0;
+    let mut total_idx = 0;
     for m in meshes {
         m.validate()?;
+        total_pos += m.positions.len();
+        total_idx += m.indices.len();
+    }
+    let mut out = Mesh {
+        positions: Vec::with_capacity(total_pos),
+        indices: Vec::with_capacity(total_idx),
+        uv: None,
+    };
+    for m in meshes {
         let base = out.positions.len() / 3;
-        out.positions.extend(&m.positions);
+        out.positions.extend_from_slice(&m.positions);
         out.indices.extend(m.indices.iter().map(|i| i + base));
     }
     out.validate()?;

@@ -298,6 +298,7 @@ struct BoxBounds {
     /// Certified `max |S^(a,b)|` over the box, order 1..=3.
     b: [[f64; 4]; 4],
     /// Certified lower bound of the weight over the box (> 0).
+    #[allow(dead_code)]
     w_lo: f64,
 }
 

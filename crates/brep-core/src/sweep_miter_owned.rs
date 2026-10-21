@@ -13,6 +13,19 @@ use nurbs_core::{
     sweeps::filled_cap_error::{self, BoundaryCertificate, Premises},
 };
 
+pub mod annular;
+pub struct DirectRequest<'a> {
+    pub loops: &'a [Vec<Curve>],
+    pub points: &'a [[f64; 3]],
+    pub normal: [f64; 3],
+    pub closed: bool,
+    pub miter_limit: f64,
+    pub max_deviation: f64,
+    pub circle: Option<Budget>,
+    pub caps: Option<CapCorrection>,
+    pub cap_endpoints: Option<[bool; 2]>,
+}
+
 mod cap_repair;
 pub use cap_repair::automatic_cap_correction;
 
@@ -173,12 +186,31 @@ fn rational_periodic_lattice(
         return Ok(None);
     }
     let mut work = 0;
-    for stride in [1., 3., 5., 7., 15., 21., 35., 105.] {
+    let mut proposal = sections.to_vec();
+    for (stride_idx, stride) in [1., 3., 5., 7., 15., 21., 35., 105.].into_iter().enumerate() {
         let step = quantum * stride;
-        let mut proposal = sections.to_vec();
+        if stride_idx > 0 {
+            for (src_sec, dst_sec) in sections.iter().zip(proposal.iter_mut()) {
+                for (src_c, dst_c) in src_sec.iter().zip(dst_sec.iter_mut()) {
+                    for (src_p, dst_p) in src_c
+                        .control_points
+                        .iter()
+                        .zip(dst_c.control_points.iter_mut())
+                    {
+                        dst_p.copy_from_slice(src_p);
+                    }
+                }
+            }
+        }
         let mut maximum: f64 = 0.;
         let mut exact = true;
         for (source, target) in sections.iter().flatten().zip(proposal.iter_mut().flatten()) {
+            let p0 = &source.control_points[0];
+            let varying = [
+                source.control_points.iter().any(|p| p[0] != p0[0]),
+                source.control_points.iter().any(|p| p[1] != p0[1]),
+                source.control_points.iter().any(|p| p[2] != p0[2]),
+            ];
             for (a, b) in source
                 .control_points
                 .iter()
@@ -190,11 +222,7 @@ fn rational_periodic_lattice(
                         return Err(invalid("Rational periodic lattice work exhausted"));
                     }
                     work += 1;
-                    if source
-                        .control_points
-                        .iter()
-                        .any(|p| p[k] != source.control_points[0][k])
-                    {
+                    if varying[k] {
                         let units = (a[k] / step).round();
                         if !units.is_finite() || units.abs() >= 2_f64.powi(46) {
                             return Ok(None);
@@ -235,13 +263,14 @@ fn nonplanar_caps(model: &Model, max_work: u64) -> (bool, u64) {
         {
             continue;
         }
-        let values = s
-            .control_points
-            .iter()
-            .flatten()
-            .flatten()
-            .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
-            .collect();
+        let mut values = Vec::with_capacity(12);
+        values.extend(
+            s.control_points
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|x| AuthoredScalar::Binary64Bits(x.to_bits())),
+        );
         let Ok(arena) = SourceArena::authored("owned-cap-planarity", 1, values) else {
             continue;
         };
@@ -279,6 +308,8 @@ pub struct BoundaryBody {
     sharp: Vec<usize>,
     closed: bool,
     budget: f64,
+    caps_deferred:bool,
+    cap_probe_work:u64,
 }
 /// Conditional reconstruction from private constructor evidence. This report
 /// does not admit material validity or transfer ownership of its certificate.
@@ -410,9 +441,20 @@ enum ConstructionAttempt {
 }
 
 pub fn construct(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody> {
-    let mut initial=request.options.initial_steps;
-    let mut previous=Vec::new();
-    let mut spent=0_u64;
+    construct_impl(request, limits, false)
+}
+fn construct_source_for_annular(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody> {
+    construct_impl(request, limits, true)
+}
+fn construct_impl(
+    request: &Request<'_>,
+    limits: &Limits,
+    annular_caps: bool,
+) -> Result<BoundaryBody> {
+    let mut initial = request.options.initial_steps;
+    let mut previous = Vec::with_capacity(8);
+    let mut spent = 0_u64;
+    let mut cached_max_steps: Option<usize> = None;
     loop {
         // Correction work remains caller-owned across rejected candidates.
         // Charge combined correction work conservatively to each supplied
@@ -432,357 +474,164 @@ pub fn construct(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody>
             caps:request.caps.as_ref().map(|cap|->Result<CapCorrection>{Ok(CapCorrection {budget:remaining(cap.budget)?,authored_frame:cap.authored_frame})}).transpose()?,
         };
         let attempt_limits=Limits {projection_exact_work:limits.projection_exact_work.saturating_sub(spent),..*limits};
-        match construct_attempt(&attempt,&attempt_limits)? {
+        match construct_attempt(&attempt,&attempt_limits,false,None,annular_caps,false)? {
             ConstructionAttempt::Complete(mut body)=>{
                 previous.append(&mut body.levels);
                 body.levels=previous;
                 if let Some(correction)=&mut body.correction {correction.work=correction.work.checked_add(spent).ok_or_else(||invalid("Progressive miter correction work overflow"))?;}
                 return Ok(body);
-            },
-            ConstructionAttempt::Refine {mut levels,steps,work,reason}=>{
-                let plan=sweep_miter_layout::plan(request.loops,request.points.len(),request.options.closed,
-                    request.options.initial_steps,request.options.max_steps)?;
-                if steps>=plan.max_steps {return Err(invalid(reason));}
-                if let Some(last)=levels.last_mut(){last.accepted=false;last.error_certificate_reason=Some("complete-boundary-refinement");}
+            }
+            ConstructionAttempt::Refine {
+                mut levels,
+                steps,
+                work,
+                reason,
+            } => {
+                let max_steps = match cached_max_steps {
+                    Some(m) => m,
+                    None => {
+                        let planner = if annular_caps {
+                            sweep_miter_layout::plan_annular
+                        } else {
+                            sweep_miter_layout::plan
+                        };
+                        let plan = planner(
+                            request.loops,
+                            request.points.len(),
+                            request.options.closed,
+                            request.options.initial_steps,
+                            request.options.max_steps,
+                        )?;
+                        cached_max_steps = Some(plan.max_steps);
+                        plan.max_steps
+                    }
+                };
+                if steps >= max_steps {
+                    return Err(invalid(reason));
+                }
+                if let Some(last) = levels.last_mut() {
+                    last.accepted = false;
+                    last.error_certificate_reason = Some("complete-boundary-refinement");
+                }
                 previous.append(&mut levels);
-                spent=spent.checked_add(work).ok_or_else(||invalid("Progressive miter correction work overflow"))?;
-                initial=(steps*2).min(plan.max_steps);
-            },
+                spent = spent
+                    .checked_add(work)
+                    .ok_or_else(|| invalid("Progressive miter correction work overflow"))?;
+                initial = (steps * 2).min(max_steps);
+            }
         }
     }
 }
 
-fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<ConstructionAttempt> {
-    let plan = sweep_miter_layout::plan(
-        request.loops,
-        request.points.len(),
-        request.options.closed,
-        request.options.initial_steps,
-        request.options.max_steps,
-    )?;
-    let profiles = request.loops.iter().flatten().cloned().collect::<Vec<_>>();
-    let rings = request.loops.iter().map(Vec::len).collect::<Vec<_>>();
-    let mut options = request.options;
-    options.max_steps = plan.max_steps;
-    let mut sweep = Sweep::new(
-        &profiles,
-        request.points,
-        request.scale,
-        request.twist,
-        options,
-    )?;
-    if let Some((axes, center)) = request.affine {
-        sweep = sweep.with_affine_laws(axes, center)?;
-    }
-    if let Some((axis, normal)) = request.frames {
-        sweep = sweep.with_frame_laws(axis, normal)?;
-    }
-    if let Some(guide) = request.guide {
-        sweep = sweep.with_orientation_guide(guide)?;
-    }
-    let mut levels = Vec::new();
-    let mut accepted = None;
-    for level in sweep.by_ref() {
-        let level = level?;
-        if level.report.accepted {
-            accepted = Some(level.sections);
-        }
-        levels.push(level.report);
-    }
-    let report = levels
-        .last()
-        .ok_or_else(|| invalid("Progressive miter produced no level"))?;
-    if !report.frame_transport_certified {
-        return Err(invalid(
-            "Progressive miter frame transport could not be proved; review the path, normal and miter limit",
-        ));
-    }
-    if !report.profile_regularity_certified {
-        return Err(invalid(
-            "Progressive miter profile tangent regularity could not be proved",
-        ));
-    }
-    if report.wall_regularity_certified == Some(false) {
-        return Err(invalid(
-            "Progressive miter retained wall Jacobian regularity could not be proved",
-        ));
-    }
-    let Some(source_error) = report.certified_error_upper else {
-        return Err(invalid(format!(
-            "Progressive miter wall error bound could not be proved: {}",
-            report
-                .error_certificate_reason
-                .unwrap_or("unresolved certificate")
-        )));
-    };
-    let original = accepted.ok_or_else(|| {
-        invalid("Progressive miter refinement/phase budget not met within the body face budget")
-    })?;
-    // Explicit caps share their caller-owned correction/work allowance with
-    // periodic profile preservation. Circle repair retains its existing order.
-    let explicit_profile = if !options.closed && request.circle.is_none() {
-        if let Some(cap) = request.caps.as_ref().filter(|c| c.budget.tolerance > 0.) {
-            if let Some(work) = cap
-                .budget
-                .max_work
-                .filter(|w| w.is_finite() && *w >= 1. && *w <= 1000000. && w.fract() == 0.)
-            {
-                periodic_profile_lattice(
-                    &original,
-                    2_f64.powi(-40),
-                    cap.budget.tolerance.min(options.max_deviation).min(1e-9),
-                    work as u64,
-                )?
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-    let (profile_error, profile_work) = explicit_profile
-        .as_ref()
-        .map_or((0., 0), |(_, e, w)| (*e, *w));
-    let correction_source = explicit_profile
-        .as_ref()
-        .map_or(original.as_slice(), |(s, _, _)| s.as_slice());
-    let mut correction = miter_section_correction::correct(
-        correction_source,
-        request.points,
-        options.closed,
-        request.circle,
-        request.caps.as_ref().map(|c| CapCorrection {
-            budget: Budget {
-                max_work: c.budget.max_work.map(|w| w - profile_work as f64),
-                ..c.budget
-            },
-            authored_frame: c.authored_frame,
-        }),
-        request.frames.map(|(axis, _)| axis),
-    )?;
-    if explicit_profile.is_some() {
-        let repair = correction
-            .as_mut()
-            .ok_or_else(|| invalid("Explicit periodic cap correction missing"))?;
-        let upper = repair
-            .wall_displacement_upper
-            .and_then(|d| error_upper::add(d, profile_error))
-            .ok_or_else(|| invalid("Explicit periodic cap displacement bound unproved"))?;
-        if upper > request.caps.as_ref().unwrap().budget.tolerance {
-            return Err(invalid(
-                "Explicit periodic cap displacement exceeds shared budget",
-            ));
-        }
-        repair.wall_displacement_upper = Some(upper);
-        repair.work += profile_work;
-    }
-    if options.closed && request.circle.is_none() && request.caps.is_none() {
-        if let Some((sections, displacement, work)) = periodic_profile_lattice(
-            &original,
-            2_f64.powi(-40),
-            options.max_deviation.min(1e-9),
-            limits.projection_exact_work,
-        )? {
-            correction = Some(nurbs_core::sweep_section_projection::Report {
-                sections: Some(sections),
-                wall_displacement_upper: Some(displacement),
-                exact_planar_sections: Vec::new(),
-                work,
-                reason: "bounded-periodic-profile-interpolation",
-            });
-        }
-    }
-    if request.circle.is_none() && request.caps.is_none() && correction.is_none() {
-        if let Some((sections, displacement, work)) = rational_periodic_lattice(
-            &original,
-            2_f64.powi(-40),
-            options.max_deviation.min(1e-9),
-            limits.projection_exact_work,
-        )? {
-            correction = Some(nurbs_core::sweep_section_projection::Report {
-                sections: Some(sections),
-                wall_displacement_upper: Some(displacement),
-                exact_planar_sections: Vec::new(),
-                work,
-                reason: "bounded-rational-periodic-profile-interpolation",
-            });
-        }
-    }
-    let retained = correction
-        .as_ref()
-        .and_then(|c| c.sections.as_deref())
-        .unwrap_or(&original);
-    let mut sections = sweep_miter_layout::partition(retained, &rings)?;
-    let mut model = if options.closed {
-        crate::periodic_section_loft(&sections)?
-    } else {
-        crate::rational_section_loft(&sections)?
-    };
-    if !options.closed && request.caps.is_none() {
-        if let Some(mut repair) = automatic_cap_correction(
-            &model, retained, request.points, request.frames.map(|(a, _)| a),
-            options.max_deviation, limits.cap_regions.max_exact_work,
-        )? {
-            let before = correction.as_ref().and_then(|c| c.wall_displacement_upper).unwrap_or(0.);
-            repair.wall_displacement_upper = repair.wall_displacement_upper
-                .and_then(|x| error_upper::add(before, x));
-            if repair.wall_displacement_upper.is_none() {
-                return Err(invalid("Automatic cap correction displacement bound unproved"));
-            }
-            repair.work += correction.as_ref().map_or(0, |c| c.work);
-            sections = sweep_miter_layout::partition(repair.sections.as_deref().unwrap(), &rings)?;
-            model = crate::rational_section_loft(&sections)?;
-            correction = Some(repair);
-        }
-    }
-    let displacement = correction
-        .as_ref()
-        .and_then(|c| c.wall_displacement_upper)
-        .unwrap_or(0.);
-    let correspondence = sweep_retained_walls::inspect_correspondence(
-        &model,
-        &sections,
-        options.closed,
-        limits.correspondence_faces,
-        limits.exact_work,
-    )?;
-    let decomposition = if correspondence.certified {
-        Some(0.)
-    } else {
-        sweep_retained_decomposition::inspect(
-            &model,
-            &sections,
-            options.closed,
-            limits.max_products,
-            limits.max_faces,
-            limits.exact_work,
-        )?
-        .wall_error_upper
-    };
-    if correction.is_some() && decomposition.is_none() {
-        return Err(invalid(
-            "Corrected progressive miter retained wall correspondence unproved",
-        ));
-    }
-    let wall = error_upper::add(source_error, displacement)
-        .zip(decomposition)
-        .and_then(|(base, extra)| error_upper::add(base, extra));
-    if correction.is_some() && !wall.is_some_and(|x| x <= options.max_deviation) {
-        let reason="Corrected progressive miter retained wall error exceeds max_deviation or is unproved";
-        if wall.is_some() {
-            let steps=report.steps;
-            return Ok(ConstructionAttempt::Refine {levels,steps,work:correction.as_ref().map_or(0,|c|c.work),reason});
-        }
-        return Err(invalid(reason));
-    }
-    let caps = if options.closed {
-        None
-    } else {
-        let endpoints = [sections[0].clone(), sections.last().unwrap().clone()];
-        let exact = sweep_retained_caps::inspect(
-            &model,
-            &endpoints,
-            limits.cap_regions,
-            limits.cap_max_edges,
-        )?;
-        let (regions, decomposition) = if exact.exact {
-            (true, Some([0., 0.]))
-        } else {
-            let r = sweep_retained_decomposition::inspect_caps(
-                &model,
-                &endpoints,
-                limits.cap_regions,
-                limits.max_products,
-                limits.cap_max_edges,
-            )?;
-            (r.certified, r.cap_error_upper)
-        };
-        if correction.is_some() && !regions {
-            return Err(invalid(
-                "Corrected progressive miter filled retained cap regions unproved",
-            ));
-        }
-        let domains = sweep.certify_ideal_cap_domains(
-            &rings,
-            limits.domain_tolerance,
-            limits.domain_pairs,
-            limits.domain_cells,
-            limits.domain_exact_work,
-        )?;
-        let planes = [
-            &model.faces[model.faces.len() - 2].surface,
-            &model.faces[model.faces.len() - 1].surface,
-        ];
-        let projection = sweep.certify_endpoint_cap_projection(
-            planes,
-            limits.projection_cells,
-            limits.projection_exact_work,
-        )?;
-        let parallel = sweep.certify_endpoint_cap_parallelism(
-            planes,
-            limits.projection_cells,
-            limits.projection_exact_work,
-        )?;
-        filled_cap_error::filled_caps(&Premises {
-            ideal_domains_certified: domains.ideal_cap_domains_certified,
-            retained_regions_exact: regions,
-            projection_normal_dots: projection.normal_dots,
-            endpoint_error: report.endpoint_contour_error_upper,
-            correction: Some(displacement),
-            decomposition,
-            parallel_planes: parallel.parallel.unwrap_or([false; 2]),
-        })
-    };
-    let boundary =
-        filled_cap_error::compose_boundary(wall, caps, options.closed, Some(options.max_deviation));
-    if boundary.within_budget == Some(false) {
-        let steps=report.steps;
-        return Ok(ConstructionAttempt::Refine {levels,steps,work:correction.as_ref().map_or(0,|c|c.work),
-            reason:"Progressive miter complete boundary error exceeds max_deviation"});
-    }
-    let cap_faces = if options.closed {
-        Vec::new()
-    } else {
-        vec![model.faces.len() - 2, model.faces.len() - 1]
-    };
-    let wall_charts = crate::sweep_retained_charts::inspect(&model, &cap_faces, limits.wall_cells)?;
-    if correction.is_some() && !wall_charts.certified {
-        #[cfg(all(test,feature="codec"))]
-        if let Ok(path)=std::env::var("OSV_MITER_UNPROVED_MODEL") {
-            std::fs::write(path,value_codec::to_string(&model).unwrap()).unwrap();
-        }
-        #[cfg(test)]
-        eprintln!("Unproved corrected wall charts: cells={} unresolved={:?} proofs={:?}",
-            wall_charts.cells, wall_charts.unresolved_faces,
-            wall_charts.charts.iter().filter(|(_, r)| r.cells > 256 || !r.certified).collect::<Vec<_>>());
-        return Err(invalid(
-            "Corrected progressive miter retained wall regularity unproved",
-        ));
-    }
-    let sharp = sweep_miter_layout::sharp_stations(
-        sections.len(),
-        plan.edges,
-        report.steps,
-        options.closed,
-    )?;
-    Ok(ConstructionAttempt::Complete(BoundaryBody {
-        model,
-        sections,
-        source_sections: original,
-        correction,
-        wall_charts,
-        edges: plan.edges,
-        max_steps: plan.max_steps,
-        levels,
-        boundary,
-        sharp,
-        closed: options.closed,
-        budget: options.max_deviation,
-    }))
+pub fn construct_direct(request: &DirectRequest<'_>, limits: &Limits) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, false, false)
 }
+fn construct_direct_source_for_annular(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, true, false)
+}
+fn construct_direct_source_for_auto(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+) -> Result<BoundaryBody> {
+    construct_direct_impl(request, limits, true, true)
+}
+fn construct_direct_impl(
+    request: &DirectRequest<'_>,
+    limits: &Limits,
+    annular_caps: bool,
+    automatic_caps: bool,
+) -> Result<BoundaryBody> {
+    let scalar = |value| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![value, 0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let scale = scalar(1.);
+    let twist = scalar(0.);
+    let original = Request {
+        loops: request.loops,
+        points: request.points,
+        scale: &scale,
+        twist: &twist,
+        options: progressive_miter::Options {
+            normal: request.normal,
+            closed: request.closed,
+            miter_limit: request.miter_limit,
+            initial_steps: 1,
+            max_steps: 1,
+            max_deviation: request.max_deviation,
+        },
+        affine: None,
+        frames: None,
+        guide: None,
+        circle: request.circle,
+        caps: request.caps.as_ref().map(|cap| CapCorrection {
+            budget: cap.budget,
+            authored_frame: cap.authored_frame,
+        }),
+    };
+    if request.cap_endpoints.is_some() && request.caps.is_none() {
+        return Err(invalid(
+            "Direct endpoint selection requires explicit cap correction",
+        ));
+    }
+    match construct_attempt(
+        &original,
+        limits,
+        true,
+        request.cap_endpoints,
+        annular_caps,
+        automatic_caps,
+    )? {
+        ConstructionAttempt::Complete(body) => Ok(body),
+        ConstructionAttempt::Refine { reason, .. } => Err(invalid(reason)),
+    }
+}
+
+pub(crate) fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool, u64)> {
+    let mut work = 0;
+    for face in &model.faces[model.faces.len() - 2..] {
+        for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+            for use_ in &model.loops[wire].coedges {
+                let Some(proof) = nurbs_core::curve_surface_agreement::verify_exact(
+                    &model.edges[use_.edge].curve,
+                    &use_.pcurve,
+                    &face.surface,
+                    use_.reversed,
+                    max_work - work,
+                )?
+                else {
+                    return Ok((false, max_work));
+                };
+                if proof.work_used > max_work - work {
+                    return Err(invalid(
+                        "Cap identity probe exceeded its exact-work allowance",
+                    ));
+                }
+                work += proof.work_used;
+                if proof.outcome != cad_predicates::BezierIdentity::Equal {
+                    return Ok((false, work));
+                }
+            }
+        }
+    }
+    Ok((true, work))
+}
+
 
 #[cfg(test)]
 #[path = "tests/sweep_miter_owned.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "sweep_miter_owned/tests/direct_source_regressions_integration.rs"]
+mod direct_source_regressions;
+
+#[path = "sweep_miter_owned/owned_attempt.rs"]
+mod owned_attempt;
+use owned_attempt::construct_attempt;

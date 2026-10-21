@@ -42,6 +42,10 @@ pub fn scad_compile(value: &Value) -> Value {
     };
     // Mirrors the MAX_SOURCE_LENGTH guard in `openscadParser.ts` (positions
     // count UTF-16 code units like the TS parser).
+    if source.len() > MAX_SOURCE_LENGTH && source.encode_utf16().count() > MAX_SOURCE_LENGTH {
+        let diagnostic = ParseError::new(0, "Source exceeds 250,000 characters").resolve(&[]);
+        return json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]});
+    }
     let units: Vec<u16> = source.encode_utf16().collect();
     if units.len() > MAX_SOURCE_LENGTH {
         let diagnostic = ParseError::new(0, "Source exceeds 250,000 characters").resolve(&units);
@@ -77,7 +81,11 @@ pub fn stable_box_plan(value: &Value) -> Value {
         if vector.len() > 3 {
             Size::Invalid
         } else {
-            Size::Vector(vector.iter().map(read_numeric).collect())
+            let mut v = Vec::with_capacity(vector.len());
+            for item in vector {
+                v.push(read_numeric(item));
+            }
+            Size::Vector(v)
         }
     } else {
         Size::Invalid
@@ -109,6 +117,10 @@ pub fn scad_eval(value: &Value) -> Value {
     let Some(profile) = LanguageProfile::parse(profile_name) else {
         return input_error(format!("Unknown OpenSCAD language profile {profile_name}"));
     };
+    if source.len() > MAX_SOURCE_LENGTH && source.encode_utf16().count() > MAX_SOURCE_LENGTH {
+        let diagnostic = ParseError::new(0, "Source exceeds 250,000 characters").resolve(&[]);
+        return json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]});
+    }
     let units: Vec<u16> = source.encode_utf16().collect();
     if units.len() > MAX_SOURCE_LENGTH {
         let diagnostic = ParseError::new(0, "Source exceeds 250,000 characters").resolve(&units);

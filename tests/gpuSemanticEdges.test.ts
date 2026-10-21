@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+const gpuReadback=vi.hoisted(()=>vi.fn())
+vi.mock('../src/services/webgpuCompute',()=>({runGpuCompute:gpuReadback}))
 import {
   buildMeshEdgeAdjacency,
   referenceSemanticEdges,
@@ -139,4 +141,14 @@ describe('WebGPU Semantic & Crease Edges Detection', () => {
     expect(result.edgeCount).toBe(3)
     expect(result.indices.length).toBe(6)
   })
+})
+
+it('reads integer shader output bits and respects readback byte offsets',async()=>{
+ const counter=new Uint32Array([123,2,456]),indices=new Uint32Array([123,0,1,1,2,456])
+ gpuReadback.mockResolvedValueOnce([new Float32Array(counter.buffer,4,1),new Float32Array(indices.buffer,4,4)])
+ vi.stubGlobal('navigator',{gpu:{}})
+ try {
+  const result=await runGpuSemanticEdges(new Float32Array([0,0,0,1,0,0,0,1,0]),new Uint32Array([0,1,2]))
+  expect(result.edgeCount).toBe(2);expect([...result.indices]).toEqual([0,1,1,2])
+ } finally {vi.unstubAllGlobals()}
 })

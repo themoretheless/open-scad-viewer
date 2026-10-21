@@ -208,3 +208,16 @@ pub fn diagnose_cap_decomposition(v: Value) -> Result<Value> {
             "globalEmbeddingCertified":false,"solidCertified":false}))}),
     )
 }
+
+pub(crate) fn profile_value(r: &sweep_smoothness::ProfileReport) -> Value {
+    let p = &r.profile;
+    json!({"method":"retained-miter-profile-joins","scope":"wall-profile-seams",
+        "maxWork":p.max_work,"exactWork":p.exact_work,"extractionComplete":p.extraction_complete,
+        "unclassifiedFaces":p.unclassified_faces,"unpairedEdges":p.unpaired_edges,"edgeIds":p.edge_ids,
+        "profile":collection(&p.g2,2),"g1Audit":p.g1.as_ref().map(|a|collection(a,1)),
+        "profileG1Certified":p.g1_certified,"g1Method":if p.g2_certified {"implied-by-G2"}
+            else if p.g1_certified {"exact-projective-audit"}else{"unproved"},
+        "station":station(&r.station),"totalExactWork":r.total_exact_work,
+        "stationContinuity":r.station_continuity,"capContinuity":r.cap_continuity,
+        "fullBoundarySmoothnessCertified":false})
+}

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "completedOn": "2026-10-16",
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_coherent": 8,
+    "periodic_trim_contacts": 28,
+    "periodic_trim_support": 13,
+    "periodic_trim_weighted": 7,
+    "normalized_identity_unit": 1,
+    "periodic_winding_regions": 10,
+    "winding_regularization": 5,
+    "winding_replay_unit": 5
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/coherent.rs": "eab4701107056cd42f9f295d05c701d984601d74d9b9e58fa147731efd54a708",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "4cf00c582b7403f4436a6d33416fb63b2870c8357ce06f5317342eda20a23736",
+    "crates/nurbs-core/tests/periodic_trim_coherent.rs": "5c6bbc7c55157149cf21cd06d0205da31907f9fc6430c5aa95f740041b2956de",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent.rs": "e52b0983b38a69462dfa92d516ffa827e81696feb09580c06e1202cc0745da6d",
+    "crates/brep-core/tests/periodic_winding_regions.rs": "7878f52233bd2a01476731aca1a75072028fbf4663a71b6a3e72a8a270c873a6"
+  },
+  "scope": "Exact affine and reversed normalized source/candidate family identities, signed copy coherence, weighted graph and independently verified candidate UV regions. No general nonlinear correspondence or owned supporting-surface faces.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "affineMapsNotRoundedOrMaterialized": true,
+  "signedOriginalSourceRolesBound": true,
+  "originalWeightedAnchorQueried": true,
+  "underflowAndOneUlpNegativeCaseChecked": true,
+  "nonlinearReparameterizationGenerallyQualified": false,
+  "ownedSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false
+}

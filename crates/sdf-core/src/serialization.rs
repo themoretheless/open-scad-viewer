@@ -107,6 +107,69 @@ impl value_codec::Serialize for Field {
                 object.insert("kind".into(), value_codec::Value::String("torus".into()));
                 value_codec::Value::Object(object)
             }
+            Self::Cylinder {
+                center,
+                radius,
+                half_height,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "half_height".into(),
+                    value_codec::Serialize::to_value(half_height),
+                );
+                object.insert("kind".into(), value_codec::Value::String("cylinder".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Gyroid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchwarzP {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Diamond {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Neovius {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::Lidinoid {
+                origin,
+                period,
+                thickness,
+            }
+            | Self::SchoenIWP {
+                origin,
+                period,
+                thickness,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
+                object.insert("period".into(), value_codec::Serialize::to_value(period));
+                object.insert(
+                    "thickness".into(),
+                    value_codec::Serialize::to_value(thickness),
+                );
+                let kind = match self {
+                    Self::Gyroid { .. } => "gyroid",
+                    Self::SchwarzP { .. } => "schwarz_p",
+                    Self::Diamond { .. } => "diamond",
+                    Self::Neovius { .. } => "neovius",
+                    Self::Lidinoid { .. } => "lidinoid",
+                    _ => "schoen_iwp",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Capsule { a, b, radius } => {
                 let mut object = value_codec::Map::new();
                 object.insert("a".into(), value_codec::Serialize::to_value(a));
@@ -115,11 +178,56 @@ impl value_codec::Serialize for Field {
                 object.insert("kind".into(), value_codec::Value::String("capsule".into()));
                 value_codec::Value::Object(object)
             }
+            Self::Octahedron { center, size } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("size".into(), value_codec::Serialize::to_value(size));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("octahedron".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::HexPrism {
+                center,
+                radius,
+                half_height,
+            }
+            | Self::TriangularPrism {
+                center,
+                radius,
+                half_height,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "half_height".into(),
+                    value_codec::Serialize::to_value(half_height),
+                );
+                let kind = match self {
+                    Self::HexPrism { .. } => "hex_prism",
+                    _ => "triangular_prism",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Union { a, b } => {
                 let mut object = value_codec::Map::new();
                 object.insert("a".into(), value_codec::Serialize::to_value(a));
                 object.insert("b".into(), value_codec::Serialize::to_value(b));
                 object.insert("kind".into(), value_codec::Value::String("union".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::SmoothIntersection { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("smooth_intersection".into()),
+                );
                 value_codec::Value::Object(object)
             }
             Self::SmoothDifference { a, b, radius } => {
@@ -164,6 +272,21 @@ impl value_codec::Serialize for Field {
                 );
                 value_codec::Value::Object(object)
             }
+            Self::ChamferUnion { a, b, radius }
+            | Self::ChamferIntersection { a, b, radius }
+            | Self::ChamferDifference { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                let kind = match self {
+                    Self::ChamferUnion { .. } => "chamfer_union",
+                    Self::ChamferIntersection { .. } => "chamfer_intersection",
+                    _ => "chamfer_difference",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Offset { input, distance } => {
                 let mut object = value_codec::Map::new();
                 object.insert("input".into(), value_codec::Serialize::to_value(input));
@@ -172,6 +295,51 @@ impl value_codec::Serialize for Field {
                     value_codec::Serialize::to_value(distance),
                 );
                 object.insert("kind".into(), value_codec::Value::String("offset".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Onion { input, thickness } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert(
+                    "thickness".into(),
+                    value_codec::Serialize::to_value(thickness),
+                );
+                object.insert("kind".into(), value_codec::Value::String("onion".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Elongate {
+                input,
+                half_extents,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert(
+                    "half_extents".into(),
+                    value_codec::Serialize::to_value(half_extents),
+                );
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("elongate".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::Mirror { input, axis } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert("axis".into(), value_codec::Serialize::to_value(axis));
+                object.insert("kind".into(), value_codec::Value::String("mirror".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Taper {
+                input,
+                height,
+                factor,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert("height".into(), value_codec::Serialize::to_value(height));
+                object.insert("factor".into(), value_codec::Serialize::to_value(factor));
+                object.insert("kind".into(), value_codec::Value::String("taper".into()));
                 value_codec::Value::Object(object)
             }
             Self::Translate { input, vector } => {
@@ -188,290 +356,7 @@ impl value_codec::Serialize for Field {
     }
 }
 
-impl<'de> value_codec::Deserialize<'de> for Field {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value["kind"].as_str().unwrap_or("") {
-            "extrude" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let profile = profile_from_value(
-                    object
-                        .remove("profile")
-                        .ok_or_else(|| value_codec::error("Missing field profile"))?,
-                )?;
-                let half_height: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("half_height")
-                        .ok_or_else(|| value_codec::error("Missing field half_height"))?,
-                )?;
-                Ok(Self::Extrude {
-                    profile,
-                    half_height,
-                })
-            }
-            "revolve" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let profile = profile_from_value(
-                    object
-                        .remove("profile")
-                        .ok_or_else(|| value_codec::error("Missing field profile"))?,
-                )?;
-                Ok(Self::Revolve { profile })
-            }
-            "deform" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let input: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("input")
-                        .ok_or_else(|| value_codec::error("Missing field input"))?,
-                )?;
-                let deformation: geometry_ops::Deformation = value_codec::Deserialize::from_value(
-                    object
-                        .remove("deformation")
-                        .ok_or_else(|| value_codec::error("Missing field deformation"))?,
-                )?;
-                Ok(Self::Deform { input, deformation })
-            }
-            "mesh_distance" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let mesh: Triangles = value_codec::Deserialize::from_value(
-                    object
-                        .remove("mesh")
-                        .ok_or_else(|| value_codec::error("Missing field mesh"))?,
-                )?;
-                let signed: bool = value_codec::Deserialize::from_value(
-                    object
-                        .remove("signed")
-                        .ok_or_else(|| value_codec::error("Missing field signed"))?,
-                )?;
-                Ok(Self::MeshDistance { mesh, signed })
-            }
-            "sphere" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let center: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("center")
-                        .ok_or_else(|| value_codec::error("Missing field center"))?,
-                )?;
-                let radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radius")
-                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
-                )?;
-                Ok(Self::Sphere { center, radius })
-            }
-            "box" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let center: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("center")
-                        .ok_or_else(|| value_codec::error("Missing field center"))?,
-                )?;
-                let half_size: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("half_size")
-                        .ok_or_else(|| value_codec::error("Missing field half_size"))?,
-                )?;
-                Ok(Self::Box { center, half_size })
-            }
-            "torus" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let center: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("center")
-                        .ok_or_else(|| value_codec::error("Missing field center"))?,
-                )?;
-                let major_radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("major_radius")
-                        .ok_or_else(|| value_codec::error("Missing field major_radius"))?,
-                )?;
-                let minor_radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("minor_radius")
-                        .ok_or_else(|| value_codec::error("Missing field minor_radius"))?,
-                )?;
-                Ok(Self::Torus {
-                    center,
-                    major_radius,
-                    minor_radius,
-                })
-            }
-            "union" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Union { a, b })
-            }
-            "intersection" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Intersection { a, b })
-            }
-            "difference" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Difference { a, b })
-            }
-            "capsule" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radius")
-                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
-                )?;
-                Ok(Self::Capsule { a, b, radius })
-            }
-            "smooth_difference" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radius")
-                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
-                )?;
-                Ok(Self::SmoothDifference { a, b, radius })
-            }
-            "smooth_union" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radius")
-                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
-                )?;
-                Ok(Self::SmoothUnion { a, b, radius })
-            }
-            "offset" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let input: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("input")
-                        .ok_or_else(|| value_codec::error("Missing field input"))?,
-                )?;
-                let distance: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("distance")
-                        .ok_or_else(|| value_codec::error("Missing field distance"))?,
-                )?;
-                Ok(Self::Offset { input, distance })
-            }
-            "translate" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let input: Box<Field> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("input")
-                        .ok_or_else(|| value_codec::error("Missing field input"))?,
-                )?;
-                let vector: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("vector")
-                        .ok_or_else(|| value_codec::error("Missing field vector"))?,
-                )?;
-                Ok(Self::Translate { input, vector })
-            }
-            _ => Err(value_codec::error("Unknown enum variant")),
-        }
-    }
-}
+
 
 impl value_codec::Serialize for Grid {
     fn to_value(&self) -> value_codec::Value {
@@ -615,3 +500,6 @@ impl<'de> value_codec::Deserialize<'de> for SdfStroke {
         })
     }
 }
+
+#[path = "serialization/field_decode.rs"]
+mod field_decode;

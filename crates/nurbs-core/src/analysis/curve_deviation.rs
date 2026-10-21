@@ -17,6 +17,53 @@ struct Cell {
     upper: f64,
     lower: f64,
 }
+/// Corresponding-parameter difference of original rational span functions.
+/// Restricted homogeneous controls remain outward intervals; no rounded
+/// trimmed reference, sampled residual or cached fit report is substituted.
+pub(crate) fn translated_cell_upper(
+    a: &Curve,
+    aspan: usize,
+    b: &Curve,
+    bspan: usize,
+    domain: [f64; 2],
+    translation: &[f64],
+) -> Result<f64> {
+    let dimension = a.control_points[0].len();
+    let t = Interval::new(domain[0], domain[1])?;
+    let aa = crate::curve_distance::restricted_controls(a, aspan, t)?;
+    let bb = crate::curve_distance::restricted_controls(b, bspan, t)?;
+    let wa = aa.iter().map(|p| p[dimension]).collect::<Vec<_>>();
+    let wb = bb.iter().map(|p| p[dimension]).collect::<Vec<_>>();
+    let denominator = crate::curve_surface_composition::mul(&wa, &wb)?;
+    let weight = Interval::new(
+        denominator
+            .iter()
+            .map(|v| v.lo)
+            .fold(f64::INFINITY, f64::min),
+        denominator
+            .iter()
+            .map(|v| v.hi)
+            .fold(f64::NEG_INFINITY, f64::max),
+    )?;
+    let mut residual = Vec::new();
+    for axis in 0..dimension {
+        let av = aa.iter().map(|p| p[axis]).collect::<Vec<_>>();
+        let bv = bb.iter().map(|p| p[axis]).collect::<Vec<_>>();
+        let left = crate::curve_surface_composition::mul(&av, &wb)?;
+        let right = crate::curve_surface_composition::mul(&bv, &wa)?;
+        let delta = Interval::point(a.control_points[aspan - a.degree][axis])
+            .sub(Interval::point(b.control_points[bspan - b.degree][axis]))?
+            .sub(Interval::point(translation[axis]))?;
+        let mut bounds = [f64::INFINITY, f64::NEG_INFINITY];
+        for i in 0..left.len() {
+            let value = left[i].sub(right[i])?.add(delta.mul(denominator[i])?)?;
+            bounds[0] = bounds[0].min(value.lo);
+            bounds[1] = bounds[1].max(value.hi);
+        }
+        residual.push(Interval::new(bounds[0], bounds[1])?.div(weight)?);
+    }
+    Ok(box_distance(&residual, &vec![Interval::point(0.); dimension])?.1)
+}
 fn midpoint(d: [f64; 2]) -> f64 {
     d[0] * 0.5 + d[1] * 0.5
 }

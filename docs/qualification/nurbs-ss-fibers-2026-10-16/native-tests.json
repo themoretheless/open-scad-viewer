@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-16",
+  "scope": "Uniform original three-unknown Krawczyk fibers and correlated local exclusion; not complete surface/surface coverage or an owned physical branch graph",
+  "catalog_completed": 198,
+  "catalog_target": 200,
+  "promoted_entries": [],
+  "tests": {
+    "source_fiber_and_coverage_regressions": {
+      "passed": 31,
+      "log": "current-native-tests.log",
+      "terminal_summaries": 4
+    },
+    "boolean_regressions": {
+      "passed": 3,
+      "log": "boolean-tests.log",
+      "terminal_summaries": 1
+    }
+  },
+  "unique_passed": 34,
+  "wasm_check": "wasm.log",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "c89b5b3b1469e561901d3608d7bdce3fd25a37c340be35fe14795e985b425c85",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "751d92b92045eb09002922b8c83f4c631492d285bfcbd478c29cc8c0c1533532",
+    "crates/nurbs-core/tests/ss_transverse_fibers.rs": "23cd4540e97859cf21f769016531f9ad40b4dec7c9e7a1bec61be5b79f8bf86e",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "2c6208ce96f32576cb02df797756e9e463904d038e8fe8da23bb225ce02e5bba",
+    "crates/nurbs-core/src/trim/periodic_trim/support.rs": "2d5458d9e69645d04931ac62c9448cbe7b54d5982f729b89cfec2b02f941868b"
+  },
+  "proof_conditions": [
+    "Original complete box and center/free interval evaluations",
+    "All original knot rectangles under one shared budget",
+    "Outward weighted contraction strictly below one",
+    "Strict complete Krawczyk image inclusion in the unknown box",
+    "Actual exact supporting seam evidence at periodic upper endpoints",
+    "Separate support rank evidence; a singular point image is not a physical curve certificate"
+  ],
+  "remaining": [
+    "General complete four-parameter domain coverage",
+    "Owned branch-atlas transitions and trim topology",
+    "Source-bound world curves and physical-branch admission"
+  ],
+  "evidence_note": "Focused semantic current-source checks, not a full repository test run; parent module documentation was amended after compilation."
+}

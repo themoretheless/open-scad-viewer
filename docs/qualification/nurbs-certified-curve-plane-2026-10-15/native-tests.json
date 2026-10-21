@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "certified_curve_plane": 6,
+    "planar_curve_crossings": 6
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_plane.rs": "0e7ecf0d34ac0a8c316ce4ea4fc2215a51b1d6b1677e58e7d17e6ba201516094",
+    "crates/nurbs-core/tests/certified_curve_plane.rs": "8789a815c3fe02f135dbf0438e5a6807e0e75353faa27ae8703101b09852b3a4",
+    "crates/nurbs-core/src/intersection/ss_intersection/rectilinear.rs": "2b12e9a2e025ff241dc192513e5eac5f48590398fa667dfe01a5d1b06359cbb7"
+  },
+  "scope": "original rational curve roots against a containing rectangular affine plane, exact clamped endpoints and complete checked overlap trace",
+  "generalNonaffineSurfaceQualified": false,
+  "topologyAuthorshipGranted": false,
+  "wasmEditorStepQualified": false
+}

@@ -296,3 +296,90 @@ pub fn inspect_opposite_pair(
     }
     certify_opposite(model, faces)
 }
+
+pub(crate) fn certify_opposite_with_budget(
+    model: &Model,
+    faces: [usize; 2],
+    max_cells: usize,
+) -> (Option<OppositeSidesCertificate>, usize) {
+    let mut used = 0;
+    let a = &model.faces[faces[0]];
+    let b = &model.faces[faces[1]];
+    let uses = |face: &crate::Face| {
+        std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .flat_map(|l| model.loops[l].coedges.iter())
+            .collect::<Vec<_>>()
+    };
+    let others = uses(b);
+    for ca in uses(a) {
+        for cb in others.iter().filter(|c| c.edge == ca.edge) {
+            if max_cells.saturating_sub(used) < 6 {
+                return (None, used);
+            }
+            if let Some(report) = curved_natural_boundary_report(
+                &a.surface,
+                &b.surface,
+                &ca.pcurve,
+                &cb.pcurve,
+                &model.edges[ca.edge].curve,
+                max_cells - used,
+            ) {
+                used += report.spans;
+                if report.proven {
+                    return (
+                        Some(OppositeSidesCertificate {
+                            edge: ca.edge,
+                            faces,
+                        }),
+                        used,
+                    );
+                }
+            }
+        }
+    }
+    (None, used)
+}
+
+fn curved_natural_boundary_report(
+    a: &Surface,
+    b: &Surface,
+    pa: &Curve,
+    pb: &Curve,
+    edge: &Curve,
+    max_cells: usize,
+) -> Option<nurbs_core::analysis::surface_injectivity::Report> {
+    let (Some(ba), Some(bb)) = (boundary(a, pa, edge), boundary(b, pb, edge)) else {
+        return None;
+    };
+    // Pure control-net permutation preserves the original rational image.
+    // It permits the same proof for station (V) and profile (U) boundaries,
+    // including a pair whose natural axes differ; no fitting is performed.
+    let transposed_a;
+    let transposed_b;
+    let a = if ba.0 == 1 {
+        let Ok(s) = nurbs_core::surface_edit::transpose(a) else {
+            return None;
+        };
+        transposed_a = s;
+        &transposed_a
+    } else {
+        a
+    };
+    let b = if bb.0 == 1 {
+        let Ok(s) = nurbs_core::surface_edit::transpose(b) else {
+            return None;
+        };
+        transposed_b = s;
+        &transposed_b
+    } else {
+        b
+    };
+    nurbs_core::analysis::surface_injectivity::certify_shared_natural_boundary(
+        a,
+        b,
+        [ba.1 != 0, bb.1 != 0],
+        max_cells,
+    )
+    .ok()
+}

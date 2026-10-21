@@ -12,7 +12,9 @@
     "dual",
     "robust_solvers",
     "interval_newton",
-    "sturm"
+    "sturm",
+    "core",
+    "numerics"
   ],
   "curves": [
     "primitives",
@@ -37,7 +39,9 @@
     "rack",
     "thread",
     "formula",
-    "curve_reconstruction"
+    "curve_reconstruction",
+    "radial_cam",
+    "worm"
   ],
   "surfaces": [
     "function_surface",
@@ -67,7 +71,17 @@
     "helical_sweep",
     "sections",
     "section_projection",
-    "section_phase"
+    "section_phase",
+    "construct",
+    "sweeps",
+    "wave_surface",
+    "superellipsoid",
+    "optical_shapes",
+    "wing_loft",
+    "profile_spring",
+    "bellows",
+    "sphere_envelope",
+    "worm_wheel"
   ],
   "editing": [
     "affine",
@@ -83,7 +97,8 @@
     "circle_sweep_repair",
     "miter_section_correction",
     "sweep_section_projection",
-    "section_circle_repair"
+    "section_circle_repair",
+    "editing"
   ],
   "joining": [
     "curve_join",
@@ -95,7 +110,13 @@
     "circle_transition",
     "ellipse_transition",
     "circle_rectangle_transition",
-    "sweep_seam_set"
+    "sweep_seam_set",
+    "join",
+    "surface_blend",
+    "surface_g2_pcurves",
+    "surface_g1_pcurves",
+    "corner_blend",
+    "radius_transition"
   ],
   "offsets": [
     "curve_offset",
@@ -116,7 +137,9 @@
     "offset_path_trims",
     "offset_path_pcurves",
     "moving_radius",
-    "moving_envelope"
+    "moving_envelope",
+    "offset",
+    "planar_toolpath"
   ],
   "queries": [
     "curve_differential",
@@ -146,7 +169,15 @@
     "surface_flux",
     "convex_distance",
     "obb_tree",
-    "normal_cone"
+    "normal_cone",
+    "analysis",
+    "distance",
+    "surface_occlusion",
+    "parallel_sections",
+    "surface_coordinate_flow",
+    "surface_normal_trace",
+    "curve_secant_trace",
+    "surface_collar"
   ],
   "parameterization": [
     "curve_pullback",
@@ -164,7 +195,9 @@
     "trimmed_surface_distance",
     "loft_reparameterization",
     "boundary_partition",
-    "bezier_extraction"
+    "bezier_extraction",
+    "trim",
+    "periodic_trim"
   ],
   "validation": [
     "curve_self_intersection",
@@ -199,11 +232,14 @@
     "curve_quadratic_separator",
     "surface_projected_jordan",
     "surface_self_chord",
-    "surface_self_chord_coverage"
+    "surface_self_chord_coverage",
+    "certificates",
+    "skin_radius"
   ],
   "meshing": [
     "curve_tessellation",
     "surface_tessellation",
-    "shared_tessellation"
+    "shared_tessellation",
+    "tessellation"
   ]
 }

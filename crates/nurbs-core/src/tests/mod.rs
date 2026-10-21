@@ -957,7 +957,7 @@ fn foundation_v5_adversarial_scales_seams_and_weights() {
 }
 
 #[test]
-fn certified_general_surface_surface_intersection() {
+fn bounded_surface_surface_reductions_and_general_candidates() {
     let xy = surface::Surface {
         degree_u: 1,
         degree_v: 1,

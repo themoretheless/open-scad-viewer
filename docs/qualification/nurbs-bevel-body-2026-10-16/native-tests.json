@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-16",
+  "scope": "Native straight-bevel blank with independently embedded original 3D profile, inclusive nominal wall/fan-cap error and continuous closure; not a globally admitted solid",
+  "tests": {
+    "native-tests": {
+      "passed": 2,
+      "failed_summaries": 0
+    },
+    "verified-tests": {
+      "passed": 1,
+      "failed_summaries": 0
+    }
+  },
+  "focused_tests_passed": 3,
+  "profile_embedding_receipt": "docs/qualification/nurbs-bevel-embedding-2026-10-16/native-tests.json",
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/brep-core/src/bevel_body.rs": "6e23137fbc5cc35d68a4ccfaea579c0a3d0b73e1dc1044e0efe991298e05a551",
+    "crates/brep-core/src/gear.rs": "b9eff7daca8e052442e8c395c970f7e93fd922c93880a3f5050930aa139c8495",
+    "crates/brep-core/tests/bevel_body.rs": "056bdf16a01e2f322d130fcf78410651955a8bd63647551bba6e3d2782aba6fe",
+    "crates/brep-core/tests/bevel_verified.rs": "9d4d6af71226cd7e489d19e33de3e88f78d01fff09d715cbc61cf03fd0646b2c"
+  },
+  "catalog_implemented": 196,
+  "catalog_planned": 4,
+  "limits": [
+    "1024 faces; each original profile curve creates three faces",
+    "Explicit axis fan caps; blank without bore",
+    "Caller interval and exact closure budgets capped at 1000000",
+    "Global cap/wall embedding and whole-solid admission unqualified"
+  ],
+  "independent_oracle": "Native volume compared to (1-lambda^3)*R*projected_area/3 from separately sampled source area; numerical regression only"
+}

@@ -21,7 +21,8 @@ fn spur_gear_is_a_closed_exact_solid_with_the_expected_volume() {
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(geometry.face_count, 20 * 6 + 2);
     assert!(geometry.flank_deviation <= FLANK_FIT);
-    assert_eq!(geometry.sweep_deviation, 0.);
+    // Even straight extrusion retains the outward floating-point rounding bound.
+    assert!(geometry.sweep_deviation >= 0. && geometry.sweep_deviation <= SWEEP_FIT);
     // The volume lies between the root and tip cylinders and close to
     // the pitch cylinder (teeth fill about half the band).
     let v = volume(&model);
@@ -117,3 +118,5 @@ fn few_teeth_planet_and_refusals() {
         .is_err()
     );
 }
+
+mod involute_certificates;

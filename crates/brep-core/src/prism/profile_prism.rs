@@ -172,7 +172,11 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             "Prism profile exceeds 254 active curve spans",
         ));
     }
-    let components = crate::profile_region::components(&profile, TOLERANCE)?;
+    let components = if profile.iter().flatten().any(|c| crate::bezier_profile::requires_general(c,TOLERANCE)) {
+        let (components,depths)=crate::bezier_profile::classify_components(&profile,TOLERANCE)?;
+        for (wire,depth) in profile.iter().zip(depths){if (crate::bezier_profile::signed_area(wire,TOLERANCE)?>0.)!=(depth%2==0){return Err(unsupported("Bézier boundaries require material-left winding"));}}
+        components
+    } else { crate::profile_region::components(&profile, TOLERANCE)? };
     if curve_count + 2 * components.len() > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",

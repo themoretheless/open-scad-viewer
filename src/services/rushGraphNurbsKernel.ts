@@ -1,3 +1,4 @@
+import {reconstructCertifiedProgressiveStations} from './geometry/brep'
 import type {ProgressiveBodyBoundaryEvidence} from './geometry/brep'
 import {transformNurbsCurve} from './nurbsCurve';
 import {transformNurbsSurface,transformNurbsSurfacePatches} from './nurbsSurface';
@@ -70,3 +71,7 @@ export interface OwnNurbsBuildControl {
  onYield?:()=>void
  onSweepPreview?:(nodeId:string,preview:ProgressiveSweepPreview)=>void|Promise<void>
 }
+
+export type StationArguments=Parameters<typeof reconstructCertifiedProgressiveStations>
+export type StationResolver=(nodeId:string,args:StationArguments)=>ReturnType<typeof reconstructCertifiedProgressiveStations>
+export class PendingProgressiveStations {constructor(readonly nodeId:string,readonly args:StationArguments){}}

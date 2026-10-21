@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_contacts": 28,
+    "periodic_trim_support": 11,
+    "periodic_trim_weighted": 6
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/contact.rs": "858b0d75b83da587b97c7d817152a322bb8ea9bed6342099780d3b5a99bf9fdf",
+    "crates/nurbs-core/src/trim/periodic_trim/contact/common_projection.rs": "12a205cd36f21e5ac6422f149f8ddc0cdab4f97d9c65e28af802589260a2fdd7",
+    "crates/nurbs-core/tests/periodic_trim_contacts.rs": "43a77fc443f4b5f308ed483d71fbd94649efbc3c5aa4fbbc2cbf19a088f69172"
+  },
+  "scope": "Exact local endpoint-germ order for clamped rational B-splines with proportional oriented knot gaps/weights and identical longitudinal projection. No general nonlinear reparameterization or owned-face regularization.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "fullNativeBaseline": "../nurbs-thread-source-2026-10-15/native-tests.json",
+  "baselineScope": "Full baseline predates this extension; 87 focused tests cover the local owner and all chart assembly callers after this change.",
+  "packagedBrowserEditorStepQualified": false
+}

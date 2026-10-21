@@ -57,8 +57,9 @@ fn assemble_loads(v: &Value, nodes: &[[f64; 3]]) -> Result<Vec<[f64; 3]>> {
 
 /// Parse and field-check the `members` array (budget checked by the caller).
 fn members(v: &Value) -> Result<Vec<Member>> {
-    let mut members = Vec::new();
-    for member in v["members"].as_array().unwrap() {
+    let arr = v["members"].as_array().unwrap();
+    let mut members = Vec::with_capacity(arr.len());
+    for member in arr {
         require_exact_fields(member, &["nodes", "youngMpa", "areaMm2"], "truss member")?;
         members.push(Member {
             nodes: field(member, "nodes")?,

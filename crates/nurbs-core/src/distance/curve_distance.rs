@@ -48,8 +48,11 @@ pub(crate) fn restricted_controls(
     // the positive rational convex hull, avoiding interval-parameter dependency.
     let count = if t.lo == t.hi { 1 } else { degree + 1 };
     let mut controls = Vec::with_capacity(count);
+    let mut q = vec![vec![Interval::point(0.); dimension + 1]; degree + 1];
     for k in 0..count {
-        let mut q = d.clone();
+        for j in 0..=degree {
+            q[j].copy_from_slice(&d[j]);
+        }
         for r in 1..=degree {
             let parameter = if r - 1 < degree - k { t.lo } else { t.hi };
             for j in (r..=degree).rev() {
@@ -77,18 +80,82 @@ pub(crate) fn restricted_controls(
     Ok(controls)
 }
 
+pub(crate) fn restricted_controls_axis(
+    curve: &Curve,
+    axis: usize,
+    span: usize,
+    t: Interval,
+) -> Result<Vec<[Interval; 2]>> {
+    let degree = curve.degree;
+    let mut d = [[Interval::point(0.); 2]; 33];
+    let mut min_weight = f64::INFINITY;
+    let mut max_weight: f64 = 0.;
+    let origin = curve.control_points[span - degree][axis];
+    let scale = (span - degree..=span)
+        .map(|i| curve.weights[i])
+        .fold(0., f64::max);
+    for (idx, i) in (span - degree..=span).enumerate() {
+        let ratio = curve.weights[i] / scale;
+        let w = if curve.weights[i] == scale {
+            Interval::point(1.)
+        } else {
+            Interval::new(ratio.next_down().max(0.), ratio.next_up())?
+        };
+        min_weight = min_weight.min(w.lo);
+        max_weight = max_weight.max(w.hi);
+        let x = curve.control_points[i][axis];
+        let p = Interval::point(x)
+            .sub(Interval::point(origin))?
+            .mul(w)?;
+        d[idx] = [p, w];
+    }
+    let count = if t.lo == t.hi { 1 } else { degree + 1 };
+    let mut controls = Vec::with_capacity(count);
+    for k in 0..count {
+        let mut q = [[Interval::point(0.); 2]; 33];
+        q[..=degree].copy_from_slice(&d[..=degree]);
+        for r in 1..=degree {
+            let parameter = if r - 1 < degree - k { t.lo } else { t.hi };
+            for j in (r..=degree).rev() {
+                let i = span - degree + j;
+                let denominator = Interval::point(curve.knots[i + degree - r + 1])
+                    .sub(Interval::point(curve.knots[i]))?;
+                let alpha = Interval::point(parameter)
+                    .sub(Interval::point(curve.knots[i]))?
+                    .div(denominator)?
+                    .intersect(0., 1.)?;
+                let beta = Interval::point(1.).sub(alpha)?.intersect(0., 1.)?;
+                for comp in 0..2 {
+                    let a = q[j - 1][comp];
+                    let b = q[j][comp];
+                    q[j][comp] = a
+                        .mul(beta)?
+                        .add(b.mul(alpha)?)?
+                        .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
+                }
+                q[j][1] = q[j][1].intersect(min_weight, max_weight)?;
+            }
+        }
+        controls.push(q[degree]);
+    }
+    Ok(controls)
+}
+
 pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
     let dimension = curve.control_points[0].len();
     let origin = &curve.control_points[span - curve.degree];
     let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; dimension];
+    let mut span_bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; dimension];
+    for i in span - curve.degree..=span {
+        let pt = &curve.control_points[i];
+        for axis in 0..dimension {
+            span_bounds[axis][0] = span_bounds[axis][0].min(pt[axis]);
+            span_bounds[axis][1] = span_bounds[axis][1].max(pt[axis]);
+        }
+    }
     for control in restricted_controls(curve, span, t)? {
         for axis in 0..dimension {
-            let lo = (span - curve.degree..=span)
-                .map(|i| curve.control_points[i][axis])
-                .fold(f64::INFINITY, f64::min);
-            let hi = (span - curve.degree..=span)
-                .map(|i| curve.control_points[i][axis])
-                .fold(f64::NEG_INFINITY, f64::max);
+            let [lo, hi] = span_bounds[axis];
             let p = control[axis]
                 .div(control[dimension])?
                 .add(Interval::point(origin[axis]))?
@@ -649,3 +716,6 @@ pub fn nearest_point(
         cells: report.cells,
     })
 }
+
+mod clearance;
+pub use clearance::{Clearance, ClearanceStatus, prove_clearance};

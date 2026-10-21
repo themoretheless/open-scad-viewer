@@ -1,6 +1,6 @@
 use gcode_core::PlannedPath;
 
-use crate::travel::{dist, path_end, path_start};
+use crate::travel::{dist, dist_sq, path_end, path_start};
 use crate::{Budget, MAX_COMB_WAYPOINTS, Result};
 
 pub struct CombOutcome {
@@ -10,7 +10,7 @@ pub struct CombOutcome {
 }
 
 pub fn comb_layer(
-    paths: &[PlannedPath],
+    paths: Vec<PlannedPath>,
     contours: &[Vec<[f64; 2]>],
     budget: &mut Budget,
 ) -> Result<CombOutcome> {
@@ -21,14 +21,17 @@ pub fn comb_layer(
             uncombed: 0,
         });
     }
-    let mut out = Vec::new();
+    let mut out = Vec::with_capacity(paths.len());
     let mut waypoints = 0usize;
     let mut uncombed = 0usize;
-    out.push(paths[0].clone());
-    for window in paths.windows(2) {
-        let from = path_end(&window[0]);
-        let to = path_start(&window[1]);
-        if let (Some(a), Some(b)) = (from, to) {
+    let mut iter = paths.into_iter();
+    let first = iter.next().unwrap();
+    let mut prev_end = path_end(&first);
+    out.push(first);
+    for path in iter {
+        let to = path_start(&path);
+        let next_end = path_end(&path);
+        if let (Some(a), Some(b)) = (prev_end, to) {
             budget.add(contours.len().saturating_mul(8))?;
             match comb_travel(a, b, contours, budget)? {
                 CombTravel::Direct => {}
@@ -44,7 +47,8 @@ pub fn comb_layer(
                 CombTravel::Uncombed => uncombed += 1,
             }
         }
-        out.push(window[1].clone());
+        prev_end = next_end;
+        out.push(path);
     }
     Ok(CombOutcome {
         paths: out,
@@ -65,7 +69,7 @@ fn comb_travel(
     contours: &[Vec<[f64; 2]>],
     budget: &mut Budget,
 ) -> Result<CombTravel> {
-    if dist(a, b) <= 1e-9 {
+    if dist_sq(a, b) <= 1e-18 {
         return Ok(CombTravel::Direct);
     }
     let mut hit: Option<usize> = None;
@@ -88,18 +92,13 @@ fn comb_travel(
     if i == j {
         return Ok(CombTravel::Uncombed);
     }
-    let (fwd, back) = ring_arcs(ring, i, j);
-    let chosen = if path_length(&fwd) <= path_length(&back) {
-        fwd
-    } else {
-        back
-    };
+    let chosen = shortest_ring_arc(ring, i, j);
     if chosen.len() > MAX_COMB_WAYPOINTS {
         return Ok(CombTravel::Uncombed);
     }
-    let mut points = Vec::new();
+    let mut points = Vec::with_capacity(chosen.len());
     for &p in &chosen {
-        if dist(p, a) > 1e-9 && dist(p, b) > 1e-9 {
+        if dist_sq(p, a) > 1e-18 && dist_sq(p, b) > 1e-18 {
             points.push(p);
         }
     }
@@ -113,45 +112,75 @@ fn comb_travel(
 fn nearest_vertex(ring: &[[f64; 2]], p: [f64; 2]) -> usize {
     ring.iter()
         .enumerate()
-        .min_by(|(_, a), (_, b)| dist(**a, p).total_cmp(&dist(**b, p)))
+        .min_by(|(_, a), (_, b)| dist_sq(**a, p).total_cmp(&dist_sq(**b, p)))
         .map(|(i, _)| i)
         .unwrap_or(0)
 }
 
-fn ring_arcs(ring: &[[f64; 2]], i: usize, j: usize) -> (Vec<[f64; 2]>, Vec<[f64; 2]>) {
+fn shortest_ring_arc(ring: &[[f64; 2]], i: usize, j: usize) -> Vec<[f64; 2]> {
     let n = ring.len();
-    let mut fwd = Vec::new();
+    let mut fwd_len = 0.0;
+    let mut fwd_count = 1usize;
     let mut k = i;
-    loop {
-        fwd.push(ring[k]);
-        if k == j {
-            break;
-        }
-        k = (k + 1) % n;
+    while k != j {
+        let next = (k + 1) % n;
+        fwd_len += dist(ring[k], ring[next]);
+        fwd_count += 1;
+        k = next;
     }
-    let mut back = Vec::new();
+    let mut back_len = 0.0;
+    let mut back_count = 1usize;
     k = i;
-    loop {
-        back.push(ring[k]);
-        if k == j {
-            break;
-        }
-        k = (k + n - 1) % n;
+    while k != j {
+        let next = (k + n - 1) % n;
+        back_len += dist(ring[k], ring[next]);
+        back_count += 1;
+        k = next;
     }
-    (fwd, back)
-}
-
-fn path_length(points: &[[f64; 2]]) -> f64 {
-    points.windows(2).map(|p| dist(p[0], p[1])).sum()
+    if fwd_len <= back_len {
+        let mut fwd = Vec::with_capacity(fwd_count);
+        k = i;
+        loop {
+            fwd.push(ring[k]);
+            if k == j {
+                break;
+            }
+            k = (k + 1) % n;
+        }
+        fwd
+    } else {
+        let mut back = Vec::with_capacity(back_count);
+        k = i;
+        loop {
+            back.push(ring[k]);
+            if k == j {
+                break;
+            }
+            k = (k + n - 1) % n;
+        }
+        back
+    }
 }
 
 fn chord_hits_ring(a: [f64; 2], b: [f64; 2], ring: &[[f64; 2]]) -> bool {
     if ring.len() < 2 {
         return false;
     }
-    for i in 0..ring.len() {
+    let ab_min_x = a[0].min(b[0]);
+    let ab_max_x = a[0].max(b[0]);
+    let ab_min_y = a[1].min(b[1]);
+    let ab_max_y = a[1].max(b[1]);
+    let n = ring.len();
+    for i in 0..n {
         let c = ring[i];
-        let d = ring[(i + 1) % ring.len()];
+        let d = ring[if i + 1 < n { i + 1 } else { 0 }];
+        if c[0].max(d[0]) < ab_min_x
+            || c[0].min(d[0]) > ab_max_x
+            || c[1].max(d[1]) < ab_min_y
+            || c[1].min(d[1]) > ab_max_y
+        {
+            continue;
+        }
         if segments_intersect(a, b, c, d) {
             return true;
         }

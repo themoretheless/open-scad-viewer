@@ -64,6 +64,7 @@ fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
+#[allow(dead_code)]
 fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
     let n = norm(v);
     (n > 1e-14).then(|| [v[0] / n, v[1] / n, v[2] / n])

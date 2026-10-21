@@ -73,16 +73,20 @@ impl ReductionPass {
             .numel()
             .min(group_limit(multiprocessors)?)
             .max(1) as u32;
-        let remaining: Vec<_> = (0..input.shape().rank())
-            .filter(|axis| !axes.contains(axis))
-            .collect();
-        let metadata = remaining
-            .iter()
-            .map(|&axis| input.shape().dims()[axis] as u64)
-            .chain(remaining.iter().map(|&axis| input.strides()[axis] as u64))
-            .chain(axes.iter().map(|&axis| input.shape().dims()[axis] as u64))
-            .chain(axes.iter().map(|&axis| input.strides()[axis] as u64))
-            .collect();
+        let input_rank = input.shape().rank();
+        let mut remaining = Vec::with_capacity(input_rank.saturating_sub(axes.len()));
+        for axis in 0..input_rank {
+            if !axes.contains(&axis) {
+                remaining.push(axis);
+            }
+        }
+        let mut metadata = Vec::with_capacity(input_rank * 2);
+        let dims = input.shape().dims();
+        let strides = input.strides();
+        metadata.extend(remaining.iter().map(|&axis| dims[axis] as u64));
+        metadata.extend(remaining.iter().map(|&axis| strides[axis] as u64));
+        metadata.extend(axes.iter().map(|&axis| dims[axis] as u64));
+        metadata.extend(axes.iter().map(|&axis| strides[axis] as u64));
         Ok(Self {
             metadata,
             traversal: Traversal::Axes {

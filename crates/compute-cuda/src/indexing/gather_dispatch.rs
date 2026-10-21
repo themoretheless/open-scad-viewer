@@ -89,7 +89,9 @@ impl GatherDispatch {
         validate_logical_size::<T>(input.shape())?;
         validate_logical_size::<T>(&shape)?;
         let index = InvalidIndicesDispatch::new(indices, input.shape().dims()[axis])?;
-        let mut metadata = layout_metadata(input);
+        let mut metadata = Vec::with_capacity(input.shape().rank() * 2 + index.metadata.len());
+        metadata.extend(input.shape().dims().iter().map(|&v| v as u64));
+        metadata.extend(input.strides().iter().map(|&v| v as u64));
         metadata.extend_from_slice(&index.metadata);
         // The suffix occurs in every nonempty output, so its product then fits
         // the validated output count. Empty outputs never divide by `inner`.

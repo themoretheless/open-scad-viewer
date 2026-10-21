@@ -1,0 +1,13 @@
+# Continuous original boundary UV lifts and exact homology
+
+OwnedPeriodicBoundaryLifts traces EVERY directed physical boundary dart exactly once using the original canonical carrier and native algebraic parameter endpoints. Each part retains source/piece/cell/interval/direction, both original endpoint definitions in their OWN primitive fields, exact homogeneous point expressions, a BigInt deck shift and rational total translation of the UNCHANGED source pcurve. No fitted control polygon or shared-field assumption is introduced.
+
+For each source edge, vertex transports Tdepart,Tarrive define lift history Lnext=Lcurrent+Tdepart-Tarrive. The source pcurve offset is piece.translation+(Lcurrent+Tdepart)*ACTUAL original knot-domain period. This preserves every join in a continuous universal UV cover. A complete physical boundary walk returns to its actual quotient vertex; its final integer history is retained as exact homology and rational net displacement. Unwrapped coordinate changes refuse. A nonzero period sum is NOT forced into a closed planar loop; zero sum does NOT certify simplicity, material ownership or a face.
+
+Regressions prove opposite one-turn lifts with net displacement+4/-4 and original natural domain[2,6]; two coincident authored traversals still yield ONE geometric boundary turn per directed orbit; tangent seam walks have three closed lifts with every independent endpoint join checked exactly, including required upper-sheet translation-4. Missing part budget, changed homology/translation/source endpoint/work refuse replay. Targeted3 tests passed; fresh gates:165 profile+73 integration tests and WASM compile.
+
+Global material side labels, base-region/homology conditions, natural support boundaries, connected region grouping and physical face publication remain open. Actual two-axis torus qualification of the new quotient path still remains. Catalog198/200. Rust isolated; shared changes preserved; cumulative patch requires coordinated merge.
+
+## Shared checkout preservation
+
+The shared checkout has external changes in crates/brep-core/src/profile_certificate.rs, crates/brep-core/src/profile_certificate/span_intersections.rs, crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs. It was not edited or reset. The previous 83-file qualified candidate was reconstructed and checked against its saved SHA256 hashes; its cumulative patch was reversed ONLY in a generated temporary directory. All 10 restored existing baseline files matched the original baseline manifest exactly. The new cumulative patch is against that verified original baseline, not the current shared checkout. A coordinated merge is required before integration; do not blindly apply it over current shared changes.

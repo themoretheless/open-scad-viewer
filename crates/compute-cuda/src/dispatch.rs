@@ -172,7 +172,9 @@ pub(crate) fn binary_metadata<T>(
     crate::runtime::validate_logical_size::<T>(&shape)?;
     let left = left.broadcast_to(shape.clone())?;
     let right = right.broadcast_to(shape.clone())?;
-    let mut metadata = layout_metadata(&left);
+    let mut metadata = Vec::with_capacity(shape.rank() * 3);
+    metadata.extend(left.shape().dims().iter().map(|&v| v as u64));
+    metadata.extend(left.strides().iter().map(|&v| v as u64));
     metadata.extend(right.strides().iter().map(|&v| v as u64));
     Ok((shape, metadata))
 }

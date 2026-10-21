@@ -2,13 +2,16 @@ use super::Surface;
 use crate::{Result, math::*};
 
 fn validate(surface: &Surface, operation: &str) -> Result<()> {
-    if surface.colors.len() != surface.positions.len()
-        || surface.positions.iter().flatten().any(|v| !v.is_finite())
+    let n = surface.positions.len();
+    if surface.colors.len() != n
+        || surface
+            .positions
+            .iter()
+            .any(|p| !(p[0].is_finite() && p[1].is_finite() && p[2].is_finite()))
         || surface
             .triangles
             .iter()
-            .flatten()
-            .any(|&i| i as usize >= surface.positions.len())
+            .any(|t| t[0] as usize >= n || t[1] as usize >= n || t[2] as usize >= n)
     {
         return Err(crate::error(format!("Invalid surface for {operation}")));
     }
@@ -43,23 +46,22 @@ pub fn filter_small_components(surface: &Surface, min_faces: usize) -> Result<Su
     for t in &surface.triangles {
         faces[root(&mut parent, t[0] as usize)] += 1;
     }
-    let mut removed = false;
-    let keep: Vec<bool> = surface
+    let kept_faces: usize = surface
         .triangles
         .iter()
-        .map(|t| {
-            let keep = faces[root(&mut parent, t[0] as usize)] >= min_faces;
-            removed |= !keep;
-            keep
-        })
-        .collect();
-    if !removed {
+        .filter(|t| faces[root(&mut parent, t[0] as usize)] >= min_faces)
+        .count();
+    if kept_faces == surface.triangles.len() {
         return Ok(surface.clone());
     }
-    let mut output = Surface::default();
+    let mut output = Surface {
+        positions: Vec::with_capacity(surface.positions.len().min(kept_faces * 3)),
+        colors: Vec::with_capacity(surface.colors.len().min(kept_faces * 3)),
+        triangles: Vec::with_capacity(kept_faces),
+    };
     let mut remap = vec![u32::MAX; surface.positions.len()];
-    for (t, &keep) in surface.triangles.iter().zip(&keep) {
-        if !keep {
+    for t in &surface.triangles {
+        if faces[root(&mut parent, t[0] as usize)] < min_faces {
             continue;
         }
         output.triangles.push(t.map(|i| {
@@ -87,16 +89,21 @@ pub fn compact(surface: &Surface, cells: usize) -> Result<Surface> {
     let mut lo = [f64::INFINITY; 3];
     let mut hi = [f64::NEG_INFINITY; 3];
     for p in &surface.positions {
-        for k in 0..3 {
-            lo[k] = lo[k].min(p[k]);
-            hi[k] = hi[k].max(p[k]);
-        }
+        lo[0] = lo[0].min(p[0]);
+        lo[1] = lo[1].min(p[1]);
+        lo[2] = lo[2].min(p[2]);
+        hi[0] = hi[0].max(p[0]);
+        hi[1] = hi[1].max(p[1]);
+        hi[2] = hi[2].max(p[2]);
     }
-    let extent = (0..3).map(|k| hi[k] - lo[k]).fold(0., f64::max).max(1e-12);
+    let extent = (hi[0] - lo[0])
+        .max(hi[1] - lo[1])
+        .max(hi[2] - lo[2])
+        .max(1e-12);
     let step = extent / cells as f64;
     let mut groups = FastMap::default();
     let mut sums = Vec::<(V3, [f64; 3], usize)>::new();
-    let mut ids = Vec::new();
+    let mut ids = Vec::with_capacity(surface.positions.len());
     for (p, color) in surface.positions.iter().zip(&surface.colors) {
         let key: [i32; 3] = std::array::from_fn(|k| ((p[k] - lo[k]) / step).floor() as i32);
         let id = *groups.entry(key).or_insert_with(|| {
@@ -111,9 +118,14 @@ pub fn compact(surface: &Surface, cells: usize) -> Result<Surface> {
         *n += 1;
         ids.push(id as u32);
     }
-    let mut result = Surface::default();
+    let mut result = Surface {
+        positions: Vec::with_capacity(sums.len()),
+        colors: Vec::with_capacity(sums.len()),
+        triangles: Vec::new(),
+    };
     for (p, c, n) in sums {
-        result.positions.push(scale(p, 1. / n as f64));
+        let inv_n = 1. / n as f64;
+        result.positions.push(scale(p, inv_n));
         result.colors.push(c.map(|v| (v / n as f64).round() as u8));
     }
     let mut faces = FastSet::default();
@@ -123,13 +135,17 @@ pub fn compact(surface: &Surface, cells: usize) -> Result<Surface> {
             continue;
         }
         let mut key = t;
-        key.sort();
+        key.sort_unstable();
         if faces.insert(key) {
             result.triangles.push(t);
         }
     }
     let mut used = FastMap::default();
-    let mut output = Surface::default();
+    let mut output = Surface {
+        positions: Vec::with_capacity(result.positions.len()),
+        colors: Vec::with_capacity(result.colors.len()),
+        triangles: Vec::with_capacity(result.triangles.len()),
+    };
     for t in &result.triangles {
         let mapped = t.map(|i| {
             *used.entry(i).or_insert_with(|| {

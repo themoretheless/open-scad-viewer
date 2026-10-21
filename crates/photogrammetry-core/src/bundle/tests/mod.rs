@@ -125,7 +125,7 @@ fn schur_elimination_matches_full_normal_equations() {
     for i in 0..n {
         h[i * n + i] += damping * h[i * n + i].max(1e-9);
     }
-    solve_reduced(&mut h, &mut rhs, &mut checkpoints).unwrap();
+    solve_reduced(&mut h, &mut rhs, &mut Vec::new(), &mut checkpoints).unwrap();
     let full = rhs;
     for (actual, expected) in step
         .cameras

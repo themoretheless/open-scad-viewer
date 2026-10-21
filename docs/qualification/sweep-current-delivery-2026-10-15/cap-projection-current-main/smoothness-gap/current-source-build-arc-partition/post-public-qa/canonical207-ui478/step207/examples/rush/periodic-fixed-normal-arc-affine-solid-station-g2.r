@@ -1,0 +1,14 @@
+// @rush/1
+// Exact original raw-WASM ABI request; no change to stations, tolerance or work budgets.
+profile0 = nurbs_curve(degree: 2,knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],control_points: [[-1.3379148292684921mm,3.1687396803961962mm,-0.32907818511978904mm],[-1.341554170737952mm,3.1780539272078645mm,-0.32907818511978904mm],[-1.3397504525805708mm,3.1787586912561125mm,-0.3388888888888889mm],[-1.3379467344231897mm,3.1794634553043606mm,-0.3486995926579888mm],[-1.33430739295373mm,3.1701492084926923mm,-0.3486995926579888mm],[-1.3306680514842701mm,3.160834961681024mm,-0.3486995926579888mm],[-1.3324717696416513mm,3.160130197632776mm,-0.3388888888888889mm],[-1.3342754877990324mm,3.159425433584528mm,-0.32907818511978904mm],[-1.3379148292684921mm,3.1687396803961962mm,-0.32907818511978904mm]],weights: [1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1],periodic: false)
+path = nurbs_curve(degree: 6,knots: [-0.75,-0.625,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1,1.125,1.25,1.375,1.5,1.625,1.75],control_points: [[4mm,0mm,0mm],[3mm,3mm,1mm],[0mm,4mm,0mm],[-3mm,3mm,-1mm],[-4mm,0mm,0mm],[-3mm,-3mm,1mm],[0mm,-4mm,0mm],[3mm,-3mm,-1mm],[4mm,0mm,0mm],[3mm,3mm,1mm],[0mm,4mm,0mm],[-3mm,3mm,-1mm],[-4mm,0mm,0mm],[-3mm,-3mm,1mm]],weights: [1,1,1,1,1,1,1,1,1,1,1,1,1,1],periodic: true)
+show brep_progressive_sweep([[profile0]],path,
+ orientation: "fixed_normal",spacing: "arc_length",normal: [0,0,1],
+ scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},
+ twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},
+ axis_scale: {degree: 1,knots: [0,0,1,1],values: [[1.5,0.75,1],[1.5,0.75,1]],weights: [1,1]},
+ center_law: {degree: 1,knots: [0,0,1,1],values: [[0.005mm,-0.0025mm,0],[0.005mm,-0.0025mm,0]],weights: [1,1]},
+ initial_sections: 33,max_sections: 129,max_deviation: 0.5mm,
+ length_tolerance: 0.0001mm,length_max_cells: 100000,
+ circle_correction_quantum: 9.094947017729282e-13mm,circle_correction_tolerance: 1e-9mm,circle_correction_max_work: 1000000
+).brep_smooth_sweep_stations(wall_tolerance: 0.01mm,quantum: 9.094947017729282e-13mm,max_work: 1000000,smoothness_max_work: 2000000).brep_tessellate(2)

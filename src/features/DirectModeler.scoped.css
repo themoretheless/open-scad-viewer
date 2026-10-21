@@ -105,3 +105,9 @@
 .direct-workspace .splitter span { display: none; }
 .direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
 .direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
+
+.minkowski-tolerance{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px}
+.canvas-wrap>.operation-card.runout-card { display:flex;flex-direction:column;overflow:hidden; }
+.runout-card>.runout-controls { display:grid;gap:10px;min-height:0;overflow-y:auto;flex:1; }
+.runout-card>.command-actions { flex:0 0 auto;padding-top:8px;border-top:1px solid var(--hairline); }
+@media(min-width:751px){.direct-workspace .command-guidance.runout-guidance { left:14px;right:calc(var(--runout-dock-width) + 259px);transform:none;max-width:none; }}

@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/services/rushFrontend'
@@ -10,7 +11,7 @@ it.each([17,65])('carries a nonbinary13/12 original guide phase through Rush, vi
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing nonbinary original guide phase boundary')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:2})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  // Only the65-station cancellation workload fixes both station limits.
  // The17-station request can refine up to65 to meet the original bound.
  if(count===65)expect(model.faces).toHaveLength(512)
@@ -27,7 +28,7 @@ it.each(['closed-contact-hollow-body-boundary.r','closed-arc-length-contact-holl
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing native closed contact boundary')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:2})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.shells).toHaveLength(2)
  const before=JSON.stringify(model)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
@@ -49,8 +50,8 @@ it.each(['closed-contact-hollow-body-boundary.r','closed-arc-length-contact-holl
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}},
   {onSweepPreview:(_id,preview)=>{last=preview.report}}).catch(error=>{throw Error('65-section contact workload: '+JSON.stringify(last),{cause:error})})
  if(!built.nativeGeometry)throw Error('Missing native cancellation workload boundary')
- expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry),JSON.stringify(JSON.parse(built.nativeGeometry.geometryJson).sweepBodyBoundaryEvidence)+" last="+JSON.stringify(last)).toMatchObject({continuousBound:true,withinBudget:true,budget:2})
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry
+ expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry),JSON.stringify(readNativeGeometryData(built.nativeGeometry).sweepBodyBoundaryEvidence)+" last="+JSON.stringify(last)).toMatchObject({continuousBound:true,withinBudget:true,budget:2})
+ const model=readNativeGeometryData(built.nativeGeometry).geometry
  expect(model.faces).toHaveLength(512)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
   allPairsClassified:true,nesting:{rolesConsistent:true,parents:[null,0]},orientations:[{outward:true},{outward:false}]})

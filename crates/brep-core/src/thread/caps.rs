@@ -122,6 +122,8 @@ pub(super) fn cap_patch_network_impl(
         (cap, cells, area > 0.)
     };
     if side_positive {
+        let cap_surface=&cap.faces[0].surface;
+        let u_ends=[cap_surface.knots_u[cap_surface.degree_u],cap_surface.knots_u[cap_surface.control_points.len()]];
         cap.faces[0].surface.control_points.reverse();
         cap.faces[0].surface.weights.reverse();
         for e in &mut cap.edges {
@@ -132,7 +134,7 @@ pub(super) fn cap_patch_network_impl(
         for c in &mut cap.loops[0].coedges {
             c.pcurve = c.pcurve.reverse()?;
             for p in &mut c.pcurve.control_points {
-                p[0] = 1. - p[0];
+                p[0] = u_ends[0] + (u_ends[1] - p[0]);
             }
         }
         cap.rebuild_topology_ids();

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {measureSolidVertices,measureSolidEdgeCurvature} from '../src/services/solidMeasurements'
-import {analyzeNurbsBrep,booleanNurbsBrep,createBrepBox,createBrepCylinder,createBrepSphere,inspectNurbsBrep,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
+import {measureSolidVertices,measureSolidEdgeCurvature,measureSolidMassProperties} from '../src/services/solidMeasurements'
+import {createBrepBox,createBrepCylinder,createBrepSphere,booleanNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 const body=(brep:ReturnType<typeof createBrepBox>)=>({id:'body',name:'Body',brep,mesh:tessellateNurbsBrep(brep)})
 it('measures vertices across bodies without modifying their documents',()=>{
  const a=body(createBrepBox([0,0,0],[1,1,1])),b=body(createBrepBox([3,4,12],[4,5,13]))
@@ -46,3 +46,22 @@ it.each(['wall sphere','drilled sphere','two stubs'] as const)('preserves tolera
  expect(results[1].bodies).toHaveLength(name==='two stubs'?2:1)
  expect(JSON.stringify([a,b])).toBe(original)
 },120_000)
+
+it('computes volume, surface area, center of mass, and principal inertia for B-Rep and mesh bodies',()=>{
+ const box=body(createBrepBox([0,0,0],[2,4,6]))
+ const mass=measureSolidMassProperties(box)
+ expect(mass.volumeMm3).toBeCloseTo(48,4)
+ expect(mass.surfaceAreaMm2).toBeCloseTo(2*(8+12+24),4)
+ expect(mass.surfaceToVolumeRatioPerMm).toBeCloseTo(88/48,4)
+ expect(mass.centerOfMass[0]).toBeCloseTo(1,3)
+ expect(mass.centerOfMass[1]).toBeCloseTo(2,3)
+ expect(mass.centerOfMass[2]).toBeCloseTo(3,3)
+ expect(mass.dimensions).toEqual([2,4,6])
+ expect(mass.principalInertiaMm5[0]).toBeGreaterThan(0)
+ expect(mass.principalInertiaMm5[1]).toBeGreaterThanOrEqual(mass.principalInertiaMm5[0])
+ expect(mass.principalInertiaMm5[2]).toBeGreaterThanOrEqual(mass.principalInertiaMm5[1])
+ const meshOnly={id:'mesh',name:'Mesh',mesh:box.mesh}
+ const meshMass=measureSolidMassProperties(meshOnly)
+ expect(meshMass.volumeMm3).toBeCloseTo(48,4)
+ expect(meshMass.centerOfMass[2]).toBeCloseTo(3,3)
+})

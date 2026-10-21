@@ -1,0 +1,11 @@
+# Original carrier incidence and boundary walks
+
+Candidate /private/tmp/nurbs-native-200-next-6v12adcx. Shared Rust unchanged. Catalog 198/200 remains. Cumulative 26-file patch against baseline-source-sha256.json; never apply older cumulative patches sequentially. No live check handles remain.
+
+Exact original endpoint coordinates are evaluated from original homogeneous endpoint nets; selected algebraic coordinate GCD identities reconcile endpoints with contact groups. Rational equality unifies remaining ordinary endpoints without display tolerance. Graph owns both directed incidences for every carrier, including both sides of closed loops. Reverify rebuilds all source coverage and endpoint incidence.
+
+Boundary walks use exact source contact cyclic rotations (including intrinsic tangent/cusp slice proof). Port-to-carrier bijection is mandatory. Ordinary rational endpoints with degree <=2 have a unique cyclic order; higher valence refuses until a complete original branch rotation is available. Target predecessor of incoming twin defines the left-side successor permutation. Every half-edge has exactly one predecessor/successor; deterministic disjoint orbit walks retain bridges and loop sides. Reverify reconstructs rotations, successor permutation and cycles. These walks are not yet filled-region selection or physical faces.
+
+Gates: 80 profile unit tests +85 integration tests across19 binaries =165 passed; brep-core WASM passed; API map186public modules/200catalogentries passed. Changed26 Rust source hashes stable across final checks. New coverage: endpoint equality, one-ULP distinct endpoints, closed-loop incidence, irrational crossings, tree bridge orbit, closed-loop opposite walks, self-crossing traversal walks; tamper replays reject vertex/incidence/ends and rotation/successor/orbit changes.
+
+Next: source-owned side witnesses and exact winding, disconnected face component / hole grouping and nonzero fill selection; endpoint high-valence fallback if required; common-component/partial-overlap assembly; periodic physical topology. General automatic complete surface intersection atlas and actual trim topology still open. Do not count helper modules as catalog entries.

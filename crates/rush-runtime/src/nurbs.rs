@@ -668,7 +668,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_chamfer",
             "brep_fillet",
             "brep_tessellate",
-            "brep_smooth_miter_stations",
+            "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
             "surface_extrude_patches", "surface_extrude",

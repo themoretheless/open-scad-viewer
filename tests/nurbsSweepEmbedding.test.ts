@@ -122,7 +122,8 @@ it('proves retained boundary embedding with independent unresolved budget eviden
  expect(report.individualPairs+report.groupedPairs).toBe(report.totalPairs)
  expect(report.caps.map(c=>c.face)).toEqual([4,5])
  const exhausted=inspectSweepEmbedding(model,[4,5],{...budgets,capBudgets:{...budgets.capBudgets,maxExactWork:0}})
- expect(exhausted.boundaryEmbeddingCertified).toBe(false)
+ // The cap shortcut can refuse while the independent full-face audit succeeds.
+ expect(exhausted).toMatchObject({boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true,nextPair:null})
  expect(exhausted.caps.every(c=>!c.capCertified)).toBe(true)
  expect(exhausted.allPairsClassified).toBe(true)
  expect(exhausted.individualPairs+exhausted.groupedPairs).toBe(exhausted.totalPairs)
@@ -152,7 +153,12 @@ it('retains volume stage evidence and refuses reversed material orientation',()=
  const wrong=inspectSweepVolume(inward,[4,5],volume)
  expect(wrong).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:true,
   orientations:[{shell:0,expectedOutward:true,outward:false}]})
- const noBoundary=inspectSweepVolume(model,[4,5],{...volume,capBudgets:{...volume.capBudgets,maxExactWork:0}})
+ const capFallback=inspectSweepVolume(model,[4,5],{...volume,capBudgets:{...volume.capBudgets,maxExactWork:0}})
+ expect(capFallback).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,
+  allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true},
+  orientations:[{shell:0,expectedOutward:true,outward:true}]})
+ expect(capFallback.boundary!.caps.every(cap=>!cap.capCertified)).toBe(true)
+ const noBoundary=inspectSweepVolume(model,[4,5],{...volume,maxExactWork:1,capBudgets:{...volume.capBudgets,maxExactWork:0}})
  expect(noBoundary).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false,nesting:null})
  expect(noBoundary.orientations.every(s=>s.attempts===0&&s.outward===null)).toBe(true)
  expect(model).toEqual(before)

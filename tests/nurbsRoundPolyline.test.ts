@@ -27,7 +27,7 @@ it('lowers and builds a spatial round path sweep through Rush',()=>{
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   expect(built.mesh).toBeDefined()
   const node=compiled.document.nodes.find(n=>n.op==='progressive_sweep')!
-  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:false})
+  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:true})
   expect(()=>compileRushFrontend(source.replace('radius: 2mm','radius: 2deg'))).toThrow()
 })
 
@@ -54,7 +54,7 @@ it('retains the independent quintic transition shape and validates dimensional R
   expect(compiled.document.nodes.find(n=>n.op==='transition_polyline_curve')).toMatchObject({setback:2})
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   const node=compiled.document.nodes.find(n=>n.op==='progressive_sweep')!
-  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:false})
+  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:true})
   expect(()=>compileRushFrontend(source.replace('setback: 2mm','setback: 2deg'))).toThrow()
   expect(()=>transitionPolylineNurbsCurve([[0,0,0],[1,0,0],[1,1,0]],2)).toThrow(/overlap/)
 })
@@ -66,7 +66,13 @@ it.each([['round',roundPolylineNurbsCurve],['transition',transitionPolylineNurbs
   expect(()=>constructor([[0,0,0],[10,0,0],[10,10,0],[0,10,0]],5,true)).toThrow(/overlap/)
   let source=readFileSync('examples/rush/closed-corner-progressive-hollow-body.r','utf8')
   if(name==='transition')source=source.replace('round_polyline_curve','transition_polyline_curve').replace('radius: 2mm','setback: 2mm')
-  expect(()=>buildOwnNurbs(compileRushFrontend(source).document,{action:'build'})).toThrow(/refinement.*budget/)
+  const precise=compileRushFrontend(source)
+  const preciseNode=precise.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
+  const preciseBuilt=buildOwnNurbs(precise.document,{action:'build'})
+  expect(preciseBuilt.report.construction?.[preciseNode.id]).toMatchObject({accepted:true,continuousBound:true})
+  expect(preciseBuilt.report.construction?.[preciseNode.id]?.continuousErrorUpper).toBeGreaterThan(0)
+  expect(preciseBuilt.report.construction?.[preciseNode.id]?.continuousErrorUpper).toBeLessThanOrEqual(.02)
+  expect(()=>buildOwnNurbs(compileRushFrontend(source.replace('max_deviation: 0.02mm','max_deviation: 0.02mm, error_max_cells: 0, error_max_products: 1000000, rmf_transport_steps: 512')).document,{action:'build'})).toThrow(/(?:refinement|continuous).*budget/)
   source=source.replace('max_deviation: 0.02mm','max_deviation: 1mm')
   const compiled=compileRushFrontend(source)
   const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_sweep')!

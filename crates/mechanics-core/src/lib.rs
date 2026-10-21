@@ -182,30 +182,88 @@ fn winding(point: [f64; 2], contours: &[Vec<[f64; 2]>]) -> i32 {
 }
 
 fn min_wall_mm(section: &LayerSection) -> f64 {
-    let mut xs = Vec::new();
-    let mut ys = Vec::new();
+    let mut min_x = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    let mut has_points = false;
     for ring in &section.contours {
         for point in ring {
-            xs.push(point[0]);
-            ys.push(point[1]);
+            has_points = true;
+            min_x = min_x.min(point[0]);
+            max_x = max_x.max(point[0]);
+            min_y = min_y.min(point[1]);
+            max_y = max_y.max(point[1]);
         }
     }
-    if xs.is_empty() {
+    if !has_points {
         return 0.0;
     }
-    let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let span = (max_y - min_y).max(max_x - min_x);
     if !span.is_finite() || span <= 0.0 {
         return 0.0;
     }
-    let step = (span / 32.0).max(span * 1e-4);
     let mut min_wall = f64::INFINITY;
+    // Rotation-invariant normal ray probes from edge midpoints
+    for (ring_idx, ring) in section.contours.iter().enumerate() {
+        for i in 0..ring.len() {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            let dx = b[0] - a[0];
+            let dy = b[1] - a[1];
+            let len = dx.hypot(dy);
+            if len <= 1e-9 {
+                continue;
+            }
+            let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
+            for sign in [1.0, -1.0] {
+                let dir = [-sign * dy / len, sign * dx / len];
+                let probe = [
+                    mid[0] + dir[0] * (span * 1e-5),
+                    mid[1] + dir[1] * (span * 1e-5),
+                ];
+                if winding(probe, &section.contours) == 0 {
+                    continue;
+                }
+                let mut best_t = f64::INFINITY;
+                for (other_ring_idx, other_ring) in section.contours.iter().enumerate() {
+                    for j in 0..other_ring.len() {
+                        if ring_idx == other_ring_idx && i == j {
+                            continue;
+                        }
+                        let c = other_ring[j];
+                        let d = other_ring[(j + 1) % other_ring.len()];
+                        let s = [d[0] - c[0], d[1] - c[1]];
+                        let denom = cross2(dir, s);
+                        if denom.abs() <= 1e-12 {
+                            continue;
+                        }
+                        let qp = sub2(c, mid);
+                        let t = cross2(qp, s) / denom;
+                        let u = cross2(qp, dir) / denom;
+                        if t > 1e-7 && (0.0..=1.0).contains(&u) && t < best_t {
+                            let check_mid =
+                                [mid[0] + dir[0] * (t * 0.5), mid[1] + dir[1] * (t * 0.5)];
+                            if winding(check_mid, &section.contours) != 0 {
+                                best_t = t;
+                            }
+                        }
+                    }
+                }
+                if best_t.is_finite() {
+                    min_wall = min_wall.min(best_t);
+                }
+            }
+        }
+    }
+    if min_wall.is_finite() {
+        return min_wall;
+    }
+    let step = (span / 32.0).max(span * 1e-4);
     let mut y = min_y + step * 0.5;
+    let mut hits = Vec::new();
     while y <= max_y - step * 0.25 {
-        let mut hits = Vec::new();
+        hits.clear();
         for ring in &section.contours {
             for i in 0..ring.len() {
                 let a = ring[i];
@@ -352,3 +410,344 @@ pub fn analyze_layers(sections: &[LayerSection], load: &LoadCase) -> Result<Stre
         weakest_index,
     })
 }
+
+/// 3D wall thickness analysis result over a triangle mesh.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WallThickness3dReport {
+    pub triangle_thickness_mm: Vec<f64>,
+    pub min_thickness_mm: f64,
+    pub max_thickness_mm: f64,
+    pub thin_triangle_indices: Vec<usize>,
+}
+
+/// Casts inward normal rays from each triangle centroid of a closed 3D mesh (`positions` flat xyz,
+/// `indices` flat triangle indices) to measure local wall thickness across the part.
+pub fn analyze_wall_thickness_3d(
+    positions: &[f64],
+    indices: &[u32],
+    min_threshold_mm: f64,
+) -> Result<WallThickness3dReport> {
+    if !positions.len().is_multiple_of(3)
+        || positions.is_empty()
+        || !indices.len().is_multiple_of(3)
+        || indices.is_empty()
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_MESH",
+            "Mesh requires non-empty xyz positions and triangle indices",
+        ));
+    }
+    require_finite(min_threshold_mm, "Threshold must be finite")?;
+    let v_count = positions.len() / 3;
+    let tri_count = indices.len() / 3;
+    if tri_count > 50_000 {
+        return Err(invalid(
+            "MECHANICS_MESH_LIMIT",
+            "3D wall thickness analysis supports up to 50000 triangles",
+        ));
+    }
+    let mut tris = Vec::with_capacity(tri_count);
+    for t in indices.chunks_exact(3) {
+        let (i0, i1, i2) = (t[0] as usize, t[1] as usize, t[2] as usize);
+        if i0 >= v_count || i1 >= v_count || i2 >= v_count {
+            return Err(invalid(
+                "MECHANICS_INVALID_MESH",
+                "Triangle index out of bounds",
+            ));
+        }
+        let v0 = [positions[i0 * 3], positions[i0 * 3 + 1], positions[i0 * 3 + 2]];
+        let v1 = [positions[i1 * 3], positions[i1 * 3 + 1], positions[i1 * 3 + 2]];
+        let v2 = [positions[i2 * 3], positions[i2 * 3 + 1], positions[i2 * 3 + 2]];
+        let e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+        let e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+        tris.push((v0, e1, e2));
+    }
+    let thicknesses = math_core::par_map_index(tri_count, 64, |ti| {
+        let (v0, e1, e2) = tris[ti];
+        let n = [
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0],
+        ];
+        let n_len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+        if n_len <= 1e-12 {
+            return 0.0;
+        }
+        // Inward ray direction is -normal
+        let dir = [-n[0] / n_len, -n[1] / n_len, -n[2] / n_len];
+        let origin = [
+            v0[0] + (e1[0] + e2[0]) / 3.0,
+            v0[1] + (e1[1] + e2[1]) / 3.0,
+            v0[2] + (e1[2] + e2[2]) / 3.0,
+        ];
+        let mut best_hit = f64::INFINITY;
+        for (oj, &(u0, ue1, ue2)) in tris.iter().enumerate() {
+            if ti == oj {
+                continue;
+            }
+            let h = [
+                dir[1] * ue2[2] - dir[2] * ue2[1],
+                dir[2] * ue2[0] - dir[0] * ue2[2],
+                dir[0] * ue2[1] - dir[1] * ue2[0],
+            ];
+            let a = ue1[0] * h[0] + ue1[1] * h[1] + ue1[2] * h[2];
+            if a.abs() <= 1e-12 {
+                continue;
+            }
+            let f = 1.0 / a;
+            let s = [origin[0] - u0[0], origin[1] - u0[1], origin[2] - u0[2]];
+            let u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
+            if !(0.0..=1.0).contains(&u) {
+                continue;
+            }
+            let q = [
+                s[1] * ue1[2] - s[2] * ue1[1],
+                s[2] * ue1[0] - s[0] * ue1[2],
+                s[0] * ue1[1] - s[1] * ue1[0],
+            ];
+            let v = f * (dir[0] * q[0] + dir[1] * q[1] + dir[2] * q[2]);
+            if v < 0.0 || u + v > 1.0 {
+                continue;
+            }
+            let dist = f * (ue2[0] * q[0] + ue2[1] * q[1] + ue2[2] * q[2]);
+            if dist > 1e-6 && dist < best_hit {
+                best_hit = dist;
+            }
+        }
+        if best_hit.is_finite() { best_hit } else { 0.0 }
+    });
+    let mut min_t = f64::INFINITY;
+    let mut max_t = 0.0_f64;
+    let mut thin_indices = Vec::new();
+    for (ti, &thick) in thicknesses.iter().enumerate() {
+        if thick > 0.0 {
+            min_t = min_t.min(thick);
+            max_t = max_t.max(thick);
+            if thick < min_threshold_mm {
+                thin_indices.push(ti);
+            }
+        }
+    }
+    Ok(WallThickness3dReport {
+        triangle_thickness_mm: thicknesses,
+        min_thickness_mm: if min_t.is_finite() { min_t } else { 0.0 },
+        max_thickness_mm: max_t,
+        thin_triangle_indices: thin_indices,
+    })
+}
+
+/// Computes Euler column critical buckling load ($P_{\text{cr}} = \pi^2 E I / (K L)^2$) and safety factor
+/// for a slender member under compressive axial load `compressive_load_n` (positive in compression).
+pub fn euler_buckling_safety_factor(
+    young_mpa: f64,
+    min_moment_of_inertia_mm4: f64,
+    length_mm: f64,
+    effective_length_factor_k: f64,
+    compressive_load_n: f64,
+) -> Result<(f64, f64)> {
+    if ![
+        young_mpa,
+        min_moment_of_inertia_mm4,
+        length_mm,
+        effective_length_factor_k,
+    ]
+    .into_iter()
+    .all(|v| v.is_finite() && v > 0.0)
+        || !compressive_load_n.is_finite()
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Euler buckling requires positive finite E, I, L, K and finite load",
+        ));
+    }
+    let kl = effective_length_factor_k * length_mm;
+    let p_cr = std::f64::consts::PI.powi(2) * young_mpa * min_moment_of_inertia_mm4 / (kl * kl);
+    let fos = if compressive_load_n > 0.0 {
+        p_cr / compressive_load_n
+    } else {
+        f64::INFINITY
+    };
+    Ok((p_cr, fos))
+}
+
+/// Estimates fundamental natural frequency $f_1$ (Hz) from static nodal displacements under gravity
+/// via the Rayleigh quotient: $\omega_1^2 \approx g \sum m_i u_i / \sum m_i u_i^2$.
+pub fn estimate_fundamental_frequency_hz(
+    nodal_masses_kg: &[f64],
+    static_gravity_deflections_mm: &[f64],
+) -> Result<f64> {
+    if nodal_masses_kg.is_empty()
+        || nodal_masses_kg.len() != static_gravity_deflections_mm.len()
+        || nodal_masses_kg.iter().any(|&m| !m.is_finite() || m < 0.0)
+        || static_gravity_deflections_mm
+            .iter()
+            .any(|&u| !u.is_finite() || u < 0.0)
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Rayleigh frequency estimate requires matching non-negative masses and deflections",
+        ));
+    }
+    let mut num = 0.0;
+    let mut den = 0.0;
+    for (&m, &u_mm) in nodal_masses_kg.iter().zip(static_gravity_deflections_mm) {
+        let u_m = u_mm * 1e-3;
+        num += m * u_m;
+        den += m * u_m * u_m;
+    }
+    if den <= 1e-18 || num <= 0.0 {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Total mass deflection product must be positive",
+        ));
+    }
+    let g = 9.80665;
+    let omega = (g * num / den).sqrt();
+    Ok(omega / std::f64::consts::TAU)
+}
+
+/// Classical high-cycle fatigue criteria.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FatigueCriterion {
+    /// Modified Goodman line: $\sigma_a / S_e + \sigma_m / S_{ut} = 1 / n$
+    Goodman,
+    /// Soderberg line (conservative, yield-based): $\sigma_a / S_e + \sigma_m / S_y = 1 / n$
+    Soderberg,
+    /// Gerber parabola: $n \sigma_a / S_e + (n \sigma_m / S_{ut})^2 = 1$
+    Gerber,
+}
+
+/// Computes high-cycle fatigue factor of safety under fluctuating stress ($\sigma_{\min}$, $\sigma_{\max}$).
+pub fn fatigue_safety_factor(
+    sigma_min_mpa: f64,
+    sigma_max_mpa: f64,
+    endurance_limit_mpa: f64,
+    yield_strength_mpa: f64,
+    ultimate_strength_mpa: f64,
+    criterion: FatigueCriterion,
+) -> Result<f64> {
+    if ![
+        sigma_min_mpa,
+        sigma_max_mpa,
+        endurance_limit_mpa,
+        yield_strength_mpa,
+        ultimate_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || endurance_limit_mpa <= 0.0
+        || yield_strength_mpa <= 0.0
+        || ultimate_strength_mpa <= 0.0
+        || sigma_max_mpa < sigma_min_mpa
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Fatigue calculation requires finite stresses with sigma_max >= sigma_min and positive material strengths",
+        ));
+    }
+    let sigma_a = 0.5 * (sigma_max_mpa - sigma_min_mpa);
+    let sigma_m = 0.5 * (sigma_max_mpa + sigma_min_mpa).max(0.0);
+    if sigma_a <= 1e-12 && sigma_m <= 1e-12 {
+        return Ok(f64::INFINITY);
+    }
+    let fos = match criterion {
+        FatigueCriterion::Goodman => {
+            1.0 / (sigma_a / endurance_limit_mpa + sigma_m / ultimate_strength_mpa)
+        }
+        FatigueCriterion::Soderberg => {
+            1.0 / (sigma_a / endurance_limit_mpa + sigma_m / yield_strength_mpa)
+        }
+        FatigueCriterion::Gerber => {
+            if sigma_m <= 1e-12 {
+                endurance_limit_mpa / sigma_a
+            } else {
+                let r_a = sigma_a / endurance_limit_mpa;
+                let r_m = sigma_m / ultimate_strength_mpa;
+                (-r_a + (r_a * r_a + 4.0 * r_m * r_m).sqrt()) / (2.0 * r_m * r_m)
+            }
+        }
+    };
+    Ok(fos)
+}
+
+#[cfg(test)]
+#[path = "tests/lib_tests_integration.rs"]
+mod lib_tests;
+
+/// VDI 2230 / ISO 898-1 bolted joint preload, tensile stress area, and clamping safety report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BoltedJointReport {
+    /// ISO 898-1 tensile stress area $A_s = \frac{\pi}{4}(d - 0.9382 P)^2$ in $\text{mm}^2$.
+    pub tensile_stress_area_mm2: f64,
+    /// Stiffness partition factor $C = k_b / (k_b + k_m)$ (standard steel bolt in steel/alu flange $\approx 0.25$).
+    pub stiffness_factor_c: f64,
+    /// Total bolt axial tension under external load: $F_b = F_i + C F_{\text{ext}}$ in N.
+    pub bolt_axial_force_n: f64,
+    /// Remaining clamping force on the joint interface: $F_m = F_i - (1 - C) F_{\text{ext}}$ in N.
+    pub residual_clamp_force_n: f64,
+    /// Axial tensile stress in the thread root $\sigma_b = F_b / A_s$ in MPa.
+    pub bolt_axial_stress_mpa: f64,
+    /// Safety factor against bolt proof load ($S_p A_s / F_b$).
+    pub proof_safety_factor: f64,
+    /// Load factor $n_0 = F_i / ((1 - C) F_{\text{ext}})$ against joint separation ($> 1.0$ means clamped).
+    pub joint_separation_safety_factor: f64,
+    /// Estimated assembly tightening torque $T = K d F_i$ (with nut factor $K = 0.20$) in $\text{N}\cdot\text{m}$.
+    pub recommended_tightening_torque_nm: f64,
+}
+
+/// Performs a bolted joint preload & clamping analysis for an ISO metric bolt (`bolt_diameter_mm`, `pitch_mm`)
+/// under initial preload `preload_n` and external separating load `external_axial_load_n` against `proof_strength_mpa`.
+pub fn bolted_joint_analysis(
+    bolt_diameter_mm: f64,
+    pitch_mm: f64,
+    preload_n: f64,
+    external_axial_load_n: f64,
+    proof_strength_mpa: f64,
+) -> Result<BoltedJointReport> {
+    if ![
+        bolt_diameter_mm,
+        pitch_mm,
+        preload_n,
+        external_axial_load_n,
+        proof_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || bolt_diameter_mm <= 0.5
+        || pitch_mm <= 0.05
+        || bolt_diameter_mm <= 1.1 * pitch_mm
+        || preload_n <= 0.0
+        || external_axial_load_n < 0.0
+        || proof_strength_mpa <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Bolted joint analysis requires valid bolt diameter, pitch, positive preload, non-negative load, and positive proof strength",
+        ));
+    }
+    let d_eff = bolt_diameter_mm - 0.9382 * pitch_mm;
+    let a_s = 0.25 * std::f64::consts::PI * d_eff * d_eff;
+    let c = 0.25_f64;
+    let f_b = preload_n + c * external_axial_load_n;
+    let f_m = preload_n - (1.0 - c) * external_axial_load_n;
+    let sigma_b = f_b / a_s;
+    let proof_load_n = proof_strength_mpa * a_s;
+    let proof_fos = proof_load_n / f_b.max(1e-12);
+    let sep_fos = if external_axial_load_n > 1e-12 {
+        preload_n / ((1.0 - c) * external_axial_load_n)
+    } else {
+        f64::INFINITY
+    };
+    let torque_nm = 0.20 * (bolt_diameter_mm * 1e-3) * preload_n;
+    Ok(BoltedJointReport {
+        tensile_stress_area_mm2: a_s,
+        stiffness_factor_c: c,
+        bolt_axial_force_n: f_b,
+        residual_clamp_force_n: f_m,
+        bolt_axial_stress_mpa: sigma_b,
+        proof_safety_factor: proof_fos,
+        joint_separation_safety_factor: sep_fos,
+        recommended_tightening_torque_nm: torque_nm,
+    })
+}
+

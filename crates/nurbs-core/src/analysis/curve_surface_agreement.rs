@@ -170,6 +170,41 @@ pub fn verify_on(
             return Ok(report);
         }
     }
+    // Identical original clocks can be covered directly at their literal
+    // knot endpoints. Normalizing then rounding each endpoint would straddle
+    // adjacent knot spans and lose the correlated composition enclosure.
+    if source_interval==p.domain() && !c.periodic && !p.periodic && c.domain() == p.domain()
+        && [c,p].iter().all(|curve| curve.knots[..=curve.degree].iter().all(|&t|t==curve.domain()[0])
+            && curve.knots[curve.control_points.len()..].iter().all(|&t|t==curve.domain()[1])) {
+        let [a,b]=c.domain();
+        let exact_mirror=|t:f64|->Option<f64> {
+            fn add(x:f64,y:f64)->(f64,f64) {
+                let sum=x+y;let v=sum-x;
+                (sum,(x-(sum-v))+(y-v))
+            }
+            let (sum,e1)=add(a,b);let (value,e2)=add(sum,-t);
+            (sum.is_finite() && value.is_finite() && e1==0. && e2==0.).then_some(value)
+        };
+        let aligned=if reversed {
+            c.degree==p.degree && c.knots.len()==p.knots.len()
+                && c.knots.iter().rev().zip(&p.knots).all(|(&t,&u)|exact_mirror(t)==Some(u))
+        }else{c.degree==p.degree && c.knots==p.knots};
+        if aligned {
+            let mut complete=true;
+            for i in p.degree..p.control_points.len() {
+                let ends=[p.knots[i],p.knots[i+1]];
+                if ends[0]==ends[1] {continue;}
+                if report.cells==max_cells {return Ok(report);}
+                report.cells+=1;
+                let edge_ends=if reversed {
+                    [Interval::point(exact_mirror(ends[0]).unwrap()),Interval::point(exact_mirror(ends[1]).unwrap())]
+                }else{ends.map(Interval::point)};
+                let upper=crate::curve_surface_composition::upper_mapped_cell(c,p,s,edge_ends,ends.map(Interval::point));
+                if !matches!(upper,Ok(Some(upper)) if upper<=tolerance) {complete=false;break;}
+            }
+            if complete {report.status=Status::WithinTolerance;return Ok(report);}
+        }
+    }
     let mut stack = vec![[0., 1.]];
     while let Some([lo, hi]) = stack.pop() {
         if report.cells == max_cells {
@@ -236,6 +271,9 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     use cad_predicates::{AuthoredScalar, Limits, PredicateContext, SourceArena, ToleranceContext};
     c.validate()?;p.validate()?;s.validate()?;
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
+    if require_chart {
+        if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+    }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
         && knots[..=degree].iter().all(|x|*x==knots[degree])
         && knots[n..].iter().all(|x|*x==knots[n]);
@@ -418,3 +456,165 @@ fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_w
 #[cfg(test)]
 #[path="../tests/curve_surface_agreement_tests.rs"]
 mod tests;
+
+mod owned_boundary;
+mod correspondence;
+pub use correspondence::{CorrespondenceReport, verify_correspondence, verify_oriented_correspondence};
+
+/// Method proposes a definition only; admission comes from continuous evidence.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LiftMethod {
+    AffineProposal,
+    TensorComposition,
+    IsoparametricProposal,
+}
+fn affine_lift_candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
+    if p.periodic
+        || s.periodic_u
+        || s.periodic_v
+        || s.degree_u != 1
+        || s.degree_v != 1
+        || s.control_points.len() != 2
+        || s.control_points[0].len() != 2
+        || s.weights.iter().flatten().any(|&w| w != s.weights[0][0])
+    {
+        return Ok(None);
+    }
+    let origin = &s.control_points[0][0];
+    let a: [f64; 3] = std::array::from_fn(|k| s.control_points[1][0][k] - origin[k]);
+    let b: [f64; 3] = std::array::from_fn(|k| s.control_points[0][1][k] - origin[k]);
+    if (0..3).any(|k| s.control_points[1][1][k] - s.control_points[1][0][k] != b[k]) {
+        return Ok(None);
+    }
+    let domain = [[s.knots_u[1], s.knots_u[2]], [s.knots_v[1], s.knots_v[2]]];
+    if domain.iter().any(|d| !(d[1] - d[0]).is_finite()) {
+        return Ok(None);
+    }
+    let mut curve = p.clone();
+    curve.control_points = p
+        .control_points
+        .iter()
+        .map(|q| {
+            let u = (q[0] - domain[0][0]) / (domain[0][1] - domain[0][0]);
+            let v = (q[1] - domain[1][0]) / (domain[1][1] - domain[1][0]);
+            (0..3).map(|k| origin[k] + a[k] * u + b[k] * v).collect()
+        })
+        .collect();
+    curve.validate()?;
+    Ok(Some(curve))
+}
+
+pub struct LiftReport {
+    /// Present only after the actual returned coefficients pass full agreement.
+    pub curve: Option<Curve>,
+    pub evidence: Option<Report>,
+    pub method: Option<LiftMethod>,
+    pub cells: usize,
+}
+/// Lift a chart curve into 3D. Optional owned endpoints are authored before the
+/// full-interval check, so endpoint edits never inherit an obsolete certificate.
+/// Unsupported composition may propose original isoparametric restrictions;
+/// these still must match the complete ORIGINAL pcurve/surface within tolerance.
+/// No fit sample, exact-identity claim or silent pcurve change grants admission.
+pub fn lift(
+    p: &Curve,
+    s: &Surface,
+    endpoints: Option<[[f64; 3]; 2]>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LiftReport> {
+    p.validate()?;
+    s.validate()?;
+    check(
+        p.control_points[0].len() == 2
+            && s.control_points[0][0].len() == 3
+            && tolerance.is_finite()
+            && tolerance > 0.
+            && max_cells <= 100000
+            && endpoints
+                .as_ref()
+                .is_none_or(|ps| ps.iter().flatten().all(|x| x.is_finite())),
+        "Lift requires 2D/3D definitions, finite endpoints and bounded positive tolerance",
+    )?;
+    let mut out = LiftReport {
+        curve: None,
+        evidence: None,
+        method: None,
+        cells: 0,
+    };
+    if max_cells == 0 {
+        return Ok(out);
+    }
+    let mut candidates = Vec::new();
+    let mut extended_tensor = None;
+    // An affine support can retain the original pcurve degree and poles.
+    // Prefer that compact proposal; the same full original-source admission
+    // still follows all endpoint edits below.
+    if let Some(c) = affine_lift_candidate(p, s)? {
+        candidates.push((LiftMethod::AffineProposal, c));
+    }
+    if let Some(c) = crate::curve_surface_composition::trace_candidate(p, s)? {
+        if p.degree==1 && p.control_points.len()==2 && s.degree_u+s.degree_v>8 {
+            // Preserve compact already-supported iso proposals. The expanded
+            // tensor trace is tried afterward, with the same original proof.
+            extended_tensor=Some((LiftMethod::TensorComposition,c));
+        }else{
+            candidates.push((LiftMethod::TensorComposition, c));
+        }
+    }
+    if p.degree == 1 && p.control_points.len() == 2 && !p.periodic && !s.periodic_u && !s.periodic_v
+    {
+        for fixed in 0..2 {
+            let a = p.control_points[0][1 - fixed];
+            let b = p.control_points[1][1 - fixed];
+            if a == b {
+                continue;
+            }
+            let value = p.control_points[0][fixed] * 0.5 + p.control_points[1][fixed] * 0.5;
+            let axis = if fixed == 0 {
+                crate::surface::Axis::U
+            } else {
+                crate::surface::Axis::V
+            };
+            let d = if fixed == 0 {
+                [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]]
+            } else {
+                [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]]
+            };
+            let free = if fixed == 0 {
+                [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]]
+            } else {
+                [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]]
+            };
+            if value < d[0] || value > d[1] || a.min(b) < free[0] || a.max(b) > free[1] {
+                continue;
+            }
+            let mut c = s.iso(axis, value)?.trim(a.min(b), a.max(b))?;
+            if a > b {
+                c = c.reverse()?;
+            }
+            candidates.push((LiftMethod::IsoparametricProposal, c));
+        }
+    }
+    candidates.extend(extended_tensor);
+    for (method, mut c) in candidates {
+        if out.cells == max_cells {
+            break;
+        }
+        if let Some(ps) = endpoints {
+            let last = c.control_points.len() - 1;
+            c.control_points[0] = ps[0].to_vec();
+            c.control_points[last] = ps[1].to_vec();
+        }
+        let evidence = verify(&c, p, s, false, tolerance, max_cells - out.cells)?;
+        out.cells += evidence.cells;
+        let accepted = evidence.status == Status::WithinTolerance;
+        out.evidence = Some(evidence);
+        if accepted {
+            out.curve = Some(c);
+            out.method = Some(method);
+            break;
+        }
+    }
+    Ok(out)
+}

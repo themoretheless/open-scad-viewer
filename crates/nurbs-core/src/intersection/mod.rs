@@ -61,3 +61,15 @@ pub use intersect_curve_surface_report::*;
 
 #[cfg(test)]
 mod bounded_curve_tests;
+
+
+
+
+
+/// Original-surface parallel plane sections with explicit unresolved charts.
+pub mod parallel_sections;
+mod planar_curve_curve;
+pub use planar_curve_curve::{CertifiedCurveCrossing, CertifiedCurveIntersection, intersect_curve_curve_certified_report};
+mod certified_curve_plane;
+pub mod certified_curve_surface;
+pub use certified_curve_plane::{CertifiedPlaneCrossing, CertifiedCurvePlaneIntersection, intersect_curve_plane_certified_report};

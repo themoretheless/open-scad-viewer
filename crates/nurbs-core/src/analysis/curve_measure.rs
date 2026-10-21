@@ -9,6 +9,7 @@ use crate::{
     numeric, resource,
 };
 use std::{cmp::Ordering, collections::{BinaryHeap,BTreeMap}};
+mod division_partition;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopReason {
@@ -111,7 +112,7 @@ fn cell(curve: &Curve, span: usize, domain: [f64; 2], serial: usize) -> Result<C
         // For the local [0,1] parameter, trapezoid error <= max |f''|/12.
         let acceleration = norm(&jets[2])?;
         let third = norm(&jets[3])?;
-        let remainder = third
+        let mut remainder = third
             .add(
                 acceleration
                     .mul(acceleration)?
@@ -119,9 +120,34 @@ fn cell(curve: &Curve, span: usize, domain: [f64; 2], serial: usize) -> Result<C
             )?
             .div(Interval::point(12.))?
             .hi;
+        // Enclose the signed speed second derivative as well. The previous
+        // triangle bound discards cancellation between v·j and |a|².
+        // Both bounds concern the same original local jets; intersect their
+        // valid remainder magnitudes, never sampled derivative estimates.
+        let tight=(|| -> Result<Interval> {
+            let dot=|a:&[Interval],b:&[Interval]| -> Result<Interval> {
+                a.iter().zip(b).try_fold(Interval::point(0.),|sum,(a,b)|sum.add(a.mul(*b)?))
+            };
+            let va=dot(&jets[1],&jets[2])?;
+            let speed3=speed.mul(speed)?.mul(speed)?;
+            let second=acceleration.mul(acceleration)?.add(dot(&jets[1],&jets[3])?)?.div(speed)?
+                .sub(va.mul(va)?.div(speed3)?)?;
+            second.div(Interval::point(12.))
+        })();
+        if let Ok(tight)=tight {
+            remainder=remainder.min(tight.lo.abs().max(tight.hi.abs()));
+        }
         let trapezoid = norm(&start[1])?
             .add(norm(&end[1])?)?
             .mul(Interval::point(0.5))?;
+        // Peano's trapezoid kernel is nonnegative and has integral1/12.
+        // Hence T - integral(f) lies in the signed second-jet interval/12.
+        // Keeping its sign further encloses cancellation without new samples.
+        if let Ok(tight)=tight {
+            if let Ok(signed)=trapezoid.sub(tight) {
+                lo=lo.max(signed.lo.max(0.));hi=hi.min(signed.hi);
+            }
+        }
         lo = lo.max((trapezoid.lo - remainder).next_down().max(0.));
         hi = hi.min((trapezoid.hi + remainder).next_up());
     }
@@ -463,7 +489,8 @@ pub fn divide_by_length(
         (1..=1024).contains(&segments),
         "Arc division needs 1..1024 segments",
     )?;
-    let (total,partition) = measure_partition(curve, curve.domain(), tolerance / 8., max_cells)?;
+    let shared_partition = division_partition::get(curve, tolerance / 8., max_cells)?;
+    let (total,partition) = shared_partition.as_ref();
     let mut cells = total.cells;
     let mut points = Vec::new();
     let mut prefix_cache=BTreeMap::new();
@@ -508,7 +535,7 @@ pub fn divide_by_length(
             point.stop_reason = StopReason::Tolerance;
             point
         } else {
-            invert_with_prefix_cache(curve,target,&total,tolerance,max_cells-cells,&mut prefix_cache,&partition)?
+            invert_with_prefix_cache(curve,target,total,tolerance,max_cells-cells,&mut prefix_cache,partition)?
         };
         cells += point.cells;
         let accepted = point.within_tolerance;
@@ -522,7 +549,7 @@ pub fn divide_by_length(
         points.len() == segments + 1 && points.iter().all(|p| p.within_tolerance);
     Ok(DivisionReport {
         points,
-        total,
+        total: total.clone(),
         cells,
         within_tolerance,
         stop_reason: if within_tolerance {
@@ -558,4 +585,31 @@ mod shared_partition_regression {
         assert!(!limited.within_tolerance);
         assert!(limited.cells<=division.total.cells);
     }
+}
+
+#[cfg(test)]
+mod signed_speed_remainder_tests {
+ use super::*;
+ #[test]
+ fn closed_spatial_original_length_meets_same_tolerance_without_extra_budget(){
+  let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![2.,1.,0.],vec![3.,3.,1.],vec![-3.,3.,1.],vec![-2.,1.,0.],vec![-1.,0.,0.],vec![0.,0.,0.]],None).unwrap();
+  let measured=length(&path,1e-6/8.,10000).unwrap();
+  assert!(measured.within_tolerance,"{measured:?}");assert!(measured.cells<=10000);
+  let velocity=path.control_points.windows(2).map(|p|std::array::from_fn::<_,3,_>(|k|7.*(p[1][k]-p[0][k]))).collect::<Vec<_>>();
+  let speed=|u:f64|{let mut q=velocity.clone();for size in (1..q.len()).rev(){for i in 0..size{q[i]=std::array::from_fn(|k|(1.-u)*q[i][k]+u*q[i+1][k]);}}q[0].iter().map(|v|v*v).sum::<f64>().sqrt()};
+  let n=8192;let mut independent=0.;for i in 0..n{let a=i as f64/n as f64;let b=(i+1) as f64/n as f64;independent+=(b-a)*(speed(a)+4.*speed((a+b)/2.)+speed(b))/6.;}
+  assert!(measured.bounds[0]<=independent&&independent<=measured.bounds[1]);
+  assert!(!length(&path,1e-6/8.,measured.cells-1).unwrap().within_tolerance);
+  eprintln!("closed original length cells={} bounds={:?} independent={independent}",measured.cells,measured.bounds);
+ }
+ #[test]
+ fn signed_remainder_retains_rational_line_and_conic_length_enclosures(){
+  let line=Curve{degree:1,knots:vec![17.,17.,29.,29.],control_points:vec![vec![0.,0.],vec![3.,4.]],weights:vec![1.,2.],periodic:false};
+  let saved=line.clone();let measured=length(&line,1e-7,10000).unwrap();
+  assert!(measured.within_tolerance);assert!(measured.bounds[0]<=5.&&5.<=measured.bounds[1]);assert_eq!(line,saved);
+  let circle=crate::primitives::circle([1.,2.,3.],[0.,0.,1.],2.).unwrap();
+  let measured=length(&circle,1e-7,10000).unwrap();let analytic=4.*std::f64::consts::PI;
+  assert!(measured.within_tolerance,"{measured:?}");assert!(measured.bounds[0]<=analytic&&analytic<=measured.bounds[1]);
+ }
+
 }

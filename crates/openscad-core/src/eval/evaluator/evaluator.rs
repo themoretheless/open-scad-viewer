@@ -13,7 +13,11 @@ impl<'a> Evaluator<'a> {
         collect_modules(statements, &mut modules);
         Self {
             record_geometry: options.record_geometry,
-            geometry: RefCell::new(Vec::new()),
+            geometry: RefCell::new(if options.record_geometry {
+                Vec::with_capacity(statements.len().min(64))
+            } else {
+                Vec::new()
+            }),
             profiles: RefCell::new(Vec::new()),
             units,
             profile,
@@ -21,7 +25,7 @@ impl<'a> Evaluator<'a> {
             animation_time: options.animation_time,
             ops: Cell::new(0),
             value_budget: Cell::new(0),
-            value_meta: RefCell::new(HashMap::new()),
+            value_meta: RefCell::new(HashMap::with_capacity(16)),
             warnings: RefCell::new(Vec::new()),
             functions,
             modules,
@@ -45,18 +49,7 @@ impl<'a> Evaluator<'a> {
         nodes.push(node);
         Ok(id)
     }
-    pub(in crate::eval) fn emit_geometry(
-        &self,
-        name: &str,
-        node: geometry_ops::solid_program::Node,
-        p: usize,
-    ) -> EvalResult<Vec<ShapeDescriptor>> {
-        let mut shape = descriptor(name, 3);
-        if self.record_geometry {
-            shape.geometry = Some(self.store_geometry(node, p)?)
-        }
-        Ok(vec![shape])
-    }
+
     pub(in crate::eval) fn emit_profile(
         &self,
         name: &str,
@@ -359,7 +352,8 @@ impl<'a> Evaluator<'a> {
         parameter_names: &[&str],
         _ctx: &Ctx<'a>,
     ) -> HashMap<String, &'a ExpressionArgument> {
-        let mut resolved: HashMap<String, &'a ExpressionArgument> = HashMap::new();
+        let mut resolved: HashMap<String, &'a ExpressionArgument> =
+            HashMap::with_capacity(parameter_names.len());
         let parameters: HashSet<&str> = parameter_names.iter().copied().collect();
         for argument in args {
             let name = match &argument.name {
@@ -2628,3 +2622,6 @@ impl<'a> Evaluator<'a> {
         })
     }
 }
+
+#[path = "evaluator/geometry_emission.rs"]
+mod geometry_emission;

@@ -88,6 +88,8 @@ export interface GeometrySweepPreview extends GeometryJobEnvelope {
  sections:number
  accepted:boolean
  continuousErrorUpper?:number
+ /** Native whole-union proof status; previews may conservatively refuse. */
+ continuousBound?:boolean
  /** Maximum for the certified subset of profiles, not the full boundary. */
  knownProfileErrorUpper?:number
  profileRegularityCertified?:boolean

@@ -1,0 +1,5 @@
+# Pending original quotient germs, cyclic order and boundary walks
+
+Two targeted periodic germ regressions passed before the shared runtime window. Subsequent source-only changes add common-chart tangent slicing and complete directed successor orbits. They are NOT yet compiled or runtime qualified. Heavy checks are deferred until 2026-10-18 13:40 UTC to preserve the requested sweep measurement window. All source remains isolated and this checkpoint does NOT update the last completed qualification pointer.
+
+Pending tests include higher-order stationary loop germs, two ports for a multiply traversed common edge, opposite-shore tangent ordering in a common exact local chart, source-clock monotone neighbourhood receipts, exact endpoint/twin permutation, and full boundary dart ownership. These walks do not imply material regions or physical faces. Run targeted tests first, repair failures, then full profile/integration/WASM gates before publishing qualification. The source-patch baseline is cryptographically verified original source; shared changes require a coordinated merge.

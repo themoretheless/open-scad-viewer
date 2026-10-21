@@ -1,0 +1,28 @@
+{
+  "scope": "Finite provider regression subset of the complete Vitest run; not universal CAD coverage",
+  "files": 19,
+  "passedTests": 303,
+  "failedTests": 0,
+  "sourceReport": "osv-r16-vitest-full.json",
+  "names": [
+    "tests/brepAnalytic.test.ts",
+    "tests/brepIdentityAdmission.test.ts",
+    "tests/brepNativeProgramSemantics.test.ts",
+    "tests/brepSemanticScene.test.ts",
+    "tests/cadBinaryTransport.test.ts",
+    "tests/cadGeometryKernel.test.ts",
+    "tests/engineManifest.test.ts",
+    "tests/geometryManifestArchiveIsolation.test.ts",
+    "tests/geometryWorkerRealBoundary.test.ts",
+    "tests/languageConformance.test.ts",
+    "tests/manifoldPlanBackend.test.ts",
+    "tests/mcpDirectGeometrySupervisor.test.ts",
+    "tests/mcpServer.test.ts",
+    "tests/openscadParser.test.ts",
+    "tests/ownRustCad.test.ts",
+    "tests/runtimeGeometryActualBinding.test.ts",
+    "tests/runtimeGeometryIdentityAudit.test.ts",
+    "tests/runtimeManifestAudit.test.ts",
+    "tests/valueBinaryCodec.test.ts"
+  ]
+}

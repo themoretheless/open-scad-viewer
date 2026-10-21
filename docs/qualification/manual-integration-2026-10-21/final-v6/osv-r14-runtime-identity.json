@@ -1,0 +1,27 @@
+{
+  "kernelPath": "src/generated/geometry-kernels/kernel_bg.wasm",
+  "schema": 1,
+  "qualificationClaim": "none",
+  "kernelBytes": 13751449,
+  "matches": true,
+  "records": [
+    {
+      "engineClass": "mesh",
+      "capabilityManifestVersion": "own-rust-node-v6",
+      "manifestDigest": "9d67dc2d3354938b0f6edb0ae1c8694d3f5c10a8cbc651ff69284f53c3afe8fb",
+      "qualificationStatus": "qualified",
+      "expectedFingerprint": "sha256:2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+      "observedFingerprint": "sha256:2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+      "matches": true
+    },
+    {
+      "engineClass": "brep",
+      "capabilityManifestVersion": "brep-closed-v6",
+      "manifestDigest": "50d4e13120d978342ccf1b9a638e64fb0aeb062259f1210d08c7b5d302217725",
+      "qualificationStatus": "qualified",
+      "expectedFingerprint": "sha256:2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+      "observedFingerprint": "sha256:2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+      "matches": true
+    }
+  ]
+}

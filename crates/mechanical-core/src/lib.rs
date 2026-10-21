@@ -1,10 +1,23 @@
 #![doc = include_str!("../README.md")]
 //! Native mechanical profiles and meshes with optional SCAD/Value compatibility.
+mod standard_parts;
 mod profiles;
 mod threads;
 pub use profiles::{
     GearInstance, GearOptions, GearProfile, GearReport, PlanetaryOptions, PlanetaryProfiles,
     gear_profile, planetary_profiles,
+};
+pub use standard_parts::{
+    BearingFitClass, BearingFitReport, BevelGearOptions, BevelGearReport, DiscSpringOptions,
+    DiscSpringReport, HeatSetInsertSpec, HelicalGearOptions, HelicalGearReport,
+    HelicalSpringOptions, HelicalSpringReport, KeywaySpec, MetricFastenerSpec, ORingGrooveSpec,
+    OringGlandSpec, PlanetaryGearsetSpec, PulleyStandard, RackOptions, RetainingRingGrooveSpec,
+    SprocketOptions, TimingPulleyOptions, WormDriveOptions, WormDriveReport, bevel_gear_params,
+    disc_spring_load, heat_set_insert_spec, helical_gear_params, helical_spring_analysis,
+    hex_nut_profile, involute_rack_profile, iso_metric_fastener, iso286_shaft_housing_fit,
+    o_ring_groove_spec, oring_gland_spec, planetary_gearset_params, retaining_ring_groove,
+    roller_chain_sprocket, shaft_keyway_din6885, timing_pulley_profile, timing_pulley_standard,
+    worm_drive_params,
 };
 pub use threads::{ThreadGeometry, ThreadOptions, thread_mesh, thread_radius_at};
 pub type Point = [f64; 2];

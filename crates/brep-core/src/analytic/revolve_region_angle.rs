@@ -132,6 +132,16 @@ pub fn revolve_wire(wire: &[Curve], tolerance: f64) -> Result<Model> {
 /// Signed partial analytic revolution, capped by retained planar trim curves.
 pub fn revolve_wire_angle(wire: &[Curve], tolerance: f64, angle_degrees: f64) -> Result<Model> {
     if !angle_degrees.is_finite() || !(1e-5..=360.).contains(&angle_degrees.abs()) {
+        return Err(Error::new("BREP_INVALID_ANGLE","Revolve angle magnitude must be in 0.00001..360 degrees"));
+    }
+    planar_trim::validate(&[wire.to_vec()],tolerance)?;
+    revolve_wire_assembly(wire,tolerance,angle_degrees)
+}
+pub(super) fn revolve_g2_annular_meridian(source:&g2_annular::Meridian,tolerance:f64)->Result<Model> {
+    revolve_wire_assembly(source.wire(),tolerance,360.)
+}
+fn revolve_wire_assembly(wire: &[Curve], tolerance: f64, angle_degrees: f64) -> Result<Model> {
+    if !angle_degrees.is_finite() || !(1e-5..=360.).contains(&angle_degrees.abs()) {
         return Err(Error::new(
             "BREP_INVALID_ANGLE",
             "Revolve angle magnitude must be in 0.00001..360 degrees",
@@ -143,7 +153,6 @@ pub fn revolve_wire_angle(wire: &[Curve], tolerance: f64, angle_degrees: f64) ->
     } else {
         (angle_degrees.abs() / 90.).ceil() as usize
     };
-    planar_trim::validate(&[wire.to_vec()], tolerance)?;
     if wire.len() > 64 || wire.len() < 3 || wire.len() * segments + if full { 0 } else { 2 } > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",

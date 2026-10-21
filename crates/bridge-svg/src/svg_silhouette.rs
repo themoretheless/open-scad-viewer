@@ -561,3 +561,141 @@ mod tests {
         );
     }
 }
+
+pub(crate) fn color_contours(
+    tree: &usvg::Tree,
+    width_mm: f64,
+    height_mm: f64,
+    raster_size: u32,
+    alpha: f64,
+    colors: usize,
+    ignore_white: bool,
+    min_area: f64,
+) -> Result<value_codec::Value> {
+    if !width_mm.is_finite()
+        || !height_mm.is_finite()
+        || width_mm <= 0.
+        || height_mm <= 0.
+        || width_mm > 10000.
+        || height_mm > 10000.
+        || !alpha.is_finite()
+        || !(0.01..=1.).contains(&alpha)
+        || !(2..=16).contains(&colors)
+        || !min_area.is_finite()
+        || min_area < 0.
+        || min_area > 1e8
+    {
+        return Err(invalid("Invalid color trace options"));
+    }
+    let pixmap = raster(tree, raster_size)?;
+    let pixels: Vec<Option<[u8; 3]>> = pixmap
+        .pixels()
+        .iter()
+        .map(|p| {
+            if f64::from(p.alpha()) < alpha * 255. {
+                return None;
+            }
+            let a = u32::from(p.alpha());
+            let color =
+                [p.red(), p.green(), p.blue()].map(|v| (u32::from(v) * 255 / a).min(255) as u8);
+            if ignore_white && color.iter().all(|c| *c >= 245) {
+                None
+            } else {
+                Some(color)
+            }
+        })
+        .collect();
+    let mut histogram = vec![[0u64; 4]; 512];
+    for color in pixels.iter().flatten() {
+        let key =
+            (color[0] as usize >> 5) * 64 + (color[1] as usize >> 5) * 8 + (color[2] as usize >> 5);
+        histogram[key][0] += 1;
+        for i in 0..3 {
+            histogram[key][i + 1] += u64::from(color[i]);
+        }
+    }
+    let mut buckets: Vec<_> = histogram
+        .into_iter()
+        .enumerate()
+        .filter(|(_, h)| h[0] > 0)
+        .collect();
+    buckets.sort_by(|a, b| b.1[0].cmp(&a.1[0]).then(a.0.cmp(&b.0)));
+    buckets.truncate(colors);
+    let palette: Vec<[u8; 3]> = buckets
+        .iter()
+        .map(|(_, h)| [1, 2, 3].map(|i| (h[i] / h[0]) as u8))
+        .collect();
+    let labels: Vec<Option<usize>> = pixels
+        .iter()
+        .map(|p| {
+            p.map(|c| {
+                palette
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(i, q)| {
+                        (
+                            (0..3)
+                                .map(|k| (i32::from(c[k]) - i32::from(q[k])).pow(2))
+                                .sum::<i32>(),
+                            *i,
+                        )
+                    })
+                    .unwrap()
+                    .0
+            })
+        })
+        .collect();
+    let mut output = Vec::with_capacity(palette.len());
+    let mut total = 0;
+    for (index, color) in palette.iter().enumerate() {
+        let mask: Vec<bool> = labels.iter().map(|l| *l == Some(index)).collect();
+        let mut rings = trace(
+            &mask,
+            pixmap.width() as usize,
+            pixmap.height() as usize,
+            width_mm,
+            height_mm,
+            MAX_POINTS,
+        )?;
+        rings.retain(|r| planar_geometry::rings::area(r).abs() >= min_area);
+        total += rings.iter().map(Vec::len).sum::<usize>();
+        if total > MAX_POINTS {
+            return Err(limit("Color trace exceeds 500000 contour points."));
+        }
+        if !rings.is_empty() {
+            output.push(value_codec::json!({"color":color,"contours":rings}));
+        }
+    }
+    Ok(value_codec::Value::Array(output))
+}
+
+pub(crate) fn raster(tree: &usvg::Tree, raster_size: u32) -> Result<tiny_skia::Pixmap> {
+    if !(1..=MAX_RASTER_SIZE).contains(&raster_size) {
+        return Err(limit("SVG raster size must be between 1 and 2048 pixels."));
+    }
+    let size = tree.size();
+    let longest = f64::from(size.width().max(size.height()));
+    let scale = f64::from(raster_size) / longest;
+    let width = (f64::from(size.width()) * scale).ceil().max(1.) as u32;
+    let height = (f64::from(size.height()) * scale).ceil().max(1.) as u32;
+    if width as usize * height as usize > MAX_PIXELS {
+        return Err(limit("SVG silhouette exceeds 4 million raster pixels."));
+    }
+    let sx = f64::from(width) / f64::from(size.width());
+    let sy = f64::from(height) / f64::from(size.height());
+    if !(sx as f32).is_finite() || !(sy as f32).is_finite() {
+        return Err(limit(
+            "SVG silhouette viewport scale exceeds the renderer's numeric range.",
+        ));
+    }
+    let mut budget = RenderBudget::default();
+    budget.group(tree.root(), sx, sy, 0)?;
+    let mut pixmap = tiny_skia::Pixmap::new(width, height)
+        .ok_or_else(|| limit("SVG silhouette bitmap allocation failed."))?;
+    resvg::render(
+        tree,
+        tiny_skia::Transform::from_scale(sx as f32, sy as f32),
+        &mut pixmap.as_mut(),
+    );
+    Ok(pixmap)
+}

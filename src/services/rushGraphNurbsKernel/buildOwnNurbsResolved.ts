@@ -1,3 +1,7 @@
+import {readMiterAffineReplayRouting} from '../geometry/brep'
+import {packNativeGeometrySnapshot} from '../nativeGeometrySnapshot'
+import {readNativeSweepPlanarCapFaces} from '../geometry/brep'
+import type {StationResolver} from '../rushGraphNurbsKernel'
 import { createOwnNurbsResolver } from './createOwnNurbsResolver'
 import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../rushGraphNurbsKernel'
 import type { BodyArguments, BodyResolver, Mesh, MiterArguments, MiterResolver, OwnNurbsRequest, SweepArguments, SweepResolver, Value } from '../rushGraphNurbsKernel'
@@ -20,11 +24,11 @@ import { meshToNurbs, meshToNurbsBrep, meshToSdf, meshToSubdivision, tessellateN
 import { stringifyMeshJson } from '../meshJson'
 import { tessellateSubdivision } from '../geometry/subdivision'
 
-export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resolveSweep?:SweepResolver,resolveBody?:BodyResolver,resolveMiter?:MiterResolver) {
+export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resolveSweep?:SweepResolver,resolveBody?:BodyResolver,resolveMiter?:MiterResolver,resolveStations?:StationResolver) {
     if (!['build', 'evaluate', 'export'].includes(request.action) || (request.evaluations?.length ?? 0) > 64)
         throw new Error('Invalid NURBS request or evaluation budget exceeded.');
     const compiled = compileRushGraphNurbs(document), nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n]));
-    const { get, cache, constructionReports, reconstructionReports } = createOwnNurbsResolver(nodes, request, resolveSweep, resolveBody, resolveMiter)
+    const { get, cache, constructionReports, reconstructionReports, exactMiterPlacements } = createOwnNurbsResolver(nodes, request, resolveSweep, resolveBody, resolveMiter, resolveStations)
     const needCurve = (key: string) => { const result = get(key); if (result.kind !== 'curve')
         throw new Error(`Expected curve at ${key}.`); return result.data; };
     const root = get(compiled.document.root);
@@ -109,7 +113,10 @@ export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsReques
             wallRegularityCertified:'wallRegularityCertified' in sourceConstruction?sourceConstruction.wallRegularityCertified:false,
             continuousBound:'continuousBound' in sourceConstruction?sourceConstruction.continuousBound:false,
         }:undefined;
-        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sourceConstruction&&'sweepMiterReplay' in sourceConstruction&&sourceConstruction.sweepMiterReplay?{sweepMiterReplay:sourceConstruction.sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
+        const replayOwner=exactMiterPlacements.get(sourceNode)?.body
+        const sweepMiterReplay=replayOwner?readMiterAffineReplayRouting(replayOwner):null
+        const sweepPlanarCapFaces=sourceValue.kind==='brep'?readNativeSweepPlanarCapFaces(sourceValue.data):undefined
+        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepPlanarCapFaces!==undefined?{sweepPlanarCapFaces}:{}),...(sourceConstruction&&'stationReconstruction' in sourceConstruction?{sweepStationReconstruction:sourceConstruction.stationReconstruction}:{}),...(sourceConstruction&&'sweepMiterReplay' in sourceConstruction&&sourceConstruction.sweepMiterReplay?{sweepMiterReplay:sourceConstruction.sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document,packNativeGeometrySnapshot);
         return {...base,...(mesh?{mesh}:{}),nativeGeometry};
     }
     return { ...base, ...(request.action === 'build' && root.kind === 'mesh' ? { mesh: root.data } : {}) };

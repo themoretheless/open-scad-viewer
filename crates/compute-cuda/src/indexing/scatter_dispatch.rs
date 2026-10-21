@@ -5,7 +5,7 @@ use crate::runtime::validate_storage;
 use crate::{
     CudaError, CudaRuntime,
     low_scatter::padded_slots,
-    runtime::{layout_metadata, rank, validate_logical_size},
+    runtime::{rank, validate_logical_size},
 };
 use gpu_compute::cuda::{CudaFunction, CudaSlice, PushKernelArg, cudarc::driver::DeviceRepr};
 use tensor_core::{Layout, ScatterOp, Shape, TensorError, scatter_updates_shape};
@@ -94,7 +94,9 @@ impl ScatterDispatch {
         validate_logical_size::<I>(&expected)?;
         let index = InvalidIndicesDispatch::new(indices, input.dims()[axis])?;
         let updates = updates.broadcast_to(expected.clone())?;
-        let mut metadata = layout_metadata(&updates);
+        let mut metadata = Vec::with_capacity(updates.shape().rank() * 2 + index.metadata.len());
+        metadata.extend(updates.shape().dims().iter().map(|&v| v as u64));
+        metadata.extend(updates.strides().iter().map(|&v| v as u64));
         metadata.extend_from_slice(&index.metadata);
         // Raw low scatter writes aligned u32 CAS words. Even an odd logical
         // result must own the adjacent halfword; terminal copies may be dense.

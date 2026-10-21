@@ -446,6 +446,9 @@ pub struct FiniteThreadCandidate {
     pub body: ClosedBodyCandidate,
     pub agreement_cells: usize,
     pub side_faces: usize,
+    /// Additional cylindrical outer walls, absent for external threads.
+    pub outer_wall_faces: usize,
+    pub outer_wall_radius_bounds: Option<[f64; 2]>,
     /// Maximum per-operation displacement bound, not total ideal-thread error.
     pub max_endpoint_adjustment_upper_bound: f64,
 }
@@ -512,6 +515,174 @@ pub fn finite_external_candidate(
         body,
         agreement_cells: used,
         side_faces,
+        outer_wall_faces: 0,
+        outer_wall_radius_bounds: None,
         max_endpoint_adjustment_upper_bound: network.max_endpoint_adjustment_upper_bound,
+    })
+}
+
+#[path = "thread_verified.rs"]
+mod verified;
+pub use verified::{CertifiedFiniteThread, finite_external_with_certificates};
+
+#[path = "thread_internal.rs"]
+mod internal;
+pub use internal::{CapProfileProof, finite_internal_with_certificates};
+
+pub(crate) fn cap_external_screw_network(
+    network: TurnSheet,
+    hand: nurbs_core::thread::Hand,
+    z_limits: [f64; 2],
+    limits: FiniteThreadLimits,
+) -> Result<(FiniteThreadCandidate, Vec<CapProfileProof>)> {
+    internal::external_network_candidate(network, hand, z_limits, limits)
+}
+
+pub fn clipped_patch_network(
+    trims: &nurbs_core::thread::TrimCandidates,
+    starts: usize,
+    z_limits: [f64; 2],
+    max_uv_error: f64,
+    tolerance: f64,
+    max_spans: usize,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+) -> Result<TurnSheet> {
+    if !(1..=8).contains(&starts) || trims.requested_z_bounds != z_limits {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Screw network source or slab changed",
+        ));
+    }
+    if max_verification_cells > 10_000_000 {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Network budget exceeds 10000000 cells",
+        ));
+    }
+
+    if !trims.unresolved.is_empty() || trims.candidates.is_empty() || trims.candidates.len() > 254 {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Network needs 1..254 retained patches without unresolved clipping",
+        ));
+    }
+    let mut sheets = Vec::new();
+    let mut used = 0;
+    let mut adjustment: f64 = 0.;
+    for c in &trims.candidates {
+        let mut planar = false;
+        for &z in &z_limits {
+            planar |= !c.plane_boundary_indices(z)?.is_empty();
+        }
+        let remaining = (max_verification_cells - used).min(100000);
+        if planar {
+            let sheet = trimmed_patch_sheet_with_planar_ends(
+                c,
+                &z_limits,
+                max_uv_error,
+                tolerance,
+                max_spans,
+                max_curve_change,
+                remaining,
+            )?;
+            used += sheet.verification_cells;
+            adjustment = adjustment.max(sheet.max_curve_change_upper_bound);
+            sheets.push(sheet.model);
+        } else {
+            let sheet = trimmed_patch_sheet(c, max_uv_error, tolerance, max_spans, remaining)?;
+            used += sheet.verification_cells;
+            sheets.push(sheet.model);
+        }
+    }
+    let key = |p: &nurbs_core::thread::Patch| (p.start, p.turn, p.quarter, p.profile_segment);
+    let neighbour = |p: &nurbs_core::thread::Patch, axis: usize| {
+        if axis == 0 {
+            if p.profile_segment < 4 {
+                (p.start, p.turn, p.quarter, p.profile_segment + 1)
+            } else if p.start + 1 < starts {
+                (p.start + 1, p.turn, p.quarter, 0)
+            } else {
+                (0, p.turn + 1, p.quarter, 0)
+            }
+        } else if p.quarter < 3 {
+            (p.start, p.turn, p.quarter + 1, p.profile_segment)
+        } else {
+            (p.start, p.turn + 1, 0, p.profile_segment)
+        }
+    };
+    let boundary = |m: &Model, wire: usize, axis: usize, value: f64| {
+        m.loops[wire]
+            .coedges
+            .iter()
+            .position(|c| c.pcurve.control_points.iter().all(|p| p[axis] == value))
+    };
+    let mut order = vec![0];
+    let mut model = sheets[0].clone();
+    while order.len() < sheets.len() {
+        let mut next = None;
+        for j in 0..sheets.len() {
+            if order.contains(&j) {
+                continue;
+            }
+            let mut pairs = Vec::new();
+            for (wire, &i) in order.iter().enumerate() {
+                for axis in 0..2 {
+                    let p = &trims.candidates[i].patch;
+                    let q = &trims.candidates[j].patch;
+                    let values = if neighbour(p, axis) == key(q) {
+                        Some((1., 0.))
+                    } else if neighbour(q, axis) == key(p) {
+                        Some((0., 1.))
+                    } else {
+                        None
+                    };
+                    if let Some((sv, tv)) = values {
+                        if let (Some(s), Some(t)) = (
+                            boundary(&model, wire, axis, sv),
+                            boundary(&sheets[j], 0, axis, tv),
+                        ) {
+                            pairs.push(([wire, s], t));
+                        }
+                    }
+                }
+            }
+            if !pairs.is_empty() {
+                next = Some((j, pairs));
+                break;
+            }
+        }
+        let (j, pairs) = next.ok_or_else(|| {
+            Error::new(
+                "BREP_THREAD_PATCH_UNRESOLVED",
+                "Retained patch network is disconnected",
+            )
+        })?;
+        let assignments: Vec<_> = pairs
+            .iter()
+            .map(|&(s, t)| (t, &model.edges[model.loops[s[0]].coedges[s[1]].edge].curve))
+            .collect();
+        let aligned = align_patch_endpoints_many(
+            &sheets[j],
+            &assignments,
+            max_curve_change,
+            (max_verification_cells - used).min(100000),
+        )?;
+        used += aligned.verification_cells;
+        adjustment = adjustment.max(aligned.max_curve_change_upper_bound);
+        let (assembled, cells) = attach_patch_sheet_edges(
+            &model,
+            &aligned.model,
+            &pairs,
+            (max_verification_cells - used).min(100000),
+        )?;
+        used += cells;
+        model = assembled;
+        order.push(j);
+    }
+    Ok(TurnSheet {
+        model,
+        verification_cells: used,
+        max_endpoint_adjustment_upper_bound: adjustment,
     })
 }

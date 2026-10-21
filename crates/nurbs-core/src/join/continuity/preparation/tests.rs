@@ -26,7 +26,7 @@ fn patch(degree: usize, knots: Vec<f64>) -> Surface {
 }
 #[test]
 #[cfg(feature = "codec")]
-fn aligns_degrees_domains_and_knots_without_introducing_C0_seams() {
+fn aligns_degrees_domains_and_knots_without_introducing_c0_seams() {
     let a = patch(2, vec![3., 3., 3., 5., 7., 7., 7.]);
     let b = patch(3, vec![-2., -2., -2., -2., 1., 2., 2., 2., 2.]);
     let before = value_codec::to_value((&a, &b)).unwrap();

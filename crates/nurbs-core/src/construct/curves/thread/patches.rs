@@ -142,3 +142,53 @@ pub fn patches(spec: Spec) -> Result<Patches> {
     })
 }
 
+
+#[derive(Clone, Copy)]
+pub(super) struct Parameters {
+    pub(super) crest: f64,
+    pub(super) root: f64,
+    pub(super) lead: f64,
+    pub(super) maximum_z: f64,
+    pub(super) quarter_angle: f64,
+}
+pub(super) fn parameters(spec: Spec) -> Result<Parameters> {
+    require_finite_f64(spec.diameter, "thread_diameter")?;
+    require_finite_f64(spec.pitch, "thread_pitch")?;
+    require_finite_f64(spec.clearance, "thread_clearance")?;
+    require_finite_f64(spec.error_budget, "thread_error_budget")?;
+    check(
+        spec.diameter > 0. && spec.pitch > 0. && spec.clearance >= 0. && spec.error_budget > 0.,
+        "Thread diameter, pitch and error budget must be positive; clearance nonnegative",
+    )?;
+    check(
+        (1..=8).contains(&spec.starts) && (1..=16).contains(&spec.turns),
+        "Thread requires 1..8 starts and 1..16 turns",
+    )?;
+    let shift = if spec.kind == Kind::External {
+        -spec.clearance / 2.
+    } else {
+        spec.clearance / 2.
+    };
+    let crest = spec.diameter / 2. + shift;
+    let depth = 3_f64.sqrt() * spec.pitch * 5. / 16.;
+    let root = crest - depth;
+    check(
+        root > 0. && root < crest && crest <= 1e9,
+        "Thread root must remain positive and radius within coordinate limits",
+    )?;
+    let lead = spec.pitch * spec.starts as f64;
+    let maximum_z = lead * (spec.turns as f64 + 1.);
+    check(
+        maximum_z.is_finite() && maximum_z <= 1e9,
+        "Thread axial size exceeds coordinate limits",
+    )?;
+    let direction = if spec.hand == Hand::Right { 1. } else { -1. };
+    let quarter_angle = direction * std::f64::consts::FRAC_PI_2;
+    Ok(Parameters {
+        crest,
+        root,
+        lead,
+        maximum_z,
+        quarter_angle,
+    })
+}

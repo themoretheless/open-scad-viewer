@@ -6,6 +6,9 @@ use super::*;
 /// Every query still certifies the original path at its own traversal.
 pub(crate) fn translated_constant_values(path:&Curve,pose:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize)->Result<ControlValuesReport>{
     let p=vector_certificate::certify_values_traversal(path,traversal,max_cells,false)?;
+    translated_constant_values_with_source(pose,p)
+}
+pub(crate) fn translated_constant_values_with_source(pose:&[[[f64;2];3]],p:vector_certificate::ValuesReport)->Result<ControlValuesReport>{
     let mut out=ControlValuesReport {status:Status::Unresolved,cells:p.cells,values:None,reason:Some("path-value-unresolved")};
     let Some(value)=p.value else{return Ok(out);};
     out.values=Some(pose.iter().map(|q|add(decode(value)?,decode(*q)?).map(|v|v.map(|x|[x.lo,x.hi]))).collect::<Result<Vec<_>>>()?);
@@ -14,6 +17,9 @@ pub(crate) fn translated_constant_values(path:&Curve,pose:&[[[f64;2];3]],travers
 
 pub(crate) fn translated_constant_jets(path:&Curve,pose:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize)->Result<TrajectoriesReport>{
     let p=vector_certificate::certify_traversal(path,traversal,max_cells,false)?;
+    translated_constant_jets_with_source(path,pose,traversal,p)
+}
+pub(crate) fn translated_constant_jets_with_source(path:&Curve,pose:&[[[f64;2];3]],traversal:[f64;2],p:vector_certificate::Report)->Result<TrajectoriesReport>{
     let mut out=TrajectoriesReport {traversal,status:Status::Unresolved,cells:p.cells,jets:None,single_span:false,reason:Some("path-law-enclosure-unresolved")};
     if p.status!=Status::Certified {return Ok(out);}
     let source=jet(path,&p)?;

@@ -1,0 +1,1424 @@
+
+ RUN  v4.1.11 /private/tmp/osv-push-integration-20261021
+
+ ✓ |direct-ui| tests/gcodePanel.test.ts (12 tests) 41ms
+(node:98739) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |direct-ui| tests/svgPanel.test.ts (31 tests) 36ms
+(node:98741) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |direct-ui| tests/solidVolumeDistanceUi.test.ts (4 tests) 9ms
+ ✓ |direct-ui| tests/meshModelerUi.test.ts (1 test) 286ms
+ ✓ |direct-ui| tests/vrControls.test.ts (3 tests) 6ms
+ ✓ |direct-ui| tests/mainModelingUi.test.ts (6 tests) 122ms
+ ✓ |direct-ui| tests/directModelerUi.test.ts (329 tests) 22478ms
+   ✓ reports the stated tolerance when a subtraction falls back to the numerical trace  1820ms
+   ✓ draws on a picked 3D face, then adds and cuts material from its supporting body  412ms
+   ✓ repeats extrusion on a new compatible profile as a cancellable preview  335ms
+   ✓ retains geometry and identities through 20 edits, command cancellation, full Undo/Redo and draft reload  548ms
+   ✓ repeats the chosen surface input roles after swapping profile and path  331ms
+   ✓ queues CV drags, keeps the latest release, and discards a late CV after Escape  464ms
+   ✓ keeps the CV panel available and invalidates a numeric edit when coordinates change  340ms
+   ✓ imports RushGraph through a cancellable worker and preserves the prior scene in Undo  419ms
+   ✓ cancels stale G2 tube requests and retries with the corrected transition size  943ms
+   ✓ keeps independent end transitions through cancellation, Retry and history  937ms
+   ✓ locates an oversized variable fillet and recovers without losing history  330ms
+   ✓ preserves 1000 linked instances on source refusal and restores deleting the entire group  1026ms
+   ✓ certifies original B-rep definitions through the Minkowski action and exposes a checked source tolerance  499ms
+   ✓ shows source-only topology without claiming the sum topology  956ms
+ ✓ |node| tests/brepRationalSweep.test.ts (22 tests) 61013ms
+   ✓ retains rational hollow loft walls, cap holes and manifold incidence through WASM  349ms
+   ✓ caps accepted simultaneous scale/twist and refuses insufficient refinement  791ms
+   ✓ caps rational hollow sections on a bent NURBS path  693ms
+   ✓ builds retained hollow body through Rush and the real editor entrypoint  2585ms
+   ✓ retains anisotropic hollow profiles and moving centers through Rush and Solid  3140ms
+   ✓ retains a closed hollow sweep as periodic outer and inner shells without caps  16571ms
+   ✓ closes full-turn twist with anisotropic and offset laws and rejects a mismatching vector seam  5753ms
+   ✓ retains authored-frame hollow body caps, rational walls and STEP topology  2718ms
+   ✓ retains shared contact fit across public hollow-body B-rep and STEP  1974ms
+   ✓ streams rational body walls on the same face budget before returning an audited hollow body  1549ms
+   ✓ streams progressive-hollow-body while preserving native body definitions and cap refusal  1630ms
+   ✓ streams authored-progressive-hollow-body while preserving native body definitions and cap refusal  6156ms
+   ✓ streams affine-hollow-body while preserving native body definitions and cap refusal  3123ms
+   ✓ streams contact-progressive-hollow-body while preserving native body definitions and cap refusal  2404ms
+   ✓ streams closed-progressive-hollow-body while preserving native body definitions and cap refusal  10056ms
+   ✓ cancels Rush body parsing on a wall preview and recovers on the same parser queue  1220ms
+ ✓ |node| tests/nurbsPrimitiveGraph.test.ts (409 tests) 91305ms
+   ✓ round-trips the ellipsoid display mesh through obj  458ms
+   ✓ round-trips the profile-sweep display mesh through obj  380ms
+   ✓ round-trips the profile-sweep display mesh through ply  364ms
+   ✓ round-trips the profile-sweep definition through JSON without changing rational controls  357ms
+   ✓ round-trips the progressive-hollow-body display mesh through obj  1661ms
+   ✓ round-trips the progressive-hollow-body display mesh through ply  1620ms
+   ✓ round-trips the progressive-hollow-body definition through JSON without changing rational controls  1617ms
+   ✓ compiles and renders the progressive-hollow-body Rush example through the editor entrypoint  820ms
+   ✓ round-trips the contact-progressive-hollow-body display mesh through obj  2401ms
+   ✓ round-trips the contact-progressive-hollow-body display mesh through ply  2372ms
+   ✓ round-trips the contact-progressive-hollow-body definition through JSON without changing rational controls  2377ms
+   ✓ compiles and renders the contact-progressive-hollow-body Rush example through the editor entrypoint  1220ms
+   ✓ round-trips the authored-progressive-hollow-body display mesh through obj  6159ms
+   ✓ round-trips the authored-progressive-hollow-body display mesh through ply  6206ms
+   ✓ round-trips the authored-progressive-hollow-body definition through JSON without changing rational controls  6112ms
+   ✓ compiles and renders the authored-progressive-hollow-body Rush example through the editor entrypoint  3106ms
+   ✓ round-trips the affine-hollow-body display mesh through obj  3102ms
+   ✓ round-trips the affine-hollow-body display mesh through ply  3087ms
+   ✓ round-trips the affine-hollow-body definition through JSON without changing rational controls  3095ms
+   ✓ compiles and renders the affine-hollow-body Rush example through the editor entrypoint  1575ms
+   ✓ round-trips the closed-progressive-hollow-body display mesh through obj  10039ms
+   ✓ round-trips the closed-progressive-hollow-body display mesh through ply  9956ms
+   ✓ round-trips the closed-progressive-hollow-body definition through JSON without changing rational controls  9991ms
+   ✓ compiles and renders the closed-progressive-hollow-body Rush example through the editor entrypoint  5012ms
+   ✓ round-trips the catenoid-patches display mesh through obj  397ms
+   ✓ round-trips the catenoid-patches display mesh through ply  398ms
+ ✓ |node| tests/sweepAffineLattice.test.ts (10 tests) 36750ms
+   ✓ replays native station reconstruction before successive affine placements  883ms
+   ✓ refuses unsupported arithmetic, exhausted work, stale ownership and boundary budget  312ms
+   ✓ keeps transformed-bound evidence through actual Rush and repeated placements  771ms
+   ✓ admits miter-periodic-moving-axis-guide-affine-hollow.r shear and reflection through bound native replay  10239ms
+   ✓ admits miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r shear and reflection through bound native replay  11599ms
+   ✓ admits closed-periodic-frame-guide-affine-hollow.r shear and reflection through bound native replay  6991ms
+   ✓ admits reflected automatic periodic caps with exact off-lattice native arithmetic  5307ms
+ ✓ |node| tests/nurbsClosedContactBody.test.ts (6 tests) 47647ms
+   ✓ carries a nonbinary13/12 original guide phase through Rush, viewport evidence and fresh Solid (17 initial sections)  5550ms
+   ✓ carries a nonbinary13/12 original guide phase through Rush, viewport evidence and fresh Solid (65 initial sections)  10170ms
+   ✓ carries original closed contact boundaries and material roles through Rush and fresh Solid: closed-contact-hollow-body-boundary.r  4972ms
+   ✓ carries original closed contact boundaries and material roles through Rush and fresh Solid: closed-arc-length-contact-hollow-body-boundary.r  6699ms
+   ✓ qualifies the valid 65-section closed contact native cancellation workload: closed-contact-hollow-body-boundary.r  10139ms
+   ✓ qualifies the valid 65-section closed contact native cancellation workload: closed-arc-length-contact-hollow-body-boundary.r  10116ms
+ ✓ |node| tests/nurbsClosedCorrectedRegularBody.test.ts (5 tests) 34202ms
+   ✓ qualifies closed corrected original error and fresh retained Solid: arc-length-periodic-corrected-frenet-nonplanar-body-boundary.r  8764ms
+   ✓ qualifies closed corrected original error and fresh retained Solid: periodic-corrected-frenet-nonplanar-body-boundary.r  3341ms
+   ✓ qualifies closed corrected original error and fresh retained Solid: closed-corrected-frenet-nonplanar-body-boundary.r  3107ms
+   ✓ qualifies closed corrected original error and fresh retained Solid: closed-corrected-frenet-nonplanar-affine-body-boundary.r  3117ms
+   ✓ qualifies closed corrected original error and fresh retained Solid: arc-length-closed-corrected-frenet-nonplanar-body-boundary.r  15873ms
+ ✓ |node| tests/nurbsProgressiveBodyBoundary.test.ts (37 tests) 33112ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: corrected-frenet-affine-zero-curvature-hollow-body-boundary.r  419ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r  2781ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: corrected-frenet-affine-inflection-hollow-body-boundary.r  483ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r  2379ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: corrected-frenet-rational-straight-affine-hollow-body-boundary.r  4949ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: rmf-rational-straight-affine-hollow-body-boundary.r  4913ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: corrected-frenet-inflection-hollow-body-boundary.r  463ms
+   ✓ qualifies corrected source wall/caps/hole and independent Solid admission: arc-length-corrected-frenet-inflection-hollow-body-boundary.r  2316ms
+   ✓ carries original-source body bounds through Rush into snapshot-local viewport metadata: closed-planar-rmf-body-boundary.r  5620ms
+   ✓ refuses folded fixed-normal material despite a proved complete boundary error  3131ms
+   ✓ refuses folded planar-rmf material despite a proved complete boundary error  3133ms
+ ✓ |node| tests/nurbsRoundPolyline.test.ts (7 tests) 26958ms
+   ✓ preserves the requested circular radius through the packaged host  300ms
+   ✓ builds capped B-rep walls along round corners within the body face budget  3217ms
+   ✓ builds capped B-rep walls along transition corners within the body face budget  3350ms
+   ✓ preserves the cyclic round path seam and hollow periodic body through Rush  9778ms
+   ✓ preserves the cyclic transition path seam and hollow periodic body through Rush  9809ms
+ ✓ |node| tests/sourceBodyWorker.test.ts (20 tests) 26230ms
+   ✓ restores original source definitions through the real WASM CAD worker  960ms
+   ✓ loads a source archive through the real document worker and rejects saved false admission  862ms
+   ✓ restores source-irrational-body-request through WASM, preview and archive history  2187ms
+   ✓ restores source-curved-shear-body-request through WASM, preview and archive history  4804ms
+   ✓ exchanges original curved root carriers through real WASM and worker STEP gates  1508ms
+   ✓ qualifies a selected original seam through the rebuilt WASM worker  568ms
+   ✓ qualifies the annular middle rail and localizes its collapsed endpoint through WASM  2519ms
+   ✓ certifies automatically searched annular wall thickness through real WASM worker  2634ms
+   ✓ qualifies curved annular cavity walls through original WASM worker  2626ms
+   ✓ discovers an original thin wall without selected groups through real WASM worker  2833ms
+   ✓ reports continuous original whole-wall coverage through the real WASM worker  4449ms
+ ✓ |node| tests/nurbsProgressiveCircleRush.test.ts (12 tests) 201836ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-spatial-rmf-affine-body-certified-profile-g2.r  11583ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-spatial-rmf-affine-hollow-body-certified-profile-g2.r  22726ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-spatial-rmf-varying-affine-hollow-body-profile-g2.r  22593ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-periodic-spatial-rmf-affine-body-certified-profile-g2.r  10439ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-periodic-spatial-rmf-varying-affine-hollow-body-profile-g2.r  21508ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r  23642ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body-profile-g2.r  21531ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-periodic-spatial-rmf-multiple-holes-body-profile-g2.r  22752ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-periodic-spatial-rmf-parameter-multiple-holes-body-profile-g2.r  22556ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-rational-nonuniform-spatial-rmf-affine-hollow-body-profile-g2.r  11220ms
+   ✓ qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: closed-antipodal-spatial-rmf-affine-hollow-body-profile-g2.r  10941ms
+   ✓ refuses exhausted spatial profile repair through Rush  342ms
+ ✓ |node| tests/nurbsClosedPlanarRmfSweep.test.ts (20 tests) 24929ms
+   ✓ certifies closed planar RMF with joint original rational scale/affine/center and full-turn twist  378ms
+   ✓ carries constructor-owned closed RMF evidence through Rush into viewport and refuses a strict budget  342ms
+   ✓ composes a closed periodic body boundary from owned walls without cap premises  2906ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":false,"orientation":"rmf"}  1141ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":true,"orientation":"rmf"}  2223ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":false,"orientation":"fixed_normal"}  1117ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":true,"orientation":"fixed_normal"}  2204ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":false,"orientation":"corrected_frenet"}  1296ms
+   ✓ certifies closed arc-length frame tube material under native budgets: {"conic":true,"orientation":"corrected_frenet"}  2268ms
+   ✓ carries closed fixed-normal arc boundary evidence through Rush and refuses source tolerance  725ms
+   ✓ builds original nonaxial corrected closed tube through Rush  788ms
+   ✓ qualifies closed nonaxial frame tube material: {"conic":false,"orientation":"corrected_frenet"}  1554ms
+   ✓ qualifies closed nonaxial frame tube material: {"conic":true,"orientation":"corrected_frenet"}  2812ms
+   ✓ qualifies closed nonaxial frame tube material: {"conic":false,"orientation":"rmf"}  1511ms
+   ✓ qualifies closed nonaxial frame tube material: {"conic":true,"orientation":"rmf"}  2736ms
+ ✓ |node| tests/nurbsProgressiveMiter.test.ts (32 tests) 24923ms
+   ✓ preserves authored miter frames from Rush into actual Solid admission  400ms
+   ✓ admits authored-axis guide affine Rush miter-combined-frame-guide-affine-hollow.r with explicit combined provenance  430ms
+   ✓ admits authored-axis guide affine Rush miter-combined-frame-guide-affine-hollow-corrected.r with explicit combined provenance  415ms
+   ✓ admits combined authored frame affine Rush bodies into Solid  410ms
+   ✓ admits guide affine Rush bodies into Solid  414ms
+   ✓ certifies closed hollow affine shells and admits the actual body into Solid  848ms
+   ✓ preserves affine miter dimensions and certificates from Rush into the native body  379ms
+   ✓ corrects nonzero skew-loop holonomy and builds retained periodic hollow topology  2071ms
+   ✓ transfers certified retained scale/twist hollow Rush geometry to Solid  770ms
+   ✓ retains Rush rational topology after streamed previews and refuses dimensioned options  16075ms
+   ✓ corrects progressive endpoint caps with bounded retained displacement and matching stream audits  376ms
+   ✓ transports progressive cap correction through Rush into construction evidence  434ms
+   ✓ composes correction with authored wall error and refuses an oversized combined frame/affine correction  480ms
+   ✓ transports original ideal material domains and preserves them in Rush evidence  597ms
+ ✓ |node| tests/nurbsMiterLawMatrix.test.ts (16 tests) 24100ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":false,"authored":false,"guided":false}  739ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":true,"authored":false,"guided":false}  412ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":false,"authored":true,"guided":false}  625ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":true,"authored":true,"guided":false}  1290ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":false,"authored":false,"guided":true}  329ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":true,"authored":false,"guided":true}  420ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":false,"authored":true,"guided":true}  2260ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":false,"affine":true,"authored":true,"guided":true}  2371ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":false,"authored":false,"guided":false}  904ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":true,"authored":false,"guided":false}  995ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":false,"authored":true,"guided":false}  2912ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":true,"authored":true,"guided":false}  2984ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":false,"authored":false,"guided":true}  948ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":true,"authored":false,"guided":true}  1050ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":false,"authored":true,"guided":true}  2874ms
+   ✓ owns all miter law combinations through Rush/viewport/Solid: {"closed":true,"affine":true,"authored":true,"guided":true}  2986ms
+ ✓ |node| tests/nurbsMiterLawSmoothMatrix.test.ts (16 tests) 22225ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":false,"authored":false,"guided":false}  690ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":true,"authored":false,"guided":false}  362ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":false,"authored":true,"guided":false}  561ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":true,"authored":true,"guided":false}  1192ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":false,"authored":false,"guided":true}  306ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":true,"authored":false,"guided":true}  354ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":false,"authored":true,"guided":true}  2117ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":false,"affine":true,"authored":true,"guided":true}  2250ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":false,"authored":false,"guided":false}  808ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":true,"authored":false,"guided":false}  892ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":false,"authored":true,"guided":false}  2762ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":true,"authored":true,"guided":false}  2763ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":false,"authored":false,"guided":true}  815ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":true,"authored":false,"guided":true}  887ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":false,"authored":true,"guided":true}  2702ms
+   ✓ proves retained profile G2 for explicitly repaired joint laws: {"closed":true,"affine":true,"authored":true,"guided":true}  2762ms
+ ✓ |node| tests/nurbsMiterLawAdmissionRefusal.test.ts (16 tests) 23703ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":false,"authored":false,"guided":false}  718ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":true,"authored":false,"guided":false}  401ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":false,"authored":true,"guided":false}  614ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":true,"authored":true,"guided":false}  1292ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":false,"authored":false,"guided":true}  309ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":true,"authored":false,"guided":true}  390ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":false,"authored":true,"guided":true}  2295ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":false,"affine":true,"authored":true,"guided":true}  2392ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":false,"authored":false,"guided":false}  873ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":true,"authored":false,"guided":false}  941ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":false,"authored":true,"guided":false}  2860ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":true,"authored":true,"guided":false}  2938ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":false,"authored":false,"guided":true}  885ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":true,"authored":false,"guided":true}  943ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":false,"authored":true,"guided":true}  2909ms
+   ✓ refuses exhausted or changed actual miter bodies in {"closed":true,"affine":true,"authored":true,"guided":true}  2942ms
+ ✓ |node| tests/bezierProfileDegeneracies.test.ts (14 tests) 20701ms
+   ✓ preserves a curved double contact through an affine change of coordinates  6079ms
+   ✓ admits monotone cubic carriers whose control polygons reverse  546ms
+   ✓ keeps curved partial coincidences through all three profile operations  797ms
+   ✓ cancels repeated curved passes and an exactly retraced spur with even-odd fill  2470ms
+   ✓ orders self-touching cusp branches with zero first jets  1157ms
+   ✓ retains a shared curved boundary when the two source spans use different injective axes  3321ms
+   ✓ normalizes a nodal cubic from its original carrier after stationary splitting  2700ms
+   ✓ keeps cusp geometry when the knot domain uses different units  856ms
+   ✓ retains the cusp component from a curved third-order difference  2388ms
+(node:3440) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/nurbsClosedAuthoredSweepBound.test.ts (12 tests) 14900ms
+   ✓ certifies the actual closed authored tube boundary and material under default Solid budgets: parameter  2275ms
+   ✓ certifies the actual closed authored tube boundary and material under default Solid budgets: arc_length  2206ms
+   ✓ qualifies closed guided tube material within default native Solid budgets: parameter  4944ms
+   ✓ qualifies closed guided tube material within default native Solid budgets: arc_length  5136ms
+ ✓ |node| tests/cadRoadmapHistory.test.ts (17 tests) 18850ms
+   ✓ preserves topology identities through 20 mixed geometry edits, full history traversal and serialized restore  714ms
+   ✓ preserves bracket, rational flange and hollow enclosure through 20 affine edits and every history snapshot  2451ms
+   ✓ preserves 20 sequential cap edits and complete undo/redo for bracket  368ms
+   ✓ preserves 20 sequential cap edits and complete undo/redo for flange  894ms
+   ✓ preserves 20 sequential cap edits and complete undo/redo for enclosure  1845ms
+   ✓ preserves bracket through 20 mixed cap, rotation, translation and scale edits  342ms
+   ✓ preserves flange through 20 mixed cap, rotation, translation and scale edits  846ms
+   ✓ preserves enclosure through 20 mixed cap, rotation, translation and scale edits  1684ms
+   ✓ preserves the bracket through 20 Boolean, face, transform and exact-fillet edits  1457ms
+   ✓ preserves the flange through 20 mixed face, hole-Boolean, transform and circular-fillet edits  1286ms
+   ✓ preserves the enclosure through 20 mixed face, hole-Boolean, transform and layered-fillet edits  6356ms
+ ✓ |node| tests/nurbsSpatialRmfError.test.ts (22 tests) 260615ms
+   ✓ carries explicit spatial RMF precision and refusal through packaged WASM  525ms
+   ✓ carries antipodal closed RMF correction through Rush and viewport with strict refusal  616ms
+   ✓ uses explicit RMF precision options in ordinary Rush construction  929ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r  11898ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: closed-spatial-rmf-affine-body-certified.r  11289ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: closed-periodic-spatial-rmf-affine-body-certified.r  11379ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: open-spatial-rmf-affine-corrected-body-certified.r  13134ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: open-spatial-rmf-varying-affine-hollow-corrected-body.r  24021ms
+   ✓ owns spatial RMF body error through Rush and recomputes Solid admission: open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r  22742ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-spatial-rmf-affine-hollow-body-certified.r  24906ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-spatial-rmf-varying-affine-hollow-body.r  23364ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-periodic-spatial-rmf-varying-affine-hollow-body.r  22215ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-spatial-rmf-parameter-varying-affine-hollow-body.r  22859ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r  22000ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-periodic-spatial-rmf-multiple-holes-body.r  24153ms
+   ✓ certifies spatial RMF shell roles and refuses exhausted global work: closed-periodic-spatial-rmf-parameter-multiple-holes-body.r  24026ms
+ ✓ |node| tests/geometryWorkerRealBoundary.test.ts (6 tests) 14590ms
+     ✓ preflights direct-route 256/257 identities before transfer and keeps the same real Worker healthy  344ms
+     ✓ runs plan-route 256/257 preflight in real disposable browser Worker realms  1213ms
+     ✓ isolates every identity boundary in real disposable Node Worker realms  398ms
+   ✓ streams cloned Rush previews and cancellation for progressive-sweep through a real worker  435ms
+   ✓ streams cloned Rush previews and cancellation for contact-progressive-hollow-body through a real worker  3049ms
+   ✓ streams cloned Rush previews and cancellation for progressive-miter-hollow-body through a real worker  9152ms
+ ✓ |node| tests/nurbsCorrectedCircleCaps.test.ts (4 tests) 14259ms
+   ✓ proves corrected circular hollow caps through Rush, viewport and fresh Solid: oblique-rmf-circle-hollow-corrected-body-boundary.r  867ms
+   ✓ proves corrected circular hollow caps through Rush, viewport and fresh Solid: curved-rmf-circle-hollow-corrected-body-boundary.r  1486ms
+   ✓ proves corrected circular hollow caps through Rush, viewport and fresh Solid: curved-frenet-circle-hollow-corrected-body-boundary.r  1464ms
+   ✓ qualifies the valid 65-station oblique corrected native cancellation workload  10441ms
+ ✓ |node| tests/solidMeasurements.test.ts (6 tests) 13721ms
+   ✓ measures vertices across bodies without modifying their documents  306ms
+   ✓ preserves tolerant Boolean mass identities within the original budget: wall sphere  3292ms
+   ✓ preserves tolerant Boolean mass identities within the original budget: drilled sphere  4506ms
+   ✓ preserves tolerant Boolean mass identities within the original budget: two stubs  5590ms
+ ✓ |node| tests/bezierFollowupCertificates.test.ts (5 tests) 12992ms
+   ✓ checks pointwise normal offsets and rejects moved output and changed tolerances  424ms
+   ✓ models degrees four and eight through transverse booleans and closed meshes  12557ms
+ ✓ |node| tests/nurbsAntipodalBody.test.ts (1 test) 12430ms
+   ✓ owns antipodal holonomy error and independently audits retained hollow Solid  12430ms
+ ✓ |node| tests/g0ToolchainFingerprints.test.ts (15 tests) 12663ms
+     ✓ refuses an unrecorded valid WASM edit before publishing any freeze  791ms
+     ✓ binds the published release independently of an ignored host rebuild  931ms
+     ✓ prepares deterministic new versions without creating any artifact or result  2265ms
+     ✓ publishes exclusively, preserves every archive, and never carries forward results  2525ms
+     ✓ rejects a source race before publishing and preserves an existing destination  1367ms
+     ✓ cannot refresh a historical archive or silently replace the frozen oracle  2047ms
+     ✓ refuses a zero-counter freeze when the new candidate already has result bookkeeping  862ms
+     ✓ historical v24 executors retain run-index admission without executing or creating evidence  1583ms
+ ✓ |node| tests/nurbsStraightBodyCancellationWorkload.test.ts (2 tests) 11819ms
+   ✓ qualifies a valid larger native cancellation body for 'progressive-hollow-boundary.r'  5542ms
+   ✓ qualifies a valid larger native cancellation body for 'progressive-unsegmented-hollow-bounda…'  6276ms
+ ✓ |node| tests/nurbsCorrectedRegularBody.test.ts (4 tests) 11684ms
+   ✓ preserves corrected regular whole-body proof, preview and fresh Solid: corrected-frenet-nonplanar-body-boundary.r  1933ms
+   ✓ preserves corrected regular whole-body proof, preview and fresh Solid: corrected-frenet-nonplanar-hollow-body-boundary.r  3210ms
+   ✓ preserves corrected regular whole-body proof, preview and fresh Solid: corrected-frenet-nonplanar-affine-hollow-body-boundary.r  3237ms
+   ✓ preserves corrected regular whole-body proof, preview and fresh Solid: arc-length-corrected-frenet-nonplanar-affine-hollow-body-boundary.r  3304ms
+ ✓ |node| tests/mcpManifoldPlanMemorySlope.test.ts (1 test) 11416ms
+     ✓ stays within the predeclared post-join retention budget  11416ms
+ ✓ |node| tests/miterStationGraph.test.ts (10 tests) 11165ms
+   ✓ carries bounded curved station reconstruction through actual Rush, async construction and viewport evidence  998ms
+   ✓ admits closed circle correction without inventing cap obligations in sync and async paths  2426ms
+   ✓ reconstructs a closed corrected frame/guide/affine hollow Solid with profile G2 and original C0 corners  3748ms
+   ✓ carries noncircular conic half weights through Rush, G2 stations and Solid  855ms
+   ✓ carries noncircular conic one weights through Rush, G2 stations and Solid  676ms
+   ✓ carries noncircular conic two weights through Rush, G2 stations and Solid  774ms
+   ✓ retains G2 of canonical circular profile joins through a closed authored frame, guide and affine Rush body  1188ms
+ ✓ |node| tests/bezierRegionCertificates.test.ts (5 tests) 10538ms
+   ✓ isolates irrational crossings, non-dyadic multiple contacts and separated fibers  328ms
+   ✓ distinguishes irrational self crossings and diagonal stationary roots  622ms
+   ✓ regularizes overlapping offsets and rejects forged global boundaries  955ms
+   ✓ cleans inward artifacts and supports curved source regions  8628ms
+ ✓ |node| tests/miterSmoothStationWalls.test.ts (10 tests) 9740ms
+   ✓ reconstructs privately owned final corrected sections rather than exposed source sections  599ms
+   ✓ requires intact full-bound ownership and exact reproduction of the source stations  434ms
+   ✓ composes the full bound and proves Solid after genuinely curved owned-source reconstruction  497ms
+   ✓ certifies periodic polynomial profiles after owned curved-center station reconstruction  400ms
+   ✓ qualifies owned general reconstruction of hollow polygon  651ms
+   ✓ qualifies owned general reconstruction of nonuniform periodic rational  392ms
+   ✓ carries nonuniform rational station certificates through the Rush geometry graph  437ms
+   ✓ admits the closed rational hollow frame/guide/affine case through native Rush replay  5838ms
+ ✓ |node| tests/mainSolidWorkerRealBoundary.test.ts (30 tests) 10299ms
+   ✓ rounds all rotated cuboid edges with endpoint radii through the real body-edit worker  862ms
+   ✓ terminates an entered noncooperative call and recovers with a real CAD worker  1214ms
+   ✓ converges oblique sphere distances across the real worker boundary  1474ms
+   ✓ certifies every parameter of an offset contact band through the actual worker and WASM  428ms
+   ✓ keeps envelope cancellation final after a genuine successful late worker response  419ms
+   ✓ qualifies actual finite envelope patches in the real worker with authored candidates and Retry  479ms
+ ✓ |node| tests/sweepRetainedDecomposition.test.ts (15 tests) 9409ms
+   ✓ binds periodic hollow profiles with joint authored frame, guide and affine laws through Rush  508ms
+   ✓ binds low-multiplicity source spans to actual ruled walls and refuses incomplete coverage  545ms
+   ✓ certifies filled caps and admits the original moving-axis periodic Rush fixture into Solid  3920ms
+   ✓ certifies the moving-axis periodic Rush body with explicit authored-plane caps  3828ms
+ ✓ |node| tests/bezierRemainingCertificates.test.ts (7 tests) 7951ms
+   ✓ proves a non-rational parameter correspondence and uses it in production booleans  5124ms
+   ✓ normalizes the eighth-degree loop using the exact original parent census  2528ms
+ ✓ |node| tests/nurbsSweepEmbedding.test.ts (6 tests) 8145ms
+   ✓ keeps closed authored-frame guide affine cavity orientation separate from embedding  5877ms
+   ✓ proves retained scale/twist hollow volume within shared budgets  1645ms
+ ✓ |node| tests/certifiedGeometryFollowup.test.ts (7 tests) 9201ms
+   ✓ binds a rational NURBS source to continuous bounds, filled enclosures and the rounded embedding  5054ms
+   ✓ uses source B-rep definitions in the document transaction and keeps a recheckable proof  664ms
+   ✓ certifies a genuinely trimmed cylinder and preserves its source definitions  3304ms
+ ✓ |node| tests/exactSolidsFromSource.test.ts (8 tests) 5958ms
+     ✓ builds an involute gear from the brep_gear builtin as one exact body with six faces per tooth  426ms
+     ✓ builds the planetary spinner as twenty exact herringbone gears  4715ms
+     ✓ lowers a helical RushGraph gear through the same builtin  563ms
+ ✓ |node| tests/quinticPolygonBody.test.ts (7 tests) 6118ms
+   ✓ transfers a freshly certified G2 station body: spatial=false weighted=false  1010ms
+   ✓ transfers a freshly certified G2 station body: spatial=false weighted=true  951ms
+   ✓ transfers a freshly certified G2 station body: spatial=true weighted=false  1194ms
+   ✓ transfers a freshly certified G2 station body: spatial=true weighted=true  1443ms
+   ✓ composes the original RMF source bound with fresh whole-body and G2 proofs  789ms
+   ✓ recomputes admission from changed source geometry rather than a retained receipt  728ms
+ ✓ |node| tests/exactSolidWorker.test.ts (18 tests) 7349ms
+     ✓ accepts periodic-hollow with 16 segments through real construction and document validation  555ms
+     ✓ accepts periodic-moving-axis-guide-affine-hollow-authored-caps with 4 segments through real construction and document validation  4006ms
+   ✓ retains Rush swept B-rep and cap holes through the exact-solid worker client  2274ms
+ ✓ |node| tests/gcodePreviewWorkerRealBoundary.test.ts (5 tests) 6224ms
+   ✓ terminates entered async warmup on timeout and recovers  5267ms
+ ✓ |node| tests/rushGraphNurbs.test.ts (11 tests) 5034ms
+   ✓ builds an exact rational cylinder surface from its generating line  319ms
+   ✓ builds and exports a closed curved plate through the actual own-kernel process  1046ms
+   ✓ returns readable rational definitions and derivative queries after editing  988ms
+   ✓ drains a multi-megabyte STL response before joining the NURBS process  612ms
+   ✓ joins a cancelled real process before accepting the following request  493ms
+   ✓ builds mesh CSG through the NURBS graph and handles empty intersections  1493ms
+ ✓ |node| tests/sweepBoundaryCertificate.test.ts (5 tests) 5456ms
+   ✓ distinguishes complete boundary bounds from acceptance and incomplete cap proofs  305ms
+   ✓ fails complete construction certification when original cap or retained region work is exhausted  873ms
+   ✓ bounds nonparallel filled caps in the moving-axis guide affine family and refuses the full budget  1757ms
+   ✓ carries the nonparallel cap budget and explicit chart work through Rush and JSON  2521ms
+ ✓ |node| tests/rushGraphMechanical.test.ts (9 tests) 5354ms
+   ✓ builds all default generators through the production worker  1789ms
+   ✓ planetary kinematics and mesh phase remain disjoint at multiple carrier poses  1294ms
+   ✓ produces watertight left/right internal threads and multiple starts with no mating overlap  1525ms
+   ✓ aligns odd-tooth planets against both mating members  539ms
+ ✓ |node| tests/brepDiagnosticExecutor.test.ts (10 tests) 5828ms
+     ✓ executes the real Node worker and matches direct scene identities without a production descriptor  1382ms
+     ✓ returns an actual native refusal, tears down, and permits a fresh successful run  910ms
+     ✓ cancels the actual Node adapter and recovers in a fresh worker  450ms
+     ✓ enforces a host deadline while synchronous WASM ignores messages  3001ms
+ ✓ |node| tests/miterStationSmoothness.test.ts (7 tests) 4726ms
+   ✓ certifies all straight station joins independently of caps and refuses budget exhaustion  330ms
+   ✓ carries applicable station G2 through Rush while retaining cap C0 and Solid  475ms
+   ✓ certifies reconstructed moving frames and hollow Solid while retaining explicit budget refusal  3659ms
+ ✓ |node| tests/rushGraphHttp.test.ts (7 tests) 4978ms
+     ✓ builds generic block functions and named records through MCP  1428ms
+     ✓ compiles own NURBS text and exports through the indicated MCP route  541ms
+     ✓ discovers, builds and exports without persistent session state  1089ms
+     ✓ preserves fluent checks through MCP compilation, reporting and export  933ms
+     ✓ recomputes endpoint ranges and exports generated parts through MCP  724ms
+ ✓ |node| tests/rushGraphNurbsMcp.test.ts (9 tests) 4990ms
+     ✓ accepts mesh_boolean over MCP and skips previews for an empty result  586ms
+     ✓ compiles parameterized control points and evaluates rational coordinates and derivatives  494ms
+     ✓ builds a closed sampled solid and returns three actual PNG views and readable topology  525ms
+     ✓ exports a real sampled STL and preserves editable rational data in JSON  1026ms
+     ✓ returns kernel failures as errors and handles a subsequent valid request  1460ms
+     ✓ transports a binary 3MF package through the actual own-kernel process  521ms
+ ✓ |node| tests/rushGraphCadOperations.test.ts (3 tests) 4483ms
+   ✓ executes new CAD operations in the production worker with closed output and measured volumes  2883ms
+   ✓ resizes from measured bounds and splits into independently closed documents  1598ms
+ ✓ |node| tests/solidDistance.test.ts (10 tests) 4170ms
+   ✓ validates actual WASM volume-distance responses without changing either input  677ms
+   ✓ qualifies actual WASM exact sphere distances across the tested radius scales  1911ms
+   ✓ converges oblique sphere clearances with original-face witnesses in actual WASM  1219ms
+ ✓ |node| tests/nurbsAutomaticCapsQualification.test.ts (6 tests) 4034ms
+   ✓ original oblique-rmf hollow reaches native bound, viewport and fresh Solid  829ms
+   ✓ original curved-rmf hollow reaches native bound, viewport and fresh Solid  1539ms
+   ✓ original curved-frenet hollow reaches native bound, viewport and fresh Solid  1512ms
+ ✓ |node| tests/nurbsMiterSweep.test.ts (6 tests) 4081ms
+   ✓ retains rational miter controls and agrees with independent right-angle extrusion geometry  306ms
+   ✓ preserves rational hollow walls and caps through spatial miter joints and STEP transport  863ms
+   ✓ lowers miter limits and spatial sites through Rush, parser and Solid  1057ms
+   ✓ preserves a hollow closed miter body without caps through Rush, Solid and STEP  969ms
+   ✓ carries explicit bounded cap correction from Rush through parser to the retained Solid  884ms
+ ✓ |node| tests/nurbsDirectMiterRush.test.ts (3 tests) 4499ms
+   ✓ owns original direct circle correction through Rush, viewport and fresh Solid admission  1406ms
+   ✓ replays original direct ownership and material orientation after affine placement: [[1,0,0,2mm],[0,1,0,3mm],[0,0,1,4mm],[0,0,0,1]]  1410ms
+   ✓ replays original direct ownership and material orientation after affine placement: [[-1,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,1]]  1682ms
+ ✓ |node| tests/nurbsCircleSectionRepair.test.ts (5 tests) 3395ms
+   ✓ shares the correction budget across stations and never publishes partial results  306ms
+   ✓ rebuilds scale/twist walls and caps with exact profile G2 and a composed boundary bound  938ms
+   ✓ carries explicit circle correction through Rush units, viewport evidence and Solid  515ms
+   ✓ composes circle repair before spatial cap projection and revalidates the final body  1374ms
+ ✓ |node| tests/mcpDirectGeometrySupervisor.test.ts (19 tests) 3659ms
+     ✓ runs the real direct evaluator and capability probe in disposable production workers  561ms
+     ✓ joins a real failed build before admitting a fresh successful worker  553ms
+     ✓ admits a delayed cold kernel under the worker startup deadline  1246ms
+     ✓ terminates and joins a real worker whose cold kernel exceeds startup deadline  1028ms
+ ✓ |node| tests/nurbsPeriodicAuthoredArcBody.test.ts (1 test) 4013ms
+   ✓ qualifies periodic authored arc original error and fresh retained Solid: arc-length-periodic-authored-spatial-body-boundary.r  4012ms
+ ✓ |node| tests/nurbsClosedCombinedMiter.test.ts (3 tests) 3764ms
+   ✓ qualifies the closed combined frame guide affine retained body without promoting miter corners  1212ms
+   ✓ preserves closed combined mode through Rush and actual Solid admission  2306ms
+ ✓ |node| tests/mcpManifoldPlanQualificationStdio.test.ts (1 test) 3238ms
+     ✓ keeps stdio/admission/store primary-only while a non-cooperative shadow is hard-killed  3237ms
+ ✓ |node| tests/solidExactEdgeFeature.test.ts (10 tests) 3261ms
+   ✓ preserves endpoint ordering, dimensions and identity for variable-radius rounds on all rotated cuboid edges  1031ms
+   ✓ rounds complete circular rims of the roadmap flange through the annular WASM API  326ms
+   ✓ rounds complete enclosure chains without opening its cavity through the WASM API  1491ms
+ ✓ |node| tests/duckdbModelStore.test.ts (30 tests) 3193ms
+     ✓ caps tiny alternating source revisions independently of source bytes  431ms
+     ✓ retains only the newest bounded build history  1177ms
+     ✓ retains only the newest bounded artifact history  476ms
+ ✓ |node| tests/mcpServer.test.ts (25 tests) 3281ms
+     ✓ does not leak legacy admission when cancellation races the built-in ping handler  956ms
+     ✓ generates readable models, returns individual planetary parts and exports a thread  791ms
+ ✓ |node| tests/sourceBodyArchive.test.ts (6 tests) 2936ms
+   ✓ retains exact source input bytes across document reload and metadata Undo/Redo  2238ms
+   ✓ refuses damaged bytes and duplicate identities  358ms
+ ✓ |node| tests/transparentBsp.test.ts (13 tests) 2882ms
+   ✓ matches independent ray depths across spatially partitioned crossing planes, scales and input orders  389ms
+   ✓ matches ray-triangle intersections for oblique camera directions  1754ms
+   ✓ matches the frozen BSP for separated layers and preserves crossing surfaces and attributes  423ms
+ ✓ |node| tests/nurbsAnnularStationQualification.test.ts (3 tests) 3082ms
+   ✓ preserves native radial caps and actual station G2 through Rush (sync)  1537ms
+   ✓ preserves native radial caps and actual station G2 through Rush (async)  1176ms
+   ✓ refuses zero station work through the same original Rush source  368ms
+stderr | tests/mcpCli.test.ts > MCP CLI > closes the stdio handle and geometry runtime before the store, exactly once
+OpenSCAD Viewer MCP server ready (DuckDB: :memory:)
+
+stderr | tests/mcpCli.test.ts > MCP CLI > still closes the store when both host shutdown operations fail
+OpenSCAD Viewer MCP server ready (DuckDB: :memory:)
+
+ ✓ |node| tests/mcpCli.test.ts (8 tests) 2924ms
+     ✓ keeps stdout JSON-RPC-clean and shuts down after stdin EOF  1459ms
+     ✓ survives a 24-request stdio burst and replies to every admitted or rejected id  1334ms
+ ✓ |node| tests/mcpManifoldPlanQualificationSupervisor.test.ts (15 tests) 2841ms
+     ✓ uses a distinct started-handshake timeout and recovers only after joining that child  317ms
+     ✓ runs the real SemanticProgram-to-Manifold adapter in disposable MCP child realms  847ms
+     ✓ preflights real plan-route identity 256/257 results inside the child and recovers in a fresh realm  1215ms
+ ✓ |node| tests/brepProfileExtrusionAudit.test.ts (5 tests) 2756ms
+   ✓ keeps refined full-circle geometry invariant under knot-domain and weight basis changes  361ms
+   ✓ admits affine 3D solids and elliptical 2D profiles with analytic mass checks  1183ms
+   ✓ retains XY matrix profile transforms with independent area, volume and centroid checks  1064ms
+ ✓ |node| tests/brepNativeProgramSemantics.test.ts (19 tests) 2759ms
+     ✓ executes exact primitive outputs with centered dimensions and preserves independent occurrence/color identity  342ms
+     ✓ authors an overlapping sphere lens as rational surfaces with the analytic volume  451ms
+     ✓ preserves analytic elliptical extrusion volume and closed topology under nonuniform scaling  1590ms
+ ✓ |node| tests/brepAnalytic.test.ts (11 tests) 2633ms
+   ✓ tessellates exact curved solids without open seams across display resolutions  389ms
+   ✓ preserves separated torus and box carriers despite overlapping bounding boxes  1368ms
+   ✓ keeps volumes and manifold incidence in rotated, holed, concave Boolean chains  518ms
+ ✓ |node| tests/brepInspectionCache.test.ts (11 tests) 2390ms
+   ✓ keeps validation results across a full 1000-instance scene scan and still rejects edits  2075ms
+ ✓ |node| tests/closedNurbsPatchNetwork.test.ts (4 tests) 2336ms
+   ✓ sews independent rounded support and end patches into one admitted body  947ms
+   ✓ retains four independent end-transition extents in the actual admitted solid  410ms
+   ✓ admits a closed network with noncircular rational edges through actual WASM  848ms
+ ✓ |node| tests/nurbsSweepSmoothnessWork.test.ts (3 tests) 2348ms
+   ✓ retains nonuniform station G2 when sharp rational profile joins refuse  659ms
+   ✓ carries sharp-profile/nonuniform-station G2 through ordinary Rush, viewport and fresh Solid  1677ms
+(node:5012) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/miterProfileSmoothness.test.ts (6 tests) 2359ms
+   ✓ reports exact profile G2 with separate C0 stations and caps in synchronous and streamed bodies  389ms
+   ✓ certifies every closed joint-mode profile seam within the declared aggregate budget  1240ms
+ ✓ |node| tests/wasmBase91.test.ts (15 tests) 2301ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (0)  360ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (1)  312ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (2)  318ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (3)  308ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (4)  310ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (5)  315ms
+   ✓ variable pairs preserve all word values, alignments, zeros and quoted literals (6)  309ms
+ ✓ |node| tests/solidStepExchange.test.ts (12 tests) 2280ms
+   ✓ preserves standalone surface shells when editing another assembly component  440ms
+   ✓ checks whole-scene capacity before replacing a saved original  314ms
+   ✓ imports, edits and re-exports the current enclosure STEP  431ms
+   ✓ imports, edits and re-exports the current flange STEP  324ms
+ ✓ |node| tests/minkowskiRegionCertificates.test.ts (9 tests) 2268ms
+   ✓ computes an exact filled Minkowski sum for nonconvex polygons and holes  321ms
+   ✓ proves collapsed erosion and splits a narrow neck into separate components  715ms
+   ✓ connects the retained general-curve offset to the filled-region operation  843ms
+ ✓ |node| tests/geometryWorker.test.ts (18 tests) 2130ms
+ ✓ |node| tests/miterOwnedBoundary.test.ts (6 tests) 2215ms
+   ✓ replays original source for native station bounds and refuses injected proofs and exhausted work  870ms
+   ✓ repairs nonplanar moving-axis periodic caps with a charged native displacement  561ms
+   ✓ keeps streamed source and preview mutations out of native final construction and cancels before it  345ms
+ ✓ |node| tests/nurbsProgressiveSweep.test.ts (42 tests) 2017ms
+   ✓ simultaneously scales and twists a weighted profile and preserves progressive reports  394ms
+ ✓ |node| tests/semanticProgramOracle.test.ts (111 tests) 2026ms
+     ✓ admits 1001 independently owned eager effects under the node-derived cap  391ms
+     ✓ bounds aggregate canonical string bytes before the 64 MiB frame ceiling  359ms
+     ✓ accepts a valid 12,000-node chain without recursive host-stack dependence  997ms
+ ✓ |node| tests/minkowski3d.test.ts (5 tests) 2126ms
+   ✓ certifies nonconvex material and a cavity without taking the convex hull  1888ms
+ ✓ |node| tests/rushAutomaticAnnularCaps.test.ts (4 tests) 2037ms
+   ✓ selects native ring caps through ordinary Rush (sync) and admits the actual body  827ms
+   ✓ selects native ring caps through ordinary Rush (async) and admits the actual body  474ms
+   ✓ reports absent endpoint caps for a closed Rush sweep  597ms
+ ✓ |node| tests/planetarySpinnerText.test.ts (2 tests) 2020ms
+   ✓ preserves the 20 exact spinner meshes through compact text  2018ms
+ ✓ |node| tests/g2AnnularTube.test.ts (5 tests) 1975ms
+   ✓ qualifies all G2 seams and material for annulus 8/4/16/0.5 and preserves its saved geometry  503ms
+   ✓ qualifies all G2 seams and material for annulus 10/7/20/0.5 and preserves its saved geometry  484ms
+   ✓ qualifies all G2 seams and material for annulus 5.15/2.3/10.3/0.25 and preserves its saved geometry  429ms
+   ✓ qualifies all G2 seams and material for annulus 10/7/20/0.1 and preserves its saved geometry  442ms
+ ✓ |node| tests/mcpSvgTools.test.ts (13 tests) 1975ms
+ ✓ |node| tests/brepProfileCertificates.test.ts (3 tests) 1875ms
+   ✓ checks a portable certificate and rejects source, witness, schema and tolerance tampering in Rust  303ms
+   ✓ retains rational cubics and affine ellipses and refuses an unproved crossing  1552ms
+ ✓ |node| tests/brepIntersections.test.ts (71 tests) 1811ms
+   ✓ admits the entire ruled trace interval before returning native curves  351ms
+ ✓ |node| tests/rushGraphProfiles.test.ts (5 tests) 1919ms
+     ✓ extrudes a profile with a subtracted hole in the production worker  413ms
+     ✓ builds a solid from a polygon, including reversed winding  564ms
+     ✓ revolves a radial profile into a hollow solid and supports partial angles  666ms
+ ✓ |node| tests/manifoldPlanBackend.test.ts (86 tests) 1742ms
+     ✓ preserves evaluator semantics on the archived corpus with the own Rust kernel: 'colored transform'  332ms
+     ✓ does not impose a smaller discarded-effect cap than the retained node budget  720ms
+ ❯ |node| tests/g1GithubActionsQualification.test.ts (15 tests | 1 failed) 1646ms
+     × binds the evidence producers and preserves the exact 4740-unit no-claim matrix 6ms
+     ✓ rejects an unbound .github/workflows/g1-qualification-clean.yml producer 0ms
+     ✓ rejects an unbound scripts/g1-github-actions.mjs producer 0ms
+     ✓ credits each complete fragment exactly once 214ms
+     ✓ accepts an observed exact image variant and preserves its recorded identity 201ms
+     ✓ rejects missing artifacts 201ms
+     ✓ rejects duplicate artifacts 208ms
+     ✓ rejects environment mismatch artifacts 199ms
+     ✓ rejects discovery-only artifacts 200ms
+     ✓ rejects a source commit other than checkout HEAD 163ms
+     ✓ rejects a dispatched source SHA that differs from GITHUB_SHA 154ms
+     ✓ accepts the actual Node Windows identity and refuses another OS or architecture 3ms
+     ✓ preserves frozen test arguments through direct Node execution on Windows 0ms
+     ✓ probes all frozen hosts without replacing the full matrix 52ms
+   ✓ preserves exact LF checkout bytes for every bound source and native sources 42ms
+ ✓ |node| tests/nurbsOwnedStationRationalG2.test.ts (3 tests) 1619ms
+   ✓ transports exact rational station G2 through topology-owned BRep audit with one budget  350ms
+   ✓ preserves exact nominal profile G2 on the corrected spatial Rush fixture  606ms
+   ✓ preserves nonbinary retained station G2 through Rush, viewport evidence and Solid  662ms
+ ✓ |node| tests/openscadParser.test.ts (53 tests) 1704ms
+     ✓ renders every bundled example  324ms
+ ✓ |node| tests/nativeBodyBoolean.test.ts (5 tests) 1604ms
+   ✓ applies retained Boolean operations with matching B-rep and mesh and preserves source bodies  384ms
+   ✓ refuses invalid later operands, mixed representations and unsupported curved pairs atomically  1084ms
+(node:5245) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/brepStepV6Workbench.test.ts (9 tests) 1543ms
+     ✓ imports, displays and reexports self-authored-ap242-periodic-cylinder.step  399ms
+     ✓ imports, displays and reexports self-authored-ap242-periodic-torus.step  680ms
+ ✓ |node| tests/profileSolidRush.test.ts (2 tests) 1433ms
+   ✓ forwards native retained-body proof through Rush, async build, viewport and Solid: closed-profile-planar-10.r  1015ms
+   ✓ forwards native retained-body proof through Rush, async build, viewport and Solid: closed-profile-spatial-6.r  417ms
+ ✓ |node| tests/legacyDirectEvaluatorOracle.test.ts (44 tests) 1567ms
+     ✓ captures deterministic complete results in fresh Node processes without writing a baseline  1242ms
+ ✓ |node| tests/rushGraphAssemblyAdvanced.test.ts (8 tests) 1614ms
+   ✓ measures overlap in the production kernel and reports separated components  1257ms
+ ✓ |node| tests/solidInstances.test.ts (18 tests) 1427ms
+   ✓ rotates and scales an instance about its center while retaining source identity and history  366ms
+   ✓ retains compact history for source edits without owning geometry in inactive states  708ms
+ ✓ |node| tests/mcpIndependentExportStdio.test.ts (1 test) 1501ms
+     ✓ lists the tool and serves an integrity-matched session resource  1501ms
+ ✓ |node| tests/nurbsFixedPatchError.test.ts (22 tests) 1334ms
+   ✓ propagates original transport retained bounds and strict refusal through Rush: oblique-rmf-progressive-sweep.r  412ms
+ ✓ |node| tests/meshSurfaceGroups.test.ts (11 tests) 1389ms
+   ✓ groups the original spinner bore around the complete ring  1158ms
+ ✓ |node| tests/brepSteppedBoolean.test.ts (6 tests) 1259ms
+     ✓ publishes a closed union result with the correct analytic volume  452ms
+ ✓ |node| tests/nurbsCatenoid.test.ts (5 tests) 1264ms
+   ✓ matches independent catenoid radius and preserves full circle seam controls  499ms
+   ✓ retains dense catenoid domains, radial accuracy and adjacent patch boundaries  436ms
+ ✓ |node| tests/coreMesh.test.ts (6 tests) 1300ms
+     ✓ keeps parser execution behind explicit browser-worker and engine-facade boundaries  778ms
+     ✓ keeps Node, DuckDB, and MCP server imports out of browser source  517ms
+ ✓ |node| tests/nurbsProgressiveMiterWallAudit.test.ts (5 tests) 1229ms
+   ✓ audits both actual retained cap domains and preserves zero-budget refusal  1064ms
+ ✓ |node| tests/directExtrusion.test.ts (14 tests) 1126ms
+     ✓ extrudes concave contours with multiple holes and nested islands independent of winding  351ms
+ ✓ |node| tests/nurbsSectionProjection.test.ts (4 tests) 1132ms
+   ✓ corrects the actual spatial endpoint once for walls and cap with a bounded curve displacement  706ms
+   ✓ constructs both corrected caps and walls through the ordinary miter body entrypoint  423ms
+ ✓ |node| tests/nurbsFoundation.test.ts (14 tests) 1114ms
+     ✓ exposes deterministic positive outward certificates through WASM  311ms
+   ✓ does not infer whole-patch regularity from matching corner normals  305ms
+ ✓ |node| tests/brepSteppedEnclosureExample.test.ts (1 test) 1096ms
+   ✓ builds and exports the public stepped enclosure with retained curved B-rep authority  1096ms
+ ✓ |node| tests/wasmArtifact.test.ts (9 tests) 998ms
+   ✓ matches independent Node SHA-256 across padding boundaries and the 16 MiB limit  731ms
+ ✓ |node| tests/nurbsProfileSweep.test.ts (3 tests) 966ms
+   ✓ matches an independent rational profile and scale equation on a straight path  589ms
+ ✓ |node| tests/nurbsVariablePipe.test.ts (4 tests) 982ms
+   ✓ preserves the linear cone radius between authored stations  692ms
+ ✓ |node| tests/nurbsOriginalFrameSmoothness.test.ts (12 tests) 1029ms
+   ✓ transports closed original path-frame C2 and preserves independent retained/Solid scope  307ms
+   ✓ transports closed original guided-frame C2 and preserves independent retained/Solid scope  507ms
+ ✓ |node| tests/brepMassProperties.test.ts (6 tests) 958ms
+   ✓ integrates rational surfaces and trims independently of the display mesh  564ms
+ ✓ |node| tests/nurbsGuidedLoft.test.ts (11 tests) 989ms
+   ✓ builds the authored guided loft through the geometry WASM  309ms
+ ✓ |node| tests/profileSolidAdmission.test.ts (2 tests) 968ms
+   ✓ delivers whole closed spatial body proofs and fresh Solid admission at 6 stations  573ms
+   ✓ delivers whole closed spatial body proofs and fresh Solid admission at 10 stations  395ms
+ ✓ |node| tests/solidNurbs.test.ts (46 tests) 1012ms
+     ✓ retains rational definitions in the Solid document and validates edits  313ms
+ ✓ |node| tests/geometryWorkerAssertion.test.ts (3 tests) 874ms
+     ✓ carries a real parser assertion through one terminal event after 350 ms cold startup  495ms
+ ✓ |node| tests/sweepCurvedGuideMiter.test.ts (1 test) 839ms
+   ✓ combines a rational curved guide with reparameterized authored frame and affine laws  839ms
+ ✓ |node| tests/mcpProtocolModern.test.ts (6 tests) 907ms
+     ✓ discovers with the required modern envelope and returns cacheable tool/resource listings  385ms
+ ✓ |node| tests/cadWorkbench.test.ts (29 tests) 856ms
+     ✓ mirrors retained topology across an offset oblique plane and is an involution  331ms
+ ✓ |node| tests/brepRegularizedBoolean.test.ts (6 tests) 901ms
+   ✓ rejects malformed legacy B-rep documents without trapping the shared WASM instance  301ms
+   ✓ keeps rational circle Boolean geometry while display detail changes  321ms
+ ✓ |node| tests/brepKernel.test.ts (10 tests) 825ms
+   ✓ shares topology across own NURBS and polygon kernels with stable face groups  353ms
+ ✓ |node| tests/solidAnalysis.test.ts (14 tests) 900ms
+     ✓ cooperative analysis preserves exclusive result buffers: sphere  419ms
+ ✓ |node| tests/rushGraphSkadis.test.ts (13 tests) 900ms
+   ✓ preserves SKADIS geometry for output 0  439ms
+ ✓ |node| tests/brepSolidBridge.test.ts (5 tests) 893ms
+   ✓ retains the complete authored enclosure through the actual Code-to-Solid conversion and persistence  803ms
+ ✓ |node| tests/spatialLattice.test.ts (15 tests) 873ms
+   ✓ generates bounded deterministic bcc graphs and closed lighter solids  390ms
+ ✓ |node| tests/brepSemanticScene.test.ts (13 tests) 843ms
+     ✓ displays a partial hollow torus with two holed caps and one shell  381ms
+ ✓ |node| tests/brepGeneralNurbsBoolean.test.ts (3 tests) 880ms
+     ✓ authors all exact-region operations in the 2x1, 1x2, and 2x2 cell  831ms
+ ✓ |node| tests/nurbsAdvancedLoft.test.ts (8 tests) 777ms
+   ✓ automatically discovers sorted reversed guides and nonuniform stations through WASM  411ms
+ ✓ |node| tests/solidStepAssembly.test.ts (3 tests) 926ms
+   ✓ exports every current body under one root and group without changing the document  597ms
+ ✓ |node| tests/valueBinaryCodec.test.ts (7 tests) 975ms
+     ✓ decodes stored, fixed and dynamic DEFLATE streams independently of zlib  460ms
+     ✓ executes commands and source compilation with JSON serialization disabled  411ms
+ ✓ |node| tests/rushGraphLoft.test.ts (3 tests) 921ms
+   ✓ builds a closed offset taper in the production worker with either profile winding  753ms
+ ✓ |node| tests/nurbsToroidalTrajectories.test.ts (5 tests) 811ms
+   ✓ matches independent toroidal coordinates for signed and fractional turns  399ms
+ ✓ |node| tests/solidPrimitive.test.ts (9 tests) 806ms
+   ✓ authors box with the requested dimensions and leaves the input intact  310ms
+ ✓ |node| tests/svgWorkerRealBoundary.test.ts (3 tests) 799ms
+   ✓ runs the shipped browser entry in an isolated real worker and returns portable artwork and valid SCAD  399ms
+(node:5737) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/directTransactionMcp.test.ts (3 tests) 812ms
+     ✓ executes outline and native extrusion together through the MCP boundary  336ms
+     ✓ returns a validated model and reports a failing action  474ms
+ ✓ |node| tests/brepStepV10Product.test.ts (5 tests) 720ms
+     ✓ preserves the authoritative occurrence graph without baking on export  503ms
+ ✓ |node| tests/harfBuzzPacking.test.ts (3 tests) 725ms
+     ✓ rejects absent, duplicate, stale and corrupt emitted packages  688ms
+ ✓ |node| tests/brepQualificationV10.test.ts (4 tests) 721ms
+     ✓ certifies analytic curved tessellation with monotone adaptive budgets  509ms
+ ✓ |node| tests/brepCurveExtrusionRushGraph.test.ts (7 tests) 636ms
+   ✓ exports the nested curve-reference schema and retains full-circle and edited-hole definitions  478ms
+ ✓ |node| tests/nurbsCircleTransition.test.ts (3 tests) 656ms
+   ✓ preserves two circles in perpendicular planes using compact ruled controls  598ms
+ ✓ |node| tests/nativeBodyHole.test.ts (4 tests) 724ms
+   ✓ cuts through and blind holes while retaining rational cylindrical walls  425ms
+ ✓ |node| tests/nurbsEllipseTransition.test.ts (2 tests) 665ms
+   ✓ preserves rotated skew ellipses and their independent ruled equation  608ms
+ ✓ |node| tests/meshExportFormats.test.ts (21 tests) 735ms
+ ✓ |node| tests/historicalEvidenceWriters.test.ts (13 tests) 702ms
+(node:5785) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/geometryKernelWarmup.test.ts (2 tests) 664ms
+   ✓ initializes asynchronously and retries a failed compile  325ms
+   ✓ shares warmup and never replaces a synchronously initialized native owner  338ms
+ ✓ |node| tests/g2SurfaceBridge.test.ts (3 tests) 632ms
+   ✓ tracks all four incident edges of a rational corner without hiding omissions  460ms
+ ✓ |node| tests/nurbsOffsetContactQualification.test.ts (4 tests) 663ms
+ ✓ |node| tests/brepStepV5Workbench.test.ts (4 tests) 624ms
+     ✓ roundtrips selected AP242 and preserves the authoritative model  382ms
+ ✓ |node| tests/nativeBodyArrangement.test.ts (9 tests) 655ms
+   ✓ aligns to the first selected body and keeps B-rep and mesh synchronized  386ms
+ ✓ |node| tests/rushGraphFunctional.test.ts (9 tests) 632ms
+ ✓ |node| tests/mcpIndependentOpenScadModules.test.ts (2 tests) 549ms
+     ✓ executes every currently implemented stable module without calling upstream  482ms
+ ✓ |node| tests/nurbsPipe.test.ts (4 tests) 639ms
+   ✓ matches the cylinder equation between stations on a straight path  368ms
+ ✓ |node| tests/nativeSceneFlatten.test.ts (4 tests) 628ms
+   ✓ welds exact shared coordinates and preserves reflected winding in Rust  310ms
+   ✓ transfers and flattens the full 100000-triangle expanded scene through WASM  303ms
+ ✓ |node| tests/mainSolidWorkerRuntime.test.ts (36 tests) 624ms
+ ✓ |node| tests/wasmBrotliPacking.test.ts (9 tests) 608ms
+     ✓ round-trips reference-encoded dictionary, overlapping and binary streams  348ms
+ ✓ |node| tests/solidGeneralProfilePreparation.test.ts (4 tests) 604ms
+   ✓ prepares a mixed sketch and NURBS chain while preserving identity, source and history  317ms
+ ✓ |node| tests/nurbsHelicoid.test.ts (5 tests) 603ms
+   ✓ matches independent helicoid equation for axis and annular signed surfaces  408ms
+ ✓ |node| tests/rushGraphSketch.test.ts (8 tests) 600ms
+     ✓ solves perturbed coordinates deterministically without changing the input  300ms
+ ✓ |node| tests/nurbsSweepStreamOwnership.test.ts (6 tests) 616ms
+   ✓ keeps accepted miter preview geometry and diagnostics separate from the final certificate  313ms
+ ✓ |node| tests/functionReference.test.ts (86 tests) 590ms
+ ✓ |node| tests/solidWallSearch.test.ts (4 tests) 606ms
+   ✓ finds original material walls after rigid rotation and translation without editing the source  340ms
+ ✓ |node| tests/solidMaterial.test.ts (4 tests) 564ms
+   ✓ preserves material through history, reload and geometric editing  393ms
+ ✓ |node| tests/nurbsCircleRectangleTransition.test.ts (2 tests) 583ms
+   ✓ retains four compact patches, independent boundaries and linear interior  504ms
+ ✓ |node| tests/rushGraph.test.ts (5 tests) 562ms
+     ✓ transfers generated geometry through the production worker contract  402ms
+ ✓ |node| tests/generalMeshTools.test.ts (5 tests) 556ms
+   ✓ shells a tapered nonconvex body with sampled distance fields  439ms
+ ✓ |node| tests/mcpOfficialRuntime.test.ts (6 tests) 578ms
+     ✓ advertises typed status/check/export tools and forwards an isolated project  308ms
+ ✓ |node| tests/nurbsSphericalSpiral.test.ts (3 tests) 505ms
+   ✓ matches independent spherical coordinates and radial equation across poles  361ms
+ ✓ |node| tests/solidDisplayPreparation.test.ts (8 tests) 548ms
+   ✓ preserves display geometry and picking with crease-aware shading for box  308ms
+ ✓ |node| tests/nurbsArchimedeanSpiral.test.ts (3 tests) 487ms
+   ✓ matches independent linear-radius spiral for growth contraction and origin start  397ms
+ ✓ |node| tests/nurbsSweepCapWallAudit.test.ts (3 tests) 551ms
+   ✓ excludes all stored hollow-loft wall interiors against each coordinate-plane cap  548ms
+ ✓ |node| tests/nativeGeometryScene.test.ts (5 tests) 560ms
+     ✓ shows a native surface with independent display detail and preserves f64 source  513ms
+ ✓ |node| tests/nurbsRibbon.test.ts (4 tests) 552ms
+   ✓ matches straight ribbon boundaries and projected orientation between stations  387ms
+ ✓ |node| tests/geometryBuildEngine.test.ts (19 tests) 521ms
+ ✓ |node| tests/meshImportConvert.test.ts (56 tests) 565ms
+ ✓ |node| tests/nonstarTopologyProtocol.test.ts (5 tests) 550ms
+ ✓ |node| tests/nurbsScrewSurface.test.ts (3 tests) 489ms
+   ✓ matches independent rational-profile screw coordinates at retained subdomains  353ms
+ ✓ |node| tests/browserQualificationRunner.test.ts (16 tests) 511ms
+ ✓ |node| tests/surfaceTexture.test.ts (6 tests) 496ms
+   ✓ generates all six patterns as closed exportable geometry  322ms
+ ✓ |node| tests/solidLightening.test.ts (15 tests) 412ms
+ ✓ |node| tests/officialOpenScadRuntimeService.test.ts (7 tests) 526ms
+(node:5943) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/brepRushGraph.test.ts (14 tests) 516ms
+   ✓ keeps the public B-rep schema identical for Rust and MCP clients  364ms
+ ✓ |node| tests/brepStepV6ExternalResolver.test.ts (3 tests) 486ms
+     ✓ resolves allowlisted digest-bound documents without ambient IO  358ms
+ ✓ |node| tests/nurbsOffsetEnvelopeFit.test.ts (6 tests) 504ms
+ ✓ |node| tests/ownRustCad.test.ts (4 tests) 483ms
+     ✓ builds the complete SKADIS box without open boundaries  310ms
+ ✓ |node| tests/nurbsTrochoid.test.ts (5 tests) 487ms
+   ✓ matches independent curtate cycloid prolate and linear limit formulas  404ms
+ ✓ |node| tests/nurbsLissajous.test.ts (3 tests) 486ms
+   ✓ matches independent three-axis harmonic trajectories and derivatives  376ms
+ ✓ |node| tests/nurbsHelix.test.ts (3 tests) 480ms
+   ✓ keeps sampled helix errors under the reported ideal interpolation estimate through WASM  367ms
+ ✓ |node| tests/nurbsLogarithmicSpiral.test.ts (3 tests) 462ms
+   ✓ matches independent exponential radial law for growth contraction and zero  382ms
+ ✓ |node| tests/brepCurvedGraphBooleanV3.test.ts (2 tests) 502ms
+     ✓ serializes exact U/V degree 2/3 intersection and difference certificates  496ms
+ ✓ |node| tests/brepNativeExecutor.test.ts (6 tests) 440ms
+   ✓ executes polygonal analytic revolutions through the Rust graph  324ms
+ ✓ |node| tests/meshReconstruction.test.ts (7 tests) 471ms
+   ✓ reconstructs exact NURBS patches and bounded smoothed patches through WASM  320ms
+ ✓ |node| tests/openscadNativeGeometry.test.ts (28 tests) 449ms
+   ✓ executes evaluated variables, user modules and loops entirely through the Rust plan  331ms
+ ✓ |node| tests/brepProfile.test.ts (6 tests) 446ms
+     ✓ orients unordered even-odd rings, preserving holes and nested islands  309ms
+ ✓ |node| tests/nurbsHelixVariants.test.ts (6 tests) 465ms
+   ✓ matches independent elliptical helix samples within the ideal interpolation estimate  334ms
+ ✓ |node| tests/partialAnnularPreviewProtocol.test.ts (3 tests) 460ms
+   ✓ accepts and executes the partial-annular request through the complete worker handler  456ms
+ ✓ |node| tests/nurbsInvolute.test.ts (3 tests) 437ms
+   ✓ matches the independent involute formula and endpoint tangent across zero  358ms
+ ✓ |node| tests/renderMesh.test.ts (6 tests) 461ms
+ ✓ |node| tests/solidSnapGeometry.test.ts (7 tests) 430ms
+   ✓ uses topological vertices, edge midpoints, face centers and the body bounding center  306ms
+ ✓ |node| tests/brepEmptyConsumers.test.ts (6 tests) 453ms
+   ✓ publishes empty B-rep text as zero scene entities and zero Solid bodies  359ms
+ ✓ |node| tests/openscadStableGeometryModuleWiring.test.ts (13 tests) 428ms
+ ✓ |node| tests/nativeBodySplit.test.ts (5 tests) 459ms
+   ✓ splits retained B-rep into oriented positive and negative halves with matching display meshes  376ms
+ ✓ |node| tests/brepNativeSession.test.ts (13 tests) 447ms
+   ✓ steps an authored graph through native wire ownership and commits once  314ms
+ ✓ |node| tests/nurbsSweepAudit.test.ts (4 tests) 430ms
+   ✓ preserves regularity and bounded jet evidence through WASM without promoting exact G1/G2  300ms
+ ✓ |node| tests/nurbsVariablePitchHelix.test.ts (3 tests) 426ms
+   ✓ matches independent variable-pitch axial law for both revolution signs  339ms
+ ✓ |node| tests/openScadImport.test.ts (19 tests) 443ms
+ ✓ |node| tests/nurbsClothoid.test.ts (3 tests) 429ms
+   ✓ matches independent Fresnel power series and keeps both error contributions  339ms
+ ✓ |node| tests/nurbsCircularRolling.test.ts (5 tests) 423ms
+   ✓ matches independent inside and outside rolling-circle formulas and cusps  339ms
+ ✓ |node| tests/cadRoadmapAcceptance.test.ts (2 tests) 432ms
+   ✓ qualifies bracket, flange and enclosure against independent dimensions and volumes  427ms
+ ✓ |node| tests/brepProductionAdmission.test.ts (13 tests) 434ms
+   ✓ executes a real lowered difference program through native production admission  355ms
+ ✓ |node| tests/nativeBrepFaceSelection.test.ts (6 tests) 435ms
+   ✓ resolves each planar display face to its authored support at different display detail  336ms
+ ✓ |node| tests/languageConformance.test.ts (24 tests) 423ms
+ ✓ |node| tests/subdivisionSdf.test.ts (5 tests) 450ms
+   ✓ refines a closed cube and retains six authored patches  334ms
+ ✓ |node| tests/solidSelfIntersection.test.ts (17 tests) 463ms
+ ✓ |node| tests/nurbsCatenary.test.ts (3 tests) 399ms
+   ✓ matches independent cosh geometry and preserves near-vertex height  319ms
+ ✓ |node| tests/meshExport.test.ts (8 tests) 389ms
+ ✓ |node| tests/nurbsSectionSurfaces.test.ts (4 tests) 397ms
+   ✓ retains ruled rational boundaries and straight generators when section weights agree  313ms
+ ✓ |node| tests/mcpIndependentOpenScadFunctions.test.ts (5 tests) 388ms
+ ✓ |node| tests/brepNurbsSuccessorCellsV3.test.ts (2 tests) 402ms
+     ✓ certifies V4 unequal spans and strict containment per operation  349ms
+ ✓ |node| tests/nurbsTwoGuideSweep.test.ts (4 tests) 402ms
+   ✓ preserves rational profile and independently parameterized guides through WASM  312ms
+ ✓ |node| tests/runtimeManifestAudit.test.ts (4 tests) 416ms
+     ✓ runs both real providers in a fresh process and returns failure exactly when bindings disagree  411ms
+ ✓ |node| tests/brepSourceAttestation.test.ts (5 tests) 393ms
+   ✓ executes a real lowered program with the envelope object and source text transported  347ms
+ ✓ |node| tests/solidRetainedRevolve.test.ts (6 tests) 395ms
+ ✓ |node| tests/miterStationReconstruction.test.ts (2 tests) 385ms
+   ✓ owns complete source correspondence and preserves caps through the native reconstruction opcode  351ms
+ ✓ |node| tests/nurbsAffine.test.ts (2 tests) 384ms
+   ✓ uses native affine rational curve and surface transforms  311ms
+ ✓ |node| tests/nurbsTwistSweep.test.ts (5 tests) 393ms
+   ✓ preserves the independent rational quarter-turn law and path translation through WASM  311ms
+ ✓ |node| tests/nurbsGridSpline.test.ts (4 tests) 386ms
+   ✓ reproduces independent bilinear geometry on nonuniform authored parameters  307ms
+ ✓ |node| tests/nurbsBoundaryFill.test.ts (4 tests) 385ms
+ ✓ |node| tests/nurbsCircularSurfaces.test.ts (2 tests) 394ms
+   ✓ preserves independent sphere, cylinder and cone equations through the packaged kernel  316ms
+ ✓ |node| tests/nurbsGuidedPatchError.test.ts (10 tests) 385ms
+ ✓ |node| tests/nurbsBezierPaths.test.ts (3 tests) 389ms
+   ✓ evaluates rational Bezier controls through the packaged geometry host  308ms
+ ✓ |node| tests/nurbsSweepContourAudit.test.ts (4 tests) 401ms
+   ✓ certifies exact unclamped hollow contours through WASM and refuses unproved altered weights  308ms
+ ✓ |node| tests/nurbsTranslationSweep.test.ts (4 tests) 389ms
+   ✓ retains both rational parameterizations in a fixed-orientation sweep  313ms
+ ✓ |node| tests/nurbsFramedSweepGraph.test.ts (4 tests) 388ms
+   ✓ retains a sampled construction report and never certifies continuous frame error  370ms
+ ✓ |node| tests/nurbsBezierPatches.test.ts (3 tests) 382ms
+   ✓ preserves affine planes and nonplanar bilinear corners through WASM  306ms
+ ✓ |node| tests/nurbsFormulaSurface.test.ts (3 tests) 389ms
+   ✓ preserves two-variable polynomial points and jets after domain normalization  307ms
+ ✓ |node| tests/nurbsFormulaText.test.ts (3 tests) 385ms
+   ✓ preserves infix precedence and ordinary polynomial coordinate formulas  308ms
+ ✓ |node| tests/brepQualificationV8.test.ts (4 tests) 389ms
+     ✓ serializes audited shell certificates and exact refusal boundaries  359ms
+ ✓ |node| tests/nurbsHermitePatch.test.ts (3 tests) 381ms
+   ✓ matches independent bicubic positions, tangents and mixed derivatives  306ms
+ ✓ |node| tests/brepEnvelopeAdmission.test.ts (17 tests) 393ms
+   ✓ admits the lowered envelope components on the native graph path  356ms
+ ✓ |node| tests/nativeBodyTransform.test.ts (5 tests) 391ms
+   ✓ rotates and scales mesh and B-rep about the shared selection pivot in Rust  325ms
+ ✓ |node| tests/brepBuild.test.ts (7 tests) 387ms
+     ✓ builds a box as a body carrying both exact topology and a display mesh  333ms
+ ✓ |node| tests/nurbsNaturalSpline.test.ts (3 tests) 382ms
+   ✓ matches the independent natural cubic solution and one-sided first/second derivatives  305ms
+ ✓ |node| tests/nurbsCoonsGraph.test.ts (3 tests) 394ms
+   ✓ retains all four rational Coons boundaries and an independently evaluated homogeneous interior  315ms
+ ✓ |node| tests/nurbsClampedSpline.test.ts (3 tests) 385ms
+   ✓ reproduces a cubic and its first two derivatives with nonuniform authored parameters  309ms
+ ✓ |node| tests/directTransactions.test.ts (5 tests) 399ms
+     ✓ outlines and extrudes as one transaction, and rolls back invalid extrusion  359ms
+ ✓ |node| tests/nurbsHermiteCurve.test.ts (3 tests) 389ms
+   ✓ interpolates authored positions and one-sided tangents on nonuniform parameter intervals  310ms
+ ✓ |node| tests/rushFrontendNurbs.test.ts (4 tests) 393ms
+   ✓ lowers compact parameters and mesh booleans to own Rust and renders directly  380ms
+ ✓ |node| tests/brepProvenanceAdmission.test.ts (11 tests) 387ms
+   ✓ executes a real lowered program with all envelope components transported  357ms
+ ✓ |node| tests/nurbsBasicPaths.test.ts (3 tests) 390ms
+   ✓ preserves affine paths and explicit clamped closure through WASM  307ms
+ ✓ |node| tests/solidMaterialWall.test.ts (3 tests) 398ms
+   ✓ accepts native full wall bounds and explicit refusal or wide intervals  317ms
+ ✓ |node| tests/nativeCadClearance.test.ts (5 tests) 385ms
+   ✓ measures separated, touching, overlapping and contained solid meshes  339ms
+ ✓ |node| tests/solidMaterialVolume.test.ts (7 tests) 377ms
+   ✓ accepts original native material segments, chords and explicit refusals  313ms
+ ✓ |node| tests/nativeDisplayTopology.test.ts (7 tests) 387ms
+   ✓ groups a box into six oriented supports and twelve physical edges with stable triangle membership  315ms
+ ✓ |node| tests/nativePlanarBodyEdit.test.ts (5 tests) 364ms
+   ✓ pushes and pulls retained planar bodies with synchronized meshes and supports repeated edits  337ms
+ ✓ |node| tests/directProfileTools.test.ts (12 tests) 372ms
+     ✓ fillets a corner with the requested radius, tangent endpoints and either winding  303ms
+ ✓ |node| tests/nurbsClosedSpline.test.ts (3 tests) 357ms
+ ✓ |node| tests/nurbsCurve.test.ts (11 tests) 364ms
+     ✓ evaluates an exact rational quarter circle and its analytic first/second derivatives  300ms
+ ✓ |node| tests/brepIdentityAdmission.test.ts (10 tests) 371ms
+   ✓ executes a real lowered program with operations transported  347ms
+ ✓ |node| tests/nurbsRetainedPatchRegularity.test.ts (8 tests) 366ms
+   ✓ checks a whole retained set with shared work without promoting other obligations  303ms
+ ✓ |node| tests/mcpBoundedTransport.test.ts (10 tests) 361ms
+ ✓ |node| tests/brepRuledLoft.test.ts (4 tests) 369ms
+   ✓ retains bilinear ruled side surfaces and integrates their volume independently of display facets  306ms
+ ✓ |node| tests/nurbsFormulaCurve.test.ts (3 tests) 361ms
+ ✓ |node| tests/shellDistance.test.ts (5 tests) 364ms
+   ✓ finds the global shell minimum over trimmed faces and rational spheres in WASM  325ms
+ ✓ |node| tests/meshTopology.test.ts (12 tests) 352ms
+ ✓ |node| tests/nurbsGordon.test.ts (3 tests) 363ms
+ ✓ |node| tests/nurbsNaturalLoft.test.ts (4 tests) 362ms
+ ✓ |node| tests/nurbsAuthoredSweepAdmission.test.ts (1 test) 362ms
+   ✓ refuses and diagnoses an authored continuous bound despite zero sampled error through Rush and async previews  361ms
+ ✓ |node| tests/rushLanguage.test.ts (4 tests) 355ms
+ ✓ |node| tests/nurbsTriangularPatch.test.ts (4 tests) 358ms
+ ✓ |node| tests/solidPlaneSection.test.ts (12 tests) 361ms
+   ✓ places a closed section on the requested world-space plane 0  305ms
+ ✓ |node| tests/nurbsClampedLoft.test.ts (3 tests) 360ms
+ ✓ |node| tests/brepQualificationV7.test.ts (4 tests) 351ms
+     ✓ publishes exact bridge/WASM certificates and refuses unsupported laws  320ms
+ ✓ |node| tests/nurbsAuthoredPatchError.test.ts (4 tests) 357ms
+ ✓ |node| tests/nurbsClosedLoft.test.ts (3 tests) 357ms
+ ✓ |node| tests/solidWholeWall.test.ts (3 tests) 355ms
+   ✓ accepts native full wall bounds and explicit refusal or wide intervals  303ms
+ ✓ |node| tests/nurbsSweepRetainedCharts.test.ts (2 tests) 352ms
+   ✓ proves a full rational quarter chart with one oblique projection and refuses folds  309ms
+ ✓ |node| tests/nurbsTessellation.test.ts (20 tests) 355ms
+     ✓ samples a plane with conforming oriented topology and zero measured deviation  301ms
+ ✓ |node| tests/mcpIndependentOpenScadProject.test.ts (8 tests) 343ms
+ ✓ |node| tests/mcpIndependentExport.test.ts (3 tests) 356ms
+     ✓ lists, exports and serves exact full-quality STL bytes without upstream or DuckDB writes  309ms
+ ✓ |node| tests/brepQualificationV9.test.ts (6 tests) 350ms
+     ✓ publishes exact multi-section topology and survives cyclic correspondence permutation  303ms
+ ✓ |node| tests/nurbsSweepCapPairAudit.test.ts (1 test) 345ms
+   ✓ qualifies actual nonunit cap charts and preserves face IDs on unresolved pairs  345ms
+ ✓ |node| tests/profileIntersections.test.ts (4 tests) 345ms
+ ✓ |node| tests/latticeDecimation.test.ts (5 tests) 348ms
+     ✓ reduces a subdivided closed box toward the target and keeps it closed, oriented and valid  309ms
+ ✓ |node| tests/geometryInterop.test.ts (6 tests) 346ms
+     ✓ passes a NURBS mesh into polygon operations and its boundary back into NURBS  310ms
+ ✓ |node| tests/solidFaceContacts.test.ts (8 tests) 346ms
+   ✓ matches native fixtures through the production WASM operation  310ms
+ ✓ |node| tests/solidBodyEdges.test.ts (2 tests) 345ms
+   ✓ keeps exact edge identities and samples independent of display tessellation  341ms
+ ✓ |node| tests/nurbsAuthoredPatchDecomposition.test.ts (1 test) 347ms
+   ✓ carries original-profile and retained decomposition error through the packaged Rust API  346ms
+ ✓ |node| tests/assemblyAnimation.test.ts (4 tests) 338ms
+     ✓ samples body and camera together while preserving source and retained geometry  309ms
+ ✓ |node| tests/nurbsSweepCapBoundaryAudit.test.ts (1 test) 338ms
+   ✓ bounds every stored cap coedge against its retained world edge without sampling  338ms
+ ✓ |node| tests/nurbsUnequalProfileSpeedG2.test.ts (3 tests) 336ms
+   ✓ owns unequal retained profile speeds 1 without smoothing sharp corners  320ms
+ ✓ |node| tests/rushGraphUnits.test.ts (8 tests) 336ms
+     ✓ converts mixed length units and preserves physical geometry through the worker  329ms
+ ✓ |node| tests/faceDistance.test.ts (5 tests) 336ms
+   ✓ measures the trimmed face rather than the missing material inside its hole  306ms
+ ✓ |node| tests/sourceBodyDisplay.test.ts (4 tests) 337ms
+ ✓ |node| tests/nativeMeshArtifactExport.test.ts (3 tests) 338ms
+ ✓ |node| tests/nativeMeshPlanes.test.ts (4 tests) 337ms
+   ✓ pushes native mesh supports with independent prism volumes and no source mutation  308ms
+ ✓ |node| tests/sculpting.test.ts (14 tests) 335ms
+     ✓ polygon brush moves only vertices inside the radius with smooth falloff  305ms
+ ✓ |node| tests/nurbsSweepProjectiveStripJets.test.ts (5 tests) 329ms
+   ✓ certifies all four rational G2 seams including closure, preserving strict homogeneous semantics  302ms
+ ✓ |node| tests/meshModelerProjection.test.ts (3 tests) 327ms
+     ✓ never paints the far side of a cube over the near side throughout an orbit  326ms
+ ✓ |node| tests/directDocumentAsync.test.ts (8 tests) 334ms
+     ✓ preserves the synchronous normalized document and detached ownership  301ms
+ ✓ |node| tests/nurbsSweepExactStripJets.test.ts (5 tests) 330ms
+   ✓ includes the closing seam in exact cyclic C1 qualification and refuses C2 or a damaged closure  310ms
+ ✓ |node| tests/rushGraphAssembly.test.ts (4 tests) 339ms
+   ✓ positions fixed mates with an explicit gap and keeps independent component meshes  336ms
+ ✓ |node| tests/nurbsSweepWallAudit.test.ts (6 tests) 326ms
+   ✓ preserves whole-chart and pair evidence without claiming shell embedding  303ms
+ ✓ |node| tests/solidBoundaryAgreement.test.ts (5 tests) 328ms
+   ✓ finds the unsampled boundary defect in WASM and retains model identities  314ms
+ ✓ |node| tests/tsViewportParity.test.ts (3 tests) 318ms
+ ✓ |node| tests/solidBlenderExchange.test.ts (3 tests) 319ms
+   ✓ exports current instance geometry and stable project/body identities  316ms
+ ✓ |node| tests/brepProfileMeasureCertificates.test.ts (4 tests) 325ms
+   ✓ checks exact area ratios and rejects forged bounds and scope  301ms
+ ✓ |node| tests/nurbsRepresentedMultispanG2.test.ts (3 tests) 320ms
+   ✓ proves actual full-multiplicity chain G2 at represented binary speeds without moving poles  305ms
+ ✓ |node| tests/nurbsFrenetFrameRegularity.test.ts (3 tests) 321ms
+   ✓ covers the original spatial Frenet frame on an independent authored domain  304ms
+ ✓ |node| tests/brepInterchangeV11.test.ts (3 tests) 324ms
+     ✓ roundtrips an IGES graph without reconstruction  302ms
+ ✓ |node| tests/nurbsCurveDistance.test.ts (4 tests) 316ms
+   ✓ measures rational curves in WASM, preserving original parameters and the document  313ms
+ ✓ |node| tests/nurbsSurface.test.ts (14 tests) 314ms
+     ✓ computes a weighted biquadratic point and analytic first/second quotient jets  301ms
+ ✓ |node| tests/profileFramePremises.test.ts (2 tests) 320ms
+   ✓ delivers an exact tilted-plane Bishop premise and a bounded work refusal through WASM  316ms
+ ✓ |node| tests/orbitCameraProjection.test.ts (12 tests) 318ms
+ ✓ |node| tests/solidSurfaceDisplayQueue.test.ts (2 tests) 317ms
+   ✓ deduplicates geometry, retains bounded results and reports unavailable surfaces  312ms
+ ✓ |node| tests/editableSketchPath.test.ts (4 tests) 314ms
+     ✓ retains authored controls through save, undo and extrusion while rebuilding samples on load  300ms
+ ✓ |node| tests/path2dCurvex.test.ts (6 tests) 315ms
+     ✓ keeps compound hole topology when scissors open a ring or knife cuts only a hole  303ms
+ ✓ |node| tests/nurbsProgressiveSweepCapDomains.test.ts (3 tests) 317ms
+   ✓ proves original oblique hollow endpoint domains independently of retained caps and body error  309ms
+ ✓ |node| tests/nurbsRetainedWallDomain.test.ts (1 test) 316ms
+   ✓ transports complete retained wall domains and exact coedges under one work budget  316ms
+ ✓ |node| tests/nurbsAuthoredFrameRegularity.test.ts (5 tests) 317ms
+   ✓ certifies whole authored traversal after subdivision without promoting a sweep bound  305ms
+ ✓ |node| tests/directDimensions.test.ts (12 tests) 315ms
+     ✓ matches rational endpoint tangent and curvature from start  305ms
+ ✓ |node| tests/directAdvancedTools.test.ts (9 tests) 316ms
+ ✓ |node| tests/transparentTriangleSplit.test.ts (4 tests) 320ms
+   ✓ preserves surface area and interpolates attributes at the crossing  302ms
+ ✓ |node| tests/nurbsFixedNormalFrameRegularity.test.ts (2 tests) 313ms
+   ✓ carries a complete original FixedNormal frame cover without promoting body or surface proofs  308ms
+ ✓ |node| tests/cylinderPushPull.test.ts (1 test) 310ms
+   ✓ pushes a displayed cylinder cap through the retained B-rep editor  310ms
+ ✓ |node| tests/directModelingTools.test.ts (6 tests) 311ms
+     ✓ previews a signed extrusion at a base plane without editing the source  300ms
+ ✓ |node| tests/nurbsSurfaceDistance.test.ts (5 tests) 314ms
+   ✓ finds a joint interior minimum on two curved surfaces in WASM  310ms
+ ✓ |node| tests/nurbsSweepProfileRegularity.test.ts (2 tests) 304ms
+   ✓ covers outer and hole tangents continuously with one shared budget  302ms
+ ✓ |node| tests/nurbsPolynomialHost.test.ts (3 tests) 310ms
+   ✓ preserves non-unit polynomial domains through the packaged host  304ms
+ ✓ |node| tests/trussFieldMeshes.test.ts (5 tests) 310ms
+ ✓ |node| tests/nurbsDecompositionCertificate.test.ts (1 test) 308ms
+   ✓ transports original rational span bounds, budget refusal and independent translation  308ms
+ ✓ |node| tests/nurbsPrimitives.test.ts (4 tests) 309ms
+   ✓ preserves conic equations and surface dimensions through WASM  303ms
+ ✓ |node| tests/structuralSections.test.ts (8 tests) 308ms
+   ✓ uses actual final boundaries instead of identical bounding boxes through WASM  302ms
+ ✓ |node| tests/nurbsScaledSweep.test.ts (4 tests) 316ms
+   ✓ preserves independent rational radius and trajectory laws through WASM  312ms
+ ✓ |node| tests/latticeStrength.test.ts (4 tests) 307ms
+ ✓ |node| tests/miterBodyLayout.test.ts (3 tests) 307ms
+   ✓ preserves the real face budget, cap reservation and refinements beyond 64  300ms
+ ✓ |node| tests/directModeling.test.ts (13 tests) 308ms
+ ✓ |node| tests/cadBinaryTransport.test.ts (4 tests) 306ms
+ ✓ |node| tests/nurbsFilledCapError.test.ts (5 tests) 301ms
+ ✓ |node| tests/semanticLoweringFastPaths.test.ts (5 tests) 308ms
+ ✓ |node| tests/meshEditing.test.ts (9 tests) 308ms
+ ✓ |node| tests/cadNativePrimitives.test.ts (2 tests) 304ms
+ ✓ |node| tests/nativeModeling.test.ts (5 tests) 305ms
+ ✓ |node| tests/nurbsRetainedBodyCoverage.test.ts (1 test) 300ms
+ ✓ |node| tests/brepAuthorizedHealV2.test.ts (2 tests) 306ms
+     ✓ executes a nonzero native endpoint snap without mutating its source  301ms
+ ✓ |node| tests/cameraGestures.test.ts (6 tests) 304ms
+   ✓ matches 81 frozen pre-migration orbit, pan and pinch states  301ms
+ ✓ |node| tests/mcpGeometryService.test.ts (12 tests) 280ms
+ ✓ |node| tests/webgpuRendererCamera.test.ts (23 tests) 303ms
+ ✓ |node| tests/frameAnalysis.test.ts (8 tests) 303ms
+ ✓ |node| tests/nurbsFilledCapNativeTransport.test.ts (2 tests) 299ms
+ ✓ |node| tests/influenceAnalysis.test.ts (2 tests) 298ms
+ ✓ |node| tests/bucklingAnalysis.test.ts (3 tests) 301ms
+ ✓ |node| tests/brepRecorder.test.ts (5 tests) 298ms
+ ✓ |node| tests/collapseAnalysis.test.ts (2 tests) 303ms
+   ✓ finds the classical propped-cantilever collapse load through real WASM  301ms
+ ✓ |node| tests/buildSurfaceInspection.test.ts (2 tests) 298ms
+ ✓ |node| tests/brepGraphNativeConstructors.test.ts (3 tests) 301ms
+ ✓ |node| tests/cadNativeAffine.test.ts (3 tests) 302ms
+ ✓ |node| tests/modalAnalysis.test.ts (2 tests) 300ms
+ ✓ |node| tests/structuralDiagnostics.test.ts (3 tests) 300ms
+ ✓ |node| tests/brepDisplay.test.ts (1 test) 292ms
+ ✓ |node| tests/nativeSketchGeometry.test.ts (15 tests) 294ms
+ ✓ |node| tests/cadQuantity.test.ts (15 tests) 291ms
+ ✓ |node| tests/browserQualificationSupervisor.test.ts (7 tests) 296ms
+ ✓ |node| tests/latticePrintSettings.test.ts (15 tests) 296ms
+ ✓ |node| tests/meshToolpathHostApi.test.ts (13 tests) 291ms
+ ✓ |node| tests/rushGraphScopedAssertions.test.ts (33 tests) 271ms
+ ✓ |node| tests/rushGraphTraitMethods.test.ts (35 tests) 282ms
+ ✓ |node| tests/sweepViewportEvidence.test.ts (16 tests) 294ms
+ ✓ |node| tests/photoAdapters.test.ts (10 tests) 285ms
+ ✓ |node| tests/trussAnalysis.test.ts (7 tests) 288ms
+ ✓ |node| tests/rushGraphConciseSyntax.test.ts (30 tests) 285ms
+ ✓ |node| tests/openScadProjectEvaluator.test.ts (14 tests) 285ms
+ ✓ |node| tests/brepDirectStepV3.test.ts (2 tests) 290ms
+ ✓ |node| tests/nativeMeshPicking.test.ts (3 tests) 285ms
+ ✓ |node| tests/nativeFileExport.test.ts (4 tests) 282ms
+ ✓ |node| tests/gcodeConfiguredJob.test.ts (3 tests) 280ms
+ ✓ |node| tests/photogrammetry.test.ts (5 tests) 280ms
+ ✓ |node| tests/webgpuRendererResources.test.ts (20 tests) 282ms
+ ✓ |node| tests/nonlinearTruss.test.ts (2 tests) 279ms
+ ✓ |node| tests/laserCamHostApi.test.ts (5 tests) 275ms
+ ✓ |node| tests/geometryCompute.test.ts (7 tests) 276ms
+ ✓ |node| tests/trussScenario.test.ts (9 tests) 270ms
+ ✓ |node| tests/meshBvh.test.ts (11 tests) 271ms
+ ✓ |node| tests/nurbsPlanarRmfSweep.test.ts (6 tests) 273ms
+ ✓ |node| tests/meshImportKernel.test.ts (2 tests) 275ms
+ ✓ |node| tests/bondedSolid.test.ts (4 tests) 266ms
+ ✓ |node| tests/thermalStrength.test.ts (3 tests) 265ms
+ ✓ |node| tests/trussScreening.test.ts (5 tests) 262ms
+ ✓ |node| tests/nativeSolidPlacement.test.ts (3 tests) 262ms
+ ✓ |node| tests/nativePickingCache.test.ts (1 test) 270ms
+ ✓ |node| tests/stlImport.test.ts (10 tests) 266ms
+ ✓ |node| tests/thinWalledSection.test.ts (2 tests) 273ms
+ ✓ |node| tests/rushFrontend.test.ts (15 tests) 260ms
+ ✓ |node| tests/nativeExportPreparation.test.ts (1 test) 262ms
+ ✓ |node| tests/spatialBishopSurface.test.ts (4 tests) 260ms
+ ✓ |node| tests/nurbsErrorComposition.test.ts (2 tests) 259ms
+ ✓ |node| tests/openscadStableExpressionDirect.test.ts (10 tests) 255ms
+ ✓ |node| tests/rushGraphPreview.test.ts (3 tests) 252ms
+ ✓ |node| tests/rushGraphPatternMatching.test.ts (140 tests) 255ms
+ ✓ |node| tests/openscadStableModifiers.test.ts (16 tests) 247ms
+ ✓ |node| tests/rushGraphTraits.test.ts (34 tests) 253ms
+ ✓ |node| tests/rushGraphRanges.test.ts (22 tests) 245ms
+ ✓ |node| tests/rushGraphLinq.test.ts (75 tests) 241ms
+ ✓ |node| tests/rushGraphBlockFunctions.test.ts (50 tests) 232ms
+ ✓ |node| tests/solidRetainedLoft.test.ts (3 tests) 237ms
+ ✓ |node| tests/semanticProgram.test.ts (57 tests) 225ms
+ ✓ |node| tests/openscadStablePrimitiveTransformWiring.test.ts (7 tests) 223ms
+ ✓ |node| tests/independentOpenScadFunctionsConformance.test.ts (2 tests) 218ms
+ ✓ |node| tests/solidSceneEditCache.test.ts (3 tests) 219ms
+ ✓ |node| tests/mainSourceEditing.test.ts (4 tests) 227ms
+ ✓ |node| tests/svgDocument.test.ts (8 tests) 224ms
+ ✓ |node| tests/openscadStableModuleSlice.test.ts (11 tests) 225ms
+ ✓ |node| tests/openScadText.test.ts (9 tests) 216ms
+ ✓ |node| tests/rushGraphMatch.test.ts (9 tests) 221ms
+ ✓ |node| tests/openscadStableCompatibilityDirect.test.ts (2 tests) 225ms
+ ✓ |node| tests/rushGraphConditional.test.ts (7 tests) 223ms
+ ✓ |node| tests/openscadStableModuleResolution.test.ts (4 tests) 223ms
+ ✓ |node| tests/openscadStableComposition.test.ts (4 tests) 221ms
+ ✓ |node| tests/rushGraphOverloads.test.ts (13 tests) 211ms
+ ✓ |node| tests/rushGraphFluent.test.ts (15 tests) 220ms
+ ✓ |node| tests/nativeOpenScadResize.test.ts (4 tests) 199ms
+ ✓ |node| tests/svgGeometry.test.ts (6 tests) 199ms
+ ✓ |node| tests/openscadStableScoping.test.ts (5 tests) 197ms
+ ✓ |node| tests/nurbsSurfaceOffset.test.ts (10 tests) 186ms
+ ✓ |node| tests/surfaceGroupsKernel.test.ts (2 tests) 180ms
+ ✓ |node| tests/cadGeometryKernel.test.ts (10 tests) 179ms
+ ✓ |node| tests/geometryWorkerProtocol.test.ts (23 tests) 175ms
+ ✓ |node| tests/nurbsOffsetEnvelope.test.ts (5 tests) 180ms
+ ✓ |node| tests/openScadBuiltinLaziness.test.ts (2 tests) 175ms
+(node:6610) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |node| tests/openScadStableRuntimeIntegration.test.ts (4 tests) 175ms
+ ✓ |node| tests/nurbsScalarSweep.test.ts (5 tests) 177ms
+ ✓ |node| tests/modelingSnaps.test.ts (17 tests) 165ms
+ ✓ |node| tests/rushGraphAssertionTargets.test.ts (2 tests) 165ms
+ ✓ |node| tests/numericSketchAuthoring.test.ts (6 tests) 160ms
+ ✓ |node| tests/curveOffsetConstruction.test.ts (3 tests) 163ms
+ ✓ |node| tests/geometryKernelModuleDelivery.test.ts (3 tests) 162ms
+ ✓ |node| tests/openScadStableTransformNativeParity.test.ts (9 tests) 150ms
+ ✓ |node| tests/mainSolidWorker.test.ts (2 tests) 132ms
+ ✓ |node| tests/meshHistory.test.ts (4 tests) 147ms
+ ✓ |node| tests/svgProjectionValidation.test.ts (5 tests) 152ms
+ ✓ |node| tests/gpuWboit.test.ts (10 tests) 132ms
+ ✓ |node| tests/gpuPicker.test.ts (9 tests) 130ms
+ ✓ |node| tests/mainSolidWorkerTransport.test.ts (4 tests) 132ms
+ ✓ |node| tests/openScadProject.test.ts (9 tests) 139ms
+ ✓ |node| tests/staticToolSchemas.test.ts (1 test) 132ms
+ ✓ |node| tests/rushGraphRustRuntime.test.ts (13 tests) 126ms
+ ✓ |node| tests/mcpProductionIsolationContract.test.ts (6 tests) 103ms
+ ✓ |node| tests/wasmPacking.test.ts (3 tests) 97ms
+ ✓ |node| tests/openScadStableModuleSemantics.test.ts (9 tests) 99ms
+ ✓ |node| tests/nurbsClosedAuthoredFrameSmoothness.test.ts (5 tests) 115ms
+ ✓ |node| tests/directHistory.test.ts (5 tests) 85ms
+ ✓ |node| tests/nurbsRetainedProfileJoin.test.ts (5 tests) 125ms
+ ✓ |node| tests/geometryWorkerPool.test.ts (6 tests) 79ms
+ ✓ |node| tests/rushGraphRustFrontend.test.ts (6 tests) 87ms
+ ✓ |node| tests/openScadStablePolyhedronNativeParity.test.ts (2 tests) 86ms
+ ✓ |node| tests/mcpManifoldPlanQualificationWorker.test.ts (1 test) 70ms
+ ✓ |node| tests/rushGraphCompiler.test.ts (3 tests) 76ms
+ ✓ |node| tests/nurbsScaledSweepLanguage.test.ts (1 test) 68ms
+ ✓ |node| tests/openscadRustFrontend.test.ts (29 tests) 69ms
+ ✓ |node| tests/openScadStableBoxNativeParity.test.ts (2 tests) 66ms
+ ✓ |node| tests/officialOpenScadRuntimeProtocol.test.ts (6 tests) 63ms
+ ✓ |node| tests/codeFormat.test.ts (5 tests) 62ms
+ ✓ |node| tests/openScadDegreeMath.test.ts (4 tests) 59ms
+ ✓ |node| tests/openScadProjectCompiler.test.ts (12 tests) 57ms
+ ✓ |node| tests/nativeOpenScadExtrudeSlices.test.ts (2 tests) 58ms
+ ✓ |node| tests/officialOpenScadRuntimeSetup.test.ts (13 tests) 60ms
+ ✓ |node| tests/nurbsRetainedSweepSmoothness.test.ts (13 tests) 66ms
+ ✓ |node| tests/openscadRustEvaluator.test.ts (15 tests) 57ms
+ ✓ |node| tests/openScadStableIndexedPolicyParity.test.ts (1 test) 55ms
+ ✓ |node| tests/openScadLegacySegments.test.ts (2 tests) 54ms
+ ✓ |node| tests/wasmStreaming.test.ts (10 tests) 57ms
+ ✓ |node| tests/openScadStableGeometrySemantics.test.ts (14 tests) 54ms
+ ✓ |node| tests/openScadStableTransformSemantics.test.ts (7 tests) 55ms
+ ✓ |node| tests/browserMemoryQualificationRunner.test.ts (14 tests) 52ms
+ ✓ |node| tests/openScadStablePrimitiveSemantics.test.ts (8 tests) 54ms
+ ✓ |node| tests/openScadStableTransformRequests.test.ts (1 test) 52ms
+ ✓ |node| tests/qualificationPlanArtifact.test.ts (10 tests) 53ms
+ ✓ |node| tests/photoCalibrationKernel.test.ts (2 tests) 38ms
+ ✓ |node| tests/manifoldPlanQualificationWorkerLane.test.ts (4 tests) 40ms
+ ✓ |node| tests/gpuMarchingCubes.test.ts (5 tests) 33ms
+ ✓ |node| tests/vrScene.test.ts (6 tests) 32ms
+ ✓ |node| tests/brepQualificationV11.test.ts (2 tests) 30ms
+ ✓ |node| tests/brepQualificationV5.test.ts (5 tests) 31ms
+ ✓ |node| tests/mainModeling.test.ts (9 tests) 49ms
+ ✓ |node| tests/rushGraphSchema.test.ts (2 tests) 42ms
+ ✓ |node| tests/openscadStableExpressionSemantics.test.ts (11 tests) 33ms
+ ✓ |node| tests/brepQualificationV12.test.ts (3 tests) 31ms
+ ✓ |node| tests/brepQualificationV6.test.ts (3 tests) 29ms
+ ✓ |node| tests/openscadStableCompatibilitySemantics.test.ts (5 tests) 28ms
+ ✓ |node| tests/profileIntersectionsProtocol.test.ts (13 tests) 32ms
+ ✓ |node| tests/openScadSurface.test.ts (4 tests) 23ms
+ ✓ |node| tests/photoDensePreset.test.ts (5 tests) 23ms
+ ✓ |node| tests/geometryRoutingContract.test.ts (48 tests) 30ms
+ ✓ |node| tests/photoWorker.test.ts (17 tests) 11ms
+ ✓ |node| tests/engineManifest.test.ts (3 tests) 19ms
+ ✓ |node| tests/workspaceShare.test.ts (3 tests) 19ms
+ ✓ |node| tests/solidDraftStore.test.ts (3 tests) 13ms
+ ✓ |node| tests/directDocumentNormalization.test.ts (11 tests) 21ms
+ ✓ |node| tests/openScadBuiltinFunctions.test.ts (16 tests) 17ms
+ ✓ |node| tests/openScadStablePolygonNativeParity.test.ts (1 test) 17ms
+ ✓ |node| tests/solidDisplayQueue.test.ts (9 tests) 16ms
+ ✓ |node| tests/multithreadingAndAsync.test.ts (3 tests) 17ms
+ ✓ |node| tests/surfaceGroupContentCache.test.ts (5 tests) 16ms
+ ✓ |node| tests/gcodePreviewWorker.test.ts (23 tests) 15ms
+ ✓ |node| tests/brepQualificationReleaseGate.test.ts (4 tests) 16ms
+ ✓ |node| tests/sceneAabbIndex.test.ts (6 tests) 14ms
+ ✓ |node| tests/workspaceIndexedDb.test.ts (25 tests) 14ms
+ ✓ |node| tests/rushGraphNurbsRuntime.test.ts (14 tests) 12ms
+ ✓ |node| tests/buildCoordinator.test.ts (43 tests) 13ms
+ ✓ |node| tests/scaleTargets.test.ts (2 tests) 14ms
+ ✓ |node| tests/mcpPublicError.test.ts (8 tests) 15ms
+ ✓ |node| tests/geometryPackingPublication.test.ts (2 tests) 10ms
+ ✓ |node| tests/predicateCandidateCorpus.test.ts (3 tests) 11ms
+ ✓ |node| tests/solidDraftHeadStore.test.ts (5 tests) 10ms
+ ✓ |node| tests/solidDisplayCache.test.ts (2 tests) 10ms
+ ✓ |node| tests/brepFoundationDependencyGate.test.ts (4 tests) 9ms
+ ✓ |node| tests/mainSolidWorkerClient.test.ts (28 tests) 9ms
+ ✓ |node| tests/gpuCsgPreview.test.ts (13 tests) 9ms
+ ✓ |node| tests/nurbsProgressiveSweepCapProjection.test.ts (3 tests) 11ms
+ ✓ |node| tests/svgWorker.test.ts (14 tests) 9ms
+ ✓ |node| tests/webgpuRendererBindGroups.test.ts (17 tests) 8ms
+ ✓ |node| tests/svgDraftStore.test.ts (7 tests) 11ms
+ ✓ |node| tests/runtimeGeometryActualBinding.test.ts (1 test) 8ms
+ ✓ |node| tests/webgpuRendererShadows.test.ts (11 tests) 9ms
+ ✓ |node| tests/mcpGeometryInitialization.test.ts (6 tests) 10ms
+ ✓ |node| tests/gpuNurbsTessellate.test.ts (7 tests) 8ms
+ ✓ |node| tests/sceneListWindow.test.ts (3 tests) 7ms
+ ✓ |node| tests/parameterPresets.test.ts (4 tests) 8ms
+ ✓ |node| tests/g0ContractPackArtifacts.test.ts (2 tests) 7ms
+ ✓ |node| tests/commandSearch.test.ts (13 tests) 7ms
+ ✓ |node| tests/openScad2021Contract.test.ts (9 tests) 6ms
+ ✓ |node| tests/viewFrustum.test.ts (4 tests) 6ms
+ ✓ |node| tests/vrSession.test.ts (4 tests) 6ms
+ ✓ |node| tests/shaderLibrary.test.ts (35 tests) 6ms
+ ✓ |node| tests/photoCalibration.test.ts (7 tests) 6ms
+ ✓ |node| tests/webgpuRendererLifecycle.test.ts (6 tests) 6ms
+ ✓ |node| tests/meshSelectionOverlay.test.ts (9 tests) 6ms
+ ✓ |node| tests/webgpuRendererMatcap.test.ts (5 tests) 6ms
+ ✓ |node| tests/openscadCompiler.test.ts (13 tests) 6ms
+ ✓ |node| tests/predicateOracleV1.test.ts (13 tests) 6ms
+ ✓ |node| tests/webgpuRendererEnv.test.ts (4 tests) 6ms
+ ✓ |node| tests/drawingSpecification.test.ts (5 tests) 6ms
+ ✓ |node| tests/progressiveAnnularViewportEvidence.test.ts (2 tests) 6ms
+ ✓ |node| tests/geometryManifestArchiveIsolation.test.ts (1 test) 6ms
+ ✓ |node| tests/themeCustomization.test.ts (13 tests) 6ms
+ ✓ |node| tests/previewSolidCurveOffset.test.ts (2 tests) 5ms
+ ✓ |node| tests/solidCurveOffset.test.ts (7 tests) 6ms
+ ✓ |node| tests/brepQualificationV4.test.ts (5 tests) 5ms
+ ✓ |node| tests/progressiveAnnularTransport.test.ts (12 tests) 5ms
+ ✓ |node| tests/autoBuildScheduler.test.ts (6 tests) 4ms
+ ✓ |node| tests/nativeViewport.test.ts (5 tests) 5ms
+ ✓ |node| tests/openscadBinder.test.ts (5 tests) 5ms
+ ✓ |node| tests/commandRegistry.test.ts (11 tests) 4ms
+ ✓ |node| tests/sourceSeamTransport.test.ts (1 test) 4ms
+ ✓ |node| tests/directGeometryProtocol.test.ts (5 tests) 5ms
+ ✓ |node| tests/g1BrowserPayloadTree.test.ts (3 tests) 4ms
+ ✓ |node| tests/workspaceDocument.test.ts (7 tests) 4ms
+ ✓ |node| tests/solidTrimmedCurveOffset.test.ts (7 tests) 4ms
+ ✓ |node| tests/brepQualificationV19.test.ts (2 tests) 4ms
+ ✓ |node| tests/transparentOrdering.test.ts (4 tests) 4ms
+ ✓ |node| tests/webgpuComputeFeatures.test.ts (3 tests) 4ms
+ ✓ |node| tests/solidGeometryDisplayQueue.test.ts (2 tests) 5ms
+ ✓ |node| tests/meshInstances.test.ts (6 tests) 4ms
+ ✓ |node| tests/gcodePreviewTransport.test.ts (2 tests) 4ms
+ ✓ |node| tests/gcodePreviewWorkerTransport.test.ts (4 tests) 4ms
+ ✓ |node| tests/webgpuRendererSectionCap.test.ts (3 tests) 4ms
+ ✓ |node| tests/textureResources.test.ts (6 tests) 4ms
+ ✓ |node| tests/g0LegacyGoldenCorpus.test.ts (4 tests) 5ms
+ ✓ |node| tests/gpuBvhRaycast.test.ts (4 tests) 3ms
+ ✓ |node| tests/topologyLineage.test.ts (2 tests) 4ms
+ ✓ |node| tests/brepQualificationV17.test.ts (2 tests) 3ms
+ ✓ |node| tests/g2RunoutWorkerClient.test.ts (2 tests) 4ms
+ ✓ |node| tests/brepQualificationV14.test.ts (2 tests) 3ms
+ ✓ |node| tests/sdfGpuBatch.test.ts (6 tests) 4ms
+ ✓ |node| tests/g0ProtocolAndComparator.test.ts (4 tests) 3ms
+ ✓ |node| tests/coreScene.test.ts (6 tests) 4ms
+ ✓ |node| tests/boundedSceneEntityId.test.ts (1 test) 3ms
+ ✓ |node| tests/solidGpuFallback.test.ts (5 tests) 3ms
+ ✓ |node| tests/latticeGraphProtocol.test.ts (2 tests) 4ms
+ ✓ |node| tests/math3d.test.ts (9 tests) 4ms
+ ✓ |node| tests/sourceWallCoverageTransport.test.ts (6 tests) 3ms
+ ✓ |node| tests/textSearch.test.ts (3 tests) 3ms
+ ✓ |node| tests/safeStorage.test.ts (5 tests) 3ms
+ ✓ |node| tests/brepQualificationV13.test.ts (2 tests) 3ms
+ ✓ |node| tests/adr0005AcceptanceEvidence.test.ts (3 tests) 3ms
+ ✓ |node| tests/meshDrawBundle.test.ts (5 tests) 3ms
+ ✓ |node| tests/webgpuRendererVisibility.test.ts (2 tests) 3ms
+ ✓ |node| tests/webgpuRendererGrid.test.ts (4 tests) 3ms
+ ✓ |node| tests/svgDocumentAsync.test.ts (3 tests) 3ms
+ ✓ |node| tests/directProjectionBasis.test.ts (2 tests) 3ms
+ ✓ |node| tests/brepProductSeam.test.ts (3 tests) 3ms
+ ✓ |node| tests/brepQualificationV16.test.ts (2 tests) 3ms
+ ✓ |node| tests/brepQualificationV15.test.ts (2 tests) 3ms
+ ✓ |node| tests/profileIntersectionDiagnostics.test.ts (8 tests) 3ms
+ ✓ |node| tests/webgpuFeatures.test.ts (10 tests) 3ms
+ ✓ |node| tests/openScadValueSemantics.test.ts (5 tests) 3ms
+ ✓ |node| tests/gpuZeroCopyPipeline.test.ts (6 tests) 3ms
+ ✓ |node| tests/meshInspection.test.ts (9 tests) 3ms
+ ✓ |node| tests/brepQualificationV18.test.ts (2 tests) 3ms
+ ✓ |node| tests/clonedBufferBudget.test.ts (2 tests) 3ms
+ ✓ |node| tests/photoGpuMatching.test.ts (3 tests) 3ms
+ ✓ |node| tests/selectionCycling.test.ts (7 tests) 3ms
+ ✓ |node| tests/sourceWallTransport.test.ts (4 tests) 3ms
+ ✓ |node| tests/webgpuRendererBounds.test.ts (6 tests) 3ms
+ ✓ |node| tests/g2RunoutSurfaceBuild.test.ts (2 tests) 3ms
+ ✓ |node| tests/solidSnapPreparation.test.ts (2 tests) 3ms
+ ✓ |node| tests/editorDiagnostics.test.ts (3 tests) 3ms
+ ✓ |node| tests/featureParity.test.ts (1 test) 3ms
+ ✓ |node| tests/independentArtifactCache.test.ts (2 tests) 2ms
+ ✓ |node| tests/shaderVariantsGolden.test.ts (17 tests) 3ms
+ ✓ |node| tests/officialArtifactCache.test.ts (3 tests) 2ms
+ ✓ |node| tests/gpuImageTrace.test.ts (3 tests) 3ms
+ ✓ |node| tests/gpuSubdivision.test.ts (4 tests) 3ms
+ ✓ |node| tests/cameraHistory.test.ts (7 tests) 3ms
+ ✓ |node| tests/currentChainProtocol.test.ts (1 test) 2ms
+ ✓ |node| tests/gpuSemanticEdges.test.ts (6 tests) 2ms
+ ✓ |node| tests/g2RunoutTransport.test.ts (3 tests) 2ms
+ ✓ |node| tests/printerCompanion.test.ts (2 tests) 3ms
+ ✓ |node| tests/scenePublication.test.ts (6 tests) 2ms
+ ✓ |node| tests/buildPromotionPolicy.test.ts (11 tests) 2ms
+ ✓ |node| tests/sdfKernelGpu.test.ts (2 tests) 2ms
+ ✓ |node| tests/exampleCatalog.test.ts (3 tests) 2ms
+ ✓ |node| tests/sceneController.test.ts (3 tests) 2ms
+ ✓ |node| tests/wasmCompilation.test.ts (2 tests) 2ms
+ ✓ |node| tests/photoGpuSweep.test.ts (2 tests) 3ms
+ ✓ |node| tests/solidSketchSnapPreparation.test.ts (2 tests) 2ms
+ ✓ |node| tests/gpuSlicer.test.ts (5 tests) 2ms
+ ✓ |node| tests/virtualFileSystem.test.ts (2 tests) 2ms
+ ✓ |node| tests/selectionSurfacePublisher.test.ts (2 tests) 2ms
+ ✓ |node| tests/scanPlaneAnimation.test.ts (5 tests) 2ms
+ ✓ |node| tests/codeHighlight.test.ts (4 tests) 2ms
+ ✓ |node| tests/buildPerformance.test.ts (3 tests) 2ms
+ ✓ |node| tests/scadCustomizer.test.ts (3 tests) 2ms
+ ✓ |node| tests/profileSweepProtocol.test.ts (3 tests) 2ms
+ ✓ |node| tests/editorBlocks.test.ts (4 tests) 2ms
+ ✓ |node| tests/curveOffsetProtocol.test.ts (1 test) 2ms
+ ✓ |node| tests/themePreferences.test.ts (3 tests) 2ms
+ ✓ |node| tests/gpuTrussSolver.test.ts (3 tests) 2ms
+ ✓ |node| tests/runtimeGeometryIdentityAudit.test.ts (3 tests) 2ms
+ ✓ |node| tests/geometryTransformTransition.test.ts (2 tests) 2ms
+ ✓ |node| tests/sourceWallScanTransport.test.ts (2 tests) 2ms
+ ✓ |node| tests/curveOffsetPreview.test.ts (2 tests) 2ms
+ ✓ |node| tests/inspectCurrentCurveChain.test.ts (1 test) 2ms
+ ✓ |node| tests/topologyIdlV1.test.ts (2 tests) 2ms
+ ✓ |node| tests/gpuGcodePreview.test.ts (3 tests) 2ms
+ ✓ |node| tests/annularG2Evidence.test.ts (2 tests) 2ms
+ ✓ |node| tests/openScadStableRuntime.test.ts (3 tests) 2ms
+ ✓ |node| tests/cpuOrbitPaint.test.ts (2 tests) 2ms
+ ✓ |node| tests/sourceSplice.test.ts (2 tests) 2ms
+ ✓ |node| tests/g0RefusalPrecedenceMatrix.test.ts (2 tests) 2ms
+ ✓ |node| tests/photoTransportBudget.test.ts (1 test) 2ms
+ ✓ |node| tests/reproducibleCargo.test.ts (4 tests) 2ms
+ ✓ |node| tests/backendQuality.test.ts (3 tests) 2ms
+ ✓ |node| tests/rendererRecoveryGate.test.ts (3 tests) 2ms
+ ✓ |node| tests/adaptiveMemoryBudget.test.ts (3 tests) 2ms
+ ✓ |node| tests/laserProfiles.test.ts (2 tests) 2ms
+ ✓ |node| tests/layoutSizing.test.ts (2 tests) 2ms
+ ✓ |node| tests/viewportModel.test.ts (2 tests) 2ms
+ ✓ |node| tests/curveOffsetDiagnostics.test.ts (3 tests) 2ms
+ ✓ |node| tests/viewportController.test.ts (1 test) 1ms
+ ✓ |node| tests/topologySiblingCowV1.test.ts (3 tests) 2ms
+ ✓ |node| tests/cadNurbsStep.test.ts (1 test) 2ms
+ ✓ |node| tests/edgeSelection.test.ts (3 tests) 1ms
+ ✓ |node| tests/sdfGpuVariants.test.ts (2 tests) 2ms
+ ✓ |node| tests/displayPolicy.test.ts (4 tests) 2ms
+ ✓ |node| tests/geometrySceneV2Oracle.test.ts (2 tests) 2ms
+ ✓ |node| tests/sourceFileExtension.test.ts (2 tests) 1ms
+ ✓ |node| tests/ownRustCadArtifact.test.ts (2 tests) 1ms
+ ✓ |node| tests/cadAnalyticStep.test.ts (1 test) 1ms
+ ✓ |node| tests/solidImportErrorMessage.test.ts (2 tests) 1ms
+ ✓ |node| tests/rovingFocus.test.ts (2 tests) 1ms
+ ↓ |node| tests/mcpOfficialRuntimeStdio.test.ts (1 test | 1 skipped)
+ ↓ |node| tests/cadMixedUiEvidence.test.ts (3 tests | 3 skipped)
+ ↓ |node| tests/g2RunoutWasmWorker.test.ts (1 test | 1 skipped)
+ ↓ |node| tests/solidInstanceRestoreProfile.test.ts (1 test | 1 skipped)
+ ↓ |node| tests/officialOpenScadRuntimeConformance.test.ts (4 tests | 4 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/g1GithubActionsQualification.test.ts > G1 V34 GitHub Actions evidence integrity > binds the evidence producers and preserves the exact 4740-unit no-claim matrix
+AssertionError: expected [Function] to not throw an error but 'Error: harness binding mismatch' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"Error: harness binding mismatch"
+
+ ❯ tests/g1GithubActionsQualification.test.ts:195:61
+    193|       'scripts/run-g1-ubuntu-docker-fragment.mjs',
+    194|     ]))
+    195|     expect(() => validateHarnessBinding(harnessBundle)).not.toThrow()
+       |                                                             ^
+    196|     expect(digest(readFileSync(resolve(root, 'docs/qualification/seman…
+    197|       .toBe('27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 676 passed | 5 skipped (682)
+      Tests  1 failed | 6157 passed | 10 skipped (6168)
+   Start at  19:11:56
+   Duration  425.03s (transform 13.15s, setup 0ms, import 89.35s, tests 1553.86s, environment 168ms)
+
+JSON report written to /tmp/osv-r15-vitest-full.json

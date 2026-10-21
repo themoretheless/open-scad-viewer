@@ -36,7 +36,7 @@ type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = SolidAn
 #[derive(Default)]
 struct AnalysisJobs {
     next: u32,
-    jobs: std::collections::BTreeMap<u32, AnalysisFuture>,
+    jobs: [Option<(u32, AnalysisFuture)>; MAX_ANALYSIS_JOBS],
 }
 thread_local! {
     static JOBS: std::cell::RefCell<AnalysisJobs> = std::cell::RefCell::new(AnalysisJobs::default());
@@ -55,16 +55,18 @@ pub fn start_solid_analysis(
     }
     JOBS.with(|jobs| {
         let mut jobs = jobs.borrow_mut();
-        if jobs.jobs.len() >= MAX_ANALYSIS_JOBS {
-            return Err(crate::input("Solid analysis job budget exceeded"));
-        }
+        let slot_idx = jobs
+            .jobs
+            .iter()
+            .position(|slot| slot.is_none())
+            .ok_or_else(|| crate::input("Solid analysis job budget exceeded"))?;
         let next = jobs
             .next
             .checked_add(1)
             .ok_or_else(|| crate::input("Solid analysis job IDs exhausted"))?;
         crate::mesh::check_analysis_triangle_budget(id, MAX_ANALYSIS_TRIANGLES)?;
         let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
-        jobs.jobs.insert(
+        jobs.jobs[slot_idx] = Some((
             next,
             Box::pin(async move {
                 let bvh = mesh_query::build_mesh_bvh_cooperative(
@@ -96,7 +98,7 @@ pub fn start_solid_analysis(
                 .await;
                 SolidAnalysis { mesh, bvh, edges }
             }),
-        );
+        ));
         jobs.next = next;
         Ok(next)
     })
@@ -107,15 +109,17 @@ pub fn start_solid_analysis(
 pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
     JOBS.with(|jobs| {
         let mut jobs = jobs.borrow_mut();
-        let future = jobs
+        let slot_idx = jobs
             .jobs
-            .get_mut(&id)
+            .iter()
+            .position(|slot| matches!(slot, Some((job_id, _)) if *job_id == id))
             .ok_or_else(|| crate::input("Unknown or completed solid analysis job"))?;
+        let future = &mut jobs.jobs[slot_idx].as_mut().unwrap().1;
         let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
         match future.as_mut().poll(&mut cx) {
             std::task::Poll::Pending => Ok(0),
             std::task::Poll::Ready(result) => {
-                jobs.jobs.remove(&id);
+                jobs.jobs[slot_idx] = None;
                 Ok(store(AnalysisBuffers::Solid(result)))
             }
         }
@@ -125,7 +129,12 @@ pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
 /// Idempotent cancellation drops all unfinished scratch and owned input data.
 pub fn cancel_solid_analysis(id: u32) {
     JOBS.with(|jobs| {
-        jobs.borrow_mut().jobs.remove(&id);
+        let mut jobs = jobs.borrow_mut();
+        for slot in &mut jobs.jobs {
+            if matches!(slot, Some((job_id, _)) if *job_id == id) {
+                *slot = None;
+            }
+        }
     });
 }
 
@@ -475,7 +484,7 @@ mod cooperative_tests {
         start_solid_analysis(id, 0.6, 0.8, 8).unwrap()
     }
     fn live() -> usize {
-        JOBS.with(|jobs| jobs.borrow().jobs.len())
+        JOBS.with(|jobs| jobs.borrow().jobs.iter().flatten().count())
     }
 
     #[test]

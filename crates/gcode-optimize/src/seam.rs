@@ -1,7 +1,7 @@
 use gcode_core::PlannedPath;
 
 use crate::SeamPrefer;
-use crate::travel::dist;
+use crate::travel::dist_sq;
 
 pub fn rotate_seam(path: &mut PlannedPath, prefer: SeamPrefer, previous: Option<[f64; 2]>) -> bool {
     if !path.closed || path.points.len() < 3 {
@@ -13,7 +13,7 @@ pub fn rotate_seam(path: &mut PlannedPath, prefer: SeamPrefer, previous: Option<
             path.points
                 .iter()
                 .enumerate()
-                .min_by(|(_, a), (_, b)| dist(**a, from).total_cmp(&dist(**b, from)))
+                .min_by(|(_, a), (_, b)| dist_sq(**a, from).total_cmp(&dist_sq(**b, from)))
                 .map(|(i, _)| i)
                 .unwrap_or(0)
         }

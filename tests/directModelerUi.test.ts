@@ -11,6 +11,13 @@ import * as transparencyKernel from '../src/services/geometry/transparentBspKern
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
 beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue');await import('../src/components/ProfileIntersectionPresentation.vue')})
+
+beforeAll(async()=>{
+ // Native geometry fixtures need the same initialized runtime as interactions
+ // in the browser; cold compilation belongs to setup, not one selected test.
+ await geometryKernel.warmGeometryKernel()
+ await import('../src/components/CurvePointTrimControls.vue')
+})
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
@@ -59,10 +66,11 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {applySolidPointEdit}=await import('../src/services/solidPointEdit')
  const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
  const {applySolidBoolean}=await import('../src/services/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
  const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
- return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
+ return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='minkowski3d'?applySolidMinkowski(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{previewWorkerRun.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
 const svgWorkerRun=vi.hoisted(()=>vi.fn())
@@ -314,6 +322,27 @@ it('previews, applies and undoes a qualified exact fillet from an edge pick',asy
  expect(analyzeNurbsBrep(body.brep!).signedVolumeMm3).toBeCloseTo(8000-(1-Math.PI/4)*80,5)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('↷');expect(ui.doc().bodies.at(-1)!.brep).toEqual(body.brep)
+})
+
+it.each([1,2])('lets navigation button %i over an edge reach the canvas without changing selection or geometry',async button=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Edges')
+ const before=ui.doc(),svg=ui.svg(),edge=ui.all(svg).find(n=>n.props['data-topology-edge'])!
+ const stopPropagation=vi.fn(),event={...ui.event(edge),button,stopPropagation}
+ edge.props.onPointerdown(event);await nextTick()
+ expect(stopPropagation).not.toHaveBeenCalled()
+ expect(edge.props['aria-pressed']).toBe(false)
+ // This renderer does not bubble DOM events. Deliver the unconsumed event
+ // to its SVG parent, then exercise the actual camera gesture.
+ const initialPoints=edge.props.points,initialView=svg.props.viewBox
+ svg.props.onPointerdown({...event,currentTarget:svg});await flushClearance()
+ svg.props.onPointermove({...ui.event(svg,30,15),button});await flushClearance()
+ if(button===2)expect(edge.props.points).not.toEqual(initialPoints)
+ else expect(svg.props.viewBox).not.toEqual(initialView)
+ svg.props.onPointerup({...ui.event(svg,30,15),button});await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ edge.props.onPointerdown({...ui.event(edge),stopPropagation});await nextTick()
+ expect(stopPropagation).toHaveBeenCalledOnce()
+ expect(edge.props['aria-pressed']).toBe(true)
 })
 
 it('locates an oversized fillet and recovers after reducing its radius',async()=>{
@@ -2076,6 +2105,7 @@ it('keeps the latest transform preview and drops an instance response after Esca
 
 it('discards Boolean replies after Escape, operand changes, document edits and panel close',async()=>{
  const {applySolidBoolean}=await import('../src/services/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,4)
@@ -2734,6 +2764,56 @@ it('cancels primitive construction on Escape, parameter change and closure, then
  expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete primitive failure')
 })
 
+it('cancels stale G2 tube requests and retries with the corrected transition size',async()=>{
+ const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const ui=await mount(),before=ui.doc()
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const toggle=ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes('G2 tube end transitions'))!
+ toggle.props['onUpdate:modelValue'](true);await flushClearance()
+ const extent=ui.all().find(n=>n.tag==='input'&&n.props.step==='0.1'&&n.parent&&ui.text(n.parent).includes('G2 transition size'))!
+ await ui.click('Tube');expect(requests[0].job.options.g2TransitionSize).toBe(.5)
+ extent.props['onUpdate:modelValue'](.25);await flushClearance()
+ requests[0].reject(Error('obsolete G2 failure'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete G2 failure')
+ await ui.click('Tube');requests[1].reject(Error('BREP_G2_ANNULAR_LIMITS'));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Check the inner radius')
+ extent.props['onUpdate:modelValue'](.1);await flushClearance();await ui.click('Retry creation')
+ expect(requests[2].job.options.g2TransitionSize).toBe(.1)
+ requests[2].resolve(addSolidPrimitive(requests[2].job.document,requests[2].job.options));await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ expect(ui.doc().bodies.at(-1)!.brep!.faces).toHaveLength(32)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('Tube');await commandKey(ui,'Escape')
+ requests[3].resolve(addSolidPrimitive(requests[3].job.document,requests[3].job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+})
+
+it('keeps independent end transitions through cancellation, Retry and history',async()=>{
+ const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const ui=await mount(),before=ui.doc()
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const toggle=(text:string)=>ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes(text))!
+ toggle('G2 tube end transitions').props['onUpdate:modelValue'](true);await flushClearance()
+ toggle('Individual tube transitions').props['onUpdate:modelValue'](true);await flushClearance()
+ async function extent(text:string,value:number){ui.all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.parent&&ui.text(n.parent).includes(text))!.props.onInput({target:{valueAsNumber:value}});await flushClearance()}
+ await extent('Outer bottom',.1);await extent('Outer top',.25);await extent('Inner top',.5);await extent('Inner bottom',.75)
+ await ui.click('Tube');expect(requests[0].job.options.g2TransitionSizes).toEqual([.1,.25,.5,.75])
+ await extent('Inner bottom',.6)
+ requests[0].resolve(addSolidPrimitive(requests[0].job.document,requests[0].job.options));await flushClearance();expect(ui.doc()).toEqual(before)
+ await ui.click('Tube');requests[1].reject(Object.assign(Error('Adjacent positive transition extents must fit their common wall or cap'),{code:'BREP_G2_ANNULAR_LIMITS'}));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Check the inner radius')
+ expect(ui.all().filter(n=>n.tag==='input'&&n.props['aria-invalid']===true).length).toBeGreaterThanOrEqual(4)
+ await extent('Inner bottom',.75);await ui.click('Retry creation')
+ expect(requests[2].job.options.g2TransitionSizes).toEqual([.1,.25,.5,.75])
+ requests[2].resolve(addSolidPrimitive(requests[2].job.document,requests[2].job.options));await flushClearance()
+ const accepted=structuredClone(ui.doc());expect(accepted.bodies).toHaveLength(before.bodies.length+1)
+ expect(accepted.bodies.at(-1)!.brep!.faces).toHaveLength(32)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(accepted)
+})
+
 it('discards vertex measurement replies after a changed input and Escape without editing history',async()=>{
  const {measureSolidVertices}=await import('../src/services/solidMeasurements')
  const ui=await mount();await ui.click('Box');const before=ui.doc()
@@ -3382,6 +3462,7 @@ it('opens guided subtraction without cloning the history for every selected body
 
 it.each(['CAD_CRASH','CAD_TIMEOUT','CAD_TRANSPORT','CAD_PROTOCOL'])('recovers Boolean from %s without changing operands or history on failure',async code=>{
  const {applySolidBoolean}=await import('../src/services/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,4)
@@ -3867,7 +3948,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(96);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(97);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
@@ -4164,4 +4245,110 @@ it('keeps partial annular mode preview-only and ignores a response after Escape'
   await flushClearance();expect(ui.doc()).toEqual(before)
   expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')).toBe(false)
  }finally {previewWorkerRun.mockReset()}
+})
+
+// Command lifecycle fixture; native runout geometry has separate Rust/WASM qualification.
+it('previews G2 runout roles, ignores late responses and keeps retry and history atomic',async()=>{
+ const requests:Array<{job:any;resolve:(v:any)=>void;reject:(e:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='surfaceBuild'&&job.options.kind==='nurbs-runout'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const source={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
+ const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}
+ const seed={version:1,bodies:[],sketches:[],surfaces:[{id:'source-runout',name:'Source runout',surface:source,segmentsU:4,segmentsV:4},{id:'end-runout',name:'End runout',surface:plane,segmentsU:4,segmentsV:4}],curves:[{id:'runout-curve',name:'Runout curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}}]}
+ const ui=await mount({seedDocument:seed})
+ await ui.click('Source runout');await ui.click('End runout',true);await ui.click('Runout curve',true)
+ const before=ui.doc();await ui.click('G2 end transition');await flushClearance()
+ expect(requests).toHaveLength(1);expect(requests[0].job.options.ids).toEqual(['source-runout','end-runout','runout-curve'])
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.all().filter(n=>n.tag==='select'&&['Source surface','Planar end','End boundary'].includes(n.props['aria-label']))).toHaveLength(3)
+ const position=ui.all().find(n=>n.props['aria-label']==='Seam position, %')!
+ position.props['onUpdate:modelValue'](80);await flushClearance();expect(requests).toHaveLength(2)
+ const response=(job:any)=>({document:{...job.document,surfaces:[...job.document.surfaces,{id:job.options.id,name:'Runout preview',surface:source,segmentsU:4,segmentsV:4}]},error:'',report:null,runoutReport:{withinTolerance:true,complete:true}})
+ const latest=response(requests[1].job);requests[1].resolve(latest);await flushClearance()
+ requests[0].reject(Error('stale runout failure'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toContain('G2 confirmed')
+ await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(3)
+ const committed=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(committed)
+ await ui.click('↶');await ui.click('G2 end transition');await flushClearance()
+ requests[2].reject(Error('RUNOUT_TARGET'));await flushClearance();expect(ui.doc()).toEqual(before)
+ await ui.click('Retry calculation');await flushClearance();expect(requests).toHaveLength(4)
+ await commandKey(ui,'Escape');requests[3].resolve(response(requests[3].job));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-testid']==='runout-report')).toBe(false)
+})
+
+it.each(['en','ru'])('builds and restores a native G2 runout through the command panel (%s)',async locale=>{
+ const source={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
+ const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}
+ const seed={version:1,bodies:[],sketches:[],surfaces:[{id:'native-runout-a',name:'Native source',surface:source,segmentsU:4,segmentsV:4},{id:'native-runout-b',name:'Native end',surface:plane,segmentsU:4,segmentsV:4}],curves:[{id:'native-runout-curve',name:'Native end curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}},{id:'bad-native-runout-curve',name:'Off-plane end curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,.5,.1],[1,1,.1]],weights:[1,1]}}]}
+ const ui=await mount({locale,seedDocument:seed})
+ await ui.click('Native source');await ui.click('Native end',true);await ui.click('Off-plane end curve',true)
+ const before=ui.doc();await ui.click(locale==='ru'?'Концевой переход G2':'G2 end transition')
+ const apply=locale==='ru'?'Готово · Enter':'Apply · Enter'
+ const curveRole=locale==='ru'?'Граница на торце':'End boundary'
+ await vi.waitFor(()=>expect(ui.all().find(n=>n.props['aria-label']===curveRole)!.props['aria-invalid']).toBe(true),{timeout:5000})
+ expect(ui.button(apply).props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ expect(ui.all().filter(n=>n.props['data-diagnostic']==='runout-target')).toHaveLength(1)
+ ui.all().find(n=>n.props['aria-label']===curveRole)!.props['onUpdate:modelValue']('native-runout-curve');await flushClearance()
+ await vi.waitFor(()=>expect(ui.button(apply).props.disabled).toBe(false),{timeout:5000})
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toContain(locale==='ru'?'G2 подтверждена':'G2 confirmed')
+ await commandKey(ui,'Enter');const committed=ui.doc()
+ expect(committed.surfaces).toHaveLength(3);expect(committed.surfaces?.slice(0,2)).toEqual(before.surfaces);expect(committed.curves).toEqual(before.curves)
+ expect(committed.surfaces?.[2].surface.degreeV).toBe(5)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(committed)
+ const restored=await mount({locale},ui.serialized());expect(restored.doc().surfaces).toEqual(committed.surfaces)
+})
+
+
+it('adds a certified Minkowski body through the visible action and clears its proof on Undo',async()=>{
+ const {box3d}=await import('./fixtures/minkowski3d-cases')
+ const seed={version:1 as const,sketches:[],bodies:[{id:'a',name:'First',mesh:box3d([0,0,0],[2,3,4])},{id:'b',name:'Second',mesh:box3d([-1,-1,-1],[1,1,1])}]}
+ const ui=await mount({seedDocument:seed})
+ await ui.click('First');expect(ui.button('Minkowski sum').props.disabled).toBe(true)
+ await ui.click('Second',true);expect(ui.button('Minkowski sum').props.disabled).toBe(false)
+ const before=ui.doc();await ui.click('Minkowski sum')
+ expect(ui.doc().bodies).toHaveLength(3);expect(ui.doc().bodies.slice(0,2)).toEqual(before.bodies)
+ expect(inspectPolygonMesh(ui.doc().bodies[2].mesh).signedVolumeMm3).toBeCloseTo(120,8)
+ expect(ui.button('Download certificate')).toBeDefined()
+ await ui.click('↶');expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['aria-label']==='Minkowski sum certificate')).toBe(false)
+})
+it('discards canceled Minkowski results and leaves source bodies untouched on refusal',async()=>{
+ const {box3d}=await import('./fixtures/minkowski3d-cases')
+ const seed={version:1 as const,sketches:[],bodies:[{id:'a',name:'First',mesh:box3d([0,0,0],[2,3,4])},{id:'b',name:'Second',mesh:box3d([-1,-1,-1],[1,1,1])}]}
+ const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true);const before=ui.doc()
+ let finish!:(r:unknown)=>void;previewWorkerRun.mockImplementationOnce(()=>new Promise(r=>{finish=r}));await ui.click('Minkowski sum');await commandKey(ui,'Escape')
+ const {applySolidMinkowski}=await import('../src/services/solidMinkowski');finish(applySolidMinkowski(seed as any,{ids:['a','b'],createdId:'late',ru:false}));await flushClearance();expect(ui.doc()).toEqual(before)
+ await ui.click('First');await ui.click('Second',true);previewWorkerRun.mockRejectedValueOnce(Error('Minkowski 3D refused: work budget exceeded'));await ui.click('Minkowski sum');expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props.role==='alert')).toBe(true)
+})
+
+it('certifies original B-rep definitions through the Minkowski action and exposes a checked source tolerance',async()=>{
+ const seed={version:1 as const,sketches:[],bodies:[createBrepBox([0,0,0],[2,3,4]),createBrepBox([-1,-1,-1],[1,1,1])].map((brep,i)=>({id:i?'b':'a',name:i?'Second':'First',brep,mesh:tessellateNurbsBrep(brep,1)}))}
+ const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true)
+ expect(ui.all().some(n=>n.tag==='input'&&n.props['aria-label']==='Minkowski source surface tolerance, mm')).toBe(true)
+ const before=ui.doc();await ui.click('Minkowski sum');expect(ui.doc().bodies).toHaveLength(3);expect(ui.doc().bodies.slice(0,2)).toEqual(before.bodies)
+ expect(ui.all().some(n=>n.props['aria-label']==='Minkowski sum certificate'&&ui.text(n).includes('Source surface sum enclosures verified.'))).toBe(true)
+ expect(ui.all().some(n=>n.props['aria-label']==='Minkowski sum certificate'&&ui.text(n).includes('Topology preserved through rounding.'))).toBe(true)
+ expect(ui.all().some(n=>n.props['aria-label']==='Minkowski sum certificate'&&ui.text(n).includes('Source surface and sum approximation topology proved.'))).toBe(true)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+it('refuses an invalid Minkowski source tolerance without adding a body or history',async()=>{
+ const seed={version:1 as const,sketches:[],bodies:[createBrepBox([0,0,0],[2,3,4]),createBrepBox([-1,-1,-1],[1,1,1])].map((brep,i)=>({id:i?'b':'a',name:i?'Second':'First',brep,mesh:tessellateNurbsBrep(brep,1)}))}
+ const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true);const before=ui.doc()
+ const field=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Minkowski source surface tolerance, mm')!;field.props['onUpdate:modelValue'](0);await nextTick();await ui.click('Minkowski sum')
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props.role==='alert')).toBe(true)
+})
+
+it('shows source-only topology without claiming the sum topology',async()=>{
+ // Render-only weaker claims; the worker's certificate binding and the actual
+ // nonstar geometry paths have separate protocol and cross-runtime checks.
+ const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
+ for(const proved of [true,false]){
+  const seed={version:1 as const,sketches:[],bodies:[createBrepBox([0,0,0],[2,3,4]),createBrepBox([-1,-1,-1],[1,1,1])].map((brep,i)=>({id:i?'b':'a',name:i?'Second':'First',brep,mesh:tessellateNurbsBrep(brep,1)}))}
+  const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true)
+  previewWorkerRun.mockImplementationOnce((job:any)=>({...applySolidMinkowski(job.document,job.options),approximationTopology:null,sourceApproximationTopology:[proved,true]}))
+  await ui.click('Minkowski sum')
+  const notice=ui.all().find(n=>n.props['aria-label']==='Minkowski sum certificate')!;expect(notice).toBeDefined()
+  expect(ui.text(notice)).toContain(proved?'Source body topology is preserved; sum topology is unproved.':'Source surface approximation topology is unproved.')
+  expect(ui.text(notice)).not.toContain('Source surface and sum approximation topology proved.')
+ }
 })

@@ -69,6 +69,11 @@ pub fn read(v: Value) -> Result<Value> {
     let Ok(document) = value_codec::from_str::<Value>(&text) else {
         return Ok(Value::Null);
     };
+    let document=if document["encoding"]==json!("native-deflate-json/1") {
+        let decoded=crate::native_snapshot::unpack(json!({"snapshot":document}))?;
+        value_codec::from_str::<Value>(decoded.as_str().ok_or_else(||crate::input("Invalid decoded sweep viewport packet"))?)
+            .map_err(|_|crate::input("Invalid decoded sweep viewport JSON"))?
+    }else{document};
     // Profile-body source error has its own scope and display contract. Its
     // accompanying volume report is not a retained-miter boundary certificate.
     if document["sweepBodyBoundaryEvidence"].is_object() {
@@ -86,16 +91,19 @@ pub fn read(v: Value) -> Result<Value> {
             .filter(|&within| within == (upper <= budget))
     });
     let certificate = &e["boundaryCertificate"];
+    let budget_matches=if budget.is_some() {
+        bound(&certificate["budget"])==budget&&within.is_some()&&certificate["withinBudget"].as_bool()==within
+    }else{
+        e.get("boundaryErrorBudget").is_some_and(Value::is_null)
+            &&e.get("boundaryErrorWithinBudget").is_some_and(Value::is_null)
+            &&certificate.get("budget").is_some_and(Value::is_null)
+            &&certificate.get("withinBudget").is_some_and(Value::is_null)
+    };
     let complete_bound = yes(e, "continuousBound")
         && named(certificate, "method", "retained-sweep-boundary-union")
         && named(certificate, "scope", "boundary-set-hausdorff")
-        && yes(certificate, "continuousBound")
-        && upper.is_some()
-        && budget.is_some()
-        && bound(&certificate["errorUpper"]) == upper
-        && bound(&certificate["budget"]) == budget
-        && within.is_some()
-        && certificate["withinBudget"].as_bool() == within;
+        && yes(certificate, "continuousBound") &&upper.is_some()
+        &&bound(&certificate["errorUpper"])==upper&&budget_matches;
     let mut result = json!({"nodeId":a["nodeId"],"solidGeometryCertified":e["volume"]["solidGeometryCertified"],"boundaryErrorUpper":upper,"boundaryErrorBudget":budget,"boundaryErrorWithinBudget":within,"continuousBound":complete_bound,"profileRegularityCertified":yes(e,"profileRegularityCertified"),"wallRegularityCertified":yes(e,"wallRegularityCertified")});
     let s = &e["profileSmoothness"];
     let p = &s["profile"];

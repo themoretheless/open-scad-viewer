@@ -1,0 +1,13 @@
+# Exact original nonzero filled boundary selection
+
+Candidate /private/tmp/nurbs-native-200-next-6v12adcx; shared Rust unchanged. Catalog198/200. Cumulative33-file patch against baseline-source-sha256.json; never apply older cumulative patches sequentially.
+
+OwnedOriginalFilledBoundaries owns original carrier cycles and one exact left/right side witness for EVERY carrier in deterministic order. Arc identity binds receipts to this actual carrier owner; closed original wire grouping must match across all witnesses. Bounded integer coefficients use checked arithmetic. Individual wire winding jumps must equal exactly +1 only for this original source wire and zero for others.
+
+Weighted labels on adjacent exact vertex sectors must agree. Select original half-edges with nonzero winding on left and zero on right. Both-nonzero internal edges disappear. The target rotation is scanned clockwise from incoming twin to the next selected material edge, skipping internal edges. Complete selected indegree/successor permutation and disjoint closed orbit census are mandatory. All retained curves/cuts remain original and algebraic. Reverify rebuilds all witnesses, rotations, sector labels, selection and boundary walks; no polygon/sample/claimed integer supplies authority.
+
+Regression tests: nested equal orientation removes inner edges; opposite weights retain a hole with reversed original half-edges; all-zero coefficients empty; overlapping square union bypasses internal cuts into one boundary; opposite coefficients produce two material islands including negative winding; missing/duplicated/foreign Arc side receipts and invalid coefficients refuse. Unit audit changes cached winding, retained edges, successor, boundary walks and coefficients and demands fresh refusal.
+
+Final gates passed:82 profile unit tests +93 integration tests across21 binaries =175 tests; brep-core WASM and API map186modules/200entries passed. All33 changed Rust source hashes stable. No live test handles remain. Authoritative profile.log / integration.log / wasm.log and native-tests.json are saved.
+
+Next: automatic rational interior choices between algebraic contact cuts (and ordinary knot cells) + bounded exact normal radius shrinking; collect all side witnesses automatically and expose original closed-wire boundary assembly. Then source-owned grouping of disconnected outer/hole boundary components into material regions and periodic physical faces. Common components / partial overlaps and automatic complete general surface intersection atlas/source trim topology remain open. Do not promote helpers as catalog entries or count boundary cycles as fully grouped material faces.

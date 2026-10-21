@@ -22,6 +22,8 @@ pub(crate) struct MotionParser {
     move_count: usize,
 }
 
+const MAX_FEEDRATE_MM_MIN: f64 = MAX_COORDINATE_MM * 60.0;
+
 impl MotionParser {
     pub(crate) fn new() -> Self {
         Self {
@@ -29,7 +31,7 @@ impl MotionParser {
                 layers: 0,
                 extrusion_mm: 0.0,
                 deposited_volume_mm3: 0.0,
-                moves: Vec::new(),
+                moves: Vec::with_capacity(256),
                 bounds: None,
                 travel_distance_mm: 0.0,
                 print_distance_mm: 0.0,
@@ -139,7 +141,7 @@ impl MotionParser {
     }
 
     pub(crate) fn all_known(&self) -> bool {
-        self.known.iter().all(|v| *v)
+        self.known[0] && self.known[1] && self.known[2]
     }
 
     pub(crate) fn current_layer_z(&self) -> Option<f64> {
@@ -148,17 +150,35 @@ impl MotionParser {
 
     /// Validates and applies X/Y/Z words to the tracked position.
     pub(crate) fn apply_position_words(&mut self, words: &MoveWords) -> Result<()> {
-        for (index, value) in [words.x, words.y, words.z].into_iter().enumerate() {
-            if let Some(value) = value {
-                if !valid_coordinate(value) {
-                    return Err(invalid(
-                        "GCODE_INVALID_COORDINATE",
-                        "Move coordinates must be within +/-1000000 mm",
-                    ));
-                }
-                self.position[index] = value;
-                self.known[index] = true;
+        if let Some(x) = words.x {
+            if !valid_coordinate(x) {
+                return Err(invalid(
+                    "GCODE_INVALID_COORDINATE",
+                    "Move coordinates must be within +/-1000000 mm",
+                ));
             }
+            self.position[0] = x;
+            self.known[0] = true;
+        }
+        if let Some(y) = words.y {
+            if !valid_coordinate(y) {
+                return Err(invalid(
+                    "GCODE_INVALID_COORDINATE",
+                    "Move coordinates must be within +/-1000000 mm",
+                ));
+            }
+            self.position[1] = y;
+            self.known[1] = true;
+        }
+        if let Some(z) = words.z {
+            if !valid_coordinate(z) {
+                return Err(invalid(
+                    "GCODE_INVALID_COORDINATE",
+                    "Move coordinates must be within +/-1000000 mm",
+                ));
+            }
+            self.position[2] = z;
+            self.known[2] = true;
         }
         Ok(())
     }
@@ -166,7 +186,9 @@ impl MotionParser {
     /// Enforces the layer-Z contract for a move, after applying its words.
     pub(crate) fn enforce_layer_z(&mut self, words: &MoveWords) -> Result<()> {
         if let Some(layer_z) = self.current_layer_z {
-            if words.z.is_some() && self.position[2] != layer_z {
+            if let Some(z) = words.z
+                && z != layer_z
+            {
                 return Err(invalid(
                     "GCODE_LAYER",
                     "Z changes require a new layer marker",
@@ -192,7 +214,7 @@ impl MotionParser {
     /// Validates and applies the F word; returns the established feedrate in mm/s.
     pub(crate) fn admit_feedrate(&mut self, words: &MoveWords) -> Result<f64> {
         if let Some(value) = words.f {
-            if value < 0.001 || value > MAX_COORDINATE_MM * 60.0 {
+            if !(0.001..=MAX_FEEDRATE_MM_MIN).contains(&value) {
                 return Err(invalid(
                     "GCODE_INVALID_FEEDRATE",
                     "Feedrate F must be 0.001..60000000 mm/min",
@@ -211,9 +233,10 @@ impl MotionParser {
     /// 3D distance from a previous position (zero until all axes are known).
     pub(crate) fn distance_from(&self, old_position: [f64; 3], was_known: bool) -> f64 {
         if was_known {
-            (self.position[0] - old_position[0])
-                .hypot(self.position[1] - old_position[1])
-                .hypot(self.position[2] - old_position[2])
+            let dx = self.position[0] - old_position[0];
+            let dy = self.position[1] - old_position[1];
+            let dz = self.position[2] - old_position[2];
+            (dx * dx + dy * dy + dz * dz).sqrt()
         } else {
             0.0
         }
@@ -236,10 +259,12 @@ impl MotionParser {
         }
         self.result.estimated_time_s += distance / feedrate_mm_s;
         if let Some(bounds) = &mut self.result.bounds {
-            for (axis, value) in self.position.iter().enumerate() {
-                bounds.min[axis] = bounds.min[axis].min(*value);
-                bounds.max[axis] = bounds.max[axis].max(*value);
-            }
+            bounds.min[0] = bounds.min[0].min(self.position[0]);
+            bounds.max[0] = bounds.max[0].max(self.position[0]);
+            bounds.min[1] = bounds.min[1].min(self.position[1]);
+            bounds.max[1] = bounds.max[1].max(self.position[1]);
+            bounds.min[2] = bounds.min[2].min(self.position[2]);
+            bounds.max[2] = bounds.max[2].max(self.position[2]);
         } else {
             self.result.bounds = Some(GcodeBounds {
                 min: self.position,
@@ -266,18 +291,15 @@ impl MotionParser {
         if self.result.layers > 0 && self.current_layer_z.is_none() {
             return Err(invalid("GCODE_LAYER", "Final layer has no Z coordinate"));
         }
-        let filament_area = std::f64::consts::PI * (self.diameter.unwrap_or(0.0) / 2.0).powi(2);
+        let r = self.diameter.unwrap_or(0.0) * 0.5;
+        let filament_area = std::f64::consts::PI * (r * r);
         self.result.extrusion_mm = extrusion_mm;
         self.result.deposited_volume_mm3 = extrusion_mm * filament_area;
-        if ![
-            self.result.extrusion_mm,
-            self.result.deposited_volume_mm3,
-            self.result.travel_distance_mm,
-            self.result.print_distance_mm,
-            self.result.estimated_time_s,
-        ]
-        .iter()
-        .all(|v| v.is_finite())
+        if !(self.result.extrusion_mm.is_finite()
+            && self.result.deposited_volume_mm3.is_finite()
+            && self.result.travel_distance_mm.is_finite()
+            && self.result.print_distance_mm.is_finite()
+            && self.result.estimated_time_s.is_finite())
         {
             return Err(invalid("GCODE_NUMERIC", totals_error));
         }

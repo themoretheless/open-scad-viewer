@@ -56,3 +56,6 @@ pub use exact_variable_radius_fillet::*;
 pub use analytic_fillet_chain::*;
 pub use audited_multi_section_loft::*;
 pub use exact_analytic_shell::*;
+
+mod independent_corners;
+pub use independent_corners::*;

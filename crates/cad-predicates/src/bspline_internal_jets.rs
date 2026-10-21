@@ -5,6 +5,12 @@ use crate::{
     exact_inputs, Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
     InputError, LeafRef, PredicateContext, Reason, Sign,
 };
+#[path = "bspline_plane_roots.rs"]
+mod plane_roots;
+pub use plane_roots::*;
+#[path = "bspline_plane_incidence.rs"]
+mod plane_incidence;
+pub use plane_incidence::{rational_bspline_plane_incidence, rational_quadratic_plane_discriminant};
 #[derive(Clone)]
 struct Rational {
     n: Expansion,
@@ -284,7 +290,7 @@ pub fn rational_bspline_cartesian_endpoint_jet_identity(
     bspline_jet_identity(ctx, controls, knots, degree, order, true)
 }
 #[cfg(test)]
-#[path = "tests/bspline_internal_jets.rs"]
+#[path = "bspline_internal_jets/tests/tests_integration.rs"]
 mod tests;
 
 // A nonzero common velocity component is a smooth direction chart. For
@@ -300,6 +306,17 @@ fn direction_equal(
     let Some(axis) = (0..3).find(|&k| l[1][k].n.sign() != Sign::Zero) else {
         return Err(Reason::MissingProof);
     };
+    if order==0 {
+        // Position and positively proportional velocity establish a continuous
+        // unit tangent even when the original parameter speed jumps.
+        if l[1][axis].n.sign()!=r[1][axis].n.sign(){return Ok(false);}
+        for k in 0..3 {
+            if !l[0][k].equal(&r[0][k],ctx)? || !l[1][k].mul(&r[1][axis],ctx)?.equal(&r[1][k].mul(&l[1][axis],ctx)?,ctx)? {
+                return Ok(false);
+            }
+        }
+        return Ok(true);
+    }
     let sign = match l[1][axis].n.sign() {
         Sign::Positive => 1.,
         Sign::Negative => -1.,
@@ -374,6 +391,7 @@ fn direction_equal(
 }
 
 /// Exact C1/C2 of a nonzero unit-direction field at original internal knots
+/// (orders 1/2), or C0 position with continuous unit tangent (order 0).
 /// or the active endpoints. Arc-length chart jets use positive speed ratios.
 /// This does not prove whole-domain regularity, position continuity, surface
 /// smoothness or closed transport holonomy; those remain caller premises.
@@ -387,7 +405,7 @@ pub fn rational_bspline_direction_jet_identity(
     arc_length: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(1..=2).contains(&order)
+        || !(0..=2).contains(&order)
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {
@@ -483,100 +501,5 @@ pub fn rational_bspline_direction_jet_identity(
 }
 
 #[cfg(test)]
-mod direction_tests {
-    use super::*;
-    use crate::{Limits, SourceArena, ToleranceContext};
-    fn audit(
-        p: &[[f64; 4]],
-        u: &[f64],
-        degree: usize,
-        order: usize,
-        endpoints: bool,
-        arc: bool,
-        work: u64,
-    ) -> BezierIdentityDecision {
-        let mut v = p.iter().flatten().copied().collect::<Vec<_>>();
-        let start = v.len();
-        v.extend_from_slice(u);
-        let arena = SourceArena::authored(
-            "original-direction-jets",
-            1,
-            v.into_iter()
-                .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
-                .collect(),
-        )
-        .unwrap();
-        let controls = (0..p.len())
-            .map(|i| std::array::from_fn(|j| arena.leaf(i * 4 + j).unwrap()))
-            .collect::<Vec<_>>();
-        let knots = (0..u.len())
-            .map(|i| arena.leaf(start + i).unwrap())
-            .collect::<Vec<_>>();
-        let tol = ToleranceContext::default_valid();
-        let mut ctx = PredicateContext::new(
-            &arena,
-            &tol,
-            Limits {
-                max_work: work,
-                ..Limits::default()
-            },
-            None,
-        );
-        rational_bspline_direction_jet_identity(
-            &mut ctx, &controls, &knots, degree, order, endpoints, arc,
-        )
-        .unwrap()
-    }
-    #[test]
-    fn direction_jets_keep_speed_changes_separate_and_refuse_reversal_and_partial_work() {
-        let p = [[0., 0., 0., 1.], [1., 0., 0., 1.], [4., 0., 0., 1.]];
-        let knots = [2., 2., 3., 5., 5.];
-        for arc in [false, true] {
-            for endpoints in [false, true] {
-                let r = audit(&p, &knots, 1, 2, endpoints, arc, 1000000);
-                assert_eq!(r.outcome, BezierIdentity::Equal);
-                assert!(matches!(
-                    audit(&p, &knots, 1, 2, endpoints, arc, r.work_used - 1).outcome,
-                    BezierIdentity::Indeterminate(_)
-                ));
-                let mut bad = p;
-                bad[2][0] = 0.;
-                assert_ne!(
-                    audit(&bad, &knots, 1, 2, endpoints, arc, 1000000).outcome,
-                    BezierIdentity::Equal
-                );
-                let mut stopped = p;
-                stopped[2][0] = 1.;
-                assert_ne!(
-                    audit(&stopped, &knots, 1, 2, endpoints, arc, 1000000).outcome,
-                    BezierIdentity::Equal
-                );
-            }
-        }
-    }
-    #[test]
-    fn rational_conic_direction_curvature_does_not_infer_second_arc_jet() {
-        let p = [
-            [1., 0., 0., 1.],
-            [1., 1., 0., 0.5],
-            [0., 1., 0., 1.],
-            [-1., 1., 0., 0.5],
-            [-1., 0., 0., 1.],
-            [-1., -1., 0., 0.5],
-            [0., -1., 0., 1.],
-            [1., -1., 0., 0.5],
-            [1., 0., 0., 1.],
-        ];
-        let u = [2., 2., 2., 2.75, 2.75, 3.5, 3.5, 4.25, 4.25, 5., 5., 5.];
-        for endpoints in [false, true] {
-            assert_eq!(
-                audit(&p, &u, 2, 1, endpoints, true, 1000000).outcome,
-                BezierIdentity::Equal
-            );
-            assert_eq!(
-                audit(&p, &u, 2, 2, endpoints, true, 1000000).outcome,
-                BezierIdentity::Different
-            );
-        }
-    }
-}
+#[path = "bspline_internal_jets/tests/direction_tests_integration.rs"]
+mod direction_tests;

@@ -299,7 +299,190 @@ impl<C, S, P> Model<C, S, P> {
         })
     }
 }
+/// Topological invariants (Euler-Poincaré characteristic, genus) and fast adjacency queries.
+pub mod explorer {
+    use super::Model;
+    use rustc_hash::FxHashSet;
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of the entire B-rep model,
+    /// where $V$ is the number of non-degenerate vertices, $E$ is the number of
+    /// non-degenerate edges, $F$ is the number of faces, and $H$ is the number of inner
+    /// hole loops across all faces.
+    pub fn euler_characteristic<C, S, P, V>(model: &Model<C, S, P, V>) -> i64 {
+        let mut vertices = FxHashSet::default();
+        let mut edges = FxHashSet::default();
+        let mut hole_loops = 0i64;
+        for f in &model.faces {
+            hole_loops += f.holes.len() as i64;
+            for &loop_id in std::iter::once(&f.outer).chain(&f.holes) {
+                let Some(wire) = model.loops.get(loop_id) else {
+                    continue;
+                };
+                for coedge in &wire.coedges {
+                    let Some(edge) = model.edges.get(coedge.edge) else {
+                        continue;
+                    };
+                    if !edge.degenerate {
+                        edges.insert(coedge.edge);
+                        vertices.insert(edge.vertices[0]);
+                        vertices.insert(edge.vertices[1]);
+                    }
+                }
+            }
+        }
+        let v = vertices.len() as i64;
+        let e = edges.len() as i64;
+        let f = model.faces.len() as i64;
+        v - e + f - hole_loops
+    }
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of a single shell `shell_id`.
+    pub fn shell_euler_characteristic<C, S, P, V>(
+        model: &Model<C, S, P, V>,
+        shell_id: usize,
+    ) -> Option<i64> {
+        let shell = model.shells.get(shell_id)?;
+        let mut vertices = FxHashSet::default();
+        let mut edges = FxHashSet::default();
+        let mut hole_loops = 0i64;
+        for face_use in &shell.faces {
+            let f = model.faces.get(face_use.face)?;
+            hole_loops += f.holes.len() as i64;
+            for &loop_id in std::iter::once(&f.outer).chain(&f.holes) {
+                let wire = model.loops.get(loop_id)?;
+                for coedge in &wire.coedges {
+                    let edge = model.edges.get(coedge.edge)?;
+                    if !edge.degenerate {
+                        edges.insert(coedge.edge);
+                        vertices.insert(edge.vertices[0]);
+                        vertices.insert(edge.vertices[1]);
+                    }
+                }
+            }
+        }
+        let v = vertices.len() as i64;
+        let e = edges.len() as i64;
+        let f = shell.faces.len() as i64;
+        Some(v - e + f - hole_loops)
+    }
+
+    /// Topological genus $g = (2 - \chi) / 2$ of a closed shell `shell_id`
+    /// (returns `None` if the shell is open or `shell_id` is out of bounds).
+    pub fn shell_genus<C, S, P, V>(model: &Model<C, S, P, V>, shell_id: usize) -> Option<i64> {
+        let shell = model.shells.get(shell_id)?;
+        if !shell.closed {
+            return None;
+        }
+        let chi = shell_euler_characteristic(model, shell_id)?;
+        Some((2 - chi) / 2)
+    }
+
+    /// Sum of topological genera across all closed shells in `model`, or `(2S - \chi) / 2`
+    /// where $S$ is the number of closed shells.
+    pub fn genus<C, S, P, V>(model: &Model<C, S, P, V>) -> i64 {
+        let mut total = 0i64;
+        for s in 0..model.shells.len() {
+            if let Some(g) = shell_genus(model, s) {
+                total += g.max(0);
+            }
+        }
+        total
+    }
+
+    /// Sorted deduplicated indices of non-degenerate edges incident to `vertex_id`.
+    pub fn vertex_edges<C, S, P, V>(model: &Model<C, S, P, V>, vertex_id: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        for (ei, edge) in model.edges.iter().enumerate() {
+            if !edge.degenerate && (edge.vertices[0] == vertex_id || edge.vertices[1] == vertex_id)
+            {
+                out.push(ei);
+            }
+        }
+        out
+    }
+
+    /// Sorted deduplicated indices of edges bounding `face_id`.
+    pub fn face_edges<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
+        let Some(face) = model.faces.get(face_id) else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for &loop_id in std::iter::once(&face.outer).chain(&face.holes) {
+            if let Some(wire) = model.loops.get(loop_id) {
+                for coedge in &wire.coedges {
+                    out.push(coedge.edge);
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    /// Sorted deduplicated indices of faces sharing at least one non-degenerate edge with `face_id`.
+    pub fn adjacent_faces<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
+        let edges: FxHashSet<usize> = face_edges(model, face_id)
+            .into_iter()
+            .filter(|&e| model.edges.get(e).is_some_and(|ed| !ed.degenerate))
+            .collect();
+        if edges.is_empty() {
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        for (fi, f) in model.faces.iter().enumerate() {
+            if fi == face_id {
+                continue;
+            }
+            let shares = std::iter::once(&f.outer).chain(&f.holes).any(|&l| {
+                model
+                    .loops
+                    .get(l)
+                    .is_some_and(|w| w.coedges.iter().any(|c| edges.contains(&c.edge)))
+            });
+            if shares {
+                out.push(fi);
+            }
+        }
+        out
+    }
+}
+
 impl<C, S, P, V> Model<C, S, P, V> {
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of the B-rep model.
+    pub fn euler_characteristic(&self) -> i64 {
+        explorer::euler_characteristic(self)
+    }
+
+    /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of `shell_id`.
+    pub fn shell_euler_characteristic(&self, shell_id: usize) -> Option<i64> {
+        explorer::shell_euler_characteristic(self, shell_id)
+    }
+
+    /// Topological genus $g = (2 - \chi) / 2$ of closed shell `shell_id`.
+    pub fn shell_genus(&self, shell_id: usize) -> Option<i64> {
+        explorer::shell_genus(self, shell_id)
+    }
+
+    /// Topological genus summed over all closed shells in the model.
+    pub fn genus(&self) -> i64 {
+        explorer::genus(self)
+    }
+
+    /// Fast adjacency query: non-degenerate edges incident to `vertex_id`.
+    pub fn vertex_edges(&self, vertex_id: usize) -> Vec<usize> {
+        explorer::vertex_edges(self, vertex_id)
+    }
+
+    /// Fast adjacency query: edges bounding `face_id`.
+    pub fn face_edges(&self, face_id: usize) -> Vec<usize> {
+        explorer::face_edges(self, face_id)
+    }
+
+    /// Fast adjacency query: faces sharing at least one non-degenerate edge with `face_id`.
+    pub fn adjacent_faces(&self, face_id: usize) -> Vec<usize> {
+        explorer::adjacent_faces(self, face_id)
+    }
+
     /// Canonical immutable predicate context derived from this model's legacy
     /// scalar. New serialized models also carry its versioned specification.
     pub fn tolerance_context(&self) -> Result<cad_predicates::ToleranceContext> {
@@ -434,9 +617,16 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 }
                 continue;
             }
-            let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::default();
-            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::default();
+            let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::with_capacity_and_hasher(
+                s.faces.len() * 4,
+                Default::default(),
+            );
+            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::with_capacity_and_hasher(
+                s.faces.len() * 4,
+                Default::default(),
+            );
             let mut pole_uses = FxHashMap::<usize, FxHashSet<usize>>::default();
+            let mut cs = Vec::new();
             for u in &s.faces {
                 let f = self
                     .faces
@@ -455,10 +645,8 @@ impl<C, S, P, V> Model<C, S, P, V> {
                             "Collapsed boundary is repeated on one face",
                         )?;
                     }
-                    let cs: Vec<_> = all
-                        .iter()
-                        .filter(|c| !self.edges[c.edge].degenerate)
-                        .collect();
+                    cs.clear();
+                    cs.extend(all.iter().filter(|c| !self.edges[c.edge].degenerate));
                     require(
                         !cs.is_empty() && (cs.len() == all.len() || cs.len() >= 2),
                         "Pole face needs at least two ordinary boundary edges",
@@ -466,7 +654,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     for (i, c) in cs.iter().enumerate() {
                         incidence
                             .entry(c.edge)
-                            .or_default()
+                            .or_insert_with(|| Vec::with_capacity(2))
                             .push((u.face, c.reversed ^ u.reversed));
                         let next = &cs[(i + 1) % cs.len()];
                         let vertex = self.edges[c.edge].vertices[usize::from(!c.reversed)];
@@ -474,7 +662,10 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     }
                 }
             }
-            let mut adjacency = FxHashMap::<usize, Vec<usize>>::default();
+            let mut adjacency = FxHashMap::<usize, Vec<usize>>::with_capacity_and_hasher(
+                s.faces.len(),
+                Default::default(),
+            );
             for (edge_index, edges) in &incidence {
                 require(
                     edges.len() <= 2,
@@ -494,11 +685,14 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     adjacency.entry(edges[1].0).or_default().push(edges[0].0);
                 }
             }
-            let mut seen = FxHashSet::default();
-            let mut queue = vec![s.faces[0].face];
+            let mut seen = FxHashSet::with_capacity_and_hasher(s.faces.len(), Default::default());
+            let mut queue = Vec::with_capacity(s.faces.len());
+            queue.push(s.faces[0].face);
             while let Some(f) = queue.pop() {
                 if seen.insert(f) {
-                    queue.extend(adjacency.get(&f).into_iter().flatten());
+                    if let Some(neighbors) = adjacency.get(&f) {
+                        queue.extend_from_slice(neighbors);
+                    }
                 }
             }
             require(
@@ -819,221 +1013,5 @@ impl<T: RevisionState> RevisionCheckout<T> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn revision_exhaustion_never_wraps_or_publishes_candidate() {
-        let snapshot = TopologySnapshot::new(sheet(), |point| {
-            require(point.iter().all(|x| x.is_finite()), "Invalid point")
-        })
-        .unwrap();
-        let mut store = TopologyStore::new(snapshot);
-        store.revision = u64::MAX;
-        let old_tolerance = store.snapshot().model().tolerance_mm;
-        let edit = store
-            .checkout()
-            .prepare(|m| {
-                m.tolerance_mm = 2e-6;
-                Ok(())
-            })
-            .unwrap();
-        assert_eq!(
-            store.commit(edit).unwrap_err().code,
-            "BREP_REVISION_EXHAUSTED"
-        );
-        assert_eq!(store.revision(), u64::MAX);
-        assert_eq!(store.snapshot().model().tolerance_mm, old_tolerance);
-    }
-    #[test]
-    fn history_is_bounded_and_branching_invalidates_redo() {
-        let snapshot = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        let mut store = TopologyStore::new(snapshot);
-        assert!(!store.undo().unwrap());
-        assert!(!store.redo().unwrap());
-        assert_eq!(store.revision(), 0);
-        for i in 0..40 {
-            let tx = store
-                .checkout()
-                .prepare(|m| {
-                    m.tolerance_mm = (i + 1) as f64 * 1e-6;
-                    Ok(())
-                })
-                .unwrap();
-            store.commit(tx).unwrap();
-        }
-        assert_eq!(store.history_lengths(), (MAX_TOPOLOGY_HISTORY, 0));
-        for _ in 0..MAX_TOPOLOGY_HISTORY {
-            assert!(store.undo().unwrap());
-        }
-        assert!(!store.undo().unwrap());
-        assert_eq!(store.history_lengths(), (0, MAX_TOPOLOGY_HISTORY));
-        assert_eq!(store.snapshot().model().tolerance_mm, 8e-6);
-        assert!(store.redo().unwrap());
-        let tx = store
-            .checkout()
-            .prepare(|m| {
-                m.tolerance_mm = 5e-6;
-                Ok(())
-            })
-            .unwrap();
-        store.commit(tx).unwrap();
-        assert!(!store.redo().unwrap());
-        assert_eq!(store.history_lengths(), (2, 0));
-        store.revision = u64::MAX;
-        assert!(store.undo().is_err());
-        assert_eq!(store.history_lengths(), (2, 0));
-        assert_eq!(store.snapshot().model().tolerance_mm, 5e-6);
-    }
-    #[test]
-    fn restored_history_cannot_change_owner_admission_policy() {
-        let original = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        let foreign = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        assert!(TopologyStore::from_history(original.clone(), vec![foreign], vec![]).is_err());
-        assert!(TopologyStore::from_history(original.clone(), vec![original], vec![]).is_ok());
-    }
-    #[test]
-    fn prepared_state_cannot_substitute_its_admission_policy() {
-        #[derive(Clone)]
-        struct OwnerState {
-            value: u32,
-            policy: u32,
-        }
-        impl RevisionState for OwnerState {
-            type Model = u32;
-            fn model(&self) -> &u32 {
-                &self.value
-            }
-            fn same_admission_policy(&self, other: &Self) -> bool {
-                self.policy == other.policy
-            }
-            fn try_edit(&self, edit: impl FnOnce(&mut u32) -> Result<()>) -> Result<Self> {
-                let mut next = self.clone();
-                edit(&mut next.value)?;
-                next.policy += 1; // Deliberately faulty owner implementation.
-                Ok(next)
-            }
-        }
-        let store = RevisionStore::new(OwnerState {
-            value: 7,
-            policy: 1,
-        });
-        let result = store.checkout().prepare(|v| {
-            *v = 9;
-            Ok(())
-        });
-        assert!(matches!(
-            result,
-            Err(Error {
-                code: "BREP_TRANSACTION_POLICY_MISMATCH",
-                ..
-            })
-        ));
-        assert_eq!(*store.snapshot().model(), 7);
-        assert_eq!(store.revision(), 0);
-        assert_eq!(store.history_lengths(), (0, 0));
-    }
-    fn sheet() -> Model<(), (), ()> {
-        Model {
-            vertices: vec![
-                Vertex {
-                    point: [0., 0., 0.],
-                },
-                Vertex {
-                    point: [1., 0., 0.],
-                },
-                Vertex {
-                    point: [0., 1., 0.],
-                },
-            ],
-            edges: vec![
-                Edge {
-                    degenerate: false,
-                    vertices: [0, 1],
-                    curve: (),
-                },
-                Edge {
-                    degenerate: false,
-                    vertices: [1, 2],
-                    curve: (),
-                },
-                Edge {
-                    degenerate: false,
-                    vertices: [2, 0],
-                    curve: (),
-                },
-            ],
-            loops: vec![Loop {
-                coedges: (0..3)
-                    .map(|edge| Coedge {
-                        edge,
-                        reversed: false,
-                        pcurve: (),
-                    })
-                    .collect(),
-            }],
-            faces: vec![Face {
-                surface: (),
-                outer: 0,
-                holes: vec![],
-            }],
-            shells: vec![Shell {
-                faces: vec![FaceUse {
-                    face: 0,
-                    reversed: false,
-                }],
-                closed: false,
-            }],
-            bodies: vec![],
-            tolerance_mm: 1e-7,
-        }
-    }
-    #[test]
-    fn no_geometry_kernel_required() {
-        sheet().validate_topology().unwrap();
-    }
-    #[test]
-    #[cfg(feature = "codec")]
-    fn legacy_tolerance_migrates_to_versioned_context() {
-        let model = sheet();
-        let mut value = value_codec::Serialize::to_value(&model);
-        value.as_object_mut().unwrap().remove("toleranceContext");
-        let restored: Model<(), (), ()> = value_codec::Deserialize::from_value(value).unwrap();
-        let context = restored.tolerance_context().unwrap();
-        assert_eq!(context.spatial_bounds().on_mm, model.tolerance_mm);
-
-        let canonical = value_codec::Serialize::to_value(&restored);
-        assert!(canonical.get("toleranceMm").is_some());
-        assert!(canonical.get("toleranceContext").is_some());
-    }
-    #[test]
-    #[cfg(feature = "codec")]
-    fn conflicting_legacy_and_context_tolerances_are_rejected() {
-        let mut value = value_codec::Serialize::to_value(&sheet());
-        *value.get_mut("toleranceMm").unwrap() = value_codec::Serialize::to_value(&2e-6_f64);
-        assert!(<Model<(), (), ()> as value_codec::Deserialize>::from_value(value).is_err());
-    }
-    #[test]
-    fn closed_shell_requires_two_opposite_uses() {
-        let mut m = sheet();
-        m.shells[0].closed = true;
-        assert!(m.validate_topology().is_err());
-    }
-    #[test]
-    fn bodies_cannot_reference_open_shells() {
-        let mut m = sheet();
-        m.bodies.push(Body {
-            outer_shell: 0,
-            inner_shells: vec![],
-        });
-        assert!(m.validate_topology().is_err());
-    }
-    #[test]
-    fn broken_reference_is_a_typed_error() {
-        let mut m = sheet();
-        m.loops[0].coedges[1].edge = 99;
-        assert_eq!(
-            m.validate_topology().unwrap_err().code,
-            "BREP_INVALID_TOPOLOGY"
-        );
-    }
-}
+#[path = "tests/tests_integration.rs"]
+mod tests;

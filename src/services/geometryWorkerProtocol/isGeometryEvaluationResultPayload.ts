@@ -210,7 +210,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
         return hasExactKeys(value,[
           'protocolVersion','documentRevision','jobId','quality','sourceSha256',
           'status','phase','nodeId','sections','accepted','sampledControlDeviation','budget','meshes',
-        ],['phaseResolved','continuousErrorUpper','knownProfileErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
+        ],['phaseResolved','continuousBound','continuousErrorUpper','knownProfileErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
           && typeof value.nodeId==='string' && value.nodeId.length>0
           && value.nodeId.length<=GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
           && Number.isInteger(value.sections) && (value.sections as number)>=2 && (value.sections as number)<=1025
@@ -218,6 +218,8 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
           && isNonNegativeFiniteNumber(value.sampledControlDeviation)
           && isNonNegativeFiniteNumber(value.budget)
           && hasSafeSuccessPayload({...value,warnings:[]})
+          && (value.continuousBound===undefined||typeof value.continuousBound==='boolean')
+          && (value.continuousBound!==true||isNonNegativeFiniteNumber(value.continuousErrorUpper))
           && (value.phaseResolved===undefined||typeof value.phaseResolved==='boolean')
           && (value.frameTransportCertified===undefined||typeof value.frameTransportCertified==='boolean')
           && (value.profileRegularityCertified===undefined||typeof value.profileRegularityCertified==='boolean')
@@ -227,7 +229,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
           && (value.continuousErrorUpper===undefined||isNonNegativeFiniteNumber(value.continuousErrorUpper))
           && (value.knownProfileErrorUpper===undefined||isNonNegativeFiniteNumber(value.knownProfileErrorUpper))
           && (value.knownProfileErrorUpper===undefined||value.continuousErrorUpper===undefined||value.knownProfileErrorUpper===value.continuousErrorUpper)
-          && value.accepted===((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number))))
+          && (value.continuousBound===undefined?value.accepted===((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number)))):(!value.accepted||(value.continuousBound&&((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number)))))))
           && (value.meshes as unknown[]).every(mesh=>isMeshData(mesh)&&!('nativeGeometry' in mesh)
             && mesh.faceIdsAuthoritative===false && mesh.provenance.every(run=>run.source===null))
       case 'succeeded':

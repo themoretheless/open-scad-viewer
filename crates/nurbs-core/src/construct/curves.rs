@@ -24,3 +24,7 @@ pub mod spherical_spiral;
 pub mod thread;
 pub mod toroidal_spiral;
 pub mod trochoid;
+
+pub mod radial_cam;
+
+pub mod worm;

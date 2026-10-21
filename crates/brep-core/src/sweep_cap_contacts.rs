@@ -205,6 +205,9 @@ fn oblique_plane_contact(
 /// Invalid topology is refused. Unproved geometry or exhausted budgets preserve
 /// unresolved face IDs and never promote allowed contact.
 pub fn inspect(model: &Model, cap: usize, caps: &[usize], budget: Budgets) -> Result<Report> {
+    inspect_with_separation(model,cap,caps,budget,&mut |_|false)
+}
+pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budget:Budgets,separated:&mut dyn FnMut(usize)->bool)->Result<Report> {
     model.validate()?;
     if caps.is_empty()
         || caps.len() > 16
@@ -323,6 +326,7 @@ pub fn inspect(model: &Model, cap: usize, caps: &[usize], budget: Budgets) -> Re
             .into_iter()
             .filter(|w| cap_uses.iter().any(|c| c.edge == w.edge))
             .collect();
+        if shared.is_empty() && separated(wall) {out.separated_walls.push(wall);continue;}
         let declaration = if shared.len() == 1 {
             boundary(model, wall, &shared[0].pcurve)
         } else {

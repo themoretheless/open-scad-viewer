@@ -3,7 +3,7 @@
 //! A true NURBS surface offset is not a NURBS surface in general. This module
 //! therefore offsets the control net along normals sampled at the Greville
 //! abscissae, detects planar/spherical/circular-cylindrical surfaces whose
-//! offsets are exact affine images of the control net, and certifies the
+//! offsets are exact affine images of the control net, and estimates the
 //! residual deviation on a dense sample grid. Degenerate regions (undefined
 //! normals, focal crossings) are recorded as UV rectangles, never fatal.
 //!
@@ -26,7 +26,7 @@ use validity::{principal, validity_cell};
 pub struct OffsetReport {
     /// Offset approximation (exact for plane/sphere/circular cylinder).
     pub surface: Surface,
-    /// Certified upper bound of the sampled deviation against the true offset:
+    /// Outward error estimate at sampled sites, not a continuous offset certificate:
     /// combines normal error `|<S_off - S, n> - distance|` and lateral drift,
     /// maximized over a dense grid, outward rounded.
     pub max_deviation: f64,
@@ -41,6 +41,14 @@ pub struct OffsetReport {
     /// True when the offset is exact by construction (plane, sphere,
     /// circular cylinder, or zero distance).
     pub exact: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OffsetAssurance { ExactIdentity, SampledDeviation }
+impl OffsetReport {
+    pub fn assurance(&self) -> OffsetAssurance {
+        if self.exact { OffsetAssurance::ExactIdentity } else { OffsetAssurance::SampledDeviation }
+    }
 }
 
 struct Jet {
@@ -149,7 +157,7 @@ fn solve3(matrix: [[f64; 3]; 3], rhs: [f64; 3]) -> Option<[f64; 3]> {
 fn detect_exact(surface: &Surface) -> Result<Option<Exact>> {
     let ([u0, u1], [v0, v1]) = domain(surface);
     let (nu, nv) = (5, 5);
-    let mut jets = Vec::new();
+    let mut jets = Vec::with_capacity((nu + 1) * (nv + 1));
     for i in 0..=nu {
         for j in 0..=nv {
             let u = u0 + (u1 - u0) * i as f64 / nu as f64;
@@ -524,7 +532,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
             exact: true,
         });
     }
-    // Fold-free precondition: certify the requested magnitude against the
+    // Sampled fold-free warning: compare the requested magnitude against the
     // minimum opposing principal curvature radius and surface any excess as
     // both a flag and a degenerate region at the limiting location.
     let validity = offset_validity(surface, distance)?;
@@ -532,7 +540,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
     if exceeds_fold_free_bound {
         degenerate.push(validity_cell(surface, validity.limiting_uv));
     }
-    // Exact affine fast paths.
+    // Affine candidate fast paths (sampled recognition, not exact proofs).
     match detect_exact(surface)? {
         Some(Exact::Plane(n)) => {
             let mut result = surface.clone();
@@ -550,7 +558,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
                 max_deviation: deviation,
                 degenerate_regions: degenerate,
                 exceeds_fold_free_bound,
-                exact: true,
+                exact: false,
             });
         }
         Some(Exact::Sphere { center, radius }) => {
@@ -578,7 +586,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
             if radius + signed <= 0. {
                 // Inward offset through the center: the general path records
                 // the focal crossing as a degenerate region.
-                let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+                let candidate = offset_net(surface, distance, &mut degenerate)?;
                 let deviation =
                     sampled_deviation(surface, &candidate, distance, &mut degenerate)?;
                 candidate.validate()?;
@@ -606,7 +614,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
                 max_deviation: deviation,
                 degenerate_regions: degenerate,
                 exceeds_fold_free_bound,
-                exact: true,
+                exact: false,
             });
         }
         Some(Exact::Cylinder {
@@ -636,7 +644,7 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
                     max_deviation: deviation,
                     degenerate_regions: degenerate,
                     exceeds_fold_free_bound,
-                    exact: true,
+                    exact: false,
                 });
             }
             // Inward offset through the axis: fall through to the general
@@ -663,11 +671,11 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
         }
     }
     if deviation > tolerance {
-        // Final fallback: certified least-squares fit of densely sampled true
-        // offset points; the certificate carries a Hausdorff error bound.
+        // Final fallback: least-squares fit of sampled offset points. Its
+        // cloud certificate does not certify the continuous offset map.
         let ([u0, u1], [v0, v1]) = domain(surface);
         let (nu, nv) = (24, 24);
-        let mut targets = Vec::new();
+        let mut targets = Vec::with_capacity((nu + 1) * (nv + 1));
         for i in 0..=nu {
             for j in 0..=nv {
                 let u = u0 + (u1 - u0) * i as f64 / nu as f64;
@@ -684,10 +692,20 @@ pub fn offset(surface: &Surface, distance: f64, tolerance: f64) -> Result<Offset
             if let Ok(fit) =
                 fit_surface_cloud_certified_report(targets, controls, controls, None)
             {
-                let certified = fit.certificate.evidence.hausdorff_error_upper;
-                if certified < deviation {
-                    candidate = fit.surface;
-                    deviation = certified;
+                // A cloud-fit certificate is not a same-UV offset error.
+                // Restore authored domains and independently remeasure the
+                // candidate against the original normal-offset map.
+                let mut fitted=fit.surface;
+                let ([fu0,fu1],[fv0,fv1])=domain(&fitted);
+                for k in &mut fitted.knots_u {*k=u0+(u1-u0)*((*k-fu0)/(fu1-fu0));}
+                for k in &mut fitted.knots_v {*k=v0+(v1-v0)*((*k-fv0)/(fv1-fv0));}
+                if fitted.validate().is_ok() {
+                    let mut regions=Vec::new();
+                    if let Ok(measured)=sampled_deviation(surface,&fitted,distance,&mut regions) {
+                        if measured<deviation {
+                            candidate=fitted;deviation=measured;degenerate.extend(regions);
+                        }
+                    }
                 }
             }
         }
@@ -707,3 +725,14 @@ mod tests;
 
 mod source;
 pub use source::{Bounds,JacobianBounds,Evaluation,ContactBand,PairDomain,Candidates,bounds,jacobian_bounds,evaluate,certify_contact_section,certify_contact_band,intersection_candidates};
+
+pub fn offset_preserving_basis(surface:&Surface,distance:f64)->Result<OffsetReport> {
+    surface.validate()?;require_finite_f64(distance,"distance")?;
+    if distance==0. {return Ok(OffsetReport{surface:surface.clone(),max_deviation:0.,degenerate_regions:vec![],exceeds_fold_free_bound:false,exact:true})}
+    let validity=offset_validity(surface,distance)?;
+    let mut degenerate=Vec::new();
+    if !validity.requested_ok {degenerate.push(validity_cell(surface,validity.limiting_uv));}
+    let result=offset_net(surface,distance,&mut degenerate)?;
+    let max_deviation=sampled_deviation(surface,&result,distance,&mut degenerate)?;
+    Ok(OffsetReport{surface:result,max_deviation,degenerate_regions:degenerate,exceeds_fold_free_bound:!validity.requested_ok,exact:false})
+}

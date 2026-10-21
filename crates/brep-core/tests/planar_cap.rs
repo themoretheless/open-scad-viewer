@@ -264,3 +264,32 @@ fn general_curved_cap_qualifies_holes_and_refuses_outside_hole() {
     assert_eq!(rejected.trim.valid, Some(false));
     assert!(rejected.model.is_none());
 }
+
+#[test]
+fn exact_curved_fallback_retains_sources_and_rejects_invalid_material_roles() {
+    let outer = bowed_rectangle([0., 4., 0., 4.], false);
+    let hole = bowed_rectangle([1., 2., 1., 2.], true);
+    let source = vec![outer.clone(), hole];
+    let caps = planar_cap::build(&source, 2., 1e-8, 10000).unwrap();
+    assert_eq!(caps.len(), 1);
+    assert_eq!(caps[0].boundaries, source);
+    assert!(
+        caps[0]
+            .agreements
+            .iter()
+            .flatten()
+            .all(|p| p.status == nurbs_core::curve_surface_agreement::Status::WithinTolerance)
+    );
+    let reversed = outer.iter().rev().map(|c| c.reverse().unwrap()).collect();
+    assert!(planar_cap::build(&[reversed], 2., 1e-8, 10000).is_err());
+    assert!(
+        planar_cap::build(
+            &[outer.clone(), bowed_rectangle([5., 6., 5., 6.], true)],
+            2.,
+            1e-8,
+            10000
+        )
+        .is_err()
+    );
+    assert!(planar_cap::build(&[outer], 2., 1e-8, 0).is_err());
+}

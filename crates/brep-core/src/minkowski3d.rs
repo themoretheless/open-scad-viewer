@@ -1,0 +1,524 @@
+//! Exact regularized positive-winding polyhedral Minkowski sums.
+//!
+//! All coordinates are exact rationals representing the supplied binary64 mesh.
+//! Plane arrangements give complete convex decompositions, not guessed pieces.
+//! Certificates bind the exact boundary to both source meshes; verification
+//! reconstructs the construction without trusting floating point CSG or hulls.
+use num_rational::BigRational as Q;
+use num_traits::{One, Signed, ToPrimitive, Zero};
+use nurbs_core::{Error, Result};
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, BTreeSet};
+#[cfg(feature = "codec")]
+pub mod curved;
+mod poly;
+mod rounding;
+mod rounding_legacy;
+mod surface_bounds;
+use poly::*;
+pub use rounding::Report as RoundingTopologyReport;
+#[cfg(feature = "codec")]
+mod codec;
+#[cfg(test)]
+mod tests;
+pub const SCOPE: &str = "represented-positive-filled-polyhedral-minkowski-sum";
+pub type Ratio = [String; 2];
+pub type ExactPoint = [Ratio; 3];
+type P = [Q; 3];
+type Plane = [Q; 4];
+type Face = Vec<P>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct SourceMesh {
+    pub positions: Vec<f64>,
+    pub indices: Vec<u32>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Certificate {
+    pub version: u32,
+    pub sources: [String; 2],
+    pub vertices: Vec<ExactPoint>,
+    pub triangles: Vec<[u32; 3]>,
+    pub source_cells: [usize; 2],
+    pub sum_cells: usize,
+}
+#[derive(Clone, Debug)]
+pub struct Verified {
+    pub certificate: Certificate,
+    pub positions: Vec<f64>,
+    pub indices: Vec<u32>,
+    pub maximum_coordinate_rounding_mm: f64,
+    pub volume_mm3: f64,
+    pub exact_volume_mm3: Ratio,
+    pub rounding_topology: RoundingTopologyReport,
+}
+fn fail(s: &str) -> Error {
+    Error::new("MINKOWSKI_3D_REFUSED", format!("Minkowski 3D refused: {s}"))
+}
+fn integer(n: i64) -> Q {
+    Q::from_integer(n.into())
+}
+fn sub(a: &P, b: &P) -> P {
+    std::array::from_fn(|i| &a[i] - &b[i])
+}
+fn add(a: &P, b: &P) -> P {
+    std::array::from_fn(|i| &a[i] + &b[i])
+}
+fn dot(a: &P, b: &P) -> Q {
+    (0..3).map(|i| &a[i] * &b[i]).sum()
+}
+fn cross(a: &P, b: &P) -> P {
+    [
+        &a[1] * &b[2] - &a[2] * &b[1],
+        &a[2] * &b[0] - &a[0] * &b[2],
+        &a[0] * &b[1] - &a[1] * &b[0],
+    ]
+}
+fn zero(p: &P) -> bool {
+    p.iter().all(Zero::is_zero)
+}
+fn plane(f: &[P]) -> Plane {
+    let n = cross(&sub(&f[1], &f[0]), &sub(&f[2], &f[0]));
+    let d = dot(&n, &f[0]);
+    [n[0].clone(), n[1].clone(), n[2].clone(), d]
+}
+fn eval(h: &Plane, p: &P) -> Q {
+    &h[0] * &p[0] + &h[1] * &p[1] + &h[2] * &p[2] - &h[3]
+}
+fn normalized(h: &Plane, oriented: bool) -> Plane {
+    let x = h[..3].iter().find(|q| !q.is_zero()).unwrap();
+    let scale = if oriented { x.abs() } else { x.clone() };
+    std::array::from_fn(|i| &h[i] / &scale)
+}
+fn neg(h: &Plane) -> Plane {
+    std::array::from_fn(|i| -&h[i])
+}
+fn centroid(points: &[P]) -> P {
+    std::array::from_fn(|i| points.iter().map(|p| &p[i]).sum::<Q>() / integer(points.len() as i64))
+}
+fn guard(p: &P) -> Result<()> {
+    if p.iter()
+        .any(|q| q.numer().bits() > 8192 || q.denom().bits() > 8192)
+    {
+        return Err(fail("exact coordinate bit budget exceeded"));
+    }
+    Ok(())
+}
+#[derive(Default)]
+struct Work(usize);
+impl Work {
+    fn charge(&mut self, n: usize) -> Result<()> {
+        self.0 = self.0.saturating_add(n);
+        if self.0 > 4_000_000 {
+            return Err(fail("exact predicate work budget exceeded"));
+        }
+        Ok(())
+    }
+}
+fn identity(m: &SourceMesh) -> String {
+    let mut h = Sha256::new();
+    h.update(b"minkowski-positive-polyhedral-source-v1");
+    h.update((m.positions.len() as u64).to_le_bytes());
+    for x in &m.positions {
+        h.update(x.to_bits().to_le_bytes())
+    }
+    h.update((m.indices.len() as u64).to_le_bytes());
+    for x in &m.indices {
+        h.update(x.to_le_bytes())
+    }
+    h.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+struct Input {
+    points: Vec<P>,
+    faces: Vec<Face>,
+    planes: Vec<Plane>,
+}
+fn input(m: &SourceMesh) -> Result<Input> {
+    if m.positions.len() % 3 != 0
+        || m.positions.len() > 3 * 1024
+        || m.indices.len() % 3 != 0
+        || m.indices.len() > 3 * 2048
+        || m.indices.is_empty()
+    {
+        return Err(fail("source mesh size or shape budget exceeded"));
+    }
+    if m.positions.iter().any(|x| !x.is_finite() || x.abs() > 1e6) {
+        return Err(fail(
+            "source coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let pts = m
+        .positions
+        .chunks_exact(3)
+        .map(|p| std::array::from_fn(|i| Q::from_float(p[i]).unwrap()))
+        .collect::<Vec<P>>();
+    input_points(&pts, &m.indices)
+}
+fn input_points(pts: &[P], indices: &[u32]) -> Result<Input> {
+    input_chain(pts,indices,true)
+}
+/// Oriented authored fan chains can overlap with opposite multiplicities (a
+/// holed face is an outer disk minus inner disks). Only their total winding
+/// represents material. Every abstract edge must still cancel exactly.
+fn input_chain(pts:&[P],indices:&[u32],manifold_edges:bool)->Result<Input>{
+    if pts.len() > 1024 || indices.len() > 6144 || indices.len() % 3 != 0 || indices.is_empty() {
+        return Err(fail("exact nominal source mesh budget exceeded"));
+    }
+    for p in pts {
+        guard(p)?;
+    }
+    let mut edges = BTreeMap::<(P, P), (usize, i32)>::new();
+    let mut faces = Vec::with_capacity(indices.len() / 3);
+    let mut points = BTreeSet::new();
+    let mut planes = BTreeSet::new();
+    for t in indices.chunks_exact(3) {
+        let f = t
+            .iter()
+            .map(|i| {
+                pts.get(*i as usize)
+                    .cloned()
+                    .ok_or_else(|| fail("invalid source triangle index"))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if zero(&cross(&sub(&f[1], &f[0]), &sub(&f[2], &f[0]))) {
+            return Err(fail("degenerate source triangle"));
+        }
+        for i in 0..3 {
+            let a = &f[i];
+            let b = &f[(i + 1) % 3];
+            let key = if a < b {
+                (a.clone(), b.clone())
+            } else {
+                (b.clone(), a.clone())
+            };
+            let e = edges.entry(key).or_default();
+            e.0 += 1;
+            e.1 += if a < b { 1 } else { -1 };
+            points.insert(a.clone());
+        }
+        planes.insert(normalized(&plane(&f), false));
+        faces.push(f);
+    }
+    if edges.values().any(|e| e.1!=0||(manifold_edges&&e.0!=2)) {
+        return Err(fail(
+            "source must be closed and consistently oriented after exact-coordinate welding",
+        ));
+    }
+    if planes.len() > 128 {
+        return Err(fail("source exceeds 128 distinct facet planes"));
+    }
+    Ok(Input {
+        points: points.into_iter().collect(),
+        faces,
+        planes: planes.into_iter().collect(),
+    })
+}
+/// A generic ray direction is selected exactly. Edge/coplanar hits cause another
+/// direction, never a tolerance decision. Closed oriented chains define winding.
+fn winding(p: &P, faces: &[Face], work: &mut Work) -> Result<i32> {
+    let face_data: Vec<(P, Q)> = faces
+        .iter()
+        .map(|f| {
+            let h = plane(f);
+            let num = -eval(&h, p);
+            let [nx, ny, nz, _] = h;
+            ([nx, ny, nz], num)
+        })
+        .collect();
+    for k in 1..=(faces.len() * 3 + 2) {
+        let d = [Q::one(), integer(k as i64), integer((k * k) as i64)];
+        let mut w = 0;
+        let mut generic = true;
+        for (f, (n, num)) in faces.iter().zip(&face_data) {
+            work.charge(1)?;
+            let den = dot(n, &d);
+            if den.is_zero() {
+                if num.is_zero() {
+                    generic = false;
+                    break;
+                }
+                continue;
+            }
+            let t = num / &den;
+            if t <= Q::zero() {
+                continue;
+            }
+            let x = std::array::from_fn(|i| &p[i] + &t * &d[i]);
+            let mut neg_side = false;
+            let mut zero_side = false;
+            for i in 0..3 {
+                let s = dot(n, &cross(&sub(&f[(i + 1) % 3], &f[i]), &sub(&x, &f[i])));
+                if s.is_negative() {
+                    neg_side = true;
+                    break;
+                }
+                if s.is_zero() {
+                    zero_side = true;
+                }
+            }
+            if neg_side {
+                continue;
+            }
+            if zero_side {
+                generic = false;
+                break;
+            }
+            w += if den.is_positive() { 1 } else { -1 };
+        }
+        if generic {
+            return Ok(w);
+        }
+    }
+    Err(fail("no generic winding ray within predicate budget"))
+}
+fn partition(mut cells: Vec<Poly>, planes: &[Plane], work: &mut Work) -> Result<Vec<Poly>> {
+    for h in planes {
+        let mut next = Vec::with_capacity(cells.len());
+        for c in cells {
+            let points = c.vertices();
+            let mut lo = false;
+            let mut hi = false;
+            for p in &points {
+                let v = eval(h, p);
+                if v.is_negative() {
+                    lo = true;
+                } else if v.is_positive() {
+                    hi = true;
+                }
+                if lo && hi {
+                    break;
+                }
+            }
+            work.charge(points.len())?;
+            if lo && hi {
+                if let Some(p) = c.clip(h, work)? {
+                    next.push(p)
+                }
+                if let Some(p) = c.clip(&neg(h), work)? {
+                    next.push(p)
+                }
+            } else {
+                next.push(c)
+            }
+            if next.len() > 2048 {
+                return Err(fail("plane arrangement exceeds 2048 cells"));
+            }
+        }
+        cells = next;
+    }
+    Ok(cells)
+}
+fn decompose(i: &Input, work: &mut Work) -> Result<Vec<Poly>> {
+    let mut bounds = bounding_box(&i.points)?;
+    work.charge(i.faces.len() * i.points.len())?;
+    // A closed outward supporting triangle chain is a positive multiple of the
+    // convex hull boundary. Consequently its positive-winding material is this
+    // hull. This exact shortcut avoids an exponential arrangement on convex input.
+    if i.faces.iter().all(|f| {
+        let h = plane(f);
+        i.points.iter().all(|p| eval(&h, p) <= Q::zero())
+    }) {
+        for f in &i.faces {
+            if let Some(c) = bounds.clip(&plane(f), work)? {
+                bounds = c
+            } else {
+                return Err(fail("empty convex source"));
+            }
+        }
+        if winding(&centroid(&bounds.vertices()), &i.faces, work)? <= 0 {
+            return Err(fail("convex source has no positive material"));
+        }
+        return Ok(vec![bounds]);
+    }
+    let mut result = Vec::new();
+    for c in partition(vec![bounds], &i.planes, work)? {
+        if winding(&centroid(&c.vertices()), &i.faces, work)? > 0 {
+            result.push(c)
+        }
+    }
+    if result.len() > 256 {
+        return Err(fail("source exceeds 256 material convex cells"));
+    }
+    Ok(result)
+}
+fn construction(a: &SourceMesh, b: &SourceMesh) -> Result<Certificate> {
+    let mut work = Work::default();
+    let a0 = input(a)?;
+    let b0 = input(b)?;
+    let aa = decompose(&a0, &mut work)?;
+    let bb = decompose(&b0, &mut work)?;
+    let material = sum_material(&aa, &bb, &mut work)?;
+    certificate_for(
+        &material,
+        [identity(a), identity(b)],
+        [aa.len(), bb.len()],
+        aa.len() * bb.len(),
+        &mut work,
+    )
+}
+fn sum_material(aa: &[Poly], bb: &[Poly], work: &mut Work) -> Result<Vec<Poly>> {
+    if aa.len() * bb.len() > 512 {
+        return Err(fail("sum exceeds 512 convex cell pairs"));
+    }
+    let mut sums = Vec::with_capacity(aa.len() * bb.len());
+    for x in aa {
+        let av = x.vertices();
+        for y in bb {
+            let bv = y.vertices();
+            if av.len() * bv.len() > 16384 {
+                return Err(fail("convex sum exceeds 16384 vertex pairs"));
+            }
+            let mut points = Vec::with_capacity(av.len() * bv.len());
+            for p in &av {
+                for q in &bv {
+                    points.push(add(p, q));
+                }
+            }
+            sums.push(hull(points, work)?);
+        }
+    }
+    let material = if sums.len() < 2 {
+        sums
+    } else {
+        let all = sums.iter().flat_map(Poly::vertices).collect::<Vec<_>>();
+        let planes = sums
+            .iter()
+            .flat_map(|c| c.faces.iter().map(|f| normalized(&plane(f), false)))
+            .collect::<BTreeSet<_>>();
+        if planes.len() > 192 {
+            return Err(fail("sum union exceeds 192 facet planes"));
+        }
+        let cells = partition(
+            vec![bounding_box(&all)?],
+            &planes.into_iter().collect::<Vec<_>>(),
+            work,
+        )?;
+        let mut retained = Vec::with_capacity(cells.len());
+        let sum_faces: usize = sums.iter().map(|s| s.faces.len()).sum();
+        for c in cells {
+            let p = centroid(&c.vertices());
+            work.charge(sum_faces)?;
+            if sums.iter().any(|s| s.contains(&p)) {
+                retained.push(c)
+            }
+        }
+        retained
+    };
+    Ok(material)
+}
+fn certificate_for(
+    material: &[Poly],
+    sources: [String; 2],
+    source_cells: [usize; 2],
+    sum_cells: usize,
+    work: &mut Work,
+) -> Result<Certificate> {
+    let (points, triangles) = boundary(material, work)?;
+    Ok(Certificate {
+        version: 1,
+        sources,
+        vertices: points
+            .iter()
+            .map(|p| std::array::from_fn(|i| [p[i].numer().to_string(), p[i].denom().to_string()]))
+            .collect(),
+        triangles,
+        source_cells,
+        sum_cells,
+    })
+}
+fn display(c: &Certificate) -> Result<Verified> {
+    display_precision(c, "f64")
+}
+fn display_precision(c: &Certificate, precision: &'static str) -> Result<Verified> {
+    let mut points = Vec::with_capacity(c.vertices.len());
+    let mut positions = Vec::with_capacity(c.vertices.len() * 3);
+    let mut rounding = Q::zero();
+    for p in &c.vertices {
+        let mut q = [Q::zero(), Q::zero(), Q::zero()];
+        for i in 0..3 {
+            q[i] = Q::new(
+                p[i][0]
+                    .parse()
+                    .map_err(|_| fail("invalid exact numerator"))?,
+                p[i][1]
+                    .parse()
+                    .map_err(|_| fail("invalid exact denominator"))?,
+            );
+            let x = q[i]
+                .to_f64()
+                .ok_or_else(|| fail("display coordinate overflow"))?;
+            let x = if precision == "f32" {
+                x as f32 as f64
+            } else {
+                x
+            };
+            if !x.is_finite() {
+                return Err(fail("rounded coordinate overflow"));
+            }
+            rounding = rounding.max((&q[i] - Q::from_float(x).unwrap()).abs());
+            positions.push(x)
+        }
+        points.push(q)
+    }
+    let mut volume = Q::zero();
+    let six = integer(6);
+    for t in &c.triangles {
+        volume += dot(
+            &points[t[0] as usize],
+            &cross(&points[t[1] as usize], &points[t[2] as usize]),
+        ) / &six
+    }
+    let mut bound = rounding.to_f64().ok_or_else(|| fail("rounding overflow"))?;
+    if Q::from_float(bound).unwrap() < rounding {
+        bound = f64::from_bits(bound.to_bits() + 1)
+    }
+    let rounding_topology = rounding::prove(&points, &positions, &c.triangles, precision)?;
+    Ok(Verified {
+        certificate: c.clone(),
+        positions,
+        indices: c.triangles.iter().flatten().copied().collect(),
+        maximum_coordinate_rounding_mm: bound,
+        volume_mm3: volume.to_f64().ok_or_else(|| fail("volume overflow"))?,
+        exact_volume_mm3: [volume.numer().to_string(), volume.denom().to_string()],
+        rounding_topology,
+    })
+}
+pub fn certify(a: &SourceMesh, b: &SourceMesh) -> Result<Verified> {
+    let c = construction(a, b)?;
+    display(&c)
+}
+pub fn verify(a: &SourceMesh, b: &SourceMesh, c: &Certificate) -> Result<Verified> {
+    if c.version != 1 || c.sources != [identity(a), identity(b)] {
+        return Err(fail("certificate source identity mismatch"));
+    }
+    if c.vertices.len() > 32768 || c.triangles.len() > 65536 {
+        return Err(fail("certificate boundary size exceeded"));
+    }
+    // Reconstruct exact cells and their complete union. No producer-only normals,
+    // cached numeric mesh, purported convex decomposition or volume is trusted.
+    if &construction(a, b)? != c {
+        return Err(fail(
+            "certificate exact boundary or complete cell census is false",
+        ));
+    }
+    display(c)
+}
+/// The same exact set certificate with a checked embedding of the mesh that
+/// will actually be uploaded to a Float32 renderer.
+pub fn certify_f32(a: &SourceMesh, b: &SourceMesh) -> Result<Verified> {
+    display_precision(&construction(a, b)?, "f32")
+}
+pub fn verify_f32(a: &SourceMesh, b: &SourceMesh, c: &Certificate) -> Result<Verified> {
+    if c.version != 1
+        || c.sources != [identity(a), identity(b)]
+        || c.vertices.len() > 32768
+        || c.triangles.len() > 65536
+    {
+        return Err(fail("certificate identity or size mismatch"));
+    }
+    if &construction(a, b)? != c {
+        return Err(fail(
+            "certificate exact boundary or complete cell census is false",
+        ));
+    }
+    display_precision(c, "f32")
+}

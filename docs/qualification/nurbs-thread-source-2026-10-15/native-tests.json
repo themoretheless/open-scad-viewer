@@ -1,0 +1,84 @@
+{
+  "passed": true,
+  "focusedTests": {
+    "core": 20,
+    "brep": 28
+  },
+  "logs": [
+    "core-tests.log",
+    "cap-regression-tests.log",
+    "wasm-check.log"
+  ],
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/thread/certificate.rs": "26f72823793e0afa4387f4f6aa384a5604ef01e938779d9847d55723efae050c",
+    "crates/nurbs-core/src/construct/curves/thread/coverage.rs": "0b11d6f132cbe4c3d485275c73aa98436b467b6c6dcb4dc6322896e9887778e5",
+    "crates/nurbs-core/src/analysis/curve_surface_composition/multi_trace.rs": "a5139baf0a51e1a6783f8c263c74403958b6f1bb26af016221f363c2ee4b3dfe",
+    "crates/brep-core/src/thread_verified.rs": "bd74101f93002df5a986760e020979444c61b4747005c2a8cfe705bdb785aa4b",
+    "crates/brep-core/src/thread_internal.rs": "f54ad5e81ca3675544c002969957053e7653a1a4bd2afa2fd01564edbc61c5de",
+    "crates/nurbs-core/tests/thread_certificate.rs": "cfbf2371413016064426de0e3ba58e3c7e28b177c02ca28a512bf8b7ea102093",
+    "crates/nurbs-core/tests/thread_trim_coverage.rs": "fec45800497f95ee22b3029dba8263c876fef9b3bb2fd3fb9f7a3a3636026efb",
+    "crates/brep-core/tests/thread_verified.rs": "5bde6b2db675cc79dbbf5605bf26264ec4097eb676346a80b3e1cef26a4b7ffd",
+    "crates/brep-core/tests/thread_internal.rs": "10fec1cf89bcf475b8d905a617dc2c3382ef9cf7d089897acf49219a5eff5dc2",
+    "crates/nurbs-core/src/construct/curves/thread.rs": "2651e11f048c3f82ca79b97165d85395f8cd9c4101e355dbe84272e41f6dd7ae",
+    "crates/nurbs-core/src/analysis/curve_surface_composition.rs": "52878b6048b272d4f58c003a1230b4520f73eff2173ecfcf8ca0e41e6d35006b",
+    "crates/brep-core/src/thread.rs": "9b67aecfd6516988ca9f4032e1aff0f2917e1d9ca42962fd107330b14fa327bb",
+    "crates/brep-core/src/planar_cap.rs": "f5f667d9abc0c07c115a883a52e344fb9442e611ab1a845d767ab6bdec56ee10",
+    "crates/brep-core/src/planar_cap/exact_profile.rs": "254bc95575ab38df1830483bf718be267d067eb47bf418ac55325e0f2f116689",
+    "crates/brep-core/tests/planar_cap.rs": "dc4793aaaf81dac50ad61a5f260a4843c43497a751c89b7af970d1a1de9c638b",
+    "crates/nurbs-core/src/analysis/surface_measure/jets.rs": "5d574c1d489d180bd0d82ad48177decc3d32276e78c15e329c34c22903b9bd8f",
+    "crates/brep-core/src/lib.rs": "117ca41bfbcca77a4cc1173c998a5c1cf37990c35cb4cde20a0ce6c0d677e37f",
+    "crates/brep-core/src/edge_partition.rs": "4a26feb9ad9210188a29d66a90d48253aa2f217b93eb3ca5cfce01f7029a41c8",
+    "crates/brep-core/src/fillet_contact.rs": "2b6795e1d98d7f6230612f37050ad1d6d188c9d82fdc91a5ee3e76b05a4d3958",
+    "crates/brep-core/src/face_crossings.rs": "2d182dae6a1d0c8921a2c44c24512225cc01f1ca4482833d6a9e3a9be7d5bcf4",
+    "crates/brep-core/src/contact_trim.rs": "51093220485bb83b2716a313e8a87623a4df28b34f0cc87ba7b38842edb7b197"
+  },
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "originalNominalWallAccuracyIncludingRounding": true,
+  "completeAffineClippingAndStoredUvIsotopy": true,
+  "sourceWallsBoundToModel": true,
+  "exactCapProfileTopology": true,
+  "finalContinuousG0": true,
+  "solid_geometry_certified": false,
+  "idealFiniteBodyErrorUpper": null,
+  "packagedBrowserEditorStepQualified": false,
+  "fullNativeSuite": {
+    "passed": true,
+    "scope": "Compiled snapshot; later changes in unrelated modules were followed by current focused revalidation.",
+    "brepCore": {
+      "passed": 1214,
+      "failed": 0,
+      "ignored": 3
+    },
+    "nurbsCore": {
+      "passed": 1861,
+      "failed": 0,
+      "ignored": 0
+    },
+    "doctests": {
+      "passed": 2,
+      "failed": 0
+    },
+    "log": "full-native.log",
+    "concurrentFiles": "concurrent-source-snapshot.json"
+  },
+  "previousFullSuiteFailure": "Standalone planar cap rejected new degree-six thread traces; fixed with exact profile fallback and six cap regression tests.",
+  "booleanRegressions": {
+    "general_multispan_boolean_authors_exact_region_operations": true,
+    "general_multispan_boolean_naming_is_rigid_transform_stable": true,
+    "general_multispan_boolean_has_independent_regularized_volume_oracle": true
+  },
+  "currentFocusedTests": {
+    "threadCore": 20,
+    "periodicTrim": 84,
+    "threadBrepAndCaps": 28,
+    "booleanRegressions": 3
+  },
+  "currentLogs": [
+    "current-core-tests.log",
+    "current-brep-tests.log",
+    "current-boolean-tests.log",
+    "current-wasm-check.log"
+  ],
+  "currentWasmCompilationPassed": true
+}

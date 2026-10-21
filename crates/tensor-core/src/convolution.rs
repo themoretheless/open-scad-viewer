@@ -48,14 +48,10 @@ impl ConvPlan {
             ));
         }
         let spatial_rank = input.rank() - 2;
-        if [
-            &options.strides,
-            &options.dilations,
-            &options.padding_before,
-            &options.padding_after,
-        ]
-        .iter()
-        .any(|values| values.len() != spatial_rank)
+        if options.strides.len() != spatial_rank
+            || options.dilations.len() != spatial_rank
+            || options.padding_before.len() != spatial_rank
+            || options.padding_after.len() != spatial_rank
         {
             return Err(invalid("every option vector must match the spatial rank"));
         }
@@ -76,7 +72,9 @@ impl ConvPlan {
                 "weight input channels must equal input channels divided by groups",
             ));
         }
-        let mut output = vec![input.dims()[0], outputs];
+        let mut output = Vec::with_capacity(spatial_rank + 2);
+        output.push(input.dims()[0]);
+        output.push(outputs);
         for axis in 0..spatial_rank {
             let kernel = weight.dims()[axis + 2];
             let stride = options.strides[axis];

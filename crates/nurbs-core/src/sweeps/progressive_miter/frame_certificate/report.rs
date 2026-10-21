@@ -18,9 +18,17 @@ pub struct Report {
     pub holonomy_angle: Option<[f64; 2]>,
     pub cumulative_lengths: Option<Vec<[f64; 2]>>,
     pub reason: Option<&'static str>,
+    pub(super) distribute_holonomy: bool,
     pub(super) sites: Option<Vec<[f64; 3]>>,
 }
 impl Report {
+    pub(in super::super) fn without_distributed_holonomy(mut self)->Self {
+        self.distribute_holonomy=false; self
+    }
+    fn distributed_angle(&self)->[f64;2] {
+        if self.distribute_holonomy {self.holonomy_angle.unwrap_or([0.,0.])} else {[0.,0.]}
+    }
+
     /// Ideal polyline chord-length traversal, including outward interpolation.
     /// Returns no value when the construction was unresolved.
     pub fn traversal(&self, edge: usize, fraction: [f64; 2]) -> Result<Option<[f64; 2]>> {
@@ -424,7 +432,7 @@ impl Report {
         let s2 = scalar(sdd).mul(sr)?.mul(sr)?;
         let theta1 = scalar(td)
             .mul(tr)?
-            .add(scalar(self.holonomy_angle.unwrap_or([0., 0.])).mul(rate)?)?;
+            .add(scalar(self.distributed_angle()).mul(rate)?)?;
         let theta2 = scalar(tdd).mul(tr)?.mul(tr)?;
         let normals = self.normals.as_ref().unwrap();
         let tangents = self.tangents.as_ref().unwrap();
@@ -494,7 +502,7 @@ impl Report {
         let Some(t) = self.traversal(edge, fraction)? else {
             return Ok(None);
         };
-        let a = self.holonomy_angle.unwrap_or([0., 0.]);
+        let a = self.distributed_angle();
         let v = I::new(a[0], a[1])?.mul(I::new(t[0], t[1])?)?;
         Ok(Some([v.lo, v.hi]))
     }
@@ -563,8 +571,9 @@ pub(super) fn unresolved(cells: usize, reason: &'static str) -> Report {
         planes: None,
         closing_normal: None,
         holonomy_angle: None,
+        distribute_holonomy:true,
         cumulative_lengths: None,
         reason: Some(reason),
-        sites: None,
+    sites: None,
     }
 }

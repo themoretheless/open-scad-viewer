@@ -154,7 +154,9 @@ impl SelectDispatch {
         let mask = mask.broadcast_to(shape.clone())?;
         let yes = yes.broadcast_to(shape.clone())?;
         let no = no.broadcast_to(shape.clone())?;
-        let mut metadata = layout_metadata(&mask);
+        let mut metadata = Vec::with_capacity(shape.rank() * 4);
+        metadata.extend(mask.shape().dims().iter().map(|&v| v as u64));
+        metadata.extend(mask.strides().iter().map(|&v| v as u64));
         metadata.extend(yes.strides().iter().chain(no.strides()).map(|&v| v as u64));
         Ok(Self {
             metadata,

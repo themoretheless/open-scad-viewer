@@ -53,46 +53,57 @@ struct Node {
     min_z: f64,
     max_z: f64,
     range: std::ops::Range<usize>,
-    children: Option<(Box<Node>, Box<Node>)>,
+    children: Option<(u32, u32)>,
 }
 
 impl Node {
-    fn build(triangles: &[Triangle], start: usize) -> Self {
-        let min_z = triangles
-            .iter()
-            .map(|t| t.min_z)
-            .fold(f64::INFINITY, f64::min);
-        let max_z = triangles
-            .iter()
-            .map(|t| t.max_z)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let children = (triangles.len() > 16).then(|| {
-            let mid = triangles.len() / 2;
-            (
-                Box::new(Self::build(&triangles[..mid], start)),
-                Box::new(Self::build(&triangles[mid..], start + mid)),
-            )
-        });
-        Self {
+    fn build(triangles: &[Triangle], start: usize, nodes: &mut Vec<Node>) -> u32 {
+        let mut min_z = f64::INFINITY;
+        let mut max_z = f64::NEG_INFINITY;
+        for t in triangles {
+            min_z = min_z.min(t.min_z);
+            max_z = max_z.max(t.max_z);
+        }
+        let idx = nodes.len() as u32;
+        nodes.push(Self {
             min_z,
             max_z,
             range: start..start + triangles.len(),
-            children,
+            children: None,
+        });
+        if triangles.len() > 16 {
+            let mid = triangles.len() / 2;
+            let left = Self::build(&triangles[..mid], start, nodes);
+            let right = Self::build(&triangles[mid..], start + mid, nodes);
+            nodes[idx as usize].children = Some((left, right));
         }
+        idx
     }
 
-    fn query(&self, z: f64, triangles: &[Triangle], out: &mut Vec<usize>) {
-        if z < self.min_z || z >= self.max_z {
+    fn query(nodes: &[Node], z: f64, triangles: &[Triangle], out: &mut Vec<usize>) {
+        if nodes.is_empty() {
             return;
         }
-        if let Some((left, right)) = &self.children {
-            left.query(z, triangles, out);
-            right.query(z, triangles, out);
-        } else {
-            for index in self.range.clone() {
-                let t = &triangles[index];
-                if t.min_z <= z && z < t.max_z {
-                    out.push(index);
+        let mut stack = [0u32; 64];
+        let mut sp = 1usize;
+        while sp > 0 {
+            sp -= 1;
+            let node = &nodes[stack[sp] as usize];
+            if z < node.min_z || z >= node.max_z {
+                continue;
+            }
+            if let Some((left, right)) = node.children {
+                stack[sp] = right;
+                stack[sp + 1] = left;
+                sp += 2;
+            } else {
+                for (offset, t) in triangles[node.range.start..node.range.end]
+                    .iter()
+                    .enumerate()
+                {
+                    if t.min_z <= z && z < t.max_z {
+                        out.push(node.range.start + offset);
+                    }
                 }
             }
         }
@@ -105,7 +116,7 @@ impl Node {
 pub struct MeshSectionIndex {
     points: Vec<[f64; 3]>,
     triangles: Vec<Triangle>,
-    root: Node,
+    nodes: Vec<Node>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -124,9 +135,10 @@ fn error(code: &'static str, message: &str) -> Error {
 impl MeshSectionIndex {
     pub fn new(mesh: &MeshView<'_>) -> Result<Self> {
         mesh.validate()?;
-        let mut points = Vec::new();
-        let mut identities = BTreeMap::new();
-        let mut vertex_ids = Vec::with_capacity(mesh.positions.len() / 3);
+        let num_verts = mesh.positions.len() / 3;
+        let mut points = Vec::with_capacity(num_verts);
+        let mut identities = HashMap::with_capacity(num_verts);
+        let mut vertex_ids = Vec::with_capacity(num_verts);
         for p in mesh.positions.as_chunks::<3>().0 {
             let p = [p[0], p[1], p[2]];
             let key = p.map(|v| if v == 0.0 { 0 } else { v.to_bits() });
@@ -139,9 +151,11 @@ impl MeshSectionIndex {
         let mut triangles = Vec::with_capacity(mesh.indices.len() / 3);
         for (source, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
             let vertices = [vertex_ids[t[0]], vertex_ids[t[1]], vertex_ids[t[2]]];
-            let z = vertices.map(|i| points[i][2]);
-            let min_z = z.into_iter().fold(f64::INFINITY, f64::min);
-            let max_z = z.into_iter().fold(f64::NEG_INFINITY, f64::max);
+            let z0 = points[vertices[0]][2];
+            let z1 = points[vertices[1]][2];
+            let z2 = points[vertices[2]][2];
+            let min_z = z0.min(z1).min(z2);
+            let max_z = z0.max(z1).max(z2);
             triangles.push(Triangle {
                 vertices,
                 source,
@@ -149,12 +163,13 @@ impl MeshSectionIndex {
                 max_z,
             });
         }
-        triangles.sort_by(|a, b| a.min_z.total_cmp(&b.min_z).then(a.source.cmp(&b.source)));
-        let root = Node::build(&triangles, 0);
+        triangles.sort_unstable_by(|a, b| a.min_z.total_cmp(&b.min_z).then(a.source.cmp(&b.source)));
+        let mut nodes = Vec::with_capacity((triangles.len() / 8).max(1));
+        Node::build(&triangles, 0, &mut nodes);
         Ok(Self {
             points,
             triangles,
-            root,
+            nodes,
         })
     }
 
@@ -169,8 +184,9 @@ impl MeshSectionIndex {
         let (p, q) = (self.points[a], self.points[b]);
         let dz = q[2] - p[2];
         let t = (z - p[2]) / dz;
-        let point = [p[0] * (1.0 - t) + q[0] * t, p[1] * (1.0 - t) + q[1] * t];
-        if !dz.is_finite() || !t.is_finite() || !point.iter().all(|x| x.is_finite()) {
+        let one_minus_t = 1.0 - t;
+        let point = [p[0] * one_minus_t + q[0] * t, p[1] * one_minus_t + q[1] * t];
+        if !dz.is_finite() || !t.is_finite() || !(point[0].is_finite() && point[1].is_finite()) {
             return Err(error(
                 "SECTION_NUMERIC_RANGE",
                 "Section interpolation exceeded the numeric range",
@@ -203,8 +219,8 @@ impl MeshSectionIndex {
                 "Section height must be finite",
             ));
         }
-        let mut candidates = Vec::new();
-        self.root.query(z_mm, &self.triangles, &mut candidates);
+        let mut candidates = Vec::with_capacity(64);
+        Node::query(&self.nodes, z_mm, &self.triangles, &mut candidates);
         let mut positions = BTreeMap::new();
         let mut outgoing = BTreeMap::new();
         let mut incoming = BTreeSet::new();
@@ -214,7 +230,7 @@ impl MeshSectionIndex {
             let mut start = None;
             let mut end = None;
             for i in 0..3 {
-                let (a, b) = (triangle.vertices[i], triangle.vertices[(i + 1) % 3]);
+                let (a, b) = (triangle.vertices[i], triangle.vertices[[1, 2, 0][i]]);
                 let above_a = self.points[a][2] > z_mm;
                 if above_a != (self.points[b][2] > z_mm) {
                     let endpoint = self.endpoint(a, b, z_mm)?;
@@ -239,8 +255,8 @@ impl MeshSectionIndex {
                         ));
                     }
                 }
-                positions.insert(a, p);
-                positions.insert(b, q);
+                positions.entry(a).or_insert(p);
+                positions.entry(b).or_insert(q);
                 if outgoing.insert(a, (b, triangle.source)).is_some() || !incoming.insert(b) {
                     return Err(error(
                         "SECTION_AMBIGUOUS_BOUNDARY",
@@ -297,7 +313,7 @@ impl MeshSectionIndex {
 
 pub fn project(mesh: &MeshView<'_>) -> Result<Rings> {
     mesh.validate()?;
-    let mut triangles = Vec::new();
+    let mut triangles = Vec::with_capacity(mesh.indices.len() / 3);
     for t in mesh.indices.as_chunks::<3>().0 {
         let mut r: Vec<_> = t
             .iter()
@@ -306,10 +322,11 @@ pub fn project(mesh: &MeshView<'_>) -> Result<Rings> {
                 [p[0], p[1]]
             })
             .collect();
-        if area(&r).abs() < 1e-12 {
+        let a = area(&r);
+        if a.abs() < 1e-12 {
             continue;
         }
-        if area(&r) < 0. {
+        if a < 0. {
             r.reverse()
         }
         triangles.push(r)
@@ -321,28 +338,32 @@ pub fn slice(mesh: &MeshView<'_>, z: f64) -> Result<Rings> {
     mesh.validate()?;
     check(z.is_finite(), "Invalid slice height")?;
     let eps = 1e-8;
+    let eps_sq = eps * eps;
     let mut points = Vec::new();
     let mut ids = HashMap::new();
     let mut edges = BTreeSet::new();
     for t in mesh.indices.as_chunks::<3>().0 {
         let p = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
         let n = cross(sub(p[1], p[0]), sub(p[2], p[0]));
-        let mut hits = Vec::new();
+        let mut hits: [[f64; 2]; 3] = [[0.; 2]; 3];
+        let mut hit_len = 0usize;
         for i in 0..3 {
             let a = p[i];
-            let b = p[(i + 1) % 3];
+            let b = p[[1, 2, 0][i]];
             if (a[2] > z) != (b[2] > z) {
                 let f = (z - a[2]) / (b[2] - a[2]);
                 let h = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
-                if hits
-                    .iter()
-                    .all(|v: &[f64; 2]| (v[0] - h[0]).hypot(v[1] - h[1]) > eps)
-                {
-                    hits.push(h)
+                if hits[..hit_len].iter().all(|v: &[f64; 2]| {
+                    let dx = v[0] - h[0];
+                    let dy = v[1] - h[1];
+                    dx * dx + dy * dy > eps_sq
+                }) {
+                    hits[hit_len] = h;
+                    hit_len += 1;
                 }
             }
         }
-        if hits.len() != 2 {
+        if hit_len != 2 {
             continue;
         }
         if (hits[1][0] - hits[0][0]) * (-n[1]) + (hits[1][1] - hits[0][1]) * n[0] < 0. {

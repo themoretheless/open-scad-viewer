@@ -136,3 +136,29 @@ mod boundary_certificate_tests {
         }
     }
 }
+
+pub fn compose_unbudgeted_boundary(
+    wall: Option<f64>,
+    caps: Option<[f64; 2]>,
+    closed: bool,
+) -> BoundaryCertificate {
+    let valid = |x: f64| x.is_finite() && x >= 0.;
+    let wall = wall.filter(|&x| valid(x));
+    let caps = caps.filter(|c| c.iter().all(|&x| valid(x)));
+    let error_upper = boundary(wall, caps, closed);
+    let reason = if wall.is_none() {
+        Some("wall-bound-unproved")
+    } else if error_upper.is_none() {
+        Some("filled-cap-bound-unproved")
+    } else {
+        Some("no-authored-tolerance")
+    };
+    BoundaryCertificate {
+        continuous_bound: error_upper.is_some(),
+        within_budget: None,
+        error_upper,
+        wall_error_upper: wall,
+        filled_cap_error_upper: if closed { None } else { caps },
+        reason,
+    }
+}

@@ -1,0 +1,242 @@
+//! Standalone Rust checker: one JSON request on stdin, no geometry bridge.
+use brep_core::profile_certificate::{
+    ProfileCertificate, ProfileMeasureCertificate, certify, certify_measure, verify, verify_measure,
+};
+use nurbs_core::curve::Curve;
+use std::io::{self, Read};
+use value_codec::{Value, json};
+fn run() -> std::result::Result<Value, Box<dyn std::error::Error>> {
+    let mode = std::env::args().nth(1).unwrap_or_else(|| "verify".into());
+    let mut source = String::new();
+    let maximum=if mode.contains("minkowski"){8_000_000}else{2_000_000};
+    io::stdin().take(maximum+1).read_to_string(&mut source)?;
+    if source.len() as u64 > maximum { return Err("Certificate request exceeds the mode size budget".into()); }
+    let v: Value = value_codec::from_str(&source)?;
+    let f32_mesh=match v.get("meshPrecision"){None=>false,Some(p)if p.as_str()==Some("f64")=>false,Some(p)if p.as_str()==Some("f32")=>true,_=>return Err("Invalid mesh precision".into())};
+    if mode=="certify-nurbs-source-atlas"||mode=="verify-nurbs-source-atlas" {
+        use brep_core::minkowski3d::curved;
+        let m=value_codec::from_value(v["model"].clone())?;
+        let c=if mode=="certify-nurbs-source-atlas" {curved::certify_source_atlas(&m,value_codec::from_value(v["depth"].clone())?)?}
+          else {let c=value_codec::from_value(v["certificate"].clone())?;curved::verify_source_atlas(&m,&c)?;c};
+        return Ok(json!({"status":"verified","certificate":c}));
+    }
+    if mode=="certify-minkowski-nurbs"||mode=="verify-minkowski-nurbs"||(mode=="verify-minkowski-3d"&&v["certificate"]["scope"].as_str()==Some(brep_core::minkowski3d::curved::SCOPE)){
+        use brep_core::minkowski3d::curved;
+        let a=value_codec::from_value(v["a"].clone())?;let b=value_codec::from_value(v["b"].clone())?;
+        let r=if mode=="certify-minkowski-nurbs"{curved::certify(&a,&b,value_codec::from_value(v["maximumSourceDeviationMm"].clone())?,f32_mesh)?}else{let c=value_codec::from_value(v["certificate"].clone())?;curved::verify(&a,&b,&c,f32_mesh)?};
+        let deviation=r.maximum_set_deviation();let approximation_topology=r.approximation_topology();let source_topology=r.source_approximation_topology();return Ok(json!({"status":"verified","scope":curved::SCOPE,"certificate":r.certificate,"roundingTopology":r.nominal.rounding_topology,"nominalVolumeMm3":r.nominal.volume_mm3,"maximumSetDeviationExactMm":deviation.map(|d|d.0),"approximationTopology":approximation_topology,"sourceApproximationTopology":source_topology}));
+    }
+    if mode=="certify-minkowski-3d"||mode=="verify-minkowski-3d" {
+        let a=value_codec::from_value(v["a"].clone())?;let b=value_codec::from_value(v["b"].clone())?;
+        let r=if mode=="verify-minkowski-3d"{let c=value_codec::from_value(v["certificate"].clone())?;if f32_mesh{brep_core::minkowski3d::verify_f32(&a,&b,&c)?}else{brep_core::minkowski3d::verify(&a,&b,&c)?}}else{if f32_mesh{brep_core::minkowski3d::certify_f32(&a,&b)?}else{brep_core::minkowski3d::certify(&a,&b)?}};
+        return Ok(json!({"status":"verified","scope":brep_core::minkowski3d::SCOPE,"certificate":r.certificate,"volumeMm3":r.volume_mm3,"exactVolumeMm3":r.exact_volume_mm3,"maximumCoordinateRoundingMm":r.maximum_coordinate_rounding_mm,"roundingTopology":r.rounding_topology}));
+    }
+    if mode=="certify-image-agreement"||mode=="verify-image-agreement"{
+        let a:Curve=value_codec::from_value(v["first"].clone())?;let b:Curve=value_codec::from_value(v["second"].clone())?;let da=value_codec::from_value(v["firstDomain"].clone())?;let db=value_codec::from_value(v["secondDomain"].clone())?;
+        if mode=="certify-image-agreement"{return Ok(value_codec::to_value(brep_core::profile_certificate::certify_curve_image_agreement(&a,&b,da,db)?)?);}
+        let c=value_codec::from_value(v["certificate"].clone())?;let r=brep_core::profile_certificate::verify_curve_image_agreement(&a,&b,da,db,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-curve-image-set-agreement","sourceCells":r.source_cells,"coverageSections":r.coverage_sections}));
+    }
+    if mode=="certify-minkowski"||mode=="certify-disk-offset"||mode=="verify-minkowski"{
+        let a:Vec<Vec<Curve>>=value_codec::from_value(v["a"].clone())?;let b:Vec<Vec<Curve>>=value_codec::from_value(v["b"].clone())?;
+        if mode=="certify-minkowski"{return Ok(value_codec::to_value(brep_core::profile_certificate::certify_minkowski_sum(&a,&b,value_codec::from_value(v["maximumSourceDeviationMm"].clone())?)?.0)?);}
+        if mode=="certify-disk-offset"{return Ok(value_codec::to_value(brep_core::profile_certificate::certify_minkowski_disk_offset(&a,value_codec::from_value(v["distanceMm"].clone())?,value_codec::from_value(v["maximumSourceDeviationMm"].clone())?)?.0)?);}
+        let c=value_codec::from_value(v["certificate"].clone())?;let r=brep_core::profile_certificate::verify_minkowski_region(&a,&b,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-filled-minkowski-region-inclusions","exactSetResult":r.exact_set_result(),"nominalExactRings":r.nominal_exact(),"innerExactRings":r.inner_exact(),"outerExactRings":r.outer_exact()}));
+    }
+    if mode=="certify-span-intersections"||mode=="verify-span-intersections"{
+        let a:Curve=value_codec::from_value(v["first"].clone())?;let b:Curve=value_codec::from_value(v["second"].clone())?;
+        if mode=="certify-span-intersections"{return Ok(value_codec::to_value(brep_core::profile_certificate::certify_span_intersections(&a,&b,value_codec::from_value(v["selfPair"].clone())?,value_codec::from_value(v["maximumParameterWidth"].clone())?)?)?);}
+        let c=value_codec::from_value(v["certificate"].clone())?;let r=brep_core::profile_certificate::verify_span_intersections(&a,&b,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-multispan-curve-intersection-components","events":r.events(),"singularParameters":r.singular_parameters(),"overlaps":r.overlaps(),"algebraicLoci":r.algebraic_loci(),"stationarySpans":r.stationary_spans(),"branchDecompositions":r.branch_decompositions(),"finiteEventsExhaustive":r.algebraic_loci().is_empty()}));
+    }
+    if mode == "certify-algebraic-intersections" || mode == "verify-algebraic-intersections" {
+        let a:Curve=value_codec::from_value(v["first"].clone())?;
+        let b:Curve=value_codec::from_value(v["second"].clone())?;
+        if mode == "certify-algebraic-intersections" {
+            return Ok(value_codec::to_value(brep_core::profile_certificate::certify_algebraic_intersections(&a,&b,value_codec::from_value(v["selfPair"].clone())?,value_codec::from_value(v["maximumParameterWidth"].clone())?)?)?);
+        }
+        let c=value_codec::from_value(v["certificate"].clone())?;
+        let r=brep_core::profile_certificate::verify_algebraic_intersections(&a,&b,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-algebraic-curve-intersection-set","events":r.events(),"singularParameters":r.singular_parameters(),"stationaryCensusComplete":r.stationary_census_complete()}));
+    }
+    if mode == "certify-multispan-agreement" || mode == "verify-multispan-agreement" {
+        let a:Curve=value_codec::from_value(v["first"].clone())?;let b:Curve=value_codec::from_value(v["second"].clone())?;
+        let da=value_codec::from_value(v["firstDomain"].clone())?;let db=value_codec::from_value(v["secondDomain"].clone())?;
+        if mode == "certify-multispan-agreement" {return Ok(value_codec::to_value(brep_core::profile_certificate::certify_multispan_agreement(&a,&b,da,db)?)?);}
+        let c=value_codec::from_value(v["certificate"].clone())?;
+        let r=brep_core::profile_certificate::verify_multispan_agreement(&a,&b,da,db,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-multispan-curve-image-agreement","commonSpans":r.common_spans()}));
+    }
+    if mode == "certify-offset-regions" || mode == "verify-offset-regions" {
+        let loops:Vec<Vec<Curve>>=value_codec::from_value(v["loops"].clone())?;
+        let d=value_codec::from_value(v["distanceMm"].clone())?;let e=value_codec::from_value(v["maximumDeviationMm"].clone())?;let l=value_codec::from_value(v["miterLimitMm"].clone())?;
+        if mode == "certify-offset-regions" {return Ok(value_codec::to_value(brep_core::profile_certificate::certify_offset_regions(&loops,d,e,v["joinStyle"].as_str().ok_or("Missing join style")?,l)?)?);}
+        let c=value_codec::from_value(v["certificate"].clone())?;
+        let r=brep_core::profile_certificate::verify_offset_regions(&loops,d,e,l,&c)?;
+        return Ok(json!({"status":"verified","scope":"represented-offset-positive-region-regularization","components":r.components().len(),"rings":r.components().iter().map(Vec::len).sum::<usize>()}));
+    }
+    if mode == "certify-nonlinear-agreement" || mode == "verify-nonlinear-agreement" {
+        let a: Curve = value_codec::from_value(v["first"].clone())?;
+        let b: Curve = value_codec::from_value(v["second"].clone())?;
+        let da = value_codec::from_value(v["firstDomain"].clone())?;
+        let db = value_codec::from_value(v["secondDomain"].clone())?;
+        if mode == "certify-nonlinear-agreement" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_nonlinear_curve_agreement(&a, &b, da, db)?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let r =
+            brep_core::profile_certificate::verify_nonlinear_curve_agreement(&a, &b, da, db, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-curve-nonlinear-image-agreement","commonSpans":r.common_spans()}),
+        );
+    }
+    if mode == "certify-intersections" || mode == "verify-intersections" {
+        let a: Curve = value_codec::from_value(v["first"].clone())?;
+        let b: Curve = value_codec::from_value(v["second"].clone())?;
+        if mode == "certify-intersections" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_curve_intersections(
+                    &a,
+                    &b,
+                    value_codec::from_value(v["selfPair"].clone())?,
+                )?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let r = brep_core::profile_certificate::verify_curve_intersections(&a, &b, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-isolated-curve-intersection-set","events":r.events(),"singularParameters":r.singular_parameters()}),
+        );
+    }
+    if mode == "certify-offset-wire" || mode == "verify-offset-wire" {
+        let curves: Vec<Curve> = value_codec::from_value(v["curves"].clone())?;
+        let d = value_codec::from_value(v["distanceMm"].clone())?;
+        let e = value_codec::from_value(v["maximumDeviationMm"].clone())?;
+        let l = value_codec::from_value(v["miterLimitMm"].clone())?;
+        if mode == "certify-offset-wire" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_offset_wire(
+                    &curves,
+                    d,
+                    e,
+                    value_codec::from_value(v["closed"].clone())?,
+                    v["joinStyle"].as_str().ok_or("Missing join style")?,
+                    l,
+                )?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let r = brep_core::profile_certificate::verify_offset_wire(&curves, d, e, l, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-joined-normal-offset-wire-approximation","segments":r.segments(),"maximumDeviationMm":r.maximum_deviation_mm()}),
+        );
+    }
+    if mode == "certify-offset" || mode == "verify-offset" {
+        let curve: Curve = value_codec::from_value(v["curve"].clone())?;
+        let distance = value_codec::from_value(v["distanceMm"].clone())?;
+        let deviation = value_codec::from_value(v["maximumDeviationMm"].clone())?;
+        if mode == "certify-offset" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_offset_curve(&curve, distance, deviation)?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let verified =
+            brep_core::profile_certificate::verify_offset_curve(&curve, distance, deviation, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-normal-offset-curve-approximation","segments":verified.segments(),"maximumDeviationMm":verified.maximum_deviation_mm()}),
+        );
+    }
+    if mode == "certify-contacts" || mode == "verify-contacts" {
+        let a: Curve = value_codec::from_value(v["first"].clone())?;
+        let b: Curve = value_codec::from_value(v["second"].clone())?;
+        if mode == "certify-contacts" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_endpoint_contacts(&a, &b)?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let verified = brep_core::profile_certificate::verify_endpoint_contacts(&a, &b, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-endpoint-intersection-set","commonEndpoints":verified.common_endpoints()}),
+        );
+    }
+    if mode == "certify-projective-agreement" || mode == "verify-projective-agreement" {
+        let a: Curve = value_codec::from_value(v["first"].clone())?;
+        let b: Curve = value_codec::from_value(v["second"].clone())?;
+        let da = value_codec::from_value(v["firstDomain"].clone())?;
+        let db = value_codec::from_value(v["secondDomain"].clone())?;
+        let scale = value_codec::from_value(v["parameterScale"].clone())?;
+        if mode == "certify-projective-agreement" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_projective_curve_agreement(
+                    &a, &b, da, db, scale,
+                )?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let verified = brep_core::profile_certificate::verify_projective_curve_agreement(
+            &a, &b, da, db, scale, &c,
+        )?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-curve-projective-parameter-agreement","commonSpans":verified.common_spans()}),
+        );
+    }
+    if mode == "certify-agreement" || mode == "verify-agreement" {
+        let a: Curve = value_codec::from_value(v["first"].clone())?;
+        let b: Curve = value_codec::from_value(v["second"].clone())?;
+        let da = value_codec::from_value(v["firstDomain"].clone())?;
+        let db = value_codec::from_value(v["secondDomain"].clone())?;
+        if mode == "certify-agreement" {
+            return Ok(value_codec::to_value(
+                brep_core::profile_certificate::certify_curve_agreement(&a, &b, da, db)?,
+            )?);
+        }
+        let c = value_codec::from_value(v["certificate"].clone())?;
+        let result = brep_core::profile_certificate::verify_curve_agreement(&a, &b, da, db, &c)?;
+        return Ok(
+            json!({"status":"verified","scope":"represented-curve-affine-parameter-agreement","commonSpans":result.common_spans()}),
+        );
+    }
+    let loops: Vec<Vec<Curve>> = value_codec::from_value(v["loops"].clone())?;
+    let tolerance: f64 = value_codec::from_value(v["toleranceMm"].clone())?;
+    match mode.as_str() {
+        "certify-measure" => {
+            let width: f64 = value_codec::from_value(v["maximumAreaWidthMm2"].clone())?;
+            Ok(value_codec::to_value(certify_measure(
+                &loops, tolerance, width,
+            )?)?)
+        }
+        "verify-measure" => {
+            let c: ProfileMeasureCertificate = value_codec::from_value(v["certificate"].clone())?;
+            let verified = verify_measure(&loops, tolerance, &c)?;
+            Ok(
+                json!({"status":"verified","scope":"represented-profile-topology-and-area",
+                "spans":verified.profile().spans(),"pieces":verified.profile().pieces(),
+                "nestingDepth":verified.profile().nesting_depth(),"areaMm2":verified.area_mm2()}),
+            )
+        }
+        "certify" => Ok(value_codec::to_value(certify(&loops, tolerance)?)?),
+        "verify" => {
+            let c: ProfileCertificate = value_codec::from_value(v["certificate"].clone())?;
+            let verified = verify(&loops, tolerance, &c)?;
+            Ok(
+                json!({"status":"verified","scope":"represented-profile-topology",
+                "spans":verified.spans(),"pieces":verified.pieces(),"nestingDepth":verified.nesting_depth()}),
+            )
+        }
+        _ => Err("Use certify, verify, certify-measure, verify-measure, certify-agreement or verify-agreement".into()),
+    }
+}
+fn main() {
+    match run() {
+        Ok(v) => println!("{}", value_codec::to_string(&v).unwrap()),
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
+    }
+}

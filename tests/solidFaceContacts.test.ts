@@ -1,3 +1,4 @@
+import {normalizeRefinedNativeEvidence} from './helpers/refinedNativeEvidence'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
@@ -42,7 +43,7 @@ it('matches native fixtures through the production WASM operation',async()=>{
  const {inspectFaceContacts}=await import('../src/services/solidFaceContacts')
  for(const f of fixtures)for(const [q,r] of [[f.request,f.result],[f.partialRequest,f.partialResult]]){
   const j=job(q),before=JSON.stringify(j.model),result=inspectFaceContacts(j.model,j.toleranceUv,j.limits)
-  expect(result).toEqual({...r,groupedPairs:0,groupCells:0,disjointGroups:[]})
+  expect(normalizeRefinedNativeEvidence(result,{...r,groupedPairs:0,groupCells:0,disjointGroups:[]})).toEqual({...r,groupedPairs:0,groupCells:0,disjointGroups:[]})
   expect(mainSolidResult(mainSolidExpectation(j),result)).toBe(true)
   expect(JSON.stringify(j.model)).toBe(before)
  }

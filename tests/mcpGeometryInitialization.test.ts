@@ -1,10 +1,10 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {HeadlessGeometryService} from '../src/mcp/geometryService'
 import {GeometryBuildEngine, geometryExecutionForError} from '../src/services/geometryBuildEngine'
-import {GEOMETRY_MANIFEST_ARCHIVE} from '../src/core/geometryExecution'
+import {ACTIVE_GEOMETRY_MANIFEST_VERSIONS,GEOMETRY_MANIFEST_ARCHIVE} from '../src/core/geometryExecution'
 
 function fixture(warm: () => Promise<void>) {
-  const manifest = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1']
+  const manifest = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh]
   const build = vi.fn(async (_source: string) => ({meshes: [], warnings: [], volume: 0, surfaceArea: 0,
     quality: 'full' as const, reduced: false,
     timings: {parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0}}))
@@ -82,7 +82,7 @@ it('bounds hung initialization and does not restart the deadline on subsequent r
 
 it('rejects revoked providers before initialization', async () => {
   const {provider} = fixture(async () => undefined)
-  const engine = new GeometryBuildEngine([provider], {revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest]})
+  const engine = new GeometryBuildEngine([provider], {revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest]})
   await expect(new HeadlessGeometryService(engine).compile('cube(1);')).rejects.toMatchObject({availabilityCause: 'revoked'})
   expect(provider.warm).not.toHaveBeenCalled()
   expect(provider.build).not.toHaveBeenCalled()

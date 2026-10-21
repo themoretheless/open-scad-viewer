@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
+import {toRaw,computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
 import type {CurveOffsetDiagnostics} from '../services/curveOffsetDiagnostics'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 const emit=defineEmits<{result:[{curves:SolidNurbsCurve[];diagnostics:CurveOffsetDiagnostics}|null]}>()
 const props=defineProps<{curves:SolidNurbsCurve[];ids:string[];locale:string}>()
-const selected=computed(()=>props.ids.map(id=>props.curves.find(c=>c.id===id)))
+function clonePlain<T>(value:T):T{
+ const raw=toRaw(value)
+ if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
+ if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
+  const out:Record<string,unknown>={}
+  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
+  return out as T
+ }
+ return raw
+}
+const curveById=computed(()=>{const m=new Map<string,SolidNurbsCurve>();for(const c of props.curves)m.set(c.id,c);return m})
+const selected=computed(()=>props.ids.map(id=>curveById.value.get(id)))
 const enabled=computed(()=>selected.value.length>0&&selected.value.every(c=>c?.curve.degree===1&&!c.curve.periodic))
 const client=createSolidPreviewWorker(),pending=ref(false),error=ref(''),result=shallowRef<CurveOffsetDiagnostics|null>(null)
 let generation=0

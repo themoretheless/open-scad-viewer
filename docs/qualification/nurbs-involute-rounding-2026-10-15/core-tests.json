@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "testsPassed": 3,
+  "testsFailed": 0,
+  "runtimeSeconds": 0.04,
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test involute_certificate",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "88652d30a7afd63b975220acfe3ededdc08b623a7b978a8a22829205557e4cf9",
+    "crates/nurbs-core/src/construct/curves/involute/quintic_certificate.rs": "0741b234cf535c57cc60caceed72b22856fe1f77cc700312f364d98ee422583d",
+    "crates/nurbs-core/tests/involute_certificate.rs": "208e3ac4bd56da43fec49fa8d8858f9757d3d55c20d34266fa7585f1454c056d"
+  },
+  "storedCurveRoundingIncluded": true,
+  "nominalParametersAreSuppliedBinary64": true,
+  "fullGearSpecDerivationCertified": false,
+  "helicalSweepRoundingCertified": false
+}

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "testsPassed": 3,
+  "testsFailed": 0,
+  "runtimeSeconds": 7.21,
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test blade",
+  "sourceSha256": {
+    "crates/brep-core/src/blade.rs": "d7e001d06bbf94bcfdb4f01e21ca592991f82e4968bda770d176b2de993d933e",
+    "crates/brep-core/tests/blade.rs": "03892be19aea95a41355b5bc6bcc58e6d0386a646aee5cd3f57ded29eb4bc79c"
+  },
+  "globalEmbeddingCertified": false,
+  "wasmEditorStepQualified": false
+}

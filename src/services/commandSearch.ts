@@ -53,6 +53,78 @@ export function swapKeyboardLayout(text: string): string {
   return out
 }
 
+const CYRILLIC_TO_LATIN_PHONETIC: Readonly<Record<string, string>> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z',
+  и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+  с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch',
+  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+}
+
+const CAD_BILINGUAL_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  фаска: ['chamfer', 'bevel'],
+  chamfer: ['фаска', 'bevel'],
+  сфера: ['sphere'],
+  sphere: ['сфера'],
+  куб: ['cube', 'box'],
+  cube: ['куб', 'box'],
+  цилиндр: ['cylinder'],
+  cylinder: ['цилиндр'],
+  выдавить: ['extrude'],
+  экструзия: ['extrude'],
+  extrude: ['выдавить', 'экструзия'],
+  вращение: ['revolve', 'rotate'],
+  revolve: ['вращение'],
+  скругление: ['fillet', 'round'],
+  fillet: ['скругление'],
+  оболочка: ['shell'],
+  shell: ['оболочка'],
+  зеркало: ['mirror'],
+  mirror: ['зеркало'],
+  сечение: ['section', 'slice'],
+  section: ['сечение'],
+  измерить: ['measure', 'distance'],
+  measure: ['измерить'],
+  сетка: ['grid', 'mesh'],
+  grid: ['сетка'],
+  объединить: ['union'],
+  union: ['объединить'],
+  вычесть: ['subtract', 'difference'],
+  subtract: ['вычесть'],
+}
+
+/**
+ * Transliterates between Cyrillic and Latin phonetically (RU <-> EN) so users
+ * typing phonetic transliterations (e.g. "faska" / "фаска", "sfera" / "сфера")
+ * match across scripts.
+ */
+export function transliterateCommandText(text: string): string {
+  const lower = text.toLowerCase()
+  if (/[а-яё]/i.test(lower)) {
+    let out = ''
+    for (const ch of lower) {
+      out += CYRILLIC_TO_LATIN_PHONETIC[ch] ?? ch
+    }
+    return out
+  }
+  return lower
+    .replace(/shch/g, 'щ')
+    .replace(/yo/g, 'ё')
+    .replace(/zh/g, 'ж')
+    .replace(/kh/g, 'х')
+    .replace(/ts/g, 'ц')
+    .replace(/ch/g, 'ч')
+    .replace(/sh/g, 'ш')
+    .replace(/yu/g, 'ю')
+    .replace(/ya/g, 'я')
+    .replace(/ph/g, 'ф')
+    .replace(/[a-z]/g, ch => ({
+      a: 'а', b: 'б', c: 'к', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х',
+      i: 'и', j: 'й', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п',
+      q: 'к', r: 'р', s: 'с', t: 'т', u: 'у', v: 'в', w: 'в', x: 'кс',
+      y: 'ы', z: 'з',
+    }[ch] ?? ch))
+}
+
 export function rankPaletteCommands(
   commands: readonly PaletteCommand[],
   rawQuery: string,
@@ -62,6 +134,18 @@ export function rankPaletteCommands(
   // The swapped spelling competes with the typed one and ranks a hair lower on a tie.
   const swapped = normalizeCommandText(swapKeyboardLayout(rawQuery))
   const alternate = swapped && swapped !== query ? swapped : null
+  const transliterated = normalizeCommandText(transliterateCommandText(rawQuery))
+  const phoneticAlternate = transliterated && transliterated !== query && transliterated !== alternate
+    ? transliterated
+    : null
+  const synonymCandidates = new Set<string>()
+  for (const q of [query, alternate, phoneticAlternate]) {
+    if (!q) continue
+    for (const syn of CAD_BILINGUAL_SYNONYMS[q] ?? []) {
+      const normSyn = normalizeCommandText(syn)
+      if (normSyn && normSyn !== query) synonymCandidates.add(normSyn)
+    }
+  }
   if (!query) {
     return commands
       .map((command, order) => ({ command, order }))
@@ -76,13 +160,19 @@ export function rankPaletteCommands(
   }
 
   return commands
-    .map((command, order): ScoredCommand => ({
-      command,
-      order,
-      score: alternate
-        ? Math.min(scoreCommand(command, query), scoreCommand(command, alternate) + 1)
-        : scoreCommand(command, query),
-    }))
+    .map((command, order): ScoredCommand => {
+      let best = scoreCommand(command, query)
+      if (alternate) best = Math.min(best, scoreCommand(command, alternate) + 1)
+      if (phoneticAlternate) best = Math.min(best, scoreCommand(command, phoneticAlternate) + 2)
+      for (const syn of synonymCandidates) {
+        best = Math.min(best, scoreCommand(command, syn) + 3)
+      }
+      return {
+        command,
+        order,
+        score: best,
+      }
+    })
     .filter(item => Number.isFinite(item.score))
     .sort((a, b) => (
       a.score - b.score
@@ -213,14 +303,21 @@ function scoreSubsequence(value: string, query: string): number {
   let firstIndex = -1
   let previousIndex = -1
   let gaps = 0
+  let consecutiveBonus = 0
   for (let index = 0; index < value.length && queryIndex < query.length; index += 1) {
     if (value[index] !== query[queryIndex]) continue
     if (firstIndex < 0) firstIndex = index
-    if (previousIndex >= 0) gaps += index - previousIndex - 1
+    if (previousIndex >= 0) {
+      const gap = index - previousIndex - 1
+      gaps += gap
+      if (gap === 0) consecutiveBonus += 1
+    }
     previousIndex = index
     queryIndex += 1
   }
-  return queryIndex === query.length ? Math.min(99, (firstIndex < 0 ? 0 : firstIndex) + gaps) : NO_MATCH
+  if (queryIndex !== query.length) return NO_MATCH
+  const rawPenalty = (firstIndex < 0 ? 0 : firstIndex) + gaps - Math.min(gaps, consecutiveBonus)
+  return Math.min(99, Math.max(0, rawPenalty))
 }
 
 function scoreFuzzyTokens(valueTokens: readonly string[], queryTokens: readonly string[]): number {

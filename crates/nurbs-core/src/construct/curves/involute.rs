@@ -216,3 +216,39 @@ pub fn approximate_quintic(
         real_arithmetic_error_estimate: estimate,
     })
 }
+
+mod quintic_certificate;
+pub use quintic_certificate::{QuinticCertificate, certify_quintic, certify_quintic_placed};
+
+mod gear_parameters;
+pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds};
+pub use quintic_certificate::certify_quintic_parameter_box;
+
+pub(crate) use quintic_certificate::trig as certified_trig;
+
+pub use gear_parameters::derive_gear_twist_bounds;
+
+pub(crate) use gear_parameters::pi as certified_pi;
+
+pub mod spherical;
+pub use spherical::{BevelGearParameterBounds, BevelGearSpec, derive_bevel_gear_parameters};
+pub use spherical::{
+    BevelOutlineCertificate, QualifiedBevelOutline, certify_bevel_outline, qualified_bevel_outline,
+};
+pub use spherical::{
+    BevelPatchCertificate, QualifiedBevelPatches, certify_straight_bevel_patches,
+    qualified_straight_bevel_patches,
+};
+pub use spherical::{
+    BevelSide, BevelTeethCertificate, PlacedBevelFlank, QualifiedBevelTeeth, certify_bevel_teeth,
+    qualified_bevel_teeth,
+};
+pub use spherical::{QualifiedNominalBevelFlank, qualified_nominal_bevel_flank};
+pub use spherical::{QualifiedStraightBevelFlank, qualified_straight_bevel_flank};
+pub use spherical::{SphericalInvoluteCertificate, certify_spherical_involute};
+pub use spherical::{
+    SphericalInvoluteSpec, StraightBevelFlank, approximate_spherical_involute, straight_bevel_flank,
+};
+pub use spherical::{StraightBevelFlankCertificate, certify_straight_bevel_flank};
+
+pub(crate) use gear_parameters::atan_positive as certified_atan_positive;

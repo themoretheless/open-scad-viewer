@@ -1,8 +1,6 @@
 use super::*;
-
-/// Builds the gear solid. Returns the model and its geometry report.
 pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
-    let (loops, mut geometry) = outline(spec)?;
+    let (loops, mut geometry) = profile_with_report(spec)?;
     let beta = spec.helix_angle_deg.to_radians();
     let total_twist = spec.height * beta.tan() / geometry.pitch_radius;
     // Axial layers: (z0, z1, theta0, twist).
@@ -21,6 +19,14 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
     let mut faces: Vec<Face> = Vec::new();
     let mut uses: Vec<FaceUse> = Vec::new();
     let mut sweep_deviation: f64 = 0.;
+    let nominal_twist = nurbs_core::involute::derive_gear_twist_bounds(
+        spec.module,
+        spec.teeth,
+        spec.height,
+        spec.helix_angle_deg,
+    )
+    .ok();
+    let mut sweep_rounding_certified = nominal_twist.is_some();
     // Per level (layer boundaries) and per loop: the level edges (one per
     // outline curve) and the level vertices (one per curve start).
     let level_z: Vec<f64> = std::iter::once(layers[0].0)
@@ -70,7 +76,24 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             let mut vertical: Vec<usize> = Vec::with_capacity(n);
             let mut surfaces: Vec<Surface> = Vec::with_capacity(n);
             for c in outline_loop {
-                let (surface, dev) = wall(c, z0, z1, theta0, twist)?;
+                let nominal = nominal_twist
+                    .map(|total| -> Result<_> {
+                        use nurbs_core::interval_eval::Interval as I;
+                        let t = I::new(total[0], total[1])?;
+                        if layers.len() == 2 {
+                            let half = t.div(I::point(2.))?;
+                            if layer == 0 {
+                                Ok(([0.; 2], [half.lo, half.hi]))
+                            } else {
+                                Ok(([half.lo, half.hi], [-half.hi, -half.lo]))
+                            }
+                        } else {
+                            Ok(([0.; 2], [t.lo, t.hi]))
+                        }
+                    })
+                    .transpose()?;
+                let (surface, dev, certified) = wall(c, z0, z1, theta0, twist, nominal)?;
+                sweep_rounding_certified &= certified;
                 sweep_deviation = sweep_deviation.max(dev);
                 surfaces.push(surface);
             }
@@ -160,6 +183,17 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
         });
     }
     geometry.sweep_deviation = sweep_deviation;
+    geometry.sweep_rounding_certified = sweep_rounding_certified;
+    geometry.ideal_wall_error_upper = if sweep_rounding_certified {
+        if let Some(profile) = geometry.profile_error_upper {
+            use nurbs_core::interval_eval::Interval as I;
+            Some(I::point(profile).add(I::point(sweep_deviation))?.hi)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     geometry.face_count = faces.len();
     let mut model = Model(
         brep_topology::Model {
@@ -187,3 +221,4 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
 pub fn gear(spec: &GearSpec) -> Result<Model> {
     gear_with_report(spec).map(|(model, _)| model)
 }
+

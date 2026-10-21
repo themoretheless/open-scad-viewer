@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-16",
+  "scope": "Continuous original-source quintic NURBS envelope approximation, saved-patch regularity and lossless C0 packing; not a closed wheel",
+  "tests": {
+    "native-tests": {
+      "passed": 14,
+      "failed_summaries": 0
+    },
+    "math-tests": {
+      "passed": 2,
+      "failed_summaries": 0
+    }
+  },
+  "focused_tests_passed": 16,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs": "fd738c7a412b7bc9fac7e763e885c83e2bed952efeeb0df8dddb6a17e07b1ed0",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/interpolation.rs": "5123939e326c0ea95ecdc8137ddda98b0fd694d3011a5dc13c81544a3f4bf063",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/taylor.rs": "0fb17686e718680982bd6ebbfa9ddf452dac7c00cf3486a9a038bad3cef630ae",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/expression.rs": "e75046d2ddf51d5de0fd75571f1881c75654667871ea9647c178f9570e819d68",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs": "f6bff83edc5a502e5daadd001b406e78bd5b4dcfff3907805d8bf0eabb77f60b",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "0a52095cdf42be7478fcea8f8ba79cb5801fe85b2e6a83c4f811d24d24a911eb",
+    "crates/nurbs-core/tests/worm_wheel_fit.rs": "381bce85506ef31bc536743b2da08da80c07d0868fde722da9a59271d5366492"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "example": {
+    "spec": "default descending ZA flank",
+    "u": [
+      0,
+      1
+    ],
+    "beta": [
+      -0.15,
+      0.15
+    ],
+    "requested_world_tolerance": 0.0001,
+    "quintic_cells": 32,
+    "packed_surfaces": 2,
+    "source_error_upper": 1.0773757602446802e-08,
+    "packing_additional_error": 0
+  },
+  "unqualified": [
+    "Higher seam continuity and global embedding",
+    "Physical stock/cutter domain and root/tip transitions",
+    "Whole tooth inventory and wheel B-rep ownership"
+  ],
+  "source_snapshot_note": "An unrelated public surface_normal_trace module appeared during work; only its queries-domain registration was repaired. No runtime qualification of that unrelated module is claimed."
+}

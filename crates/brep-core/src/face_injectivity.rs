@@ -445,3 +445,107 @@ mod tests {
         }
     }
 }
+
+pub(crate) struct Inspector {
+    model: std::sync::Arc<Model>,
+    max_spans: usize,
+    max_linear_cells: usize,
+    proposals: Vec<Option<[[i8;3];2]>>,
+    report: Report,
+}
+impl Inspector {
+    pub(crate) fn new(model: std::sync::Arc<Model>, max_spans: usize, max_linear_cells: usize,
+        proposals: Vec<Option<[[i8;3];2]>>) -> Result<Self> {
+        model.validate_boundary_diagnostic_inputs()?;
+        if max_spans == 0 || max_spans > 100_000 || max_linear_cells > 100_000 {
+            return Err(Error::new("BREP_INJECTIVITY_BUDGET", "Face injectivity budget must be in 1..100000"));
+        }
+        let face_count = model.faces.len();
+        Ok(Self {model, max_spans, max_linear_cells, proposals,
+            report: Report {all_faces_injective:true,spans:0,linear_cells:0,faces:Vec::with_capacity(face_count)}})
+    }
+    pub(crate) fn completed_faces(&self) -> usize { self.report.faces.len() }
+    pub(crate) fn finished(&self) -> bool { self.completed_faces() == self.model.faces.len() }
+    pub(crate) fn advance(&mut self, max_faces: usize) -> Result<usize> {
+        if !(1..=100_000).contains(&max_faces) {
+            return Err(Error::new("BREP_INJECTIVITY_STEP", "Injectivity step requires 1..100000 faces"));
+        }
+        let start=self.completed_faces();
+        let stop=start.saturating_add(max_faces).min(self.model.faces.len());
+        while self.completed_faces()<stop {
+            let face=self.completed_faces();
+            let f=&self.model.faces[face];
+        let result = if self.report.spans < self.max_spans {
+            Some(if false {
+                surface_injectivity::certify(&f.surface, self.max_spans - self.report.spans)?
+            } else {
+                surface_injectivity::certify_contraction(&f.surface, self.max_spans - self.report.spans)?
+            })
+        } else {
+            None
+        };
+        let linear = if !result.as_ref().is_some_and(|r| r.proven)
+            && self.report.linear_cells < self.max_linear_cells
+        {
+            let proof = nurbs_core::surface_linear_monotonicity::inspect_candidate_with_hint(
+                &f.surface,
+                self.proposals.get(face).copied().flatten(),
+                self.max_linear_cells - self.report.linear_cells,
+            )?;
+            Some(proof)
+        } else {
+            None
+        };
+        self.report.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
+        self.report.spans += result.as_ref().map_or(0, |r| r.spans);
+        let quotient = if result
+            .as_ref()
+            .is_some_and(|r| r.reason == "collapsed-boundary-requires-quotient-proof")
+            && self.max_spans - self.report.spans >= 256
+        {
+            if let Some((end, edge, vertex)) = declared_pole(self.model.as_ref(), face) {
+                let proof = surface_quotient_injectivity::certify_source_frame(
+                    &f.surface,
+                    end,
+                    16,
+                    self.max_spans - self.report.spans,
+                )?;
+                self.report.spans += proof.cells;
+                let polar = if !proof.proven && self.max_spans-self.report.spans >= 64 {
+                    let r=surface_quotient_injectivity::certify_polar_source_frame(
+                        &f.surface,end,8,self.max_spans-self.report.spans)?;
+                    self.report.spans+=r.cells;
+                    Some(r)
+                } else { None };
+                Some(Quotient {
+                    collapsed_end: end,
+                    pole_edge: edge,
+                    pole_vertex: vertex,
+                    result: proof,
+                    polar,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let face = Face {
+            face,
+            result,
+            linear,
+            quotient,
+        };
+        self.report.all_faces_injective &= face.absence_proven();
+        self.report.faces.push(face);
+        }
+        Ok(self.completed_faces()-start)
+    }
+    pub(crate) fn finish(self) -> Result<Report> {
+        if !self.finished() {
+            return Err(Error::new("BREP_INJECTIVITY_PENDING", "Incomplete native injectivity audit has no final report"));
+        }
+        Ok(self.report)
+    }
+}
+

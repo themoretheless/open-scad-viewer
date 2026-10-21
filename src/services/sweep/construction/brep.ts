@@ -1,3 +1,5 @@
+import {hasOriginalMiterBody,transformOriginalMiterBody,reconstructOriginalMiterStations,smoothOriginalMiterBody,rememberProgressiveSource} from './extendedBrep'
+import type {ProgressiveBrepSweepOptions,ProgressiveBrepBody as CandidateBody} from './extendedBrep'
 import {type MiterProfileSmoothness} from '../certificates/miterProfileSmoothness'
 import {type SweepBoundaryCertificate} from '../certificates/sweepBoundaryCertificate'
 import {type SweepSectionCorrection} from './nurbsSectionProjection'
@@ -35,22 +37,22 @@ export interface CertifiedMiterBoundaryOwner {model:NurbsBrep;boundaryCertificat
 
 /** Reconstruct final corrected sections owned by the source constructor.
  * Original polyline vertices keep their independent one-sided jets. */
-export function reconstructCertifiedMiterStations(source:CertifiedMiterBoundaryOwner,options:{quantum:number;maxWork:number;wallTolerance:number;maxDeviation:number}):NativeSmoothedMiterBody {return callBodyRust('brep_reconstruct_certified_miter',{source,owner:nativeOwners.get(source)??null,options})}
+export function reconstructCertifiedMiterStations(source:CertifiedMiterBoundaryOwner,options:{quantum:number;maxWork:number;wallTolerance:number;maxDeviation:number}):NativeSmoothedMiterBody {if(hasOriginalMiterBody(source))return reconstructOriginalMiterStations(source,options);return callBodyRust('brep_reconstruct_certified_miter',{source,owner:nativeOwners.get(source)??null,options})}
 export interface ExactAffineLatticePlacement {model:NurbsBrep|null;operatorNormUpper:number|null;arithmeticErrorUpper:number|null;work:number;reason:string}
 export const placeNurbsBrepOnExactAffineLattice=(model:NurbsBrep,matrix:number[][],quantum:number,maxWork:number):ExactAffineLatticePlacement=>callGeometryRust('brep_nurbs_affine_lattice',{model,matrix,quantum,maxWork})
 /** Exact placement scales the complete wall/cap Hausdorff bound; actual G2,
  * regularity, material nesting and orientation are audited on the new body. */
-export function transformCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,matrix:number[][],options:{quantum:number;maxWork:number;maxDeviation:number}):NativeTransformedMiterBody {return callBodyRust('brep_transform_certified_miter',{source,owner:nativeOwners.get(source)??null,matrix,options})}
+export function transformCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,matrix:number[][],options:{quantum:number;maxWork:number;maxDeviation:number}):NativeTransformedMiterBody {if(hasOriginalMiterBody(source))return transformOriginalMiterBody(source,matrix,options);return callBodyRust('brep_transform_certified_miter',{source,owner:nativeOwners.get(source)??null,matrix,options})}
 /** Compose a bounded wall reconstruction with constructor-owned full boundary
  * evidence. Endpoint sections/caps stay identical; every material audit is new. */
-export function smoothCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,sections:NurbsCurve[][][],sharp:number[],options:{quantum:number;maxWork:number;wallTolerance:number;maxDeviation:number}):NativeSmoothedMiterBody {return callBodyRust('brep_smooth_certified_miter',{source,owner:nativeOwners.get(source)??null,sections,sharp,options})}
+export function smoothCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,sections:NurbsCurve[][][],sharp:number[],options:{quantum:number;maxWork:number;wallTolerance:number;maxDeviation:number}):NativeSmoothedMiterBody {if(hasOriginalMiterBody(source))return smoothOriginalMiterBody(source,sections,sharp,options);return callBodyRust('brep_smooth_certified_miter',{source,owner:nativeOwners.get(source)??null,sections,sharp,options})}
 
 export const createProgressiveMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions):ProgressiveMiterBrepBody=>callBodyRust('brep_progressive_miter_body',{loops,points,scale,twist,options})
 export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterProfileSmoothness;method:'polyline-miter-sections';sections:number;closedPath:boolean;globalEmbeddingCertified:false;roundingCertified:false;continuousBound:false;profileRegularityCertified:boolean;profileRegularity:SweepProfileRegularityAudit;wallRegularityCertified:boolean;retainedWallCharts:SweepRetainedChartEvidence;volume:SweepVolumeAudit;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;retainedCorrespondence?:SweepRetainedCorrespondence}}
 export const createMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):MiterBrepBody=>callBodyRust('brep_miter_body',{loops,points,normal,miterLimit,closed,capCorrection})
 export const createRationalBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep=>callGeometryRust('brep_nurbs_rational_section_loft',{sections})
 
-export interface ProgressiveBrepBody {volume:SweepVolumeAudit;model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
+export interface ProgressiveBrepBody extends Omit<CandidateBody,'model'|'approximation'|'globalEmbeddingCertified'> {volume:SweepVolumeAudit;model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
  bodyDecompositionErrorUpper?:number|null;bodyDecompositionProducts?:number
  capProjection?:{idealCapDomainsCertified:boolean;normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null;
   cells:number;exactWork:number;reason:string|null;scope:'constructor-owned-endpoint-plane-projection'}|null
@@ -63,7 +65,7 @@ export interface ProgressiveBrepBody {volume:SweepVolumeAudit;model:NurbsBrep;ap
   scope:'constructor-owned-retained-endpoint-regions';continuousBound:false;globalEmbeddingCertified:false}|null}
 export type ProgressiveBodyBoundaryEvidence=Omit<ProgressiveBrepBody,'model'|'approximation'> & {budget:number;closedPath:boolean}
 /** Open-path caps or closed-path periodic shells, constrained by the shared B-rep face budget. Twist values are degrees. */
-export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveBrepBody=>callBodyRust('brep_progressive_profile_body',{loops,path,scale,twist,options})
+export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveBrepSweepOptions):ProgressiveBrepBody=>callBodyRust('brep_progressive_profile_body',{loops,path,scale,twist,options})
 
 /** Closed contour shells with an identical repeated endpoint section; no caps. */
 export const createPeriodicBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep=>callGeometryRust('brep_nurbs_periodic_section_loft',{sections})
@@ -96,7 +98,11 @@ const ownerCleanup=new FinalizationRegistry<string>(owner=>{
 })
 function captureBody<T>(result:T):T {
  if(result&&typeof result==='object'){
-  const record=result as T & {_nativeOwner?:string}
+  const record=result as T & {_nativeOwner?:string;_progressiveRequest?:unknown;_progressiveOperation?:string}
+  if(record._progressiveRequest&&typeof record._progressiveOperation==='string'){
+   rememberProgressiveSource(record as unknown as CandidateBody,record._progressiveRequest,record._progressiveOperation)
+   delete record._progressiveRequest;delete record._progressiveOperation
+  }
   if(typeof record._nativeOwner==='string'){
    nativeOwners.set(record,record._nativeOwner)
    ownerCleanup.register(record,record._nativeOwner,record)

@@ -1,0 +1,576 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-push-integration-20261021/crates/target/.../wgsl_export
+  |                                                              ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `release` profile [optimized] target(s) in 0.09s
+wasm-brotli: wasm unchanged, skipping packaging (stamp hit)
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-push-integration-20261021/crates/target/.../wgsl_export
+  |                                                              ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling cad-predicates v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/cad-predicates)
+warning: unused import: `constraint_jacobian::constraint_active_vars`
+   --> sketch-core/src/lib.rs:543:5
+    |
+543 | use constraint_jacobian::constraint_active_vars;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sketch-core` (lib) generated 1 warning (run `cargo fix --lib -p sketch-core` to apply 1 suggestion)
+   Compiling planar-geometry v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/planar-geometry)
+   Compiling brep-topology v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/brep-topology)
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/nurbs-core)
+warning: unused import: `Parameters`
+   --> nurbs-core/src/construct/curves/thread.rs:800:15
+    |
+800 | use patches::{Parameters,parameters};
+    |               ^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `axial_fitting::axial_source`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:742:5
+    |
+742 | use axial_fitting::axial_source;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_packing::same_scalar_bits`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:755:5
+    |
+755 | use grid_packing::same_scalar_bits;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_packing::same_row_bits`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:756:5
+    |
+756 | use grid_packing::same_row_bits;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::saved_regular`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:763:5
+    |
+763 | use grid_verification::saved_regular;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::interpolation_error`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:764:5
+    |
+764 | use grid_verification::interpolation_error;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::node`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:765:5
+    |
+765 | use grid_verification::node;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::norm`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:767:5
+    |
+767 | use grid_verification::norm;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `grid_verification::sixth_power`
+   --> nurbs-core/src/construct/surfaces/worm_wheel/fit.rs:768:5
+    |
+768 | use grid_verification::sixth_power;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `box_of`
+ --> nurbs-core/src/foundation/fitting.rs:4:57
+  |
+4 |     Curve, Result, Surface, ToleranceContext, binomial, box_of, check, context, distance, interval,
+  |                                                         ^^^^^^
+
+warning: unused import: `initial_coordinates_owned::coordinates_in_basis`
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:772:5
+    |
+772 | use initial_coordinates_owned::coordinates_in_basis;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `arc_frame_owned::closed_frenet_position_seam`
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:783:5
+    |
+783 | use arc_frame_owned::closed_frenet_position_seam;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `sections::*`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:502:5
+    |
+502 | use sections::*;
+    |     ^^^^^^^^^^^
+
+warning: unused import: `fillet_construction::variable_radius_sections`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:740:5
+    |
+740 | use fillet_construction::variable_radius_sections;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `section_geometry::march_direction`
+   --> nurbs-core/src/offset/fillet_surfaces.rs:748:5
+    |
+748 | use section_geometry::march_direction;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `surface_distance::rectangle_bounds`
+ --> nurbs-core/src/intersection/surface_contact_search.rs:9:5
+  |
+9 |     surface_distance::rectangle_bounds,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling mesh-section v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/mesh-section)
+   Compiling sdf-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/sdf-core)
+   Compiling polygon-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/polygon-core)
+   Compiling slicer-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/slicer-core)
+warning: unused import: `infill_curves::hilbert_d2xy`
+   --> slicer-core/src/lib.rs:740:5
+    |
+740 | use infill_curves::hilbert_d2xy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `gcode_emission::require_settings_from_job`
+   --> slicer-core/src/lib.rs:753:5
+    |
+753 | use gcode_emission::require_settings_from_job;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `gcode_emission::optimize_input`
+   --> slicer-core/src/lib.rs:754:5
+    |
+754 | use gcode_emission::optimize_input;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `slicer-core` (lib) generated 3 warnings (run `cargo fix --lib -p slicer-core` to apply 3 suggestions)
+   Compiling laser-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/laser-core)
+   Compiling mechanics-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/mechanics-core)
+warning: unused import: `spectral::*`
+   --> mechanics-core/src/frame.rs:305:5
+    |
+305 | use spectral::*;
+    |     ^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `plasticity::*`
+   --> mechanics-core/src/frame.rs:313:5
+    |
+313 | use plasticity::*;
+    |     ^^^^^^^^^^^^^
+
+warning: unused import: `influence::*`
+   --> mechanics-core/src/frame.rs:321:5
+    |
+321 | use influence::*;
+    |     ^^^^^^^^^^^^
+
+warning: unused import: `nonlinear::*`
+   --> mechanics-core/src/truss.rs:396:5
+    |
+396 | use nonlinear::*;
+    |     ^^^^^^^^^^^^
+
+warning: `mechanics-core` (lib) generated 4 warnings (run `cargo fix --lib -p mechanics-core` to apply 4 suggestions)
+   Compiling bridge-analysis v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/bridge-analysis)
+   Compiling manifold-ops v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/manifold-ops)
+   Compiling bridge-cam v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/bridge-cam)
+   Compiling bridge-svg v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/bridge-svg)
+warning: function `rectangle_control_query_prepared` is never used
+   --> nurbs-core/src/distance/surface_distance.rs:642:15
+    |
+642 | pub(crate) fn rectangle_control_query_prepared(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `quarter_angle` is never read
+   --> nurbs-core/src/construct/curves/thread/patches.rs:152:16
+    |
+147 | pub(super) struct Parameters {
+    |                   ---------- field in this struct
+...
+152 |     pub(super) quarter_angle: f64,
+    |                ^^^^^^^^^^^^^
+    |
+    = note: `Parameters` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `surface_homogeneous_controls` is never used
+   --> nurbs-core/src/analysis/curve_surface_composition.rs:202:4
+    |
+202 | fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Interval;4]>>,[f64;2])> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_cubic` is never used
+   --> nurbs-core/src/offset/fillet_surfaces.rs:144:4
+    |
+144 | fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
+    |    ^^^^^^^^^^^^^
+
+warning: function `march_direction` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:101:15
+    |
+101 | pub(super) fn march_direction(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `trace_spine` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:184:15
+    |
+184 | pub(super) fn trace_spine(
+    |               ^^^^^^^^^^^
+
+warning: function `polish_with_law` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:216:15
+    |
+216 | pub(super) fn polish_with_law(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `stations` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/marching.rs:253:15
+    |
+253 | pub(super) fn stations(
+    |               ^^^^^^^^
+
+warning: function `arc_section` is never used
+ --> nurbs-core/src/offset/fillet_surfaces/sections.rs:5:15
+  |
+5 | pub(super) fn arc_section(sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
+  |               ^^^^^^^^^^^
+
+warning: function `normal_curvature` is never used
+  --> nurbs-core/src/offset/fillet_surfaces/sections.rs:33:15
+   |
+33 | pub(super) fn normal_curvature(surface: &Surface, uv: [f64; 2], dir: [f64; 3]) -> Result<Option<f64>> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `g2_section` is never used
+  --> nurbs-core/src/offset/fillet_surfaces/sections.rs:54:15
+   |
+54 | pub(super) fn g2_section(m: &Marcher<'_>, sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
+   |               ^^^^^^^^^^
+
+warning: function `assemble` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:112:15
+    |
+112 | pub(super) fn assemble(
+    |               ^^^^^^^^
+
+warning: function `build_report` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:143:15
+    |
+143 | pub(super) fn build_report(
+    |               ^^^^^^^^^^^^
+
+warning: enum `SectionKind` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:231:17
+    |
+231 | pub(super) enum SectionKind {
+    |                 ^^^^^^^^^^^
+
+warning: function `prepare` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:236:15
+    |
+236 | pub(super) fn prepare<'a>(
+    |               ^^^^^^^
+
+warning: function `reachability_warnings` is never used
+   --> nurbs-core/src/offset/fillet_surfaces/sections.rs:247:15
+    |
+247 | pub(super) fn reachability_warnings(a: &Surface, b: &Surface, sa: f64, sb: f64, r_max: f64) -> Vec<String> {
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:569:15
+    |
+569 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `admit_coincidence` is never used
+  --> nurbs-core/src/intersection/../intersection/curve_curve/box_certification.rs:84:15
+   |
+84 | pub(super) fn admit_coincidence(
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+   Compiling nurbs-intersect v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/nurbs-intersect)
+   Compiling brep-core v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/brep-core)
+warning: unused import: `nurbs_core::numerics::error_upper as error_bound`
+ --> brep-core/src/analytic/rational_loft.rs:4:5
+  |
+4 | use nurbs_core::numerics::error_upper as error_bound;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `super::*`
+ --> brep-core/src/face_contacts/frozen_contacts.rs:2:5
+  |
+2 | use super::*;
+  |     ^^^^^^^^
+
+warning: unused import: `shore_derivation::order`
+   --> brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs:447:5
+    |
+447 | use shore_derivation::order;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `support_plan::world_curve`
+   --> brep-core/src/profile_certificate/span_intersections/translated/periodic_support_boundaries.rs:311:5
+    |
+311 | use support_plan::world_curve;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `CanonicalPolygon` is more private than the item `canonical_polygons`
+   --> brep-core/src/direct_edit/movement.rs:337:1
+    |
+337 | / pub(super) fn canonical_polygons(
+338 | |     model: &Model,
+339 | |     substitute: &BTreeMap<usize, [f64; 3]>,
+340 | |     guard: &mut BudgetGuard,
+341 | | ) -> Result<Vec<CanonicalPolygon>> {
+    | |__________________________________^ function `canonical_polygons` is reachable at visibility `pub(in crate::direct_edit)`
+    |
+note: but type `CanonicalPolygon` is only usable at visibility `pub(self)`
+   --> brep-core/src/direct_edit/movement.rs:318:1
+    |
+318 | struct CanonicalPolygon {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:176:8
+    |
+176 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:182:8
+    |
+182 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:193:8
+    |
+193 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:232:8
+    |
+232 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `outline` is never used
+   --> brep-core/src/gear/gear_spec.rs:619:15
+    |
+619 | pub(super) fn outline(spec:&GearSpec)->Result<(Vec<Vec<Curve>>,GearGeometry)> { profile_with_report(spec) }
+    |               ^^^^^^^
+
+warning: function `cap_single_exact` is never used
+   --> brep-core/src/thread_internal.rs:455:15
+    |
+455 | pub(super) fn cap_single_exact(source: &Model, z: f64, max_cells: usize) -> Result<(Model, usize)> {
+    |               ^^^^^^^^^^^^^^^^
+
+   Compiling cad-step v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/cad-step)
+   Compiling brep-intersect v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/brep-intersect)
+warning: unused import: `brep_core::intersections::sphere_sphere::*`
+  --> brep-intersect/src/lib.rs:41:29
+   |
+41 | mod sphere_sphere { pub use brep_core::intersections::sphere_sphere::*; }
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `CanonicalPlane` and `recognize_plane`
+  --> brep-intersect/src/lib.rs:43:32
+   |
+43 | use brep_core::intersections::{CanonicalPlane, recognize_plane};
+   |                                ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: `brep-intersect` (lib) generated 2 warnings (run `cargo fix --lib -p brep-intersect` to apply 2 suggestions)
+   Compiling geometry-bridge v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/geometry-bridge)
+warning: unused import: `math_core::dot`
+ --> geometry-bridge/src/cad_mesh_topology.rs:3:5
+  |
+3 | use math_core::dot;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `BTreeMap`, `BTreeSet`, and `HashMap`
+ --> geometry-bridge/src/cad_mesh_topology.rs:5:24
+  |
+5 | use std::collections::{BTreeMap, BTreeSet, HashMap};
+  |                        ^^^^^^^^  ^^^^^^^^  ^^^^^^^
+
+warning: variable does not need to be mutable
+ --> geometry-bridge/src/dispatch/sweep_profile_candidate.rs:3:21
+  |
+3 | pub(super) fn build(mut v:Value)->Result<Value> {
+  |                     ----^
+  |                     |
+  |                     help: remove this `mut`
+  |
+  = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `profile` is never used
+  --> geometry-bridge/src/miter_smoothness.rs:18:8
+   |
+18 | pub fn profile(r: &ProfileReport, max_work: u64, has_caps: bool) -> Value {
+   |        ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `Face` is never constructed
+ --> geometry-bridge/src/cad_mesh_topology.rs:6:8
+  |
+6 | struct Face {
+  |        ^^^^
+
+warning: struct `Edge` is never constructed
+  --> geometry-bridge/src/cad_mesh_topology.rs:13:8
+   |
+13 | struct Edge {
+   |        ^^^^
+
+warning: function `seam_coordinate` is never used
+  --> geometry-bridge/src/cad_mesh_topology.rs:20:4
+   |
+20 | fn seam_coordinate(x: f64) -> String {
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `diagnose_cap_decomposition` is never used
+   --> geometry-bridge/src/cad_sweep_smoothness.rs:184:8
+    |
+184 | pub fn diagnose_cap_decomposition(v: Value) -> Result<Value> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 51 warnings (run `cargo fix --lib -p nurbs-core` to apply 18 suggestions)
+warning: `geometry-bridge` (lib) generated 8 warnings (run `cargo fix --lib -p geometry-bridge` to apply 3 suggestions)
+warning: `brep-core` (lib) generated 11 warnings (run `cargo fix --lib -p brep-core` to apply 4 suggestions)
+   Compiling geometry-wasm v0.1.0 (/private/tmp/osv-push-integration-20261021/crates/geometry-wasm)
+    Finished `release` profile [optimized] target(s) in 2m 07s
+wasm-opt: 15411874 -> 13751449 bytes (10.8% smaller)
+geometry-kernels artifact: sha256=2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058 bytes=13751449

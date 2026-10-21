@@ -1,3 +1,8 @@
+import type {SolidMinkowskiOptions,SolidMinkowskiResult} from './solidMinkowski'
+import {validG2RunoutResult,type createG2RunoutSurface} from './geometricG2'
+import type {AssemblyFrameExport} from './assemblyFrameExport'
+import type {AssemblyAnimation} from './assemblyAnimation'
+import type {DrawingSheetOptions,DrawingSheet} from './drawingSheets'
 import {callGeometryRust} from './geometry/kernel'
 import {isBoundaryConnectivity,isMaterialAudit} from './structuralSectionsValidation'
 export {isBoundaryConnectivity}
@@ -129,6 +134,13 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
+  | {kind:'g2RunoutSurface';source:NurbsSurface;plane:NurbsSurface;targetPcurve:NurbsCurve;options:Parameters<typeof createG2RunoutSurface>[3]}
+  | {kind:'transaction';document:DirectDocument;script:string}
+  | {kind:'drawingPdf';sheets:DrawingSheet[]}
+  | {kind:'drawingSheets';bodies:DirectBody[];options:DrawingSheetOptions}
+  | {kind:'animationFrames';document:DirectDocument;animation:AssemblyAnimation;fps:number}
+  | {kind:'animationSample';document:DirectDocument;animation:AssemblyAnimation;time:number}
+  | {kind:'minkowski3d';document:DirectDocument;options:SolidMinkowskiOptions}
 /** Exhaustive registry: adding a typed job must also admit it at the worker boundary. */
 export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  sourceBodyRestore:true,
@@ -195,8 +207,20 @@ export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  latticeGraph:true,
  structuralSections:true,
  bondedSolid:true,
-}
-export interface MainSolidResults {sourceBodyRestore:SourceBodyResult;offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;rushGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+g2RunoutSurface:true,
+transaction:true,
+drawingPdf:true,
+drawingSheets:true,
+animationFrames:true,
+animationSample:true,
+minkowski3d:true,}
+export interface MainSolidResults {sourceBodyRestore:SourceBodyResult;offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;rushGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections;minkowski3d:SolidMinkowskiResult;
+g2RunoutSurface:ReturnType<typeof createG2RunoutSurface>;
+animationFrames:AssemblyFrameExport;
+drawingPdf:Uint8Array;
+animationSample:{document:DirectDocument;camera:{yaw:number;pitch:number}};
+drawingSheets:DrawingSheet[];
+transaction:DirectDocument;}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -248,4 +272,7 @@ export type MainSolidExpectation =
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'sourceBodyRestore'|'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:Exclude<MainSolidJob['kind'],'minkowski3d'|'g2RunoutSurface'|'surfaceBuild'|'sourceBodyRestore'|'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:'minkowski3d';createdId:string;bodyIds:string[];sourceSizes:[number,number][];sourceKinds:('brep'|'mesh')[]}
+  | {kind:'g2RunoutSurface';maxCells:number;maxExactWork:number;maxPatches:number;tolerances:[number,number,number]}
+  | {kind:'surfaceBuild';runoutId?:string}

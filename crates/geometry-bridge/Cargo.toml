@@ -14,13 +14,14 @@ gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
 
 [dependencies]
-brep-intersect = { path = "../brep-intersect" }
-cad-step = { path = "../cad-step" }
-nurbs-intersect = { path = "../nurbs-intersect" }
-bridge-codec = { path = "../bridge-codec" }
-bridge-cam = { path = "../bridge-cam" }
-bridge-analysis = { path = "../bridge-analysis" }
-bridge-svg = { path = "../bridge-svg" }
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
+brep-intersect = { workspace = true, features = ["codec"] }
+cad-step = { workspace = true }
+nurbs-intersect = { workspace = true, features = ["codec"] }
+bridge-codec = { workspace = true }
+bridge-cam = { workspace = true }
+bridge-analysis = { workspace = true }
+bridge-svg = { workspace = true }
 gcode-core = { workspace = true }
 laser-core = { workspace = true }
 mesh-io = { workspace = true }

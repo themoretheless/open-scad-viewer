@@ -71,7 +71,8 @@ describe('gpu matching dispatch', () => {
 
     const first = job.dispatches[0]!
     expect(first.workgroups).toEqual([2 + 3, 1, 1])
-    const params = new DataView(first.buffers[0]!.data as ArrayBuffer)
+    const data=first.buffers[0]!.data!
+    const params=ArrayBuffer.isView(data)?new DataView(data.buffer,data.byteOffset,data.byteLength):new DataView(data as ArrayBuffer)
     expect(params.getUint32(0, true)).toBe(2)
     expect(params.getUint32(4, true)).toBe(3)
     expect(params.getUint32(8, true)).toBe(0) // image 0 offset
@@ -83,7 +84,8 @@ describe('gpu matching dispatch', () => {
 
     const second = job.dispatches[1]!
     expect(second.workgroups).toEqual([2 + 1, 1, 1])
-    const params2 = new DataView(second.buffers[0]!.data as ArrayBuffer)
+    const data2=second.buffers[0]!.data!
+    const params2=ArrayBuffer.isView(data2)?new DataView(data2.buffer,data2.byteOffset,data2.byteLength):new DataView(data2 as ArrayBuffer)
     expect(params2.getUint32(12, true)).toBe(5) // image 2 offset
 
     expect(result.length).toBe(2 * 12 + 3 * 8 + 2 * 12 + 1 * 8)

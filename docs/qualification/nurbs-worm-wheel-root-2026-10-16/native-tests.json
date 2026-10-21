@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original generated crest-edge/root-cylinder contact, source regularity/injectivity, sixth derivatives and source-owned NURBS fits; not a complete worm wheel",
+  "tests": {
+    "native-tests": {
+      "passed": 26,
+      "failed_summaries": 0
+    },
+    "root-final-tests": {
+      "passed": 7,
+      "failed_summaries": 0
+    },
+    "math-ownership-tests": {
+      "passed": 4,
+      "failed_summaries": 0
+    },
+    "boolean-tests": {
+      "passed": 3,
+      "failed_summaries": 0
+    }
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "d148dfc682d78bcb9cd690046bf83cb1985dff46042b89b0b69681ec0995b478",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/root.rs": "f013239f70926daca93a62a0629346e54a8b694da01b0556b7dee47150e3a960",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs": "c9f8b0702b418c735e53072f38a6f0ede764158998a5248c13a085e098ebfc78",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/expression.rs": "c72ed1f2b0c55cee55517e36278fd8618a3f2a49a04da3e980b21d871c72a09a",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs": "21a0af4b80f6b5cdb7f4c489bcb37f83c4c97eca9e0f70c10e38caccb5732a47",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/taylor.rs": "9ef48f3b687daa21b539552172f2247bbda61370e6726000e29a493eaee408bc",
+    "crates/nurbs-core/tests/worm_wheel_root.rs": "cdc2b0cd86befe52c955936dedb9281a224c1942daeea9e4c20e7c39c3a7a8e6"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "api_map_public_modules": 182,
+  "rustfmt": "passed explicit changed files",
+  "wasm_check": "passed both crates",
+  "full_suite_reference": "../nurbs-worm-wheel-stock-2026-10-16/native-tests.json; 3246 native + 2 doctests compiled snapshots, 3 ignored diagnostics; not rerun for these localized additions",
+  "unqualified": [
+    "finite cutter coverage/global visibility",
+    "saved-grid global injectivity",
+    "stock-tip and finite axial boundaries",
+    "tooth placement and actual cross-family interface assembly",
+    "owned closed worm-wheel B-rep"
+  ],
+  "unique_focused_passed": 34,
+  "unique_count_rule": "20 other envelope/stock regressions + 7 final root checks + 4 math/ownership + 3 Boolean. The final 7 root checks supersede the earlier 6 inside native-tests.log.",
+  "example": {
+    "spec": "default, both hands, beta [-0.15,0.15]",
+    "tolerance": 0.0001,
+    "surfaces_per_root_part": 1,
+    "source_edge_error_upper_max": 4.981918783064071e-05,
+    "source_cylinder_error_upper_max": 1.183848415216567e-08,
+    "packing_additional_error": 0
+  }
+}

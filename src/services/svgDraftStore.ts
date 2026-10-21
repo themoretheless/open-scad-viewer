@@ -21,10 +21,11 @@ export class SvgDraftStorageError extends Error {
 }
 // A draft preserves unfinished controls too; geometry validates their values when an operation runs.
 const numericDraft = (value: unknown) => typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' && value.length <= 64
+const withinSvgBytes = (text: string) => text.length <= SVG_MAX_BYTES && (text.length * 3 <= SVG_MAX_BYTES || new TextEncoder().encode(text).length <= SVG_MAX_BYTES)
 export function validSvgDraft(value: unknown): value is SvgDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<SvgDraft>
-  return draft.version === 1 && typeof draft.text === 'string' && draft.text.length <= SVG_MAX_BYTES && new TextEncoder().encode(draft.text).length <= SVG_MAX_BYTES
+  return draft.version === 1 && typeof draft.text === 'string' && withinSvgBytes(draft.text)
     && typeof draft.filename === 'string' && draft.filename.length <= 512 && typeof draft.opened === 'boolean'
     && numericDraft(draft.height) && ['x', 'y', 'z'].includes(draft.axis ?? '')
     && numericDraft(draft.dpi) && numericDraft(draft.tolerance)

@@ -1,0 +1,17 @@
+# Exact original miter-offset cleanup on orthogonal NURBS wires
+
+`nurbs_core::curve_offset::cleanup_orthogonal_miter_offset` constructs and regularizes the nominal miter-offset chain of an original closed orthogonal line wire. This is a native, exact-source specialization of NURBS-0188. Arbitrary smooth NURBS offsets retain their separate unresolved topology obligations.
+
+Input is 4..256 clamped two-pole degree-one constant-weight NURBS curves with exact closed joins and perpendicular consecutive segments. Curves are XY, either 2D or at one common stored Z. Coordinates and absolute signed-left offset are bounded by 1e6. Every source curve is validated before inspecting adjacent definitions, so malformed later segments cannot cause an indexing panic.
+
+The source unit normals are exact coordinate axes. Miter vertices are intersections of adjacent shifted supporting lines, and each nominal coordinate addition must be exactly representable. Failed exact arithmetic returns PrecisionLimit without fitted geometry. A collapsed miter segment remains explicitly unresolved. Positive distance means left of source traversal; orientation is not inferred from a mesh.
+
+All perpendicular crossings are formed by selecting the exact original horizontal/vertical coordinate components. Collinear overlaps are split at every exact endpoint. Every original miter segment is sorted and partitioned along its stored world axis. Vertex and geometric-edge deduplication preserve all directed source occurrences and their multiplicities. Thus the original nominal miter chain and its complete construction arrangement have identical images and incidence, with zero approximation/rounding error. Conservative source-parameter metadata is not used as a topology proof.
+
+Existing independent arrangement embedding, complete angular ordering, original-source circulation winding and left-witness admission then select NonZero or EvenOdd region boundaries. Coincident opposite occurrences cancel only in the fill circulation, not in the original-source evidence. Failed or exhausted downstream admission returns FillUnresolved and no boundary curves. Returned degree-one chunks retain exact shared endpoints; a common source Z is copied exactly.
+
+The zero error bound is **source-to-arrangement**, not source-to-cleaned-boundary: fill regularization deliberately removes internal/cancelled edges. The operation certifies the specified nominal miter-chain fill. It does not claim Minkowski dilation/erosion, original-part clearance, cutter safety, arbitrary curved offset topology, smooth corner rounding, embedding of a 3D solid or adapter/export support.
+
+Work limits: 1..1000000 original segment-pair checks, 1..65536 split directed occurrences, and 1..1000000 witness checks per admitted walk; downstream graph admission/angular ordering retain their own bounded 1000000 limits. Source length and resulting graph sizes independently bound memory and total work. Pair/edge exhaustion is WorkLimit with no geometry; unsupported source definitions and precision/degeneracy stops are explicit.
+
+Three independent integration tests cover signed square offsets and exact area, an inward U-shaped miter chain with two components after exact opposite-overlap cancellation, three components under NonZero fill after proper crossings, preserved common Z, exact zero source-transfer error, immutability, malformed/curved sources, collapse, unrepresentable shifts and shared source-pair exhaustion.
