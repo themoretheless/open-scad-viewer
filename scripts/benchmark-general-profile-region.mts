@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto'
 import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {performance} from 'node:perf_hooks'
 import path from 'node:path'
+import {tmpdir} from 'node:os'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {validateBrepProfile} from '../src/services/geometry/brepProfile'
 import type {NurbsCurve} from '../src/services/nurbsCurve'
@@ -16,7 +17,7 @@ function loop(x:number,y:number,size:number):NurbsCurve[]{
  wire[0]={degree:2,knots:[0,0,0,.5,1,1,1],controlPoints:[[x,y],[x+size*.25,y-size*.1],[x+size*.75,y-size*.1],[x+size,y]],weights:[1,.8,1.2,1],periodic:false}
  return wire
 }
-const directory=path.resolve(process.argv[2]??'/tmp/general-profile-benchmark')
+const directory=path.resolve(process.argv[2]??path.join(tmpdir(),'general-profile-benchmark'))
 const fixture=[loop(3,3,1),loop(20,0,3),loop(0,0,10),loop(2,2,4)]
 const source=JSON.stringify(fixture),hash=(s:string|Buffer)=>createHash('sha256').update(s).digest('hex')
 const before=process.argv.find(a=>a.startsWith('--before='))?.slice(9)

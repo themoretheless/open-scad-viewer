@@ -135,7 +135,7 @@ export async function prepareOpenScadSurfaceAssets(
       if (nextPreparedPixels > OPENSCAD_SURFACE_MAX_PREPARED_PIXELS) {
         png.set(file.path, new OpenScadSurfaceDataError(
           'E_SURFACE_DIMENSION_LIMIT',
-          `surface() project PNG decode budget exceeds ${OPENSCAD_SURFACE_MAX_PREPARED_PIXELS.toLocaleString()} pixels.`,
+          `surface() project PNG decode budget exceeds ${OPENSCAD_SURFACE_MAX_PREPARED_PIXELS.toLocaleString('en-US')} pixels.`,
           OPENSCAD_SURFACE_MAX_PREPARED_PIXELS,
           nextPreparedPixels,
           file.path,
@@ -217,7 +217,7 @@ export function triangulateOpenScadSurface(
   if (triangleCount > OPENSCAD_SURFACE_MAX_TRIANGLES) {
     return dataError(
       'E_SURFACE_TRIANGLE_LIMIT',
-      `surface() heightmap would exceed ${OPENSCAD_SURFACE_MAX_TRIANGLES.toLocaleString()} triangles.`,
+      `surface() heightmap would exceed ${OPENSCAD_SURFACE_MAX_TRIANGLES.toLocaleString('en-US')} triangles.`,
       OPENSCAD_SURFACE_MAX_TRIANGLES,
       triangleCount,
     )

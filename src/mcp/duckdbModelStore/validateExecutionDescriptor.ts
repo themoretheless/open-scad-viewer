@@ -15,7 +15,7 @@ export function validateExecutionDescriptor(
   validateBoundedJson(value, 'Build execution provenance')
   const encoded = JSON.stringify(value)
   if (Buffer.byteLength(encoded, 'utf8') > MAX_STORED_EXECUTION_JSON_BYTES) {
-    throw new RangeError(`Build execution provenance exceeds ${MAX_STORED_EXECUTION_JSON_BYTES.toLocaleString()} bytes`)
+    throw new RangeError(`Build execution provenance exceeds ${MAX_STORED_EXECUTION_JSON_BYTES.toLocaleString('en-US')} bytes`)
   }
   if (!value || Array.isArray(value) || typeof value !== 'object') {
     throw new TypeError('Build execution provenance must be an object')

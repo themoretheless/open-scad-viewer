@@ -157,7 +157,7 @@ const rands: BuiltinHandler = (args, context) => {
   }
   const count = Math.trunc(requestedCount)
   if (!Number.isSafeInteger(count) || count > MAX_GENERATED_ITEMS) {
-    return fail(context, 'rands', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString()} items`)
+    return fail(context, 'rands', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString('en-US')} items`)
   }
   let random = context.random
   if (args.length === 4) {
@@ -219,7 +219,7 @@ const concat: BuiltinHandler = (args, context) => {
   for (const value of args) {
     const addition = Array.isArray(value) ? value.length : 1
     if (result.length + addition > MAX_GENERATED_ITEMS) {
-      return fail(context, 'concat', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString()} items`)
+      return fail(context, 'concat', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString('en-US')} items`)
     }
     if (Array.isArray(value)) {
       // Avoid Function#apply/spread argument limits for large, otherwise valid

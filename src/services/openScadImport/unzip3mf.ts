@@ -77,7 +77,7 @@ export async function unzip3mf(
     if (!Number.isSafeInteger(expanded) || expanded > OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES) {
       return dataError(
         'E_IMPORT_LIMIT',
-        `3MF ZIP expands beyond ${OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES.toLocaleString()} bytes.`,
+        `3MF ZIP expands beyond ${OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES.toLocaleString('en-US')} bytes.`,
         '3mf',
         OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES,
         expanded,
@@ -92,7 +92,7 @@ export async function unzip3mf(
     if (!Number.isSafeInteger(total) || total > OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES) {
       return dataError(
         'E_IMPORT_LIMIT',
-        `Prepared project 3MF data expands beyond ${OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES.toLocaleString()} bytes.`,
+        `Prepared project 3MF data expands beyond ${OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES.toLocaleString('en-US')} bytes.`,
         '3mf',
         OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES,
         total,

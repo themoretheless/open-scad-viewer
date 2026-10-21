@@ -350,7 +350,7 @@ No wall-clock pass/fail thresholds. Invalid or changed outputs fail the run.`)
       }
       assert.equal(result.source.inputSha256, source.inputSha256, 'Source changed between fixtures; discard and rerun')
       results.push(result)
-      console.log(`  ${result.geometry.triangles.toLocaleString()} triangles; build p50 ${result.stageSummaries.build.wallMs.p50.toFixed(2)} ms, analyze ${result.stageSummaries.build.phases.analyzeMs.p50.toFixed(2)} ms, STL ${result.stageSummaries.stl.wallMs.p50.toFixed(2)} ms`)
+      console.log(`  ${result.geometry.triangles.toLocaleString('en-US')} triangles; build p50 ${result.stageSummaries.build.wallMs.p50.toFixed(2)} ms, analyze ${result.stageSummaries.build.phases.analyzeMs.p50.toFixed(2)} ms, STL ${result.stageSummaries.stl.wallMs.p50.toFixed(2)} ms`)
     }
     assert.equal((await sourceSnapshot()).inputSha256, source.inputSha256, 'Source changed during the benchmark suite')
     const status = refused.length ? 'partial' : 'complete'

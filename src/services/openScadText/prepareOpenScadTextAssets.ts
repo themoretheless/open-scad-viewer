@@ -81,7 +81,7 @@ export function validateSfntFace(bytes: Uint8Array, path: string, offset: number
   if (name && name.length > OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES) {
     textError(
       'E_TEXT_FONT_LIMIT',
-      `Font ${path} name table exceeds ${OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES.toLocaleString()} bytes.`,
+      `Font ${path} name table exceeds ${OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES.toLocaleString('en-US')} bytes.`,
       { fontPath: path, limit: OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES, actual: name.length },
     )
   }
@@ -353,7 +353,7 @@ export function boundedParameter(value: number, name: string, limit: number): nu
   if (Math.abs(value) > limit) {
     return textError(
       'E_TEXT_PARAMETER_LIMIT',
-      `text() ${name} exceeds the absolute limit ${limit.toLocaleString()}.`,
+      `text() ${name} exceeds the absolute limit ${limit.toLocaleString('en-US')}.`,
       { limit, actual: Math.abs(value) },
     )
   }

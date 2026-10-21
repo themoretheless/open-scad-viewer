@@ -233,7 +233,7 @@ export function validateModelSource(source: string): void {
     throw new TypeError('OpenSCAD source must contain well-formed Unicode')
   }
   if (source.length > MAX_MODEL_SOURCE_LENGTH) {
-    throw new RangeError(`OpenSCAD source exceeds ${MAX_MODEL_SOURCE_LENGTH.toLocaleString()} characters`)
+    throw new RangeError(`OpenSCAD source exceeds ${MAX_MODEL_SOURCE_LENGTH.toLocaleString('en-US')} characters`)
   }
 }
 

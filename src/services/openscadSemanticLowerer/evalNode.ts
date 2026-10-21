@@ -442,7 +442,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
             const occurrence = invoke(node, ctx, slots)
             output.push(...frameChildren(node, node.children, occurrence, iterationContext))
             if (output.length > MAX_SHAPES) {
-              evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+              evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
             }
             return
           }
@@ -458,7 +458,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
           }
           for (const value of values) {
             if (++ctx.budget.ops > MAX_EVAL_OPS) {
-              evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+              evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
             }
             const env = new Map(iterationContext.env)
             env.set(binding.name, value)
@@ -479,12 +479,12 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (!Array.isArray(values)) evaluationError(ctx, node.p, 'for() iterator must be a vector or range')
       const output: SemanticShape[] = []
       for (const value of values) {
-        if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+        if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
         const env = new Map(ctx.env)
         env.set(name, value)
         const occurrence = invoke(node, ctx, [semanticSlot(name, value)])
         output.push(...frameChildren(node, node.children, occurrence, { ...ctx, env }))
-        if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+        if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
       }
       return output
     }

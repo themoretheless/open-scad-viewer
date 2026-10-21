@@ -29,7 +29,7 @@ export function boundedCount(
     return dataError('E_IMPORT_INVALID_DATA', `${label} must be a non-negative integer.`, format)
   }
   if (value > limit) {
-    return dataError('E_IMPORT_LIMIT', `${label} exceeds the ${limit.toLocaleString()} limit.`, format, limit, value)
+    return dataError('E_IMPORT_LIMIT', `${label} exceeds the ${limit.toLocaleString('en-US')} limit.`, format, limit, value)
   }
   return value
 }

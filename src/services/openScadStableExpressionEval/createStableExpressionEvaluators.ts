@@ -120,7 +120,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
           }
           for (const value of iterable) {
             if (++ctx.budget.ops > MAX_EVAL_OPS) {
-              evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+              evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
             }
             const env = new Map(iterationContext.env)
             env.set(binding.name, value)
@@ -138,7 +138,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
         iterationContext = stableOverlayContext(ctx, iterationContext.env)
         while (openScadTruthy(host.evalExpression(expr.condition, iterationContext, depth + 1))) {
           if (++ctx.budget.ops > MAX_EVAL_OPS) {
-            evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+            evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
           }
           appendComprehensionValues(
             output,
