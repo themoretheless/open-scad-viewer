@@ -127,7 +127,7 @@ pub fn tessellate(
     )?;
     let mut report = Report {
         mesh: None,
-        agreements: vec![],
+        agreements: Vec::with_capacity(seams.len() * 2),
         agreement_cells: 0,
         cells: 0,
         error_upper: 0.,
@@ -215,14 +215,14 @@ pub fn tessellate(
     }
     let map: Vec<_> = (0..points.len()).map(|i| root(&parent, i)).collect();
     let mut remap = vec![0; points.len()];
-    let mut compact = Vec::new();
+    let mut compact = Vec::with_capacity(points.len());
     for i in 0..points.len() {
         if map[i] == i {
             remap[i] = compact.len();
             compact.push(points[i]);
         }
     }
-    let mut triangles = Vec::new();
+    let mut triangles = Vec::with_capacity(surfaces.len() * n * n * 2);
     for (patch, s) in surfaces.iter().enumerate() {
         for i in 0..n {
             for j in 0..n {

@@ -119,15 +119,16 @@ pub fn frechet_discrete(a: &Curve, b: &Curve, samples: usize) -> Result<FrechetR
     let pa = arc_uniform_samples(a, samples, sampling_tolerance(a))?.1;
     let pb = arc_uniform_samples(b, samples, sampling_tolerance(b))?.1;
     let n = samples;
-    let mut distance_at = vec![0.; n * n];
-    for (i, (_, x)) in pa.iter().enumerate() {
-        for (j, (_, y)) in pb.iter().enumerate() {
-            distance_at[i * n + j] = x
-                .iter()
-                .zip(y)
-                .map(|(u, v)| (u - v) * (u - v))
-                .sum::<f64>()
-                .sqrt();
+    let mut distance_at = Vec::with_capacity(n * n);
+    for (_, x) in &pa {
+        for (_, y) in &pb {
+            distance_at.push(
+                x.iter()
+                    .zip(y)
+                    .map(|(u, v)| (u - v) * (u - v))
+                    .sum::<f64>()
+                    .sqrt(),
+            );
         }
     }
     numeric(
@@ -136,7 +137,7 @@ pub fn frechet_discrete(a: &Curve, b: &Curve, samples: usize) -> Result<FrechetR
     )?;
     // ca[i][j] = min over monotone couplings ending at (i, j) of the max pair
     // distance along the coupling.
-    let mut ca = vec![0.; n * n];
+    let mut ca = Vec::with_capacity(n * n);
     for i in 0..n {
         for (j, &d) in distance_at[i * n..(i + 1) * n].iter().enumerate() {
             let best = match (i > 0, j > 0) {
@@ -147,7 +148,7 @@ pub fn frechet_discrete(a: &Curve, b: &Curve, samples: usize) -> Result<FrechetR
                     .min(ca[(i - 1) * n + j - 1])
                     .min(ca[i * n + j - 1]),
             };
-            ca[i * n + j] = best.max(d);
+            ca.push(best.max(d));
         }
     }
     let distance = ca[n * n - 1];
@@ -181,6 +182,49 @@ pub fn frechet_discrete(a: &Curve, b: &Curve, samples: usize) -> Result<FrechetR
         coupling_length: (steps + 1) as f64,
         samples,
     })
+}
+
+/// Symmetric discrete Hausdorff distance between two NURBS curves sampled at
+/// `samples` arc-length-uniform sites per curve.
+pub fn hausdorff_curve_discrete(
+    curve_a: &Curve,
+    curve_b: &Curve,
+    samples: usize,
+) -> std::result::Result<f64, String> {
+    curve_a.validate().map_err(|e| e.message)?;
+    curve_b.validate().map_err(|e| e.message)?;
+    if !(2..=512).contains(&samples) {
+        return Err("Hausdorff sample count must be in 2..=512 per curve".to_string());
+    }
+    let pa = arc_uniform_samples(curve_a, samples, sampling_tolerance(curve_a))
+        .map_err(|e| e.message)?
+        .1;
+    let pb = arc_uniform_samples(curve_b, samples, sampling_tolerance(curve_b))
+        .map_err(|e| e.message)?
+        .1;
+    let sq_dist = |x: &[f64], y: &[f64]| -> f64 {
+        x.iter().zip(y).map(|(u, v)| (u - v) * (u - v)).sum::<f64>()
+    };
+    let mut max_min_sq = 0.0_f64;
+    for (_, x) in &pa {
+        let min_sq = pb
+            .iter()
+            .map(|(_, y)| sq_dist(x, y))
+            .fold(f64::INFINITY, f64::min);
+        max_min_sq = max_min_sq.max(min_sq);
+    }
+    for (_, y) in &pb {
+        let min_sq = pa
+            .iter()
+            .map(|(_, x)| sq_dist(x, y))
+            .fold(f64::INFINITY, f64::min);
+        max_min_sq = max_min_sq.max(min_sq);
+    }
+    let d = max_min_sq.sqrt();
+    if !d.is_finite() {
+        return Err("Hausdorff pair distances exhausted finite precision".to_string());
+    }
+    Ok(d)
 }
 
 #[cfg(test)]
@@ -249,5 +293,19 @@ mod tests {
         let b = line([0., 0., 0.], [1., 1., 0.]);
         assert!(frechet_discrete(&a, &b, 1).is_err());
         assert!(frechet_discrete(&a, &b, 513).is_err());
+    }
+
+    #[test]
+    fn hausdorff_curve_discrete_symmetric_and_orientation_invariant() {
+        let forward = line([0., 0., 0.], [4., 0., 0.]);
+        let reversed = line([4., 0., 0.], [0., 0., 0.]);
+        // Reversed curve has Fréchet distance 4.0, but symmetric Hausdorff distance ~ 0.0!
+        let h_rev = hausdorff_curve_discrete(&forward, &reversed, 33).unwrap();
+        assert!(h_rev <= 1e-9, "hausdorff reversed={h_rev}");
+
+        let shifted = line([0., 0.75, 0.], [4., 0.75, 0.]);
+        let h_shift = hausdorff_curve_discrete(&forward, &shifted, 33).unwrap();
+        assert!((h_shift - 0.75).abs() <= 1e-9);
+        assert!(hausdorff_curve_discrete(&forward, &shifted, 1).is_err());
     }
 }

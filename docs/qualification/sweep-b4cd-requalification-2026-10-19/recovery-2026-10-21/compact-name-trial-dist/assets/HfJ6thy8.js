@@ -1,0 +1,1 @@
+import{r as e}from"./DOSd-koL.js";export{e as createSvgWorkerClient};

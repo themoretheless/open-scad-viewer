@@ -180,6 +180,7 @@ fn planning_budget_accounts_for_temporary_plane_states() {
     };
     let legacy = DenseOptions {
         max_side: 384,
+        sparse_depth_prior: false,
         ..Default::default()
     };
     let slanted = DenseOptions {

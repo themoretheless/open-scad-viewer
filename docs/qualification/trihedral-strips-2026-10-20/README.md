@@ -1,61 +1,37 @@
-# Three unequal-radius G2 strips — partial qualification
+# Unequal-radius corner boundary qualification
 
-Base: `bb4e9923978b88012590b4ef95f7b1cf3a78ad09`, with the owned Rust files listed in the frozen evidence manifest. Native tests ran against the frozen source snapshot, not the changing shared checkout.
+Latest verification: **2026-10-21, current working tree**. Exact owned-source hashes and results are in [collars-source-result.json](collars-source-result.json).
 
-## Implemented and checked
+## Confirmed
 
-- Three root-trimmed open strip faces at a convex orthogonal corner, radii 0.1, 0.2 and 0.35 mm; explicit runout 0.1 mm and span 2 mm.
-- Fresh whole-interval positional, geometric G2, rolling-center law and individual-skin injectivity checks. Incorrect radius and exhausted budget regressions refuse a result; original model remains unchanged.
-- Nine frozen B-rep tests and two positional-ownership tests passed.
-- Independent OCCT 7.7.2.0 STEP import: one face, four edges, four vertices, zero solids per strip, valid topology and successful mesh. Seam samples supplement the native interval proofs.
-- Direct integration of the imported surface over its verified linear UV quadrilateral at orders 32 and 64 converges within 1.5e-12 mm². Difference from independent quintic section area is at most 1.35e-11 mm²; the unchanged acceptance threshold is 1e-7 mm².
+- Three root-trimmed open G2 strips on a convex orthogonal corner, with independently prescribed rolling-centre radii **0.1, 0.2 and 0.35 mm**, runout **0.1 mm**, span **2 mm**.
+- Shared literal endpoints, six endpoint G0/G1/G2 joins, an ordered six-curve rim, original trimmed-face membership of its three connectors, individual injectivity and whole-rim simplicity.
+- Positive certified pairwise strip distance lower bounds; they exclude intersections without asserting a converged minimum distance.
+- Six stored NURBS boundary collars, each freshly checked against its complete original support: three constructed strip surfaces and three original body faces. Every original rim curve also agrees with both its support and stored collar.
+- Whole-seam position, normal and shape-tensor bounds retain tolerances **1e-7 mm / 1e-5 / 1e-4 mm^-1**. Collar preparation uses **183 cells**, **1815 exact-predicate work**, and **1,039,125 coefficient work** within the supplied budgets. These counts exclude the preceding strip construction.
 
-OCCT BRepGProp area at requested epsilon 1e-10 differed by up to 2.68e-6 mm², despite a reported relative error near 2e-15. Its area and reported error remain in the JSON for diagnosis. Direct integration measures the actual imported surface and trim; it does not substitute the native surface or tessellation.
+The correlated proof now composes directly from original B-spline coefficients by Cox-de Boor recurrence on one retained knot interval. It uses no rounded extracted reference surface. Mapped collars crossing original knot intervals remain refused. The original single-Bezier path remains covered by regression tests.
 
-## Not qualified
+## Validation
 
-These are three **open faces**, not a closed filleted solid. General B-rep trimming, original-face grafting, central corner filling, arbitrary NURBS edges, concave/multi-edge corners, general-body intersections and whole-wall thickness remain outstanding. The radius certificate concerns the rolling-center law; the quintic G2 cross-section is not a constant-curvature circular arc. No WASM/worker/UI or three-part end-to-end acceptance is claimed.
+**11 current-worktree native tests passed:** six NURBS collar tests and five B-rep/rim tests. Controls cover rational multispan coefficients, independent analytic positions, changed curvature, changed original surface/pcurve, a crossing knot interval, wrong radii, exhausted work, a spatial bow-tie and mismatching literal endpoints. Two execution-monitor tests and the benchmark noninterference test also passed.
 
-The shared checkout build failed in unrelated `profile_certificate/span_intersections/event_nodes.rs` (`Ok(x.0)` on a Vec). Frozen tests do not qualify that shared integration.
+Independent **OCCT 7.7.2.0** reconstruction of the actual saved collar coefficients checked **198 stations**. Maximum sampled errors: position **1.34e-15 mm**, normal **1.13e-13**, world shape tensor **1.53e-10 mm^-1**. Samples supplement the native whole-interval proofs. This check reconstructs stored NURBS coefficients, rather than importing a closed STEP solid. See [collars-occt-report.json](collars-occt-report.json).
 
-## Reproduction
+The three open-strip STEP files independently import with one face/four edges/four vertices and zero solids each. Surface area is integrated over the actual imported UV trim and compared with an independent quintic-section calculation. OCCT's separate BRepGProp estimate remains in the report for comparison; its reported integration error underestimated the observed discrepancy. The acceptance threshold remains 1e-7 mm². See [occt-report.json](occt-report.json).
 
-Run `scripts/verify-trihedral-strips-occt.py DIRECTORY` using Python with OCP 7.7.2.0. DIRECTORY must contain skin-0..2 JSON/STEP generated by `trihedral_skins` with `OSV_TRIHEDRAL_SKIN_EVIDENCE`. Raw evidence and frozen source currently reside in `output/qualification/trihedral-strips-20261020`; that directory is ignored by Git.
+## Test suspension: root cause fixed
 
-## Mutual strip separation follow-up
+SDF GPU benchmark runners sent **SIGSTOP** to competing same-user cargo/rustc/test processes to force quiet measurement windows. The paused-process journal contains the exact identity of the monitored CAD cargo process; the benchmark's recorded runner hash matches the pre-fix source. This establishes the cause without relying on an inferred hang.
 
-The constructor now refuses publication unless each pair has a finite, strictly positive certified whole-face distance lower bound above the unchanged positional tolerance. Original trimmed surfaces are used; no mesh is used for admission. The distance minimizer does not converge in these bounded runs, so the reported upper values are not asserted to be exact minimum distances. Positive lower bounds suffice to exclude pairwise intersection.
+Five runners now **observe competing work**, wait for an uncontaminated window and never stop another session. Their own descendants are excluded without exempting unrelated jobs under the same desktop application. Legacy event fields remain compatible. Completed measurement data were preserved; the active old controller was terminated through its existing recovery handler, which resumed its journaled identities.
 
-Three pair lower bounds: 0.2367450891, 0.01640629937 and 0.03540042815 mm. Total shared work is 13858 cells, including domain classification, 343222 exact work and 48384 coefficients. Per-pair search/domain budgets are charged to the same constructor budget. Two affected native tests passed after this addition, followed by a fresh independent STEP check of all three regenerated files. This does not prove closure or separation from the retained source faces.
+`run-native-monitored.py` starts the command in its own session, records actual stopped/continued/exited statuses and propagates the native exit code. It never restarts or automatically resumes a stopped child. A synthetic stop/continue regression verifies the same PID reaches its terminal status. All three post-fix current-worktree runs completed with exit code zero and no stop events.
 
-## Endpoint-owned central rim
+## Still required for the full goal
 
-`build_trihedral_rim` now extracts each near cross-section from the actual constructed strip using its original end-root order. Three quintic connectors link the six ports by shared support-face roles. Each connector preserves both existing endpoint coordinates literally. Its endpoint tangent is derived from the corresponding clamped rational cross-section; zero-curvature connector ends are admitted only after fresh native interval G0/G1/G2 inspection against the actual cross-sections. All six joins must pass; otherwise the rim is refused.
+The central spanning surface is **not constructed**, and there is **no closed filleted body**. Next are the six-sided G2 fill, source-face cutting and grafting, end transitions and solid assembly. Endpoint curve G2 does not certify a future spanning surface.
 
-The updated native test passed (two tests total): six distinct ports, literal endpoint preservation, all six G2 joins, existing pair separation and strip checks. Frozen run: `rim-native.log`, finished successfully in 1.92 seconds after compilation. Source hashes above include the new rim module.
+General NURBS edges, concave/multi-edge corners, full wall thickness, whole-body intersections/gaps, WASM/worker/UI admission, three-part STEP/history acceptance, P0 and P2–P3 remain unqualified. Radius values here describe the rolling-centre law of quintic G2 sections; constant circular-section curvature remains unqualified.
 
-This is a boundary-curve network, not a filled corner surface. Whole-rim simplicity, connector membership in the original trimmed faces, ordering/orientation for a fill, central surface construction, source-face partition and closed-body grafting remain unqualified. No additional STEP or runtime acceptance is claimed for this new rim.
-
-## Ordered spatial rim and original-support qualification
-
-The three cross-sections and three connectors now have a single cyclic traversal derived from the six original ports. Traversal rejects ambiguous incidence, early closure and any mismatch of literal endpoint coordinates; it does not weld by proximity.
-
-`inspect_rim_supports` independently computes a pcurve for every connector, requires whole-interval agreement with the original support surface at half the model positional tolerance, and checks the whole pcurve against the actual original trimmed face. Agreement and domain cells share a bounded work counter. The control fixture passed; a six-cell budget refuses an answer.
-
-`inspect_spatial_rim` proves sufficient simplicity directly on original spatial rational Bezier definitions. Original pole monotonicity proves individual injectivity, outward interval signs prove separating planes for adjacent pairs excluding their common endpoint, and original-curve distance lower bounds separate nonadjacent pairs. It never uses a rounded planar projection or mesh. Its scope is clamped single-span positive-weight curves; it refuses other representations. An unproven result is not a detected intersection.
-
-Latest frozen native run: four tests passed (`rim-spatial-native.log`): the actual six-curve unequal-radius corner rim is proven simple; a tilted spatial square passes; a bow-tie cannot be certified; an endpoint discrepancy of 1e-12 is refused despite the larger geometric tolerance. The constructor's strip, G2, separation and support checks remain exercised.
-
-These results supersede the earlier unqualified ordering, connector membership and whole-rim simplicity entries **for this control fixture**. Central surface construction, surface G2 across the completed corner, source-face partition/graft, closed body, arbitrary NURBS edges, whole-body wall/intersection checks and all subsequent runtime/acceptance items remain outstanding. Endpoint curve G2 does not imply G2 of a future spanning surface.
-
-## Six original-support collars — acceptance pending
-
-Current source adds `prepare_trihedral_collars`: fresh spatial-rim and original-face membership checks, six local NURBS collar proposals, and fresh whole-seam position/normal/curvature inspection directly against the complete original supports. Local rounded knot-span extraction is a proposal only; it cannot grant admission. Global cell, coefficient and exact-predicate budgets remain bounded. A shifted original strip surface is included as a negative regression.
-
-Earlier attempts correctly refused an oblique direction leaving the natural chart and a multispan support passed to the single-Bezier primitive. The driver now considers chart-contained coordinate directions and extracts one local knot span for construction. Final admission still uses the complete original surface; no tolerance was increased.
-
-The latest source compiled successfully, but its three-test runtime acceptance is **not complete**. The owned cargo/test process group repeatedly enters OS stopped state T. The existing run was inspected and continued, not restarted; only the invalid-span/budget test has reported success so far. Handle and exact source hashes are in `collars-source-pending.json`. Previous successful four-test evidence does not qualify these latest changes.
-
-No six-collar success, central spanning surface, closed-solid result or new runtime acceptance is claimed. The central six-sided G2 solve, source-face cutting/grafting and subsequent full-goal work remain active.
-
-Follow-up observation: the same run remains live but stopped (`cargo` PID 4355, test PID 4444, group 4355). A targeted continuation allowed `modified_original_surface_cannot_reuse_corner_boundary_proofs` to finish successfully. Two of three tests have now reported success; the positive six-collar case remains pending. Project searches found no explicit stop signal in the inspected native code/scripts. No origin of the repeated OS stop has been established. This is not a failed or completed positive test.
+Raw evidence and source snapshots are retained in ignored `output/qualification/test-suspension-20261021` and `output/qualification/trihedral-strips-20261020`. Historical pending metadata is retained with an explicit supersession link; it does not describe current acceptance.

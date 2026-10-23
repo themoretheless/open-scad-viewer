@@ -1,4 +1,4 @@
-import { detectHardwareConcurrency, type WorkerPoolStats } from './geometryWorkerPool'
+import { detectHardwareConcurrency, type WorkerPoolDiagnostics, type WorkerPoolStats } from './geometryWorkerPool'
 import type { MainSolidJob, MainSolidResults } from './mainSolidProtocol'
 import {
   MainSolidWorkerClient,
@@ -10,6 +10,10 @@ import {
 export interface MainSolidPoolRunOptions extends MainSolidRunOptions {
   /** Higher priority tasks are dispatched ahead of lower priority queued tasks (default: 0) */
   priority?: number
+}
+
+export interface MainSolidPoolDiagnostics extends WorkerPoolDiagnostics {
+  warmWorkers: number
 }
 
 interface QueuedSolidTask<K extends MainSolidJob['kind'] = MainSolidJob['kind']> {
@@ -41,6 +45,9 @@ export class MainSolidWorkerPool {
   private readonly queue: QueuedSolidTask<any>[] = []
   private queueHead = 0
   private activeQueuedCount = 0
+  private peakQueueDepth = 0
+  private cancelledCount = 0
+  private timedOutCount = 0
   private nextTaskId = 1
   private completedTasks = 0
   private closed = false
@@ -78,6 +85,7 @@ export class MainSolidWorkerPool {
       return Promise.reject(new MainSolidWorkerError('CAD_DISPOSED', 'CAD worker pool is closed'))
     }
     if (options.signal?.aborted) {
+      this.cancelledCount++
       return Promise.reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
     }
     const timeoutMs = options.timeoutMs ?? 120000
@@ -100,6 +108,7 @@ export class MainSolidWorkerPool {
           if (!task.aborted) {
             task.aborted = true
             this.activeQueuedCount--
+            this.cancelledCount++
             task.cleanupAbort?.()
             reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
           }
@@ -127,6 +136,9 @@ export class MainSolidWorkerPool {
         q.splice(lo, 0, task)
       }
       this.activeQueuedCount++
+      if (this.activeQueuedCount > this.peakQueueDepth) {
+        this.peakQueueDepth = this.activeQueuedCount
+      }
 
       this.pump()
     })
@@ -197,6 +209,7 @@ export class MainSolidWorkerPool {
 
       if (task.options.signal?.aborted) {
         task.aborted = true
+        this.cancelledCount++
         task.reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
         continue
       }
@@ -223,6 +236,10 @@ export class MainSolidWorkerPool {
           error => {
             this.busySlots[slotIdx] = 0
             this.activeSlotCount--
+            if (error instanceof MainSolidWorkerError) {
+              if (error.code === 'CAD_TIMEOUT') this.timedOutCount++
+              else if (error.code === 'CAD_CANCELLED') this.cancelledCount++
+            }
             task.reject(error)
             this.pump()
           }
@@ -238,6 +255,7 @@ export class MainSolidWorkerPool {
       const task = this.dequeueTask()
       if (!task) break
       task.aborted = true
+      this.cancelledCount++
       task.cleanupAbort?.()
       task.reject(new MainSolidWorkerError('CAD_CANCELLED', 'Operation cancelled', 'AbortError'))
     }
@@ -267,6 +285,24 @@ export class MainSolidWorkerPool {
       queuedTasks: this.activeQueuedCount,
       completedTasks: this.completedTasks,
       perWorkerCompleted: [...this.perWorkerCompleted],
+    }
+  }
+
+  getPoolDiagnostics(): MainSolidPoolDiagnostics {
+    let warmWorkers = 0
+    for (let i = 0; i < this.slots.length; i++) {
+      if (this.slots[i] !== null) warmWorkers++
+    }
+    return {
+      poolSize: this.poolSize,
+      activeWorkers: this.activeSlotCount,
+      idleWorkers: Math.max(0, this.poolSize - this.activeSlotCount),
+      warmWorkers,
+      queuedJobs: this.activeQueuedCount,
+      completedJobs: this.completedTasks,
+      peakQueueDepth: this.peakQueueDepth,
+      cancelledJobs: this.cancelledCount,
+      timedOutJobs: this.timedOutCount,
     }
   }
 }

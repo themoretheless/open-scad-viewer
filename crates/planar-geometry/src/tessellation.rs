@@ -95,16 +95,27 @@ fn clean_ring(ring: &[[f64; 2]]) -> Result<Vec<[f64; 2]>> {
 }
 
 fn sweep_region(rings: &Rings) -> Result<FillMesh> {
-    let mut levels: Vec<f64> = rings.iter().flatten().map(|p| p[1]).collect();
+    let total_pts: usize = rings.iter().map(Vec::len).sum();
+    let mut levels: Vec<f64> = Vec::with_capacity(total_pts);
+    levels.extend(rings.iter().flatten().map(|p| p[1]));
     levels.sort_by(f64::total_cmp);
     levels.dedup();
-    let edges: Vec<_> = rings
-        .iter()
-        .flat_map(|r| (0..r.len()).map(move |i| (r[i], r[(i + 1) % r.len()])))
-        .filter(|(a, b)| a[1] != b[1])
-        .collect();
-    let mut mesh = FillMesh::default();
-    let mut vertex_ids = FxHashMap::default();
+    let mut edges = Vec::with_capacity(total_pts);
+    for r in rings {
+        for i in 0..r.len() {
+            let a = r[i];
+            let b = r[(i + 1) % r.len()];
+            if a[1] != b[1] {
+                edges.push((a, b));
+            }
+        }
+    }
+    let mut mesh = FillMesh {
+        positions: Vec::with_capacity(total_pts),
+        indices: Vec::with_capacity(total_pts * 3),
+    };
+    let mut vertex_ids =
+        FxHashMap::with_capacity_and_hasher(total_pts, Default::default());
     let mut starts: Vec<_> = (0..edges.len()).collect();
     let mut ends: Vec<_> = (0..edges.len()).collect();
     starts.sort_unstable_by(|&a, &b| {

@@ -227,11 +227,17 @@ impl Field {
                 | Field::Neovius { .. }
                 | Field::Lidinoid { .. }
                 | Field::SchoenIWP { .. }
+                | Field::Octahedron { .. }
+                | Field::HexPrism { .. }
+                | Field::TriangularPrism { .. }
+                | Field::SmoothIntersection { .. }
                 | Field::ChamferUnion { .. }
                 | Field::ChamferIntersection { .. }
                 | Field::ChamferDifference { .. }
                 | Field::Onion { .. }
-                | Field::Elongate { .. } => {
+                | Field::Elongate { .. }
+                | Field::Mirror { .. }
+                | Field::Taper { .. } => {
                     return None;
                 }
             }

@@ -28,14 +28,19 @@ fn choose(n: usize, k: usize) -> Q {
     })
 }
 pub(super) fn check(h: &Net) -> Result<()> {
+    for p in bernstein::limits(h)? {
+        guard(&p)?;
+    }
     for p in h.iter().flatten() {
-        if p[3] <= Q::zero()
+        if p[3] < Q::zero()
             || p.iter()
                 .any(|q| q.numer().bits() > 8192 || q.denom().bits() > 8192)
         {
             return Err(fail("atlas transformed chart weight/bit budget exceeded"));
         }
-        guard(&sb::point(p))?;
+        if p[3] > Q::zero() {
+            guard(&sb::point(p))?;
+        }
     }
     Ok(())
 }
@@ -44,6 +49,27 @@ pub(super) fn check(h: &Net) -> Result<()> {
 /// and gives a regular candidate on 0<=y<=x<=1. The caller must still prove
 /// the candidate's Jacobian, links and separation. No singular cell is dropped.
 pub(super) fn pole(h: &sb::Net, work: &mut Work) -> Result<Option<Net>> {
+    let direct = pole_base(h, work)?;
+    let reflected = h.iter().rev().cloned().collect::<sb::Net>();
+    let alternative = pole_base(&reflected, work)?.map(|h| reverse(&h));
+    let result = match (direct, alternative) {
+        (Some(a), Some(b)) => Some(if a.len() <= b.len() { a } else { b }),
+        (Some(a), None) => Some(a),
+        (None, b) => b,
+    };
+    if result.is_some() {
+        Ok(result)
+    } else {
+        match super::planar_pole::chart(h, work)? {
+            Some(chart) => Ok(Some(chart)),
+            None => match super::graph_pole::chart(h, work)? {
+                Some(h) => Ok(Some(h)),
+                None => super::conical::chart(h, work),
+            },
+        }
+    }
+}
+pub(super) fn pole_base(h: &sb::Net, work: &mut Work) -> Result<Option<Net>> {
     let (n, m) = (h.len() - 1, h[0].len() - 1);
     let p = sb::point(&h[0][0]);
     if h.iter().any(|r| sb::point(&r[0]) != p) {
@@ -67,22 +93,44 @@ pub(super) fn pole(h: &sb::Net, work: &mut Work) -> Result<Option<Net>> {
             }
         }
     }
-    for (i, row) in power.iter().enumerate() {
-        if row.iter().take(i).any(|p| p.iter().any(|q| !q.is_zero())) {
-            return Ok(None);
+    // Remove stationary angular/radial powers by an exact image-preserving
+    // change x=v^radial, y=u^angular*v^radial. Positive real roots give the
+    // inverse on the punctured rectangle; no algebraic coordinate is rounded.
+    let active = power
+        .iter()
+        .enumerate()
+        .flat_map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .filter_map(move |(j, p)| p.iter().any(|q| !q.is_zero()).then_some((i, j)))
+        })
+        .collect::<Vec<_>>();
+    let mut chosen = None;
+    'outer: for radial in (1..=m.max(1)).rev() {
+        for angular in (1..=n.max(1)).rev() {
+            if active
+                .iter()
+                .all(|(i, j)| i % angular == 0 && j % radial == 0 && j / radial >= i / angular)
+            {
+                chosen = Some((angular, radial));
+                break 'outer;
+            }
         }
     }
-    // Coordinates x=lambda1+lambda2, y=lambda2. Thus u=y/x,
-    // v=x maps vertices to pole, (u=0,v=1), (u=1,v=1).
-    let d = m;
+    let Some((angular, radial)) = chosen else {
+        return Ok(None);
+    };
+    let d = active.iter().map(|(_, j)| j / radial).max().unwrap_or(0);
+    if d == 0 {
+        return Ok(None);
+    }
     let mut polynomial = vec![vec![std::array::from_fn::<_, 4, _>(|_| Q::zero()); d + 1]; d + 1];
-    for (i, row) in power.iter().enumerate() {
-        for (j, p) in row.iter().enumerate().skip(i) {
-            for a in 0..=j - i {
-                let f = choose(j - i, a);
-                for k in 0..4 {
-                    polynomial[a][j - a][k] += &p[k] * &f;
-                }
+    for (i, j) in active {
+        let (a, b) = (i / angular, j / radial);
+        for x in 0..=b - a {
+            let factor = choose(b - a, x);
+            for k in 0..4 {
+                polynomial[x][b - x][k] += &power[i][j][k] * &factor;
             }
         }
     }
@@ -121,6 +169,70 @@ mod tests {
         assert!(root(&integer(2), 2).is_none());
     }
     #[test]
+    fn stationary_radial_and_angular_poles_have_exact_image_charts() {
+        // S(u,v)=(u³ v²,v²,v⁴), both parameter directions stationary.
+        let h = (0..=3)
+            .map(|i| {
+                (0..=4)
+                    .map(|j| {
+                        let v = if j >= 2 {
+                            choose(j, 2) / choose(4, 2)
+                        } else {
+                            Q::zero()
+                        };
+                        [
+                            if i == 3 { v.clone() } else { Q::zero() },
+                            v,
+                            integer(if j == 4 { 1 } else { 0 }),
+                            Q::one(),
+                        ]
+                    })
+                    .collect()
+            })
+            .collect::<sb::Net>();
+        for input in [h.clone(), h.iter().rev().cloned().collect()] {
+            let chart = pole(&input, &mut Work::default()).unwrap().unwrap();
+            assert_eq!(chart.len(), 3);
+            let ds = bernstein::derivatives(&chart, &mut Work::default()).unwrap();
+            assert!(
+                ds.iter()
+                    .flatten()
+                    .flatten()
+                    .flatten()
+                    .any(|q| !q.is_zero())
+            );
+            assert!(
+                regular(
+                    &Patch {
+                        ids: [0, 1, 2],
+                        h: chart.clone(),
+                        motion: bernstein::homotopy(&chart, &mut Work::default()).unwrap(),
+                        derivatives: ds
+                    },
+                    &cross(
+                        &sub(
+                            &bernstein::corners(&chart)[1],
+                            &bernstein::corners(&chart)[0]
+                        ),
+                        &sub(
+                            &bernstein::corners(&chart)[2],
+                            &bernstein::corners(&chart)[0]
+                        )
+                    ),
+                    &mut Work::default()
+                )
+                .unwrap()
+            );
+        }
+        let mut bad = h;
+        bad[1][1][0] += Q::new(1.into(), 16.into());
+        assert!(pole_base(&bad, &mut Work::default()).unwrap().is_none());
+        // The expanded constructor can represent this source as a singular
+        // rational chart; embedding is decided separately by the atlas checks.
+        let candidate = pole(&bad, &mut Work::default()).unwrap().unwrap();
+        check(&candidate).unwrap();
+    }
+    #[test]
     fn exact_pole_blowdown_preserves_curved_image() {
         // S(u,v)=(u*v,v,v²). Degree elevate u and v to two.
         let h = (0..=2)
@@ -155,7 +267,11 @@ mod tests {
         );
         let mut bad = h;
         bad[1][1][0] += Q::one(); // collapsed edge remains, but no regular polynomial blowdown
-        assert!(pole(&bad, &mut Work::default()).unwrap().is_none());
+        assert!(pole_base(&bad, &mut Work::default()).unwrap().is_none());
+        // The expanded constructor can represent this source as a singular
+        // rational chart; embedding is decided separately by the atlas checks.
+        let candidate = pole(&bad, &mut Work::default()).unwrap().unwrap();
+        check(&candidate).unwrap();
     }
 }
 
@@ -231,6 +347,12 @@ fn clock(a: &[sb::H], b: &[sb::H]) -> Result<Q> {
 /// multiplicative linear system determines positive vertex scales for every
 /// patch; free scales are one. Unproved roots or inconsistent cycles refuse.
 pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> {
+    synchronize_mode(patches, false, work)
+}
+pub(super) fn synchronize_images(patches: &mut [Patch], work: &mut Work) -> Result<()> {
+    synchronize_mode(patches, true, work)
+}
+fn synchronize_mode(patches: &mut [Patch], allow_segments: bool, work: &mut Work) -> Result<()> {
     if patches.len() > 128 {
         return Err(fail("atlas seam transport chart budget exceeded"));
     }
@@ -258,6 +380,9 @@ pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> 
         }
         let (a, x, y, ha) = &e[0];
         let (b, u, v, hb) = &e[1];
+        if allow_segments && segment_seam(ha, hb, work)? {
+            continue;
+        }
         let mut rhs = clock(ha, hb)?;
         let mut row = BTreeMap::<usize, Q>::new();
         for (p, k, sign) in [(*a, *y, 1), (*a, *x, -1), (*b, *v, -1), (*b, *u, 1)] {

@@ -20,9 +20,16 @@ pub mod codegen;
 pub mod generated_layouts;
 pub mod layout;
 pub mod pipeline;
+pub mod postprocess;
 pub mod rasterizer;
 pub mod readback;
 pub mod resources;
 pub mod shaders;
 pub mod uniform;
 pub mod variants;
+
+pub use postprocess::{
+    CullingStats, bilateral_depth_filter, bloom_bright_pass_and_blur,
+    compute_normal_map_from_depth, compute_ssao_ao, evaluate_culling_stats, fxaa_luma_antialias,
+    sobel_edge_outline, tone_map_aces_filmic,
+};

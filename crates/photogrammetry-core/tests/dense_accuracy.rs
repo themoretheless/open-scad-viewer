@@ -78,21 +78,45 @@ fn evaluate(options: &DenseOptions) -> Metrics {
 
 #[test]
 fn accurate_preset_beats_defaults_on_analytic_scenes() {
-    let baseline = evaluate(&DenseOptions::default());
+    let baseline = evaluate(&DenseOptions {
+        sparse_depth_prior: false,
+        fusion_merge_pass: false,
+        min_component_triangles: 0,
+        ..DenseOptions::default()
+    });
+    let current_default = evaluate(&DenseOptions::default());
     let accurate = evaluate(&DenseOptions::accurate());
+    // Default options (with sparse depth prior and fusion consolidation) must
+    // not regress against the legacy baseline.
+    assert!(
+        current_default.mean_error <= baseline.mean_error,
+        "mean surface error {:.6} (default) vs {:.6} (legacy baseline)",
+        current_default.mean_error,
+        baseline.mean_error
+    );
+    assert!(
+        current_default.f1 >= baseline.f1,
+        "mean F1 {:.6} (default) vs {:.6} (legacy baseline)",
+        current_default.f1,
+        baseline.f1
+    );
     // Qualified values: 0.01246 -> 0.00907 mean surface error (-27%) and
     // 0.892 -> 0.921 mean F1 (+3.3%). The bounds leave slack but reject any
-    // regression back towards the defaults.
+    // regression back towards the legacy baseline, and accurate() must also
+    // improve on current_default.
     assert!(
-        accurate.mean_error < baseline.mean_error * 0.85,
-        "mean surface error {:.6} (accurate) vs {:.6} (default)",
+        accurate.mean_error < baseline.mean_error * 0.85
+            && accurate.mean_error < current_default.mean_error,
+        "mean surface error {:.6} (accurate) vs {:.6} (default) / {:.6} (baseline)",
         accurate.mean_error,
+        current_default.mean_error,
         baseline.mean_error
     );
     assert!(
         accurate.f1 > baseline.f1 + 0.02,
-        "mean F1 {:.6} (accurate) vs {:.6} (default)",
+        "mean F1 {:.6} (accurate) vs {:.6} (default) / {:.6} (baseline)",
         accurate.f1,
+        current_default.f1,
         baseline.f1
     );
 }

@@ -6,9 +6,10 @@ use geometry_ops::Triangles;
 #[cfg(feature = "codec")]
 mod serialization;
 pub use math_core::{Acceleration, Error, Result, V3, finite};
+#[allow(unused_imports)]
 use planar_geometry::rings::{self, Rings};
 const INVALID_INPUT: &str = "SDF_INVALID_INPUT";
-fn error(message: impl Into<String>) -> Error {
+pub(crate) fn error(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)
 }
 #[cfg(feature = "cuda")]
@@ -27,212 +28,17 @@ pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
     gpu::backend_report()
 }
 
-/// The grid-sampling compute shader (WGSL), shared by the native `gpu` feature
-/// and the browser WebGPU host path; both must execute the identical text.
-pub const SDF_WGSL: &str = r##"
-struct Params {
-    nx: u32,
-    ny: u32,
-    nz: u32,
-    n_nodes: u32,
-    min_x: f32,
-    min_y: f32,
-    min_z: f32,
-    step_x: f32,
-    step_y: f32,
-    step_z: f32,
-}
-@group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var<storage, read> kinds: array<u32>;
-@group(0) @binding(2) var<storage, read> node_params: array<f32>;
-@group(0) @binding(3) var<storage, read> aux: array<u32>;
-@group(0) @binding(4) var<storage, read> tris: array<f32>;
-@group(0) @binding(5) var<storage, read_write> values: array<f32>;
 
-fn closest_triangle(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> vec3f {
-    let ab = b - a;
-    let ac = c - a;
-    let n = cross(ab, ac);
-    let nn = dot(n, n);
-    if (nn > 0.0) {
-        let q = p - n * (dot(p - a, n) / nn);
-        let aq = q - a;
-        let v = dot(cross(aq, ac), n) / nn;
-        let w = dot(cross(ab, aq), n) / nn;
-        if (v >= 0.0 && w >= 0.0 && v + w <= 1.0) {
-            return q;
-        }
-    }
-    var best = a;
-    var best_dist = 3.402823466e+38;
-    let edges = array<vec3f, 6>(a, b, b, c, c, a);
-    for (var e = 0u; e < 3u; e++) {
-        let ea = edges[e * 2u];
-        let eb = edges[e * 2u + 1u];
-        let d = eb - ea;
-        var t = 0.0;
-        if (dot(d, d) > 0.0) {
-            t = clamp(dot(p - ea, d) / dot(d, d), 0.0, 1.0);
-        }
-        let q = ea + t * d;
-        let dist_edge = distance(p, q);
-        if (dist_edge < best_dist) {
-            best = q;
-            best_dist = dist_edge;
-        }
-    }
-    return best;
-}
+mod differential_and_queries;
+mod field_eval;
+mod wgsl;
 
-// `WG` is the workgroup-size anchor: the compute-core runtime may substitute
-// a per-backend tuned value (powers of two only) before compilation.
-const WG: u32 = 256;
+pub use differential_and_queries::polygonize_surface_nets;
+pub use wgsl::SDF_WGSL;
+#[cfg(test)]
+use field_eval::{point, triangles_closed, triangles_ok};
+use field_eval::{finish_triangles, positive};
 
-// Flat postorder field tree: leaves push, CSG/offset ops combine with a value
-// stack. Node kinds match sdf-core/src/flat.rs.
-@compute @workgroup_size(WG)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let row = params.nx + 1u;
-    let total = row * (params.ny + 1u) * (params.nz + 1u);
-    if (id.x >= total) {
-        return;
-    }
-    let x = idx_decompose_x(id.x, row);
-    let y = (id.x / row) % (params.ny + 1u);
-    let z = id.x / (row * (params.ny + 1u));
-    let p = vec3f(
-        params.min_x + f32(x) * params.step_x,
-        params.min_y + f32(y) * params.step_y,
-        params.min_z + f32(z) * params.step_z,
-    );
-    var stack: array<f32, 33>;
-    var sp = 0u;
-    for (var n = 0u; n < params.n_nodes; n++) {
-        let base = n * 8u;
-        let kind = kinds[n];
-        if (kind <= 2u || kind == 10u || (kind >= 12u && kind <= 15u)) {
-            // Leaves: sphere / box / torus / capsule / cylinder / TPMS with translate-folded parameters.
-            var v = 0.0;
-            if (kind == 10u) {
-                let a = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                let b = vec3f(node_params[base + 3u], node_params[base + 4u], node_params[base + 5u]);
-                let ab = b - a;
-                let ap = p - a;
-                var t = 0.0;
-                let denom = dot(ab, ab);
-                if (denom > 0.0) {
-                    t = clamp(dot(ap, ab) / denom, 0.0, 1.0);
-                }
-                v = length(ap - ab * t) - node_params[base + 6u];
-            } else if (kind == 0u) {
-                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                v = length(p - c) - node_params[base + 3u];
-            } else if (kind == 1u) {
-                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                let h = vec3f(node_params[base + 3u], node_params[base + 4u], node_params[base + 5u]);
-                let q = abs(p - c) - h;
-                v = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
-            } else if (kind == 2u) {
-                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                let q = p - c;
-                v = length(vec2f(length(q.xy) - node_params[base + 3u], q.z)) - node_params[base + 4u];
-            } else if (kind == 12u) {
-                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                let q = p - c;
-                let d = vec2f(length(q.xy) - node_params[base + 3u], abs(q.z) - node_params[base + 4u]);
-                v = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
-            } else {
-                let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
-                let period = node_params[base + 3u];
-                let thickness = node_params[base + 4u];
-                let k = 6.283185307179586 / period;
-                let q = (p - c) * k;
-                let sx = sin(q.x);
-                let sy = sin(q.y);
-                let sz = sin(q.z);
-                let cx = cos(q.x);
-                let cy = cos(q.y);
-                let cz = cos(q.z);
-                var iso = 0.0;
-                if (kind == 13u) {
-                    iso = sx * cy + sy * cz + sz * cx;
-                } else if (kind == 14u) {
-                    iso = cx + cy + cz;
-                } else {
-                    iso = sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz;
-                }
-                v = abs(iso) / k - 0.5 * thickness;
-            }
-            stack[sp] = v;
-            sp++;
-        } else if (kind == 8u || kind == 9u) {
-            // Mesh distance: brute-force closest point (and solid angle for
-            // signed) over the referenced triangle window, in scan order.
-            let start = aux[n * 2u];
-            let count = aux[n * 2u + 1u];
-            var best = 3.402823466e+38;
-            var angle = 0.0;
-            for (var t = 0u; t < count; t++) {
-                let base_t = (start + t) * 9u;
-                let a = vec3f(tris[base_t], tris[base_t + 1u], tris[base_t + 2u]);
-                let b = vec3f(tris[base_t + 3u], tris[base_t + 4u], tris[base_t + 5u]);
-                let c = vec3f(tris[base_t + 6u], tris[base_t + 7u], tris[base_t + 8u]);
-                best = min(best, distance(p, closest_triangle(p, a, b, c)));
-                if (kind == 9u) {
-                    let qa = a - p;
-                    let qb = b - p;
-                    let qc = c - p;
-                    let la = length(qa);
-                    let lb = length(qb);
-                    let lc = length(qc);
-                    angle += 2.0 * atan2(
-                        dot(qa, cross(qb, qc)),
-                        la * lb * lc + dot(qa, qb) * lc + dot(qb, qc) * la + dot(qc, qa) * lb,
-                    );
-                }
-            }
-            var v = best;
-            if (kind == 9u && best > 0.0 && abs(angle) > 6.283185307) {
-                v = -best;
-            }
-            stack[sp] = v;
-            sp++;
-        } else if (kind == 7u) {
-            sp--;
-            stack[sp] = stack[sp] - node_params[base];
-            sp++;
-        } else {
-            sp--;
-            let b = stack[sp];
-            sp--;
-            let a = stack[sp];
-            var v = 0.0;
-            if (kind == 3u) {
-                v = min(a, b);
-            } else if (kind == 4u) {
-                v = max(a, b);
-            } else if (kind == 5u) {
-                v = max(a, -b);
-            } else if (kind == 11u) {
-                let k = node_params[base];
-                let na = -a;
-                let h = clamp(0.5 + 0.5 * (b - na) / k, 0.0, 1.0);
-                v = -(b * (1.0 - h) + na * h - k * h * (1.0 - h));
-            } else {
-                let k = node_params[base];
-                let h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-                v = b * (1.0 - h) + a * h - k * h * (1.0 - h);
-            }
-            stack[sp] = v;
-            sp++;
-        }
-    }
-    values[id.x] = stack[0];
-}
-fn idx_decompose_x(idx: u32, row: u32) -> u32 {
-    return idx % row;
-}
-"##;
 pub type Point = V3;
 use math_core::{cross, dot, norm as length, sub};
 #[derive(Clone, Debug)]
@@ -305,6 +111,20 @@ pub enum Field {
         b: Point,
         radius: f64,
     },
+    Octahedron {
+        center: Point,
+        size: f64,
+    },
+    HexPrism {
+        center: Point,
+        radius: f64,
+        half_height: f64,
+    },
+    TriangularPrism {
+        center: Point,
+        radius: f64,
+        half_height: f64,
+    },
     Union {
         a: Box<Field>,
         b: Box<Field>,
@@ -318,6 +138,11 @@ pub enum Field {
         b: Box<Field>,
     },
     SmoothUnion {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
+    SmoothIntersection {
         a: Box<Field>,
         b: Box<Field>,
         radius: f64,
@@ -354,477 +179,21 @@ pub enum Field {
         input: Box<Field>,
         half_extents: Point,
     },
+    Mirror {
+        input: Box<Field>,
+        axis: [bool; 3],
+    },
+    Taper {
+        input: Box<Field>,
+        height: f64,
+        factor: f64,
+    },
     Translate {
         input: Box<Field>,
         vector: Point,
     },
 }
 
-fn smooth_min(a: f64, b: f64, k: f64) -> f64 {
-    let h = (0.5 + 0.5 * (b - a) / k).clamp(0., 1.);
-    b * (1. - h) + a * h - k * h * (1. - h)
-}
-fn positive(x: f64) -> bool {
-    x.is_finite() && x > 0. && x <= 1e6
-}
-/// Triangle corner positions as `[x, y, z]` rows: one bounds check per corner
-/// instead of three, and the chunk view is hoisted out of the sampling loops.
-#[inline(always)]
-fn corners(mesh: &Triangles) -> &[[f64; 3]] {
-    mesh.positions.as_chunks::<3>().0
-}
-#[inline(always)]
-fn point(mesh: &Triangles, i: usize) -> Point {
-    corners(mesh)[i]
-}
-fn triangles_ok(mesh: &Triangles) -> bool {
-    let n = mesh.indices.len() / 3;
-    n > 0
-        && n <= 4096
-        && mesh.indices.len().is_multiple_of(3)
-        && mesh.positions.len().is_multiple_of(3)
-        && mesh.indices.iter().all(|&i| {
-            i.checked_mul(3)
-                .is_some_and(|o| o + 2 < mesh.positions.len())
-        })
-        && mesh
-            .positions
-            .iter()
-            .all(|x| x.is_finite() && x.abs() <= 1e6)
-        && mesh.indices.as_chunks::<3>().0.iter().all(|t| {
-            length(cross(
-                sub(point(mesh, t[1]), point(mesh, t[0])),
-                sub(point(mesh, t[2]), point(mesh, t[0])),
-            )) > 0.
-        })
-}
-fn triangles_closed(mesh: &Triangles) -> bool {
-    let mut edges = rustc_hash::FxHashMap::with_capacity_and_hasher(
-        mesh.indices.len() / 2,
-        Default::default(),
-    );
-    for t in mesh.indices.as_chunks::<3>().0 {
-        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
-            *edges.entry((a.min(b), a.max(b))).or_insert(0) += 1;
-        }
-    }
-    !edges.is_empty() && edges.values().all(|&n| n == 2)
-}
-fn finish_triangles(mesh: Triangles) -> Result<Triangles> {
-    if !mesh.indices.len().is_multiple_of(3)
-        || mesh.indices.iter().any(|&i| {
-            i.checked_mul(3)
-                .is_none_or(|o| o + 2 >= mesh.positions.len())
-        })
-    {
-        return Err(error("Implicit mesh has invalid indices"));
-    }
-    Ok(mesh)
-}
-/// Closest point on segment `ab` to `p`; `d` is the precomputed `b - a`.
-#[inline(always)]
-fn closest_on_segment(p: Point, a: Point, d: Point) -> Point {
-    let dd = dot(d, d);
-    let t = if dd > 0. {
-        (dot(sub(p, a), d) / dd).clamp(0., 1.)
-    } else {
-        0.
-    };
-    [a[0] + t * d[0], a[1] + t * d[1], a[2] + t * d[2]]
-}
-#[inline]
-fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
-    let ab = sub(b, a);
-    let ac = sub(c, a);
-    let n = cross(ab, ac);
-    let nn = dot(n, n);
-    if nn > 0. {
-        let s = dot(sub(p, a), n);
-        let q = [
-            p[0] - n[0] * s / nn,
-            p[1] - n[1] * s / nn,
-            p[2] - n[2] * s / nn,
-        ];
-        let aq = sub(q, a);
-        let v = dot(cross(aq, ac), n) / nn;
-        let w = dot(cross(ab, aq), n) / nn;
-        if v >= 0. && w >= 0. && v + w <= 1. {
-            return q;
-        }
-    }
-    // Unrolled a→b, b→c, c→a scan with the original strict-`<` tie-breaking.
-    let mut best = a;
-    let mut distance = f64::INFINITY;
-    for (a, d) in [(a, ab), (b, sub(c, b)), (c, sub(a, c))] {
-        let q = closest_on_segment(p, a, d);
-        let dist = length(sub(p, q));
-        if dist < distance {
-            best = q;
-            distance = dist;
-        }
-    }
-    best
-}
-#[inline]
-fn closest_point(mesh: &Triangles, p: Point) -> (Point, f64) {
-    let corners = corners(mesh);
-    let mut best = p;
-    let mut distance = f64::INFINITY;
-    for &[i, j, k] in mesh.indices.as_chunks::<3>().0 {
-        let q = closest_triangle(p, corners[i], corners[j], corners[k]);
-        let d = length(sub(p, q));
-        if d < distance {
-            best = q;
-            distance = d;
-        }
-    }
-    (best, distance)
-}
-#[inline]
-fn signed_distance(mesh: &Triangles, p: Point) -> f64 {
-    let (_, d) = closest_point(mesh, p);
-    if d == 0. {
-        return 0.;
-    }
-    let corners = corners(mesh);
-    let mut angle = 0.;
-    for &[i, j, k] in mesh.indices.as_chunks::<3>().0 {
-        let a = sub(corners[i], p);
-        let b = sub(corners[j], p);
-        let c = sub(corners[k], p);
-        let la = length(a);
-        let lb = length(b);
-        let lc = length(c);
-        angle += 2.
-            * dot(a, cross(b, c))
-                .atan2(la * lb * lc + dot(a, b) * lc + dot(b, c) * la + dot(c, a) * lb);
-    }
-    if angle.abs() > 2. * std::f64::consts::PI {
-        -d
-    } else {
-        d
-    }
-}
-impl Field {
-    pub fn validate(&self) -> Result<()> {
-        fn walk(f: &Field, depth: usize, budget: &mut usize) -> bool {
-            if depth > 32 || *budget >= 256 {
-                return false;
-            }
-            *budget += 1;
-            match f {
-                Field::Extrude {
-                    profile,
-                    half_height,
-                } => rings::validate_profile(profile).is_ok() && positive(*half_height),
-                Field::Revolve { profile } => {
-                    rings::validate_profile(profile).is_ok()
-                        && profile.iter().flatten().all(|p| p[0] >= 0.)
-                }
-                Field::Deform { input, deformation } => {
-                    matches!(deformation, geometry_ops::Deformation::Twist { .. })
-                        && deformation.validate().is_ok()
-                        && walk(input, depth + 1, budget)
-                }
-                Field::MeshDistance { mesh, signed } => {
-                    triangles_ok(mesh) && (!*signed || triangles_closed(mesh))
-                }
-                Field::Sphere { center, radius } => finite(*center) && positive(*radius),
-                Field::Box { center, half_size } => {
-                    finite(*center) && half_size.iter().all(|&x| positive(x))
-                }
-                Field::Torus {
-                    center,
-                    major_radius,
-                    minor_radius,
-                } => {
-                    finite(*center)
-                        && positive(*major_radius)
-                        && positive(*minor_radius)
-                        && minor_radius < major_radius
-                }
-                Field::Cylinder {
-                    center,
-                    radius,
-                    half_height,
-                } => finite(*center) && positive(*radius) && positive(*half_height),
-                Field::Gyroid {
-                    origin,
-                    period,
-                    thickness,
-                }
-                | Field::SchwarzP {
-                    origin,
-                    period,
-                    thickness,
-                }
-                | Field::Diamond {
-                    origin,
-                    period,
-                    thickness,
-                }
-                | Field::Neovius {
-                    origin,
-                    period,
-                    thickness,
-                }
-                | Field::Lidinoid {
-                    origin,
-                    period,
-                    thickness,
-                }
-                | Field::SchoenIWP {
-                    origin,
-                    period,
-                    thickness,
-                } => {
-                    finite(*origin)
-                        && positive(*period)
-                        && positive(*thickness)
-                        && thickness < period
-                }
-                Field::Union { a, b }
-                | Field::Intersection { a, b }
-                | Field::Difference { a, b } => {
-                    walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
-                }
-                Field::Capsule { a, b, radius } => finite(*a) && finite(*b) && positive(*radius),
-                Field::SmoothUnion { a, b, radius }
-                | Field::SmoothDifference { a, b, radius }
-                | Field::ChamferUnion { a, b, radius }
-                | Field::ChamferIntersection { a, b, radius }
-                | Field::ChamferDifference { a, b, radius } => {
-                    positive(*radius) && walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
-                }
-                Field::Offset { input, distance } => {
-                    distance.is_finite() && distance.abs() <= 1e6 && walk(input, depth + 1, budget)
-                }
-                Field::Onion { input, thickness } => {
-                    positive(*thickness) && walk(input, depth + 1, budget)
-                }
-                Field::Elongate {
-                    input,
-                    half_extents,
-                } => {
-                    finite(*half_extents)
-                        && half_extents.iter().all(|&x| (0.0..=1e6).contains(&x))
-                        && walk(input, depth + 1, budget)
-                }
-                Field::Translate { input, vector } => {
-                    finite(*vector) && walk(input, depth + 1, budget)
-                }
-            }
-        }
-        if walk(self, 0, &mut 0) && self.sample_work() <= 4096 {
-            Ok(())
-        } else {
-            Err(error("Invalid field or depth/node budget exceeded"))
-        }
-    }
-    fn sample(&self, p: Point) -> f64 {
-        match self {
-            Self::Extrude {
-                profile,
-                half_height,
-            } => {
-                let a = rings::signed_distance(profile, [p[0], p[1]]);
-                let b = p[2].abs() - half_height;
-                a.max(0.).hypot(b.max(0.)) + a.max(b).min(0.)
-            }
-            Self::Revolve { profile } => rings::signed_distance(profile, [p[0].hypot(p[1]), p[2]]),
-            Self::Deform { input, deformation } => match deformation.inverse(p) {
-                Ok(q) => input.sample(q),
-                Err(_) => f64::NAN,
-            },
-            Self::MeshDistance { mesh, signed } => {
-                if *signed {
-                    signed_distance(mesh, p)
-                } else {
-                    closest_point(mesh, p).1
-                }
-            }
-            Self::Sphere { center, radius } => length(sub(p, *center)) - radius,
-            Self::Box { center, half_size } => {
-                let q: Point = [
-                    (p[0] - center[0]).abs() - half_size[0],
-                    (p[1] - center[1]).abs() - half_size[1],
-                    (p[2] - center[2]).abs() - half_size[2],
-                ];
-                length([q[0].max(0.), q[1].max(0.), q[2].max(0.)])
-                    + q[0].max(q[1]).max(q[2]).min(0.)
-            }
-            Self::Torus {
-                center,
-                major_radius,
-                minor_radius,
-            } => {
-                let q = sub(p, *center);
-                (q[0].hypot(q[1]) - major_radius).hypot(q[2]) - minor_radius
-            }
-            Self::Cylinder {
-                center,
-                radius,
-                half_height,
-            } => {
-                let q = sub(p, *center);
-                let dx = q[0].hypot(q[1]) - radius;
-                let dy = q[2].abs() - half_height;
-                dx.max(dy).min(0.) + dx.max(0.).hypot(dy.max(0.))
-            }
-            Self::Gyroid {
-                origin,
-                period,
-                thickness,
-            }
-            | Self::SchwarzP {
-                origin,
-                period,
-                thickness,
-            }
-            | Self::Diamond {
-                origin,
-                period,
-                thickness,
-            }
-            | Self::Neovius {
-                origin,
-                period,
-                thickness,
-            }
-            | Self::Lidinoid {
-                origin,
-                period,
-                thickness,
-            }
-            | Self::SchoenIWP {
-                origin,
-                period,
-                thickness,
-            } => {
-                let k = std::f64::consts::TAU / period;
-                let q = [
-                    (p[0] - origin[0]) * k,
-                    (p[1] - origin[1]) * k,
-                    (p[2] - origin[2]) * k,
-                ];
-                let (sx, cx) = q[0].sin_cos();
-                let (sy, cy) = q[1].sin_cos();
-                let (sz, cz) = q[2].sin_cos();
-                let iso = match self {
-                    Self::Gyroid { .. } => sx * cy + sy * cz + sz * cx,
-                    Self::SchwarzP { .. } => cx + cy + cz,
-                    Self::Diamond { .. } => {
-                        sx * sy * sz + sx * cy * cz + cx * sy * cz + cx * cy * sz
-                    }
-                    Self::Neovius { .. } => 3.0 * (cx + cy + cz) + 4.0 * cx * cy * cz,
-                    Self::Lidinoid { .. } => {
-                        let s2x = 2.0 * sx * cx;
-                        let s2y = 2.0 * sy * cy;
-                        let s2z = 2.0 * sz * cz;
-                        let c2x = cx * cx - sx * sx;
-                        let c2y = cy * cy - sy * sy;
-                        let c2z = cz * cz - sz * sz;
-                        0.5 * (s2x * cy * sz + s2y * cz * sx + s2z * cx * sy)
-                            - 0.5 * (c2x * c2y + c2y * c2z + c2z * c2x)
-                            + 0.15
-                    }
-                    _ => {
-                        let c2x = cx * cx - sx * sx;
-                        let c2y = cy * cy - sy * sy;
-                        let c2z = cz * cz - sz * sz;
-                        2.0 * (cx * cy + cy * cz + cz * cx) - (c2x + c2y + c2z)
-                    }
-                };
-                iso.abs() / k - 0.5 * thickness
-            }
-            Self::Capsule { a, b, radius } => {
-                let ab = sub(*b, *a);
-                let ap = sub(p, *a);
-                let denom = dot(ab, ab);
-                let t = if denom > 0. {
-                    (dot(ap, ab) / denom).clamp(0., 1.)
-                } else {
-                    0.
-                };
-                length(sub(ap, math_core::scale(ab, t))) - radius
-            }
-            Self::Union { a, b } => a.sample(p).min(b.sample(p)),
-            Self::Intersection { a, b } => a.sample(p).max(b.sample(p)),
-            Self::Difference { a, b } => a.sample(p).max(-b.sample(p)),
-            Self::SmoothUnion { a, b, radius: k } => smooth_min(a.sample(p), b.sample(p), *k),
-            // Smooth max(a, -b): the polynomial smooth-union mirrored through negation.
-            Self::SmoothDifference { a, b, radius: k } => {
-                -smooth_min(-a.sample(p), b.sample(p), *k)
-            }
-            Self::ChamferUnion { a, b, radius: r } => {
-                let da = a.sample(p);
-                let db = b.sample(p);
-                da.min(db).min((da - r + db) * std::f64::consts::FRAC_1_SQRT_2)
-            }
-            Self::ChamferIntersection { a, b, radius: r } => {
-                let da = a.sample(p);
-                let db = b.sample(p);
-                da.max(db).max((da + r + db) * std::f64::consts::FRAC_1_SQRT_2)
-            }
-            Self::ChamferDifference { a, b, radius: r } => {
-                let da = a.sample(p);
-                let db = -b.sample(p);
-                da.max(db).max((da + r + db) * std::f64::consts::FRAC_1_SQRT_2)
-            }
-            Self::Offset { input, distance } => input.sample(p) - distance,
-            Self::Onion { input, thickness } => input.sample(p).abs() - 0.5 * thickness,
-            Self::Elongate {
-                input,
-                half_extents: h,
-            } => {
-                let q = [
-                    p[0] - p[0].clamp(-h[0], h[0]),
-                    p[1] - p[1].clamp(-h[1], h[1]),
-                    p[2] - p[2].clamp(-h[2], h[2]),
-                ];
-                input.sample(q)
-            }
-            Self::Translate { input, vector } => input.sample(sub(p, *vector)),
-        }
-    }
-    pub fn from_triangles(mesh: Triangles, signed: bool) -> Result<Self> {
-        let field = Self::MeshDistance { mesh, signed };
-        field.validate()?;
-        Ok(field)
-    }
-    fn sample_work(&self) -> usize {
-        match self {
-            Self::Extrude { profile, .. } | Self::Revolve { profile } => rings::work(profile),
-            Self::MeshDistance { mesh, .. } => mesh.indices.len() / 3,
-            Self::Union { a, b }
-            | Self::Intersection { a, b }
-            | Self::Difference { a, b }
-            | Self::SmoothUnion { a, b, .. }
-            | Self::SmoothDifference { a, b, .. }
-            | Self::ChamferUnion { a, b, .. }
-            | Self::ChamferIntersection { a, b, .. }
-            | Self::ChamferDifference { a, b, .. } => a.sample_work() + b.sample_work(),
-            Self::Deform { input, .. }
-            | Self::Offset { input, .. }
-            | Self::Onion { input, .. }
-            | Self::Elongate { input, .. }
-            | Self::Translate { input, .. } => input.sample_work(),
-            _ => 1,
-        }
-    }
-    pub fn evaluate(&self, p: Point) -> Result<f64> {
-        self.validate()?;
-        if !finite(p) {
-            return Err(error("Invalid sample point"));
-        }
-        let value = self.sample(p);
-        if value.is_finite() {
-            Ok(value)
-        } else {
-            Err(error("Field evaluation left its numeric domain"))
-        }
-    }
-}
 #[derive(Clone, Debug)]
 pub struct Grid {
     pub min: Point,
@@ -1903,226 +1272,127 @@ mod tests {
         assert!(triangles_closed(&sn_mesh));
         assert!(triangles_ok(&sn_mesh));
     }
-}
 
-impl Field {
-    /// Computes the unit outward gradient $\nabla f(p) / \|\nabla f(p)\|$ using a 4-point
-    /// tetrahedral finite-difference stencil.
-    pub fn gradient(&self, p: Point, eps: f64) -> Point {
-        let h = eps.max(1e-7);
-        let d0 = self.sample([p[0] + h, p[1] - h, p[2] - h]);
-        let d1 = self.sample([p[0] - h, p[1] - h, p[2] + h]);
-        let d2 = self.sample([p[0] - h, p[1] + h, p[2] - h]);
-        let d3 = self.sample([p[0] + h, p[1] + h, p[2] + h]);
-        let g = [
-            d0 - d1 - d2 + d3,
-            -d0 - d1 + d2 + d3,
-            -d0 + d1 - d2 + d3,
-        ];
-        let n = length(g);
-        if n > 1e-15 {
-            [g[0] / n, g[1] / n, g[2] / n]
-        } else {
-            [0.0, 0.0, 1.0]
-        }
+    #[test]
+    fn octahedron_prisms_mirror_taper_raycast_and_volume() {
+        let oct = Field::Octahedron {
+            center: [0.; 3],
+            size: 1.0,
+        };
+        assert!(oct.validate().is_ok());
+        assert!(oct.evaluate([0.; 3]).unwrap() < 0.0);
+        assert!((oct.evaluate([1.0, 0.0, 0.0]).unwrap()).abs() < 1e-12);
+
+        let hex = Field::HexPrism {
+            center: [0.; 3],
+            radius: 1.0,
+            half_height: 0.8,
+        };
+        assert!(hex.validate().is_ok());
+        assert!(hex.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let tri_prism = Field::TriangularPrism {
+            center: [0.; 3],
+            radius: 1.0,
+            half_height: 0.8,
+        };
+        assert!(tri_prism.validate().is_ok());
+        assert!(tri_prism.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let s_inter = Field::SmoothIntersection {
+            a: Box::new(sphere()),
+            b: Box::new(Field::Box {
+                center: [0.; 3],
+                half_size: [0.8; 3],
+            }),
+            radius: 0.2,
+        };
+        assert!(s_inter.validate().is_ok());
+        assert!(s_inter.evaluate([0.; 3]).unwrap() < 0.0);
+
+        let mirrored = Field::Mirror {
+            input: Box::new(Field::Sphere {
+                center: [1.5, 0.0, 0.0],
+                radius: 0.5,
+            }),
+            axis: [true, false, false],
+        };
+        assert!((mirrored.evaluate([-1.5, 0.0, 0.0]).unwrap() + 0.5).abs() < 1e-12);
+
+        let tapered = Field::Taper {
+            input: Box::new(Field::Cylinder {
+                center: [0.; 3],
+                radius: 1.0,
+                half_height: 1.0,
+            }),
+            height: 2.0,
+            factor: 0.5,
+        };
+        assert!(tapered.validate().is_ok());
+        assert!(tapered.evaluate([0.0, 0.0, 0.8]).unwrap() < 0.0);
+        assert!(tapered.evaluate([0.8, 0.0, 0.8]).unwrap() > 0.0);
+
+        // Raycast from (-3, 0, 0) along +X against unit sphere at origin
+        let (hit_p, hit_n, dist) = sphere()
+            .raycast([-3.0, 0.0, 0.0], [1.0, 0.0, 0.0], 10.0, 1e-5)
+            .unwrap();
+        assert!((dist - 2.0).abs() < 1e-4);
+        assert!((hit_p[0] + 1.0).abs() < 1e-4);
+        assert!((hit_n[0] + 1.0).abs() < 1e-3);
+
+        // Volume estimation of unit sphere (~4/3 * pi = 4.18879)
+        let vol = sphere().estimate_volume(32);
+        let exact = 4.0 * std::f64::consts::PI / 3.0;
+        assert!((vol - exact).abs() < 0.15, "estimated {vol} vs exact {exact}");
+
+        // Mean curvature on a sphere of radius R=2.0 is H = 1/R = 0.5
+        let r2_sphere = Field::Sphere {
+            center: [0.; 3],
+            radius: 2.0,
+        };
+        let h_curv = r2_sphere.mean_curvature([2.0, 0.0, 0.0], 1e-3);
+        assert!((h_curv - 0.5).abs() < 1e-3, "mean curvature got {h_curv}");
+
+        // Ambient occlusion: unoccluded sphere surface -> 1.0; occluded by an overhanging box -> < 0.8
+        let ao_open = r2_sphere.ambient_occlusion([2.0, 0.0, 0.0], [1.0, 0.0, 0.0], 5, 0.2);
+        assert!((ao_open - 1.0).abs() < 1e-6, "expected 1.0, got {ao_open}");
+        let occluded_scene = Field::Union {
+            a: Box::new(r2_sphere),
+            b: Box::new(Field::Box {
+                center: [2.8, 0.0, 0.0],
+                half_size: [0.5, 2.0, 2.0],
+            }),
+        };
+        let ao_occluded = occluded_scene.ambient_occlusion([2.0, 0.0, 0.0], [1.0, 0.0, 0.0], 5, 0.2);
+        assert!(ao_occluded < 0.6, "expected occluded AO < 0.6, got {ao_occluded}");
+
+        // Principal curvatures on a sphere of radius R = 2.0: k1 = k2 = H = 0.5, K = 0.25
+        let sph2 = Field::Sphere {
+            center: [0.; 3],
+            radius: 2.0,
+        };
+        let (k1, k2, gauss_k, mean_h) = sph2.principal_curvatures([2.0, 0.0, 0.0], 1e-3);
+        assert!((k1 - 0.5).abs() < 1e-3, "expected k1=0.5, got {k1}");
+        assert!((k2 - 0.5).abs() < 1e-3, "expected k2=0.5, got {k2}");
+        assert!((gauss_k - 0.25).abs() < 1e-3, "expected K=0.25, got {gauss_k}");
+        assert!((mean_h - 0.5).abs() < 1e-3, "expected H=0.5, got {mean_h}");
+
+        // Principal curvatures on a cylinder of radius R = 2.0: k1 = 0.5, k2 = 0.0, K = 0.0, H = 0.25
+        let cyl2 = Field::Cylinder {
+            center: [0.; 3],
+            radius: 2.0,
+            half_height: 5.0,
+        };
+        let (ck1, ck2, c_gauss_k, c_mean_h) = cyl2.principal_curvatures([2.0, 0.0, 0.0], 1e-3);
+        assert!((ck1 - 0.5).abs() < 1e-3, "expected ck1=0.5, got {ck1}");
+        assert!(ck2.abs() < 1e-3, "expected ck2=0.0, got {ck2}");
+        assert!(c_gauss_k.abs() < 1e-3, "expected cK=0.0, got {c_gauss_k}");
+        assert!((c_mean_h - 0.25).abs() < 1e-3, "expected cH=0.25, got {c_mean_h}");
+
+        // Closest surface point projection onto a sphere of radius 2.0 from query [5.0, 0.0, 0.0]
+        let proj = sph2.closest_surface_point([5.0, 0.0, 0.0], 16, 1e-6);
+        assert!((proj[0] - 2.0).abs() < 1e-5, "expected x=2.0, got {:?}", proj);
+        assert!(proj[1].abs() < 1e-5 && proj[2].abs() < 1e-5);
     }
 }
 
-/// Dual Surface Nets / Dual Contouring extraction with gradient-guided QEF vertex projection.
-/// Places one dual vertex per active grid cell at the mass point of edge crossings and projects
-/// it onto the tangent planes defined by the SDF gradients $\nabla f$, then emits two outward
-/// triangles per sign-changing interior grid edge.
-pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> {
-    check_grid_budget(field, grid)?;
-    if !finite(grid.min)
-        || !finite(grid.max)
-        || grid.cells.iter().any(|&n| n == 0 || n > 64)
-        || (0..3).any(|i| grid.max[i] <= grid.min[i])
-    {
-        return Err(error(
-            "Invalid grid: each axis requires 1..64 cells and ordered finite bounds",
-        ));
-    }
-    let [nx, ny, nz] = grid.cells;
-    let index = |x: usize, y: usize, z: usize| (z * (ny + 1) + y) * (nx + 1) + x;
-    let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
-    let mut points = Vec::with_capacity(sample_count);
-    let mut values = Vec::with_capacity(sample_count);
-    let snap = 32.0
-        * f64::EPSILON
-        * (0..3)
-            .map(|i| grid.max[i] - grid.min[i])
-            .fold(0.0, f64::max);
-    for z in 0..=nz {
-        for y in 0..=ny {
-            for x in 0..=nx {
-                let p = std::array::from_fn(|i| {
-                    grid.min[i]
-                        + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64 / grid.cells[i] as f64
-                });
-                let v = field.sample(p);
-                let v = if v.abs() <= snap { 0.0 } else { v };
-                if !v.is_finite() {
-                    return Err(error("Field returned a non-finite value"));
-                }
-                if (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz) && v <= 0.0 {
-                    return Err(error("Surface touches grid boundary; enlarge bounds"));
-                }
-                points.push(p);
-                values.push(v);
-            }
-        }
-    }
-
-    let cell_idx = |cx: usize, cy: usize, cz: usize| (cz * ny + cy) * nx + cx;
-    let mut cell_vert = vec![usize::MAX; nx * ny * nz];
-    let cell_estimate = (nx * ny + ny * nz + nz * nx) * 2;
-    let mut positions = Vec::with_capacity(cell_estimate * 3);
-    let step = [
-        (grid.max[0] - grid.min[0]) / nx as f64,
-        (grid.max[1] - grid.min[1]) / ny as f64,
-        (grid.max[2] - grid.min[2]) / nz as f64,
-    ];
-    let grad_eps = step[0].min(step[1]).min(step[2]) * 0.05;
-
-    const CUBE_EDGES: [[usize; 2]; 12] = [
-        [0, 1],
-        [1, 2],
-        [2, 3],
-        [3, 0],
-        [4, 5],
-        [5, 6],
-        [6, 7],
-        [7, 4],
-        [0, 4],
-        [1, 5],
-        [2, 6],
-        [3, 7],
-    ];
-
-    for cz in 0..nz {
-        for cy in 0..ny {
-            for cx in 0..nx {
-                let c = [
-                    index(cx, cy, cz),
-                    index(cx + 1, cy, cz),
-                    index(cx + 1, cy + 1, cz),
-                    index(cx, cy + 1, cz),
-                    index(cx, cy, cz + 1),
-                    index(cx + 1, cy, cz + 1),
-                    index(cx + 1, cy + 1, cz + 1),
-                    index(cx, cy + 1, cz + 1),
-                ];
-                let mut crossings_buf = [[0.0; 3]; 12];
-                let mut cross_len = 0usize;
-                for &[ea, eb] in &CUBE_EDGES {
-                    let va = values[c[ea]];
-                    let vb = values[c[eb]];
-                    if (va < 0.0) != (vb < 0.0) {
-                        let t = (va / (va - vb)).clamp(0.0, 1.0);
-                        let pa = points[c[ea]];
-                        let pb = points[c[eb]];
-                        crossings_buf[cross_len] = [
-                            pa[0] + t * (pb[0] - pa[0]),
-                            pa[1] + t * (pb[1] - pa[1]),
-                            pa[2] + t * (pb[2] - pa[2]),
-                        ];
-                        cross_len += 1;
-                    }
-                }
-                if cross_len == 0 {
-                    continue;
-                }
-                let crossings = &crossings_buf[..cross_len];
-                let inv_len = 1.0 / cross_len as f64;
-                let mut v_pos = [0.0; 3];
-                for p in crossings {
-                    for k in 0..3 {
-                        v_pos[k] += p[k] * inv_len;
-                    }
-                }
-                // Gradient-descent / QEF tangent-plane projection clamped strictly inside cell bounds
-                let c_min = points[c[0]];
-                let c_max = points[c[6]];
-                for _ in 0..2 {
-                    let mut disp = [0.0; 3];
-                    for p in crossings {
-                        let n = field.gradient(*p, grad_eps);
-                        let d = dot(sub(*p, v_pos), n);
-                        for k in 0..3 {
-                            disp[k] += d * n[k] * inv_len;
-                        }
-                    }
-                    for k in 0..3 {
-                        let margin = step[k] * 0.05;
-                        v_pos[k] = (v_pos[k] + 0.5 * disp[k])
-                            .clamp(c_min[k] + margin, c_max[k] - margin);
-                    }
-                }
-                let vid = positions.len() / 3;
-                positions.extend_from_slice(&v_pos);
-                cell_vert[cell_idx(cx, cy, cz)] = vid;
-            }
-        }
-    }
-
-    let mut indices = Vec::with_capacity(positions.len() * 2);
-    let mut emit_quad = |v0: usize, v1: usize, v2: usize, v3: usize, flip: bool| {
-        if flip {
-            indices.extend_from_slice(&[v0, v2, v1, v0, v3, v2]);
-        } else {
-            indices.extend_from_slice(&[v0, v1, v2, v0, v2, v3]);
-        }
-    };
-
-    // X-parallel edges: shared by cells (x, y-1, z-1), (x, y, z-1), (x, y, z), (x, y-1, z)
-    for z in 1..nz {
-        for y in 1..ny {
-            for x in 0..nx {
-                let va = values[index(x, y, z)];
-                let vb = values[index(x + 1, y, z)];
-                if (va < 0.0) != (vb < 0.0) {
-                    let c0 = cell_vert[cell_idx(x, y - 1, z - 1)];
-                    let c1 = cell_vert[cell_idx(x, y, z - 1)];
-                    let c2 = cell_vert[cell_idx(x, y, z)];
-                    let c3 = cell_vert[cell_idx(x, y - 1, z)];
-                    emit_quad(c0, c1, c2, c3, va >= 0.0);
-                }
-            }
-        }
-    }
-    // Y-parallel edges: shared by cells (x-1, y, z-1), (x-1, y, z), (x, y, z), (x, y, z-1)
-    for z in 1..nz {
-        for y in 0..ny {
-            for x in 1..nx {
-                let va = values[index(x, y, z)];
-                let vb = values[index(x, y + 1, z)];
-                if (va < 0.0) != (vb < 0.0) {
-                    let c0 = cell_vert[cell_idx(x - 1, y, z - 1)];
-                    let c1 = cell_vert[cell_idx(x - 1, y, z)];
-                    let c2 = cell_vert[cell_idx(x, y, z)];
-                    let c3 = cell_vert[cell_idx(x, y, z - 1)];
-                    emit_quad(c0, c1, c2, c3, va >= 0.0);
-                }
-            }
-        }
-    }
-    // Z-parallel edges: shared by cells (x-1, y-1, z), (x, y-1, z), (x, y, z), (x-1, y, z)
-    for z in 0..nz {
-        for y in 1..ny {
-            for x in 1..nx {
-                let va = values[index(x, y, z)];
-                let vb = values[index(x, y, z + 1)];
-                if (va < 0.0) != (vb < 0.0) {
-                    let c0 = cell_vert[cell_idx(x - 1, y - 1, z)];
-                    let c1 = cell_vert[cell_idx(x, y - 1, z)];
-                    let c2 = cell_vert[cell_idx(x, y, z)];
-                    let c3 = cell_vert[cell_idx(x - 1, y, z)];
-                    emit_quad(c0, c1, c2, c3, va >= 0.0);
-                }
-            }
-        }
-    }
-
-    finish_triangles(Triangles { positions, indices })
-}

@@ -35,12 +35,22 @@ impl Default for ReconstructionOptions {
         Self {
             feature_limit: 900,
             feature_options: features::FeatureOptions::default(),
-            geometry_options: camera::GeometryOptions::default(),
+            geometry_options: camera::GeometryOptions {
+                joint_refinement: true,
+                analytic_epipolar_jacobian: true,
+                ..camera::GeometryOptions::CONSENSUS
+            },
             max_seed_pairs: 12,
             max_seed_attempts: 4,
-            seed_options: crate::seeding::SeedOptions::default(),
+            seed_options: crate::seeding::SeedOptions {
+                verify_runners_up: true,
+            },
             bundle: Some(bundle::BundleOptions {
                 max_cameras: 64,
+                filter: Some(bundle::FilterOptions {
+                    max_reprojection_error: 3.5,
+                    min_parallax: 0.0,
+                }),
                 ..Default::default()
             }),
         }
@@ -560,11 +570,55 @@ fn grow(
             if accepted.len() < 8 {
                 continue;
             }
-            for (f, p) in accepted {
-                tracks[i][f] = Some(p);
-                points[p].observations.push((i, f));
+            for (f, p) in &accepted {
+                tracks[i][*f] = Some(*p);
+                points[*p].observations.push((i, *f));
             }
             cameras[i] = Some(c);
+            // Re-triangulate extended tracks across all active observations when doing so
+            // lowers total squared reprojection error and stays within 16 px^2 per view.
+            let mut obs_scratch = Vec::with_capacity(8);
+            for &(_, p) in &accepted {
+                if points[p].observations.len() < 3 {
+                    continue;
+                }
+                obs_scratch.clear();
+                let mut old_sq_err = 0.;
+                let mut valid_old = true;
+                for &(cam_idx, feat_idx) in &points[p].observations {
+                    if let Some(cam) = cameras[cam_idx].as_ref() {
+                        let q = pixel(&features[cam_idx][feat_idx]);
+                        obs_scratch.push((cam, q));
+                        if let Some(uv) = cam.project(points[p].position) {
+                            old_sq_err += (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2);
+                        } else {
+                            valid_old = false;
+                        }
+                    }
+                }
+                if obs_scratch.len() >= 3
+                    && let Some(new_pos) = triangulate(&obs_scratch)
+                {
+                    let mut new_sq_err = 0.;
+                    let mut all_in_gate = true;
+                    for &(cam, q) in &obs_scratch {
+                        if let Some(uv) = cam.project(new_pos) {
+                            let e2 = (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2);
+                            if e2 >= 16. {
+                                all_in_gate = false;
+                                break;
+                            }
+                            new_sq_err += e2;
+                        } else {
+                            all_in_gate = false;
+                            break;
+                        }
+                    }
+                    if all_in_gate && (!valid_old || new_sq_err < old_sq_err) {
+                        points[p].position = new_pos;
+                    }
+                }
+            }
             report.images[i].registered = true;
             report.images[i].reason = "registered";
             let ci_center = cameras[i].as_ref().unwrap().center();
@@ -877,7 +931,10 @@ mod tests {
             &mut cameras,
             &mut points,
             &features,
-            &bundle::BundleOptions::default(),
+            &bundle::BundleOptions {
+                filter: None,
+                ..Default::default()
+            },
         );
         assert_eq!(report.bundle_runs.len(), 2);
         assert!(
@@ -904,7 +961,10 @@ mod tests {
             &mut off_cameras,
             &mut off_points,
             &features,
-            &bundle::BundleOptions::default(),
+            &bundle::BundleOptions {
+                filter: None,
+                ..Default::default()
+            },
         );
         let off_rmse = clean_rmse(&off_cameras, &off_points, &features);
         let (mut cameras, mut points, features, _, _) = outlier_scene();

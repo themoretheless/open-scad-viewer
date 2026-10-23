@@ -1,0 +1,1 @@
+import{t as e}from"./CTDrUWsg.js";import{t}from"./D5p--0ys.js";function n(n){let{positions:r,indices:i}=e(n);return{positions:r,indices:i,report:{...t(r,i),construction:`sampled_surface`,errorBoundCertified:!1,selfIntersectionStatus:`not_checked`}}}function r(e){return{...n(e),parts:e.filter(e=>e.indices.length>0).map(e=>n([e]))}}export{r as flattenExportMeshes};

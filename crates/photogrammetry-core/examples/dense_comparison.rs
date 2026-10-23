@@ -70,6 +70,8 @@ fn main() {
                 estimator,
                 max_side: 80,
                 patch_radius: radius,
+                red_black_propagation: estimator == DenseEstimator::SlantedPlane,
+                adaptive_refine_budget: estimator == DenseEstimator::SlantedPlane,
                 ..Default::default()
             };
             let _ = densify_with_options(&images, &sparse, &options, |_, _, _| true).unwrap();
@@ -81,6 +83,8 @@ fn main() {
                     estimator: modes[m],
                     max_side: 80,
                     patch_radius: radius,
+                    red_black_propagation: modes[m] == DenseEstimator::SlantedPlane,
+                    adaptive_refine_budget: modes[m] == DenseEstimator::SlantedPlane,
                     ..Default::default()
                 };
                 let start = Instant::now();

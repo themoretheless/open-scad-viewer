@@ -419,3 +419,85 @@ export class OpenScadProject {
     })
   }
 }
+
+/**
+ * Strips line comments (`// ...`), block comments (`/* ... * /`), and string literals (`"..."`)
+ * from OpenSCAD source code while preserving angle-bracket directives outside comments/strings.
+ */
+function stripCommentsAndStringsForDirectives(source: string): string {
+  let out = ''
+  let i = 0
+  const len = source.length
+  while (i < len) {
+    const ch = source[i]!
+    const next = source[i + 1]
+    if (ch === '/' && next === '/') {
+      i += 2
+      while (i < len && source[i] !== '\n') i++
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      i += 2
+      while (i < len && !(source[i] === '*' && source[i + 1] === '/')) {
+        if (source[i] === '\n') out += '\n'
+        i++
+      }
+      if (i < len) i += 2
+      continue
+    }
+    if (ch === '"') {
+      out += '""'
+      i++
+      while (i < len && source[i] !== '"') {
+        if (source[i] === '\\' && i + 1 < len) {
+          i += 2
+          continue
+        }
+        if (source[i] === '\n') out += '\n'
+        i++
+      }
+      if (i < len) i++
+      continue
+    }
+    out += ch
+    i++
+  }
+  return out
+}
+
+/**
+ * Extracts unique `include <...>` and `use <...>` file specifiers in declaration order
+ * from an OpenSCAD source string while ignoring directives inside `//` or `/* ... * /` comments
+ * or string literals.
+ */
+export function extractOpenScadDependencies(source: string): { includes: string[]; uses: string[] } {
+  if (typeof source !== 'string' || source.length === 0) {
+    return { includes: [], uses: [] }
+  }
+  const stripped = stripCommentsAndStringsForDirectives(source)
+  const includes: string[] = []
+  const uses: string[] = []
+  const seenIncludes = new Set<string>()
+  const seenUses = new Set<string>()
+
+  const directiveRegex = /\b(include|use)\s*<([^>\r\n]+)>/g
+  let match: RegExpExecArray | null
+  while ((match = directiveRegex.exec(stripped)) !== null) {
+    const kind = match[1]
+    const rawPath = match[2]!.trim()
+    if (!rawPath) continue
+    if (kind === 'include') {
+      if (!seenIncludes.has(rawPath)) {
+        seenIncludes.add(rawPath)
+        includes.push(rawPath)
+      }
+    } else if (kind === 'use') {
+      if (!seenUses.has(rawPath)) {
+        seenUses.add(rawPath)
+        uses.push(rawPath)
+      }
+    }
+  }
+
+  return { includes, uses }
+}

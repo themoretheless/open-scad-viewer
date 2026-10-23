@@ -113,6 +113,15 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
     if let Some(directory) = std::env::var_os("OSV_TRIHEDRAL_SKIN_EVIDENCE") {
         let d = std::path::PathBuf::from(directory);
         std::fs::create_dir_all(&d).unwrap();
+        let collar_data=collars.boundaries.iter().map(|c| value_codec::json!({
+            "curve":c.curve,"surface":c.surface,"originalSurface":c.original_surface,
+            "originalPcurve":c.original_pcurve,"direction":c.direction,
+            "g2Upper":c.g2.upper,"positionUpperMm":c.positions.upper
+        })).collect::<Vec<_>>();
+        std::fs::write(d.join("corner-collars.json"),value_codec::to_string(&value_codec::json!({
+            "boundaries":collar_data,"cells":collars.cells,"exactWork":collars.exact_work,
+            "coefficientWork":collars.coefficient_work,"centralSurfaceBuilt":false,"closedBody":false
+        })).unwrap()).unwrap();
         for (i, s) in out.strips.iter().enumerate() {
             std::fs::write(d.join(format!("skin-{i}.json")),value_codec::to_string(&value_codec::json!({"source":m,"model":s.patch.model,"sourceEdge":s.source_edge,"supports":s.support_faces,"radiusMm":s.radius_mm,"lawDomain":s.original_law_domain,"targetStartMm":out.plan.edges[i].distance_mm,"spanMm":2.,"sides":s.sides,"contactEdges":[s.patch.edges[3],s.patch.edges[1]],"endOrder":s.end_order,"g2Proven":true,"rollingCenterRadiusProven":true,"circularSectionRadiusProven":false,"closedBody":false})).unwrap()).unwrap();
             std::fs::write(

@@ -1,0 +1,314 @@
+//! Corners from original rational pcurves. Radius laws and B-rep assembly
+//! remain separate; admission requires all original seams and an injective patch.
+use super::*;
+use crate::{curve::Curve, distance_bounds::Interval as I, surface_collar};
+
+#[derive(Clone, Copy)]
+pub struct Support<'a> {
+    pub surface: &'a Surface,
+    pub pcurve: &'a Curve,
+    /// Parameter displacement into the retained source side.
+    pub direction: [f64; 2],
+}
+pub struct Report {
+    pub corner: super::Report,
+    pub collars: Vec<Surface>,
+    pub original_seams: Vec<surface_collar::G2Report>,
+    /// Actual patch side versus ORIGINAL support, without a collar triangle.
+    /// Reports use the normalized side chart; `direct_upper` is frame invariant.
+    pub direct_original_seams: Vec<surface_collar::G2Report>,
+    pub direct_upper: Option<[[f64; 3]; 4]>,
+    pub direct_admitted: bool,
+    /// Outward original-support bounds, tightened by direct proof when complete.
+    pub upper: Option<[[f64; 3]; 4]>,
+    pub orientations: Option<[crate::surface_g2::Orientation; 4]>,
+    pub cells: usize,
+    pub coefficient_work: usize,
+    pub admitted: bool,
+}
+/// Construct four mapped collars, freshly qualify them against the original
+/// supports, and construct a corner from their actual stored coefficients.
+/// All seam proofs share the caller's cell and coefficient-work limits.
+/// No caller-supplied receipt is accepted. Interior certification applies only
+/// to the proposed patch, not surrounding faces or the resulting solid.
+pub fn g2(
+    supports: [Support<'_>; 4],
+    options: Options,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_coefficients: usize,
+    max_exact: u64,
+) -> Result<Report> {
+    run(
+        None,
+        supports,
+        options,
+        tolerances,
+        max_cells,
+        max_coefficients,
+        max_exact,
+    )
+}
+/// Recompute every original-support seam for the supplied actual patch.
+/// Construction receipts and any previously admitted patch are not inputs.
+pub fn inspect_candidate(
+    candidate: &Surface,
+    supports: [Support<'_>; 4],
+    options: Options,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_coefficients: usize,
+    max_exact: u64,
+) -> Result<Report> {
+    candidate.validate()?;
+    run(
+        Some(candidate),
+        supports,
+        options,
+        tolerances,
+        max_cells,
+        max_coefficients,
+        max_exact,
+    )
+}
+fn run(
+    candidate: Option<&Surface>,
+    supports: [Support<'_>; 4],
+    mut options: Options,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_coefficients: usize,
+    max_exact: u64,
+) -> Result<Report> {
+    check(
+        (1..=100000).contains(&max_cells)
+            && (1..=2000000).contains(&max_coefficients)
+            && max_exact <= 1000000
+            && tolerances.iter().all(|x| x.is_finite() && *x > 0.)
+            && tolerances[1] <= 2.,
+        "Mapped corner requires finite positive tolerances and bounded work",
+    )?;
+    // Half each requested tolerance is a sufficient, conservative allocation.
+    // Final admission always checks the outward sum against the full limits.
+    let half = tolerances.map(|x| x * 0.5);
+    check(
+        half.iter().all(|x| *x > 0.),
+        "Mapped corner tolerance underflow",
+    )?;
+    let mut collars = Vec::new();
+    let mut original_seams = Vec::new();
+    let (mut cells, mut coefficients) = (0, 0);
+    for support in supports {
+        let constructed = surface_collar::construct(
+            support.surface,
+            support.pcurve,
+            support.direction,
+            half[0],
+            max_coefficients.saturating_sub(coefficients),
+        )?;
+        coefficients += constructed.coefficient_work;
+        check(
+            coefficients < max_coefficients && cells < max_cells,
+            "Mapped corner construction exhausted shared work",
+        )?;
+        let proof = surface_collar::inspect_g2(
+            support.surface,
+            support.pcurve,
+            support.direction,
+            &constructed.surface,
+            half,
+            max_cells - cells,
+            max_coefficients - coefficients,
+        )?;
+        cells += proof.cells;
+        coefficients += proof.coefficient_work;
+        collars.push(constructed.surface);
+        original_seams.push(proof);
+    }
+    options.boundaries = [Boundary::VStart; 4];
+    let references = [&collars[0], &collars[1], &collars[2], &collars[3]];
+    let traces = std::array::from_fn(|i| natural_trace(references[i], Boundary::VStart));
+    // Keep work for ORIGINAL support admission. An inconclusive auxiliary
+    // collar comparison must not consume the entire direct-proof allowance.
+    let legacy_cells = max_cells.saturating_sub(cells) / 2;
+    let legacy_coefficients = max_coefficients.saturating_sub(coefficients) / 2;
+    let mut corner = if let Some(candidate) = candidate {
+        super::inspect_candidate_bounded(
+            candidate,
+            references,
+            traces,
+            options,
+            half,
+            legacy_cells,
+            max_exact,
+            legacy_coefficients,
+        )?
+    } else {
+        super::g2_traces_bounded(
+            references,
+            traces,
+            options,
+            half,
+            legacy_cells,
+            max_exact,
+            legacy_coefficients,
+        )?
+    };
+    cells += corner.cells;
+    coefficients += corner.coefficient_work;
+    let mut upper = [[0.; 3]; 4];
+    use crate::surface_g2::Orientation;
+    let mut orientations = [Orientation::Same; 4];
+    let mut admitted = corner.admitted && corner.seams.len() == 4;
+    for side in 0..4 {
+        let original = &original_seams[side];
+        let seam = corner.seams.get(side);
+        if let (Some(a), Some(oa), Some(b)) = (original.upper, original.orientation, seam) {
+            if let Some(ob) = b.orientation {
+                let branch = &b.branches[usize::from(matches!(ob, Orientation::Opposite))];
+                if let (Some(normal), Some(tensor)) = (branch.normal_upper, branch.tensor_upper) {
+                    let bounds = [b.position_bounds[1], normal, tensor];
+                    for k in 0..3 {
+                        upper[side][k] = I::point(a[k]).add(I::point(bounds[k]))?.hi;
+                        admitted &= upper[side][k] <= tolerances[k];
+                    }
+                    orientations[side] =
+                        if matches!(oa, Orientation::Same) == matches!(ob, Orientation::Same) {
+                            Orientation::Same
+                        } else {
+                            Orientation::Opposite
+                        };
+                    admitted &= original.decision == crate::surface_join::Decision::WithinTolerance
+                        && b.decision == crate::surface_join::Decision::WithinTolerance;
+                    continue;
+                }
+            }
+        }
+        admitted = false;
+    }
+    let mut direct_original_seams = Vec::new();
+    let mut direct_upper = [[0.; 3]; 4];
+    let mut direct_orientations = [Orientation::Same; 4];
+    let mut direct_violation = false;
+    let mut direct_admitted = true;
+    for side in 0..4 {
+        if cells >= max_cells || coefficients >= max_coefficients {
+            direct_admitted = false;
+            break;
+        }
+        let Some(actual) = original_side_chart(&corner.surface, side, options.reverse_along[side])
+        else {
+            direct_admitted = false;
+            break;
+        };
+        let gain = -1. / options.gains[side];
+        if !gain.is_finite() {
+            direct_admitted = false;
+            break;
+        }
+        let proof = surface_collar::inspect_g2_cross_frame(
+            supports[side].surface,
+            supports[side].pcurve,
+            supports[side].direction,
+            &actual,
+            gain,
+            tolerances,
+            max_cells - cells,
+            max_coefficients - coefficients,
+        )?;
+        cells += proof.cells;
+        coefficients += proof.coefficient_work;
+        if let (Some(bounds), Some(mut orientation)) = (proof.upper, proof.orientation) {
+            // Exact chart axis permutation/reversal changes the stored normal
+            // and signed world tensor together. Convert back to the raw patch.
+            let flip = (side < 2) ^ (side == 1 || side == 3) ^ options.reverse_along[side];
+            if flip {
+                orientation = match orientation {
+                    Orientation::Same => Orientation::Opposite,
+                    Orientation::Opposite => Orientation::Same,
+                };
+            }
+            direct_upper[side] = bounds;
+            direct_orientations[side] = orientation;
+            direct_admitted &= proof.decision == crate::surface_join::Decision::WithinTolerance;
+        } else {
+            direct_admitted = false;
+        }
+        if proof.decision == crate::surface_join::Decision::CorrespondenceExceedsTolerance {
+            direct_violation = true;
+        }
+        direct_original_seams.push(proof);
+    }
+    direct_admitted &= direct_original_seams.len() == 4;
+    if direct_admitted && !corner.interior.certified && cells < max_cells {
+        // The direct route still needs the ACTUAL complete patch to be regular
+        // and injective. Re-run only under unused shared cells; an auxiliary
+        // proof's smaller allocation must not suppress this independent gate.
+        let interior = crate::surface_linear_monotonicity::inspect_candidate(
+            &corner.surface,
+            max_cells - cells,
+        )?;
+        cells += interior.cells;
+        corner.cells += interior.cells;
+        corner.interior = interior;
+        corner.admitted = corner.complete && corner.within_tolerance && corner.interior.certified;
+    }
+    direct_admitted &= corner.interior.certified;
+    if direct_admitted {
+        upper = direct_upper;
+        orientations = direct_orientations;
+    }
+    admitted = !direct_violation && (admitted || direct_admitted);
+    Ok(Report {
+        corner,
+        collars,
+        original_seams,
+        direct_original_seams,
+        direct_upper: direct_admitted.then_some(direct_upper),
+        direct_admitted,
+        upper: admitted.then_some(upper),
+        orientations: admitted.then_some(orientations),
+        cells,
+        coefficient_work: coefficients,
+        admitted,
+    })
+}
+/// A clamped Bernstein chart has the same normalized Cartesian map after
+/// replacing ONLY its endpoint knot labels by 0/1. Axis permutations and
+/// pole reversals are exact. No rounded control-net proxy is introduced.
+fn original_side_chart(s: &Surface, side: usize, reverse_along: bool) -> Option<Surface> {
+    for (knots, degree, n) in [
+        (&s.knots_u, s.degree_u, s.control_points.len()),
+        (&s.knots_v, s.degree_v, s.control_points[0].len()),
+    ] {
+        if n != degree + 1
+            || !knots[..=degree].iter().all(|&k| k == knots[degree])
+            || !knots[n..].iter().all(|&k| k == knots[n])
+        {
+            return None;
+        }
+    }
+    if s.periodic_u || s.periodic_v {
+        return None;
+    }
+    let mut out = if side < 2 {
+        crate::surface_edit::transpose(s).ok()?
+    } else {
+        s.clone()
+    };
+    if side == 1 || side == 3 {
+        for row in &mut out.control_points {
+            row.reverse();
+        }
+        for row in &mut out.weights {
+            row.reverse();
+        }
+    }
+    if reverse_along {
+        out.control_points.reverse();
+        out.weights.reverse();
+    }
+    out.knots_u = [vec![0.; out.degree_u + 1], vec![1.; out.degree_u + 1]].concat();
+    out.knots_v = [vec![0.; out.degree_v + 1], vec![1.; out.degree_v + 1]].concat();
+    Some(out)
+}

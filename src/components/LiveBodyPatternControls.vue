@@ -1,3 +1,9 @@
+<script lang="ts">
+export {
+  computeLinearPatternOffsets,
+  computeCircularPatternTransforms,
+} from '../services/directModelingTools'
+</script>
 <script setup lang="ts">
 import {computed,ref,watch} from 'vue'
 import type {DirectDocument} from '../services/directModeling'

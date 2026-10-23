@@ -1,0 +1,415 @@
+//! Bounded exact arithmetic in Q[s][t]. No numerical root decision is trusted.
+use super::*;
+pub(in super::super) type Bi = Vec<Poly>;
+fn budget(p: &Bi) -> Result<()> {
+    if p.len() > 18
+        || p.iter().any(|r| {
+            r.len() > 257
+                || r.iter()
+                    .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
+        })
+    {
+        return Err(refused("Bivariate exact arithmetic budget exhausted"));
+    }
+    Ok(())
+}
+fn clean(mut p: Bi) -> Bi {
+    for r in &mut p {
+        *r = trim(std::mem::take(r));
+    }
+    while p.last().is_some_and(Vec::is_empty) {
+        p.pop();
+    }
+    p
+}
+pub(in super::super) fn primitive(p: Bi) -> Result<Bi> {
+    let p = clean(p);
+    let mut content = Vec::new();
+    for r in &p {
+        content = gcd(&content, r)?;
+    }
+    if content.is_empty() {
+        return Ok(p);
+    }
+    let out = p
+        .iter()
+        .map(|r| quotient(r, &content))
+        .collect::<Result<Bi>>()?;
+    budget(&out)?;
+    Ok(out)
+}
+fn remainder(a: &Bi, b: &Bi) -> Result<Bi> {
+    if b.is_empty() {
+        return Err(refused("Zero bivariate divisor"));
+    }
+    let mut r = a.clone();
+    let mut work = 0;
+    while !r.is_empty() && r.len() >= b.len() {
+        work += 1;
+        if work > 32 {
+            return Err(refused("Bivariate division work exhausted"));
+        }
+        let k = r.len() - b.len();
+        let lead = r.last().unwrap().clone();
+        for row in &mut r {
+            *row = product(row, b.last().unwrap());
+        }
+        for (i, row) in b.iter().enumerate() {
+            r[k + i] = sub(&r[k + i], &product(&lead, row));
+        }
+        budget(&r)?;
+        r = primitive(r)?;
+    }
+    Ok(r)
+}
+pub(in super::super) fn common(mut a: Bi, mut b: Bi) -> Result<Bi> {
+    a = primitive(a)?;
+    b = primitive(b)?;
+    while !b.is_empty() {
+        let r = remainder(&a, &b)?;
+        a = b;
+        b = r;
+    }
+    primitive(a)
+}
+/// Full Q[s,t] gcd, retaining vertical contents discarded by primitive PRS.
+/// Exact quotients provide F=D*f and G=D*g, so V(F,G)=V(D) union V(f,g).
+pub(in super::super) fn component_system(a:&[[Q;3]],b:&[[Q;3]],self_pair:bool)->Result<Option<(Bi,[Bi;2])>>{
+ let e=intersection_polynomials(a,b,self_pair)?;
+ if e.iter().all(Vec::is_empty){return Ok(Some((Vec::new(),[Vec::new(),Vec::new()])))}
+ let content=|p:&Bi|->Result<Poly>{p.iter().try_fold(Vec::new(),|c,row|gcd(&c,row))};
+ let u=gcd(&content(&e[0])?,&content(&e[1])?)?;
+ let mut h=common(e[0].clone(),e[1].clone())?;
+ if h.is_empty(){return Err(refused("Empty nonzero common component polynomial"))}
+ for row in &mut h{*row=product(row,&u)}
+ let lead=h.last().unwrap().last().unwrap().clone();for row in &mut h{for q in row{*q/=&lead}}
+ budget(&h)?;
+ if h.len()==1&&h[0].len()==1{return Ok(None)}
+ let residual=[exact_bivariate_quotient(&e[0],&h)?,exact_bivariate_quotient(&e[1],&h)?];
+ Ok(Some((h,residual)))
+}
+pub(in super::super) fn intersection_polynomials(
+    a: &[[Q; 3]],
+    b: &[[Q; 3]],
+    self_pair: bool,
+) -> Result<[Bi; 2]> {
+    let reduced = |net: &[[Q; 3]]| -> Result<[Poly; 3]> {
+        let mut h = std::array::from_fn(|axis| power(net, axis));
+        let g = gcd(&gcd(&h[0], &h[1])?, &h[2])?;
+        // Positive source weights prove W>0 over [0,1]. A common divisor
+        // of W therefore has no source-domain zero. Check every quotient.
+        if g.len() > 1 {
+            for p in &mut h {
+                *p = quotient(p, &g)?;
+            }
+        }
+        Ok(h)
+    };
+    let ah = reduced(a)?;
+    let bh = reduced(b)?;
+    let aw = &ah[2];
+    let bw = &bh[2];
+    let mut out = std::array::from_fn(|axis| {
+        let x = &ah[axis];
+        let y = &bh[axis];
+        clean(
+            (0..bw.len().max(y.len()))
+                .map(|j| {
+                    sub(
+                        &x.iter()
+                            .map(|q| q * bw.get(j).unwrap_or(&Q::zero()))
+                            .collect::<Poly>(),
+                        &aw.iter()
+                            .map(|q| q * y.get(j).unwrap_or(&Q::zero()))
+                            .collect::<Poly>(),
+                    )
+                })
+                .collect(),
+        )
+    });
+    if self_pair {
+        // Exactly divide out the diagonal t-s. It is not an intersection event.
+        for p in &mut out {
+            if p.is_empty() {
+                continue;
+            }
+            let mut r = p.clone();
+            let mut q = vec![Vec::new(); p.len() - 1];
+            for j in (1..r.len()).rev() {
+                q[j - 1] = r[j].clone();
+                r[j - 1] = sub(&r[j - 1], &product(&r[j], &[Q::zero(), -Q::one()]));
+            }
+            if !r[0].is_empty() {
+                return Err(refused("Self-intersection diagonal identity failed"));
+            }
+            *p = clean(q);
+        }
+    }
+    for p in &out {
+        budget(p)?;
+    }
+    Ok(out)
+}
+fn sign_open(p: &Poly) -> Result<i8> {
+    if p.is_empty() || interior_roots(p)? != 0 {
+        return Ok(0);
+    }
+    let v = at(p, &Q::new(1.into(), 2.into()));
+    Ok(if v > Q::zero() {
+        1
+    } else if v < Q::zero() {
+        -1
+    } else {
+        0
+    })
+}
+pub(in super::super) fn verify_partial_relation(a:&[[Q;3]],b:&[[Q;3]],axis:usize,h:&Bi)->Result<bool>{
+    budget(h)?;
+    if axis>1||h.len()<2||clean(h.clone())!=*h||!monotone(a,axis)?||!monotone(b,axis)?||sign_open(h.last().unwrap())?==0{return Ok(false);}
+    let e=intersection_polynomials(a,b,false)?;
+    if e.iter().any(|g|!remainder(g,h).is_ok_and(|r|r.is_empty())){return Ok(false);}
+    let h0=&h[0];let h1=h.iter().fold(Vec::new(),|s,r|sub(&s,&r.iter().map(|q|-q).collect::<Poly>()));
+    if h0.is_empty()||h1.is_empty(){return Ok(false);}
+    let g0=e[axis].first().cloned().unwrap_or_default();let g1=e[axis].iter().fold(Vec::new(),|s,r|sub(&s,&r.iter().map(|q|-q).collect::<Poly>()));
+    let q0=quotient(&g0,h0)?;let q1=quotient(&g1,&h1)?;
+    let sign=sign_open(&q0)?;Ok(sign!=0&&sign_open(&q1)?==sign)
+}
+pub(in super::super) fn partial_relation(a:&[[Q;3]],b:&[[Q;3]],axis:usize)->Result<Bi>{
+    let [x,y]=intersection_polynomials(a,b,false)?;let h=common(x,y)?;
+    if !verify_partial_relation(a,b,axis,&h)?{return Err(refused("Partial nonlinear image correspondence is unproved"));}Ok(h)
+}
+pub(in super::super) fn verify_relation(
+    a: &[[Q; 3]],
+    b: &[[Q; 3]],
+    axis: usize,
+    h: &Bi,
+) -> Result<bool> {
+    budget(h)?;
+    if axis > 1
+        || h.len() < 2
+        || clean(h.clone()) != *h
+        || !monotone(a, axis)?
+        || !monotone(b, axis)?
+    {
+        return Ok(false);
+    }
+    for k in 0..2 {
+        for end in [0, 1] {
+            let p = if end == 0 { &a[0] } else { a.last().unwrap() };
+            let q = if end == 0 { &b[0] } else { b.last().unwrap() };
+            if &p[k] * &q[2] != &q[k] * &p[2] {
+                return Ok(false);
+            }
+        }
+    }
+    let left = h[0].clone();
+    let right = h.iter().fold(Vec::new(), |s, r| {
+        sub(&s, &r.iter().map(|v| -v).collect::<Poly>())
+    });
+    let s = sign_open(&left)?;
+    if s == 0 || sign_open(&right)? != -s || sign_open(h.last().unwrap())? == 0 {
+        return Ok(false);
+    }
+    let equations = intersection_polynomials(a, b, false)?;
+    Ok(equations
+        .iter()
+        .all(|g| remainder(g, h).is_ok_and(|r| r.is_empty())))
+}
+pub(in super::super) fn nonlinear_relation(a: &[[Q; 3]], b: &[[Q; 3]], axis: usize) -> Result<Bi> {
+    let [x, y] = intersection_polynomials(a, b, false)?;
+    let h = common(x, y)?;
+    if !verify_relation(a, b, axis, &h)? {
+        return Err(refused("Nonlinear curve correspondence remains unproved"));
+    }
+    Ok(h)
+}
+/// Sylvester determinant over Q[s], using exact fraction-free Bareiss division.
+pub(in super::super) fn resultant(a: &Bi, b: &Bi) -> Result<Poly> {
+    if a.is_empty() || b.is_empty() {
+        return Err(refused(
+            "Intersection set has an unresolved common component",
+        ));
+    }
+    let (m, n) = (a.len() - 1, b.len() - 1);
+    let size = m + n;
+    if size == 0 {
+        return gcd(&a[0], &b[0]);
+    }
+    let mut matrix = vec![vec![Vec::new(); size]; size];
+    for i in 0..n {
+        for j in 0..=m {
+            matrix[i][i + j] = a[m - j].clone();
+        }
+    }
+    for i in 0..m {
+        for j in 0..=n {
+            matrix[n + i][i + j] = b[n - j].clone();
+        }
+    }
+    let mut previous = vec![Q::one()];
+    let mut negative = false;
+    for k in 0..size - 1 {
+        let Some(pivot) = (k..size).find(|i| !matrix[*i][k].is_empty()) else {
+            return Ok(Vec::new());
+        };
+        if pivot != k {
+            matrix.swap(k, pivot);
+            negative = !negative;
+        }
+        let lead = matrix[k][k].clone();
+        for i in k + 1..size {
+            for j in k + 1..size {
+                let p = sub(
+                    &product(&lead, &matrix[i][j]),
+                    &product(&matrix[i][k], &matrix[k][j]),
+                );
+                budget(&vec![p.clone()])?;
+                matrix[i][j] = quotient(&p, &previous)?;
+            }
+            matrix[i][k] = Vec::new();
+        }
+        previous = lead;
+    }
+    let mut r = matrix[size - 1][size - 1].clone();
+    if negative {
+        for q in &mut r {
+            *q = -q.clone();
+        }
+    }
+    Ok(trim(r))
+}
+pub(in super::super) fn fiber(p: &Bi, s: &Q) -> Poly {
+    trim(p.iter().map(|r| at(r, s)).collect())
+}
+pub(in super::super) fn fiber_gcd(equations: &[Bi; 2], s: &Q) -> Result<Poly> {
+    gcd(&fiber(&equations[0], s), &fiber(&equations[1], s))
+}
+fn affine(p: &Poly, a: &Q, b: &Q) -> Poly {
+    let line = vec![a.clone(), b - a];
+    p.iter().rev().fold(Vec::new(), |out, q| {
+        let mut r = product(&out, &line);
+        if r.is_empty() {
+            r.push(q.clone());
+        } else {
+            r[0] += q;
+        }
+        trim(r)
+    })
+}
+pub(in super::super) fn roots_accounted(p: &Poly, values: &[Q]) -> Result<bool> {
+    if p.is_empty() {
+        return Ok(false);
+    }
+    let mut rest = p.clone();
+    for x in values {
+        while rest.len() > 1 && at(&rest, x).is_zero() {
+            rest = quotient(&rest, &[-x, Q::one()])?;
+        }
+    }
+    Ok(!at(&rest, &Q::zero()).is_zero()
+        && !at(&rest, &Q::one()).is_zero()
+        && interior_roots(&rest)? == 0)
+}
+pub(in super::super) fn rational_roots(p: &Poly) -> Result<Vec<Q>> {
+    if p.is_empty() {
+        return Err(refused("Nonisolated exact intersection fiber"));
+    }
+    fn visit(p: &Poly, a: Q, b: Q, depth: u8, out: &mut Vec<Q>, work: &mut usize) -> Result<()> {
+        *work += 1;
+        if *work > 4096 || out.len() > 128 {
+            return Err(refused("Intersection root census work exhausted"));
+        }
+        if interior_roots(&affine(p, &a, &b))? == 0 {
+            return Ok(());
+        }
+        if depth >= 40 {
+            return Err(refused(
+                "Intersection root is not an isolated dyadic witness",
+            ));
+        }
+        let mid = (&a + &b) / Q::from_integer(2.into());
+        if at(p, &mid).is_zero() {
+            out.push(mid.clone());
+        }
+        visit(p, a, mid.clone(), depth + 1, out, work)?;
+        visit(p, mid, b, depth + 1, out, work)
+    }
+    let mut out = Vec::new();
+    for x in [Q::zero(), Q::one()] {
+        if at(p, &x).is_zero() {
+            out.push(x);
+        }
+    }
+    visit(p, Q::zero(), Q::one(), 0, &mut out, &mut 0)?;
+    out.sort();
+    out.dedup();
+    Ok(out)
+}
+pub(in super::super) fn endpoint_census(a: &[[Q; 3]], b: &[[Q; 3]], shared: bool) -> Result<bool> {
+    let equations = intersection_polynomials(a, b, false)?;
+    let r = resultant(&equations[0], &equations[1])?;
+    let endpoints = [Q::zero(), Q::one()];
+    if !roots_accounted(&r, &endpoints)? {
+        return Ok(false);
+    }
+    for (i, s) in endpoints.iter().enumerate() {
+        if !at(&r, s).is_zero() {
+            continue;
+        }
+        let f = gcd(&fiber(&equations[0], s), &fiber(&equations[1], s))?;
+        let mut allowed = Vec::new();
+        if shared {
+            for (j, t) in endpoints.iter().enumerate() {
+                let p = if i == 0 { &a[0] } else { a.last().unwrap() };
+                let q = if j == 0 { &b[0] } else { b.last().unwrap() };
+                if &p[0] * &q[2] == &q[0] * &p[2] && &p[1] * &q[2] == &q[1] * &p[2] {
+                    allowed.push(t.clone());
+                }
+            }
+        }
+        if !roots_accounted(&f, &allowed)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+pub(in super::super) fn exact_bivariate_quotient(a:&Bi,b:&Bi)->Result<Bi>{
+    let mut r=a.clone();let mut q=vec![Vec::new();a.len().saturating_sub(b.len())+1];
+    if b.is_empty(){return Err(refused("Zero bivariate image divisor"));}
+    while !r.is_empty()&&r.len()>=b.len(){let k=r.len()-b.len();let c=quotient(r.last().unwrap(),b.last().unwrap())?;q[k]=c.clone();
+        for (i,row) in b.iter().enumerate(){r[i+k]=sub(&r[i+k],&product(&c,row));}r=clean(r);budget(&r)?;
+    }
+    if !r.is_empty(){return Err(refused("Nonexact bivariate image radical quotient"));}Ok(clean(q))
+}
+fn derivative_t(h:&Bi)->Bi{clean(h.iter().enumerate().skip(1).map(|(i,p)|p.iter().map(|v|v*Q::from_integer(i.into())).collect()).collect())}
+pub(in super::super) fn image_relation(a:&[[Q;3]],b:&[[Q;3]])->Result<Bi>{
+    let [x,y]=intersection_polynomials(a,b,false)?;
+    let h=if x.is_empty()&&y.is_empty(){vec![Vec::new(),vec![Q::one()]]}else{common(x,y)?};
+    if h.len()<2{return Err(refused("Curves have no common nonconstant image relation"));}
+    let repeated=common(h.clone(),derivative_t(&h))?;
+    let h=primitive(exact_bivariate_quotient(&h,&repeated)?)?;
+    image_relation_projection(a,b,&h)?;Ok(h)
+}
+pub(in super::super) fn image_relation_projection(a:&[[Q;3]],b:&[[Q;3]],h:&Bi)->Result<Poly>{
+    budget(h)?;
+    // Primitive squarefree H plus checked pseudo-division proves polynomial
+    // divisibility in Q[s,t] (Gauss), including exceptional source fibers.
+    if h.len()<2||clean(h.clone())!=*h||primitive(h.clone())?!=*h||common(h.clone(),derivative_t(h))?.len()!=1{return Err(refused("Image relation is not primitive squarefree"));}
+    for e in intersection_polynomials(a,b,false)?{if !remainder(&e,h)?.is_empty(){return Err(refused("Image relation does not divide both coordinate identities"));}}
+    let mut terms=vec![h.last().unwrap().clone(),h[0].clone(),h.iter().fold(Vec::new(),|sum,p|sub(&sum,&p.iter().map(|v|-v).collect::<Poly>())),resultant(h,&derivative_t(h))?];
+    terms.retain(|p|!p.is_empty());combine_image_projections(&terms)
+}
+pub(in super::super) fn combine_image_projections(terms:&[Poly])->Result<Poly>{
+    let mut out=vec![Q::one()];for p in terms{
+        if p.is_empty(){continue;}let p=quotient(p,&gcd(p,&derivative(p))?)?;
+        out=product(&out,&quotient(&p,&gcd(&out,&p)?)?);
+        if out.len()>1025||out.iter().any(|q|q.numer().bits()>16384||q.denom().bits()>16384){return Err(refused("Image quantifier projection budget exceeded"));}
+    }
+    if let Some(lead)=out.last().cloned(){for v in &mut out{*v/=&lead;}}Ok(out)
+}
+pub(in super::super) fn image_fiber_exists(h:&Bi,s:&Q)->Result<bool>{
+    let p=trim(h.iter().map(|row|at(row,s)).collect());
+    if p.is_empty(){return Err(refused("Image sample has an exceptional zero fiber"));}
+    Ok(at(&p,&Q::zero()).is_zero()||at(&p,&Q::one()).is_zero()||interior_roots(&p)?>0)
+}

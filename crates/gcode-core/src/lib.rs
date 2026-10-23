@@ -22,7 +22,9 @@ mod foreign_words;
 mod job;
 mod package_3mf;
 mod parser;
+pub mod stats;
 mod writer;
+pub use stats::{filament_cost_estimate, filament_mass_grams, filament_volume_mm3};
 pub use writer::{emit_job_to, emit_to};
 
 pub use flavor::Flavor;

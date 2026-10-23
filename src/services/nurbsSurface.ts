@@ -80,6 +80,209 @@ export function measureNurbsSurfaceDistance(a:NurbsSurface,b:NurbsSurface,tolera
 export function transformNurbsSurface(surface:NurbsSurface,matrix:number[][]):NurbsSurface {return callNurbsRust("surface_affine",{surface,matrix})}
 export function transformNurbsSurfacePatches(patches:NurbsSurface[],matrix:number[][]):NurbsSurface[] {return callNurbsRust("patches_affine",{patches,matrix})}
 
+/**
+ * Evaluate the unit surface normal at `(u, v)` on `surface`, falling back to normalized
+ * $\partial_u S \times \partial_v S$ if needed.
+ */
+export function evaluateNurbsSurfaceNormal(
+  surface: NurbsSurface,
+  u: number,
+  v: number,
+): Point3 | null {
+  const ev = evaluateNurbsSurface(surface, u, v)
+  if (ev.normal) {
+    const [nx, ny, nz] = ev.normal
+    const len = Math.hypot(nx, ny, nz)
+    if (len > 1e-14) {
+      return [nx / len, ny / len, nz / len]
+    }
+  }
+  if (ev.du && ev.dv) {
+    const [ux, uy, uz] = ev.du
+    const [vx, vy, vz] = ev.dv
+    const cx = uy * vz - uz * vy
+    const cy = uz * vx - ux * vz
+    const cz = ux * vy - uy * vx
+    const len = Math.hypot(cx, cy, cz)
+    if (len > 1e-14) {
+      return [cx / len, cy / len, cz / len]
+    }
+  }
+  return null
+}
+
+/**
+ * Approximate total surface area $\iint \|\partial_u S \times \partial_v S\| \, du \, dv$
+ * over the active `(u, v)` parameter domain using midpoint quadrature on a `stepsU x stepsV` grid.
+ */
+export function evaluateNurbsSurfaceArea(
+  surface: NurbsSurface,
+  stepsU = 16,
+  stepsV = 16,
+): number {
+  const nu = Math.max(1, Math.floor(stepsU))
+  const nv = Math.max(1, Math.floor(stepsV))
+  const evaluator = createNurbsSurfaceEvaluator(surface)
+  try {
+    const first = evaluator(surface.knotsU[surface.degreeU] ?? 0, surface.knotsV[surface.degreeV] ?? 0)
+    const [uMin, uMax] = first.domainU
+    const [vMin, vMax] = first.domainV
+    const duStep = (uMax - uMin) / nu
+    const dvStep = (vMax - vMin) / nv
+    if (duStep <= 0 || dvStep <= 0) return 0
+
+    let area = 0
+    for (let i = 0; i < nu; i++) {
+      const u = uMin + (i + 0.5) * duStep
+      for (let j = 0; j < nv; j++) {
+        const v = vMin + (j + 0.5) * dvStep
+        const sample = evaluator(u, v)
+        if (sample.du && sample.dv) {
+          const [ux, uy, uz] = sample.du
+          const [vx, vy, vz] = sample.dv
+          const cx = uy * vz - uz * vy
+          const cy = uz * vx - ux * vz
+          const cz = ux * vy - uy * vx
+          area += Math.hypot(cx, cy, cz) * duStep * dvStep
+        }
+      }
+    }
+    return area
+  } finally {
+    evaluator.dispose()
+  }
+}
+
+/**
+ * Find the closest point on a NURBS surface to `target` using a coarse `(gridSteps + 1)^2` lattice
+ * search followed by 2D Gauss-Newton / damped Newton refinement on $(S(u, v) - P)$.
+ */
+export function closestPointOnNurbsSurface(
+  surface: NurbsSurface,
+  target: [number, number, number],
+  gridSteps = 16,
+): { u: number; v: number; point: [number, number, number]; distance: number } {
+  const steps = Math.max(4, Math.floor(gridSteps))
+  const evaluator = createNurbsSurfaceEvaluator(surface)
+  try {
+    const first = evaluator(surface.knotsU[surface.degreeU] ?? 0, surface.knotsV[surface.degreeV] ?? 0)
+    const [uMin, uMax] = first.domainU
+    const [vMin, vMax] = first.domainV
+    const spanU = Math.max(0, uMax - uMin)
+    const spanV = Math.max(0, vMax - vMin)
+
+    const distSq3 = (a: Point3, b: Point3): number => {
+      const dx = a[0] - b[0]
+      const dy = a[1] - b[1]
+      const dz = a[2] - b[2]
+      return dx * dx + dy * dy + dz * dz
+    }
+
+    let bestU = uMin
+    let bestV = vMin
+    let bestPt: Point3 = [first.point[0], first.point[1], first.point[2]]
+    let bestDistSq = distSq3(bestPt, target)
+
+    if (spanU <= 1e-15 && spanV <= 1e-15) {
+      return { u: bestU, v: bestV, point: bestPt, distance: Math.sqrt(bestDistSq) }
+    }
+
+    for (let i = 0; i <= steps; i++) {
+      const u = uMin + (i / steps) * spanU
+      for (let j = 0; j <= steps; j++) {
+        const v = vMin + (j / steps) * spanV
+        const ev = evaluator(u, v)
+        const pt: Point3 = [ev.point[0], ev.point[1], ev.point[2]]
+        const d2 = distSq3(pt, target)
+        if (d2 < bestDistSq) {
+          bestDistSq = d2
+          bestU = u
+          bestV = v
+          bestPt = pt
+        }
+      }
+    }
+
+    // 2D Gauss-Newton refinement
+    let u = bestU
+    let v = bestV
+    for (let iter = 0; iter < 12; iter++) {
+      const ev = evaluator(u, v)
+      const pt: Point3 = [ev.point[0], ev.point[1], ev.point[2]]
+      const d2 = distSq3(pt, target)
+      if (d2 < bestDistSq) {
+        bestDistSq = d2
+        bestU = u
+        bestV = v
+        bestPt = pt
+      }
+      if (!ev.du || !ev.dv) break
+
+      const rx = pt[0] - target[0]
+      const ry = pt[1] - target[1]
+      const rz = pt[2] - target[2]
+      const [ux, uy, uz] = ev.du
+      const [vx, vy, vz] = ev.dv
+
+      const gu = rx * ux + ry * uy + rz * uz
+      const gv = rx * vx + ry * vy + rz * vz
+      if (Math.hypot(gu, gv) <= 1e-12) break
+
+      let huu = ux * ux + uy * uy + uz * uz
+      let huv = ux * vx + uy * vy + uz * vz
+      let hvv = vx * vx + vy * vy + vz * vz
+      if (ev.duu && ev.duv && ev.dvv) {
+        huu += rx * ev.duu[0] + ry * ev.duu[1] + rz * ev.duu[2]
+        huv += rx * ev.duv[0] + ry * ev.duv[1] + rz * ev.duv[2]
+        hvv += rx * ev.dvv[0] + ry * ev.dvv[1] + rz * ev.dvv[2]
+      }
+      // Fall back to positive-definite first-order Jacobian J^T J if full Hessian is indefinite
+      let det = huu * hvv - huv * huv
+      if (!Number.isFinite(det) || det <= 1e-14 || huu <= 0 || hvv <= 0) {
+        huu = ux * ux + uy * uy + uz * uz + 1e-12
+        huv = ux * vx + uy * vy + uz * vz
+        hvv = vx * vx + vy * vy + vz * vz + 1e-12
+        det = huu * hvv - huv * huv
+      }
+      if (!Number.isFinite(det) || Math.abs(det) <= 1e-20) break
+
+      const invDet = 1 / det
+      const du = (hvv * gu - huv * gv) * invDet
+      const dv = (-huv * gu + huu * gv) * invDet
+
+      let accepted = false
+      for (const alpha of [1.0, 0.5, 0.25]) {
+        const candU = Math.min(uMax, Math.max(uMin, u - alpha * du))
+        const candV = Math.min(vMax, Math.max(vMin, v - alpha * dv))
+        const candEv = evaluator(candU, candV)
+        const candPt: Point3 = [candEv.point[0], candEv.point[1], candEv.point[2]]
+        const candD2 = distSq3(candPt, target)
+        if (candD2 <= bestDistSq) {
+          const moved = Math.hypot(candU - u, candV - v)
+          bestDistSq = candD2
+          bestU = candU
+          bestV = candV
+          bestPt = candPt
+          u = candU
+          v = candV
+          accepted = moved > 1e-11
+          break
+        }
+      }
+      if (!accepted) break
+    }
+
+    return {
+      u: bestU,
+      v: bestV,
+      point: bestPt,
+      distance: Math.sqrt(bestDistSq),
+    }
+  } finally {
+    evaluator.dispose()
+  }
+}
+
 import { runGpuNurbsTessellate, type GpuNurbsTessellationResult } from './gpuNurbsTessellate'
 
 /**

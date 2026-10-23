@@ -137,15 +137,20 @@ impl FfdLattice {
             clamped_uniform(counts[1], degrees[1]),
             clamped_uniform(counts[2], degrees[2]),
         ];
+        let g0: Vec<f64> = (0..counts[0])
+            .map(|i| min[0] + extent[0] * greville(&knots[0], degrees[0], i))
+            .collect();
+        let g1: Vec<f64> = (0..counts[1])
+            .map(|j| min[1] + extent[1] * greville(&knots[1], degrees[1], j))
+            .collect();
+        let g2: Vec<f64> = (0..counts[2])
+            .map(|k| min[2] + extent[2] * greville(&knots[2], degrees[2], k))
+            .collect();
         let mut controls = Vec::with_capacity(counts[0] * counts[1] * counts[2]);
-        for k in 0..counts[2] {
-            for j in 0..counts[1] {
-                for i in 0..counts[0] {
-                    controls.push([
-                        min[0] + extent[0] * greville(&knots[0], degrees[0], i),
-                        min[1] + extent[1] * greville(&knots[1], degrees[1], j),
-                        min[2] + extent[2] * greville(&knots[2], degrees[2], k),
-                    ]);
+        for &z in &g2 {
+            for &y in &g1 {
+                for &x in &g0 {
+                    controls.push([x, y, z]);
                 }
             }
         }
@@ -295,8 +300,11 @@ impl FfdLattice {
             point.copy_from_slice(&deformed);
         }
         Ok(Curve {
+            degree: curve.degree,
+            knots: curve.knots.clone(),
             control_points,
-            ..curve.clone()
+            weights: curve.weights.clone(),
+            periodic: curve.periodic,
         })
     }
 
@@ -313,8 +321,14 @@ impl FfdLattice {
             }
         }
         Ok(Surface {
+            degree_u: surface.degree_u,
+            degree_v: surface.degree_v,
+            knots_u: surface.knots_u.clone(),
+            knots_v: surface.knots_v.clone(),
             control_points,
-            ..surface.clone()
+            weights: surface.weights.clone(),
+            periodic_u: surface.periodic_u,
+            periodic_v: surface.periodic_v,
         })
     }
 }
@@ -356,8 +370,14 @@ fn deform_surface_controls(
         }
     }
     Ok(Surface {
+        degree_u: surface.degree_u,
+        degree_v: surface.degree_v,
+        knots_u: surface.knots_u.clone(),
+        knots_v: surface.knots_v.clone(),
         control_points,
-        ..surface.clone()
+        weights: surface.weights.clone(),
+        periodic_u: surface.periodic_u,
+        periodic_v: surface.periodic_v,
     })
 }
 
@@ -412,10 +432,12 @@ pub fn barr_taper(
     let nv = surface.control_points[0].len();
     let mut normals = vec![vec![None; nv]; nu];
     let band_width = band[1] - band[0];
+    let v_greville: Vec<f64> = (0..nv)
+        .map(|j| greville(&surface.knots_v, surface.degree_v, j))
+        .collect();
     for i in 0..nu {
-        for j in 0..nv {
-            let u = greville(&surface.knots_u, surface.degree_u, i);
-            let v = greville(&surface.knots_v, surface.degree_v, j);
+        let u = greville(&surface.knots_u, surface.degree_u, i);
+        for (j, &v) in v_greville.iter().enumerate() {
             let Some(normal) = surface.evaluate(u, v)?.unit_normal() else {
                 continue;
             };

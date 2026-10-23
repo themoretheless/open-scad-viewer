@@ -1,0 +1,1 @@
+import{f as e}from"./solid-gpu-view-uVPyzynu.js";import{s as t}from"./polygon-aDAOJwcb.js";function n(n){return t(e(`scene_flatten`,{meshes:n.map(e=>({vertices:e.vertices,indices:e.indices,transform:e.transform}))}))}function r(e,t){let r=n([e]);return{id:String(t),name:`Body ${t+1}`,mesh:{positions:r.positions,indices:r.indices}}}export{r as n,n as t};

@@ -41,8 +41,8 @@ function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, pr
 }
 
 /** Dense via the browser WebGPU sweep; any failure falls back to the CPU path. */
-async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: number): Promise<boolean> {
-  const prepared = kernel.densePrepare(resolution)
+async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: number, preset?: PhotoDensePreset): Promise<boolean> {
+  const prepared = kernel.densePrepare(resolution, preset ?? 'baseline')
   if (!prepared) return false
   const scores = await runGpuSweep(prepared.payload, prepared.wgsl, prepared.wgslVariants)
   publishSurface(kernel, kernel.denseFinish(scores))
@@ -104,9 +104,9 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
     if (data.dense) {
       post({type: 'stage', stage: 'depth'})
       const denseStart = performance.now()
-      const baseline = data.densePreset === undefined || data.densePreset === 'baseline'
-      const gpu = data.gpu && baseline
-        ? await reconstructSurfaceGpu(kernel, data.resolution).catch(error => {
+      const gpuEligible = data.densePreset === undefined || data.densePreset === 'baseline' || data.densePreset === 'accurate'
+      const gpu = data.gpu && gpuEligible
+        ? await reconstructSurfaceGpu(kernel, data.resolution, data.densePreset).catch(error => {
             post({type: 'warning', message: `WebGPU sweep unavailable: ${errorMessage(error)}`})
             return false
           })

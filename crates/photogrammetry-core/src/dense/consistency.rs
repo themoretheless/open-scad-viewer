@@ -1,6 +1,6 @@
 //! Reciprocal depth/reprojection checks define which observations may enter fusion.
 use super::{DenseDiagnostics, DenseOptions, DepthMap, cancelled, world_points};
-use crate::{Image, Reconstruction, Result, camera::Camera, math::*};
+use crate::{Image, Reconstruction, Result, math::*};
 
 #[derive(Clone, Debug)]
 pub(super) struct Sample {
@@ -27,7 +27,13 @@ fn inverse_depths(map: &DepthMap) -> Vec<f64> {
         .collect()
 }
 
-fn normal(map: &DepthMap, points: &[V3], camera: &Camera, i: usize, tolerance: f64) -> Option<V3> {
+fn normal(
+    map: &DepthMap,
+    points: &[V3],
+    camera_center: V3,
+    i: usize,
+    tolerance: f64,
+) -> Option<V3> {
     let (x, y) = (i % map.width, i / map.width);
     let z = map.depth[i];
     if z <= 0. {
@@ -59,7 +65,7 @@ fn normal(map: &DepthMap, points: &[V3], camera: &Camera, i: usize, tolerance: f
         return None;
     }
     let n = unit(n);
-    Some(if dot(n, sub(camera.center(), p)) < 0. {
+    Some(if dot(n, sub(camera_center, p)) < 0. {
         scale(n, -1.)
     } else {
         n
@@ -160,7 +166,7 @@ pub(super) fn filter(
     let mut normals = Vec::with_capacity(maps.len());
     let mut normal_rows = 0;
     for (map_index, map) in maps.iter().enumerate() {
-        let camera = sparse.cameras[map.image].as_ref().unwrap();
+        let camera_center = sparse.cameras[map.image].as_ref().unwrap().center();
         let mut values = Vec::with_capacity(map.depth.len());
         for y in 0..map.height {
             cancelled(progress, "consistency", normal_rows + y, total_rows * 2)?;
@@ -168,7 +174,7 @@ pub(super) fn filter(
                 values.push(normal(
                     map,
                     &points[map_index],
-                    camera,
+                    camera_center,
                     y * map.width + x,
                     options.relative_depth_tolerance,
                 ));
@@ -179,8 +185,25 @@ pub(super) fn filter(
     }
     let mut patches = Vec::new();
     let mut completed_rows = 0;
+    let mut active_others = Vec::with_capacity(maps.len());
     for (map_index, map) in maps.iter().enumerate() {
         let camera = sparse.cameras[map.image].as_ref().unwrap();
+        active_others.clear();
+        for (other_index, other) in maps.iter().enumerate() {
+            if other.image == map.image {
+                continue;
+            }
+            // Opt-in COLMAP-style check: only the views selected for
+            // depth estimation may vote; the default polls every map.
+            if options.selected_sources_consistency && !map.neighbors.contains(&other.image) {
+                continue;
+            }
+            active_others.push((
+                other_index,
+                other,
+                sparse.cameras[other.image].as_ref().unwrap(),
+            ));
+        }
         let mut patch = ObservedPatch::default();
         let mut ids = vec![u32::MAX; map.depth.len()];
         for y in 0..map.height {
@@ -199,17 +222,7 @@ pub(super) fn filter(
                 let p = points[map_index][i];
                 let n = normals[map_index][i];
                 let mut support = 0;
-                for (other_index, other) in maps.iter().enumerate() {
-                    if other.image == map.image {
-                        continue;
-                    }
-                    // Opt-in COLMAP-style check: only the views selected for
-                    // depth estimation may vote; the default polls every map.
-                    if options.selected_sources_consistency && !map.neighbors.contains(&other.image)
-                    {
-                        continue;
-                    }
-                    let nc = sparse.cameras[other.image].as_ref().unwrap();
+                for &(other_index, other, nc) in &active_others {
                     let cp = nc.camera_point(p);
                     let Some(uv) = nc.project_camera_point(cp) else {
                         continue;
@@ -324,16 +337,7 @@ pub(super) fn filter(
                         let world = triangle.map(|i| points[map_index][i]);
                         let center = scale(add(add(world[0], world[1]), world[2]), 1. / 3.);
                         let mut support = 0;
-                        for other in maps {
-                            if other.image == map.image {
-                                continue;
-                            }
-                            if options.selected_sources_consistency
-                                && !map.neighbors.contains(&other.image)
-                            {
-                                continue;
-                            }
-                            let nc = sparse.cameras[other.image].as_ref().unwrap();
+                        for &(_, other, nc) in &active_others {
                             let cp = nc.camera_point(center);
                             let Some(uv) = nc.project_camera_point(cp) else {
                                 continue;
@@ -381,6 +385,7 @@ pub(super) fn filter(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::camera::Camera;
     fn map() -> DepthMap {
         DepthMap {
             image: 0,
@@ -496,13 +501,13 @@ mod tests {
         let mut map = map();
         let points = world_points(&map, &camera);
         assert_eq!(
-            normal(&map, &points, &camera, 5, 0.025).unwrap(),
+            normal(&map, &points, camera.center(), 5, 0.025).unwrap(),
             [0., 0., -1.]
         );
         map.depth[4] = 2.;
         map.depth[6] = 2.;
         let points = world_points(&map, &camera);
-        assert!(normal(&map, &points, &camera, 5, 0.025).is_none());
+        assert!(normal(&map, &points, camera.center(), 5, 0.025).is_none());
     }
     #[test]
     fn overlapping_registered_depth_maps_become_one_observed_grid() {

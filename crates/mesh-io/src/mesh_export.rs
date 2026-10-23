@@ -46,7 +46,17 @@ pub fn export(mesh: &MeshView<'_>, format: &str) -> Result<Vec<u8>> {
     if format == "stl_binary" {
         return binary_stl(mesh);
     }
-    let mut out = Output(Vec::new());
+    let v_count = mesh.positions.len() / 3;
+    let f_count = mesh.indices.len() / 3;
+    let est_cap = match format {
+        "obj" => 36 + v_count * 36 + f_count * 28,
+        "ply" => 180 + v_count * 36 + f_count * 28,
+        "off" => 32 + v_count * 36 + f_count * 28,
+        "amf" => 160 + v_count * 96 + f_count * 64,
+        _ => 256,
+    }
+    .min(MAX_BYTES);
+    let mut out = Output(Vec::with_capacity(est_cap));
     let written = (|| -> fmt::Result {
         match format {
             "obj" => out.write_str("# RushGraph; units: millimeter\n")?,
@@ -150,6 +160,109 @@ fn binary_stl(mesh: &MeshView<'_>) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// Exports a validated `MeshView` to either ASCII PLY (`binary_little_endian == false`)
+/// or compact binary little-endian PLY (`binary_little_endian == true`).
+pub fn export_ply(mesh: &MeshView<'_>, binary_little_endian: bool) -> Result<Vec<u8>> {
+    if !binary_little_endian {
+        return export(mesh, "ply");
+    }
+    check(
+        mesh.indices.len() / 3 <= 100_000,
+        "Mesh export exceeds 100000 triangles.",
+    )?;
+    let report = mesh.inspect()?;
+    check(
+        report.degenerate_triangles == 0
+            && report.non_manifold_edges == 0
+            && report.orientation_conflicts == 0,
+        "Mesh has invalid or inconsistent topology.",
+    )?;
+    let v_count = mesh.positions.len() / 3;
+    let f_count = mesh.indices.len() / 3;
+    let header = format!(
+        "ply\nformat binary_little_endian 1.0\ncomment units millimeter\nelement vertex {v_count}\nproperty double x\nproperty double y\nproperty double z\nelement face {f_count}\nproperty list uchar int vertex_indices\nend_header\n"
+    );
+    let body_size = v_count * 24 + f_count * 13;
+    check(
+        header.len() + body_size <= MAX_BYTES,
+        "Export exceeds 4 MiB.",
+    )?;
+    let mut out = Vec::with_capacity(header.len() + body_size);
+    out.extend_from_slice(header.as_bytes());
+    for &coord in mesh.positions {
+        out.extend_from_slice(&coord.to_le_bytes());
+    }
+    for tri in mesh.indices.as_chunks::<3>().0 {
+        out.push(3u8);
+        for &idx in tri {
+            out.extend_from_slice(&(idx as i32).to_le_bytes());
+        }
+    }
+    Ok(out)
+}
+
+/// Exports a validated `MeshView` to a Wavefront `.obj` string along with a companion `.mtl`
+/// material library string defining `material_name` with RGB diffuse color `diffuse_rgb` ($\in [0, 1]^3$).
+pub fn export_obj_with_mtl(
+    mesh: &MeshView<'_>,
+    material_name: &str,
+    diffuse_rgb: [f64; 3],
+) -> Result<(String, String)> {
+    let mat = material_name.trim();
+    check(
+        !mat.is_empty()
+            && mat
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.')),
+        "Invalid OBJ material name.",
+    )?;
+    check(
+        diffuse_rgb
+            .iter()
+            .all(|&c| c.is_finite() && (0.0..=1.0).contains(&c)),
+        "Diffuse RGB components must be finite and within 0.0..=1.0.",
+    )?;
+    check(
+        mesh.indices.len() / 3 <= 100_000,
+        "Mesh export exceeds 100000 triangles.",
+    )?;
+    let report = mesh.inspect()?;
+    check(
+        report.degenerate_triangles == 0
+            && report.non_manifold_edges == 0
+            && report.orientation_conflicts == 0,
+        "Mesh has invalid or inconsistent topology.",
+    )?;
+
+    let v_count = mesh.positions.len() / 3;
+    let f_count = mesh.indices.len() / 3;
+    let est_cap = (64 + mat.len() * 2 + v_count * 36 + f_count * 28).min(MAX_BYTES);
+    let mut obj = Output(Vec::with_capacity(est_cap));
+    let written = (|| -> fmt::Result {
+        writeln!(
+            obj,
+            "# RushGraph; units: millimeter\nmtllib {mat}.mtl\nusemtl {mat}"
+        )?;
+        for p in mesh.positions.as_chunks::<3>().0 {
+            let [x, y, z] = [Number(p[0]), Number(p[1]), Number(p[2])];
+            writeln!(obj, "v {x} {y} {z}")?;
+        }
+        for t in mesh.indices.as_chunks::<3>().0 {
+            writeln!(obj, "f {} {} {}", t[0] + 1, t[1] + 1, t[2] + 1)?;
+        }
+        Ok(())
+    })();
+    written.map_err(|_| error("Export exceeds 4 MiB or allocation failed."))?;
+    let obj_source = String::from_utf8(obj.0).map_err(|_| error("UTF-8 encoding failed."))?;
+    let mut mtl_source = String::with_capacity(140 + mat.len());
+    let _ = write!(
+        mtl_source,
+        "# RushGraph material library\nnewmtl {mat}\nKa 0.1000 0.1000 0.1000\nKd {:.4} {:.4} {:.4}\nKs 0.2000 0.2000 0.2000\nNs 32.0\nd 1.0\nillum 2\n",
+        diffuse_rgb[0], diffuse_rgb[1], diffuse_rgb[2]
+    );
+    Ok((obj_source, mtl_source))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +274,32 @@ mod tests {
         out.write_str("x").unwrap();
         assert!(out.write_str("x").is_err());
         assert_eq!(out.0.len(), MAX_BYTES);
+    }
+
+    #[test]
+    fn export_and_import_ply_binary_and_ascii_roundtrip() {
+        let positions = [
+            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0,
+        ];
+        let indices = [0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3];
+        let view = MeshView::new(&positions, &indices);
+
+        let bin_bytes = export_ply(&view, true).unwrap();
+        let imported_bin = crate::import_ply(&bin_bytes).unwrap();
+        assert_eq!(imported_bin.positions, positions);
+        assert_eq!(imported_bin.indices, indices);
+
+        let ascii_bytes = export_ply(&view, false).unwrap();
+        let imported_ascii = crate::import_ply(&ascii_bytes).unwrap();
+        assert_eq!(imported_ascii.positions, positions);
+        assert_eq!(imported_ascii.indices, indices);
+
+        let (obj_src, mtl_src) =
+            export_obj_with_mtl(&view, " anodized_alu ", [0.25, 0.55, 0.85]).unwrap();
+        assert!(obj_src.contains("mtllib anodized_alu.mtl"));
+        assert!(obj_src.contains("usemtl anodized_alu"));
+        assert!(obj_src.contains("f 1 3 2"));
+        assert!(mtl_src.contains("newmtl anodized_alu"));
+        assert!(mtl_src.contains("Kd 0.2500 0.5500 0.8500"));
     }
 }

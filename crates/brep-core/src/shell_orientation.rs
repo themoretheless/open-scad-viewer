@@ -65,9 +65,10 @@ pub fn inspect_trimmed(model: &Model, point: [f64; 3], direction: [f64; 3],
         return Ok(out);
     }
     let face = &model.faces[face];
-    let loops = std::iter::once(face.outer).chain(face.holes.iter().copied())
-        .map(|wire| model.loops[wire].coedges.iter().map(|c| c.pcurve.clone()).collect::<Vec<_>>())
-        .collect::<Vec<_>>();
+    let mut loops = Vec::with_capacity(1 + face.holes.len());
+    for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+        loops.push(model.loops[wire].coedges.iter().map(|c| c.pcurve.clone()).collect::<Vec<_>>());
+    }
     if loops.len() > 16 || loops.iter().any(|l| l.len() < 2) || loops.iter().map(Vec::len).sum::<usize>() > 256 {
         return Ok(out);
     }

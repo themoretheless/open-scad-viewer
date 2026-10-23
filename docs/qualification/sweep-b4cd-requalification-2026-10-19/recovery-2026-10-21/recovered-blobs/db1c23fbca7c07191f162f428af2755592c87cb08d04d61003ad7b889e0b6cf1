@@ -1,0 +1,680 @@
+//! Correlated rational Cartesian jet residuals on ORIGINAL Bernstein knot cells.
+//! Lipschitz bounds turn jet errors into world normal/curvature tensor errors.
+use crate::{
+    Error, Result, distance_bounds::Interval as I, surface::Surface, surface_blend::Boundary,
+};
+type Poly = Vec<I>;
+type H = [Poly; 4];
+type Vector = [Poly; 3];
+type Rational = (Vector, Poly);
+pub(super) struct Work {
+    pub cells: usize,
+    pub coefficients: usize,
+    pub max_coefficients: usize,
+    pub max_cells: usize,
+    pub exact_work: u64,
+    pub max_exact: u64,
+}
+fn mapped_knot(k: f64, domain: [f64; 2], reverse: bool) -> f64 {
+    let t = (k - domain[0]) / (domain[1] - domain[0]);
+    if reverse { 1. - t } else { t }
+}
+fn exact_knot_map(k: f64, t: f64, domain: [f64; 2], reverse: bool, w: &mut Work) -> Result<bool> {
+    use cad_predicates::{
+        AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
+        orient2d,
+    };
+    if !t.is_finite() || w.exact_work >= w.max_exact {
+        return Ok(false);
+    }
+    let values = [
+        domain[0],
+        if reverse { 1. } else { 0. },
+        domain[1],
+        if reverse { 0. } else { 1. },
+        k,
+        t,
+    ];
+    let arena = SourceArena::authored(
+        "corner-original-knot-map",
+        1,
+        values
+            .into_iter()
+            .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+            .collect(),
+    )
+    .map_err(|_| Error::new("CORNER_KNOT_MAP", "Invalid authored knot map"))?;
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(
+        &arena,
+        &tolerance,
+        Limits {
+            max_work: w.max_exact - w.exact_work,
+            ..Limits::default()
+        },
+        None,
+    );
+    let pair = |i| [arena.leaf(i).unwrap(), arena.leaf(i + 1).unwrap()];
+    let outcome = orient2d(&mut ctx, pair(0), pair(2), pair(4));
+    w.exact_work += ctx.work_used();
+    Ok(outcome.is_ok_and(|r| matches!(r.outcome, Outcome::Sign(Sign::Zero))))
+}
+fn exhausted() -> Error {
+    Error::new("CORNER_JET_WORK", "Corner jet coefficient budget exhausted")
+}
+fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> Result<Poly> {
+    let n = a.len() - 1;
+    let m = b.len() - 1;
+    let cost = a.len().checked_mul(b.len()).ok_or_else(exhausted)?;
+    if cost > w.max_coefficients.saturating_sub(w.coefficients) {
+        return Err(exhausted());
+    }
+    w.coefficients += cost;
+    let mut c = vec![I::point(0.); n + m + 1];
+    for i in 0..=n {
+        for j in 0..=m {
+            let factor = choose(n, i)?
+                .mul(choose(m, j)?)?
+                .div(choose(n + m, i + j)?)?;
+            c[i + j] = c[i + j].add(a[i].mul(b[j])?.mul(factor)?)?;
+        }
+    }
+    Ok(c)
+}
+fn choose(n: usize, k: usize) -> Result<I> {
+    let mut v = I::point(1.);
+    for j in 0..k.min(n - k) {
+        v = v
+            .mul(I::point((n - j) as f64))?
+            .div(I::point((j + 1) as f64))?;
+    }
+    Ok(v)
+}
+fn add(a: &Poly, b: &Poly, sign: f64) -> Result<Poly> {
+    if a.len() != b.len() {
+        return Err(Error::new(
+            "CORNER_JET_BASIS",
+            "Residual polynomial degrees differ",
+        ));
+    }
+    a.iter()
+        .zip(b)
+        .map(|(x, y)| x.add(y.mul(I::point(sign))?))
+        .collect()
+}
+fn scale(a: &Poly, v: I) -> Result<Poly> {
+    a.iter().map(|x| x.mul(v)).collect()
+}
+fn hull(a: &Poly) -> Result<I> {
+    I::new(
+        a.iter().map(|x| x.lo).fold(f64::INFINITY, f64::min),
+        a.iter().map(|x| x.hi).fold(f64::NEG_INFINITY, f64::max),
+    )
+}
+fn elevate(a: &Poly, degree: usize) -> Result<Poly> {
+    let mut a = a.clone();
+    while a.len() <= degree {
+        let n = a.len();
+        let mut b = vec![a[0]; n + 1];
+        b[n] = a[n - 1];
+        for i in 1..n {
+            let t = I::point(i as f64).div(I::point(n as f64))?;
+            b[i] = a[i - 1].mul(t)?.add(a[i].mul(I::point(1.).sub(t)?)?)?;
+        }
+        a = b;
+    }
+    Ok(a)
+}
+fn difference(mut net: Vec<Vec<[I; 4]>>, axis: usize) -> Result<Vec<Vec<[I; 4]>>> {
+    let degree = if axis == 0 {
+        net.len() - 1
+    } else {
+        net[0].len() - 1
+    };
+    if degree == 0 {
+        for row in &mut net {
+            for p in row {
+                *p = [I::point(0.); 4];
+            }
+        }
+        return Ok(net);
+    }
+    let nu = net.len() - usize::from(axis == 0);
+    let nv = net[0].len() - usize::from(axis == 1);
+    let mut out = vec![vec![[I::point(0.); 4]; nv]; nu];
+    for i in 0..nu {
+        for j in 0..nv {
+            for k in 0..4 {
+                out[i][j][k] = net[i + usize::from(axis == 0)][j + usize::from(axis == 1)][k]
+                    .sub(net[i][j][k])?
+                    .mul(I::point(degree as f64))?;
+            }
+        }
+    }
+    Ok(out)
+}
+fn split(a: &Poly, t: I) -> Result<(Poly, Poly)> {
+    let mut row = a.clone();
+    let mut left = vec![row[0]];
+    let mut right = vec![*row.last().unwrap()];
+    while row.len() > 1 {
+        row = row
+            .windows(2)
+            .map(|p| p[0].mul(I::point(1.).sub(t)?)?.add(p[1].mul(t)?))
+            .collect::<Result<_>>()?;
+        left.push(row[0]);
+        right.push(*row.last().unwrap());
+    }
+    right.reverse();
+    Ok((left, right))
+}
+fn restrict(a: &Poly, lo: I, hi: I) -> Result<Poly> {
+    if lo.lo == 0. && lo.hi == 0. && hi.lo == 1. && hi.hi == 1. {
+        return Ok(a.clone());
+    }
+    let right = if lo.lo == 0. && lo.hi == 0. {
+        a.clone()
+    } else {
+        split(a, lo)?.1
+    };
+    let t = hi.sub(lo)?.div(I::point(1.).sub(lo)?)?.intersect(0., 1.)?;
+    Ok(split(&right, t)?.0)
+}
+fn is_u(b: Boundary) -> bool {
+    matches!(b, Boundary::UStart | Boundary::UEnd)
+}
+fn end(b: Boundary) -> bool {
+    matches!(b, Boundary::UEnd | Boundary::VEnd)
+}
+fn domains(s: &Surface) -> [[f64; 2]; 2] {
+    [
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ]
+}
+fn fields(
+    s: &Surface,
+    b: Boundary,
+    trace: super::Trace,
+    reverse: bool,
+    gain: f64,
+    range: [f64; 2],
+) -> Result<[H; 6]> {
+    let cross = usize::from(!is_u(b));
+    let along = 1 - cross;
+    let mut domain = domains(s);
+    domain[along] = trace.along;
+    let knots = [&s.knots_u, &s.knots_v];
+    let degrees = [s.degree_u, s.degree_v];
+    let counts = [s.control_points.len(), s.control_points[0].len()];
+    let along_span = (degrees[along]..counts[along])
+        .find(|&i| {
+            if knots[along][i] == knots[along][i + 1] {
+                return false;
+            }
+            let low = knots[along][i].max(trace.along[0]);
+            let high = knots[along][i + 1].min(trace.along[1]);
+            if low >= high {
+                return false;
+            }
+            let a = mapped_knot(low, domain[along], reverse);
+            let b = mapped_knot(high, domain[along], reverse);
+            range[0] >= a.min(b) && range[1] <= a.max(b)
+        })
+        .ok_or_else(|| {
+            Error::new(
+                "CORNER_JET_SPAN",
+                "Common seam interval is outside original support spans",
+            )
+        })?;
+    let cross_span = (degrees[cross]..counts[cross])
+        .find(|&i| {
+            knots[cross][i] < knots[cross][i + 1]
+                && if end(b) {
+                    knots[cross][i] < trace.at && trace.at <= knots[cross][i + 1]
+                } else {
+                    knots[cross][i] <= trace.at && trace.at < knots[cross][i + 1]
+                }
+        })
+        .ok_or_else(|| {
+            Error::new(
+                "CORNER_TRACE_SPAN",
+                "Trace has no retained original knot cell",
+            )
+        })?;
+    let span = if cross == 0 {
+        [cross_span, along_span]
+    } else {
+        [along_span, cross_span]
+    };
+    let cell = std::array::from_fn(|k| [knots[k][span[k]], knots[k][span[k] + 1]]);
+    let net = crate::surface_measure::jets::original_span_net(s, span, cell)?;
+    let width = |k: usize| I::point(cell[k][1]).sub(I::point(cell[k][0]));
+    let at = if trace.at == cell[cross][0] {
+        I::point(0.)
+    } else if trace.at == cell[cross][1] {
+        I::point(1.)
+    } else {
+        I::point(trace.at)
+            .sub(I::point(cell[cross][0]))?
+            .div(width(cross)?)?
+            .intersect(0., 1.)?
+    };
+    let along_scale = I::point(domain[along][1])
+        .sub(I::point(domain[along][0]))?
+        .div(width(along)?)?
+        .mul(I::point(if reverse { -1. } else { 1. }))?;
+    let cross_scale = I::point(gain).div(width(cross)?)?;
+    let fraction = |t: f64| -> Result<I> {
+        let t = if reverse {
+            I::point(1.).sub(I::point(t))?
+        } else {
+            I::point(t)
+        };
+        I::point(domain[along][0])
+            .add(
+                I::point(domain[along][1])
+                    .sub(I::point(domain[along][0]))?
+                    .mul(t)?,
+            )?
+            .sub(I::point(cell[along][0]))?
+            .div(width(along)?)?
+            .intersect(0., 1.)
+    };
+    let (lo, hi) = if reverse {
+        (fraction(range[1])?, fraction(range[0])?)
+    } else {
+        (fraction(range[0])?, fraction(range[1])?)
+    };
+    let mut output = Vec::new();
+    for (a, c) in [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)] {
+        let mut d = net.clone();
+        for _ in 0..a {
+            d = difference(d, along)?;
+        }
+        for _ in 0..c {
+            d = difference(d, cross)?;
+        }
+        let mut factor = I::point(1.);
+        for _ in 0..a {
+            factor = factor.mul(along_scale)?;
+        }
+        for _ in 0..c {
+            factor = factor.mul(cross_scale)?;
+        }
+        let count = if cross == 0 { d[0].len() } else { d.len() };
+        let last = if cross == 0 {
+            d.len() - 1
+        } else {
+            d[0].len() - 1
+        };
+        let mut h: H = std::array::from_fn(|_| Vec::new());
+        for i in 0..count {
+            for k in 0..4 {
+                let row = (0..=last)
+                    .map(|j| if cross == 0 { d[j][i][k] } else { d[i][j][k] })
+                    .collect::<Poly>();
+                let value = if at.lo == 0. && at.hi == 0. {
+                    row[0]
+                } else if at.lo == 1. && at.hi == 1. {
+                    row[last]
+                } else {
+                    *split(&row, at)?.0.last().unwrap()
+                };
+                h[k].push(value.mul(factor)?);
+            }
+        }
+        for p in &mut h {
+            *p = restrict(p, lo, hi)?;
+            if reverse {
+                p.reverse();
+            }
+        }
+        output.push(h);
+    }
+    Ok(output.try_into().ok().unwrap())
+}
+fn rational(h: &[H; 6], w: &mut Work) -> Result<[Rational; 6]> {
+    // Elevate derivative polynomials to one degree before forming rational jets.
+    let degree = h.iter().flat_map(|h| h.iter().map(Vec::len)).max().unwrap() - 1;
+    let h = h
+        .iter()
+        .map(|v| {
+            v.iter()
+                .map(|p| elevate(p, degree))
+                .collect::<Result<Vec<_>>>()
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let den = &h[0][3];
+    let den2 = multiply(den, den, w)?;
+    let den3 = multiply(&den2, den, w)?;
+    let mut out = Vec::new();
+    for order in 0..6 {
+        let mut xyz = Vec::new();
+        for axis in 0..3 {
+            let p = if order == 0 {
+                h[0][axis].clone()
+            } else if order <= 2 {
+                add(
+                    &multiply(&h[order][axis], den, w)?,
+                    &multiply(&h[0][axis], &h[order][3], w)?,
+                    -1.,
+                )?
+            } else {
+                let (a, b) = match order {
+                    3 => (1, 1),
+                    4 => (1, 2),
+                    _ => (2, 2),
+                };
+                let mut p = multiply(&h[order][axis], &den2, w)?;
+                p = add(
+                    &p,
+                    &multiply(&multiply(&h[0][axis], &h[order][3], w)?, den, w)?,
+                    -1.,
+                )?;
+                p = add(
+                    &p,
+                    &multiply(&multiply(&h[a][axis], &h[b][3], w)?, den, w)?,
+                    -1.,
+                )?;
+                p = add(
+                    &p,
+                    &multiply(&multiply(&h[b][axis], &h[a][3], w)?, den, w)?,
+                    -1.,
+                )?;
+                p = add(
+                    &p,
+                    &scale(
+                        &multiply(&multiply(&h[0][axis], &h[a][3], w)?, &h[b][3], w)?,
+                        I::point(2.),
+                    )?,
+                    1.,
+                )?;
+                p
+            };
+            xyz.push(p);
+        }
+        out.push((
+            xyz.try_into().ok().unwrap(),
+            if order == 0 {
+                den.clone()
+            } else if order <= 2 {
+                den2.clone()
+            } else {
+                den3.clone()
+            },
+        ));
+    }
+    Ok(out.try_into().ok().unwrap())
+}
+fn norm(v: [I; 3]) -> Result<(f64, f64)> {
+    let mut low = I::point(0.);
+    let mut high = I::point(0.);
+    for x in v {
+        let a = if x.lo <= 0. && x.hi >= 0. {
+            0.
+        } else {
+            x.lo.abs().min(x.hi.abs())
+        };
+        let b = x.lo.abs().max(x.hi.abs());
+        low = low.add(I::point(a).mul(I::point(a))?)?;
+        high = high.add(I::point(b).mul(I::point(b))?)?;
+    }
+    Ok((
+        low.lo.max(0.).sqrt().next_down().max(0.),
+        high.hi.max(0.).sqrt().next_up(),
+    ))
+}
+fn cross(a: [I; 3], b: [I; 3]) -> Result<[I; 3]> {
+    Ok([
+        a[1].mul(b[2])?.sub(a[2].mul(b[1])?)?,
+        a[2].mul(b[0])?.sub(a[0].mul(b[2])?)?,
+        a[0].mul(b[1])?.sub(a[1].mul(b[0])?)?,
+    ])
+}
+fn upper_jet(a: &Rational) -> Result<[I; 3]> {
+    let den = hull(&a.1)?;
+    Ok([
+        hull(&a.0[0])?.div(den)?,
+        hull(&a.0[1])?.div(den)?,
+        hull(&a.0[2])?.div(den)?,
+    ])
+}
+fn residual(a: &Rational, b: &Rational, w: &mut Work) -> Result<f64> {
+    let denominator = multiply(&a.1, &b.1, w)?;
+    let d = hull(&denominator)?;
+    let mut out = [I::point(0.); 3];
+    for k in 0..3 {
+        let x = multiply(&a.0[k], &b.1, w)?;
+        let y = multiply(&b.0[k], &a.1, w)?;
+        let degree = x.len().max(y.len()) - 1;
+        out[k] = hull(&add(&elevate(&x, degree)?, &elevate(&y, degree)?, -1.)?)?.div(d)?;
+    }
+    Ok(norm(out)?.1)
+}
+fn cell(
+    a: &Surface,
+    ab: Boundary,
+    b: &Surface,
+    bb: Boundary,
+    trace: super::Trace,
+    reverse: bool,
+    gain: f64,
+    range: [f64; 2],
+    w: &mut Work,
+) -> Result<Option<[f64; 3]>> {
+    let a = rational(
+        &fields(
+            a,
+            ab,
+            super::natural_trace(a, ab),
+            false,
+            if end(ab) { -1. } else { 1. },
+            range,
+        )?,
+        w,
+    )?;
+    let b = rational(
+        &fields(
+            b,
+            bb,
+            trace,
+            reverse,
+            if end(bb) { gain } else { -gain },
+            range,
+        )?,
+        w,
+    )?;
+    let mut error = [0.; 6];
+    for k in 0..6 {
+        error[k] = residual(&a[k], &b[k], w)?;
+    }
+    let av = upper_jet(&a[1])?;
+    let bv = upper_jet(&a[2])?;
+    let an = norm(av)?.1;
+    let bn = norm(bv)?.1;
+    let (nl, nu) = norm(cross(av, bv)?)?;
+    if nl <= 0. {
+        return Ok(None);
+    }
+    let p = I::point;
+    let dn = p(error[1])
+        .mul(p(bn))?
+        .add(p(error[2]).mul(p(an))?)?
+        .add(p(error[1]).mul(p(error[2]))?)?
+        .hi;
+    let candidate = p(nl).sub(p(dn))?.lo;
+    if candidate <= 0. {
+        return Ok(None);
+    }
+    let normal = p(2.).mul(p(dn))?.div(p(nl))?.hi.min(2.);
+    let refden = p(nl).mul(p(nl))?;
+    let newden = p(candidate).mul(p(candidate))?;
+    let dd = p(2.).mul(p(nu))?.mul(p(dn))?.add(p(dn).mul(p(dn))?)?;
+    let dual = |t: f64, dt: f64| -> Result<(I, I, I)> {
+        let numerator = p(t).mul(p(nu))?;
+        let original = numerator.div(refden)?;
+        let delta = p(dt)
+            .mul(p(nu))?
+            .add(p(t).mul(p(dn))?)?
+            .add(p(dt).mul(p(dn))?)?
+            .div(newden)?
+            .add(numerator.mul(dd)?.div(refden.mul(newden)?)?)?;
+        Ok((original, delta, original.add(delta)?))
+    };
+    let (da, ea, ca) = dual(bn, error[2])?;
+    let (db, eb, cb) = dual(an, error[1])?;
+    let mut tensor = p(0.);
+    for (jet, x, dx, cx) in [(3, da, ea, ca), (5, db, eb, cb)] {
+        let q = p(norm(upper_jet(&a[jet])?)?.1);
+        let dq = p(normal).mul(q)?.add(p(error[jet]))?;
+        tensor = tensor.add(
+            dq.mul(cx.mul(cx)?)?
+                .add(q.mul(p(2.).mul(x)?.mul(dx)?.add(dx.mul(dx)?)?)?)?,
+        )?;
+    }
+    let q = p(norm(upper_jet(&a[4])?)?.1);
+    let dq = p(normal).mul(q)?.add(p(error[4]))?;
+    let cross_error = da.mul(eb)?.add(db.mul(ea)?)?.add(ea.mul(eb)?)?;
+    tensor = tensor.add(p(2.).mul(dq.mul(ca)?.mul(cb)?.add(q.mul(cross_error)?)?)?)?;
+    Ok(Some([error[0], normal, tensor.hi]))
+}
+pub(super) fn inspect(
+    a: &Surface,
+    ab: Boundary,
+    b: &Surface,
+    bb: Boundary,
+    trace: super::Trace,
+    reverse: bool,
+    gain: f64,
+    tol: [f64; 3],
+    w: &mut Work,
+) -> Result<crate::surface_g2::Report> {
+    use crate::surface_g2::{BranchBounds, Orientation, Report};
+    use crate::surface_join::Decision;
+    let mut nodes = vec![0., 1.];
+    for (s, b, t, r) in [
+        (a, ab, super::natural_trace(a, ab), false),
+        (b, bb, trace, reverse),
+    ] {
+        let along = usize::from(is_u(b));
+        let d = t.along;
+        let knots = if along == 0 { &s.knots_u } else { &s.knots_v };
+        let degree = if along == 0 { s.degree_u } else { s.degree_v };
+        let non_c2 = knots.iter().any(|&k| {
+            d[0] < k
+                && k < d[1]
+                && knots.iter().filter(|&&x| x == k).count() > degree.saturating_sub(2)
+        });
+        let cross_knots = if along == 0 { &s.knots_v } else { &s.knots_u };
+        let cross_degree = if along == 0 { s.degree_v } else { s.degree_u };
+        let cross_domain = domains(s)[1 - along];
+        let cross_non_c2 = cross_domain[0] < t.at
+            && t.at < cross_domain[1]
+            && cross_knots.iter().filter(|&&k| k == t.at).count() > cross_degree.saturating_sub(2);
+        let mut exact = true;
+        let mut previous = None;
+        for &k in knots {
+            if d[0] < k && k < d[1] && previous != Some(k) {
+                previous = Some(k);
+                exact &= exact_knot_map(k, mapped_knot(k, d, r), d, r, w)?;
+            }
+        }
+        // A merely rounded normalized knot cannot authorize removal of a
+        // narrow interval from the original chart. Only fresh exact affine
+        // identities permit the common partition, including reversed charts.
+        if non_c2 || cross_non_c2 || !exact {
+            return Ok(Report {
+                position_bounds: [0., f64::INFINITY],
+                branches: std::array::from_fn(|_| BranchBounds {
+                    normal_lower: 0.,
+                    tensor_lower: 0.,
+                    normal_upper: None,
+                    tensor_upper: None,
+                }),
+                orientation: None,
+                regularity_proven: false,
+                decision: Decision::Unresolved,
+                cells: 0,
+            });
+        }
+        for &k in knots {
+            if d[0] < k && k < d[1] {
+                nodes.push(mapped_knot(k, d, r));
+            }
+        }
+    }
+    nodes.sort_by(f64::total_cmp);
+    nodes.dedup();
+    let start = w.cells;
+    let mut pending = nodes.windows(2).map(|p| [p[0], p[1]]).collect::<Vec<_>>();
+    let mut uppers = [0_f64; 3];
+    let mut complete = true;
+    while let Some(range) = pending.pop() {
+        if w.cells == w.max_cells {
+            complete = false;
+            break;
+        }
+        w.cells += 1;
+        let bound = match cell(a, ab, b, bb, trace, reverse, gain, range, w) {
+            Ok(x) => x,
+            Err(e) if e.code == "CORNER_JET_WORK" => {
+                complete = false;
+                break;
+            }
+            Err(e) => return Err(e),
+        };
+        if let Some(bound) = bound {
+            if (0..3).all(|k| bound[k] <= tol[k]) {
+                for k in 0..3 {
+                    uppers[k] = uppers[k].max(bound[k]);
+                }
+                continue;
+            }
+        }
+        let mid = range[0] * 0.5 + range[1] * 0.5;
+        if !(range[0] < mid && mid < range[1]) {
+            complete = false;
+            break;
+        }
+        pending.push([mid, range[1]]);
+        pending.push([range[0], mid]);
+    }
+    let sign = |b: Boundary, along_reversed: bool, cross_sign: f64| {
+        let along = if along_reversed { -1. } else { 1. };
+        (if is_u(b) { -1. } else { 1. }) * along * cross_sign
+    };
+    let same = sign(ab, false, if end(ab) { -1. } else { 1. })
+        == sign(bb, reverse, if end(bb) { 1. } else { -1. });
+    let branch = usize::from(!same);
+    let mut branches = std::array::from_fn(|_| BranchBounds {
+        normal_lower: 0.,
+        tensor_lower: 0.,
+        normal_upper: None,
+        tensor_upper: None,
+    });
+    if complete {
+        branches[branch].normal_upper = Some(uppers[1]);
+        branches[branch].tensor_upper = Some(uppers[2]);
+    }
+    Ok(Report {
+        position_bounds: [0., if complete { uppers[0] } else { f64::INFINITY }],
+        branches,
+        orientation: if complete {
+            Some(if same {
+                Orientation::Same
+            } else {
+                Orientation::Opposite
+            })
+        } else {
+            None
+        },
+        regularity_proven: complete,
+        decision: if complete {
+            Decision::WithinTolerance
+        } else {
+            Decision::Unresolved
+        },
+        cells: w.cells - start,
+    })
+}

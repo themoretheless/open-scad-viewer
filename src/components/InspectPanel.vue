@@ -121,11 +121,16 @@ function updateOffset(rawValue: string | number) {
   emit('update:section-offset', Math.max(safeSectionMin.value, Math.min(safeSectionMax.value, numeric)))
 }
 
+const MAX_NUMBER_FORMAT_CACHE_ENTRIES = 32
 const numberFormatCache = new Map<string, Intl.NumberFormat>()
 function getNumberFormatter(locale: string, digits: number): Intl.NumberFormat {
   const key = `${locale}:${digits}`
   let formatter = numberFormatCache.get(key)
   if (!formatter) {
+    if (numberFormatCache.size >= MAX_NUMBER_FORMAT_CACHE_ENTRIES) {
+      const oldestKey = numberFormatCache.keys().next().value
+      if (oldestKey !== undefined) numberFormatCache.delete(oldestKey)
+    }
     formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: digits })
     numberFormatCache.set(key, formatter)
   }
@@ -134,6 +139,25 @@ function getNumberFormatter(locale: string, digits: number): Intl.NumberFormat {
 
 function formatNumber(value: number, digits = 3) {
   return getNumberFormatter(props.locale, digits).format(value)
+}
+
+function formatSiUnit(value: number, kind: 'length' | 'area' | 'volume', digits = 3) {
+  const fmt = getNumberFormatter(props.locale, digits)
+  if (!Number.isFinite(value)) return '—'
+  const abs = Math.abs(value)
+  if (kind === 'length') {
+    if (abs >= 1000) return `${fmt.format(value / 1000)} m`
+    if (abs > 0 && abs < 0.1) return `${fmt.format(value * 1000)} µm`
+    return `${fmt.format(value)} mm`
+  }
+  if (kind === 'area') {
+    if (abs >= 1_000_000) return `${fmt.format(value / 1_000_000)} m²`
+    if (abs >= 1_000) return `${fmt.format(value / 100)} cm²`
+    return `${fmt.format(value)} mm²`
+  }
+  if (abs >= 1_000_000_000) return `${fmt.format(value / 1_000_000_000)} m³`
+  if (abs >= 10_000) return `${fmt.format(value / 1000)} cm³`
+  return `${fmt.format(value)} mm³`
 }
 
 function formatVector(vector: Vector3 | undefined | null) {
@@ -178,11 +202,11 @@ function sourceLocation(source: SourceProvenanceRow) {
             </div>
             <div v-if="selection.surfaceArea !== undefined">
               <dt>{{ text.area }}</dt>
-              <dd>{{ formatNumber(selection.surfaceArea) }}</dd>
+              <dd :title="formatSiUnit(selection.surfaceArea, 'area')">{{ formatNumber(selection.surfaceArea) }}</dd>
             </div>
             <div v-if="selection.volume !== undefined">
               <dt>{{ text.volume }}</dt>
-              <dd>{{ formatNumber(selection.volume) }}</dd>
+              <dd :title="formatSiUnit(selection.volume, 'volume')">{{ formatNumber(selection.volume) }}</dd>
             </div>
           </dl>
 

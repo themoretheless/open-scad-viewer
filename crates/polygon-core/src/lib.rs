@@ -317,6 +317,261 @@ impl Mesh {
     pub fn export_stl(&self) -> Result<String> {
         mesh_io::export_stl(&self.view()).map_err(mesh_error)
     }
+    /// Total unsigned surface area of the triangle mesh in mm².
+    pub fn surface_area(&self) -> f64 {
+        let mut total = 0.0;
+        let v_count = self.positions.len() / 3;
+        for t in self.indices.as_chunks::<3>().0 {
+            if t[0] >= v_count || t[1] >= v_count || t[2] >= v_count {
+                continue;
+            }
+            let a = [
+                self.positions[3 * t[0]],
+                self.positions[3 * t[0] + 1],
+                self.positions[3 * t[0] + 2],
+            ];
+            let b = [
+                self.positions[3 * t[1]],
+                self.positions[3 * t[1] + 1],
+                self.positions[3 * t[1] + 2],
+            ];
+            let c = [
+                self.positions[3 * t[2]],
+                self.positions[3 * t[2] + 1],
+                self.positions[3 * t[2] + 2],
+            ];
+            total += 0.5 * norm(cross(sub(b, a), sub(c, a)));
+        }
+        total
+    }
+    /// Signed volume enclosed by the oriented triangle mesh in mm³ via divergence theorem.
+    pub fn volume(&self) -> f64 {
+        let mut v6 = 0.0;
+        let v_count = self.positions.len() / 3;
+        for t in self.indices.as_chunks::<3>().0 {
+            if t[0] >= v_count || t[1] >= v_count || t[2] >= v_count {
+                continue;
+            }
+            let a = [
+                self.positions[3 * t[0]],
+                self.positions[3 * t[0] + 1],
+                self.positions[3 * t[0] + 2],
+            ];
+            let b = [
+                self.positions[3 * t[1]],
+                self.positions[3 * t[1] + 1],
+                self.positions[3 * t[1] + 2],
+            ];
+            let c = [
+                self.positions[3 * t[2]],
+                self.positions[3 * t[2] + 1],
+                self.positions[3 * t[2] + 2],
+            ];
+            v6 += dot(a, cross(b, c));
+        }
+        v6 / 6.0
+    }
+    /// Volume-weighted center of mass (centroid) of the solid enclosed by the mesh.
+    /// Falls back to area-weighted surface centroid (or `[0.0; 3]`) if volume vanishes.
+    pub fn center_of_mass(&self) -> [f64; 3] {
+        let mut v6_sum = 0.0;
+        let mut com = [0.0; 3];
+        let mut area_sum = 0.0;
+        let mut surf_com = [0.0; 3];
+        let v_count = self.positions.len() / 3;
+        for t in self.indices.as_chunks::<3>().0 {
+            if t[0] >= v_count || t[1] >= v_count || t[2] >= v_count {
+                continue;
+            }
+            let a = [
+                self.positions[3 * t[0]],
+                self.positions[3 * t[0] + 1],
+                self.positions[3 * t[0] + 2],
+            ];
+            let b = [
+                self.positions[3 * t[1]],
+                self.positions[3 * t[1] + 1],
+                self.positions[3 * t[1] + 2],
+            ];
+            let c = [
+                self.positions[3 * t[2]],
+                self.positions[3 * t[2] + 1],
+                self.positions[3 * t[2] + 2],
+            ];
+            let det = dot(a, cross(b, c));
+            v6_sum += det;
+            for k in 0..3 {
+                com[k] += det * (a[k] + b[k] + c[k]);
+            }
+            let tri_area = 0.5 * norm(cross(sub(b, a), sub(c, a)));
+            area_sum += tri_area;
+            for k in 0..3 {
+                surf_com[k] += tri_area * (a[k] + b[k] + c[k]) / 3.0;
+            }
+        }
+        if v6_sum.abs() > 1e-15 {
+            [
+                com[0] / (4.0 * v6_sum),
+                com[1] / (4.0 * v6_sum),
+                com[2] / (4.0 * v6_sum),
+            ]
+        } else if area_sum > 1e-15 {
+            [
+                surf_com[0] / area_sum,
+                surf_com[1] / area_sum,
+                surf_com[2] / area_sum,
+            ]
+        } else {
+            [0.0; 3]
+        }
+    }
+    /// 3x3 inertia tensor (assuming unit density) relative to the mesh's `center_of_mass()`.
+    pub fn inertia_tensor(&self) -> [[f64; 3]; 3] {
+        let com = self.center_of_mass();
+        let mut cov = [[0.0; 3]; 3];
+        let v_count = self.positions.len() / 3;
+        for t in self.indices.as_chunks::<3>().0 {
+            if t[0] >= v_count || t[1] >= v_count || t[2] >= v_count {
+                continue;
+            }
+            let a = sub(
+                [
+                    self.positions[3 * t[0]],
+                    self.positions[3 * t[0] + 1],
+                    self.positions[3 * t[0] + 2],
+                ],
+                com,
+            );
+            let b = sub(
+                [
+                    self.positions[3 * t[1]],
+                    self.positions[3 * t[1] + 1],
+                    self.positions[3 * t[1] + 2],
+                ],
+                com,
+            );
+            let c = sub(
+                [
+                    self.positions[3 * t[2]],
+                    self.positions[3 * t[2] + 1],
+                    self.positions[3 * t[2] + 2],
+                ],
+                com,
+            );
+            let det = dot(a, cross(b, c));
+            let pts = [a, b, c];
+            for i in 0..3 {
+                for j in 0..3 {
+                    let mut sum = 0.0;
+                    for p in 0..3 {
+                        for q in 0..3 {
+                            let weight = if p == q { 2.0 } else { 1.0 };
+                            sum += weight * pts[p][i] * pts[q][j];
+                        }
+                    }
+                    cov[i][j] += det * sum / 120.0;
+                }
+            }
+        }
+        let trace = cov[0][0] + cov[1][1] + cov[2][2];
+        let mut inertia = [[0.0; 3]; 3];
+        for i in 0..3 {
+            for j in 0..3 {
+                inertia[i][j] = if i == j {
+                    trace - cov[i][i]
+                } else {
+                    -cov[i][j]
+                };
+            }
+        }
+        inertia
+    }
+
+    /// Computes `(surface_area, volume, center_of_mass, inertia_tensor)` in a single pass
+    /// over the triangle indices (with parallel-axis shift for the central inertia tensor).
+    pub fn mass_properties(&self) -> (f64, f64, [f64; 3], [[f64; 3]; 3]) {
+        let mut area_sum = 0.0;
+        let mut v6_sum = 0.0;
+        let mut com_num = [0.0; 3];
+        let mut surf_com = [0.0; 3];
+        let mut cov0 = [[0.0; 3]; 3];
+        let v_count = self.positions.len() / 3;
+        for t in self.indices.as_chunks::<3>().0 {
+            if t[0] >= v_count || t[1] >= v_count || t[2] >= v_count {
+                continue;
+            }
+            let a = [
+                self.positions[3 * t[0]],
+                self.positions[3 * t[0] + 1],
+                self.positions[3 * t[0] + 2],
+            ];
+            let b = [
+                self.positions[3 * t[1]],
+                self.positions[3 * t[1] + 1],
+                self.positions[3 * t[1] + 2],
+            ];
+            let c = [
+                self.positions[3 * t[2]],
+                self.positions[3 * t[2] + 1],
+                self.positions[3 * t[2] + 2],
+            ];
+            let tri_area = 0.5 * norm(cross(sub(b, a), sub(c, a)));
+            area_sum += tri_area;
+            let det = dot(a, cross(b, c));
+            v6_sum += det;
+            for k in 0..3 {
+                let s = a[k] + b[k] + c[k];
+                com_num[k] += det * s;
+                surf_com[k] += tri_area * s / 3.0;
+            }
+            let pts = [a, b, c];
+            let det_120 = det / 120.0;
+            for i in 0..3 {
+                let s_i = a[i] + b[i] + c[i];
+                for j in i..3 {
+                    let s_j = a[j] + b[j] + c[j];
+                    let diag = pts[0][i] * pts[0][j] + pts[1][i] * pts[1][j] + pts[2][i] * pts[2][j];
+                    cov0[i][j] += det_120 * (s_i * s_j + diag);
+                }
+            }
+        }
+        cov0[1][0] = cov0[0][1];
+        cov0[2][0] = cov0[0][2];
+        cov0[2][1] = cov0[1][2];
+
+        let volume = v6_sum / 6.0;
+        let com = if v6_sum.abs() > 1e-15 {
+            let inv = 1.0 / (4.0 * v6_sum);
+            [com_num[0] * inv, com_num[1] * inv, com_num[2] * inv]
+        } else if area_sum > 1e-15 {
+            [
+                surf_com[0] / area_sum,
+                surf_com[1] / area_sum,
+                surf_com[2] / area_sum,
+            ]
+        } else {
+            [0.0; 3]
+        };
+
+        let mut cov = [[0.0; 3]; 3];
+        for i in 0..3 {
+            for j in 0..3 {
+                cov[i][j] = cov0[i][j] - volume * com[i] * com[j];
+            }
+        }
+        let trace = cov[0][0] + cov[1][1] + cov[2][2];
+        let mut inertia = [[0.0; 3]; 3];
+        for i in 0..3 {
+            for j in 0..3 {
+                inertia[i][j] = if i == j {
+                    trace - cov[i][i]
+                } else {
+                    -cov[i][j]
+                };
+            }
+        }
+        (area_sum, volume, com, inertia)
+    }
 }
 
 #[cfg(test)]

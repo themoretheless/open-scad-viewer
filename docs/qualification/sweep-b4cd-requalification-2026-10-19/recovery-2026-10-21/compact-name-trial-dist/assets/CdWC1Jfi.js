@@ -1,0 +1,1 @@
+import"./DEEf_pau.js";import"./8KDJiMDN.js";function e(e){return[`sketch-transform`,`transform`,`instance-create`,`instance-transform`,`instance-place`,`loft`].includes(String(e))}export{e as t};

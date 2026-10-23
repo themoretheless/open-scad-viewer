@@ -223,7 +223,8 @@ export function referenceSemanticEdges(
   const posOffset = opts.posOffset ?? 0
 
   const nScratch = new Float64Array(6)
-  const resultEdges: number[] = []
+  const outPairs = new Uint32Array(totalEdges * 2)
+  let outPtr = 0
 
   for (let e = 0; e < totalEdges; e++) {
     const base = e * 4
@@ -234,7 +235,8 @@ export function referenceSemanticEdges(
 
     if (tri1 === 0xffffffff) {
       // Boundary edge
-      resultEdges.push(v0, v1)
+      outPairs[outPtr++] = v0
+      outPairs[outPtr++] = v1
     } else {
       // Manifold interior edge: check dihedral angle
       computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
@@ -245,14 +247,15 @@ export function referenceSemanticEdges(
         nScratch[2]! * nScratch[5]!
 
       if (dot < threshold) {
-        resultEdges.push(v0, v1)
+        outPairs[outPtr++] = v0
+        outPairs[outPtr++] = v1
       }
     }
   }
 
   return {
-    indices: new Uint32Array(resultEdges),
-    edgeCount: resultEdges.length / 2,
+    indices: outPairs.slice(0, outPtr),
+    edgeCount: outPtr >>> 1,
   }
 }
 
@@ -274,7 +277,8 @@ export async function referenceSemanticEdgesAsync(
   const posOffset = opts.posOffset ?? 0
 
   const nScratch = new Float64Array(6)
-  const resultEdges: number[] = []
+  const outPairs = new Uint32Array(totalEdges * 2)
+  let outPtr = 0
 
   await forEachChunkedAsync(
     totalEdges,
@@ -286,7 +290,8 @@ export async function referenceSemanticEdgesAsync(
       const tri1 = edgeAdjacency[base + 3]!
 
       if (tri1 === 0xffffffff) {
-        resultEdges.push(v0, v1)
+        outPairs[outPtr++] = v0
+        outPairs[outPtr++] = v1
       } else {
         computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
         computeTriNormalInto(tri1, vertices, indices, strideFloats, posOffset, nScratch, 3)
@@ -295,7 +300,8 @@ export async function referenceSemanticEdgesAsync(
           nScratch[1]! * nScratch[4]! +
           nScratch[2]! * nScratch[5]!
         if (dot < threshold) {
-          resultEdges.push(v0, v1)
+          outPairs[outPtr++] = v0
+          outPairs[outPtr++] = v1
         }
       }
     },
@@ -303,7 +309,7 @@ export async function referenceSemanticEdgesAsync(
   )
 
   return {
-    indices: new Uint32Array(resultEdges),
-    edgeCount: resultEdges.length / 2,
+    indices: outPairs.slice(0, outPtr),
+    edgeCount: outPtr >>> 1,
   }
 }

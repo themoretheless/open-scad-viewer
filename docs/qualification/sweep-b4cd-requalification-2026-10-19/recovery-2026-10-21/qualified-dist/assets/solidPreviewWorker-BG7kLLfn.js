@@ -1,0 +1,1 @@
+import{t as e}from"./mainSolidWorkerClient-D5LCI3Dd.js";function t(){return new e(()=>new Worker(new URL(`/assets/mainSolid.worker-DQlYKo9B.js`,``+import.meta.url),{type:`module`}))}export{t};

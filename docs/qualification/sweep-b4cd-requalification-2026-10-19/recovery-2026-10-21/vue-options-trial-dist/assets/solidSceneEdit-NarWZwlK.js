@@ -1,0 +1,1 @@
+import"./brepInspectionCache-Bw4hhUdN.js";import"./direct-modeling-DNNS1VmH.js";function e(e){return[`sketch-transform`,`transform`,`instance-create`,`instance-transform`,`instance-place`,`loft`].includes(String(e))}export{e as t};

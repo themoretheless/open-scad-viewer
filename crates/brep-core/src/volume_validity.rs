@@ -73,11 +73,11 @@ impl Inspector {
         return Err(Error::new("BREP_INVALID_INPUT", "Volume audit requires bounded positive stage budgets"));
     }
         let chart_caps=caps.as_ref().map(|(c,_)|c.clone()).unwrap_or_default();
-        let chart_proposals=proposals.clone();
         let sweep=caps.is_some();
         let caps=caps.filter(|(c,_)|!c.is_empty());
+        let chart_proposals=if sweep {proposals.clone()} else {proposals};
         let boundary_work=boundary_embedding::Inspector::new(model.clone(),tolerance_uv,limits.boundary,max_linear_cells,
-            caps,if sweep {proposals} else {vec![]},sweep)?;
+            caps,if sweep {chart_proposals.clone()} else {vec![]},sweep)?;
         Ok(Self {model,tolerance_uv,limits,boundary_work:Some(boundary_work),boundary:None,result:None,failed:false,completed_steps:0,chart_caps,chart_linear:max_linear_cells,chart_proposals})
     }
     pub fn finished(&self)->bool {self.result.is_some()}
@@ -114,7 +114,7 @@ fn complete_after_boundary(model:&Model,tolerance_uv:f64,limits:Limits,boundary:
     let mut out = Report { proven: false, boundary, nesting: None,
         orientations: (0..model.shells.len()).map(|shell| ShellOrientation {
             shell, expected_outward: !model.bodies.iter().any(|b| b.inner_shells.contains(&shell)),
-            outward: None, attempts: Vec::new() }).collect(),
+            outward: None, attempts: Vec::with_capacity(6) }).collect(),
         orientation_cells: 0, orientation_domain_cells: 0 };
     if !out.boundary.proven { return Ok(out); }
     let nesting = shell_nesting::inspect_with_boundary(model, model.tolerance_mm, tolerance_uv,
@@ -132,7 +132,10 @@ fn complete_after_boundary(model:&Model,tolerance_uv:f64,limits:Limits,boundary:
         }
         let point = bounds.map(|b| b[0]*0.5+b[1]*0.5);
         let directions = [[1.,0.317,0.173],[0.239,1.,0.419],[0.137,0.283,1.]];
-        let mut rays=directions.into_iter().map(|d|(point,d)).collect::<Vec<_>>();
+        let mut rays = Vec::with_capacity(6);
+        for d in directions {
+            rays.push((point, d));
+        }
         // A box centre may lie in the empty hole of a toroidal shell and all
         // rays can miss it. Propose additional rays aimed at a retained chart.
         // Evaluated points only propose origins; every crossing and its normal
@@ -190,7 +193,7 @@ fn frozen_inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_ce
     let mut out = Report { proven: false, boundary, nesting: None,
         orientations: (0..model.shells.len()).map(|shell| ShellOrientation {
             shell, expected_outward: !model.bodies.iter().any(|b| b.inner_shells.contains(&shell)),
-            outward: None, attempts: Vec::new() }).collect(),
+            outward: None, attempts: Vec::with_capacity(6) }).collect(),
         orientation_cells: 0, orientation_domain_cells: 0 };
     if !out.boundary.proven { return Ok(out); }
     let nesting = shell_nesting::inspect_with_boundary(model, model.tolerance_mm, tolerance_uv,
@@ -208,7 +211,10 @@ fn frozen_inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_ce
         }
         let point = bounds.map(|b| b[0]*0.5+b[1]*0.5);
         let directions = [[1.,0.317,0.173],[0.239,1.,0.419],[0.137,0.283,1.]];
-        let mut rays=directions.into_iter().map(|d|(point,d)).collect::<Vec<_>>();
+        let mut rays = Vec::with_capacity(6);
+        for d in directions {
+            rays.push((point, d));
+        }
         // A box centre may lie in the empty hole of a toroidal shell and all
         // rays can miss it. Propose additional rays aimed at a retained chart.
         // Evaluated points only propose origins; every crossing and its normal

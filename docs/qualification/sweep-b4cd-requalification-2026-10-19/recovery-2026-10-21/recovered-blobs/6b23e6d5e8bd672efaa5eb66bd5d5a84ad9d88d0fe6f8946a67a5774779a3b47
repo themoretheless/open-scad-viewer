@@ -1,0 +1,16 @@
+[package]
+name = "mechanical-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = ["codec"]
+codec = ["dep:value-codec"]
+
+[dependencies]
+value-codec = { workspace = true, optional = true }

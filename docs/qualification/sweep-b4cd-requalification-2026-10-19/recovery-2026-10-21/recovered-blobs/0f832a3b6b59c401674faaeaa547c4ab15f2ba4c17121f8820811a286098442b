@@ -1,0 +1,321 @@
+{
+ "source": "union(){cube(1);cube(2);cube(3);}",
+ "operations": [
+  {
+   "id": 0,
+   "operationId": "opv1:18e23c080a4c12212725174cfbd2b4c1224ff92e327236d5559b12c19bc89d4f",
+   "parent": null,
+   "childOrdinal": 0,
+   "name": "union",
+   "category": "boolean",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "union",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 1,
+   "operationId": "opv1:1c27a04f5656000f7c3bab28d2b0657ceee422d37f63a50df6998b9b04372032",
+   "parent": 0,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "union",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 2,
+   "operationId": "opv1:0b7f4ac12a9066c2773032a97a112e13d37b7662e4e229d973f06a728fc6459b",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "union",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:37289bd5c03288aaa7e24d047fa899cc9222a41546a7df108c86d09448da1398"
+  },
+  {
+   "id": 3,
+   "operationId": "opv1:a90d9cd2f4fa6d0e8045846450e44065cb37e6bd098dd7b8347208f94e1a8d24",
+   "parent": 1,
+   "childOrdinal": 1,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "union",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 1
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:37289bd5c03288aaa7e24d047fa899cc9222a41546a7df108c86d09448da1398"
+  },
+  {
+   "id": 4,
+   "operationId": "opv1:c42978713c731df1ab293606f70f60e8034300d792a77286c75a1a8da933fd26",
+   "parent": 1,
+   "childOrdinal": 2,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "union",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 2
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:37289bd5c03288aaa7e24d047fa899cc9222a41546a7df108c86d09448da1398"
+  }
+ ],
+ "occurrences": [
+  {
+   "id": 0,
+   "occurrenceId": "occv1:b3c74e869ba095545026f91ebb2608244a3acccc955b5d66b0c8ee9fb21cc352",
+   "operation": 0,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 3,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:e4e3d2bc95b408e4a0270603fbc517a0115ec7950be21e7170dc044d4303cea3"
+  },
+  {
+   "id": 1,
+   "occurrenceId": "occv1:51cf387a7e961cfdb7284a267634021865753dfee60b155fb136a85c35ec08af",
+   "operation": 1,
+   "parent": 0,
+   "staticParent": 0,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 2,
+   "occurrenceId": "occv1:32ccf0af829874a2295f1991781ae0e0c3265f91f95d34147e73de21b64eaa42",
+   "operation": 2,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 0,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:722b3045a53bceb662e269ee64dc47a1a4755205a79b3dd0a801aff88da85f74"
+  },
+  {
+   "id": 3,
+   "occurrenceId": "occv1:30cd6cdc90daa208675377041329567a211f94d4bbfa2e202bea2b69fc44d007",
+   "operation": 3,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 1,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:29a8fbec046dbcdcd0420e4060d41c0612b8e802a2390fe4570db69d7a8f1450"
+  },
+  {
+   "id": 4,
+   "occurrenceId": "occv1:cc953f057a777776d38eb8a79ff7d62cc4cc8e61dc0cb35eb40823e1529c45a2",
+   "operation": 4,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 2,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:4882b7a093e7615124874a82b9d413c02269b5ba56f35828075d0ec0b3985925"
+  }
+ ],
+ "nodes": [
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    1,
+    1,
+    1
+   ],
+   "center": false,
+   "id": 0
+  },
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    2,
+    2,
+    2
+   ],
+   "center": false,
+   "id": 1
+  },
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    3,
+    3,
+    3
+   ],
+   "center": false,
+   "id": 2
+  },
+  {
+   "kind": "boolean",
+   "operation": "union",
+   "valueType": {
+    "geometryKind": "solid-set",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "inputs": [
+    0,
+    1,
+    2
+   ],
+   "id": 3
+  }
+ ],
+ "result": {
+  "tag": "single",
+  "item": {
+   "node": 3,
+   "producerOccurrence": 0,
+   "identityOccurrence": 0,
+   "color": [
+    0.26,
+    0.52,
+    0.96,
+    1
+   ]
+  }
+ },
+ "execution": {
+  "version": "semantic-execution-v2",
+  "evaluationOrder": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "discardedEffects": [],
+  "terminal": null
+ }
+}

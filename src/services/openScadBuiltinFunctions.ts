@@ -946,10 +946,117 @@ const HANDLERS: Readonly<Record<OpenScadBuiltinFunctionName, BuiltinHandler>> = 
   },
 })
 
-const BUILTIN_NAMES = new Set<string>(OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES)
+const BUILTIN_NAMES: ReadonlySet<string> = new Set<string>(OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES)
+
+/**
+ * Common OpenSCAD built-in modules/transforms/functions used alongside
+ * `OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES` for $O(1)$ lookup and typo suggestions.
+ */
+const OPENSCAD_EXTENDED_BUILTIN_CANDIDATES: readonly string[] = Object.freeze([
+  ...OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES,
+  'cube',
+  'sphere',
+  'cylinder',
+  'polyhedron',
+  'circle',
+  'square',
+  'polygon',
+  'text',
+  'import',
+  'surface',
+  'translate',
+  'rotate',
+  'scale',
+  'resize',
+  'mirror',
+  'multmatrix',
+  'color',
+  'offset',
+  'hull',
+  'minkowski',
+  'union',
+  'difference',
+  'intersection',
+  'linear_extrude',
+  'rotate_extrude',
+  'projection',
+  'render',
+  'children',
+  'echo',
+  'assert',
+])
+
+const EXTENDED_BUILTIN_SET: ReadonlySet<string> = new Set<string>(OPENSCAD_EXTENDED_BUILTIN_CANDIDATES)
 
 export function isOpenScadBuiltinFunctionName(name: string): name is OpenScadBuiltinFunctionName {
   return BUILTIN_NAMES.has(name)
+}
+
+/**
+ * Fast $O(1)$ lookup checking whether `name` is a standard OpenSCAD built-in
+ * function or built-in primitive/transformation identifier using a precomputed `ReadonlySet<string>`.
+ */
+export function isOpenScadBuiltinFunction(name: string): boolean {
+  if (typeof name !== 'string' || name.length === 0) return false
+  return BUILTIN_NAMES.has(name) || EXTENDED_BUILTIN_SET.has(name)
+}
+
+function computeLevenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0
+  const m = a.length
+  const n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+
+  const prev = new Uint16Array(n + 1)
+  const curr = new Uint16Array(n + 1)
+  for (let j = 0; j <= n; j++) prev[j] = j
+
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i
+    const charA = a.charCodeAt(i - 1)
+    for (let j = 1; j <= n; j++) {
+      const cost = charA === b.charCodeAt(j - 1) ? 0 : 1
+      const del = prev[j]! + 1
+      const ins = curr[j - 1]! + 1
+      const sub = prev[j - 1]! + cost
+      curr[j] = Math.min(del, ins, sub)
+    }
+    prev.set(curr)
+  }
+  return prev[n]!
+}
+
+/**
+ * Suggests the closest OpenSCAD built-in function or module name within `maxEditDistance`
+ * (default: 2) using Levenshtein edit distance, or returns `null` if no close match exists.
+ */
+export function findClosestOpenScadBuiltinFunction(
+  typoName: string,
+  maxEditDistance = 2,
+): string | null {
+  if (typeof typoName !== 'string') return null
+  const normalized = typoName.trim().toLowerCase()
+  if (normalized.length === 0 || maxEditDistance < 0) return null
+  if (EXTENDED_BUILTIN_SET.has(normalized)) return normalized
+
+  let bestCandidate: string | null = null
+  let bestDistance = Math.floor(maxEditDistance) + 1
+
+  for (const candidate of OPENSCAD_EXTENDED_BUILTIN_CANDIDATES) {
+    if (Math.abs(candidate.length - normalized.length) >= bestDistance) continue
+    const dist = computeLevenshteinDistance(normalized, candidate)
+    if (dist < bestDistance) {
+      bestDistance = dist
+      bestCandidate = candidate
+      if (dist === 1) {
+        // Keep scanning only if an exact 0-distance match could exist (already checked above)
+        break
+      }
+    }
+  }
+
+  return bestCandidate
 }
 
 /** Evaluate one already-bound call, or explicitly report that it is a user or

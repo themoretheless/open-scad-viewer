@@ -178,11 +178,56 @@ impl value_codec::Serialize for Field {
                 object.insert("kind".into(), value_codec::Value::String("capsule".into()));
                 value_codec::Value::Object(object)
             }
+            Self::Octahedron { center, size } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("size".into(), value_codec::Serialize::to_value(size));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("octahedron".into()),
+                );
+                value_codec::Value::Object(object)
+            }
+            Self::HexPrism {
+                center,
+                radius,
+                half_height,
+            }
+            | Self::TriangularPrism {
+                center,
+                radius,
+                half_height,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "half_height".into(),
+                    value_codec::Serialize::to_value(half_height),
+                );
+                let kind = match self {
+                    Self::HexPrism { .. } => "hex_prism",
+                    _ => "triangular_prism",
+                };
+                object.insert("kind".into(), value_codec::Value::String(kind.into()));
+                value_codec::Value::Object(object)
+            }
             Self::Union { a, b } => {
                 let mut object = value_codec::Map::new();
                 object.insert("a".into(), value_codec::Serialize::to_value(a));
                 object.insert("b".into(), value_codec::Serialize::to_value(b));
                 object.insert("kind".into(), value_codec::Value::String("union".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::SmoothIntersection { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("smooth_intersection".into()),
+                );
                 value_codec::Value::Object(object)
             }
             Self::SmoothDifference { a, b, radius } => {
@@ -276,6 +321,25 @@ impl value_codec::Serialize for Field {
                     "kind".into(),
                     value_codec::Value::String("elongate".into()),
                 );
+                value_codec::Value::Object(object)
+            }
+            Self::Mirror { input, axis } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert("axis".into(), value_codec::Serialize::to_value(axis));
+                object.insert("kind".into(), value_codec::Value::String("mirror".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Taper {
+                input,
+                height,
+                factor,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("input".into(), value_codec::Serialize::to_value(input));
+                object.insert("height".into(), value_codec::Serialize::to_value(height));
+                object.insert("factor".into(), value_codec::Serialize::to_value(factor));
+                object.insert("kind".into(), value_codec::Value::String("taper".into()));
                 value_codec::Value::Object(object)
             }
             Self::Translate { input, vector } => {
@@ -574,6 +638,80 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                 )?;
                 Ok(Self::Capsule { a, b, radius })
             }
+            "octahedron" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let center: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("center")
+                        .ok_or_else(|| value_codec::error("Missing field center"))?,
+                )?;
+                let size: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("size")
+                        .ok_or_else(|| value_codec::error("Missing field size"))?,
+                )?;
+                Ok(Self::Octahedron { center, size })
+            }
+            "hex_prism" | "triangular_prism" => {
+                let kind = value["kind"].as_str().unwrap_or("hex_prism").to_owned();
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let center: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("center")
+                        .ok_or_else(|| value_codec::error("Missing field center"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                let half_height: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("half_height")
+                        .ok_or_else(|| value_codec::error("Missing field half_height"))?,
+                )?;
+                Ok(if kind == "hex_prism" {
+                    Self::HexPrism {
+                        center,
+                        radius,
+                        half_height,
+                    }
+                } else {
+                    Self::TriangularPrism {
+                        center,
+                        radius,
+                        half_height,
+                    }
+                })
+            }
+            "smooth_intersection" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let a: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                Ok(Self::SmoothIntersection { a, b, radius })
+            }
             "smooth_difference" => {
                 let mut object = value
                     .as_object()
@@ -697,6 +835,49 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                 Ok(Self::Elongate {
                     input,
                     half_extents,
+                })
+            }
+            "mirror" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let input: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("input")
+                        .ok_or_else(|| value_codec::error("Missing field input"))?,
+                )?;
+                let axis: [bool; 3] = value_codec::Deserialize::from_value(
+                    object
+                        .remove("axis")
+                        .ok_or_else(|| value_codec::error("Missing field axis"))?,
+                )?;
+                Ok(Self::Mirror { input, axis })
+            }
+            "taper" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let input: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("input")
+                        .ok_or_else(|| value_codec::error("Missing field input"))?,
+                )?;
+                let height: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("height")
+                        .ok_or_else(|| value_codec::error("Missing field height"))?,
+                )?;
+                let factor: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("factor")
+                        .ok_or_else(|| value_codec::error("Missing field factor"))?,
+                )?;
+                Ok(Self::Taper {
+                    input,
+                    height,
+                    factor,
                 })
             }
             "translate" => {

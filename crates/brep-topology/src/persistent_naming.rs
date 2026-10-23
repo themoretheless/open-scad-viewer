@@ -202,7 +202,7 @@ impl ChangeKind {
         }
     }
 
-    fn parse(value: &str) -> Option<Self> {
+    pub fn parse(value: &str) -> Option<Self> {
         Some(match value {
             "persisted" => Self::Persisted,
             "generated" => Self::Generated,

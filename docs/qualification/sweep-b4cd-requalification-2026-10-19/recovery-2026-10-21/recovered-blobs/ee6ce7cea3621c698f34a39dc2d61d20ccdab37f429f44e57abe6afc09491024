@@ -1,0 +1,291 @@
+//! Exact regularized operations on filled rational polygon regions.
+//! Vertical cells cover holes and disconnected/nonconvex material without fitting.
+use super::*;
+pub(super) fn cross(a: &Point, b: &Point) -> Q {
+    &a[0] * &b[1] - &a[1] * &b[0]
+}
+fn sub(a: &Point, b: &Point) -> Point {
+    [&a[0] - &b[0], &a[1] - &b[1]]
+}
+pub(super) fn hull(mut p: Vec<Point>) -> Vec<Point> {
+    p.sort();
+    p.dedup();
+    if p.len() < 3 {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    for q in &p {
+        while out.len() > 1
+            && cross(
+                &sub(out.last().unwrap(), &out[out.len() - 2]),
+                &sub(q, out.last().unwrap()),
+            ) <= Q::zero()
+        {
+            out.pop();
+        }
+        out.push(q.clone());
+    }
+    let lower = out.len();
+    for q in p.iter().rev().skip(1) {
+        while out.len() > lower
+            && cross(
+                &sub(out.last().unwrap(), &out[out.len() - 2]),
+                &sub(q, out.last().unwrap()),
+            ) <= Q::zero()
+        {
+            out.pop();
+        }
+        out.push(q.clone());
+    }
+    out.pop();
+    if out.len() < 3 { Vec::new() } else { out }
+}
+fn bounded(r: &Rings) -> Result<()> {
+    if r.iter().map(Vec::len).sum::<usize>() > 8192
+        || r.iter()
+            .flatten()
+            .flatten()
+            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
+    {
+        return Err(refused(
+            "Minkowski exact coordinate or edge budget exceeded",
+        ));
+    }
+    Ok(())
+}
+fn convex_ring(r: &[Point]) -> Option<Vec<Point>> {
+    let h = hull(r.to_vec());
+    if h.len() != r.len() || h.len() < 3 {
+        return None;
+    }
+    let start = r.iter().position(|p| *p == h[0])?;
+    if (0..h.len()).all(|i| r[(start + i) % r.len()] == h[i]) {
+        Some(h)
+    } else {
+        None
+    }
+}
+fn cells(r: &Rings) -> Result<Rings> {
+    bounded(r)?;
+    if r.len() == 1
+        && let Some(h) = convex_ring(&r[0])
+    {
+        return Ok(vec![h]);
+    }
+    let mut xs: Vec<_> = r.iter().flatten().map(|p| p[0].clone()).collect();
+    xs.sort();
+    xs.dedup();
+    if xs.len() > 512 {
+        return Err(refused("Minkowski vertical partition budget exceeded"));
+    }
+    let edges: Vec<_> = r
+        .iter()
+        .flat_map(|ring| (0..ring.len()).map(|i| (&ring[i], &ring[(i + 1) % ring.len()])))
+        .collect();
+    let mut out = Vec::new();
+    for slab in xs.windows(2) {
+        let mid = (&slab[0] + &slab[1]) / Q::from_integer(2.into());
+        let mut hits = Vec::new();
+        for (a, b) in &edges {
+            if a[0].clone().min(b[0].clone()) < mid && mid < a[0].clone().max(b[0].clone()) {
+                let y = |x: &Q| &a[1] + (x - &a[0]) * (&b[1] - &a[1]) / (&b[0] - &a[0]);
+                hits.push((
+                    y(&mid),
+                    y(&slab[0]),
+                    y(&slab[1]),
+                    if b[0] > a[0] { 1i64 } else { -1 },
+                ));
+            }
+        }
+        hits.sort();
+        let mut winding = 0i64;
+        let mut lower = None;
+        let mut i = 0;
+        while i < hits.len() {
+            let mut j = i + 1;
+            let mut jump = hits[i].3;
+            while j < hits.len() && hits[j].0 == hits[i].0 {
+                jump += hits[j].3;
+                j += 1;
+            }
+            let before = winding;
+            winding += jump;
+            if before <= 0 && winding > 0 {
+                lower = Some((hits[i].1.clone(), hits[i].2.clone()));
+            }
+            if before > 0 && winding <= 0 {
+                let (lo, hi) = lower
+                    .take()
+                    .ok_or_else(|| refused("Incomplete Minkowski vertical winding"))?;
+                let cell = hull(vec![
+                    [slab[0].clone(), lo],
+                    [slab[1].clone(), hi],
+                    [slab[1].clone(), hits[i].2.clone()],
+                    [slab[0].clone(), hits[i].1.clone()],
+                ]);
+                if !cell.is_empty() {
+                    out.push(cell);
+                    if out.len() > 1024 {
+                        return Err(refused("Minkowski convex cell budget exceeded"));
+                    }
+                }
+            }
+            i = j;
+        }
+        if winding != 0 || lower.is_some() {
+            return Err(refused("Minkowski vertical winding does not close"));
+        }
+    }
+    Ok(out)
+}
+pub(super) fn sum(a: &Rings, b: &Rings) -> Result<Rings> {
+    if a.is_empty() || b.is_empty() {
+        return Ok(Vec::new());
+    }
+    let a = cells(a)?;
+    let b = cells(b)?;
+    if a.len().saturating_mul(b.len()) > 2048 {
+        return Err(refused("Minkowski convex pair budget exceeded"));
+    }
+    let mut parts = Vec::new();
+    let mut count = 0;
+    for x in &a {
+        for y in &b {
+            let points = x
+                .iter()
+                .flat_map(|p| y.iter().map(move |q| [&p[0] + &q[0], &p[1] + &q[1]]))
+                .collect();
+            let h = hull(points);
+            count += h.len();
+            if count > 8192 {
+                return Err(refused("Minkowski union edge budget exceeded"));
+            }
+            parts.push(h);
+        }
+    }
+    let out = arrangement::union(&parts)?;
+    bounded(&out)?;
+    Ok(out)
+}
+fn shifted(r: &Rings, p: &Point) -> Rings {
+    r.iter()
+        .map(|r| r.iter().map(|q| [&q[0] - &p[0], &q[1] - &p[1]]).collect())
+        .collect()
+}
+fn convex_erode(a: &[Point], b: &Rings) -> Vec<Point> {
+    let mut out: Vec<_> = a.iter().map(|p| sub(p, &b[0][0])).collect();
+    for i in 0..a.len() {
+        if out.is_empty() {
+            break;
+        }
+        let edge = sub(&a[(i + 1) % a.len()], &a[i]);
+        let support = b.iter().flatten().map(|p| cross(&edge, p)).min().unwrap();
+        let side = |p: &Point| cross(&edge, &sub(p, &a[i])) + &support;
+        let mut clipped = Vec::new();
+        for j in 0..out.len() {
+            let p = &out[j];
+            let q = &out[(j + 1) % out.len()];
+            let x = side(p);
+            let y = side(q);
+            if x >= Q::zero() {
+                clipped.push(p.clone());
+            }
+            if (x < Q::zero() && y > Q::zero()) || (x > Q::zero() && y < Q::zero()) {
+                let t = &x / (&x - &y);
+                clipped.push([&p[0] + (&q[0] - &p[0]) * &t, &p[1] + (&q[1] - &p[1]) * &t]);
+            }
+        }
+        out = hull(clipped);
+    }
+    out
+}
+pub(super) fn erode(a: &Rings, b: &Rings) -> Result<Rings> {
+    if b.is_empty() {
+        return Err(refused("Erosion by an empty filled kernel is unbounded"));
+    }
+    if a.is_empty() {
+        return Ok(Vec::new());
+    }
+    bounded(a)?;
+    bounded(b)?;
+    if a.len() == 1
+        && let Some(convex) = convex_ring(&a[0])
+    {
+        let h = convex_erode(&convex, b);
+        return Ok(if h.is_empty() { Vec::new() } else { vec![h] });
+    }
+    let candidate = shifted(a, &b[0][0]);
+    let mut points = Vec::new();
+    for p in candidate.iter().flatten() {
+        for q in b.iter().flatten() {
+            points.push([&p[0] + &q[0], &p[1] + &q[1]]);
+        }
+    }
+    let lo: Point =
+        std::array::from_fn(|k| points.iter().map(|p| p[k].clone()).min().unwrap() - Q::one());
+    let hi: Point =
+        std::array::from_fn(|k| points.iter().map(|p| p[k].clone()).max().unwrap() + Q::one());
+    let universe = vec![vec![
+        lo.clone(),
+        [hi[0].clone(), lo[1].clone()],
+        hi.clone(),
+        [lo[0].clone(), hi[1].clone()],
+    ]];
+    let complement = arrangement::boolean(&universe, a, "difference")?;
+    let reflected = b
+        .iter()
+        .map(|r| r.iter().map(|p| [-&p[0], -&p[1]]).collect())
+        .collect();
+    let forbidden = sum(&complement, &reflected)?;
+    let out = arrangement::boolean(&candidate, &forbidden, "difference")?;
+    bounded(&out)?;
+    Ok(out)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn ring(a: &[[i64; 2]]) -> Vec<Point> {
+        a.iter()
+            .map(|p| p.map(|v| Q::from_integer(v.into())))
+            .collect()
+    }
+    #[test]
+    fn exact_nonconvex_holes_and_collapsed_erosion() {
+        let a = vec![ring(&[[0, 0], [4, 0], [4, 4], [0, 4]])];
+        let b = vec![ring(&[[-1, -1], [1, -1], [1, 1], [-1, 1]])];
+        let s = sum(&a, &b).unwrap();
+        assert_eq!(arrangement::area(&s[0]), Q::from_integer(36.into()));
+        let e = erode(&a, &b).unwrap();
+        assert_eq!(arrangement::area(&e[0]), Q::from_integer(4.into()));
+        assert!(
+            erode(&a, &vec![ring(&[[-3, -3], [3, -3], [3, 3], [-3, 3]])])
+                .unwrap()
+                .is_empty()
+        );
+        let l = vec![ring(&[[0, 0], [4, 0], [4, 1], [1, 1], [1, 4], [0, 4]])];
+        assert_eq!(
+            sum(&l, &b)
+                .unwrap()
+                .iter()
+                .map(|r| arrangement::area(r))
+                .sum::<Q>(),
+            Q::from_integer(27.into())
+        );
+        let frame = vec![
+            ring(&[[0, 0], [10, 0], [10, 10], [0, 10]]),
+            ring(&[[3, 3], [3, 7], [7, 7], [7, 3]]),
+        ];
+        let s = sum(&frame, &b).unwrap();
+        assert_eq!(s.len(), 2);
+        assert_eq!(
+            s.iter().map(|r| arrangement::area(r)).sum::<Q>(),
+            Q::from_integer(140.into())
+        );
+        let e = erode(&frame, &b).unwrap();
+        assert_eq!(e.len(), 2);
+        assert_eq!(
+            e.iter().map(|r| arrangement::area(r)).sum::<Q>(),
+            Q::from_integer(28.into())
+        );
+    }
+}

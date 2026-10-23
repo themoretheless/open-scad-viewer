@@ -329,3 +329,190 @@ fn serialized_tolerance_identity_cannot_be_substituted() {
         .unwrap() = value_codec::Value::String("forged".into());
     assert!(<ToleranceContext as value_codec::Deserialize>::from_value(value).is_err());
 }
+
+#[test]
+fn incircle2d_coplanar3d_and_collinear3d_predicates() {
+    // Unit circle through (1,0), (0,1), (-1,0) in CCW order.
+    let a = [1.0, 0.0];
+    let b = [0.0, 1.0];
+    let c = [-1.0, 0.0];
+    assert_eq!(incircle2d(a, b, c, [0.0, 0.0]), Sign::Positive);
+    assert_eq!(incircle2d(a, b, c, [0.0, -1.0]), Sign::Zero);
+    assert_eq!(incircle2d(a, b, c, [0.0, -2.0]), Sign::Negative);
+
+    // Near-cocircular perturbation resolved by exact expansion.
+    assert_eq!(
+        incircle2d(a, b, c, [0.0, -1.0 + f64::EPSILON]),
+        Sign::Positive
+    );
+    assert_eq!(
+        incircle2d(a, b, c, [0.0, -1.0 - f64::EPSILON]),
+        Sign::Negative
+    );
+
+    // Coplanar3d and Collinear3d checks.
+    assert!(coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 0.0],
+        0.0
+    ));
+    assert!(!coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 1e-4],
+        1e-6
+    ));
+    assert!(coplanar3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [2.0, 3.0, 1e-7],
+        1e-6
+    ));
+
+    assert!(collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0],
+        0.0
+    ));
+    assert!(!collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0 + 1e-3],
+        1e-6
+    ));
+    assert!(collinear3d(
+        [0.0, 0.0, 0.0],
+        [1.0, 2.0, 3.0],
+        [2.0, 4.0, 6.0 + 1e-7],
+        1e-5
+    ));
+}
+
+#[test]
+fn insphere3d_and_segment_intersects_segment_2d_exact_predicates() {
+    // Unit sphere through (1,0,0), (0,1,0), (-1,0,0), (0,0,1):
+    // orient3d(a, b, c, d) > 0 since base (1,0,0)->(0,1,0)->(-1,0,0) is CCW in XY and d=(0,0,1) has z>0.
+    let a = [1.0, 0.0, 0.0];
+    let b = [0.0, 1.0, 0.0];
+    let c = [-1.0, 0.0, 0.0];
+    let d = [0.0, 0.0, 1.0];
+    assert_eq!(insphere3d(a, b, c, d, [0.0, 0.0, 0.0]), Sign::Positive);
+    assert_eq!(insphere3d(a, b, c, d, [0.0, -1.0, 0.0]), Sign::Zero);
+    assert_eq!(insphere3d(a, b, c, d, [0.0, 0.0, -1.0]), Sign::Zero);
+    assert_eq!(insphere3d(a, b, c, d, [0.0, 0.0, 2.0]), Sign::Negative);
+    // Near-cospherical perturbation resolved by exact expansion.
+    assert_eq!(
+        insphere3d(a, b, c, d, [0.0, 0.0, -1.0 + f64::EPSILON]),
+        Sign::Positive
+    );
+    assert_eq!(
+        insphere3d(a, b, c, d, [0.0, 0.0, -1.0 - f64::EPSILON]),
+        Sign::Negative
+    );
+
+    // 2D segment intersection: proper crossing, endpoint touch, collinear overlap, and disjoint.
+    assert!(segment_intersects_segment_2d(
+        [0.0, 0.0],
+        [2.0, 2.0],
+        [0.0, 2.0],
+        [2.0, 0.0]
+    ));
+    assert!(segment_intersects_segment_2d(
+        [0.0, 0.0],
+        [2.0, 0.0],
+        [2.0, 0.0],
+        [2.0, 2.0]
+    ));
+    assert!(segment_intersects_segment_2d(
+        [0.0, 0.0],
+        [3.0, 0.0],
+        [1.0, 0.0],
+        [4.0, 0.0]
+    ));
+    assert!(!segment_intersects_segment_2d(
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [2.0, 0.0],
+        [3.0, 0.0]
+    ));
+    assert!(!segment_intersects_segment_2d(
+        [0.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 2.0],
+        [1.0, 3.0]
+    ));
+
+    // point_in_triangle_2d: inside, boundary, vertex, outside, both CCW and CW.
+    let ta = [0.0, 0.0];
+    let tb = [4.0, 0.0];
+    let tc = [0.0, 4.0];
+    assert_eq!(point_in_triangle_2d([1.0, 1.0], ta, tb, tc), Sign::Positive);
+    assert_eq!(point_in_triangle_2d([1.0, 1.0], ta, tc, tb), Sign::Positive);
+    assert_eq!(point_in_triangle_2d([2.0, 2.0], ta, tb, tc), Sign::Zero);
+    assert_eq!(point_in_triangle_2d([0.0, 0.0], ta, tb, tc), Sign::Zero);
+    assert_eq!(point_in_triangle_2d([3.0, 3.0], ta, tb, tc), Sign::Negative);
+
+    // point_in_tetrahedron_3d: inside, face boundary, vertex, outside, both orientations.
+    let qa = [0.0, 0.0, 0.0];
+    let qb = [4.0, 0.0, 0.0];
+    let qc = [0.0, 4.0, 0.0];
+    let qd = [0.0, 0.0, 4.0];
+    assert_eq!(
+        point_in_tetrahedron_3d([0.5, 0.5, 0.5], qa, qb, qc, qd),
+        Sign::Positive
+    );
+    assert_eq!(
+        point_in_tetrahedron_3d([0.5, 0.5, 0.5], qa, qc, qb, qd),
+        Sign::Positive
+    );
+    assert_eq!(
+        point_in_tetrahedron_3d([1.0, 1.0, 0.0], qa, qb, qc, qd),
+        Sign::Zero
+    );
+    assert_eq!(
+        point_in_tetrahedron_3d([0.0, 0.0, 4.0], qa, qb, qc, qd),
+        Sign::Zero
+    );
+    assert_eq!(
+        point_in_tetrahedron_3d([2.0, 2.0, 2.0], qa, qb, qc, qd),
+        Sign::Negative
+    );
+
+    // segment_triangle_intersect_3d_exact: interior piercing, boundary/endpoint touch, and disjoint.
+    let tri_a = [0.0, 0.0, 0.0];
+    let tri_b = [4.0, 0.0, 0.0];
+    let tri_c = [0.0, 4.0, 0.0];
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([1.0, 1.0, -1.0], [1.0, 1.0, 1.0], tri_a, tri_b, tri_c),
+        Sign::Positive
+    );
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([1.0, 1.0, 1.0], [1.0, 1.0, -1.0], tri_a, tri_b, tri_c),
+        Sign::Positive
+    );
+    // Touching triangle edge (x + y = 4, z = 0) at (2, 2, 0).
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([2.0, 2.0, -1.0], [2.0, 2.0, 1.0], tri_a, tri_b, tri_c),
+        Sign::Zero
+    );
+    // Endpoint resting on interior of triangle.
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([1.0, 1.0, 0.0], [1.0, 1.0, 2.0], tri_a, tri_b, tri_c),
+        Sign::Zero
+    );
+    // Passing outside triangle in XY plane.
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([3.0, 3.0, -1.0], [3.0, 3.0, 1.0], tri_a, tri_b, tri_c),
+        Sign::Negative
+    );
+    // AABB disjoint above triangle plane.
+    assert_eq!(
+        segment_triangle_intersect_3d_exact([1.0, 1.0, 2.0], [1.0, 1.0, 5.0], tri_a, tri_b, tri_c),
+        Sign::Negative
+    );
+}

@@ -316,3 +316,109 @@ export function summarizeMeasurement(start: Vec3, end: Vec3): MeasurementSummary
     distance,
   }
 }
+
+export interface MeshManifoldDiagnostics {
+  uniqueVertexCount: number
+  uniqueEdgeCount: number
+  validFaceCount: number
+  degenerateTriangleCount: number
+  boundaryEdgeCount: number
+  nonManifoldEdgeCount: number
+  isWatertight: boolean
+  eulerCharacteristic: number
+}
+
+/**
+ * Inspects topological manifold diagnostics on a render mesh by welding coincident
+ * world-space vertices (accounting for split per-face normal vertices) and analyzing
+ * triangle areas, edge incidence counts, and the Euler characteristic (V - E + F).
+ */
+export function inspectMeshManifoldDiagnostics(
+  mesh: Pick<MeshData, 'vertices' | 'indices' | 'transform'>,
+): MeshManifoldDiagnostics {
+  if (mesh.transform.length !== 16) throw new Error('Expected 16-element matrix')
+  const triangleCount = Math.floor(mesh.indices.length / 3)
+  const maxPossibleVertices = Math.max(1, triangleCount * 3 + 1)
+  const vertexMap = new Map<string, number>()
+  const edgeCounts = new Map<number, number>()
+  let degenerateTriangleCount = 0
+  let validFaceCount = 0
+
+  const getWeldedVertexId = (x: number, y: number, z: number): number => {
+    const qx = Math.round(x * 1e6)
+    const qy = Math.round(y * 1e6)
+    const qz = Math.round(z * 1e6)
+    const key = `${qx},${qy},${qz}`
+    let id = vertexMap.get(key)
+    if (id === undefined) {
+      id = vertexMap.size
+      vertexMap.set(key, id)
+    }
+    return id
+  }
+
+  const recordEdge = (a: number, b: number) => {
+    const u = a < b ? a : b
+    const v = a < b ? b : a
+    const edgeKey = u * maxPossibleVertices + v
+    edgeCounts.set(edgeKey, (edgeCounts.get(edgeKey) ?? 0) + 1)
+  }
+
+  for (let t = 0; t < triangleCount; t++) {
+    if (!writeWorldTriangle(mesh.vertices, mesh.indices, t, mesh.transform, SCRATCH_WORLD_PTS)) {
+      degenerateTriangleCount++
+      continue
+    }
+    const ax = SCRATCH_WORLD_PTS[0], ay = SCRATCH_WORLD_PTS[1], az = SCRATCH_WORLD_PTS[2]
+    const bx = SCRATCH_WORLD_PTS[3], by = SCRATCH_WORLD_PTS[4], bz = SCRATCH_WORLD_PTS[5]
+    const cx = SCRATCH_WORLD_PTS[6], cy = SCRATCH_WORLD_PTS[7], cz = SCRATCH_WORLD_PTS[8]
+
+    const abx = bx - ax, aby = by - ay, abz = bz - az
+    const acx = cx - ax, acy = cy - ay, acz = cz - az
+    const nx = aby * acz - abz * acy
+    const ny = abz * acx - abx * acz
+    const nz = abx * acy - aby * acx
+    const doubleAreaSq = nx * nx + ny * ny + nz * nz
+
+    const v0 = getWeldedVertexId(ax, ay, az)
+    const v1 = getWeldedVertexId(bx, by, bz)
+    const v2 = getWeldedVertexId(cx, cy, cz)
+
+    if (v0 === v1 || v1 === v2 || v2 === v0 || !Number.isFinite(doubleAreaSq) || doubleAreaSq <= 1e-20) {
+      degenerateTriangleCount++
+      continue
+    }
+
+    validFaceCount++
+    recordEdge(v0, v1)
+    recordEdge(v1, v2)
+    recordEdge(v2, v0)
+  }
+
+  let boundaryEdgeCount = 0
+  let nonManifoldEdgeCount = 0
+  for (const count of edgeCounts.values()) {
+    if (count === 1) boundaryEdgeCount++
+    else if (count > 2) nonManifoldEdgeCount++
+  }
+
+  const uniqueVertexCount = vertexMap.size
+  const uniqueEdgeCount = edgeCounts.size
+  const eulerCharacteristic = uniqueVertexCount - uniqueEdgeCount + validFaceCount
+  const isWatertight =
+    validFaceCount > 0 &&
+    degenerateTriangleCount === 0 &&
+    boundaryEdgeCount === 0 &&
+    nonManifoldEdgeCount === 0
+
+  return {
+    uniqueVertexCount,
+    uniqueEdgeCount,
+    validFaceCount,
+    degenerateTriangleCount,
+    boundaryEdgeCount,
+    nonManifoldEdgeCount,
+    isWatertight,
+    eulerCharacteristic,
+  }
+}

@@ -371,9 +371,6 @@ pub(super) struct Source<'a> {
     pub(super) rays: [V3; 25],
 }
 impl Source<'_> {
-    pub(super) fn prepare_pixel(&mut self, center: V3) {
-        self.prepare_rays(center, 25);
-    }
     /// Scoring reads only rays[..len] (and plane.rs reads the center ray below
     /// len); entries beyond len keep their zero initialization.
     pub(super) fn prepare_rays(&mut self, center: V3, len: usize) {
@@ -385,13 +382,14 @@ impl Source<'_> {
     pub(super) fn score(&self, patch: &Patch, z: f64, sampled: &mut u64) -> Option<f64> {
         let mut correlation = patch.accumulator();
         for (i, ray) in self.rays[..patch.len].iter().enumerate() {
-            let p = add(scale(*ray, z), self.translation);
-            if p[2] <= 0. {
+            let pz = ray[2] * z + self.translation[2];
+            if pz <= 0. {
                 return None;
             }
+            let f_inv_z = self.camera.focal / pz;
             let value = self.image.sample(
-                self.camera.focal * p[0] / p[2] + self.camera.cx,
-                self.camera.focal * p[1] / p[2] + self.camera.cy,
+                f_inv_z * (ray[0] * z + self.translation[0]) + self.camera.cx,
+                f_inv_z * (ray[1] * z + self.translation[1]) + self.camera.cy,
             )?;
             *sampled += 1;
             correlation.sample(i, value);
@@ -733,6 +731,11 @@ pub(super) fn estimate_prepared(
         };
         let mut sources = build_sources(step);
         if options.estimator == DenseEstimator::SlantedPlane {
+            let ranges = if options.sparse_depth_prior {
+                sparse_intervals(sparse, index, reference, width, height, step, near, far)
+            } else {
+                None
+            };
             let (depth, confidence) = super::plane::estimate(
                 gray,
                 reference,
@@ -742,6 +745,7 @@ pub(super) fn estimate_prepared(
                 step,
                 near,
                 far,
+                ranges.as_ref(),
                 options,
                 &mut diagnostics,
                 &mut |_, row, _| {

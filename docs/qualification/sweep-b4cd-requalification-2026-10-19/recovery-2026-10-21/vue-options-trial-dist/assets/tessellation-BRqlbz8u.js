@@ -1,0 +1,1 @@
+import{f as e}from"./solid-gpu-view-uVPyzynu.js";import{o as t,s as n}from"./polygon-aDAOJwcb.js";function r(t,r){return n(e(`surface_tessellate`,{surface:t,options:r}))}function i(e,r){return{...t(n({positions:e,indices:r})),construction:`sampled_surface`}}export{r as n,i as t};

@@ -1,0 +1,388 @@
+{
+ "source": "hull(){cube(1);translate([2,0,0]) sphere(0.5);}",
+ "operations": [
+  {
+   "id": 0,
+   "operationId": "opv1:ea3bb34d87f0fd77b25dc0932285c9c76d960e2088844bda69e7ab0b01bbc218",
+   "parent": null,
+   "childOrdinal": 0,
+   "name": "hull",
+   "category": "boolean",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 1,
+   "operationId": "opv1:db01cb5ebf2c2e9afd3cfd008a22c563f0e6e9abd68ac381a055f523c6c1f2c0",
+   "parent": 0,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 2,
+   "operationId": "opv1:d1db31a22c500bbd0d806d6a760adb5131294a98b2692604ed2263f59d15f740",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 3,
+   "operationId": "opv1:c3bdbc824dff9ce752eaf7d4cdb1d4b30d37b214e90dfc4004c397a8dfa45551",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "translate",
+   "category": "transform",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 4,
+   "operationId": "opv1:afb3a0791363f09711bb371651a42465695d62c90278a3a428906cd323c9e1af",
+   "parent": 3,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 5,
+   "operationId": "opv1:9d15eb936fb21b3d912314e03bec8d863723368f449582624e84cd46d5e68f3d",
+   "parent": 4,
+   "childOrdinal": 0,
+   "name": "sphere",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "hull",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "sphere",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  }
+ ],
+ "occurrences": [
+  {
+   "id": 0,
+   "occurrenceId": "occv1:c6f1b4eb1acc99058b17d65be5d2489cfb1994abb1cea58659f1edde93cd2058",
+   "operation": 0,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 3,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:7326dd8506dd230c3da7237856b06f7225ae75d31c3e3443aeee190e761d2adc"
+  },
+  {
+   "id": 1,
+   "occurrenceId": "occv1:f20a529e2314f47a6f61e1d323e3aac116e94b6583a266839d7f60a35abd0bff",
+   "operation": 1,
+   "parent": 0,
+   "staticParent": 0,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 2,
+   "occurrenceId": "occv1:9760496c680da12f38e6c7f7a6894411b151b21f1d06e7e75df2ec460bb147a8",
+   "operation": 2,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 0,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:116b7956886a8d479d32602cc91cdfc3e1dfa5dc4fca2daf075e7def45ebee90"
+  },
+  {
+   "id": 3,
+   "occurrenceId": "occv1:dc0e108d9d5d00d908644c87b2e7a4337f5a7e656eae8530eca9f408910820b3",
+   "operation": 3,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 2,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:ae24908585bc6898d6109ee8455219c2236d89bc0b990c23817d20ccf0f031c9"
+  },
+  {
+   "id": 4,
+   "occurrenceId": "occv1:d425b859fd25a7a19c01588d9fc88520a3cc93e183d5a96a7cccc7e535c9acfd",
+   "operation": 4,
+   "parent": 3,
+   "staticParent": 3,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 5,
+   "occurrenceId": "occv1:1a96d9debe7fb5e9baa5ad4d374612312f909bda7f8d24ecf649cca676ff1282",
+   "operation": 5,
+   "parent": 4,
+   "staticParent": 4,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 1,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:2717f2dc0207d36e8468f66fc4d07ba916aa07e768770cb20ae210aad01f3783"
+  }
+ ],
+ "nodes": [
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    1,
+    1,
+    1
+   ],
+   "center": false,
+   "id": 0
+  },
+  {
+   "kind": "sphere-analytic",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "radius": 0.5,
+   "id": 1
+  },
+  {
+   "kind": "transform",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "input": 1,
+   "matrix": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    2,
+    0,
+    0,
+    1
+   ],
+   "id": 2
+  },
+  {
+   "kind": "hull",
+   "valueType": {
+    "geometryKind": "solid-set",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "inputs": [
+    0,
+    2
+   ],
+   "id": 3
+  }
+ ],
+ "result": {
+  "tag": "single",
+  "item": {
+   "node": 3,
+   "producerOccurrence": 0,
+   "identityOccurrence": 0,
+   "color": [
+    0.26,
+    0.52,
+    0.96,
+    1
+   ]
+  }
+ },
+ "execution": {
+  "version": "semantic-execution-v2",
+  "evaluationOrder": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "discardedEffects": [],
+  "terminal": null
+ }
+}

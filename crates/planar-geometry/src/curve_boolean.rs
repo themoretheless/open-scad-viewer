@@ -373,19 +373,23 @@ pub fn binary_op(
     let mut curve_order: Vec<_> = (0..curves.len()).collect();
     curve_order.sort_by(|&a, &b| bounds[a].x0.total_cmp(&bounds[b].x0));
     let mut broad_comparisons = 0usize;
+    let broad_tol = numeric * 4.;
     for (position, &i) in curve_order.iter().enumerate() {
+        let aa = bounds[i];
+        let aa_x1 = aa.x1 + broad_tol;
+        let aa_y0 = aa.y0 - broad_tol;
+        let aa_y1 = aa.y1 + broad_tol;
         for &j in &curve_order[position + 1..] {
             broad_comparisons += 1;
             check(
                 broad_comparisons <= 8_000_000,
                 "Curve Boolean broad-phase work budget exceeded",
             )?;
-            let aa = bounds[i];
             let bb = bounds[j];
-            if bb.x0 > aa.x1 + numeric * 4. {
+            if bb.x0 > aa_x1 {
                 break;
             }
-            if bb.y0 > aa.y1 + numeric * 4. || aa.y0 > bb.y1 + numeric * 4. {
+            if bb.y0 > aa_y1 || bb.y1 < aa_y0 {
                 continue;
             }
             if no_interior_intersection(curves[i], curves[j], aa, bb) {
@@ -397,8 +401,8 @@ pub fn binary_op(
         }
     }
     let chord_tol = (tolerance * 0.125).min(extent * 0.001).max(numeric * 4.);
-    let mut chords = Vec::new();
-    let mut chord_ranges = Vec::new();
+    let mut chords = Vec::with_capacity(curves.len() * 8);
+    let mut chord_ranges = Vec::with_capacity(curves.len());
     for (i, &c) in curves.iter().enumerate() {
         let begin = chords.len();
         if active[i] {
@@ -418,16 +422,18 @@ pub fn binary_op(
             .total_cmp(&chords[j].a.x.min(chords[j].b.x))
     });
     let mut comparisons = 0usize;
+    let chord_tol2 = 2. * chord_tol;
     for (position, &i) in order.iter().enumerate() {
         let x = chords[i];
+        let x_max_x = x.a.x.max(x.b.x) + chord_tol2;
+        let x_min_y = x.a.y.min(x.b.y) - chord_tol2;
+        let x_max_y = x.a.y.max(x.b.y) + chord_tol2;
         for &j in &order[position + 1..] {
             let y = chords[j];
-            if y.a.x.min(y.b.x) > x.a.x.max(x.b.x) + 2. * chord_tol {
+            if y.a.x.min(y.b.x) > x_max_x {
                 break;
             }
-            if y.a.y.min(y.b.y) > x.a.y.max(x.b.y) + 2. * chord_tol
-                || x.a.y.min(x.b.y) > y.a.y.max(y.b.y) + 2. * chord_tol
-            {
+            if y.a.y.min(y.b.y) > x_max_y || y.a.y.max(y.b.y) < x_min_y {
                 continue;
             }
             if x.source == y.source && ((x.t1 - y.t0).abs() < 1e-12 || (y.t1 - x.t0).abs() < 1e-12)
@@ -538,9 +544,9 @@ pub fn binary_op(
             BinaryOp::Xor => x != y,
         }
     };
-    let mut vertices = Vec::<Point>::new();
+    let mut vertices = Vec::<Point>::with_capacity(curves.len() * 2);
     let mut grid = FxHashMap::<(i64, i64), Vec<usize>>::default();
-    let mut boundary = Vec::new();
+    let mut boundary = Vec::with_capacity(curves.len() * 2);
     let mut seen = BTreeSet::new();
     for (i, mut ts) in parameters.into_iter().enumerate() {
         for t in &mut ts {
@@ -621,7 +627,7 @@ pub fn binary_op(
         outgoing[edge.from].push(i);
     }
     let mut used = vec![false; boundary.len()];
-    let mut result = Vec::new();
+    let mut result_with_area = Vec::new();
     for first in 0..boundary.len() {
         if used[first] {
             continue;
@@ -652,17 +658,13 @@ pub fn binary_op(
             }).ok_or_else(||crate::error(format!("Open curve Boolean arrangement boundary at {:?}, incoming {:?}, {} total edges, outgoing {:?}",vertices[edge.to],edge.curve,boundary.len(),outgoing[edge.to].iter().map(|&i|(used[i],boundary[i].curve)).collect::<Vec<_>>())))?;
         }
         elements.push(PathEl::ClosePath);
-        let path = BezPath::from_vec(elements.clone());
-        if path.area().abs() > numeric * numeric {
-            result.push(Contour { path: elements });
+        let area_abs = BezPath::from_vec(elements.clone()).area().abs();
+        if area_abs > numeric * numeric {
+            result_with_area.push((area_abs, Contour { path: elements }));
         }
     }
-    result.sort_by(|a, b| {
-        BezPath::from_vec(b.path.clone())
-            .area()
-            .abs()
-            .total_cmp(&BezPath::from_vec(a.path.clone()).area().abs())
-    });
+    result_with_area.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let result = result_with_area.into_iter().map(|(_, c)| c).collect();
     Ok(Contours { contours: result })
 }
 

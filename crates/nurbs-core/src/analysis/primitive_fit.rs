@@ -32,6 +32,29 @@ pub struct FitReport {
     pub converged: bool,
 }
 
+impl FitReport {
+    /// Доля точек из `residuals`, попадающих в полосу `|r| <= threshold`.
+    pub fn inlier_ratio(&self, residuals: &[f64], threshold: f64) -> f64 {
+        if residuals.is_empty() || !threshold.is_finite() || threshold < 0. {
+            return 0.;
+        }
+        let count = residuals.iter().filter(|&&r| r.abs() <= threshold).count();
+        count as f64 / residuals.len() as f64
+    }
+}
+
+/// Результат fit'а плоскости `normal · x + offset = 0`.
+#[derive(Clone, Copy, Debug)]
+pub struct PlaneFit {
+    /// Центроид облака точек (точка на плоскости).
+    pub centroid: [f64; 3],
+    /// Единичная нормаль плоскости.
+    pub normal: [f64; 3],
+    /// Знаковое смещение `offset = -normal · centroid`.
+    pub offset: f64,
+    pub report: FitReport,
+}
+
 /// Результат fit'а сферы.
 #[derive(Clone, Copy, Debug)]
 pub struct SphereFit {
@@ -209,6 +232,40 @@ fn solver_options() -> SolverOptions {
         gradient_epsilon: 1e-12,
         ..SolverOptions::default()
     }
+}
+
+// ---------------------------------------------------------------------------
+// Плоскость
+// ---------------------------------------------------------------------------
+
+/// Fit плоскости методом главных компонент (PCA): нормаль — собственный вектор
+/// с наименьшим собственным значением ковариационной матрицы.
+pub fn fit_plane(points: &[[f64; 3]]) -> Result<PlaneFit> {
+    validate_points(points, 3)?;
+    let c0 = centroid(points);
+    let axes = point_principal_axes(points, Acceleration::Cpu)
+        .map_err(|e| numeric_err(format!("PCA failed: {e}")))?;
+    // Проверим, что точки не коллинеарны (вторая главная дисперсия > 0).
+    numeric(
+        axes.variances[1] > 1e-24 * axes.variances[0].max(1.),
+        "Degenerate plane fit (points are collinear)",
+    )?;
+    let normal = unit(axes.axes[2]);
+    let offset = -dot(normal, c0);
+    let mut residuals = Vec::with_capacity(points.len());
+    for p in points {
+        residuals.push(dot(*p, normal) + offset);
+    }
+    let report = report_from_residuals(&residuals, 0, true)?;
+    require_finite_point(&c0, "plane centroid")?;
+    require_finite_point(&normal, "plane normal")?;
+    require_finite_f64(offset, "plane offset")?;
+    Ok(PlaneFit {
+        centroid: c0,
+        normal,
+        offset,
+        report,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -857,5 +914,32 @@ mod tests {
             .map(|_| [rng.f64() * 4. - 2., rng.f64() * 4. - 2., 1.])
             .collect();
         assert!(fit_sphere(&pts).is_err());
+    }
+
+    #[test]
+    fn fits_plane_and_computes_inlier_ratio() {
+        let mut rng = Rng::new(29);
+        let n_true = unit([0.3, -0.4, 1.0]);
+        let (u, v) = basis(n_true);
+        let d_true = 2.5;
+        let pts: Vec<[f64; 3]> = (0..300)
+            .map(|_| {
+                let s = rng.f64() * 4. - 2.;
+                let t = rng.f64() * 4. - 2.;
+                let noise = 0.002 * rng.gauss();
+                [
+                    (d_true + noise) * n_true[0] + s * u[0] + t * v[0],
+                    (d_true + noise) * n_true[1] + s * u[1] + t * v[1],
+                    (d_true + noise) * n_true[2] + s * u[2] + t * v[2],
+                ]
+            })
+            .collect();
+        let fit = fit_plane(&pts).unwrap();
+        assert!(dot(fit.normal, n_true).abs() > 0.9999);
+        assert!((fit.offset.abs() - d_true).abs() < 0.01);
+        assert!(fit.report.rms < 0.005);
+        assert!(fit.report.converged);
+        let residuals: Vec<f64> = pts.iter().map(|p| dot(*p, fit.normal) + fit.offset).collect();
+        assert!(fit.report.inlier_ratio(&residuals, 0.01) > 0.95);
     }
 }

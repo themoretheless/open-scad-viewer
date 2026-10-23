@@ -1079,6 +1079,121 @@ pub fn dent_detection(
     })
 }
 
+/// Evaluates zebra / isophote reflection stripe intensity in $[0, 1]$ across a $(u, v)$ grid
+/// (`grid_u` rows by `grid_v` columns) for Class-A surface smoothness inspection.
+pub fn zebra_reflection_stripes(
+    surface: &Surface,
+    view_dir: [f64; 3],
+    light_dir: [f64; 3],
+    stripe_frequency: f64,
+    grid_u: usize,
+    grid_v: usize,
+) -> Vec<Vec<f64>> {
+    if grid_u == 0
+        || grid_v == 0
+        || !stripe_frequency.is_finite()
+        || stripe_frequency <= 0.0
+        || surface.validate().is_err()
+    {
+        return Vec::new();
+    }
+    let (Some(v_dir), Some(l_dir)) = (unit(view_dir), unit(light_dir)) else {
+        return Vec::new();
+    };
+    let (du, dv) = surface_domains(surface);
+    let span_u = du[1] - du[0];
+    let span_v = dv[1] - dv[0];
+    let pi_freq = std::f64::consts::PI * stripe_frequency;
+    let mut v_vals = Vec::with_capacity(grid_v);
+    for j in 0..grid_v {
+        let tv = if grid_v == 1 {
+            0.5
+        } else {
+            j as f64 / (grid_v - 1) as f64
+        };
+        v_vals.push(dv[0] + span_v * tv);
+    }
+    let mut grid = Vec::with_capacity(grid_u);
+    for i in 0..grid_u {
+        let tu = if grid_u == 1 {
+            0.5
+        } else {
+            i as f64 / (grid_u - 1) as f64
+        };
+        let u = du[0] + span_u * tu;
+        let mut row = Vec::with_capacity(grid_v);
+        for &v in &v_vals {
+            let intensity = surface
+                .evaluate_validated(u, v)
+                .ok()
+                .and_then(|ev| {
+                    let n = ev.unit_normal()?;
+                    let r = reflect(v_dir, n);
+                    let cos_theta = dot(r, l_dir).clamp(-1.0, 1.0);
+                    Some(0.5 * (1.0 + (pi_freq * cos_theta).cos()))
+                })
+                .unwrap_or(0.0);
+            row.push(intensity);
+        }
+        grid.push(row);
+    }
+    grid
+}
+
+/// Evaluates Gaussian curvature $K = \kappa_1 \kappa_2$ and mean curvature $H = (\kappa_1 + \kappa_2) / 2$
+/// across a $(u, v)$ grid (`grid_u` rows by `grid_v` columns).
+pub fn gaussian_and_mean_curvature_grid(
+    surface: &Surface,
+    grid_u: usize,
+    grid_v: usize,
+) -> Vec<Vec<(f64, f64)>> {
+    if grid_u == 0 || grid_v == 0 || surface.validate().is_err() {
+        return Vec::new();
+    }
+    let (du, dv) = surface_domains(surface);
+    let span_u = du[1] - du[0];
+    let span_v = dv[1] - dv[0];
+    let eps_u = 1e-6 * span_u;
+    let eps_v = 1e-6 * span_v;
+    let inset = 1e-4;
+    let eval_kh = |u: f64, v: f64| -> Option<(f64, f64)> {
+        surface.evaluate_validated(u, v).ok()?.curvatures()
+    };
+    let mut v_vals = Vec::with_capacity(grid_v);
+    for j in 0..grid_v {
+        let tv = if grid_v == 1 {
+            0.5
+        } else {
+            inset + (1.0 - 2.0 * inset) * (j as f64 / (grid_v - 1) as f64)
+        };
+        v_vals.push(dv[0] + span_v * tv);
+    }
+    let mut grid = Vec::with_capacity(grid_u);
+    for i in 0..grid_u {
+        let tu = if grid_u == 1 {
+            0.5
+        } else {
+            inset + (1.0 - 2.0 * inset) * (i as f64 / (grid_u - 1) as f64)
+        };
+        let u = du[0] + span_u * tu;
+        let mut row = Vec::with_capacity(grid_v);
+        for &v in &v_vals {
+            let kh = eval_kh(u, v)
+                .or_else(|| {
+                    let u_nudged = (u + eps_u).clamp(du[0] + eps_u, du[1] - eps_u);
+                    let v_nudged = (v + eps_v).clamp(dv[0] + eps_v, dv[1] - eps_v);
+                    eval_kh(u_nudged, v)
+                        .or_else(|| eval_kh(u, v_nudged))
+                        .or_else(|| eval_kh(u_nudged, v_nudged))
+                })
+                .unwrap_or((0.0, 0.0));
+            row.push(kh);
+        }
+        grid.push(row);
+    }
+    grid
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1410,5 +1525,32 @@ mod tests {
         let lines = chain_segments(segments, 0.1, &limits()).unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 4);
+    }
+
+    #[test]
+    fn zebra_reflection_stripes_and_curvature_grid_on_sphere_and_flat_patch() {
+        let s = sphere();
+        let stripes = zebra_reflection_stripes(&s, [0., 0., 1.], [1., 0., 1.], 6.0, 9, 9);
+        assert_eq!(stripes.len(), 9);
+        assert_eq!(stripes[0].len(), 9);
+        assert!(
+            stripes
+                .iter()
+                .flatten()
+                .all(|&v| v.is_finite() && (0.0..=1.0).contains(&v))
+        );
+
+        let kh_sphere = gaussian_and_mean_curvature_grid(&s, 5, 5);
+        assert_eq!(kh_sphere.len(), 5);
+        assert_eq!(kh_sphere[0].len(), 5);
+        let (k_mid, h_mid) = kh_sphere[2][2];
+        assert!((k_mid - 1.0).abs() < 1e-4, "K={k_mid}");
+        assert!((h_mid.abs() - 1.0).abs() < 1e-4, "|H|={h_mid}");
+
+        let flat = flat_patch([0., 0., 0.], [2., 0., 0.], [0., 2., 0.]);
+        let kh_flat = gaussian_and_mean_curvature_grid(&flat, 4, 4);
+        for &(k, h) in kh_flat.iter().flatten() {
+            assert!(k.abs() < 1e-12 && h.abs() < 1e-12);
+        }
     }
 }

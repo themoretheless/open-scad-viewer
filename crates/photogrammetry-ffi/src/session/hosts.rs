@@ -18,9 +18,17 @@ pub(super) fn browser_dense_options(side: usize, preset: u32) -> Result<DenseOpt
             }
             options.shared_volume = preset == 2;
             options.dual_scale = preset == 2;
+            options.red_black_propagation = true;
+            options.adaptive_refine_budget = true;
             options.estimator = DenseEstimator::SlantedPlane;
             options.patch_radius = 2;
             options.depth_hypotheses = 64;
+        }
+        3 => {
+            options = DenseOptions {
+                max_side: side,
+                ..DenseOptions::accurate()
+            };
         }
         _ => return Err(input("Unknown dense reconstruction preset")),
     }
@@ -47,6 +55,8 @@ pub(super) fn dense_report_value(
     }
     let preset = if options.shared_volume && options.dual_scale {
         "dual-scale-volume"
+    } else if options.estimator == DenseEstimator::FrontoparallelSweep && options.dual_scale {
+        "accurate"
     } else {
         match options.estimator {
             DenseEstimator::FrontoparallelSweep => "baseline",
@@ -183,9 +193,9 @@ impl Session {
     fn dense_prepare(&mut self, side: usize, preset: u32) -> Result<Value> {
         self.pending_sweep = None;
         let options = browser_dense_options(side, preset)?;
-        if side > 128 {
-            // The scores readback grows quadratically with the map side; keep
-            // the host path at the default resolution for now.
+        if side > 192 {
+            // The scores readback grows quadratically with the map side; cap
+            // the host path at 192 px ('More detail') to stay within transport limits.
             return Ok(Value::Null);
         }
         let sparse = self

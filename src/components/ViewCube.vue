@@ -1,3 +1,7 @@
+<script lang="ts">
+import { computeSteppedOrbitAngles, type ViewOrbitDirection } from '../services/viewportModel'
+export { computeSteppedOrbitAngles, type ViewOrbitDirection }
+</script>
 <script setup lang="ts">
 import { computed } from 'vue'
 import { projectAxesToScreen, type StandardView } from '../services/viewportModel'
@@ -14,6 +18,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   view: [view: StandardView]
+  orbitStep: [angles: { yaw: number; pitch: number; stepDegrees: 15 | 90; direction: ViewOrbitDirection }]
 }>()
 
 const labels: Record<StandardView, string> = {
@@ -68,10 +73,29 @@ const triadAxes = computed<TriadAxis[]>(() => {
 function choose(view: StandardView) {
   emit('view', view)
 }
+
+function handleOrbitKeydown(event: KeyboardEvent) {
+  let direction: ViewOrbitDirection | null = null
+  if (event.key === 'ArrowLeft') direction = 'left'
+  else if (event.key === 'ArrowRight') direction = 'right'
+  else if (event.key === 'ArrowUp') direction = 'up'
+  else if (event.key === 'ArrowDown') direction = 'down'
+  if (!direction) return
+  event.preventDefault()
+  const stepDegrees: 15 | 90 = event.shiftKey ? 90 : 15
+  const next = computeSteppedOrbitAngles(props.yaw, props.pitch, direction, stepDegrees)
+  emit('orbitStep', { ...next, stepDegrees, direction })
+}
 </script>
 
 <template>
-  <div class="view-cube" role="group" aria-label="View orientation / Ориентация вида">
+  <div
+    class="view-cube"
+    role="group"
+    aria-label="View orientation / Ориентация вида"
+    title="View orientation (Arrow keys: 15° step, Shift+Arrow: 90° step)"
+    @keydown="handleOrbitKeydown"
+  >
     <svg class="cube-svg" viewBox="0 0 128 132" aria-hidden="false">
       <g class="axes" aria-hidden="true">
         <template v-for="axis in triadAxes" :key="axis.name">
@@ -101,6 +125,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.top"
+        :title="labels.top"
         :aria-pressed="props.activeView === 'top'"
         @click="choose('top')"
         @keydown.enter.prevent="choose('top')"
@@ -117,6 +142,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.front"
+        :title="labels.front"
         :aria-pressed="props.activeView === 'front'"
         @click="choose('front')"
         @keydown.enter.prevent="choose('front')"
@@ -133,6 +159,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.right"
+        :title="labels.right"
         :aria-pressed="props.activeView === 'right'"
         @click="choose('right')"
         @keydown.enter.prevent="choose('right')"
@@ -149,6 +176,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.back"
+        :title="labels.back"
         :aria-pressed="props.activeView === 'back'"
         @click="choose('back')"
         @keydown.enter.prevent="choose('back')"
@@ -166,6 +194,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.left"
+        :title="labels.left"
         :aria-pressed="props.activeView === 'left'"
         @click="choose('left')"
         @keydown.enter.prevent="choose('left')"
@@ -183,6 +212,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.bottom"
+        :title="labels.bottom"
         :aria-pressed="props.activeView === 'bottom'"
         @click="choose('bottom')"
         @keydown.enter.prevent="choose('bottom')"
@@ -200,6 +230,7 @@ function choose(view: StandardView) {
         role="button"
         tabindex="0"
         :aria-label="labels.iso"
+        :title="labels.iso"
         :aria-pressed="props.activeView === 'iso'"
         @click="choose('iso')"
         @keydown.enter.prevent="choose('iso')"

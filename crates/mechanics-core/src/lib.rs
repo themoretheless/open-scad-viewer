@@ -726,6 +726,415 @@ mod lib_tests {
         let n_gerber = fatigue_safety_factor(50.0, 150.0, 200.0, 350.0, 500.0, FatigueCriterion::Gerber).unwrap();
         assert!(n_soderberg < n_goodman && n_goodman < n_gerber);
         assert!((n_goodman - 2.2222).abs() < 1e-3);
+
+        // M8 x 1.25 class 8.8 bolt (proof strength 600 MPa) with 12 kN preload and 5 kN external load
+        let bolt = bolted_joint_analysis(8.0, 1.25, 12_000.0, 5_000.0, 600.0).unwrap();
+        assert!((bolt.tensile_stress_area_mm2 - 36.6).abs() < 0.1);
+        assert!(bolt.proof_safety_factor > 1.5);
+        assert!(bolt.joint_separation_safety_factor > 2.5);
+        assert!((bolt.recommended_tightening_torque_nm - 19.2).abs() < 0.5);
+
+        // 20 mm solid shaft pressed into a 40 mm OD hub (length 25 mm, diametral interference 0.03 mm, steel E=200 GPa)
+        let pf = press_fit_interference_analysis(
+            20.0,
+            20.0,
+            40.0,
+            25.0,
+            0.03,
+            200e9,
+            0.3,
+            0.15,
+        )
+        .unwrap();
+        // Contact pressure p = E * delta / (2 * d) * (1 - (d/D)^2) = 200000 * 0.03 / 40 * 0.75 = 112.5 MPa
+        assert!((pf.contact_pressure_mpa - 112.5).abs() < 1e-3);
+        // Max hoop stress at bore = p * (D^2 + d^2) / (D^2 - d^2) = 112.5 * (5/3) = 187.5 MPa
+        assert!((pf.max_hub_hoop_stress_mpa - 187.5).abs() < 1e-3);
+        assert!(pf.axial_assembly_force_n > 20_000.0);
+        assert!(pf.max_transmitted_torque_nm > 200.0);
+
+        // 20 mm solid steel shaft (L = 200 mm, T = 100 N*m, G = 80 GPa, tau_y = 250 MPa)
+        let shaft = torsion_shaft_analysis(20.0, 0.0, 200.0, 100.0, 80e9, 250.0).unwrap();
+        // J = pi/32 * 20^4 = 5000 * pi ≈ 15707.96 mm^4, tau_max = 100000 * 10 / J ≈ 63.662 MPa
+        assert!((shaft.polar_moment_j_mm4 - 5000.0 * std::f64::consts::PI).abs() < 1e-3);
+        assert!((shaft.max_shear_stress_mpa - 63.661977).abs() < 1e-3);
+        assert!((shaft.safety_factor - 250.0 / 63.661977).abs() < 1e-3);
+        assert!(shaft.twist_angle_deg > 0.5 && shaft.twist_angle_deg < 1.5);
+
+        // Hertzian contact: two identical steel spheres (R1 = R2 = 10 mm, F = 1000 N, E = 200 GPa, nu = 0.3)
+        let hc_sph =
+            hertz_contact_sphere_sphere(10.0, 10.0, 1000.0, 200e9, 0.3, 200e9, 0.3).unwrap();
+        // R* = 5 mm, E* = 109890.1 MPa -> a ≈ 0.3245 mm, p_max ≈ 4532.9 MPa
+        assert!(hc_sph.contact_half_width_a_mm > 0.25 && hc_sph.contact_half_width_a_mm < 0.45);
+        assert!(hc_sph.max_contact_pressure_mpa > 4000.0 && hc_sph.max_contact_pressure_mpa < 5000.0);
+        assert!(hc_sph.approach_deflection_mm > 0.01 && hc_sph.approach_deflection_mm < 0.05);
+        assert!((hc_sph.max_subsurface_shear_stress_mpa - 0.31 * hc_sph.max_contact_pressure_mpa).abs() < 1e-6);
+
+        // Hertzian line contact: steel roller (R = 10 mm, L = 20 mm) on flat steel plane (F = 2000 N, E* = 115.38 GPa)
+        let hc_cyl = hertz_contact_cylinder_plane(10.0, 20.0, 2000.0, 115.3846e9).unwrap();
+        assert!(hc_cyl.contact_half_width_a_mm > 0.05 && hc_cyl.contact_half_width_a_mm < 0.25);
+        assert!(hc_cyl.max_contact_pressure_mpa > 400.0 && hc_cyl.max_contact_pressure_mpa < 1200.0);
+        assert!((hc_cyl.max_subsurface_shear_stress_mpa - 0.30 * hc_cyl.max_contact_pressure_mpa).abs() < 1e-6);
     }
 }
+
+/// VDI 2230 / ISO 898-1 bolted joint preload, tensile stress area, and clamping safety report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BoltedJointReport {
+    /// ISO 898-1 tensile stress area $A_s = \frac{\pi}{4}(d - 0.9382 P)^2$ in $\text{mm}^2$.
+    pub tensile_stress_area_mm2: f64,
+    /// Stiffness partition factor $C = k_b / (k_b + k_m)$ (standard steel bolt in steel/alu flange $\approx 0.25$).
+    pub stiffness_factor_c: f64,
+    /// Total bolt axial tension under external load: $F_b = F_i + C F_{\text{ext}}$ in N.
+    pub bolt_axial_force_n: f64,
+    /// Remaining clamping force on the joint interface: $F_m = F_i - (1 - C) F_{\text{ext}}$ in N.
+    pub residual_clamp_force_n: f64,
+    /// Axial tensile stress in the thread root $\sigma_b = F_b / A_s$ in MPa.
+    pub bolt_axial_stress_mpa: f64,
+    /// Safety factor against bolt proof load ($S_p A_s / F_b$).
+    pub proof_safety_factor: f64,
+    /// Load factor $n_0 = F_i / ((1 - C) F_{\text{ext}})$ against joint separation ($> 1.0$ means clamped).
+    pub joint_separation_safety_factor: f64,
+    /// Estimated assembly tightening torque $T = K d F_i$ (with nut factor $K = 0.20$) in $\text{N}\cdot\text{m}$.
+    pub recommended_tightening_torque_nm: f64,
+}
+
+/// Performs a bolted joint preload & clamping analysis for an ISO metric bolt (`bolt_diameter_mm`, `pitch_mm`)
+/// under initial preload `preload_n` and external separating load `external_axial_load_n` against `proof_strength_mpa`.
+pub fn bolted_joint_analysis(
+    bolt_diameter_mm: f64,
+    pitch_mm: f64,
+    preload_n: f64,
+    external_axial_load_n: f64,
+    proof_strength_mpa: f64,
+) -> Result<BoltedJointReport> {
+    if ![
+        bolt_diameter_mm,
+        pitch_mm,
+        preload_n,
+        external_axial_load_n,
+        proof_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || bolt_diameter_mm <= 0.5
+        || pitch_mm <= 0.05
+        || bolt_diameter_mm <= 1.1 * pitch_mm
+        || preload_n <= 0.0
+        || external_axial_load_n < 0.0
+        || proof_strength_mpa <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Bolted joint analysis requires valid bolt diameter, pitch, positive preload, non-negative load, and positive proof strength",
+        ));
+    }
+    let d_eff = bolt_diameter_mm - 0.9382 * pitch_mm;
+    let a_s = 0.25 * std::f64::consts::PI * d_eff * d_eff;
+    let c = 0.25_f64;
+    let f_b = preload_n + c * external_axial_load_n;
+    let f_m = preload_n - (1.0 - c) * external_axial_load_n;
+    let sigma_b = f_b / a_s;
+    let proof_load_n = proof_strength_mpa * a_s;
+    let proof_fos = proof_load_n / f_b.max(1e-12);
+    let sep_fos = if external_axial_load_n > 1e-12 {
+        preload_n / ((1.0 - c) * external_axial_load_n)
+    } else {
+        f64::INFINITY
+    };
+    let torque_nm = 0.20 * (bolt_diameter_mm * 1e-3) * preload_n;
+    Ok(BoltedJointReport {
+        tensile_stress_area_mm2: a_s,
+        stiffness_factor_c: c,
+        bolt_axial_force_n: f_b,
+        residual_clamp_force_n: f_m,
+        bolt_axial_stress_mpa: sigma_b,
+        proof_safety_factor: proof_fos,
+        joint_separation_safety_factor: sep_fos,
+        recommended_tightening_torque_nm: torque_nm,
+    })
+}
+
+/// Lamé thick-walled cylinder interference / press-fit stress and capacity report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PressFitReport {
+    /// Interface contact pressure $p$ in MPa ($\text{N/mm}^2$).
+    pub contact_pressure_mpa: f64,
+    /// Maximum tensile tangential (hoop) stress at the hub inner bore $\sigma_{\theta,\max}$ in MPa.
+    pub max_hub_hoop_stress_mpa: f64,
+    /// Equivalent von Mises stress at the hub inner bore $\sigma_{\text{vm}} = \sqrt{\sigma_\theta^2 + \sigma_r^2 - \sigma_\theta \sigma_r}$ in MPa.
+    pub hub_bore_von_mises_mpa: f64,
+    /// Axial force required to press-assemble or strip the joint $F_{\text{axial}} = \mu p \pi d L$ in N.
+    pub axial_assembly_force_n: f64,
+    /// Maximum slip-free transmitted torque capacity $T_{\max} = F_{\text{axial}} (d / 2)$ in $\text{N}\cdot\text{m}$.
+    pub max_transmitted_torque_nm: f64,
+}
+
+/// Computes Lamé thick-walled cylinder interference press-fit contact pressure $p$, hub inner-bore
+/// hoop stress $\sigma_\theta$, axial assembly force $F_{\text{axial}}$, and slip torque capacity $T_{\max}$
+/// for a solid shaft of diameter `shaft_outer_dia_mm` pressed into a hub (`hub_inner_dia_mm`, `hub_outer_dia_mm`)
+/// with diametral interference `interference_mm` (or if `interference_mm <= 0.0`, derived from `shaft_outer_dia_mm - hub_inner_dia_mm`).
+pub fn press_fit_interference_analysis(
+    shaft_outer_dia_mm: f64,
+    hub_inner_dia_mm: f64,
+    hub_outer_dia_mm: f64,
+    engagement_length_mm: f64,
+    interference_mm: f64,
+    youngs_modulus_pa: f64,
+    poisson_ratio: f64,
+    friction_coeff: f64,
+) -> Result<PressFitReport> {
+    if ![
+        shaft_outer_dia_mm,
+        hub_inner_dia_mm,
+        hub_outer_dia_mm,
+        engagement_length_mm,
+        interference_mm,
+        youngs_modulus_pa,
+        poisson_ratio,
+        friction_coeff,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || shaft_outer_dia_mm <= 0.5
+        || hub_inner_dia_mm <= 0.5
+        || hub_outer_dia_mm <= hub_inner_dia_mm * 1.05
+        || engagement_length_mm <= 0.1
+        || youngs_modulus_pa <= 1e6
+        || !(0.0..0.5).contains(&poisson_ratio)
+        || friction_coeff <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Press-fit analysis requires valid positive geometry, hub_outer > 1.05 * hub_inner, E > 1 MPa, 0 <= nu < 0.5, and mu > 0",
+        ));
+    }
+    let delta_d = if interference_mm > 0.0 {
+        interference_mm
+    } else {
+        shaft_outer_dia_mm - hub_inner_dia_mm
+    };
+    if delta_d <= 0.0 {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Diametral interference must be positive",
+        ));
+    }
+    let d = 0.5 * (shaft_outer_dia_mm + hub_inner_dia_mm);
+    let d_outer = hub_outer_dia_mm;
+    let e_mpa = youngs_modulus_pa * 1e-6;
+    let ratio_sq = (d / d_outer).powi(2);
+    // Identical-modulus Lamé equation for solid shaft in thick-walled hub (radial interference = delta_d / 2):
+    // p = (E * delta_d / (2 * d)) * (1 - (d / D_outer)^2)
+    let p_mpa = (e_mpa * delta_d / (2.0 * d)) * (1.0 - ratio_sq);
+    let k_hoop = (1.0 + ratio_sq) / (1.0 - ratio_sq);
+    let sigma_theta_mpa = p_mpa * k_hoop;
+    let sigma_r_mpa = -p_mpa;
+    let vm_mpa = (sigma_theta_mpa * sigma_theta_mpa
+        + sigma_r_mpa * sigma_r_mpa
+        - sigma_theta_mpa * sigma_r_mpa)
+        .sqrt();
+    let contact_area_mm2 = std::f64::consts::PI * d * engagement_length_mm;
+    let axial_force_n = friction_coeff * p_mpa * contact_area_mm2;
+    let torque_nm = axial_force_n * (0.5 * d * 1e-3);
+    Ok(PressFitReport {
+        contact_pressure_mpa: p_mpa,
+        max_hub_hoop_stress_mpa: sigma_theta_mpa,
+        hub_bore_von_mises_mpa: vm_mpa,
+        axial_assembly_force_n: axial_force_n,
+        max_transmitted_torque_nm: torque_nm,
+    })
+}
+
+/// Circular solid or hollow shaft torsion stress, twist angle, and stiffness report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TorsionShaftReport {
+    /// Polar moment of inertia $J = \frac{\pi}{32}(d_o^4 - d_i^4)$ in $\text{mm}^4$.
+    pub polar_moment_j_mm4: f64,
+    /// Polar section modulus $Z_p = J / (d_o / 2)$ in $\text{mm}^3$.
+    pub polar_section_modulus_mm3: f64,
+    /// Maximum outer-fiber torsional shear stress $\tau_{\max} = T r_o / J$ in MPa.
+    pub max_shear_stress_mpa: f64,
+    /// Total angle of twist $\theta = T L / (G J)$ in radians.
+    pub twist_angle_rad: f64,
+    /// Total angle of twist $\theta$ in degrees.
+    pub twist_angle_deg: f64,
+    /// Torsional spring stiffness $k_t = G J / L$ in $\text{N}\cdot\text{m/rad}$.
+    pub torsional_stiffness_nm_per_rad: f64,
+    /// Torsional yield safety factor $\tau_{\text{yield}} / \tau_{\max}$.
+    pub safety_factor: f64,
+}
+
+/// Analyzes a solid (`inner_dia_mm == 0.0`) or hollow (`0.0 <= inner_dia_mm < outer_dia_mm`)
+/// circular shaft of length `length_mm` under torque `torque_nm` ($\text{N}\cdot\text{m}$),
+/// shear modulus `shear_modulus_pa` ($\text{Pa}$), and allowable shear yield strength `yield_shear_mpa` ($\text{MPa}$).
+pub fn torsion_shaft_analysis(
+    outer_dia_mm: f64,
+    inner_dia_mm: f64,
+    length_mm: f64,
+    torque_nm: f64,
+    shear_modulus_pa: f64,
+    yield_shear_mpa: f64,
+) -> Result<TorsionShaftReport> {
+    if ![
+        outer_dia_mm,
+        inner_dia_mm,
+        length_mm,
+        torque_nm,
+        shear_modulus_pa,
+        yield_shear_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || outer_dia_mm <= 0.1
+        || inner_dia_mm < 0.0
+        || inner_dia_mm >= outer_dia_mm
+        || length_mm <= 0.1
+        || shear_modulus_pa <= 1e6
+        || yield_shear_mpa <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Torsion shaft analysis requires 0 <= inner_dia_mm < outer_dia_mm, length > 0.1 mm, G > 1 MPa, and yield_shear_mpa > 0",
+        ));
+    }
+    let j_mm4 = (std::f64::consts::PI / 32.0) * (outer_dia_mm.powi(4) - inner_dia_mm.powi(4));
+    let r_o_mm = 0.5 * outer_dia_mm;
+    let zp_mm3 = j_mm4 / r_o_mm;
+    let torque_nmm = torque_nm.abs() * 1e3;
+    let tau_max_mpa = torque_nmm / zp_mm3;
+    let g_mpa = shear_modulus_pa * 1e-6;
+    let theta_rad = (torque_nmm * length_mm) / (g_mpa * j_mm4);
+    let kt_nm_per_rad = (g_mpa * j_mm4 / length_mm) * 1e-3;
+    let fos = if tau_max_mpa > 1e-12 {
+        yield_shear_mpa / tau_max_mpa
+    } else {
+        f64::INFINITY
+    };
+    Ok(TorsionShaftReport {
+        polar_moment_j_mm4: j_mm4,
+        polar_section_modulus_mm3: zp_mm3,
+        max_shear_stress_mpa: tau_max_mpa,
+        twist_angle_rad: theta_rad,
+        twist_angle_deg: theta_rad.to_degrees(),
+        torsional_stiffness_nm_per_rad: kt_nm_per_rad,
+        safety_factor: fos,
+    })
+}
+
+/// Hertzian contact mechanics report for spherical (point) or cylindrical (line) non-conformal contact.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HertzContactReport {
+    /// Contact patch radius (sphere-sphere) or rectangular half-width (cylinder-plane) $a$ in mm.
+    pub contact_half_width_a_mm: f64,
+    /// Peak Hertzian normal contact pressure $p_{\max}$ at the center of the contact patch in MPa.
+    pub max_contact_pressure_mpa: f64,
+    /// Mean contact pressure $p_{\text{mean}}$ across the contact patch in MPa.
+    pub mean_contact_pressure_mpa: f64,
+    /// Mutual normal approach / elastic indentation deflection $\delta$ in mm.
+    pub approach_deflection_mm: f64,
+    /// Maximum subsurface Tresca / principal shear stress $\tau_{\max} \approx 0.30\,p_{\max}$ in MPa.
+    pub max_subsurface_shear_stress_mpa: f64,
+    /// Depth below the contact surface at which $\tau_{\max}$ occurs ($z_{\tau} \approx 0.48\,a$ or $0.78\,a$) in mm.
+    pub shear_stress_depth_mm: f64,
+}
+
+/// Computes Hertzian point-contact stress and deflection between two spheres of radii `r1_mm` and `r2_mm`
+/// under normal load `normal_force_n` ($\text{N}$) with elastic moduli `e1_pa`, `e2_pa` ($\text{Pa}$)
+/// and Poisson ratios `nu1`, `nu2`.
+pub fn hertz_contact_sphere_sphere(
+    r1_mm: f64,
+    r2_mm: f64,
+    normal_force_n: f64,
+    e1_pa: f64,
+    nu1: f64,
+    e2_pa: f64,
+    nu2: f64,
+) -> Result<HertzContactReport> {
+    if ![r1_mm, r2_mm, normal_force_n, e1_pa, nu1, e2_pa, nu2]
+        .into_iter()
+        .all(f64::is_finite)
+        || r1_mm <= 0.05
+        || r2_mm <= 0.05
+        || normal_force_n <= 0.0
+        || e1_pa <= 1e6
+        || e2_pa <= 1e6
+        || !(0.0..0.5).contains(&nu1)
+        || !(0.0..0.5).contains(&nu2)
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Sphere-sphere Hertzian contact requires positive radii, positive force, E > 1 MPa, and 0 <= nu < 0.5",
+        ));
+    }
+    let r_eff_mm = (r1_mm * r2_mm) / (r1_mm + r2_mm);
+    let e1_mpa = e1_pa * 1e-6;
+    let e2_mpa = e2_pa * 1e-6;
+    let inv_e_star = (1.0 - nu1 * nu1) / e1_mpa + (1.0 - nu2 * nu2) / e2_mpa;
+    let e_star_mpa = 1.0 / inv_e_star;
+
+    let a_mm = ((3.0 * normal_force_n * r_eff_mm) / (4.0 * e_star_mpa)).cbrt();
+    let area_mm2 = std::f64::consts::PI * a_mm * a_mm;
+    let p_mean_mpa = normal_force_n / area_mm2.max(1e-18);
+    let p_max_mpa = 1.5 * p_mean_mpa;
+    let delta_mm = (a_mm * a_mm) / r_eff_mm;
+    let tau_max_mpa = 0.31 * p_max_mpa;
+    let depth_mm = 0.48 * a_mm;
+
+    Ok(HertzContactReport {
+        contact_half_width_a_mm: a_mm,
+        max_contact_pressure_mpa: p_max_mpa,
+        mean_contact_pressure_mpa: p_mean_mpa,
+        approach_deflection_mm: delta_mm,
+        max_subsurface_shear_stress_mpa: tau_max_mpa,
+        shear_stress_depth_mm: depth_mm,
+    })
+}
+
+/// Computes Hertzian line-contact stress and deflection for a cylinder of radius `radius_mm` and
+/// contact length `length_mm` pressed against a flat plane under normal force `normal_force_n` ($\text{N}$)
+/// with effective contact modulus $E^*$ (`e_eff_pa` in $\text{Pa}$).
+pub fn hertz_contact_cylinder_plane(
+    radius_mm: f64,
+    length_mm: f64,
+    normal_force_n: f64,
+    e_eff_pa: f64,
+) -> Result<HertzContactReport> {
+    if ![radius_mm, length_mm, normal_force_n, e_eff_pa]
+        .into_iter()
+        .all(f64::is_finite)
+        || radius_mm <= 0.05
+        || length_mm <= 0.1
+        || normal_force_n <= 0.0
+        || e_eff_pa <= 1e6
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Cylinder-plane Hertzian contact requires positive radius, length, normal force, and e_eff_pa > 1 MPa",
+        ));
+    }
+    let e_star_mpa = e_eff_pa * 1e-6;
+    let line_load_n_per_mm = normal_force_n / length_mm;
+    let a_mm = ((4.0 * line_load_n_per_mm * radius_mm) / (std::f64::consts::PI * e_star_mpa)).sqrt();
+    let p_max_mpa = (2.0 * line_load_n_per_mm) / (std::f64::consts::PI * a_mm.max(1e-12));
+    let p_mean_mpa = line_load_n_per_mm / (2.0 * a_mm.max(1e-12));
+    // Johnson / Roark cylindrical line-contact approach approximation
+    let ratio = (4.0 * radius_mm / a_mm.max(1e-9)).max(2.0);
+    let delta_mm = (2.0 * line_load_n_per_mm / (std::f64::consts::PI * e_star_mpa))
+        * (ratio.ln() - 0.5).max(0.5);
+    let tau_max_mpa = 0.30 * p_max_mpa;
+    let depth_mm = 0.78 * a_mm;
+
+    Ok(HertzContactReport {
+        contact_half_width_a_mm: a_mm,
+        max_contact_pressure_mpa: p_max_mpa,
+        mean_contact_pressure_mpa: p_mean_mpa,
+        approach_deflection_mm: delta_mm,
+        max_subsurface_shear_stress_mpa: tau_max_mpa,
+        shear_stress_depth_mm: depth_mm,
+    })
+}
+
+
+
 

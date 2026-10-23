@@ -70,9 +70,9 @@ pub struct Report {
     /// Whole stored surface versus S(P(u)+v*direction), in millimetres.
     pub position_error_upper_mm: f64,
 }
-/// Compose one original rational Bezier surface with a rational Bezier pcurve
+/// Compose one original rational NURBS knot interval with a rational Bezier pcurve
 /// and a constant transverse chart direction. Output parameters are normalized.
-/// Every mapped chart control stays inside the immutable original natural
+/// Every mapped chart control stays inside one immutable original knot
 /// rectangle. Interval Bernstein arithmetic bounds the actual stored rounding
 /// over the WHOLE collar. This bound concerns positions, never derivative jets.
 pub fn construct(
@@ -176,6 +176,88 @@ fn compose(
     compose_at_origin(source, pcurve, direction, max_work, [0.; 3])
 }
 
+// Homogeneous Cox-de Boor numerators on one ORIGINAL knot interval.
+// No floating-point knot insertion or rounded extracted reference is used.
+fn span_basis(
+    map: &[Poly],
+    axis: usize,
+    knots: &[f64],
+    degree: usize,
+    span: usize,
+    p: usize,
+    work: &mut Work,
+) -> Result<Vec<Poly>> {
+    let mut previous = std::collections::BTreeMap::new();
+    previous.insert(span, vec![vec![I::point(1.)]]);
+    for depth in 1..=degree {
+        let mut next = std::collections::BTreeMap::new();
+        for i in span - depth..=span {
+            let mut value = vec![vec![I::point(0.); depth + 1]; p * depth + 1];
+            for (old, low, high, complement) in [
+                (i, knots[i], knots[i + depth], false),
+                (i + 1, knots[i + 1], knots[i + depth + 1], true),
+            ] {
+                if high == low {
+                    continue;
+                }
+                let Some(basis) = previous.get(&old) else {
+                    continue;
+                };
+                let denominator = I::point(high).sub(I::point(low))?;
+                let mut factor = vec![vec![I::point(0.); 2]; p + 1];
+                for a in 0..=p {
+                    for b in 0..2 {
+                        work.charge(5)?;
+                        factor[a][b] = if complement {
+                            I::point(high)
+                                .mul(map[2][a][b])?
+                                .sub(map[axis][a][b])?
+                                .div(denominator)?
+                        } else {
+                            map[axis][a][b]
+                                .sub(I::point(low).mul(map[2][a][b])?)?
+                                .div(denominator)?
+                        };
+                    }
+                }
+                let term = mul(basis, &factor, work)?;
+                for a in 0..value.len() {
+                    for b in 0..value[0].len() {
+                        work.charge(1)?;
+                        value[a][b] = value[a][b].add(term[a][b])?;
+                    }
+                }
+            }
+            next.insert(i, value);
+        }
+        previous = next;
+    }
+    Ok((span - degree..=span)
+        .map(|i| previous.remove(&i).unwrap())
+        .collect())
+}
+fn original_span(s: &Surface, p: &Curve, direction: [f64; 2], axis: usize) -> Result<usize> {
+    let (knots, degree, count) = if axis == 0 {
+        (&s.knots_u, s.degree_u, s.control_points.len())
+    } else {
+        (&s.knots_v, s.degree_v, s.control_points[0].len())
+    };
+    let mut lo = f64::INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for point in &p.control_points {
+        let end = if direction[axis] == 0. {
+            I::point(point[axis])
+        } else {
+            I::point(point[axis]).add(I::point(direction[axis]))?
+        };
+        lo = lo.min(point[axis]).min(end.lo);
+        hi = hi.max(point[axis]).max(end.hi);
+    }
+    (degree..count)
+        .find(|&i| knots[i] < knots[i + 1] && knots[i] <= lo && hi <= knots[i + 1])
+        .ok_or_else(|| refused("Complete collar crosses an original knot interval"))
+}
+
 fn compose_at_origin(
     source: &Surface,
     pcurve: &Curve,
@@ -197,17 +279,17 @@ fn compose_at_origin(
         || sum > 16
         || !(1..=2000000).contains(&max_work)
         || direction.iter().any(|x| !x.is_finite())
-        || !bezier(&source.knots_u, du, source.control_points.len())
-        || !bezier(&source.knots_v, dv, source.control_points[0].len())
         || !bezier(&pcurve.knots, p, pcurve.control_points.len())
     {
         return Err(refused(
-            "Need bounded original Bezier charts and finite collar work",
+            "Need bounded original spline charts and finite collar work",
         ));
     }
+    let spans=[original_span(source,pcurve,direction,0)?,original_span(source,pcurve,direction,1)?];
+    let offsets=[spans[0]-du,spans[1]-dv];
     let domains = [
-        [source.knots_u[du], source.knots_u[du + 1]],
-        [source.knots_v[dv], source.knots_v[dv + 1]],
+        [source.knots_u[spans[0]],source.knots_u[spans[0]+1]],
+        [source.knots_v[spans[1]],source.knots_v[spans[1]+1]],
     ];
     let mut work = Work {
         used: 0,
@@ -243,6 +325,13 @@ fn compose_at_origin(
     }
     let mut basis = Vec::new();
     for (axis, n) in [(0, du), (1, dv)] {
+        let single=if axis==0 {bezier(&source.knots_u,du,source.control_points.len())}
+            else {bezier(&source.knots_v,dv,source.control_points[0].len())};
+        if !single {
+            let knots=if axis==0 {&source.knots_u} else {&source.knots_v};
+            basis.push(span_basis(&map,axis,knots,n,spans[axis],p,&mut work)?);
+            continue;
+        }
         let mut coordinate = map[axis].clone();
         let mut complement = map[2].clone();
         for i in 0..=p {
@@ -276,16 +365,16 @@ fn compose_at_origin(
             for k in 0..4 {
                 work.charge(1)?;
                 let cp = if k == 3 {
-                    I::point(source.weights[i][j])
+                    I::point(source.weights[i+offsets[0]][j+offsets[1]])
                 } else {
-                    let point = I::point(source.control_points[i][j][k]);
+                    let point = I::point(source.control_points[i+offsets[0]][j+offsets[1]][k]);
                     let centered = if origin[k] == 0. {
                         point
                     } else {
                         work.charge(1)?;
                         point.sub(I::point(origin[k]))?
                     };
-                    centered.mul(I::point(source.weights[i][j]))?
+                    centered.mul(I::point(source.weights[i+offsets[0]][j+offsets[1]]))?
                 };
                 for a in 0..=degree {
                     for b in 0..=sum {

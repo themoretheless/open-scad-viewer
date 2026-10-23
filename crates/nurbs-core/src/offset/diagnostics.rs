@@ -31,7 +31,7 @@ impl Diagnostics {
 
 /// Inspect the current represented straight edges, independent of offset provenance.
 /// Station indices refer to retained control-polygon edges across ordered chunks.
-
+#[allow(dead_code)]
 pub fn inspect_curves(curves: &[crate::curve::Curve], max_pairs: usize) -> Result<Diagnostics> {
     check(
         !curves.is_empty() && curves.len() <= 128,

@@ -34,7 +34,12 @@ import {
   OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
 } from './officialOpenScadRuntimeProtocol'
 
-export { PUBLIC_ERROR_CODES, type PublicErrorCode } from './errorContract'
+export {
+  PUBLIC_ERROR_CODES,
+  describePublicErrorCode,
+  type PublicErrorCode,
+  type PublicErrorCodeDescription,
+} from './errorContract'
 
 type PublicErrorDetail = string | number | boolean | null
 

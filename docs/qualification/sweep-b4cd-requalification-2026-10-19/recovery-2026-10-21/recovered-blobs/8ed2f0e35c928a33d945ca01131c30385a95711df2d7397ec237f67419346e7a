@@ -1,0 +1,307 @@
+//! Whole-angle existence and uniqueness of a stock-cylinder intersection.
+use super::*;
+
+/// Side of the implicit edge retained inside the cylindrical wheel blank.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StockInterior {
+    /// Original U is at most the unique angle-dependent root.
+    LowerU,
+    /// Original U is at least the unique angle-dependent root.
+    HigherU,
+}
+
+/// Whole original crest-to-stock chart bounds, with Taylor coefficients f^(6)/6!.
+#[derive(Clone, Debug)]
+pub struct StockChartBounds {
+    pub point: [[f64; 2]; 3],
+    pub dt: [[f64; 2]; 3],
+    pub dbeta: [[f64; 2]; 3],
+    pub sixth: [[[f64; 2]; 3]; 2],
+    pub regularity_proven: bool,
+}
+
+/// A unique original-envelope/stock intersection U for every beta in the domain.
+/// The enclosing U interval is not a fitted trim curve or a swept-cutter proof.
+#[derive(Clone, Debug)]
+pub struct StockIntersection {
+    spec: Spec,
+    flank: Flank,
+    domain: ChartDomain,
+    radius: f64,
+    bracket: [f64; 2],
+    increasing: bool,
+    cells: usize,
+}
+impl StockIntersection {
+    pub fn specification(&self) -> Spec {
+        self.spec
+    }
+    pub fn flank(&self) -> Flank {
+        self.flank
+    }
+    /// Replays complete original-root admission on a contained angle interval.
+    pub fn restrict_beta(&self, beta: [f64; 2]) -> Result<Self> {
+        check(
+            beta.iter().all(|x| x.is_finite())
+                && self.domain.beta[0] <= beta[0]
+                && beta[0] <= beta[1]
+                && beta[1] <= self.domain.beta[1],
+            "Stock angle restriction lies outside the original source",
+        )?;
+        intersect_stock_cylinder(
+            self.spec,
+            self.flank,
+            ChartDomain {
+                beta,
+                ..self.domain
+            },
+            self.radius,
+            self.cells,
+        )
+    }
+    /// Encloses S(crest + (U_stock(beta)-crest)*t, beta) continuously.
+    /// Requires the complete original flank domain, local t in [0,1] and
+    /// a separated implicit root derivative. No fitted surface is returned.
+    pub fn enclose_trimmed_chart(&self, t: [f64; 2]) -> Result<StockChartBounds> {
+        check(
+            self.domain.u == [0., 1.]
+                && t.iter().all(|x| x.is_finite())
+                && 0. <= t[0]
+                && t[0] <= t[1]
+                && t[1] <= 1.,
+            "Stock chart requires the full original flank and ordered local t in [0,1]",
+        )?;
+        let a = super::taylor::stock_chart(self.spec, self.flank, self.domain, self.bracket, t, 0)?;
+        let b = super::taylor::stock_chart(self.spec, self.flank, self.domain, self.bracket, t, 1)?;
+        let du = a[1];
+        let db = b[1];
+        let cross = [
+            du[1].mul(db[2])?.sub(du[2].mul(db[1])?)?,
+            du[2].mul(db[0])?.sub(du[0].mul(db[2])?)?,
+            du[0].mul(db[1])?.sub(du[1].mul(db[0])?)?,
+        ];
+        Ok(StockChartBounds {
+            point: a[0].map(pair),
+            dt: du.map(pair),
+            dbeta: db.map(pair),
+            sixth: [a[2].map(pair), b[2].map(pair)],
+            regularity_proven: cross.iter().any(|x| x.lo > 0. || x.hi < 0.),
+        })
+    }
+    pub fn u_bracket(&self) -> [f64; 2] {
+        self.bracket
+    }
+    pub fn domain(&self) -> ChartDomain {
+        self.domain
+    }
+    /// Restricts the complete source proof to a requested contact angle.
+    pub fn section(&self, beta: f64) -> Result<Self> {
+        check(
+            beta.is_finite() && self.domain.beta[0] <= beta && beta <= self.domain.beta[1],
+            "Stock section angle lies outside its original domain",
+        )?;
+        intersect_stock_cylinder(
+            self.spec,
+            self.flank,
+            ChartDomain {
+                beta: [beta, beta],
+                ..self.domain
+            },
+            self.radius,
+            self.cells,
+        )
+    }
+    /// Whole original stock-edge positions, including root-isolation rounding.
+    pub fn position_bounds(&self) -> Result<[[f64; 2]; 3]> {
+        Ok(enclose_chart(
+            self.spec,
+            self.flank,
+            ChartDomain {
+                u: self.bracket,
+                ..self.domain
+            },
+        )?
+        .point())
+    }
+    /// Original edge derivative with respect to beta via implicit differentiation.
+    /// Refuses if a single interval cannot separate the radial U derivative.
+    pub fn tangent_bounds(&self) -> Result<[[f64; 2]; 3]> {
+        let d = ChartDomain {
+            u: self.bracket,
+            ..self.domain
+        };
+        let g = chart::radial_gradient(self.spec, self.flank, d)?;
+        let root_derivative = neg(g[1])?.div_signed(g[0])?;
+        let e = enclose_chart(self.spec, self.flank, d)?;
+        let du = e.du();
+        let db = e.dbeta();
+        let mut result = [[0.; 2]; 3];
+        for i in 0..3 {
+            result[i] = pair(iv(db[i])?.add(iv(du[i])?.mul(root_derivative)?)?);
+        }
+        Ok(result)
+    }
+    pub fn radius(&self) -> f64 {
+        self.radius
+    }
+    pub fn radius_increases_with_u(&self) -> bool {
+        self.increasing
+    }
+    /// Follows from the proved strict radial monotonicity and endpoint signs.
+    /// Includes the boundary itself; concerns the cylindrical blank only.
+    pub fn stock_interior(&self) -> StockInterior {
+        if self.increasing {
+            StockInterior::LowerU
+        } else {
+            StockInterior::HigherU
+        }
+    }
+    /// Replays the original source, all monotonicity cells and both endpoint signs.
+    pub fn reverify(&self) -> Result<()> {
+        let fresh =
+            intersect_stock_cylinder(self.spec, self.flank, self.domain, self.radius, self.cells)?;
+        check(
+            fresh.bracket == self.bracket && fresh.increasing == self.increasing,
+            "Stock intersection source replay changed",
+        )
+    }
+}
+
+/// Proves exactly one intersection per angle using original-source interval
+/// derivatives and the intermediate value theorem, then contracts a common U
+/// bracket. Unseparated derivative/signs are explicit refusals. Every cell of
+/// the original U domain participates; no disconnected component is dropped.
+/// `cells` is a proof subdivision count in 1..=4096, not an approximation count.
+pub fn intersect_stock_cylinder(
+    spec: Spec,
+    flank: Flank,
+    domain: ChartDomain,
+    radius: f64,
+    cells: usize,
+) -> Result<StockIntersection> {
+    chart::validate(spec, flank, domain)?;
+    check(
+        radius.is_finite()
+            && radius > 0.
+            && radius <= 1e8
+            && domain.u[0] < domain.u[1]
+            && (1..=4096).contains(&cells),
+        "Stock cylinder requires a positive bounded radius, nonempty U and 1..4096 cells",
+    )?;
+    let radius_squared = I::point(radius).mul(I::point(radius))?;
+    let source = super::expression::prepare(spec, flank)?;
+    // Complete angular coverage for derivative and endpoint sign proofs.
+    // Redundant zero-width cells are omitted only when the same point is
+    // already an endpoint of a retained closed interval.
+    let mut angles = Vec::new();
+    let mut left = domain.beta[0];
+    let angle_cells = if domain.beta[0] == domain.beta[1] {
+        1
+    } else {
+        16
+    };
+    for i in 1..=angle_cells {
+        let right = if i == angle_cells {
+            domain.beta[1]
+        } else {
+            domain.beta[0] + (domain.beta[1] - domain.beta[0]) * (i as f64 / angle_cells as f64)
+        };
+        check(left <= right, "Stock angle cover lost parameter ordering")?;
+        if right > left || domain.beta[0] == domain.beta[1] {
+            angles.push([left, right]);
+        }
+        left = right;
+    }
+    let mut increasing = None;
+    let mut left = domain.u[0];
+    for i in 1..=cells {
+        let right = if i == cells {
+            domain.u[1]
+        } else {
+            domain.u[0] + (domain.u[1] - domain.u[0]) * (i as f64 / cells as f64)
+        };
+        check(
+            right > left,
+            "Stock derivative subdivision lost parameter precision",
+        )?;
+        for &beta in &angles {
+            let (_, derivative) = chart::radial_prepared(
+                &source,
+                ChartDomain {
+                    u: [left, right],
+                    beta,
+                },
+            )?;
+            check(
+                derivative.lo > 0. || derivative.hi < 0.,
+                "Stock radial derivative is not separated from zero",
+            )?;
+            let sign = derivative.lo > 0.;
+            check(
+                increasing.is_none_or(|v| v == sign),
+                "Stock radial monotonicity changes",
+            )?;
+            increasing = Some(sign);
+        }
+        left = right;
+    }
+    let increasing = increasing.unwrap();
+    let residual = |u| -> Result<I> {
+        let mut bounds = None::<I>;
+        for &beta in &angles {
+            let v = chart::radial_prepared(&source, ChartDomain { u: [u, u], beta })?
+                .0
+                .sub(radius_squared)?;
+            bounds = Some(match bounds {
+                None => v,
+                Some(old) => I::new(old.lo.min(v.lo), old.hi.max(v.hi))?,
+            });
+        }
+        Ok(bounds.unwrap())
+    };
+    let before = |v: I| if increasing { v.hi < 0. } else { v.lo > 0. };
+    let after = |v: I| if increasing { v.lo > 0. } else { v.hi < 0. };
+    check(
+        before(residual(domain.u[0])?) && after(residual(domain.u[1])?),
+        "Stock endpoint signs do not prove an intersection for every angle",
+    )?;
+    let mut bracket = domain.u;
+    // Contract each endpoint independently. An interval that straddles zero
+    // may contain roots at different beta values and must never be discarded.
+    for side in 0..2 {
+        let mut search = bracket;
+        for _ in 0..56 {
+            let m = search[0] + (search[1] - search[0]) * 0.5;
+            if m <= search[0] || m >= search[1] {
+                break;
+            }
+            let v = residual(m)?;
+            if side == 0 {
+                if before(v) {
+                    bracket[0] = m;
+                    search[0] = m;
+                } else {
+                    search[1] = m;
+                }
+            } else if after(v) {
+                bracket[1] = m;
+                search[1] = m;
+            } else {
+                search[0] = m;
+            }
+        }
+    }
+    check(
+        before(residual(bracket[0])?) && after(residual(bracket[1])?),
+        "Stock contracted bracket lost original endpoint signs",
+    )?;
+    Ok(StockIntersection {
+        spec,
+        flank,
+        domain,
+        radius,
+        bracket,
+        increasing,
+        cells,
+    })
+}

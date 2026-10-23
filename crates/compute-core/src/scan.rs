@@ -188,3 +188,69 @@ impl ComputeProgram<'_> {
         Ok(())
     }
 }
+
+/// Deterministic CPU reference exclusive prefix scan (`output[i] = sum(input[..i])` with `u32` wrapping addition),
+/// matching [`ComputeProgram::exclusive_scan`].
+#[inline]
+pub fn exclusive_scan_u32(input: &[u32]) -> Vec<u32> {
+    let mut acc = 0_u32;
+    input
+        .iter()
+        .map(|&v| {
+            let prev = acc;
+            acc = acc.wrapping_add(v);
+            prev
+        })
+        .collect()
+}
+
+/// Deterministic CPU reference inclusive prefix scan (`output[i] = sum(input[..=i])` with `u32` wrapping addition).
+#[inline]
+pub fn inclusive_scan_u32(input: &[u32]) -> Vec<u32> {
+    let mut acc = 0_u32;
+    input
+        .iter()
+        .map(|&v| {
+            acc = acc.wrapping_add(v);
+            acc
+        })
+        .collect()
+}
+
+/// Deterministic CPU reference stream compaction keeping elements where `keep[i] != 0` in input order.
+pub fn compact_if_u32<T: Copy>(input: &[T], keep: &[u32]) -> Result<Vec<T>, ComputeError> {
+    if input.len() != keep.len() {
+        return Err(ComputeError::LengthMismatch {
+            expected: input.len(),
+            actual: keep.len(),
+        });
+    }
+    let count = keep.iter().filter(|&&m| m != 0).count();
+    let mut out = Vec::with_capacity(count);
+    for (&val, &mask) in input.iter().zip(keep.iter()) {
+        if mask != 0 {
+            out.push(val);
+        }
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpu_reference_scans_and_compaction_match_expected_semantics() {
+        let data = [3_u32, 1, 4, 1, 5, 9];
+        assert_eq!(exclusive_scan_u32(&data), vec![0, 3, 4, 8, 9, 14]);
+        assert_eq!(inclusive_scan_u32(&data), vec![3, 4, 8, 9, 14, 23]);
+        assert!(exclusive_scan_u32(&[]).is_empty());
+        assert!(inclusive_scan_u32(&[]).is_empty());
+
+        let values = [10.0_f32, 20.0, 30.0, 40.0, 50.0];
+        let keep = [0_u32, 1, 0, 5, 1];
+        let compacted = compact_if_u32(&values, &keep).unwrap();
+        assert_eq!(compacted, vec![20.0, 40.0, 50.0]);
+        assert!(compact_if_u32(&values, &[1, 0]).is_err());
+    }
+}

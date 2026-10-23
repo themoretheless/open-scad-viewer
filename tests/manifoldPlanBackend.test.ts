@@ -338,6 +338,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'core/ownRustCadEvidence.ts',
       'core/qualityTargets.ts',
       'core/runtimeGeometryEvidenceV3.ts',
+      'core/runtimeGeometryEvidenceV4.ts',
       'core/scene.ts',
       'core/semanticProgram.ts',
       'core/sha256.ts',

@@ -88,7 +88,7 @@ pub fn planar_bezier_endpoint_separation(
         };
         let h = homogeneous(aa, ctx)?;
         let query = homogeneous(bb, ctx)?;
-        let mut dual = Vec::new();
+        let mut dual = Vec::with_capacity(3);
         for k in 0..3 {
             let (u, v) = ((k + 1) % 3, (k + 2) % 3);
             dual.push(
@@ -141,7 +141,7 @@ pub fn planar_bezier_endpoint_separation(
                 .checked_mul(c)
                 .ok_or(Reason::ResourceLimit)?;
         }
-        let mut coefficients = Vec::new();
+        let mut coefficients = Vec::with_capacity(degree + 1);
         for k in 0..=degree {
             let mut value = Expansion::scalar(0.);
             for i in k.saturating_sub(n)..=k.min(n) {
@@ -230,7 +230,8 @@ fn conic_bernstein_no_interior_roots(
         if (increasing||decreasing)&&((b[0].hi<0.&&b[n].lo>0.)||(b[0].lo>0.&&b[n].hi<0.)) {
             return Ok(false);
         }
-        let mut levels = vec![b];
+        let mut levels = Vec::with_capacity(n + 1);
+        levels.push(b);
         for k in 1..=n {
             levels.push(
                 levels[k - 1]
@@ -291,9 +292,9 @@ fn primitive_carrier(a: [Poly; 3], ctx: &mut PredicateContext<'_>) -> Result<[Po
     if g.len() <= 1 {
         return Ok(a);
     }
-    let mut quotients = Vec::new();
-    let mut source_coefficients = Vec::new();
-    let mut product_coefficients = Vec::new();
+    let mut quotients = Vec::with_capacity(3);
+    let mut source_coefficients = Vec::with_capacity(3);
+    let mut product_coefficients = Vec::with_capacity(3);
     for p in &a {
         if zero(p) {
             quotients.push(vec![Expansion::scalar(0.)]);
@@ -331,7 +332,7 @@ fn primitive_carrier(a: [Poly; 3], ctx: &mut PredicateContext<'_>) -> Result<[Po
         source_coefficients.push(source);
         product_coefficients.push(scale);
     }
-    let mut reduced = Vec::new();
+    let mut reduced = Vec::with_capacity(3);
     for i in 0..3 {
         let mut scale = source_coefficients[i].clone();
         for j in 0..3 {
@@ -384,7 +385,7 @@ fn kernel(
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Vec<Vec<Expansion>>, Reason> {
     let mut rows = matrix.to_vec();
-    let mut pivots = Vec::new();
+    let mut pivots = Vec::with_capacity(6);
     for col in 0..6 {
         let k = pivots.len();
         let Some(row) = (k..rows.len()).find(|&i| rows[i][col].sign() != Sign::Zero) else {
@@ -410,7 +411,7 @@ fn kernel(
             break;
         }
     }
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(6 - pivots.len());
     for free in (0..6).filter(|j| !pivots.contains(j)) {
         let mut v = vec![Expansion::scalar(0.); 6];
         v[free] = Expansion::scalar(1.);
@@ -715,7 +716,7 @@ fn solve(
         } else {
             square_free_chain(&f, ctx)?.0
         };
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(roots.len());
         for root in roots {
             let mut interval = root.interval;
             let sy = root_sign(&chain[0], &chain, &y, &mut interval, ctx)?;

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Browser-based OpenSCAD 3D viewer using WebGPU. Edit, render and view models directly in the browser." />
+  <meta name="color-scheme" content="dark light" />
+  <title>OpenSCAD WebGPU Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/assets/index-B_WhhKv6.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/CQy2Nllq.js">
+  <link rel="modulepreload" crossorigin href="/assets/Bw7DlkWE.js">
+  <link rel="modulepreload" crossorigin href="/assets/-sGg_M-n.js">
+  <link rel="modulepreload" crossorigin href="/assets/vr-core-bytes-D-hCHE33.js">
+  <link rel="modulepreload" crossorigin href="/assets/BDNMzG2s.js">
+  <link rel="modulepreload" crossorigin href="/assets/BLm4OzSk.js">
+  <link rel="modulepreload" crossorigin href="/assets/CVKQT5bI.js">
+  <link rel="modulepreload" crossorigin href="/assets/wasm-brotli-bytes-Bmmsw5O9.js">
+  <link rel="modulepreload" crossorigin href="/assets/BPCCgxq0.js">
+  <link rel="modulepreload" crossorigin href="/assets/language-kernel-bytes-DLyuBJkA.js">
+  <link rel="modulepreload" crossorigin href="/assets/B54aMuwT.js">
+  <link rel="modulepreload" crossorigin href="/assets/geometry-kernel-bytes-C0xEaZ1A.js">
+  <link rel="modulepreload" crossorigin href="/assets/BXC0yRPY.js">
+  <link rel="modulepreload" crossorigin href="/assets/BqeUwk53.js">
+  <link rel="modulepreload" crossorigin href="/assets/DTZjkZXE.js">
+  <link rel="modulepreload" crossorigin href="/assets/CwQSUgkB.js">
+  <link rel="modulepreload" crossorigin href="/assets/BdOMRrAC.js">
+  <link rel="modulepreload" crossorigin href="/assets/2h7Td8QN.js">
+  <link rel="modulepreload" crossorigin href="/assets/DN38n4w8.js">
+  <link rel="modulepreload" crossorigin href="/assets/B1MTT5_V.js">
+  <link rel="modulepreload" crossorigin href="/assets/CZOXGc-P.js">
+  <link rel="modulepreload" crossorigin href="/assets/Bpeqqepk.js">
+  <link rel="modulepreload" crossorigin href="/assets/j9xCyQ4U.js">
+  <link rel="modulepreload" crossorigin href="/assets/B2o2RJsb.js">
+  <link rel="modulepreload" crossorigin href="/assets/BDySeuo8.js">
+  <link rel="modulepreload" crossorigin href="/assets/BEWrmvsQ.js">
+  <link rel="modulepreload" crossorigin href="/assets/8KDJiMDN.js">
+  <link rel="modulepreload" crossorigin href="/assets/DEEf_pau.js">
+  <link rel="modulepreload" crossorigin href="/assets/CTDrUWsg.js">
+  <link rel="modulepreload" crossorigin href="/assets/D5p--0ys.js">
+  <link rel="modulepreload" crossorigin href="/assets/C5Zozm6V.js">
+  <link rel="modulepreload" crossorigin href="/assets/BaLqcf3_.js">
+  <link rel="modulepreload" crossorigin href="/assets/CozsFvJa.js">
+  <link rel="modulepreload" crossorigin href="/assets/DxlqHkeA.js">
+  <link rel="modulepreload" crossorigin href="/assets/C6KPYKNB.js">
+  <link rel="modulepreload" crossorigin href="/assets/BoLbWKO0.js">
+  <link rel="modulepreload" crossorigin href="/assets/DzCuhLFR.js">
+  <link rel="modulepreload" crossorigin href="/assets/Cf2J6ngh.js">
+  <link rel="modulepreload" crossorigin href="/assets/C4gPZiUl.js">
+  <link rel="modulepreload" crossorigin href="/assets/CQN5tQJD.js">
+  <link rel="modulepreload" crossorigin href="/assets/DdWikGvR.js">
+  <link rel="modulepreload" crossorigin href="/assets/renderer-DI8hR7hH.js">
+  <link rel="modulepreload" crossorigin href="/assets/CYDajE21.js">
+  <link rel="modulepreload" crossorigin href="/assets/index-B_WhhKv6.js">
+  <link rel="modulepreload" crossorigin href="/assets/DP8AbRlR.js">
+  <link rel="stylesheet" crossorigin href="/assets/meshEditing-DGa1eM9P.css">
+  <link rel="stylesheet" crossorigin href="/assets/index-BVl_nb3z.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // The offline shell is a production concern. In development it would serve stale
+    // modules from its cache, so any registration left over from a build is removed.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        if ('false' === 'true') {
+          navigator.serviceWorker.getRegistrations()
+            .then(registrations => registrations.forEach(registration => registration.unregister()))
+            .catch(() => {})
+          return
+        }
+        navigator.serviceWorker.register('/sw.js').catch(() => {})
+      })
+    }
+  </script>
+</body>
+</html>

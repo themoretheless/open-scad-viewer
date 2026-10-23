@@ -107,6 +107,8 @@ pub struct Decision {
 enum Predicate {
     Orient2,
     Orient3,
+    InCircle2,
+    InSphere3,
     DirectionDot3,
     Distance(usize),
 }
@@ -130,11 +132,97 @@ fn expression<T: Algebra>(
             let v = values[5].sub(&values[1], ctx)?;
             x.mul(&v, ctx)?.sub(&y.mul(&u, ctx)?, ctx)
         }
+        Predicate::InCircle2 => {
+            let adx = values[0].sub(&values[6], ctx)?;
+            let ady = values[1].sub(&values[7], ctx)?;
+            let bdx = values[2].sub(&values[6], ctx)?;
+            let bdy = values[3].sub(&values[7], ctx)?;
+            let cdx = values[4].sub(&values[6], ctx)?;
+            let cdy = values[5].sub(&values[7], ctx)?;
+            let alift = adx.mul(&adx, ctx)?.add(&ady.mul(&ady, ctx)?, ctx)?;
+            let blift = bdx.mul(&bdx, ctx)?.add(&bdy.mul(&bdy, ctx)?, ctx)?;
+            let clift = cdx.mul(&cdx, ctx)?.add(&cdy.mul(&cdy, ctx)?, ctx)?;
+            let bc = bdx.mul(&cdy, ctx)?.sub(&bdy.mul(&cdx, ctx)?, ctx)?;
+            let ca = cdx.mul(&ady, ctx)?.sub(&cdy.mul(&adx, ctx)?, ctx)?;
+            let ab = adx.mul(&bdy, ctx)?.sub(&ady.mul(&bdx, ctx)?, ctx)?;
+            alift
+                .mul(&bc, ctx)?
+                .add(&blift.mul(&ca, ctx)?, ctx)?
+                .add(&clift.mul(&ab, ctx)?, ctx)
+        }
+        Predicate::InSphere3 => {
+            let aex = values[0].sub(&values[12], ctx)?;
+            let aey = values[1].sub(&values[13], ctx)?;
+            let aez = values[2].sub(&values[14], ctx)?;
+            let bex = values[3].sub(&values[12], ctx)?;
+            let bey = values[4].sub(&values[13], ctx)?;
+            let bez = values[5].sub(&values[14], ctx)?;
+            let cex = values[6].sub(&values[12], ctx)?;
+            let cey = values[7].sub(&values[13], ctx)?;
+            let cez = values[8].sub(&values[14], ctx)?;
+            let dex = values[9].sub(&values[12], ctx)?;
+            let dey = values[10].sub(&values[13], ctx)?;
+            let dez = values[11].sub(&values[14], ctx)?;
+
+            let ab = aex.mul(&bey, ctx)?.sub(&bex.mul(&aey, ctx)?, ctx)?;
+            let bc = bex.mul(&cey, ctx)?.sub(&cex.mul(&bey, ctx)?, ctx)?;
+            let cd = cex.mul(&dey, ctx)?.sub(&dex.mul(&cey, ctx)?, ctx)?;
+            let da = dex.mul(&aey, ctx)?.sub(&aex.mul(&dey, ctx)?, ctx)?;
+            let ac = aex.mul(&cey, ctx)?.sub(&cex.mul(&aey, ctx)?, ctx)?;
+            let bd = bex.mul(&dey, ctx)?.sub(&dex.mul(&bey, ctx)?, ctx)?;
+
+            let abc = aez
+                .mul(&bc, ctx)?
+                .sub(&bez.mul(&ac, ctx)?, ctx)?
+                .add(&cez.mul(&ab, ctx)?, ctx)?;
+            let bcd = bez
+                .mul(&cd, ctx)?
+                .sub(&cez.mul(&bd, ctx)?, ctx)?
+                .add(&dez.mul(&bc, ctx)?, ctx)?;
+            let cda = cez
+                .mul(&da, ctx)?
+                .add(&dez.mul(&ac, ctx)?, ctx)?
+                .add(&aez.mul(&cd, ctx)?, ctx)?;
+            let dab = dez
+                .mul(&ab, ctx)?
+                .add(&aez.mul(&bd, ctx)?, ctx)?
+                .add(&bez.mul(&da, ctx)?, ctx)?;
+
+            let alift = aex
+                .mul(&aex, ctx)?
+                .add(&aey.mul(&aey, ctx)?, ctx)?
+                .add(&aez.mul(&aez, ctx)?, ctx)?;
+            let blift = bex
+                .mul(&bex, ctx)?
+                .add(&bey.mul(&bey, ctx)?, ctx)?
+                .add(&bez.mul(&bez, ctx)?, ctx)?;
+            let clift = cex
+                .mul(&cex, ctx)?
+                .add(&cey.mul(&cey, ctx)?, ctx)?
+                .add(&cez.mul(&cez, ctx)?, ctx)?;
+            let dlift = dex
+                .mul(&dex, ctx)?
+                .add(&dey.mul(&dey, ctx)?, ctx)?
+                .add(&dez.mul(&dez, ctx)?, ctx)?;
+
+            alift
+                .mul(&bcd, ctx)?
+                .sub(&blift.mul(&cda, ctx)?, ctx)?
+                .add(&clift.mul(&dab, ctx)?, ctx)?
+                .sub(&dlift.mul(&abc, ctx)?, ctx)
+        }
         Predicate::Orient3 => {
-            let mut vectors = Vec::with_capacity(9);
-            for i in 3..12 {
-                vectors.push(values[i].sub(&values[i % 3], ctx)?);
-            }
+            let vectors = [
+                values[3].sub(&values[0], ctx)?,
+                values[4].sub(&values[1], ctx)?,
+                values[5].sub(&values[2], ctx)?,
+                values[6].sub(&values[0], ctx)?,
+                values[7].sub(&values[1], ctx)?,
+                values[8].sub(&values[2], ctx)?,
+                values[9].sub(&values[0], ctx)?,
+                values[10].sub(&values[1], ctx)?,
+                values[11].sub(&values[2], ctx)?,
+            ];
             let x = vectors[4]
                 .mul(&vectors[8], ctx)?
                 .sub(&vectors[5].mul(&vectors[7], ctx)?, ctx)?;
@@ -299,6 +387,571 @@ pub fn orient3d(
             a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
         ],
     )
+}
+
+/// Authored 2D incircle predicate: positive when `d` lies strictly inside the
+/// counter-clockwise circle through `(a, b, c)`, negative when strictly outside,
+/// and zero when cocircular.
+pub fn incircle2d_authored(
+    ctx: &mut PredicateContext<'_>,
+    a: [LeafRef; 2],
+    b: [LeafRef; 2],
+    c: [LeafRef; 2],
+    d: [LeafRef; 2],
+) -> Result<Decision, InputError> {
+    evaluate(
+        ctx,
+        Predicate::InCircle2,
+        &[a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]],
+    )
+}
+
+/// Adaptive exact 2D incircle predicate over finite binary64 coordinates.
+pub fn incircle2d(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Sign {
+    let coords = [a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Zero;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("incircle2d-ephemeral", 0, scalars) else {
+        return Sign::Zero;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    match incircle2d_authored(&mut ctx, pair(0), pair(2), pair(4), pair(6)) {
+        Ok(Decision {
+            outcome: Outcome::Sign(sign),
+            ..
+        }) => sign,
+        _ => Sign::Zero,
+    }
+}
+
+/// Authored 3D insphere predicate: positive when `e` lies strictly inside the
+/// sphere through `(a, b, c, d)` when `orient3d(a, b, c, d)` is positive,
+/// negative when strictly outside, and zero when cospherical.
+pub fn insphere3d_authored(
+    ctx: &mut PredicateContext<'_>,
+    a: [LeafRef; 3],
+    b: [LeafRef; 3],
+    c: [LeafRef; 3],
+    d: [LeafRef; 3],
+    e: [LeafRef; 3],
+) -> Result<Decision, InputError> {
+    evaluate(
+        ctx,
+        Predicate::InSphere3,
+        &[
+            a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2], e[0], e[1],
+            e[2],
+        ],
+    )
+}
+
+/// Adaptive exact 3D insphere predicate over finite binary64 coordinates.
+/// Returns `Sign::Positive` when `e` is strictly inside the sphere through `(a, b, c, d)`
+/// (assuming `orient3d(a, b, c, d) > 0`), `Sign::Negative` when strictly outside, and `Sign::Zero` when cospherical.
+pub fn insphere3d(
+    a: [f64; 3],
+    b: [f64; 3],
+    c: [f64; 3],
+    d: [f64; 3],
+    e: [f64; 3],
+) -> Sign {
+    let coords = [
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2], e[0], e[1], e[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Zero;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("insphere3d-ephemeral", 0, scalars) else {
+        return Sign::Zero;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let pt = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+            source.leaf(offset + 2).unwrap(),
+        ]
+    };
+    match insphere3d_authored(&mut ctx, pt(0), pt(3), pt(6), pt(9), pt(12)) {
+        Ok(Decision {
+            outcome: Outcome::Sign(sign),
+            ..
+        }) => sign,
+        _ => Sign::Zero,
+    }
+}
+
+/// Fast 2D axis-aligned bounding-box rejection filter: returns `true` when closed
+/// boxes `[min_a, max_a]` and `[min_b, max_b]` do not overlap.
+#[inline]
+pub fn aabb2_disjoint(min_a: [f64; 2], max_a: [f64; 2], min_b: [f64; 2], max_b: [f64; 2]) -> bool {
+    max_a[0] < min_b[0] || max_b[0] < min_a[0] || max_a[1] < min_b[1] || max_b[1] < min_a[1]
+}
+
+/// Fast 3D axis-aligned bounding-box rejection filter: returns `true` when closed
+/// boxes `[min_a, max_a]` and `[min_b, max_b]` do not overlap.
+#[inline]
+pub fn aabb3_disjoint(min_a: [f64; 3], max_a: [f64; 3], min_b: [f64; 3], max_b: [f64; 3]) -> bool {
+    max_a[0] < min_b[0]
+        || max_b[0] < min_a[0]
+        || max_a[1] < min_b[1]
+        || max_b[1] < min_a[1]
+        || max_a[2] < min_b[2]
+        || max_b[2] < min_a[2]
+}
+
+/// Exact 2D closed segment intersection test using adaptive `orient2d` predicates.
+/// Returns `true` if closed segments `[a0, a1]` and `[b0, b1]` intersect (either by proper
+/// crossing or by endpoint/collinear touch).
+pub fn segment_intersects_segment_2d(
+    a0: [f64; 2],
+    a1: [f64; 2],
+    b0: [f64; 2],
+    b1: [f64; 2],
+) -> bool {
+    let coords = [a0[0], a0[1], a1[0], a1[1], b0[0], b0[1], b1[0], b1[1]];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return false;
+    }
+    let min_a = [a0[0].min(a1[0]), a0[1].min(a1[1])];
+    let max_a = [a0[0].max(a1[0]), a0[1].max(a1[1])];
+    let min_b = [b0[0].min(b1[0]), b0[1].min(b1[1])];
+    let max_b = [b0[0].max(b1[0]), b0[1].max(b1[1])];
+    if aabb2_disjoint(min_a, max_a, min_b, max_b) {
+        return false;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("seg-inter-2d-ephemeral", 0, scalars) else {
+        return false;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    let orient = |p: usize, q: usize, r: usize| -> Option<Sign> {
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        match orient2d(&mut ctx, pair(p), pair(q), pair(r)) {
+            Ok(Decision {
+                outcome: Outcome::Sign(s),
+                ..
+            }) => Some(s),
+            _ => None,
+        }
+    };
+    let (Some(o1), Some(o2), Some(o3), Some(o4)) = (
+        orient(0, 2, 4),
+        orient(0, 2, 6),
+        orient(4, 6, 0),
+        orient(4, 6, 2),
+    ) else {
+        return false;
+    };
+    if o1 != o2 && o3 != o4 && o1 != Sign::Zero && o2 != Sign::Zero && o3 != Sign::Zero && o4 != Sign::Zero {
+        return true;
+    }
+    let on_segment = |p: [f64; 2], s0: [f64; 2], s1: [f64; 2]| -> bool {
+        p[0] >= s0[0].min(s1[0])
+            && p[0] <= s0[0].max(s1[0])
+            && p[1] >= s0[1].min(s1[1])
+            && p[1] <= s0[1].max(s1[1])
+    };
+    (o1 == Sign::Zero && on_segment(b0, a0, a1))
+        || (o2 == Sign::Zero && on_segment(b1, a0, a1))
+        || (o3 == Sign::Zero && on_segment(a0, b0, b1))
+        || (o4 == Sign::Zero && on_segment(a1, b0, b1))
+}
+
+/// Exact 2D point-in-triangle classification using adaptive `orient2d` predicates.
+/// Returns `Sign::Positive` when `p` is strictly inside triangle `(a, b, c)`,
+/// `Sign::Zero` when `p` lies on a boundary edge or vertex, and `Sign::Negative`
+/// when `p` is outside (or if `(a, b, c)` is degenerate), independent of whether
+/// `(a, b, c)` is ordered counter-clockwise or clockwise.
+pub fn point_in_triangle_2d(p: [f64; 2], a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> Sign {
+    let coords = [p[0], p[1], a[0], a[1], b[0], b[1], c[0], c[1]];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Negative;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("pt-in-tri-2d-ephemeral", 0, scalars) else {
+        return Sign::Negative;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    let orient = |q0: usize, q1: usize, q2: usize| -> Option<Sign> {
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        match orient2d(&mut ctx, pair(q0), pair(q1), pair(q2)) {
+            Ok(Decision {
+                outcome: Outcome::Sign(s),
+                ..
+            }) => Some(s),
+            _ => None,
+        }
+    };
+    let Some(tri_orient) = orient(2, 4, 6) else {
+        return Sign::Negative;
+    };
+    if tri_orient == Sign::Zero {
+        return Sign::Negative;
+    }
+    let (Some(s0), Some(s1), Some(s2)) = (orient(2, 4, 0), orient(4, 6, 0), orient(6, 2, 0)) else {
+        return Sign::Negative;
+    };
+    if [s0, s1, s2].iter().all(|&s| s == tri_orient) {
+        return Sign::Positive;
+    }
+    if [s0, s1, s2]
+        .iter()
+        .all(|&s| s == tri_orient || s == Sign::Zero)
+    {
+        return Sign::Zero;
+    }
+    Sign::Negative
+}
+
+/// Exact 3D point-in-tetrahedron classification using adaptive `orient3d` predicates.
+/// Returns `Sign::Positive` when `p` is strictly inside tetrahedron `(a, b, c, d)`,
+/// `Sign::Zero` when `p` lies on a boundary face, edge, or vertex, and `Sign::Negative`
+/// when `p` is outside (or if `(a, b, c, d)` is coplanar/degenerate), independent of
+/// the orientation of `(a, b, c, d)`.
+pub fn point_in_tetrahedron_3d(
+    p: [f64; 3],
+    a: [f64; 3],
+    b: [f64; 3],
+    c: [f64; 3],
+    d: [f64; 3],
+) -> Sign {
+    let coords = [
+        p[0], p[1], p[2], a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Negative;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("pt-in-tet-3d-ephemeral", 0, scalars) else {
+        return Sign::Negative;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pt = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+            source.leaf(offset + 2).unwrap(),
+        ]
+    };
+    let orient = |q0: usize, q1: usize, q2: usize, q3: usize| -> Option<Sign> {
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        match orient3d(&mut ctx, pt(q0), pt(q1), pt(q2), pt(q3)) {
+            Ok(Decision {
+                outcome: Outcome::Sign(s),
+                ..
+            }) => Some(s),
+            _ => None,
+        }
+    };
+    let Some(tet_orient) = orient(3, 6, 9, 12) else {
+        return Sign::Negative;
+    };
+    if tet_orient == Sign::Zero {
+        return Sign::Negative;
+    }
+    let (Some(s0), Some(s1), Some(s2), Some(s3)) = (
+        orient(0, 6, 9, 12),
+        orient(3, 0, 9, 12),
+        orient(3, 6, 0, 12),
+        orient(3, 6, 9, 0),
+    ) else {
+        return Sign::Negative;
+    };
+    if [s0, s1, s2, s3].iter().all(|&s| s == tet_orient) {
+        return Sign::Positive;
+    }
+    if [s0, s1, s2, s3]
+        .iter()
+        .all(|&s| s == tet_orient || s == Sign::Zero)
+    {
+        return Sign::Zero;
+    }
+    Sign::Negative
+}
+
+/// Exact 3D segment–triangle intersection classification using adaptive `orient3d` predicates
+/// with a fast [`aabb3_disjoint`] pre-rejection filter.
+///
+/// Returns:
+/// - `Sign::Positive` when the open segment `(seg_a, seg_b)` pierces the strict interior of
+///   triangle `(tri_a, tri_b, tri_c)`,
+/// - `Sign::Zero` when the closed segment `[seg_a, seg_b]` touches the triangle boundary
+///   (edge or vertex) or when a segment endpoint lies on the closed triangle,
+/// - `Sign::Negative` when the segment and triangle are disjoint (or if the triangle is degenerate).
+pub fn segment_triangle_intersect_3d_exact(
+    seg_a: [f64; 3],
+    seg_b: [f64; 3],
+    tri_a: [f64; 3],
+    tri_b: [f64; 3],
+    tri_c: [f64; 3],
+) -> Sign {
+    let coords = [
+        seg_a[0], seg_a[1], seg_a[2], seg_b[0], seg_b[1], seg_b[2], tri_a[0], tri_a[1], tri_a[2],
+        tri_b[0], tri_b[1], tri_b[2], tri_c[0], tri_c[1], tri_c[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return Sign::Negative;
+    }
+    let min_seg = [
+        seg_a[0].min(seg_b[0]),
+        seg_a[1].min(seg_b[1]),
+        seg_a[2].min(seg_b[2]),
+    ];
+    let max_seg = [
+        seg_a[0].max(seg_b[0]),
+        seg_a[1].max(seg_b[1]),
+        seg_a[2].max(seg_b[2]),
+    ];
+    let min_tri = [
+        tri_a[0].min(tri_b[0]).min(tri_c[0]),
+        tri_a[1].min(tri_b[1]).min(tri_c[1]),
+        tri_a[2].min(tri_b[2]).min(tri_c[2]),
+    ];
+    let max_tri = [
+        tri_a[0].max(tri_b[0]).max(tri_c[0]),
+        tri_a[1].max(tri_b[1]).max(tri_c[1]),
+        tri_a[2].max(tri_b[2]).max(tri_c[2]),
+    ];
+    if aabb3_disjoint(min_seg, max_seg, min_tri, max_tri) {
+        return Sign::Negative;
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("seg-tri-3d-ephemeral", 0, scalars) else {
+        return Sign::Negative;
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pt = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+            source.leaf(offset + 2).unwrap(),
+        ]
+    };
+    let orient = |q0: usize, q1: usize, q2: usize, q3: usize| -> Option<Sign> {
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        match orient3d(&mut ctx, pt(q0), pt(q1), pt(q2), pt(q3)) {
+            Ok(Decision {
+                outcome: Outcome::Sign(s),
+                ..
+            }) => Some(s),
+            _ => None,
+        }
+    };
+    let (Some(oa), Some(ob)) = (orient(6, 9, 12, 0), orient(6, 9, 12, 3)) else {
+        return Sign::Negative;
+    };
+    if oa != Sign::Zero && oa == ob {
+        return Sign::Negative;
+    }
+    let coplanar_pt_in_tri = |p: [f64; 3]| -> Sign {
+        let ab = [tri_b[0] - tri_a[0], tri_b[1] - tri_a[1], tri_b[2] - tri_a[2]];
+        let ac = [tri_c[0] - tri_a[0], tri_c[1] - tri_a[1], tri_c[2] - tri_a[2]];
+        let nx = (ab[1] * ac[2] - ab[2] * ac[1]).abs();
+        let ny = (ab[2] * ac[0] - ab[0] * ac[2]).abs();
+        let nz = (ab[0] * ac[1] - ab[1] * ac[0]).abs();
+        let (i0, i1) = if nx >= ny && nx >= nz {
+            (1, 2)
+        } else if ny >= nz {
+            (2, 0)
+        } else {
+            (0, 1)
+        };
+        point_in_triangle_2d(
+            [p[i0], p[i1]],
+            [tri_a[i0], tri_a[i1]],
+            [tri_b[i0], tri_b[i1]],
+            [tri_c[i0], tri_c[i1]],
+        )
+    };
+    if oa == Sign::Zero && ob == Sign::Zero {
+        let ab = [tri_b[0] - tri_a[0], tri_b[1] - tri_a[1], tri_b[2] - tri_a[2]];
+        let ac = [tri_c[0] - tri_a[0], tri_c[1] - tri_a[1], tri_c[2] - tri_a[2]];
+        let nx = (ab[1] * ac[2] - ab[2] * ac[1]).abs();
+        let ny = (ab[2] * ac[0] - ab[0] * ac[2]).abs();
+        let nz = (ab[0] * ac[1] - ab[1] * ac[0]).abs();
+        let (i0, i1) = if nx >= ny && nx >= nz {
+            (1, 2)
+        } else if ny >= nz {
+            (2, 0)
+        } else {
+            (0, 1)
+        };
+        let sa2 = [seg_a[i0], seg_a[i1]];
+        let sb2 = [seg_b[i0], seg_b[i1]];
+        let ta2 = [tri_a[i0], tri_a[i1]];
+        let tb2 = [tri_b[i0], tri_b[i1]];
+        let tc2 = [tri_c[i0], tri_c[i1]];
+        if point_in_triangle_2d(sa2, ta2, tb2, tc2) != Sign::Negative
+            || point_in_triangle_2d(sb2, ta2, tb2, tc2) != Sign::Negative
+            || segment_intersects_segment_2d(sa2, sb2, ta2, tb2)
+            || segment_intersects_segment_2d(sa2, sb2, tb2, tc2)
+            || segment_intersects_segment_2d(sa2, sb2, tc2, ta2)
+        {
+            return Sign::Zero;
+        }
+        return Sign::Negative;
+    }
+    if oa == Sign::Zero {
+        return if coplanar_pt_in_tri(seg_a) != Sign::Negative {
+            Sign::Zero
+        } else {
+            Sign::Negative
+        };
+    }
+    if ob == Sign::Zero {
+        return if coplanar_pt_in_tri(seg_b) != Sign::Negative {
+            Sign::Zero
+        } else {
+            Sign::Negative
+        };
+    }
+    // oa and ob have strictly opposite signs: segment straddles the triangle plane.
+    let (Some(s0), Some(s1), Some(s2)) = (
+        orient(0, 3, 6, 9),
+        orient(0, 3, 9, 12),
+        orient(0, 3, 12, 6),
+    ) else {
+        return Sign::Negative;
+    };
+    // Because orient3d(tri_a, tri_b, tri_c, seg_a) = oa and orient3d(tri_a, tri_b, tri_c, seg_b) = ob = -oa,
+    // all three edge-tetrahedra (seg_a, seg_b, e0, e1) must match `ob` (or be Zero on an edge/vertex).
+    if [s0, s1, s2].iter().all(|&s| s == ob) {
+        return Sign::Positive;
+    }
+    if [s0, s1, s2].iter().all(|&s| s == ob || s == Sign::Zero) {
+        return Sign::Zero;
+    }
+    Sign::Negative
+}
+
+/// Return true when `d` lies within signed distance `tol` of the plane spanned by
+/// `(a, b, c)`, or when `(a, b, c)` are collinear within `tol`. Uses exact
+/// orientation when `tol <= 0.0`.
+pub fn coplanar3d(a: [f64; 3], b: [f64; 3], c: [f64; 3], d: [f64; 3], tol: f64) -> bool {
+    let coords = [
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) || !tol.is_finite() || tol < 0.0 {
+        return false;
+    }
+    if tol == 0.0 {
+        let scalars = coords
+            .iter()
+            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect();
+        let Ok(source) = SourceArena::authored("coplanar3d-ephemeral", 0, scalars) else {
+            return false;
+        };
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        let pt = |offset: usize| {
+            [
+                source.leaf(offset).unwrap(),
+                source.leaf(offset + 1).unwrap(),
+                source.leaf(offset + 2).unwrap(),
+            ]
+        };
+        return matches!(
+            orient3d(&mut ctx, pt(0), pt(3), pt(6), pt(9)),
+            Ok(Decision {
+                outcome: Outcome::Sign(Sign::Zero),
+                ..
+            })
+        );
+    }
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let ad = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
+    let n = [
+        ab[1] * ac[2] - ab[2] * ac[1],
+        ab[2] * ac[0] - ab[0] * ac[2],
+        ab[0] * ac[1] - ab[1] * ac[0],
+    ];
+    let n_len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+    if n_len <= tol * tol {
+        return true;
+    }
+    let det = ad[0] * n[0] + ad[1] * n[1] + ad[2] * n[2];
+    (det.abs() / n_len) <= tol
+}
+
+/// Return true when `(a, b, c)` are collinear within perpendicular distance `tol`
+/// (exact cross-product zero check when `tol <= 0.0`).
+pub fn collinear3d(a: [f64; 3], b: [f64; 3], c: [f64; 3], tol: f64) -> bool {
+    let coords = [a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]];
+    if coords.iter().any(|v| !v.is_finite()) || !tol.is_finite() || tol < 0.0 {
+        return false;
+    }
+    if tol == 0.0 {
+        let scalars = [
+            a[0], a[1], b[0], b[1], c[0], c[1],
+            a[1], a[2], b[1], b[2], c[1], c[2],
+            a[2], a[0], b[2], b[0], c[2], c[0],
+        ]
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+        let Ok(source) = SourceArena::authored("collinear3d-ephemeral", 0, scalars) else {
+            return false;
+        };
+        let tolerance = ToleranceContext::default_valid();
+        for plane in 0..3 {
+            let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+            let base = plane * 6;
+            let p = |k: usize| [source.leaf(base + k).unwrap(), source.leaf(base + k + 1).unwrap()];
+            let Ok(decision) = orient2d(&mut ctx, p(0), p(2), p(4)) else {
+                return false;
+            };
+            if decision.outcome != Outcome::Sign(Sign::Zero) {
+                return false;
+            }
+        }
+        return true;
+    }
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let bc = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
+    let cross = [
+        ab[1] * ac[2] - ab[2] * ac[1],
+        ab[2] * ac[0] - ab[0] * ac[2],
+        ab[0] * ac[1] - ab[1] * ac[0],
+    ];
+    let area2 = (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt();
+    let max_len = (ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2])
+        .max(ac[0] * ac[0] + ac[1] * ac[1] + ac[2] * ac[2])
+        .max(bc[0] * bc[0] + bc[1] * bc[1] + bc[2] * bc[2])
+        .sqrt();
+    if max_len <= tol {
+        return true;
+    }
+    (area2 / max_len) <= tol
 }
 
 fn distance_references(

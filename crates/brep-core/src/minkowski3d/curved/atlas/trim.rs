@@ -31,6 +31,40 @@ pub(super) fn chart(m: &Model, face: usize, work: &mut Work) -> Result<Net> {
         let h = sb::curve(c, &Q::from_float(a).unwrap(), &Q::from_float(b).unwrap())?;
         curves.push(h);
     }
+    disk(m, face, curves, work)
+}
+fn disk(m: &Model, face: usize, curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Net> {
+    let f = &m.faces[face];
+    let mut uv = disk_uv(curves, work)?;
+    let s = &f.surface;
+    let lo = [
+        Q::from_float(s.knots_u[s.degree_u]).unwrap(),
+        Q::from_float(s.knots_v[s.degree_v]).unwrap(),
+    ];
+    let hi = [
+        Q::from_float(s.knots_u[s.control_points.len()]).unwrap(),
+        Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap(),
+    ];
+    let tensor = sb::cell(
+        s,
+        [lo[0].clone(), hi[0].clone()],
+        [lo[1].clone(), hi[1].clone()],
+    )?;
+    for p in uv.iter_mut().flatten() {
+        for k in 0..2 {
+            p[k] = (&p[k] - &lo[k] * &p[3]) / (&hi[k] - &lo[k]);
+            if p[k] < Q::zero() || p[k] > p[3] {
+                return Err(fail("trimmed atlas UV control hull leaves tensor cell"));
+            }
+        }
+    }
+    bernstein::compose(&tensor, &uv, work)
+}
+
+pub(super) fn disk_uv(mut curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Net> {
+    if curves.len() != 3 {
+        return Err(fail("UV disk needs three edges"));
+    }
     // Choose common corner gauges from the highest-degree boundaries first.
     // A positive linear homogeneous factor adjusts any remaining endpoints
     // without changing either the curve image or its parameter clock. This
@@ -137,29 +171,7 @@ pub(super) fn chart(m: &Model, face: usize, work: &mut Work) -> Result<Net> {
             }
         }
     }
-    let s = &f.surface;
-    let lo = [
-        Q::from_float(s.knots_u[s.degree_u]).unwrap(),
-        Q::from_float(s.knots_v[s.degree_v]).unwrap(),
-    ];
-    let hi = [
-        Q::from_float(s.knots_u[s.control_points.len()]).unwrap(),
-        Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap(),
-    ];
-    let tensor = sb::cell(
-        s,
-        [lo[0].clone(), hi[0].clone()],
-        [lo[1].clone(), hi[1].clone()],
-    )?;
-    for p in uv.iter_mut().flatten() {
-        for k in 0..2 {
-            p[k] = (&p[k] - &lo[k] * &p[3]) / (&hi[k] - &lo[k]);
-            if p[k] < Q::zero() || p[k] > p[3] {
-                return Err(fail("trimmed atlas UV control hull leaves tensor cell"));
-            }
-        }
-    }
-    bernstein::compose(&tensor, &uv, work)
+    Ok(uv)
 }
 
 #[cfg(test)]
@@ -199,4 +211,13 @@ mod tests {
         m.faces[0].holes.push(outer);
         assert!(chart(&m, 0, &mut Work::default()).is_err());
     }
+}
+
+mod region;
+pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>> {
+    let f = &m.faces[face];
+    if f.holes.is_empty() && m.loops[f.outer].coedges.len() == 3 {
+        return Ok(vec![chart(m, face, work)?]);
+    }
+    region::charts(m, face, work)
 }

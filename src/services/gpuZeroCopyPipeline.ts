@@ -10,6 +10,14 @@
  * 3. Supports OffscreenCanvas WebGPU context initialization inside Web Workers.
  */
 
+import {
+  getGpuMemoryArchitectureProfile,
+  type GpuMemoryArchitecture,
+  type GpuMemoryArchitectureProfile,
+} from '../renderer/types'
+
+export { getGpuMemoryArchitectureProfile, type GpuMemoryArchitecture, type GpuMemoryArchitectureProfile }
+
 // WebGPU standard GPUBufferUsage bitflags (fallback for headless Node.js environments)
 const BUFFER_USAGE = {
   MAP_READ: typeof GPUBufferUsage !== 'undefined' ? GPUBufferUsage.MAP_READ : 0x0001,
@@ -21,6 +29,78 @@ const BUFFER_USAGE = {
   UNIFORM: typeof GPUBufferUsage !== 'undefined' ? GPUBufferUsage.UNIFORM : 0x0040,
   STORAGE: typeof GPUBufferUsage !== 'undefined' ? GPUBufferUsage.STORAGE : 0x0080,
   INDIRECT: typeof GPUBufferUsage !== 'undefined' ? GPUBufferUsage.INDIRECT : 0x0100,
+}
+
+/**
+ * Detects whether a WebGPU device/adapter operates on Unified Memory Architecture (`'uma'`,
+ * e.g. Apple Silicon Metal or integrated SoCs with mappable primary buffers) versus
+ * Discrete / Decoupled Memory Architecture (`'duma'`, e.g. discrete PCIe GPUs or isolated staging pipelines).
+ */
+export function detectGpuMemoryArchitecture(
+  adapterInfo?: { vendor?: string; architecture?: string; description?: string } | null,
+  features?: { has(name: string): boolean } | null,
+): GpuMemoryArchitecture {
+  if (features?.has('mappable-primary-buffers')) {
+    return 'uma'
+  }
+  const vendor = (adapterInfo?.vendor ?? '').toLowerCase()
+  const arch = (adapterInfo?.architecture ?? '').toLowerCase()
+  const desc = (adapterInfo?.description ?? '').toLowerCase()
+  if (
+    vendor.includes('apple') ||
+    arch.includes('apple') ||
+    arch.includes('metal') ||
+    desc.includes('apple m')
+  ) {
+    return 'uma'
+  }
+  return 'duma'
+}
+
+/**
+ * Upload a byte/typed-array payload into a newly allocated GPU buffer according to the
+ * active memory architecture (`'uma'` vs `'duma'`):
+ * - **UMA** (`mappedAtCreation: true` directly on the primary buffer): writes directly into
+ *   unified CPU/GPU DRAM inside `getMappedRange()` and unmaps before returning — zero staging copy.
+ * - **dUMA** (`mappedAtCreation: false` + `device.queue.writeBuffer`): allocates a private device-local
+ *   VRAM buffer (`COPY_DST`) and schedules an asynchronous staging ring DMA transfer.
+ */
+export function createAndUploadBufferByArchitecture(
+  device: GPUDevice,
+  data: ArrayBufferView,
+  usage: number,
+  architecture: GpuMemoryArchitecture = 'duma',
+): GPUBuffer {
+  const byteSize = alignByteSize(data.byteLength, 16)
+  if (architecture === 'uma') {
+    const umaUsage = device.features?.has('mappable-primary-buffers')
+      ? usage | BUFFER_USAGE.MAP_WRITE
+      : usage
+    const buffer = device.createBuffer({
+      size: byteSize,
+      usage: umaUsage,
+      mappedAtCreation: true,
+    })
+    const dst = new Uint8Array(buffer.getMappedRange(0, byteSize))
+    const src = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+    dst.set(src)
+    buffer.unmap()
+    return buffer
+  }
+
+  const buffer = device.createBuffer({
+    size: byteSize,
+    usage: usage | BUFFER_USAGE.COPY_DST,
+    mappedAtCreation: false,
+  })
+  device.queue.writeBuffer(
+    buffer,
+    0,
+    data.buffer as ArrayBuffer,
+    data.byteOffset,
+    data.byteLength,
+  )
+  return buffer
 }
 
 export interface ZeroCopyMeshBuffers {

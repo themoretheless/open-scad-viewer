@@ -70,4 +70,26 @@ describe('camera history', () => {
     expect(() => new CameraHistory(0)).toThrow(RangeError)
     expect(() => new CameraHistory(1.5)).toThrow(RangeError)
   })
+
+  it('supports undo and redo navigation with redo stack clearing on new record', () => {
+    const history = new CameraHistory(10)
+    history.record(state(10))
+    history.record(state(20))
+    expect(history.canUndo()).toBe(true)
+    expect(history.canRedo()).toBe(false)
+
+    const undone = history.undo()
+    expect(undone).toEqual(state(20))
+    expect(history.canRedo()).toBe(true)
+    expect(history.redoSize).toBe(1)
+
+    const redone = history.redo()
+    expect(redone).toEqual(state(20))
+    expect(history.canRedo()).toBe(false)
+
+    history.undo()
+    expect(history.canRedo()).toBe(true)
+    history.record(state(40))
+    expect(history.canRedo()).toBe(false)
+  })
 })

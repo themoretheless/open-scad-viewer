@@ -1,0 +1,55 @@
+[package]
+name = "geometry-bridge"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = []
+gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
+cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
+
+[dependencies]
+mesh-io = { workspace = true }
+mesh-topology = { workspace = true }
+mesh-query = { workspace = true }
+mesh-section = { workspace = true }
+math-core = { workspace = true }
+compute-core = { workspace = true, optional = true }
+gpu-compute = { workspace = true, optional = true }
+value-codec = { workspace = true }
+geometry-ops = { workspace = true, features = ["codec"] }
+manifold-core = { workspace = true }
+manifold-ops = { workspace = true }
+mechanical-core = { workspace = true, features = ["codec"] }
+mechanics-core = { workspace = true }
+sketch-core = { workspace = true, features = ["codec"] }
+brep-topology = { workspace = true, features = ["codec"] }
+brep-core = { workspace = true, features = ["codec"] }
+cad-predicates = { workspace = true, features = ["codec"] }
+planar-geometry = { workspace = true }
+resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
+subdivision-core = { workspace = true, features = ["codec"] }
+sdf-core = { workspace = true, features = ["codec"] }
+nurbs-core = { workspace = true, features = ["transport"] }
+polygon-core = { workspace = true, features = ["codec"] }
+slicer-core = { workspace = true }
+usvg = { version = "0.47.0", default-features = false, features = ["text"] }
+svgtypes = "0.16.1"
+base64 = "0.22"
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
+sha2 = "0.11"
+data-url = "0.3"
+imagesize = "0.14"
+gif = "0.14.1"
+image-webp = "0.2.4"
+zune-jpeg = "0.5.8"
+simplecss = "0.2.2"
+ttf-parser = "0.25.1"
+
+[dev-dependencies]
+gcode-core = { workspace = true }

@@ -1,0 +1,1 @@
+import{t as e}from"./lIS1Vv-h.js";function t(){return new e(()=>new Worker(new URL(`/assets/mainSolid.worker-CmM2yuop.js`,``+import.meta.url),{type:`module`}))}export{t};

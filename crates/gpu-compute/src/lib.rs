@@ -13,8 +13,10 @@ mod profiling;
 mod readback;
 
 pub use backend::{
-    BackendKind, BackendReport, SubgroupReport, available_backend_report,
-    available_subgroup_report, backend_label, tuned_workgroup_size,
+    BackendKind, BackendReport, HardwareExecutionTopology, MemoryArchitecture,
+    MemoryArchitectureProfile, SubgroupReport, available_backend_report,
+    available_execution_topology, available_subgroup_report, backend_label,
+    recommend_workgroup_shape_2d, tuned_workgroup_size,
 };
 pub use buffer::{
     f32_le_bytes, pack_f32, pack_u32, read_buffer, storage_entry, u32_le_bytes, uniform_entry,
@@ -23,7 +25,8 @@ pub use buffer::{
 pub use context::{GpuContext, GpuContextError};
 pub use executor::block_on;
 pub use memory::{
-    BufferError, GpuBuffer, GpuBufferView, create_buffer_initialized, shared_memory_uploads,
+    BufferError, GpuBuffer, GpuBufferView, create_buffer_initialized, device_memory_architecture,
+    shared_memory_uploads,
 };
 pub use profiling::{GpuTimer, GpuTimestamp, TimestampError, TimestampReadback};
 pub use readback::{ByteReadback, ReadbackError, try_read_buffer, try_read_buffer_with};

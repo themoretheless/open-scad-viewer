@@ -135,6 +135,17 @@ impl GpuContext {
         BackendReport::from_wgpu(self.backend)
     }
 
+    /// Returns the memory architecture (`MemoryArchitecture::Uma` vs `MemoryArchitecture::Duma`)
+    /// active on this device.
+    pub fn memory_architecture(&self) -> crate::MemoryArchitecture {
+        crate::device_memory_architecture(&self.device)
+    }
+
+    /// Returns the detailed UMA / dUMA memory architecture profile for this device.
+    pub fn memory_profile(&self) -> crate::MemoryArchitectureProfile {
+        self.memory_architecture().profile()
+    }
+
     pub fn enabled_features(&self) -> wgpu::Features {
         self.enabled_features
     }
@@ -146,6 +157,20 @@ impl GpuContext {
             min_size: self.subgroup_min_size,
             max_size: self.subgroup_max_size,
         }
+    }
+
+    /// Maximum single storage buffer allocation size in bytes permitted by this device.
+    #[inline]
+    pub fn max_storage_allocation_bytes(&self) -> u64 {
+        self.limits
+            .max_buffer_size
+            .min(self.limits.max_storage_buffer_binding_size as u64)
+    }
+
+    /// Validates whether a byte size fits within the device's storage buffer allocation limits.
+    #[inline]
+    pub fn can_allocate_storage(&self, bytes: u64) -> bool {
+        bytes > 0 && bytes.is_multiple_of(4) && bytes <= self.max_storage_allocation_bytes()
     }
 }
 

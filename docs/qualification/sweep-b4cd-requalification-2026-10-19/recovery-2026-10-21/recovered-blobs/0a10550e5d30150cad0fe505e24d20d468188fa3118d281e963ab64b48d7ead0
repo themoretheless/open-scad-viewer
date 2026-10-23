@@ -1,0 +1,412 @@
+//! Filled-region Minkowski sum and regularized disk erosion/dilation.
+//! Curved sources are enclosed from both sides by independently checked tubes.
+use super::algebraic_intersections::{ExactRatio, decode_ratio, ratio};
+use super::offset_regions::arrangement::{self, Point, Rings};
+use super::*;
+use num_traits::ToPrimitive;
+mod bounds;
+mod polygon;
+pub type ExactRegionRings = Vec<Vec<[ExactRatio; 2]>>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct MinkowskiRegionCertificate {
+    pub version: u32,
+    pub source: String,
+    pub operation: String,
+    pub maximum_source_deviation_mm: f64,
+    pub distance_mm: f64,
+    pub first_partition: Vec<Vec<String>>,
+    pub second_partition: Vec<Vec<String>>,
+    pub disk_inner: ExactRegionRings,
+    pub disk_outer: ExactRegionRings,
+    pub nominal: ExactRegionRings,
+    pub inner: ExactRegionRings,
+    pub outer: ExactRegionRings,
+}
+#[derive(Clone, Debug)]
+pub struct VerifiedMinkowskiRegion {
+    nominal: Rings,
+    inner: Rings,
+    outer: Rings,
+}
+impl VerifiedMinkowskiRegion {
+    pub fn nominal_exact(&self) -> ExactRegionRings {
+        encode_rings(&self.nominal)
+    }
+    pub fn inner_exact(&self) -> ExactRegionRings {
+        encode_rings(&self.inner)
+    }
+    pub fn outer_exact(&self) -> ExactRegionRings {
+        encode_rings(&self.outer)
+    }
+    pub fn exact_set_result(&self) -> bool {
+        self.inner == self.outer
+    }
+    /// These binary64 polygons are for modeling/display. Inclusion is certified
+    /// for the exact rational rings; output rounding has its separate bound.
+    pub fn components(&self, deviation: f64) -> Result<Vec<Vec<Vec<Curve>>>> {
+        Ok(offset_regions::rounded(&self.nominal, deviation.max(1e-9))?.1)
+    }
+}
+fn encode_rings(r: &Rings) -> ExactRegionRings {
+    r.iter()
+        .map(|r| r.iter().map(|p| [ratio(&p[0]), ratio(&p[1])]).collect())
+        .collect()
+}
+fn decode_rings(r: &ExactRegionRings) -> Result<Rings> {
+    if r.len() > 512 || r.iter().map(Vec::len).sum::<usize>() > 8192 {
+        return Err(refused("Minkowski exact output census exceeded"));
+    }
+    r.iter()
+        .map(|r| {
+            if r.len() < 3 {
+                return Err(refused("Minkowski certificate has a degenerate ring"));
+            }
+            r.iter()
+                .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
+                .collect()
+        })
+        .collect()
+}
+fn source(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    operation: &str,
+    distance: f64,
+    deviation: f64,
+) -> Result<String> {
+    if !matches!(operation, "sum" | "offset")
+        || !distance.is_finite()
+        || distance.abs() > 1e6
+        || !deviation.is_finite()
+        || !(0. ..=1.).contains(&deviation)
+        || (operation == "sum" && distance != 0.)
+        || (operation == "offset" && !b.is_empty())
+    {
+        return Err(refused(
+            "Invalid filled Minkowski operation or source bound",
+        ));
+    }
+    Ok(format!(
+        "minkowski-region-v1/{operation}/{:016x}/{:016x}/{}/{}",
+        distance.to_bits(),
+        deviation.to_bits(),
+        source_bits(a, 1e-7)?,
+        source_bits(b, 1e-7)?
+    ))
+}
+fn derive(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    c: &MinkowskiRegionCertificate,
+) -> Result<VerifiedMinkowskiRegion> {
+    if c.version != 1
+        || c.source
+            != source(
+                a,
+                b,
+                &c.operation,
+                c.distance_mm,
+                c.maximum_source_deviation_mm,
+            )?
+    {
+        return Err(refused("Minkowski source identity or operation mismatch"));
+    }
+    let eps = Q::from_float(c.maximum_source_deviation_mm).unwrap();
+    let a = bounds::verify(a, &eps, &c.first_partition)?;
+    let (nominal, inner, outer) = if c.operation == "sum" {
+        if !c.disk_inner.is_empty() || !c.disk_outer.is_empty() {
+            return Err(refused(
+                "A Minkowski sum contains an unexpected disk witness",
+            ));
+        }
+        let b = bounds::verify(b, &eps, &c.second_partition)?;
+        if a.exact && b.exact {
+            let out = polygon::sum(&a.nominal, &b.nominal)?;
+            (out.clone(), out.clone(), out)
+        } else {
+            (
+                polygon::sum(&a.nominal, &b.nominal)?,
+                polygon::sum(&a.inner, &b.inner)?,
+                polygon::sum(&a.outer, &b.outer)?,
+            )
+        }
+    } else {
+        if !c.second_partition.is_empty() {
+            return Err(refused(
+                "Disk offset contains unexpected second source cells",
+            ));
+        }
+        if c.distance_mm == 0. {
+            if !c.disk_inner.is_empty() || !c.disk_outer.is_empty() {
+                return Err(refused(
+                    "Zero disk offset contains nonzero kernel witnesses",
+                ));
+            }
+            (a.nominal, a.inner, a.outer)
+        } else {
+            let ki = decode_rings(&c.disk_inner)?;
+            let ko = decode_rings(&c.disk_outer)?;
+            bounds::verify_disk(&ki, &ko, &Q::from_float(c.distance_mm.abs()).unwrap(), &eps)?;
+            if c.distance_mm > 0. {
+                (
+                    polygon::sum(&a.nominal, &ki)?,
+                    polygon::sum(&a.inner, &ki)?,
+                    polygon::sum(&a.outer, &ko)?,
+                )
+            } else {
+                (
+                    polygon::erode(&a.nominal, &ki)?,
+                    polygon::erode(&a.inner, &ko)?,
+                    polygon::erode(&a.outer, &ki)?,
+                )
+            }
+        }
+    };
+    Ok(VerifiedMinkowskiRegion {
+        nominal,
+        inner,
+        outer,
+    })
+}
+fn produce(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    op: &str,
+    d: f64,
+    e: f64,
+) -> Result<(MinkowskiRegionCertificate, VerifiedMinkowskiRegion)> {
+    let source = source(a, b, op, d, e)?;
+    let eps = Q::from_float(e).unwrap();
+    let first_partition = bounds::produce(a, &eps)?;
+    let second_partition = if op == "sum" {
+        bounds::produce(b, &eps)?
+    } else {
+        Vec::new()
+    };
+    let (disk_inner, disk_outer) = if op == "offset" && d != 0. {
+        let (x, y) = bounds::disk(d.abs(), &eps)?;
+        (encode_rings(&x), encode_rings(&y))
+    } else {
+        (Vec::new(), Vec::new())
+    };
+    let mut c = MinkowskiRegionCertificate {
+        version: 1,
+        source,
+        operation: op.into(),
+        maximum_source_deviation_mm: e,
+        distance_mm: d,
+        first_partition,
+        second_partition,
+        disk_inner,
+        disk_outer,
+        nominal: Vec::new(),
+        inner: Vec::new(),
+        outer: Vec::new(),
+    };
+    let r = derive(a, b, &c)?;
+    c.nominal = r.nominal_exact();
+    c.inner = r.inner_exact();
+    c.outer = r.outer_exact();
+    Ok((c, r))
+}
+pub fn certify_minkowski_sum(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    maximum_source_deviation_mm: f64,
+) -> Result<(MinkowskiRegionCertificate, VerifiedMinkowskiRegion)> {
+    produce(a, b, "sum", 0., maximum_source_deviation_mm)
+}
+pub fn certify_minkowski_disk_offset(
+    a: &[Vec<Curve>],
+    distance_mm: f64,
+    maximum_source_deviation_mm: f64,
+) -> Result<(MinkowskiRegionCertificate, VerifiedMinkowskiRegion)> {
+    produce(a, &[], "offset", distance_mm, maximum_source_deviation_mm)
+}
+pub fn verify_minkowski_region(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    c: &MinkowskiRegionCertificate,
+) -> Result<VerifiedMinkowskiRegion> {
+    let r = derive(a, b, c)?;
+    if decode_rings(&c.nominal)? != r.nominal
+        || decode_rings(&c.inner)? != r.inner
+        || decode_rings(&c.outer)? != r.outer
+    {
+        return Err(refused(
+            "Minkowski nominal result or inclusion bounds are false",
+        ));
+    }
+    Ok(r)
+}
+#[cfg(feature = "codec")]
+mod serialization {
+    use super::*;
+    use value_codec::{Deserialize, Serialize, Value, error, json};
+    impl Serialize for MinkowskiRegionCertificate {
+        fn to_value(&self) -> Value {
+            json!({"version":self.version,"scope":"represented-filled-minkowski-region-inclusions","source":self.source,"operation":self.operation,"maximumSourceDeviationMm":self.maximum_source_deviation_mm,"distanceMm":self.distance_mm,"firstPartition":self.first_partition,"secondPartition":self.second_partition,"diskInner":self.disk_inner,"diskOuter":self.disk_outer,"nominal":self.nominal,"inner":self.inner,"outer":self.outer})
+        }
+    }
+    impl<'de> Deserialize<'de> for MinkowskiRegionCertificate {
+        fn from_value(v: Value) -> value_codec::Result<Self> {
+            let keys = [
+                "version",
+                "scope",
+                "source",
+                "operation",
+                "maximumSourceDeviationMm",
+                "distanceMm",
+                "firstPartition",
+                "secondPartition",
+                "diskInner",
+                "diskOuter",
+                "nominal",
+                "inner",
+                "outer",
+            ];
+            if v.as_object()
+                .is_none_or(|o| o.len() != keys.len() || keys.iter().any(|k| !o.contains_key(*k)))
+                || v["scope"].as_str() != Some("represented-filled-minkowski-region-inclusions")
+                || v["source"].as_str().is_none_or(|s| s.len() > 140000)
+            {
+                return Err(error(
+                    "Minkowski certificate schema or identity size mismatch",
+                ));
+            }
+            for k in ["firstPartition", "secondPartition"] {
+                if v[k].as_array().is_none_or(|a| {
+                    a.len() > 128
+                        || a.iter().any(|v| {
+                            v.as_array().is_none_or(|a| {
+                                a.len() > 512
+                                    || a.iter().any(|v| v.as_str().is_none_or(|s| s.len() > 24))
+                            })
+                        })
+                }) {
+                    return Err(error("Minkowski partition witness size exceeded"));
+                }
+            }
+            for k in ["diskInner", "diskOuter", "nominal", "inner", "outer"] {
+                if v[k].as_array().is_none_or(|a| {
+                    a.len() > 512
+                        || a.iter()
+                            .any(|r| r.as_array().is_none_or(|a| a.len() > 8192))
+                }) {
+                    return Err(error("Minkowski exact ring size exceeded"));
+                }
+            }
+            Ok(Self {
+                version: Deserialize::from_value(v["version"].clone())?,
+                source: Deserialize::from_value(v["source"].clone())?,
+                operation: Deserialize::from_value(v["operation"].clone())?,
+                maximum_source_deviation_mm: Deserialize::from_value(
+                    v["maximumSourceDeviationMm"].clone(),
+                )?,
+                distance_mm: Deserialize::from_value(v["distanceMm"].clone())?,
+                first_partition: Deserialize::from_value(v["firstPartition"].clone())?,
+                second_partition: Deserialize::from_value(v["secondPartition"].clone())?,
+                disk_inner: Deserialize::from_value(v["diskInner"].clone())?,
+                disk_outer: Deserialize::from_value(v["diskOuter"].clone())?,
+                nominal: Deserialize::from_value(v["nominal"].clone())?,
+                inner: Deserialize::from_value(v["inner"].clone())?,
+                outer: Deserialize::from_value(v["outer"].clone())?,
+            })
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn square() -> Vec<Curve> {
+        crate::sketch::polygon_wire(vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]]).unwrap()
+    }
+    #[test]
+    fn disk_erosion_proves_collapse_instead_of_reappearing_material() {
+        let a = vec![square()];
+        let (c, r) = certify_minkowski_disk_offset(&a, -3., 0.1).unwrap();
+        assert!(r.exact_set_result());
+        assert!(r.outer.is_empty());
+        verify_minkowski_region(&a, &[], &c).unwrap();
+        let (_, r) = certify_minkowski_disk_offset(&a, -1., 0.1).unwrap();
+        assert_eq!(r.nominal.len(), 1);
+        let area = arrangement::area(&r.nominal[0]);
+        assert!(area > Q::from_float(3.5).unwrap() && area < Q::from_float(4.5).unwrap());
+    }
+    #[test]
+    fn polygon_sum_is_exact_and_rejects_changed_claims() {
+        let a = vec![square()];
+        let (c, r) = certify_minkowski_sum(&a, &a, 0.).unwrap();
+        assert!(r.exact_set_result());
+        assert_eq!(arrangement::area(&r.nominal[0]), Q::from_integer(64.into()));
+        let mut bad = c;
+        bad.outer[0].pop();
+        assert!(verify_minkowski_region(&a, &a, &bad).is_err());
+    }
+    #[test]
+    fn zero_jets_and_crossing_sources_have_checked_region_bounds() {
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0., 0.], vec![4., 0.], vec![4., 4.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let mut wire = vec![c];
+        wire.extend(
+            crate::sketch::polygon_wire(vec![[4., 4.], [0., 4.], [0., 0.]])
+                .unwrap()
+                .into_iter()
+                .take(2),
+        );
+        let a = vec![wire];
+        let b = vec![square()];
+        let (c, r) = certify_minkowski_sum(&a, &b, 0.25).unwrap();
+        assert!(!r.outer.is_empty());
+        assert!(!r.inner.is_empty());
+        verify_minkowski_region(&a, &b, &c).unwrap();
+        let mut bad = c;
+        bad.first_partition[0].pop();
+        assert!(verify_minkowski_region(&a, &b, &bad).is_err());
+    }
+    #[test]
+    fn retraced_lines_and_crossing_wires_use_filled_material_semantics() {
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![4., 0.], vec![-4., 0.], vec![0., 0.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let (_, r) = certify_minkowski_sum(&[vec![c]], &[square()], 0.).unwrap();
+        assert!(r.exact_set_result());
+        assert!(r.outer.is_empty());
+        let bow =
+            crate::sketch::polygon_wire(vec![[0., 0.], [4., 4.], [0., 4.], [4., 0.]]).unwrap();
+        let (_, r) = certify_minkowski_sum(&[bow], &[square()], 0.).unwrap();
+        assert!(r.exact_set_result());
+        assert_eq!(arrangement::area(&r.nominal[0]), Q::from_integer(44.into()));
+    }
+    #[test]
+    fn erosion_of_a_narrow_neck_splits_components() {
+        let wire = crate::sketch::polygon_wire(vec![
+            [0., 0.],
+            [3., 0.],
+            [3., 1.25],
+            [5., 1.25],
+            [5., 0.],
+            [8., 0.],
+            [8., 3.],
+            [5., 3.],
+            [5., 1.75],
+            [3., 1.75],
+            [3., 3.],
+            [0., 3.],
+        ])
+        .unwrap();
+        let (c, r) = certify_minkowski_disk_offset(&[wire.clone()], -0.4, 0.05).unwrap();
+        assert_eq!(arrangement::groups(&r.inner).unwrap().len(), 2);
+        assert_eq!(arrangement::groups(&r.outer).unwrap().len(), 2);
+        verify_minkowski_region(&[wire], &[], &c).unwrap();
+    }
+}

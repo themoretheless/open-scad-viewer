@@ -135,13 +135,25 @@ fn validate_allocation(
     Ok(bytes)
 }
 
-/// Whether fresh mapped uploads use the final Metal shared allocation.
-pub fn shared_memory_uploads(device: &wgpu::Device) -> bool {
-    cfg!(all(target_os = "macos", target_arch = "aarch64"))
+/// Classifies the active wgpu device into [`crate::MemoryArchitecture::Uma`]
+/// (unified physical CPU/GPU RAM with `MAPPABLE_PRIMARY_BUFFERS` on Apple Silicon Metal)
+/// or [`crate::MemoryArchitecture::Duma`] (discrete/decoupled VRAM requiring staging transfers).
+pub fn device_memory_architecture(device: &wgpu::Device) -> crate::MemoryArchitecture {
+    if cfg!(all(target_os = "macos", target_arch = "aarch64"))
         && device
             .features()
             .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
         && device.adapter_info().backend == wgpu::Backend::Metal
+    {
+        crate::MemoryArchitecture::Uma
+    } else {
+        crate::MemoryArchitecture::Duma
+    }
+}
+
+/// Whether fresh mapped uploads use the final Metal UMA shared allocation.
+pub fn shared_memory_uploads(device: &wgpu::Device) -> bool {
+    device_memory_architecture(device) == crate::MemoryArchitecture::Uma
 }
 
 /// Fill a new buffer without a host packing Vec. MAP_WRITE is essential here:

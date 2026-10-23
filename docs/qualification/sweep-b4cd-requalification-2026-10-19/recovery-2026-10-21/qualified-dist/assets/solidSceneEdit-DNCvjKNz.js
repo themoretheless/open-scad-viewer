@@ -1,0 +1,1 @@
+import"./brepInspectionCache-DV_Oghtz.js";import"./direct-modeling-V3La_5zg.js";function e(e){return[`sketch-transform`,`transform`,`instance-create`,`instance-transform`,`instance-place`,`loft`].includes(String(e))}export{e as t};

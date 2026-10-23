@@ -8,7 +8,8 @@ pub struct CornerCollar {
     pub original_pcurve: Curve,
     pub direction: [f64; 2],
     pub surface: Surface,
-    pub g2: nurbs_core::surface_g2_pcurves::OwnedInspection,
+    pub g2: surface_collar::G2Report,
+    pub positions: nurbs_core::surface_g2_pcurves::Positions,
 }
 pub struct CornerCollars {
     pub boundaries: Vec<CornerCollar>,
@@ -50,33 +51,6 @@ fn direction(s: &Surface, p: &Curve, width: f64) -> Result<[f64; 2]> {
     Err(refuse(
         "No proposed transverse collar stays in original natural chart",
     ))
-}
-// Trim is a rounded proposal only. The returned collar is always checked
-// directly against the complete original support, not this extracted patch.
-fn local_proposal(s: &Surface, p: &Curve, direction: [f64; 2]) -> Result<Surface> {
-    let mut ranges = [[0.; 2]; 2];
-    for axis in 0..2 {
-        let low = p
-            .control_points
-            .iter()
-            .map(|p| p[axis].min(p[axis] + direction[axis]))
-            .fold(f64::INFINITY, f64::min);
-        let high = p
-            .control_points
-            .iter()
-            .map(|p| p[axis].max(p[axis] + direction[axis]))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let (knots, degree, count) = if axis == 0 {
-            (&s.knots_u, s.degree_u, s.control_points.len())
-        } else {
-            (&s.knots_v, s.degree_v, s.control_points[0].len())
-        };
-        let found = (degree..count)
-            .find(|&i| knots[i] < knots[i + 1] && knots[i] <= low && high <= knots[i + 1]);
-        let i = found.ok_or_else(|| refuse("Collar proposal crosses an original knot line"))?;
-        ranges[axis] = [knots[i], knots[i + 1]];
-    }
-    s.trim([ranges[0][0], ranges[0][1], ranges[1][0], ranges[1][1]])
 }
 /// All six boundary curves, support membership and original-support G2 are
 /// freshly inspected. No supplied certificate or mutable admission flag is used.
@@ -152,9 +126,8 @@ pub fn prepare_trihedral_collars(
         if remaining == 0 {
             return Err(refuse("Collar construction work exhausted"));
         }
-        let local = local_proposal(&s, &p, direction)?;
         let built = surface_collar::construct(
-            &local,
+            &s,
             &p,
             direction,
             tolerances[0] / 4.,
@@ -166,27 +139,35 @@ pub fn prepare_trihedral_collars(
             return Err(refuse("No original collar proof work remains"));
         }
         let collar_pcurve = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]])?;
-        let proof = nurbs_core::surface_g2_pcurves::inspect_owned(
+        let positions = nurbs_core::surface_g2_pcurves::verify_positions(
             boundary,
             [&p, &collar_pcurve],
             [&s, &built.surface],
             [false, false],
             tolerances[0],
-            tolerances[1],
-            tolerances[2],
-            (max_cells - out.cells).min(15000),
+            (max_cells - out.cells).min(10000),
             max_exact.saturating_sub(out.exact_work).min(20000),
         )?;
-        out.cells += proof.report.geometric.cells;
-        out.exact_work += proof.report.positions.exact_work;
-        if proof.positions.is_none()
-            || proof.report.geometric.decision
-                != nurbs_core::surface_join::Decision::WithinTolerance
-        {
-            return Err(refuse(&format!(
-                "Original support seam remains unproven: {:?}, positions {}",
-                proof.report.geometric.decision, proof.report.positions.proven
-            )));
+        out.cells += positions.cells;
+        out.exact_work += positions.exact_work;
+        if !positions.proven || out.cells >= max_cells {
+            return Err(refuse(
+                "Original boundary/collar agreement remains unproven",
+            ));
+        }
+        let proof = surface_collar::inspect_g2(
+            &s,
+            &p,
+            direction,
+            &built.surface,
+            tolerances,
+            max_cells - out.cells,
+            remaining.min(2000000),
+        )?;
+        out.cells += proof.cells;
+        out.coefficient_work += proof.coefficient_work;
+        if proof.decision != nurbs_core::surface_join::Decision::WithinTolerance {
+            return Err(refuse("Original correlated collar G2 remains unproven"));
         }
         out.boundaries.push(CornerCollar {
             curve: boundary.clone(),
@@ -195,6 +176,7 @@ pub fn prepare_trihedral_collars(
             direction,
             surface: built.surface,
             g2: proof,
+            positions,
         });
     }
     Ok(out)

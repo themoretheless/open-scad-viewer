@@ -71,24 +71,8 @@ impl PixelCost<'_, '_> {
             return -1.;
         }
         let mut depths = [0.; 25];
+        let mut depths_ready = false;
         let side = options.patch_radius * 2 + 1;
-        // Each column/row term repeats across the patch. Preserve the original
-        // multiplication and addition order so scores remain bit-identical.
-        let mut column_offsets = [0.; 5];
-        let mut row_offsets = [0.; 5];
-        for i in 0..side {
-            let offset = (i as f64 - options.patch_radius as f64) * ray_step;
-            column_offsets[i] = offset * q[0];
-            row_offsets[i] = offset * q[1];
-        }
-        for (i, depth) in depths[..patch.len].iter_mut().enumerate() {
-            let offset = column_offsets[i % side] + row_offsets[i / side];
-            let d = inv + offset;
-            if d <= 0. {
-                return -1.;
-            }
-            *depth = 1. / d;
-        }
         let mut votes = [(-1., 0.); 6];
         let mut usable = 0;
         let mut count = 0;
@@ -107,18 +91,45 @@ impl PixelCost<'_, '_> {
             if !(0.0625..=16.).contains(&area_ratio) {
                 continue;
             }
+            if !depths_ready {
+                // Each column/row term repeats across the patch. Preserve the original
+                // multiplication and addition order so scores remain bit-identical.
+                if q[0] == 0. && q[1] == 0. {
+                    depths[..patch.len].fill(z);
+                } else {
+                    let mut column_offsets = [0.; 5];
+                    let mut row_offsets = [0.; 5];
+                    for i in 0..side {
+                        let offset = (i as f64 - options.patch_radius as f64) * ray_step;
+                        column_offsets[i] = offset * q[0];
+                        row_offsets[i] = offset * q[1];
+                    }
+                    for (i, depth) in depths[..patch.len].iter_mut().enumerate() {
+                        let offset = column_offsets[i % side] + row_offsets[i / side];
+                        let d = inv + offset;
+                        if d <= 0. {
+                            return -1.;
+                        }
+                        *depth = 1. / d;
+                    }
+                }
+                depths_ready = true;
+            }
             diagnostics.evaluated_source_patches += 1;
             let mut correlation = patch.accumulator();
             let mut complete = true;
             for i in 0..patch.len {
-                let p = add(scale(source.rays[i], depths[i]), source.translation);
-                if p[2] <= 0. {
+                let d_i = depths[i];
+                let r_i = source.rays[i];
+                let pz = r_i[2] * d_i + source.translation[2];
+                if pz <= 0. {
                     complete = false;
                     break;
                 }
+                let f_inv_z = source.camera.focal / pz;
                 if let Some(v) = source.image.sample(
-                    source.camera.focal * p[0] / p[2] + source.camera.cx,
-                    source.camera.focal * p[1] / p[2] + source.camera.cy,
+                    f_inv_z * (r_i[0] * d_i + source.translation[0]) + source.camera.cx,
+                    f_inv_z * (r_i[1] * d_i + source.translation[1]) + source.camera.cy,
                 ) {
                     correlation.sample(i, v);
                     diagnostics.sampled_source_pixels += 1;
@@ -223,7 +234,7 @@ fn at_depth_with_slope(q: V3, ray: V3, inverse_depth: f64) -> V3 {
 // pixel's hypothesis strictly improved, for the optional adaptive budget.
 #[allow(clippy::too_many_arguments)]
 fn refine_pixel(
-    gray: &GrayImage,
+    patch: Option<&Patch>,
     reference: &Camera,
     sources: &mut [Source<'_>],
     planes: &mut [Hypothesis],
@@ -243,19 +254,19 @@ fn refine_pixel(
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
 ) -> bool {
-    let Some(patch) = patch(gray, x, y, step, options.patch_radius) else {
+    let Some(patch) = patch else {
         return false;
     };
     let i = y * width + x;
     let ray = reference.ray([x as f64 * step, y as f64 * step]);
     for source in sources.iter_mut() {
-        source.prepare_pixel(ray);
+        source.prepare_rays(ray, patch.len);
     }
     let cost = PixelCost {
         ray,
         unit_ray: unit(ray),
         ray_step,
-        patch: &patch,
+        patch,
         sources,
         reference_focal: reference.focal,
         options,
@@ -362,12 +373,17 @@ pub(super) fn estimate(
     step: f64,
     near: f64,
     far: f64,
+    ranges: Option<&(Vec<f64>, Vec<f64>)>,
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
     let count = width * height;
     let mut planes = vec![Hypothesis::default(); count];
+    // Precompute centered reference patches once per pixel instead of
+    // re-sampling 9 or 25 bilinear taps across initialization and refinement passes.
+    let mut patches: Vec<Option<Patch>> = Vec::with_capacity(count);
+    patches.resize_with(count, || None);
     // Keep a distant global competitor, not the neighboring slope refinement,
     // as ambiguity evidence. Local refinement does not manufacture confidence.
     let mut coarse = vec![(0., -1., 0.); count];
@@ -382,18 +398,20 @@ pub(super) fn estimate(
     for y in 3..height - 3 {
         cancelled(progress, "depth", y, height * 3)?;
         for x in 3..width - 3 {
-            let Some(patch) = patch(gray, x, y, step, options.patch_radius) else {
+            let i = y * width + x;
+            patches[i] = patch(gray, x, y, step, options.patch_radius);
+            let Some(patch) = patches[i].as_ref() else {
                 continue;
             };
             let ray = reference.ray([x as f64 * step, y as f64 * step]);
             for source in sources.iter_mut() {
-                source.prepare_pixel(ray);
+                source.prepare_rays(ray, patch.len);
             }
             let cost = PixelCost {
                 ray,
                 unit_ray: unit(ray),
                 ray_step,
-                patch: &patch,
+                patch,
                 sources,
                 reference_focal: reference.focal,
                 options,
@@ -402,10 +420,27 @@ pub(super) fn estimate(
             for (d, value) in scores[..initial].iter_mut().enumerate() {
                 *value = cost.score([0., 0., low + d as f64 * interval], diagnostics);
             }
-            let best = (0..initial)
+            let last_init = initial - 1;
+            let (bin_lo, bin_hi) = match ranges {
+                Some((r_lo, r_hi)) if r_lo[i] > 0. && r_hi[i] <= r_lo[i] * 1.15 => {
+                    let bin_of = |inv_z: f64| (inv_z - low) / (high - low) * last_init as f64;
+                    let lo_b = bin_of(1. / r_hi[i]).floor().max(0.) as usize;
+                    let hi_b = (bin_of(1. / r_lo[i]).ceil() as usize).min(last_init);
+                    (lo_b, hi_b.max(lo_b))
+                }
+                _ => (0, last_init),
+            };
+            let ranged = bin_lo > 0 || bin_hi < last_init;
+            let best_ranged = (bin_lo..=bin_hi)
                 .max_by(|&a, &b| scores[a].total_cmp(&scores[b]))
                 .unwrap();
-            let i = y * width + x;
+            let best = if ranged && scores[best_ranged] >= options.min_correlation {
+                best_ranged
+            } else {
+                (0..initial)
+                    .max_by(|&a, &b| scores[a].total_cmp(&scores[b]))
+                    .unwrap()
+            };
             planes[i] = Hypothesis {
                 plane: [0., 0., low + best as f64 * interval],
                 score: scores[best],
@@ -425,10 +460,20 @@ pub(super) fn estimate(
             );
             // Same inverse-depth separation as three bins in the full sweep.
             let separation = 3. * (high - low) / (options.depth_hypotheses - 1) as f64;
-            alternative[i] = (0..initial)
-                .filter(|&d| (d.abs_diff(best) as f64 * interval) > separation)
-                .map(|d| scores[d])
-                .fold(-1., f64::max);
+            alternative[i] = if ranged && best == best_ranged {
+                (0..initial)
+                    .filter(|&d| {
+                        (d < bin_lo && (bin_lo - d) as f64 * interval > separation)
+                            || (d > bin_hi && (d - bin_hi) as f64 * interval > separation)
+                    })
+                    .map(|d| scores[d])
+                    .fold(-1., f64::max)
+            } else {
+                (0..initial)
+                    .filter(|&d| (d.abs_diff(best) as f64 * interval) > separation)
+                    .map(|d| scores[d])
+                    .fold(-1., f64::max)
+            };
         }
     }
     let red_black = options.red_black_propagation;
@@ -451,7 +496,7 @@ pub(super) fn estimate(
                             continue;
                         }
                         pass_improved |= refine_pixel(
-                            gray,
+                            patches[y * width + x].as_ref(),
                             reference,
                             sources,
                             &mut planes,
@@ -482,7 +527,7 @@ pub(super) fn estimate(
                 for column in 3..width - 3 {
                     let x = if reverse { width - 1 - column } else { column };
                     pass_improved |= refine_pixel(
-                        gray,
+                        patches[y * width + x].as_ref(),
                         reference,
                         sources,
                         &mut planes,
@@ -583,6 +628,7 @@ mod tests {
                 1.,
                 2.,
                 8.,
+                None,
                 options,
                 &mut DenseDiagnostics::default(),
                 &mut |_, _, _| true,
@@ -675,7 +721,7 @@ mod tests {
                 }),
                 rays: [[0.; 3]; 25],
             };
-            source.prepare_pixel(ray);
+            source.prepare_rays(ray, 25);
             source
         };
         let sources = [

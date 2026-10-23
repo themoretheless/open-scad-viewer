@@ -475,6 +475,8 @@ pub fn spectrum_map(
     Ok(map)
 }
 
+pub use crate::analysis::class_a::{gaussian_and_mean_curvature_grid, zebra_reflection_stripes};
+
 #[cfg(test)]
 mod tests {
     use super::*;

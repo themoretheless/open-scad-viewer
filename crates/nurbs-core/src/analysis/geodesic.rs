@@ -292,7 +292,8 @@ pub fn trace_geodesic_report(
         direction_uv[0] / scale,
         direction_uv[1] / scale,
     ];
-    let mut states = vec![y];
+    let mut states = Vec::with_capacity(max_steps.min(256) + 1);
+    states.push(y);
     let tolerance = 1e-9;
     let h_min = length * 1e-10;
     let mut h = length / 64.;
@@ -390,7 +391,8 @@ pub fn geodesic_offset_report(
         )?;
     }
     // Resample the polyline uniformly by uv chord length.
-    let mut cumulative = vec![0.];
+    let mut cumulative = Vec::with_capacity(curve_uv.len());
+    cumulative.push(0.);
     for w in curve_uv.windows(2) {
         cumulative.push(
             cumulative.last().unwrap() + ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2)).sqrt(),
@@ -472,6 +474,28 @@ pub fn geodesic_offset_report(
         max_deviation: next_up(max_deviation),
         stops,
     })
+}
+
+/// Computes the 3D chordal arc length of a surface UV polyline by evaluating 3D points on `surface`.
+pub fn geodesic_polyline_length_3d(surface: &Surface, uv_polyline: &[[f64; 2]]) -> Result<f64> {
+    surface.validate()?;
+    check(
+        uv_polyline.len() >= 2 && uv_polyline.iter().flatten().all(|x| x.is_finite()),
+        "Geodesic 3D polyline length requires at least two finite UV points.",
+    )?;
+    let d = domains(surface);
+    let mut total = 0.;
+    let mut prev: Option<[f64; 3]> = None;
+    for &[u, v] in uv_polyline {
+        let u = u.clamp(d[0][0], d[0][1]);
+        let v = v.clamp(d[1][0], d[1][1]);
+        let pt = surface.evaluate_validated(u, v)?.point;
+        if let Some(p0) = prev {
+            total += norm([pt[0] - p0[0], pt[1] - p0[1], pt[2] - p0[2]]);
+        }
+        prev = Some(pt);
+    }
+    Ok(total)
 }
 
 #[cfg(test)]
@@ -611,5 +635,7 @@ mod tests {
         let report = trace_geodesic_report(&s, [0.1, 1.0], [1., 1.], 1.5, 1).unwrap();
         assert_eq!(report.stop, GeodesicStop::BudgetExhausted);
         assert!(report.length_achieved < 1.5);
+        let len3 = geodesic_polyline_length_3d(&s, &report.uv_polyline).unwrap();
+        assert!(len3 > 0. && (len3 - report.length_achieved).abs() < 1e-2);
     }
 }

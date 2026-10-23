@@ -1280,3 +1280,209 @@ pub fn evaluate_builtin<'a>(
 /// Keep `ParseError` referenced for downstream diagnostics plumbing.
 #[allow(unused)]
 fn _assert_parse_error_used(_: &ParseError) {}
+
+/// Pure standalone OpenSCAD `lookup(key, table)` linear interpolation helper over `(key, value)` pairs:
+/// clamps to the lowest key's value below the table range, clamps to the highest key's value above
+/// the table range, and linearly interpolates between the tightest bounding keys inside the range.
+/// Returns `f64::NAN` if `table` is empty or `key` is non-finite.
+pub fn lookup_table_interpolate(key: f64, table: &[[f64; 2]]) -> f64 {
+    if !key.is_finite() || table.is_empty() {
+        return f64::NAN;
+    }
+    let (mut low_k, mut low_v) = (table[0][0], table[0][1]);
+    let (mut high_k, mut high_v) = (table[0][0], table[0][1]);
+    for &[ck, cv] in table.iter().skip(1) {
+        if !ck.is_finite() || !cv.is_finite() {
+            continue;
+        }
+        if ck <= key && (ck > low_k || low_k > key) {
+            low_k = ck;
+            low_v = cv;
+        }
+        if ck >= key && (ck < high_k || high_k < key) {
+            high_k = ck;
+            high_v = cv;
+        }
+    }
+    if key <= low_k {
+        return high_v;
+    }
+    if key >= high_k {
+        return low_v;
+    }
+    let fraction = (key - low_k) / (high_k - low_k);
+    high_v * fraction + low_v * (1.0 - fraction)
+}
+
+/// Pure standalone OpenSCAD Euclidean vector norm (`norm(v) = sqrt(sum(v_i^2))`) using
+/// overflow-safe hypot scaling.
+pub fn vector_norm(v: &[f64]) -> f64 {
+    if v.is_empty() {
+        return 0.0;
+    }
+    let mut max_abs = 0.0_f64;
+    for &x in v {
+        if x.is_nan() {
+            return f64::NAN;
+        }
+        max_abs = max_abs.max(x.abs());
+    }
+    if max_abs == 0.0 || !max_abs.is_finite() {
+        return max_abs;
+    }
+    let sum_sq: f64 = v.iter().map(|&x| (x / max_abs).powi(2)).sum();
+    max_abs * sum_sq.sqrt()
+}
+
+/// Pure standalone 3D vector cross product (`cross(a, b)`).
+pub fn vector_cross_3d(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+/// Pure standalone 2D vector cross product (`cross([ax, ay], [bx, by]) = ax * by - ay * bx`).
+pub fn vector_cross_2d(a: [f64; 2], b: [f64; 2]) -> f64 {
+    a[0] * b[1] - a[1] * b[0]
+}
+
+/// Folds constant-literal binary and unary arithmetic expressions in an OpenSCAD [`Expr`] AST
+/// (`+`, `-`, `*`, `/`, `%`, `^` on `LiteralValue::Number` and `!` on `LiteralValue::Bool`)
+/// without altering source spans or non-constant subtrees.
+pub fn fold_constant_expr(expr: &Expr) -> Expr {
+    match expr {
+        Expr::Unary { op, value, p } => {
+            let folded = fold_constant_expr(value);
+            if let Expr::Literal {
+                value: ref lit,
+                ..
+            } = folded
+            {
+                match (op, lit) {
+                    (TT::Minus, crate::ast::LiteralValue::Number(n)) if n.is_finite() => {
+                        return Expr::Literal {
+                            value: crate::ast::LiteralValue::Number(-n),
+                            p: *p,
+                        };
+                    }
+                    (TT::Plus, crate::ast::LiteralValue::Number(n)) if n.is_finite() => {
+                        return Expr::Literal {
+                            value: crate::ast::LiteralValue::Number(*n),
+                            p: *p,
+                        };
+                    }
+                    (TT::Not, crate::ast::LiteralValue::Bool(b)) => {
+                        return Expr::Literal {
+                            value: crate::ast::LiteralValue::Bool(!b),
+                            p: *p,
+                        };
+                    }
+                    _ => {}
+                }
+            }
+            Expr::Unary {
+                op: *op,
+                value: Box::new(folded),
+                p: *p,
+            }
+        }
+        Expr::Binary { op, left, right, p } => {
+            let l = fold_constant_expr(left);
+            let r = fold_constant_expr(right);
+            if let (
+                Expr::Literal {
+                    value: crate::ast::LiteralValue::Number(a),
+                    ..
+                },
+                Expr::Literal {
+                    value: crate::ast::LiteralValue::Number(b),
+                    ..
+                },
+            ) = (&l, &r)
+            {
+                let folded_val = match op {
+                    TT::Plus => Some(a + b),
+                    TT::Minus => Some(a - b),
+                    TT::Star => Some(a * b),
+                    TT::Slash if *b != 0.0 => Some(a / b),
+                    TT::Percent if *b != 0.0 => Some(a % b),
+                    TT::Caret => Some(a.powf(*b)),
+                    _ => None,
+                };
+                if let Some(res) = folded_val
+                    && res.is_finite()
+                {
+                    return Expr::Literal {
+                        value: crate::ast::LiteralValue::Number(res),
+                        p: *p,
+                    };
+                }
+            }
+            Expr::Binary {
+                op: *op,
+                left: Box::new(l),
+                right: Box::new(r),
+                p: *p,
+            }
+        }
+        Expr::Vector { items, p } => Expr::Vector {
+            items: items.iter().map(fold_constant_expr).collect(),
+            p: *p,
+        },
+        other => other.clone(),
+    }
+}
+
+#[cfg(test)]
+mod helper_and_folding_tests {
+    use super::*;
+    use crate::ast::LiteralValue;
+
+    #[test]
+    fn standalone_lookup_norm_cross_and_constant_folding_work() {
+        let table = [[0.0, 10.0], [10.0, 30.0], [20.0, 70.0]];
+        assert!((lookup_table_interpolate(-5.0, &table) - 10.0).abs() < 1e-9);
+        assert!((lookup_table_interpolate(5.0, &table) - 20.0).abs() < 1e-9);
+        assert!((lookup_table_interpolate(15.0, &table) - 50.0).abs() < 1e-9);
+        assert!((lookup_table_interpolate(25.0, &table) - 70.0).abs() < 1e-9);
+
+        assert!((vector_norm(&[3.0, 4.0, 12.0]) - 13.0).abs() < 1e-12);
+        assert_eq!(
+            vector_cross_3d([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]),
+            [0.0, 0.0, 1.0]
+        );
+        assert!((vector_cross_2d([2.0, 3.0], [4.0, 5.0]) - (-2.0)).abs() < 1e-12);
+
+        // Build (2 + 3) * 4 -> folds to Literal(20.0)
+        let expr = Expr::Binary {
+            op: TT::Star,
+            left: Box::new(Expr::Binary {
+                op: TT::Plus,
+                left: Box::new(Expr::Literal {
+                    value: LiteralValue::Number(2.0),
+                    p: 0,
+                }),
+                right: Box::new(Expr::Literal {
+                    value: LiteralValue::Number(3.0),
+                    p: 4,
+                }),
+                p: 2,
+            }),
+            right: Box::new(Expr::Literal {
+                value: LiteralValue::Number(4.0),
+                p: 8,
+            }),
+            p: 6,
+        };
+        let folded = fold_constant_expr(&expr);
+        assert_eq!(
+            folded,
+            Expr::Literal {
+                value: LiteralValue::Number(20.0),
+                p: 6
+            }
+        );
+    }
+}

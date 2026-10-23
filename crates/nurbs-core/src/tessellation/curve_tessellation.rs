@@ -52,7 +52,7 @@ pub fn tessellate(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<Rep
         ));
     }
     let mut cells = pending.len();
-    let mut segments = Vec::new();
+    let mut segments = Vec::with_capacity(pending.len() * 2);
     while let Some((span, domain)) = pending.pop() {
         let points = [
             curve.evaluate(domain[0])?.point,

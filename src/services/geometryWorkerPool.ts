@@ -170,6 +170,7 @@ export interface WorkerTaskOptions {
   priority?: number
   signal?: AbortSignal
   transfer?: boolean
+  timeoutMs?: number
 }
 
 export type TaskExecutor<TInput, TOutput> = (input: TInput, workerIndex: number) => Promise<TOutput> | TOutput
@@ -179,6 +180,7 @@ interface QueuedTask<TInput, TOutput> {
   input: TInput
   priority: number
   signal?: AbortSignal
+  timeoutMs?: number
   aborted?: boolean
   resolve: (value: TOutput) => void
   reject: (reason: unknown) => void
@@ -190,6 +192,17 @@ export interface WorkerPoolStats {
   queuedTasks: number
   completedTasks: number
   perWorkerCompleted: number[]
+}
+
+export interface WorkerPoolDiagnostics {
+  poolSize: number
+  activeWorkers: number
+  idleWorkers: number
+  queuedJobs: number
+  completedJobs: number
+  peakQueueDepth: number
+  cancelledJobs: number
+  timedOutJobs: number
 }
 
 /**
@@ -204,6 +217,9 @@ export class GeometryWorkerPool<TInput, TOutput> {
   private readonly queue: QueuedTask<TInput, TOutput>[] = []
   private queueHead = 0
   private activeQueuedCount = 0
+  private peakQueueDepth = 0
+  private cancelledCount = 0
+  private timedOutCount = 0
   private nextTaskId = 1
   private completedCount = 0
   private disposed = false
@@ -224,6 +240,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
       return Promise.reject(new Error('GeometryWorkerPool has been disposed'))
     }
     if (options.signal?.aborted) {
+      this.cancelledCount++
       return Promise.reject(new Error('Task aborted'))
     }
 
@@ -233,6 +250,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
         input,
         priority: options.priority ?? 0,
         signal: options.signal,
+        timeoutMs: options.timeoutMs,
         resolve,
         reject,
       }
@@ -244,6 +262,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
             if (!task.aborted) {
               task.aborted = true
               this.activeQueuedCount--
+              this.cancelledCount++
               reject(new Error('Task aborted'))
             }
           },
@@ -270,6 +289,9 @@ export class GeometryWorkerPool<TInput, TOutput> {
         q.splice(lo, 0, task)
       }
       this.activeQueuedCount++
+      if (this.activeQueuedCount > this.peakQueueDepth) {
+        this.peakQueueDepth = this.activeQueuedCount
+      }
 
       this.pump()
     })
@@ -330,6 +352,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
       if (!task) break
       if (task.signal?.aborted) {
         task.aborted = true
+        this.cancelledCount++
         task.reject(new Error('Task aborted'))
         continue
       }
@@ -339,21 +362,40 @@ export class GeometryWorkerPool<TInput, TOutput> {
       this.busyWorkers[workerIdx] = 1
       this.activeCount++
 
+      let settled = false
+      let timerId: ReturnType<typeof setTimeout> | undefined
+      if (task.timeoutMs !== undefined && Number.isFinite(task.timeoutMs) && task.timeoutMs > 0) {
+        timerId = setTimeout(() => {
+          if (settled) return
+          settled = true
+          this.timedOutCount++
+          task.reject(new Error(`Task timed out after ${task.timeoutMs}ms`))
+        }, task.timeoutMs)
+      }
+
       Promise.resolve()
         .then(() => this.executor(task.input, workerIdx))
         .then(
           result => {
+            if (timerId !== undefined) clearTimeout(timerId)
             this.busyWorkers[workerIdx] = 0
             this.activeCount--
             this.perWorkerCount[workerIdx]!++
             this.completedCount++
-            task.resolve(result)
+            if (!settled) {
+              settled = true
+              task.resolve(result)
+            }
             this.pump()
           },
           err => {
+            if (timerId !== undefined) clearTimeout(timerId)
             this.busyWorkers[workerIdx] = 0
             this.activeCount--
-            task.reject(err)
+            if (!settled) {
+              settled = true
+              task.reject(err)
+            }
             this.pump()
           }
         )
@@ -370,12 +412,26 @@ export class GeometryWorkerPool<TInput, TOutput> {
     }
   }
 
+  getPoolDiagnostics(): WorkerPoolDiagnostics {
+    return {
+      poolSize: this.poolSize,
+      activeWorkers: this.activeCount,
+      idleWorkers: Math.max(0, this.poolSize - this.activeCount),
+      queuedJobs: this.activeQueuedCount,
+      completedJobs: this.completedCount,
+      peakQueueDepth: this.peakQueueDepth,
+      cancelledJobs: this.cancelledCount,
+      timedOutJobs: this.timedOutCount,
+    }
+  }
+
   dispose(): void {
     this.disposed = true
     while (true) {
       const task = this.dequeueTask()
       if (!task) break
       task.aborted = true
+      this.cancelledCount++
       task.reject(new Error('GeometryWorkerPool disposed'))
     }
   }

@@ -1,0 +1,140 @@
+use super::*;
+pub(super) struct Prepared {
+    pub source: Surface,
+    pub plane: Surface,
+    pub trace: Trace,
+    pub target: Curve,
+    pub transverse: [f64; 2],
+    pub gains: [f64; 2],
+    pub cells: usize,
+}
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    (0..3).map(|k| a[k] * b[k]).sum()
+}
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+pub(super) fn prepare(
+    v: &Value,
+    boundary: Boundary,
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<Prepared> {
+    let source = field::<Surface>(v, "source")?;
+    let plane = field::<Surface>(v, "plane")?;
+    source.validate()?;
+    plane.validate()?;
+    if v["targetCurve"].is_null() {
+        return Ok(Prepared {
+            source,
+            plane,
+            trace: Trace {
+                at: field(&v["sourceTrace"], "at")?,
+                along: field(&v["sourceTrace"], "along")?,
+            },
+            target: field(v, "targetPcurve")?,
+            transverse: field(v, "transverseUv")?,
+            gains: field(v, "gains")?,
+            cells: 0,
+        });
+    }
+    let position = field::<f64>(v, "sourcePosition")?;
+    let size = field::<f64>(v, "tangentLengthMm")?;
+    if !position.is_finite()
+        || !(0. ..=1.).contains(&position)
+        || !size.is_finite()
+        || size <= 0.
+        || !(1..=100000).contains(&max_cells)
+        || !tolerances[0].is_finite()
+        || tolerances[0] <= 0.
+    {
+        return Err(super::super::input(
+            "Runout needs an interior position, positive tangent length and bounded work",
+        ));
+    }
+    let ranges = [
+        [
+            source.knots_u[source.degree_u],
+            source.knots_u[source.control_points.len()],
+        ],
+        [
+            source.knots_v[source.degree_v],
+            source.knots_v[source.control_points[0].len()],
+        ],
+    ];
+    let axis = usize::from(matches!(boundary, Boundary::VStart | Boundary::VEnd));
+    let at = ranges[axis][0] + (ranges[axis][1] - ranges[axis][0]) * position;
+    let trace = Trace {
+        at,
+        along: ranges[1 - axis],
+    };
+    let world = field::<Curve>(v, "targetCurve")?;
+    let projection = nurbs_core::curve_pullback::project(
+        &world,
+        &plane,
+        nurbs_core::curve_pullback::Limits {
+            tolerance: tolerances[0] * 0.5,
+            max_segments: 256,
+            max_iterations: 32,
+            agreement_cells: max_cells,
+        },
+    )?;
+    let cells = projection.agreement_cells;
+    let target = projection.pcurve.ok_or_else(|| {
+        super::super::input("RUNOUT_TARGET: curve projection onto the end plane remains unproven")
+    })?;
+    let d = target.domain();
+    let q = target.evaluate((d[0] + d[1]) * 0.5)?;
+    let e = plane.evaluate(q.point[0], q.point[1])?;
+    let (a, b) = e
+        .first_derivatives()
+        .ok_or_else(|| super::super::input("RUNOUT_TARGET: singular end plane"))?;
+    let d1 =
+        q.d1.ok_or_else(|| super::super::input("RUNOUT_TARGET: curve tangent unavailable"))?;
+    let t = std::array::from_fn(|k| a[k] * d1[0] + b[k] * d1[1]);
+    let dir = cross(cross(a, b), t);
+    let norm = dot(dir, dir).sqrt();
+    let det = dot(a, a) * dot(b, b) - dot(a, b).powi(2);
+    if !norm.is_finite() || norm <= 0. || !det.is_finite() || det <= 0. {
+        return Err(super::super::input(
+            "RUNOUT_TARGET: degenerate transverse proposal",
+        ));
+    }
+    let sign = if v["flipSide"].as_bool() == Some(true) {
+        -1.
+    } else {
+        1.
+    };
+    let dir = dir.map(|x| x / norm * sign);
+    let transverse = [
+        (dot(b, b) * dot(a, dir) - dot(a, b) * dot(b, dir)) / det,
+        (dot(a, a) * dot(b, dir) - dot(a, b) * dot(a, dir)) / det,
+    ];
+    let mut uv = [0.; 2];
+    uv[axis] = at;
+    uv[1 - axis] = (trace.along[0] + trace.along[1]) * 0.5;
+    let jet = source
+        .evaluate(uv[0], uv[1])?
+        .first_derivatives()
+        .ok_or_else(|| super::super::input("RUNOUT_SOURCE: singular source trace"))?;
+    let derivative = if axis == 0 { jet.0 } else { jet.1 };
+    let speed = dot(derivative, derivative).sqrt();
+    if !speed.is_finite() || speed <= 0. {
+        return Err(super::super::input(
+            "RUNOUT_SOURCE: source transverse tangent unavailable",
+        ));
+    }
+    Ok(Prepared {
+        source,
+        plane,
+        trace,
+        target,
+        transverse,
+        gains: [size / speed, size],
+        cells,
+    })
+}

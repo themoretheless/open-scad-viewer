@@ -29,8 +29,73 @@ ${b.source}}`, 'full', boundedSignal)
       pairs.push({a:a.instance_path,b:b.instance_path,status:volume>1e-6?'overlap':'no_volume_overlap',intersection_volume_mm3:volume,method:'manifold_intersection'})
     } catch { pairs.push({a:a.instance_path,b:b.instance_path,status:'unknown',intersection_volume_mm3:null,method:'intersection_unavailable'}) }
   }
-  return {document_sha256:compiled.document_sha256,scope:'current joint positions only; contact and motion sweep not checked',volume_tolerance_mm3:1e-6,pairs,status:pairs.some(p=>p.status==='overlap')?'overlap':pairs.some(p=>p.status==='unknown')?'unknown':'no_volume_overlap'}
+  return {document_sha256:compiled.document_sha256,scope:'current joint positions only; contact and motion sweep not checked',volume_tolerance_mm3:1e-6,pairs,status:pairs.some(p=>p.status==='overlap')?'overlap':pairs.some(p=>p.status==='unknown')?'unknown':'no_volume_overlap' as const}
 }
+
+export interface InterferenceReportPair {
+  a: string
+  b: string
+  status: 'overlap' | 'no_volume_overlap' | 'unknown'
+  intersection_volume_mm3: number | null
+  method: string
+  min_clearance_mm?: number | null
+}
+
+export interface InterferenceReport {
+  document_sha256: string
+  scope: string
+  volume_tolerance_mm3: number
+  pairs: readonly InterferenceReportPair[]
+  status: 'overlap' | 'no_volume_overlap' | 'unknown' | string
+}
+
+/**
+ * Renders a Markdown summary table of colliding/interfering assembly parts,
+ * intersection volumes, and minimum clearances for LLM agents.
+ */
+export function formatInterferenceMarkdownReport(report: InterferenceReport): string {
+  let overlapCount = 0
+  let unknownCount = 0
+  let clearCount = 0
+  for (let i = 0; i < report.pairs.length; i++) {
+    const status = report.pairs[i]!.status
+    if (status === 'overlap') overlapCount++
+    else if (status === 'unknown') unknownCount++
+    else if (status === 'no_volume_overlap') clearCount++
+  }
+
+  const lines = new Array<string>(11 + report.pairs.length)
+  lines[0] = '# Assembly Interference Report'
+  lines[1] = ''
+  lines[2] = `- **Overall Status**: \`${report.status}\``
+  lines[3] = `- **Document SHA-256**: \`${report.document_sha256}\``
+  lines[4] = `- **Scope**: ${report.scope}`
+  lines[5] = `- **Volume Tolerance**: ${report.volume_tolerance_mm3} mm³`
+  lines[6] = `- **Summary**: ${overlapCount} colliding, ${clearCount} clear, ${unknownCount} unknown (${report.pairs.length} total pairs)`
+  lines[7] = ''
+  lines[8] = '| Part A | Part B | Status | Intersection Volume (mm³) | Min Clearance (mm) | Method |'
+  lines[9] = '| :--- | :--- | :--- | :---: | :---: | :--- |'
+
+  let idx = 10
+  for (let i = 0; i < report.pairs.length; i++) {
+    const pair = report.pairs[i]!
+    const volText =
+      pair.intersection_volume_mm3 === null || pair.intersection_volume_mm3 === undefined
+        ? 'N/A'
+        : pair.intersection_volume_mm3.toFixed(4)
+    const clearanceText =
+      pair.min_clearance_mm !== undefined && pair.min_clearance_mm !== null
+        ? pair.min_clearance_mm.toFixed(3)
+        : pair.status === 'overlap'
+          ? '0.000 (collision)'
+          : '—'
+    lines[idx++] = `| \`${pair.a}\` | \`${pair.b}\` | **${pair.status}** | ${volText} | ${clearanceText} | \`${pair.method}\` |`
+  }
+  lines.length = idx
+
+  return lines.join('\n')
+}
+
 export function registerRushGraphInterference(server:McpServer, geometry:McpGeometryService) {
   server.registerTool('rush_interference',{description:'Check volume overlap between up to 32 leaf assembly components at current joint positions using bounds and actual Manifold intersections. Does not check contact, clearance or the swept path of motion.',inputSchema:z.object({document:rushGraphSchema}),annotations:{readOnlyHint:true,openWorldHint:false}},async(input,context)=>{
     try {const report=await inspectRushGraphInterference(input.document,geometry,context.mcpReq.signal);return {structuredContent:report,content:[{type:'text' as const,text:JSON.stringify(report)}]}}

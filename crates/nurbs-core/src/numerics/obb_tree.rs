@@ -37,6 +37,7 @@ pub struct ObbNode {
 }
 impl ObbNode {
     /// Whether this node is a leaf.
+    #[inline]
     pub fn is_leaf(&self) -> bool {
         self.left.is_none()
     }
@@ -141,9 +142,10 @@ impl ObbTree {
             require_finite_point(p, "points")?;
         }
         let leaf_size = leaf_size.max(1);
+        let estimated_leaves = points.len().div_ceil(leaf_size).max(1);
         let mut tree = ObbTree {
             points: Vec::new(),
-            nodes: Vec::new(),
+            nodes: Vec::with_capacity(2 * estimated_leaves),
             leaf_size,
             leaf_count: 0,
         };
@@ -231,6 +233,12 @@ impl ObbTree {
         Ok(&self.points[n.start..n.start + n.count])
     }
 
+    /// Total number of nodes in the OBB tree.
+    #[inline]
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
     /// Maximum depth of the tree (root depth 0).
     pub fn depth(&self) -> usize {
         fn walk(tree: &ObbTree, node: usize) -> usize {
@@ -245,6 +253,12 @@ impl ObbTree {
         } else {
             walk(self, 0)
         }
+    }
+
+    /// Alias for [`Self::depth`]: maximum depth of the tree (root depth 0).
+    #[inline]
+    pub fn max_depth(&self) -> usize {
+        self.depth()
     }
 }
 
@@ -286,7 +300,8 @@ pub fn traverse(a: &ObbTree, b: &ObbTree, tolerance: f64) -> Result<Vec<LeafPair
         ..Budget::default()
     }
     .guard("obb-tree-traverse");
-    let mut stack = vec![(0usize, 0usize)];
+    let mut stack = Vec::with_capacity(64);
+    stack.push((0usize, 0usize));
     while let Some((ia, ib)) = stack.pop() {
         guard.tick()?;
         let na = &a.nodes[ia];
@@ -361,8 +376,9 @@ pub fn candidate_patch_pairs(
 ) -> Result<Vec<PatchPair>> {
     let ta = ObbTree::build_surface(surf_a, leaf_size)?;
     let tb = ObbTree::build_surface(surf_b, leaf_size)?;
-    let mut out = Vec::new();
-    for pair in traverse(&ta, &tb, tolerance)? {
+    let leaf_pairs = traverse(&ta, &tb, tolerance)?;
+    let mut out = Vec::with_capacity(leaf_pairs.len());
+    for pair in leaf_pairs {
         out.push(PatchPair {
             a: ta.leaf_points(pair.node_a)?.to_vec(),
             b: tb.leaf_points(pair.node_b)?.to_vec(),

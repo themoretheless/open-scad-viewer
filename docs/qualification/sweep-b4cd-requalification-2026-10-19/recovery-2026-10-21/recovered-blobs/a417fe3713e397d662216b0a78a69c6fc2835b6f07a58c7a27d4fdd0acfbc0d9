@@ -1,0 +1,311 @@
+//! Closed outer spherical profile, before cap/solid and embedding admission.
+use super::super::quintic_certificate::trig;
+use super::*;
+use crate::{
+    curve::Curve,
+    distance_bounds::{Interval as I, box_distance},
+};
+#[derive(Clone)]
+struct ArcBox {
+    p: [[I; 3]; 3],
+    w: [I; 3],
+}
+enum Template {
+    Source(Curve),
+    Arc(ArcBox, [Vec<f64>; 2]),
+}
+fn iv(x: [f64; 2]) -> Result<I> {
+    I::new(x[0], x[1])
+}
+fn mid(x: I) -> f64 {
+    x.lo + (x.hi - x.lo) * 0.5
+}
+fn polar(r: I, b: I, a: I) -> Result<[I; 3]> {
+    let (sb, cb) = trig(b)?;
+    let (sa, ca) = trig(a)?;
+    Ok([r.mul(sb)?.mul(ca)?, r.mul(sb)?.mul(sa)?, r.mul(cb)?])
+}
+fn arc(r: I, b: [I; 2], a: [I; 2], meridian: bool) -> Result<ArcBox> {
+    let half = I::point(0.5);
+    let beta = b[0].add(b[1])?.mul(half)?;
+    let alpha = a[0].add(a[1])?.mul(half)?;
+    let sweep = if meridian {
+        b[1].sub(b[0])?
+    } else {
+        a[1].sub(a[0])?
+    };
+    let (_, w) = trig(sweep.mul(half)?)?;
+    check(
+        w.lo > 0.,
+        "Bevel transition arc weight must be proved positive",
+    )?;
+    let mut center = polar(r, beta, alpha)?;
+    center[0] = center[0].div(w)?;
+    center[1] = center[1].div(w)?;
+    if meridian {
+        center[2] = center[2].div(w)?;
+    }
+    Ok(ArcBox {
+        p: [polar(r, b[0], a[0])?, center, polar(r, b[1], a[1])?],
+        w: [I::point(1.), w, I::point(1.)],
+    })
+}
+fn candidate(b: &ArcBox, endpoints: &[Vec<f64>; 2]) -> Curve {
+    Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            endpoints[0].clone(),
+            b.p[1].map(mid).to_vec(),
+            endpoints[1].clone(),
+        ],
+        weights: b.w.map(mid).to_vec(),
+        periodic: false,
+    }
+}
+fn arc_error(c: &Curve, b: &ArcBox) -> Result<f64> {
+    c.validate()?;
+    check(
+        c.degree == 2
+            && !c.periodic
+            && c.knots == [0., 0., 0., 1., 1., 1.]
+            && c.control_points.len() == 3
+            && c.control_points.iter().all(|p| p.len() == 3),
+        "Bevel transition requires a single original quadratic Bernstein arc",
+    )?;
+    let mut dp = 0_f64;
+    let mut dw = 0_f64;
+    let mut magnitude = 0_f64;
+    let mut minimum = f64::INFINITY;
+    for k in 0..3 {
+        let p: Vec<_> = c.control_points[k].iter().map(|x| I::point(*x)).collect();
+        dp = dp.max(box_distance(&p, &b.p[k])?.1);
+        magnitude = magnitude.max(box_distance(&[I::point(0.); 3], &b.p[k])?.1);
+        let d = I::point(c.weights[k]).sub(b.w[k])?;
+        dw = dw.max(d.lo.abs().max(d.hi.abs()));
+        minimum = minimum.min(c.weights[k]);
+    }
+    // Rational Bernstein convexity: dp + 2*max||Q_i||*dw/min(saved w).
+    I::point(dp)
+        .add(
+            I::point(2.)
+                .mul(I::point(magnitude))?
+                .mul(I::point(dw))?
+                .div(I::point(minimum))?,
+        )
+        .map(|x| x.hi)
+}
+fn outer(surface: &Surface) -> Curve {
+    Curve {
+        degree: surface.degree_u,
+        knots: surface.knots_u.clone(),
+        periodic: false,
+        control_points: surface
+            .control_points
+            .iter()
+            .map(|r| r[1].clone())
+            .collect(),
+        weights: surface.weights.iter().map(|r| r[1]).collect(),
+    }
+}
+fn reverse(mut curve: Curve) -> Curve {
+    curve.control_points.reverse();
+    curve.weights.reverse();
+    curve.knots = curve.knots.iter().rev().map(|x| -x).collect();
+    curve
+}
+fn layout(source: &QualifiedBevelTeeth) -> Result<Vec<Template>> {
+    source.reverify()?;
+    let p = source.source().parameters();
+    let z = source.specification().teeth;
+    let r = iv(p.cone_distances[1])?;
+    let root = iv(p.root_cone_angle)?;
+    let base = iv(p.base_cone_angle)?;
+    let tip = iv(p.tip_cone_angle)?;
+    let below = root.hi < base.lo;
+    check(
+        below || root.lo > base.hi,
+        "Bevel root/base transition ordering is unresolved",
+    )?;
+    let step = iv(p.tooth_step)?;
+    let offset = iv(p.half_pitch_tooth_angle)?.add(iv(p.pitch_involute_azimuth)?)?;
+    let root_half = iv(source.certificate().nominal_root_half_angle)?;
+    let tip_half = iv(source.certificate().nominal_tip_half_angle)?;
+    let mut roots = Vec::with_capacity(z);
+    for j in 0..z {
+        let center = step.mul(I::point(j as f64))?;
+        let pair = if below {
+            [
+                polar(r, root, center.sub(root_half)?)?.map(mid).to_vec(),
+                polar(r, root, center.add(root_half)?)?.map(mid).to_vec(),
+            ]
+        } else {
+            [
+                source.flanks()[2 * j].patches[0].control_points[0][1].clone(),
+                source.flanks()[2 * j + 1].patches[0].control_points[0][1].clone(),
+            ]
+        };
+        roots.push(pair);
+    }
+    let mut result = Vec::new();
+    for j in 0..z {
+        let center = step.mul(I::point(j as f64))?;
+        let left = &source.flanks()[2 * j].patches;
+        let right = &source.flanks()[2 * j + 1].patches;
+        if below {
+            let phi = center.sub(offset)?;
+            result.push(Template::Arc(
+                arc(r, [root, base], [phi, phi], true)?,
+                [roots[j][0].clone(), left[0].control_points[0][1].clone()],
+            ));
+        }
+        for patch in left {
+            result.push(Template::Source(outer(patch)));
+        }
+        let l = left.last().unwrap().control_points.last().unwrap()[1].clone();
+        let rr = right.last().unwrap().control_points.last().unwrap()[1].clone();
+        result.push(Template::Arc(
+            arc(
+                r,
+                [tip, tip],
+                [center.sub(tip_half)?, center.add(tip_half)?],
+                false,
+            )?,
+            [l, rr],
+        ));
+        for patch in right.iter().rev() {
+            result.push(Template::Source(reverse(outer(patch))));
+        }
+        if below {
+            let phi = center.add(offset)?;
+            result.push(Template::Arc(
+                arc(r, [base, root], [phi, phi], true)?,
+                [right[0].control_points[0][1].clone(), roots[j][1].clone()],
+            ));
+        }
+        let next = step.mul(I::point((j + 1) as f64))?;
+        result.push(Template::Arc(
+            arc(
+                r,
+                [root, root],
+                [center.add(root_half)?, next.sub(root_half)?],
+                false,
+            )?,
+            [roots[j][1].clone(), roots[(j + 1) % z][0].clone()],
+        ));
+    }
+    Ok(result)
+}
+#[derive(Clone, Debug)]
+pub struct BevelOutlineCertificate {
+    pub world_error_upper: f64,
+    pub transition_error_upper: f64,
+    pub curves: usize,
+    pub transitions: usize,
+}
+/// Exact saved-chain closure and continuous original-spec accuracy. This does
+/// not prove complete-profile embedding, noninterference or B-rep solid validity.
+pub fn certify_bevel_outline(
+    source: &QualifiedBevelTeeth,
+    curves: &[Curve],
+) -> Result<BevelOutlineCertificate> {
+    let templates = layout(source)?;
+    check(
+        curves.len() == templates.len(),
+        "Bevel outline source-role inventory changed",
+    )?;
+    let mut error = 0_f64;
+    let mut transitions = 0;
+    for (c, t) in curves.iter().zip(&templates) {
+        c.validate()?;
+        match t {
+            Template::Source(expected) => check(
+                c == expected,
+                "Bevel outline changed an original working-flank curve",
+            )?,
+            Template::Arc(b, endpoints) => {
+                check(
+                    c.control_points.first() == Some(&endpoints[0])
+                        && c.control_points.last() == Some(&endpoints[1]),
+                    "Bevel transition no longer owns exact canonical endpoints",
+                )?;
+                error = error.max(arc_error(c, b)?);
+                transitions += 1;
+            }
+        }
+    }
+    for j in 0..curves.len() {
+        check(
+            curves[j].control_points.last()
+                == curves[(j + 1) % curves.len()].control_points.first(),
+            "Bevel outline is not an exactly closed clamped chain",
+        )?;
+    }
+    Ok(BevelOutlineCertificate {
+        world_error_upper: error.max(source.certificate().world_error_upper),
+        transition_error_upper: error,
+        curves: curves.len(),
+        transitions,
+    })
+}
+pub struct QualifiedBevelOutline {
+    source: QualifiedBevelTeeth,
+    curves: Vec<Curve>,
+    tolerance: f64,
+    certificate: BevelOutlineCertificate,
+}
+impl QualifiedBevelOutline {
+    pub fn source(&self) -> &QualifiedBevelTeeth {
+        &self.source
+    }
+    pub fn curves(&self) -> &[Curve] {
+        &self.curves
+    }
+    pub fn certificate(&self) -> &BevelOutlineCertificate {
+        &self.certificate
+    }
+    pub fn reverify(&self) -> Result<()> {
+        let fresh = certify_bevel_outline(&self.source, &self.curves)?;
+        check(
+            fresh.world_error_upper <= self.tolerance
+                && fresh.world_error_upper == self.certificate.world_error_upper,
+            "Owned bevel outline error receipt changed",
+        )
+    }
+}
+pub fn qualified_bevel_outline(
+    spec: BevelGearSpec,
+    tolerance: f64,
+    max_patches_per_flank: usize,
+    max_surfaces: usize,
+    max_curves: usize,
+) -> Result<QualifiedBevelOutline> {
+    check(
+        tolerance.is_finite() && tolerance > 0. && (1..=8192).contains(&max_curves),
+        "Bevel outline needs positive tolerance and 1..8192 curve budget",
+    )?;
+    let source = qualified_bevel_teeth(spec, tolerance * 0.5, max_patches_per_flank, max_surfaces)?;
+    let templates = layout(&source)?;
+    check(
+        templates.len() <= max_curves,
+        "Bevel outline curve budget is insufficient",
+    )?;
+    let curves = templates
+        .iter()
+        .map(|t| match t {
+            Template::Source(c) => c.clone(),
+            Template::Arc(b, endpoints) => candidate(b, endpoints),
+        })
+        .collect::<Vec<_>>();
+    let certificate = certify_bevel_outline(&source, &curves)?;
+    check(
+        certificate.world_error_upper <= tolerance,
+        "Bevel complete outline error exceeds requested tolerance",
+    )?;
+    Ok(QualifiedBevelOutline {
+        source,
+        curves,
+        tolerance,
+        certificate,
+    })
+}

@@ -66,7 +66,7 @@ export interface PhotoDiagnostics {
   warnings: string[]
 }
 
-export type PhotoDensePreset = 'baseline' | 'slanted-plane' | 'dual-scale-volume'
+export type PhotoDensePreset = 'baseline' | 'accurate' | 'slanted-plane' | 'dual-scale-volume'
 
 export interface PhotoDenseDiagnostics {
   preset?: PhotoDensePreset
@@ -191,6 +191,7 @@ export class PhotogrammetryKernel {
 
   dense(resolution = 128, preset: PhotoDensePreset = 'baseline'): PhotoSurface {
     if (preset === 'baseline') return this.response<PhotoSurface>(this.wasm.photo_run(2, resolution))
+    if (preset === 'accurate') return this.response<PhotoSurface>(this.wasm.photo_dense(resolution, 3))
     if (preset === 'slanted-plane') return this.response<PhotoSurface>(this.wasm.photo_dense(resolution, 1))
     if (preset === 'dual-scale-volume') return this.response<PhotoSurface>(this.wasm.photo_dense(resolution, 2))
     throw new Error('Unknown dense reconstruction preset')
@@ -208,11 +209,12 @@ export class PhotogrammetryKernel {
    * Browser WebGPU sweep, stage 1: returns the packed shader payload and WGSL
    * text, or null when the request is ineligible for the GPU path.
    */
-  densePrepare(resolution: number): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[]} | null {
+  densePrepare(resolution: number, preset: PhotoDensePreset = 'baseline'): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[]} | null {
+    const presetCode = preset === 'accurate' ? 3 : preset === 'slanted-plane' ? 1 : preset === 'dual-scale-volume' ? 2 : 0
     const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string, wgslVariants?: WgslVariant[]} | null>>(
       this.wasm.memory,
       (pointer, size) => this.wasm.photo_free(pointer, size),
-      this.wasm.photo_dense_prepare(resolution, 0),
+      this.wasm.photo_dense_prepare(resolution, presetCode),
     )
     if (!decoded.ok) throw new Error(decoded.message)
     if (decoded.value === null) return null

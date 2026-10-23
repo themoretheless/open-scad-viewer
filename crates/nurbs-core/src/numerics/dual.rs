@@ -21,13 +21,16 @@ pub struct Dual {
 
 impl Dual {
     /// Constant (zero derivative).
+    #[inline]
     pub fn constant(val: f64) -> Self {
         Self { val, der: 0. }
     }
     /// Independent variable seeded at `val` (unit derivative).
+    #[inline]
     pub fn variable(val: f64) -> Self {
         Self { val, der: 1. }
     }
+    #[inline]
     pub fn sqrt(self) -> Self {
         let val = self.val.sqrt();
         Self {
@@ -35,18 +38,47 @@ impl Dual {
             der: 0.5 * self.der / val,
         }
     }
+    #[inline]
     pub fn sin(self) -> Self {
+        let (s, c) = self.val.sin_cos();
         Self {
-            val: self.val.sin(),
-            der: self.val.cos() * self.der,
+            val: s,
+            der: c * self.der,
         }
     }
+    #[inline]
     pub fn cos(self) -> Self {
+        let (s, c) = self.val.sin_cos();
         Self {
-            val: self.val.cos(),
-            der: -self.val.sin() * self.der,
+            val: c,
+            der: -s * self.der,
         }
     }
+    /// Simultaneous sine and cosine lifted along the chain rule.
+    #[inline]
+    pub fn sin_cos(self) -> (Self, Self) {
+        let (s, c) = self.val.sin_cos();
+        (
+            Self {
+                val: s,
+                der: c * self.der,
+            },
+            Self {
+                val: c,
+                der: -s * self.der,
+            },
+        )
+    }
+    /// Tangent lifted along the chain rule: `d/dx tan(x) = x' / cos²(x)`.
+    #[inline]
+    pub fn tan(self) -> Self {
+        let (s, c) = self.val.sin_cos();
+        Self {
+            val: s / c,
+            der: self.der / (c * c),
+        }
+    }
+    #[inline]
     pub fn exp(self) -> Self {
         let val = self.val.exp();
         Self {
@@ -54,12 +86,14 @@ impl Dual {
             der: val * self.der,
         }
     }
+    #[inline]
     pub fn ln(self) -> Self {
         Self {
             val: self.val.ln(),
             der: self.der / self.val,
         }
     }
+    #[inline]
     pub fn powf(self, exponent: Dual) -> Self {
         // x^y = exp(y·ln x), so d = x^y·(y'·ln x + y·x'/x).
         let val = self.val.powf(exponent.val);
@@ -68,6 +102,7 @@ impl Dual {
             der: val * (exponent.der * self.val.ln() + exponent.val * self.der / self.val),
         }
     }
+    #[inline]
     pub fn powi(self, n: i32) -> Self {
         Self {
             val: self.val.powi(n),
@@ -75,16 +110,44 @@ impl Dual {
         }
     }
     /// Two-argument arctangent lifted along the chain rule.
+    #[inline]
     pub fn atan2(self, x: Dual) -> Self {
         Self {
             val: self.val.atan2(x.val),
             der: (x.val * self.der - self.val * x.der) / (x.val * x.val + self.val * self.val),
         }
     }
+    /// Euclidean norm `sqrt(self² + other²)` lifted along the chain rule.
+    #[inline]
+    pub fn hypot(self, other: Dual) -> Self {
+        let val = self.val.hypot(other.val);
+        let der = if val > 0. {
+            (self.val * self.der + other.val * other.der) / val
+        } else {
+            0.
+        };
+        Self { val, der }
+    }
+    /// Absolute value lifted along the subgradient (`0.` derivative at `0.`).
+    #[inline]
+    pub fn abs(self) -> Self {
+        let sign = if self.val > 0. {
+            1.
+        } else if self.val < 0. {
+            -1.
+        } else {
+            0.
+        };
+        Self {
+            val: self.val.abs(),
+            der: sign * self.der,
+        }
+    }
 }
 
 impl Add for Dual {
     type Output = Dual;
+    #[inline]
     fn add(self, rhs: Dual) -> Dual {
         Dual {
             val: self.val + rhs.val,
@@ -94,6 +157,7 @@ impl Add for Dual {
 }
 impl Sub for Dual {
     type Output = Dual;
+    #[inline]
     fn sub(self, rhs: Dual) -> Dual {
         Dual {
             val: self.val - rhs.val,
@@ -103,6 +167,7 @@ impl Sub for Dual {
 }
 impl Mul for Dual {
     type Output = Dual;
+    #[inline]
     fn mul(self, rhs: Dual) -> Dual {
         Dual {
             val: self.val * rhs.val,
@@ -112,6 +177,7 @@ impl Mul for Dual {
 }
 impl Div for Dual {
     type Output = Dual;
+    #[inline]
     fn div(self, rhs: Dual) -> Dual {
         Dual {
             val: self.val / rhs.val,
@@ -121,6 +187,7 @@ impl Div for Dual {
 }
 impl Neg for Dual {
     type Output = Dual;
+    #[inline]
     fn neg(self) -> Dual {
         Dual {
             val: -self.val,
@@ -130,18 +197,21 @@ impl Neg for Dual {
 }
 impl Add<f64> for Dual {
     type Output = Dual;
+    #[inline]
     fn add(self, rhs: f64) -> Dual {
         self + Dual::constant(rhs)
     }
 }
 impl Sub<f64> for Dual {
     type Output = Dual;
+    #[inline]
     fn sub(self, rhs: f64) -> Dual {
         self - Dual::constant(rhs)
     }
 }
 impl Mul<f64> for Dual {
     type Output = Dual;
+    #[inline]
     fn mul(self, rhs: f64) -> Dual {
         Dual {
             val: self.val * rhs,
@@ -151,6 +221,7 @@ impl Mul<f64> for Dual {
 }
 impl Div<f64> for Dual {
     type Output = Dual;
+    #[inline]
     fn div(self, rhs: f64) -> Dual {
         Dual {
             val: self.val / rhs,
@@ -171,6 +242,7 @@ pub struct HyperDual {
 
 impl HyperDual {
     /// Constant (all derivatives zero).
+    #[inline]
     pub fn constant(val: f64) -> Self {
         Self {
             val,
@@ -180,6 +252,7 @@ impl HyperDual {
         }
     }
     /// Variable seeded along ε₁ only (for ∂/∂u, ∂²/∂u∂v mixed slots).
+    #[inline]
     pub fn variable_e1(val: f64) -> Self {
         Self {
             val,
@@ -189,6 +262,7 @@ impl HyperDual {
         }
     }
     /// Variable seeded along ε₂ only.
+    #[inline]
     pub fn variable_e2(val: f64) -> Self {
         Self {
             val,
@@ -199,6 +273,7 @@ impl HyperDual {
     }
     /// Variable seeded along both ε₁ and ε₂: the mixed slot then carries
     /// the unmixed second derivative ∂²/∂u² of any function of it.
+    #[inline]
     pub fn variable_second(val: f64) -> Self {
         Self {
             val,
@@ -208,6 +283,7 @@ impl HyperDual {
         }
     }
     /// Multiplicative inverse via the ε-expansion of 1/x.
+    #[inline]
     pub fn recip(self) -> Self {
         let v2 = self.val * self.val;
         Self {
@@ -217,6 +293,7 @@ impl HyperDual {
             d12: (2. * self.d1 * self.d2 - self.val * self.d12) / (v2 * self.val),
         }
     }
+    #[inline]
     pub fn sqrt(self) -> Self {
         let s = self.val.sqrt();
         Self {
@@ -226,6 +303,7 @@ impl HyperDual {
             d12: 0.5 * self.d12 / s - 0.25 * self.d1 * self.d2 / (s * self.val),
         }
     }
+    #[inline]
     pub fn sin(self) -> Self {
         let (s, c) = self.val.sin_cos();
         Self {
@@ -235,6 +313,7 @@ impl HyperDual {
             d12: c * self.d12 - s * self.d1 * self.d2,
         }
     }
+    #[inline]
     pub fn cos(self) -> Self {
         let (s, c) = self.val.sin_cos();
         Self {
@@ -244,6 +323,7 @@ impl HyperDual {
             d12: -s * self.d12 - c * self.d1 * self.d2,
         }
     }
+    #[inline]
     pub fn exp(self) -> Self {
         let e = self.val.exp();
         Self {
@@ -253,6 +333,7 @@ impl HyperDual {
             d12: e * (self.d12 + self.d1 * self.d2),
         }
     }
+    #[inline]
     pub fn ln(self) -> Self {
         Self {
             val: self.val.ln(),
@@ -261,6 +342,7 @@ impl HyperDual {
             d12: self.d12 / self.val - self.d1 * self.d2 / (self.val * self.val),
         }
     }
+    #[inline]
     pub fn powi(self, n: i32) -> Self {
         let val = self.val.powi(n);
         let first = n as f64 * self.val.powi(n - 1);
@@ -276,6 +358,7 @@ impl HyperDual {
 
 impl Add for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn add(self, rhs: HyperDual) -> HyperDual {
         HyperDual {
             val: self.val + rhs.val,
@@ -287,6 +370,7 @@ impl Add for HyperDual {
 }
 impl Sub for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn sub(self, rhs: HyperDual) -> HyperDual {
         HyperDual {
             val: self.val - rhs.val,
@@ -298,6 +382,7 @@ impl Sub for HyperDual {
 }
 impl Mul for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn mul(self, rhs: HyperDual) -> HyperDual {
         HyperDual {
             val: self.val * rhs.val,
@@ -309,12 +394,14 @@ impl Mul for HyperDual {
 }
 impl Div for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn div(self, rhs: HyperDual) -> HyperDual {
         self * rhs.recip()
     }
 }
 impl Neg for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn neg(self) -> HyperDual {
         HyperDual {
             val: -self.val,
@@ -326,6 +413,7 @@ impl Neg for HyperDual {
 }
 impl Mul<f64> for HyperDual {
     type Output = HyperDual;
+    #[inline]
     fn mul(self, rhs: f64) -> HyperDual {
         HyperDual {
             val: self.val * rhs,
@@ -703,6 +791,20 @@ mod tests {
         // d/dy atan2(y, x) = x/(x²+y²) at (y=1, x=2).
         let angle = Dual::variable(1.).atan2(Dual::constant(2.));
         assert_close(angle.der, 0.4, 1e-15);
+        // sin_cos, tan, hypot, abs.
+        let (s_dual, c_dual) = Dual::variable(0.6).sin_cos();
+        assert_close(s_dual.val, 0.6_f64.sin(), 1e-15);
+        assert_close(s_dual.der, 0.6_f64.cos(), 1e-15);
+        assert_close(c_dual.val, 0.6_f64.cos(), 1e-15);
+        assert_close(c_dual.der, -(0.6_f64.sin()), 1e-15);
+        let t_dual = Dual::variable(0.6).tan();
+        assert_close(t_dual.val, 0.6_f64.tan(), 1e-15);
+        assert_close(t_dual.der, 1. / (0.6_f64.cos().powi(2)), 1e-14);
+        let h_dual = Dual::variable(3.).hypot(Dual::constant(4.));
+        assert_close(h_dual.val, 5., 1e-15);
+        assert_close(h_dual.der, 0.6, 1e-15);
+        assert_eq!(Dual::variable(-3.5).abs(), Dual { val: 3.5, der: -1. });
+        assert_eq!(Dual::variable(3.5).abs(), Dual { val: 3.5, der: 1. });
     }
 
     #[test]

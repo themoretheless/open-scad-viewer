@@ -114,7 +114,7 @@ pub fn thicken_patch(
         offset_fallback_reason: None,
         continuous_thickness_error_upper: None,
         rounding_inclusive_thickness_certified: false,
-        regularity: vec![],
+        regularity: Vec::with_capacity(6),
         regularity_cells: 0,
         agreement: None,
         solid_geometry_certified: false,
@@ -181,11 +181,13 @@ pub fn thicken_patch(
             "Offset coordinates exceed bound",
         ));
     }
-    let mut patches = vec![source.clone(), offset.surface.clone()];
+    let mut patches = Vec::with_capacity(6);
+    patches.push(source.clone());
+    patches.push(offset.surface);
     for i in 0..4 {
         patches.push(side(
             &crate::rounded_patch_network::boundary(source, i).0,
-            &crate::rounded_patch_network::boundary(&offset.surface, i).0,
+            &crate::rounded_patch_network::boundary(&patches[1], i).0,
         ));
     }
     for patch in patches.iter().skip(1) {

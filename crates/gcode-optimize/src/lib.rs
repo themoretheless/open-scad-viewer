@@ -467,4 +467,577 @@ mod arc_and_zhop_tests {
         assert!(gcode.contains("G3 X0.000 Y10.000 I-10.000 J0.000"));
         assert!(gcode.contains("G0 Z0.400")); // Z-hop lift of 0.2mm above z=0.2mm
     }
+
+    #[test]
+    fn pressure_advance_input_shaper_and_klipper_print_time() {
+        let gcode = "G21\nG90\nG1 X10 Y0 E0.5 F3000\nG1 X10 Y10 E1.0 F3000\n";
+        let klipper_pa = inject_pressure_advance(gcode, Flavor::Klipper, 0.045, 0.04).unwrap();
+        assert!(klipper_pa.contains("SET_PRESSURE_ADVANCE ADVANCE=0.04500 SMOOTH_TIME=0.04000"));
+
+        let marlin_pa = inject_pressure_advance(gcode, Flavor::Marlin, 0.06, 0.04).unwrap();
+        assert!(marlin_pa.contains("M900 K0.06000"));
+
+        let shaper = format_input_shaper_command(Flavor::Klipper, "mzv", 54.2, 48.6).unwrap();
+        assert_eq!(
+            shaper,
+            "SET_INPUT_SHAPER SHAPER_TYPE=MZV SHAPER_FREQ_X=54.20 SHAPER_FREQ_Y=48.60"
+        );
+
+        let moves = vec![
+            GcodeMove {
+                x: 0.0,
+                y: 0.0,
+                z: 0.2,
+                e: 0.0,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: false,
+            },
+            GcodeMove {
+                x: 50.0,
+                y: 0.0,
+                z: 0.2,
+                e: 1.5,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: true,
+            },
+            GcodeMove {
+                x: 50.0,
+                y: 50.0,
+                z: 0.2,
+                e: 3.0,
+                feedrate_mm_s: 100.0,
+                layer_index: 0,
+                extruded: true,
+            },
+        ];
+        // Ideal time at 100 mm/s for 100 mm is 1.0 s; with finite acceleration (3000 mm/s^2) and 90 deg corner (scv=5 mm/s), time > 1.0 s
+        let time_s = estimate_klipper_print_time(&moves, 3000.0, 5.0);
+        assert!(time_s > 1.05 && time_s < 1.5, "got {time_s}");
+
+        let fan_sched = inject_ramping_fan_control(5, 64, 255, 3);
+        assert_eq!(fan_sched.len(), 5);
+        assert_eq!(fan_sched[0], (0, "M107".to_string()));
+        assert!(fan_sched[1].1.starts_with("M106 S"));
+        assert_eq!(fan_sched[3], (3, "M106 S255".to_string()));
+        assert_eq!(fan_sched[4], (4, "M106 S255".to_string()));
+
+        // Straight collinear move -> full cruise velocity
+        let v_straight = optimize_corner_velocity_limits([10.0, 0.0, 0.0], [10.0, 0.0, 0.0], 3000.0, 0.02, 120.0);
+        assert!((v_straight - 120.0).abs() < 1e-6);
+        // 90-degree corner with JD = 0.02 mm and accel = 3000 mm/s^2 -> v = sqrt(3000 * 0.02 * sin(45) / (1 - sin(45))) ≈ 12.04 mm/s
+        let v_90 = optimize_corner_velocity_limits([10.0, 0.0, 0.0], [0.0, 10.0, 0.0], 3000.0, 0.02, 120.0);
+        assert!(v_90 > 11.5 && v_90 < 12.5, "got {v_90}");
+        // 180-degree reversal -> 0.0 mm/s
+        let v_rev = optimize_corner_velocity_limits([10.0, 0.0, 0.0], [-10.0, 0.0, 0.0], 3000.0, 0.02, 120.0);
+        assert!(v_rev < 1e-3);
+
+        // Spiral vase mode continuous helical Z interpolation
+        let sq = vec![[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]];
+        let vase = plan_spiral_vase_mode(&[(0.2, sq.clone()), (0.4, sq.clone()), (0.6, sq)], 0.2);
+        assert_eq!(vase.len(), 13); // 5 on first layer + 4 + 4 on next two layers (seam deduplicated)
+        for w in vase.windows(2) {
+            assert!(w[1][2] > w[0][2], "Z must strictly increase along spiral vase path: {:?} -> {:?}", w[0], w[1]);
+        }
+        assert!((vase.first().unwrap()[2] - 0.2).abs() < 1e-9);
+        assert!((vase.last().unwrap()[2] - 0.8).abs() < 1e-9);
+
+        // Nozzle wipe retraction back-tracing along extrusion path before travel
+        let path_moves = vec![
+            [0.0, 0.0, 0.2, 0.0],
+            [10.0, 0.0, 0.2, 0.5],
+            [10.0, 10.0, 0.2, 1.0],
+            [30.0, 30.0, 0.2, 1.0], // non-extruding travel move
+        ];
+        let wiped = inject_wiper_retraction(&path_moves, 0.8, 3.0);
+        // Should insert a wipe move back from [10.0, 10.0] toward [10.0, 0.0] at [10.0, 7.0, 0.2, 0.2]
+        // and restore E=1.0 at the travel destination
+        assert!(wiped.len() > path_moves.len());
+        assert!(wiped.iter().any(|m| (m[0] - 10.0).abs() < 1e-6 && (m[1] - 7.0).abs() < 1e-6 && (m[3] - 0.2).abs() < 1e-6));
+    }
 }
+
+pub use gcode_core::GcodeMove;
+
+/// Injects firmware-specific Pressure Advance / Linear Advance setup commands into a G-code program
+/// (`SET_PRESSURE_ADVANCE` for Klipper, `M900 K...` for Marlin, `M572 D0 S...` for RepRapFirmware).
+pub fn inject_pressure_advance(
+    gcode: &str,
+    flavor: Flavor,
+    k_factor: f64,
+    smooth_time_s: f64,
+) -> Result<String> {
+    use std::fmt::Write as _;
+    if !k_factor.is_finite()
+        || !(0.0..=2.0).contains(&k_factor)
+        || !smooth_time_s.is_finite()
+        || !(0.001..=0.2).contains(&smooth_time_s)
+    {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Pressure advance k_factor must be in 0..=2.0 and smooth_time_s in 0.001..=0.2",
+        ));
+    }
+    let mut out = String::with_capacity(gcode.len() + 64);
+    let write_cmd = |buf: &mut String| match flavor {
+        Flavor::Klipper => {
+            let _ = writeln!(
+                buf,
+                "SET_PRESSURE_ADVANCE ADVANCE={k_factor:.5} SMOOTH_TIME={smooth_time_s:.5}"
+            );
+        }
+        Flavor::Marlin => {
+            let _ = writeln!(buf, "M900 K{k_factor:.5}");
+        }
+        Flavor::RepRapFirmware => {
+            let _ = writeln!(buf, "M572 D0 S{k_factor:.5}");
+        }
+    };
+    let mut injected = false;
+    for line in gcode.lines() {
+        out.push_str(line);
+        out.push('\n');
+        if !injected {
+            let trimmed = line.trim_start();
+            if !trimmed.is_empty() && !trimmed.starts_with(';') {
+                write_cmd(&mut out);
+                injected = true;
+            }
+        }
+    }
+    if !injected {
+        write_cmd(&mut out);
+    }
+    Ok(out)
+}
+
+/// Formats an Input Shaper resonance compensation command for Klipper (`SET_INPUT_SHAPER`) or Marlin (`M593`).
+pub fn format_input_shaper_command(
+    flavor: Flavor,
+    shaper_type: &str,
+    freq_x_hz: f64,
+    freq_y_hz: f64,
+) -> Result<String> {
+    if !freq_x_hz.is_finite()
+        || !(10.0..=200.0).contains(&freq_x_hz)
+        || !freq_y_hz.is_finite()
+        || !(10.0..=200.0).contains(&freq_y_hz)
+    {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Input shaper frequencies must be finite and within 10..=200 Hz",
+        ));
+    }
+    let shaper_upper = shaper_type.trim().to_ascii_uppercase();
+    if !["ZV", "MZV", "ZVD", "EI", "2HUMP_EI", "3HUMP_EI"].contains(&shaper_upper.as_str()) {
+        return Err(invalid(
+            "OPT_INVALID_SETTINGS",
+            "Unsupported input shaper type",
+        ));
+    }
+    Ok(match flavor {
+        Flavor::Klipper => format!(
+            "SET_INPUT_SHAPER SHAPER_TYPE={shaper_upper} SHAPER_FREQ_X={freq_x_hz:.2} SHAPER_FREQ_Y={freq_y_hz:.2}"
+        ),
+        _ => format!("M593 X F{freq_x_hz:.2}\nM593 Y F{freq_y_hz:.2}"),
+    })
+}
+
+/// Estimates realistic print execution time in seconds using Klipper's trapezoidal velocity profile
+/// and centripetal cornering velocity limit (`square_corner_velocity_mm_s`, typically `5.0` mm/s)
+/// with peak acceleration `accel_mm_s2`.
+pub fn estimate_klipper_print_time(
+    moves: &[GcodeMove],
+    accel_mm_s2: f64,
+    square_corner_velocity_mm_s: f64,
+) -> f64 {
+    if moves.len() < 2 || !accel_mm_s2.is_finite() || accel_mm_s2 <= 0.0 {
+        return 0.0;
+    }
+    let scv = square_corner_velocity_mm_s.max(0.1);
+    let inv_accel = 1.0 / accel_mm_s2;
+    let inv_2accel = 0.5 * inv_accel;
+    let mut total_time_s = 0.0;
+    let mut prev_dir: Option<[f64; 3]> = None;
+    let mut prev_exit_v = 0.0_f64;
+
+    // Precompute the first segment direction and length so each loop iteration only computes the next segment once.
+    let mut cur_dist = 0.0_f64;
+    let mut cur_dir = [0.0_f64; 3];
+    {
+        let a = &moves[0];
+        let b = &moves[1];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dz = b.z - a.z;
+        let d = (dx * dx + dy * dy + dz * dz).sqrt();
+        if d > 1e-9 {
+            cur_dist = d;
+            let inv_d = 1.0 / d;
+            cur_dir = [dx * inv_d, dy * inv_d, dz * inv_d];
+        }
+    }
+
+    for i in 1..moves.len() {
+        let b = &moves[i];
+        let dist = cur_dist;
+        let dir = cur_dir;
+
+        // Compute lookahead segment (i -> i+1) once and cache for next iteration
+        let mut next_dist = 0.0_f64;
+        let mut next_dir = [0.0_f64; 3];
+        if i + 1 < moves.len() {
+            let c = &moves[i + 1];
+            let ndx = c.x - b.x;
+            let ndy = c.y - b.y;
+            let ndz = c.z - b.z;
+            let nd = (ndx * ndx + ndy * ndy + ndz * ndz).sqrt();
+            if nd > 1e-9 {
+                next_dist = nd;
+                let inv_nd = 1.0 / nd;
+                next_dir = [ndx * inv_nd, ndy * inv_nd, ndz * inv_nd];
+            }
+        }
+        cur_dist = next_dist;
+        cur_dir = next_dir;
+
+        if dist <= 1e-9 {
+            continue;
+        }
+        let v_cruise = b.feedrate_mm_s.max(0.1);
+
+        let v_entry = if let Some(pd) = prev_dir {
+            let cos_theta = (pd[0] * dir[0] + pd[1] * dir[1] + pd[2] * dir[2]).clamp(-1.0, 1.0);
+            let half_angle = (0.5 * (1.0 - cos_theta)).max(0.0).sqrt(); // sin(theta / 2)
+            if half_angle > 1e-4 {
+                let cos_half = (0.5 * (1.0 + cos_theta)).max(0.0).sqrt();
+                let factor = (cos_half / half_angle).sqrt();
+                (scv * factor).min(v_cruise).min(prev_exit_v)
+            } else {
+                v_cruise.min(prev_exit_v)
+            }
+        } else {
+            0.0
+        };
+
+        let v_exit = if next_dist > 1e-9 {
+            let c = &moves[i + 1];
+            let cos_theta =
+                (dir[0] * next_dir[0] + dir[1] * next_dir[1] + dir[2] * next_dir[2]).clamp(-1.0, 1.0);
+            let half_angle = (0.5 * (1.0 - cos_theta)).max(0.0).sqrt();
+            if half_angle > 1e-4 {
+                let cos_half = (0.5 * (1.0 + cos_theta)).max(0.0).sqrt();
+                (scv * (cos_half / half_angle).sqrt())
+                    .min(v_cruise)
+                    .min(c.feedrate_mm_s.max(0.1))
+            } else {
+                v_cruise.min(c.feedrate_mm_s.max(0.1))
+            }
+        } else {
+            0.0
+        };
+
+        // Reachable peak velocity given segment length and acceleration
+        let v_peak_sq = accel_mm_s2 * dist + 0.5 * (v_entry * v_entry + v_exit * v_exit);
+        let v_peak = v_peak_sq.max(0.0).sqrt().min(v_cruise);
+        let d_accel = ((v_peak * v_peak - v_entry * v_entry).max(0.0)) * inv_2accel;
+        let d_decel = ((v_peak * v_peak - v_exit * v_exit).max(0.0)) * inv_2accel;
+        let d_cruise = (dist - d_accel - d_decel).max(0.0);
+
+        let t_accel = (v_peak - v_entry).max(0.0) * inv_accel;
+        let t_decel = (v_peak - v_exit).max(0.0) * inv_accel;
+        let t_cruise = d_cruise / v_peak.max(1e-6);
+
+        total_time_s += t_accel + t_cruise + t_decel;
+        prev_dir = Some(dir);
+        prev_exit_v = v_peak;
+    }
+    total_time_s
+}
+
+/// Generates a layer-indexed progressive part-cooling fan schedule (`(layer_index, gcode_command)`):
+/// layer `0` turns the fan off (`M107`) for bed adhesion unless `full_fan_layer == 0`,
+/// intermediate layers linearly ramp PWM from `min_fan_pwm` up to `max_fan_pwm` (`M106 S...`),
+/// and layers at or above `full_fan_layer` maintain `max_fan_pwm`.
+pub fn inject_ramping_fan_control(
+    layers_count: usize,
+    min_fan_pwm: u8,
+    max_fan_pwm: u8,
+    full_fan_layer: usize,
+) -> Vec<(usize, String)> {
+    let mut schedule = Vec::with_capacity(layers_count);
+    let low = min_fan_pwm.min(max_fan_pwm) as f64;
+    let high = max_fan_pwm.max(min_fan_pwm) as f64;
+    for layer in 0..layers_count {
+        let cmd = if full_fan_layer == 0 || layer >= full_fan_layer {
+            if max_fan_pwm == 0 {
+                "M107".to_string()
+            } else {
+                format!("M106 S{}", high.round() as u8)
+            }
+        } else if layer == 0 {
+            "M107".to_string()
+        } else {
+            let t = if full_fan_layer <= 1 {
+                1.0
+            } else {
+                (layer - 1) as f64 / (full_fan_layer - 1) as f64
+            };
+            let pwm = (low + t * (high - low)).round().clamp(0.0, 255.0) as u8;
+            if pwm == 0 {
+                "M107".to_string()
+            } else {
+                format!("M106 S{pwm}")
+            }
+        };
+        schedule.push((layer, cmd));
+    }
+    schedule
+}
+
+/// Computes the maximum allowable cornering / junction velocity (in $\text{mm/s}$) between two
+/// consecutive 3D move vectors `prev_vec` and `next_vec` using the classic Marlin / Grbl
+/// junction deviation model ($v_{\text{corner}} = \sqrt{a \cdot \text{JD} \cdot \sin(\theta/2) / (1 - \sin(\theta/2))}$),
+/// clamped to `[0.0, max_feedrate_mm_s]`.
+pub fn optimize_corner_velocity_limits(
+    prev_vec: [f64; 3],
+    next_vec: [f64; 3],
+    accel_mm_s2: f64,
+    junction_deviation_mm: f64,
+    max_feedrate_mm_s: f64,
+) -> f64 {
+    if !accel_mm_s2.is_finite()
+        || accel_mm_s2 <= 0.0
+        || !junction_deviation_mm.is_finite()
+        || junction_deviation_mm <= 0.0
+        || !max_feedrate_mm_s.is_finite()
+        || max_feedrate_mm_s <= 0.0
+    {
+        return 0.0;
+    }
+    let len_a = (prev_vec[0] * prev_vec[0] + prev_vec[1] * prev_vec[1] + prev_vec[2] * prev_vec[2]).sqrt();
+    let len_b = (next_vec[0] * next_vec[0] + next_vec[1] * next_vec[1] + next_vec[2] * next_vec[2]).sqrt();
+    if len_a <= 1e-9 || len_b <= 1e-9 {
+        return 0.0;
+    }
+    // Cosine of angle between unit move directions u_a and u_b:
+    // Note that in Grbl/Marlin junction deviation, cos_theta = -(u_a . u_b) is the interior corner angle,
+    // so sin(theta_interior / 2) = sqrt(0.5 * (1 - cos_theta_interior)) = sqrt(0.5 * (1 - (u_a . u_b))) when u_a == u_b -> sin=0?
+    // Wait: when moves are collinear (u_a == u_b), the interior angle between (-u_a) and u_b is 180 deg, so sin(180/2) = 1 -> denominator (1 - 1) = 0 -> v = max_feedrate!
+    let dot = ((prev_vec[0] * next_vec[0] + prev_vec[1] * next_vec[1] + prev_vec[2] * next_vec[2])
+        / (len_a * len_b))
+        .clamp(-1.0, 1.0);
+    // Let cos_interior = -dot (angle between -u_a and u_b)
+    // Then sin(interior / 2) = sqrt(0.5 * (1.0 - cos_interior)) = sqrt(0.5 * (1.0 + dot))
+    let sin_half_interior = (0.5 * (1.0 + dot)).max(0.0).sqrt();
+    if sin_half_interior >= 1.0 - 1e-6 {
+        return max_feedrate_mm_s;
+    }
+    if sin_half_interior <= 1e-6 {
+        return 0.0;
+    }
+    let v_sq = accel_mm_s2 * junction_deviation_mm * sin_half_interior / (1.0 - sin_half_interior);
+    v_sq.max(0.0).sqrt().min(max_feedrate_mm_s)
+}
+
+/// Closed 2D contour loop (`Vec<[f64; 2]>`) in millimeter coordinates.
+pub type Contour = Vec<[f64; 2]>;
+
+/// Generates a continuous single-wall helical Z-interpolated ("spiral vase mode") 3D toolpath
+/// from a sequence of `(z_mm, outer_contour)` slices. Each layer's contour is seam-rotated to
+/// start at the vertex nearest to the previous layer's end, and $Z$ rises linearly along cumulative
+/// XY perimeter arc length by `dz` (either the slice-to-slice height delta or `layer_height_mm`).
+pub fn plan_spiral_vase_mode(
+    contours_by_layer: &[(f64, Contour)],
+    layer_height_mm: f64,
+) -> Vec<[f64; 3]> {
+    if contours_by_layer.is_empty() || !layer_height_mm.is_finite() || layer_height_mm <= 0.0 {
+        return Vec::new();
+    }
+    let total_cap: usize = contours_by_layer
+        .iter()
+        .map(|(_, r)| r.len() + 1)
+        .sum();
+    let max_ring_len = contours_by_layer
+        .iter()
+        .map(|(_, r)| r.len())
+        .max()
+        .unwrap_or(0);
+    let mut spiral = Vec::with_capacity(total_cap);
+    let mut cum_len = Vec::with_capacity(max_ring_len + 1);
+    let mut last_xy: Option<[f64; 2]> = None;
+
+    for (layer_idx, (z_base, ring)) in contours_by_layer.iter().enumerate() {
+        let n = ring.len();
+        if n < 3 || !z_base.is_finite() {
+            continue;
+        }
+        let dz = if layer_idx + 1 < contours_by_layer.len() {
+            let next_z = contours_by_layer[layer_idx + 1].0;
+            if next_z > *z_base && next_z.is_finite() {
+                next_z - *z_base
+            } else {
+                layer_height_mm
+            }
+        } else {
+            layer_height_mm
+        };
+
+        // Rotate contour so vertex 0 is nearest to `last_xy` for a seamless helical transition
+        let start_idx = if let Some(prev) = last_xy {
+            let mut best_idx = 0usize;
+            let mut best_d2 = f64::INFINITY;
+            for (idx, a) in ring.iter().enumerate() {
+                let dx = a[0] - prev[0];
+                let dy = a[1] - prev[1];
+                let d2 = dx * dx + dy * dy;
+                if d2 < best_d2 {
+                    best_d2 = d2;
+                    best_idx = idx;
+                }
+            }
+            best_idx
+        } else {
+            0
+        };
+
+        cum_len.clear();
+        cum_len.push(0.0);
+        let mut total_perim = 0.0;
+        for k in 0..n {
+            let a = ring[(start_idx + k) % n];
+            let b = ring[(start_idx + k + 1) % n];
+            let seg = (b[0] - a[0]).hypot(b[1] - a[1]);
+            total_perim += seg;
+            cum_len.push(total_perim);
+        }
+        if total_perim <= 1e-9 {
+            continue;
+        }
+        let first_pt = ring[start_idx];
+        let skip_first = spiral.last().is_some_and(|prev: &[f64; 3]| {
+            let dx = prev[0] - first_pt[0];
+            let dy = prev[1] - first_pt[1];
+            dx * dx + dy * dy < 1e-12
+        });
+        let inv_perim = 1.0 / total_perim;
+        for (k, &cl) in cum_len.iter().enumerate() {
+            if k == 0 && skip_first {
+                continue;
+            }
+            let pt = ring[(start_idx + k) % n];
+            let t = cl * inv_perim;
+            let z = *z_base + t * dz;
+            spiral.push([pt[0], pt[1], z]);
+        }
+        last_xy = Some(first_pt);
+    }
+    spiral
+}
+
+/// Injects back-trace nozzle wipe moves along the end of each extruding path during filament
+/// retraction (`retract_length_mm` over `wipe_distance_mm`) to eliminate stringing and seam blobs.
+/// Input and output moves are `[x, y, z, e]` in millimeters (where `e` is cumulative extrusion).
+pub fn inject_wiper_retraction(
+    moves: &[[f64; 4]],
+    retract_length_mm: f64,
+    wipe_distance_mm: f64,
+) -> Vec<[f64; 4]> {
+    if moves.len() < 2
+        || !retract_length_mm.is_finite()
+        || retract_length_mm <= 0.0
+        || !wipe_distance_mm.is_finite()
+        || wipe_distance_mm <= 0.0
+    {
+        return moves.to_vec();
+    }
+    let mut out = Vec::with_capacity(moves.len() + 16);
+    let mut run_start = 0usize;
+    let mut in_extrusion = false;
+
+    let emit_wipe = |out: &mut Vec<[f64; 4]>, slice: &[[f64; 4]]| {
+        if slice.len() < 2 {
+            return;
+        }
+        // Compute total extruding path length available for back-tracing
+        let mut total_avail = 0.0_f64;
+        for w in slice.windows(2).rev() {
+            let a = w[0];
+            let b = w[1];
+            let seg = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt();
+            total_avail += seg;
+            if total_avail >= wipe_distance_mm {
+                break;
+            }
+        }
+        let target_wipe = wipe_distance_mm.min(total_avail);
+        if target_wipe <= 1e-6 {
+            return;
+        }
+        let e_end = slice.last().unwrap()[3];
+        let mut wiped_so_far = 0.0_f64;
+        for w in slice.windows(2).rev() {
+            let prev_pt = w[0];
+            let curr_pt = w[1];
+            let dx = prev_pt[0] - curr_pt[0];
+            let dy = prev_pt[1] - curr_pt[1];
+            let dz = prev_pt[2] - curr_pt[2];
+            let seg = (dx * dx + dy * dy + dz * dz).sqrt();
+            if seg <= 1e-9 {
+                continue;
+            }
+            let rem = target_wipe - wiped_so_far;
+            if seg >= rem {
+                let frac = rem / seg;
+                let wx = curr_pt[0] + frac * dx;
+                let wy = curr_pt[1] + frac * dy;
+                let wz = curr_pt[2] + frac * dz;
+                out.push([wx, wy, wz, e_end - retract_length_mm]);
+                break;
+            } else {
+                wiped_so_far += seg;
+                let progress = wiped_so_far / target_wipe;
+                let e_wipe = e_end - progress * retract_length_mm;
+                out.push([prev_pt[0], prev_pt[1], prev_pt[2], e_wipe]);
+            }
+        }
+    };
+
+    out.push(moves[0]);
+    for i in 1..moves.len() {
+        let prev = moves[i - 1];
+        let curr = moves[i];
+        let de = curr[3] - prev[3];
+        let dist = ((curr[0] - prev[0]).powi(2)
+            + (curr[1] - prev[1]).powi(2)
+            + (curr[2] - prev[2]).powi(2))
+        .sqrt();
+        let is_extruding = de > 1e-7 && dist > 1e-7;
+        if is_extruding {
+            if !in_extrusion {
+                run_start = i - 1;
+                in_extrusion = true;
+            }
+            out.push(curr);
+        } else {
+            if in_extrusion {
+                // Transition from extruding run to travel move: inject back-trace wipe + retract
+                emit_wipe(&mut out, &moves[run_start..i]);
+                // Travel to `curr` while retracted, then unretract at destination
+                out.push([curr[0], curr[1], curr[2], prev[3] - retract_length_mm]);
+                out.push(curr);
+                in_extrusion = false;
+            } else {
+                out.push(curr);
+            }
+        }
+    }
+    if in_extrusion {
+        emit_wipe(&mut out, &moves[run_start..moves.len()]);
+    }
+    out
+}
+
+
+

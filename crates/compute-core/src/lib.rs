@@ -51,18 +51,19 @@ pub use kernel::{Binding, Kernel, KernelError};
 pub use ops::{BinaryOp, CompareOp, ReduceOp, ScatterOp, UnaryOp};
 pub use program::ComputeProgram;
 pub use readback::Readback;
-pub use reduction::{Reduction, reduce_f32};
+pub use reduction::{Reduction, reduce_f32, reduce_min_max_f32, reduce_sum_f32_compensated};
 pub use runtime::ComputeRuntime;
-pub use scratch::{ScratchArray, ScratchPool};
+pub use scratch::{ScratchArray, ScratchPool, ScratchPoolStats};
 pub use tensor::{GpuLowTensor, GpuTensor, TensorComputeError};
 pub use tensor_core;
 
 pub use selection::CompactedArray;
+pub use scan::{compact_if_u32, exclusive_scan_u32, inclusive_scan_u32};
 
 pub use kernel::{BindingInfo, KernelBindingError};
 pub use kernel_cache::{KernelCache, KernelCacheStats};
 
-pub use matrix::{GpuMatrix, MatrixView};
+pub use matrix::{GpuMatrix, MatrixView, matmul_f32_tiled_8x8};
 
 pub use fusion::{Expression, FusedKernel, FusedSumKernel, FusionError, FusionGraph, Predicate};
 

@@ -13,6 +13,39 @@ impl<'a> ComputeBatch<'a> {
         Self::default()
     }
 
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            steps: Vec::with_capacity(capacity),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.steps.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.steps.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.steps.clear();
+    }
+
+    /// Number of pipeline switches that will actually occur when recording this batch
+    /// after consecutive-kernel deduplication.
+    pub fn pipeline_switch_count(&self) -> usize {
+        let mut switches = 0;
+        let mut current_kernel: Option<*const Kernel> = None;
+        for (kernel, _, _) in &self.steps {
+            let ptr = *kernel as *const Kernel;
+            if current_kernel != Some(ptr) {
+                switches += 1;
+                current_kernel = Some(ptr);
+            }
+        }
+        switches
+    }
+
     /// Adds a dispatch using a cached binding group. Zero groups are a no-op.
     pub fn push(&mut self, kernel: &'a Kernel, bindings: &wgpu::BindGroup, groups: u32) {
         assert!(groups <= 65535, "batch dispatch exceeds workgroup limit");

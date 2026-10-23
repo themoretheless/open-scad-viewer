@@ -194,3 +194,101 @@ impl<'a> Reduction<'a> {
         &self.output
     }
 }
+
+/// Fast 4-wide unrolled Neumaier/Kahan compensated summation with a 4-lane accumulator tree
+/// to eliminate $O(N \varepsilon)$ floating-point drift on CPU reference reductions.
+pub fn reduce_sum_f32_compensated(values: &[f32]) -> f32 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let mut s = [0.0_f64; 4];
+    let mut c = [0.0_f64; 4];
+
+    #[inline]
+    fn neumaier_step(sum: &mut f64, comp: &mut f64, x: f64) {
+        let t = *sum + x;
+        if sum.abs() >= x.abs() {
+            *comp += (*sum - t) + x;
+        } else {
+            *comp += (x - t) + *sum;
+        }
+        *sum = t;
+    }
+
+    let chunks = values.chunks_exact(4);
+    let rem = chunks.remainder();
+    for chunk in chunks {
+        neumaier_step(&mut s[0], &mut c[0], chunk[0] as f64);
+        neumaier_step(&mut s[1], &mut c[1], chunk[1] as f64);
+        neumaier_step(&mut s[2], &mut c[2], chunk[2] as f64);
+        neumaier_step(&mut s[3], &mut c[3], chunk[3] as f64);
+    }
+    for (i, &v) in rem.iter().enumerate() {
+        neumaier_step(&mut s[i], &mut c[i], v as f64);
+    }
+
+    let sum01 = (s[0] + c[0]) + (s[1] + c[1]);
+    let sum23 = (s[2] + c[2]) + (s[3] + c[3]);
+    (sum01 + sum23) as f32
+}
+
+/// Single-pass simultaneous `(min, max)` reduction in $1.5 N$ comparisons by comparing adjacent
+/// pairs before updating the running extrema. Returns `None` if `values` is empty.
+pub fn reduce_min_max_f32(values: &[f32]) -> Option<(f32, f32)> {
+    let (&first, rest) = values.split_first()?;
+    let mut min_val = first;
+    let mut max_val = first;
+    let pairs = rest.chunks_exact(2);
+    let rem = pairs.remainder();
+    for pair in pairs {
+        let a = pair[0];
+        let b = pair[1];
+        if a <= b {
+            if a < min_val || min_val.is_nan() {
+                min_val = a;
+            }
+            if b > max_val || max_val.is_nan() {
+                max_val = b;
+            }
+        } else {
+            if b < min_val || min_val.is_nan() {
+                min_val = b;
+            }
+            if a > max_val || max_val.is_nan() {
+                max_val = a;
+            }
+        }
+    }
+    if let Some(&last) = rem.first() {
+        if last < min_val || min_val.is_nan() {
+            min_val = last;
+        }
+        if last > max_val || max_val.is_nan() {
+            max_val = last;
+        }
+    }
+    Some((min_val, max_val))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reduce_sum_f32_compensated_eliminates_drift_and_reduce_min_max_f32_works() {
+        assert_eq!(reduce_sum_f32_compensated(&[]), 0.0);
+        assert_eq!(reduce_min_max_f32(&[]), None);
+        assert_eq!(reduce_min_max_f32(&[4.5]), Some((4.5, 4.5)));
+
+        // Classic cancellation / drift test: [1e7, 1.0, 1.0, ..., -1e7]
+        let mut vals = Vec::with_capacity(1002);
+        vals.push(1.0e7_f32);
+        vals.extend(std::iter::repeat_n(1.0_f32, 1000));
+        vals.push(-1.0e7_f32);
+        let sum = reduce_sum_f32_compensated(&vals);
+        assert!((sum - 1000.0).abs() < 1e-4);
+
+        let mm = reduce_min_max_f32(&[3.0, -5.0, 12.5, 0.0, -19.25, 8.0, 42.0]).unwrap();
+        assert_eq!(mm, (-19.25, 42.0));
+    }
+}

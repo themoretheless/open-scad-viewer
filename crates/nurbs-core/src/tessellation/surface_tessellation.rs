@@ -110,7 +110,7 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
             "Initial surface knot rectangles exceed the cell budget",
         ));
     }
-    let mut grid = Vec::new();
+    let mut grid = Vec::with_capacity(spans[0].len() * spans[1].len());
     for &u in &spans[0] {
         for &v in &spans[1] {
             grid.push(measure(
@@ -182,9 +182,9 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
         grid = next;
     };
     let mut out = Report {
-        points: Vec::new(),
-        parameters: Vec::new(),
-        triangles: Vec::new(),
+        points: Vec::with_capacity(grid.len() + 1),
+        parameters: Vec::with_capacity(grid.len() + 1),
+        triangles: Vec::with_capacity(grid.len() * 2),
         error_upper: 0.,
         within_tolerance: reason == StopReason::Tolerance,
         cells: work,

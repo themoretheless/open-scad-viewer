@@ -1,0 +1,2 @@
+function e(e){let t=e.mesh.positions,n=t.length/3,r=Array(n);for(let e=0,i=0;e<n;e++,i+=3)r[e]=[t[i],t[i+1],t[i+2]];return r}function t(t){return t.bodies.map(t=>{let n=t.mesh.indices,r=n.length/3,i=Array(r);for(let e=0,t=0;e<r;e++,t+=3)i[e]=[n[t+2],n[t+1],n[t]];return`polyhedron(points=${JSON.stringify(e(t))},faces=${JSON.stringify(i)},convexity=10);`}).join(`
+`)}export{t as n,e as t};

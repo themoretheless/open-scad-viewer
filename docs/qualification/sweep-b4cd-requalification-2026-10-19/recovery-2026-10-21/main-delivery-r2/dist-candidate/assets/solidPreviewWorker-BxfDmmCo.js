@@ -1,0 +1,1 @@
+import{t as e}from"./mainSolidWorkerClient-CqkGA-vX.js";function t(){return new e(()=>new Worker(new URL(`/assets/mainSolid.worker-Cuwy9DjU.js`,``+import.meta.url),{type:`module`}))}export{t};

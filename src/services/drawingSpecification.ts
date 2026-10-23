@@ -38,6 +38,46 @@ export function drawingSpecificationRows(bodies:DirectBody[],parts:DrawingPartMe
  }
  return rows
 }
+function escapeCsvCell(value:string):string {
+ const normalized=value.replace(/\r\n/g,'\n')
+ return /[",\n]/.test(normalized)?`"${normalized.replace(/"/g,'""')}"`:normalized
+}
+export function exportDrawingSpecificationCsv(rows:readonly DrawingSpecificationRow[],locale:'ru'|'en'='en'):string {
+ const headers=locale==='ru'
+  ?['Поз.','Обозначение','Наименование','Кол.','Материал','Примечание']
+  :['Position','Designation','Description','Quantity','Material','Note']
+ const lines=[headers.map(escapeCsvCell).join(',')]
+ for(const row of rows){
+  lines.push([
+   String(row.position),
+   row.designation,
+   row.description,
+   String(row.quantity),
+   row.material,
+   row.note,
+  ].map(escapeCsvCell).join(','))
+ }
+ return lines.join('\n')
+}
+function escapeMarkdownCell(value:string):string {
+ return value.replace(/\r?\n/g,'<br>').replace(/\|/g,'\\|')
+}
+export function exportDrawingSpecificationMarkdown(rows:readonly DrawingSpecificationRow[],locale:'ru'|'en'='en'):string {
+ const headers=locale==='ru'
+  ?['Поз.','Обозначение','Наименование','Кол.','Материал','Примечание']
+  :['Item','Designation','Description','Qty','Material','Note']
+ const headLine=`| ${headers.join(' | ')} |`
+ const sepLine=`| ${headers.map((_,i)=>i===0||i===3?'---:':':---').join(' | ')} |`
+ const bodyLines=rows.map(row=>`| ${[
+  String(row.position),
+  escapeMarkdownCell(row.designation),
+  escapeMarkdownCell(row.description),
+  String(row.quantity),
+  escapeMarkdownCell(row.material),
+  escapeMarkdownCell(row.note),
+ ].join(' | ')} |`)
+ return [headLine,sepLine,...bodyLines].join('\n')
+}
 /** Presentation only: counts refer to authored body occurrences; no shape
  * equivalence, physical material or mass is inferred from display meshes. */
 export function createSpecificationSheets(bodies:DirectBody[],options:DrawingSheetOptions,width:number,height:number):DrawingSheet[]{

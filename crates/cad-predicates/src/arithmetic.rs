@@ -32,12 +32,14 @@ pub(crate) struct Interval {
     pub(crate) hi: f64,
 }
 impl Interval {
+    #[inline]
     pub(crate) fn point(value: f64) -> Self {
         Self {
             lo: value,
             hi: value,
         }
     }
+    #[inline]
     fn enclose(lo: f64, hi: f64) -> Self {
         if lo.is_nan() || hi.is_nan() {
             Self {
@@ -51,12 +53,14 @@ impl Interval {
             }
         }
     }
+    #[inline]
     fn integer(value: u64, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         // The two 32-bit chunks are exactly representable. Their sum is
         // enclosed; u64::MAX must never be rounded and called an exact leaf.
         let high = Self::point((value >> 32) as f64 * 4_294_967_296.);
         high.add(&Self::point((value & 0xffff_ffff) as f64), ctx)
     }
+    #[inline]
     pub(crate) fn authored(
         value: &AuthoredScalar,
         ctx: &mut PredicateContext<'_>,
@@ -95,6 +99,7 @@ impl Interval {
             }
         }
     }
+    #[inline]
     pub(crate) fn sign(&self) -> Option<Sign> {
         if self.lo > 0. {
             Some(Sign::Positive)
@@ -104,11 +109,13 @@ impl Interval {
             None
         }
     }
+    #[inline]
     pub(crate) fn distance_width(&self) -> f64 {
         let low = next_down(self.lo.max(0.).sqrt()).max(0.);
         let high = next_up(self.hi.sqrt());
         next_up(high - low)
     }
+    #[inline]
     pub(crate) fn width(&self) -> f64 {
         next_up(self.hi - self.lo)
     }
@@ -145,14 +152,17 @@ impl Interval {
     }
 }
 impl Algebra for Interval {
+    #[inline]
     fn add(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(4)?;
         Ok(Self::enclose(self.lo + other.lo, self.hi + other.hi))
     }
+    #[inline]
     fn sub(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(4)?;
         Ok(Self::enclose(self.lo - other.hi, self.hi - other.lo))
     }
+    #[inline]
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(8)?;
         if self.lo >= 0. && other.lo >= 0. {
@@ -214,15 +224,18 @@ pub(crate) struct Approx {
     error: f64,
 }
 impl Approx {
+    #[inline]
     pub(crate) fn leaf(value: f64) -> Self {
         Self { value, error: 0. }
     }
+    #[inline]
     fn rounding_error(value: f64) -> f64 {
         if !value.is_finite() {
             return f64::INFINITY;
         }
         next_up(value.abs()) - value.abs()
     }
+    #[inline]
     pub(crate) fn sign(&self) -> Option<Sign> {
         if !self.value.is_finite() || !self.error.is_finite() {
             None
@@ -254,6 +267,7 @@ fn up_mul(a: f64, b: f64) -> f64 {
     }
 }
 impl Algebra for Approx {
+    #[inline]
     fn add(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(6)?;
         let value = self.value + other.value;
@@ -262,6 +276,7 @@ impl Algebra for Approx {
             error: up_add(up_add(self.error, other.error), Self::rounding_error(value)),
         })
     }
+    #[inline]
     fn sub(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         self.add(
             &Self {
@@ -271,6 +286,7 @@ impl Algebra for Approx {
             ctx,
         )
     }
+    #[inline]
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(12)?;
         let value = self.value * other.value;
@@ -313,6 +329,7 @@ fn least_bit_exponent(value: f64) -> i32 {
     }) + mantissa.trailing_zeros() as i32
 }
 
+#[inline]
 fn split_sum(left: f64, right: f64, ctx: &mut PredicateContext<'_>) -> Result<(f64, f64), Reason> {
     ctx.charge(8)?;
     let rounded = left + right;
@@ -333,6 +350,7 @@ fn split_sum(left: f64, right: f64, ctx: &mut PredicateContext<'_>) -> Result<(f
     Ok((rounded, residual))
 }
 
+#[inline]
 fn split_product(
     left: f64,
     right: f64,
@@ -452,9 +470,11 @@ impl Expansion {
         values.clone_from_slice(&reduced);
         Ok(())
     }
+    #[inline]
     pub(crate) fn term_count(&self) -> usize {
         self.0.len()
     }
+    #[inline]
     pub(crate) fn enclosure(&self, ctx: &mut PredicateContext<'_>) -> Result<Interval, Reason> {
         let mut bound = Interval::point(0.);
         for &part in &self.0 {
@@ -462,12 +482,15 @@ impl Expansion {
         }
         Ok(bound)
     }
+    #[inline]
     pub(crate) fn scalar(value: f64) -> Self {
         Self(if value == 0. { Vec::new() } else { vec![value] })
     }
+    #[inline]
     pub(crate) fn is_one(&self) -> bool {
         self.0 == [1.]
     }
+    #[inline]
     fn insert(&mut self, value: f64, ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
         ctx.charge(1)?;
         if value == 0. {
@@ -492,14 +515,17 @@ impl Expansion {
         ctx.terms(self.0.len())?;
         Ok(())
     }
+    #[inline]
     pub(crate) fn integer(value: u64, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         let mut result = Self::scalar((value & 0xffff_ffff) as f64);
         result.insert((value >> 32) as f64 * 4_294_967_296., ctx)?;
         Ok(result)
     }
+    #[inline]
     pub(crate) fn negated(&self) -> Self {
         Self(self.0.iter().map(|v| -v).collect())
     }
+    #[inline]
     pub(crate) fn sign(&self) -> Sign {
         match self.0.last() {
             None => Sign::Zero,

@@ -30,6 +30,7 @@ pub struct PointCloud {
     pub points: Vec<[f64; 3]>,
 }
 impl Support for PointCloud {
+    #[inline]
     fn support(&self, dir: [f64; 3]) -> [f64; 3] {
         self.points
             .iter()
@@ -46,6 +47,7 @@ pub struct Aabb {
     pub max: [f64; 3],
 }
 impl Support for Aabb {
+    #[inline]
     fn support(&self, dir: [f64; 3]) -> [f64; 3] {
         [
             if dir[0] >= 0. { self.max[0] } else { self.min[0] },
@@ -62,6 +64,7 @@ pub struct Sphere {
     pub radius: f64,
 }
 impl Support for Sphere {
+    #[inline]
     fn support(&self, dir: [f64; 3]) -> [f64; 3] {
         let len = norm(dir);
         if len <= f64::EPSILON || self.radius <= 0. {
@@ -84,6 +87,7 @@ pub struct Obb {
     pub half_extents: [f64; 3],
 }
 impl Support for Obb {
+    #[inline]
     fn support(&self, dir: [f64; 3]) -> [f64; 3] {
         let mut p = self.center;
         for i in 0..3 {
@@ -104,6 +108,7 @@ struct SupportPoint {
     b: [f64; 3],
     w: [f64; 3],
 }
+#[inline]
 fn support_pair<A: Support + ?Sized, B: Support + ?Sized>(
     a: &A,
     b: &B,
@@ -686,8 +691,22 @@ pub fn obb_sat(a: &Obb, b: &Obb) -> SatResult {
 }
 
 /// Convenience: whether two OBBs are separated by some axis.
+#[inline]
 pub fn obb_separated(a: &Obb, b: &Obb) -> bool {
     obb_sat(a, b).separated
+}
+
+/// Fast combined GJK + EPA penetration query: returns `Ok(Some(epa_result))` when
+/// convex sets `a` and `b` intersect, or `Ok(None)` when they are separated.
+pub fn gjk_penetration_check<A: Support + ?Sized, B: Support + ?Sized>(
+    a: &A,
+    b: &B,
+) -> Result<Option<EpaResult>> {
+    let g = gjk(a, b)?;
+    if !g.intersecting {
+        return Ok(None);
+    }
+    Ok(Some(epa(a, b)?))
 }
 
 /// Fast broad-phase verdict from convex hulls of control nets.
@@ -730,7 +749,8 @@ pub fn surface_control_cloud(surface: &Surface) -> Result<PointCloud> {
         !surface.control_points.is_empty(),
         "Surface control net is empty",
     )?;
-    let mut points = Vec::new();
+    let total_points: usize = surface.control_points.iter().map(Vec::len).sum();
+    let mut points = Vec::with_capacity(total_points);
     for row in &surface.control_points {
         for p in row {
             check(p.len() == 3, "Convex culling expects 3D control points")?;
@@ -964,6 +984,9 @@ mod tests {
         let b = sphere([3., 0., 0.], 1.);
         let g = gjk(&a, &b)?;
         assert!(g.converged && g.iterations <= GJK_MAX_ITERATIONS);
+        assert!(gjk_penetration_check(&a, &b)?.is_none());
+        let c = sphere([1.0, 0., 0.], 1.);
+        assert!(gjk_penetration_check(&a, &c)?.is_some());
         Ok(())
     }
 

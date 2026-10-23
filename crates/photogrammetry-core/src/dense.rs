@@ -103,7 +103,7 @@ impl Default for DenseOptions {
             red_black_propagation: false,
             adaptive_refine_budget: false,
             selected_sources_consistency: false,
-            sparse_depth_prior: false,
+            sparse_depth_prior: true,
             coarse_to_fine: false,
             estimator: DenseEstimator::FrontoparallelSweep,
             max_side: 128,
@@ -116,8 +116,8 @@ impl Default for DenseOptions {
             relative_depth_tolerance: 0.025,
             reprojection_tolerance: 1.5,
             fuse: true,
-            fusion_merge_pass: false,
-            min_component_triangles: 0,
+            fusion_merge_pass: true,
+            min_component_triangles: 4,
             acceleration: crate::Acceleration::Cpu,
         }
     }
@@ -133,6 +133,8 @@ impl DenseOptions {
             dual_scale: true,
             sparse_depth_prior: true,
             patch_radius: 2,
+            fusion_merge_pass: true,
+            min_component_triangles: 4,
             ..Self::default()
         }
     }
@@ -467,7 +469,6 @@ pub fn prepare_host_sweep(
     options.validate()?;
     if options.estimator != DenseEstimator::FrontoparallelSweep
         || options.coarse_to_fine
-        || options.dual_scale
         || options.shared_volume
     {
         return Ok(None);
@@ -490,9 +491,36 @@ pub fn densify_with_host_scores(
 ) -> Result<DenseReconstruction> {
     options.validate()?;
     let grayscale = estimation::prepare_grayscale(images, sparse, options, progress)?;
-    let (maps, diagnostics) = estimation::finish_host_views(
+    let (mut maps, mut diagnostics) = estimation::finish_host_views(
         images, sparse, options, &grayscale, prepared, scores, progress,
     )?;
+    if options.dual_scale {
+        let mut secondary_options = options.clone();
+        secondary_options.patch_radius = 1;
+        secondary_options.dual_scale = false;
+        let retained = selection::retained_map_bytes(&maps, maps.capacity())?;
+        selection::check_secondary_budget(
+            estimated_working_bytes(images, sparse, &secondary_options),
+            retained,
+            MAX_WORKING_BYTES,
+        )?;
+        let (secondary, work) = estimation::estimate_prepared(
+            images,
+            sparse,
+            &secondary_options,
+            &grayscale,
+            &mut |_, done, total| progress("depth-secondary", done, total),
+        )?;
+        diagnostics.add_estimation_work(&work)?;
+        for map in &mut maps {
+            let other = secondary
+                .iter()
+                .find(|m| m.image == map.image)
+                .ok_or_else(|| crate::error("Missing secondary depth map"))?;
+            selection::select_depth(map, other, options.relative_depth_tolerance, progress)?;
+        }
+    }
+    drop(grayscale);
     finish_densify(images, sparse, options, maps, diagnostics, progress)
 }
 
@@ -509,6 +537,8 @@ mod tests {
         let options = DenseOptions {
             max_side: 64,
             patch_radius: 2,
+            sparse_depth_prior: false,
+            coarse_to_fine: false,
             ..Default::default()
         };
         assert!(!options.sparse_depth_prior && !options.coarse_to_fine);

@@ -164,41 +164,17 @@ pub fn isolated_outward_shell(model: &Model, shell_id: usize, cavity_role: bool)
             }
         }
     }
-    for (next, old) in face_map
-        .keys()
-        .copied()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .enumerate()
-    {
-        face_map.insert(old, next);
+    for (next, value) in face_map.values_mut().enumerate() {
+        *value = next;
     }
-    for (next, old) in loop_map
-        .keys()
-        .copied()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .enumerate()
-    {
-        loop_map.insert(old, next);
+    for (next, value) in loop_map.values_mut().enumerate() {
+        *value = next;
     }
-    for (next, old) in edge_map
-        .keys()
-        .copied()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .enumerate()
-    {
-        edge_map.insert(old, next);
+    for (next, value) in edge_map.values_mut().enumerate() {
+        *value = next;
     }
-    for (next, old) in vertex_map
-        .keys()
-        .copied()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .enumerate()
-    {
-        vertex_map.insert(old, next);
+    for (next, value) in vertex_map.values_mut().enumerate() {
+        *value = next;
     }
     let vertices = vertex_map
         .keys()

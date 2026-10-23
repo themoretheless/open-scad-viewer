@@ -18,3 +18,7 @@ pub mod proximity;
 pub mod scene_bvh;
 pub mod section;
 pub mod tessellation;
+
+/// Convenience type alias for a solid triangle mesh.
+pub type Solid = crate::Mesh;
+pub use primitives::{capsule, cone_frustum, torus};

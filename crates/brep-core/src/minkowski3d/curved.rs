@@ -6,6 +6,7 @@ use super::*;
 use crate::Model;
 use value_codec::{Deserialize, Serialize, Value, error, json};
 mod atlas;
+mod atlas_legacy;
 mod prismatic;
 pub use atlas::Certificate as SourceAtlasCertificate;
 /// Independent source atlas certificate, without requiring a Minkowski sum.

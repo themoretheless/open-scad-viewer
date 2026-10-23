@@ -206,10 +206,15 @@ pub fn energy_of(surface: &Surface, form: &CsrMatrix) -> Result<f64> {
         "Energy form size does not match the control net",
     )?;
     let mut total = 0.;
+    let mut x = vec![0.0; nu * nv];
     for axis in 0..3 {
-        let x: Vec<f64> = (0..nu * nv)
-            .map(|i| surface.control_points[i / nv][i % nv][axis])
-            .collect();
+        for i in 0..nu {
+            let row = &surface.control_points[i];
+            let base = i * nv;
+            for j in 0..nv {
+                x[base + j] = row[j][axis];
+            }
+        }
         let ax = form.spmv(&x)?;
         total += x.iter().zip(&ax).map(|(a, b)| a * b).sum::<f64>();
     }
@@ -224,10 +229,15 @@ pub fn energy_gradient(surface: &Surface, form: &CsrMatrix) -> Result<Vec<Vec<Ve
     let nu = surface.control_points.len();
     let nv = surface.control_points[0].len();
     let mut gradient = vec![vec![vec![0.; 3]; nv]; nu];
+    let mut x = vec![0.0; nu * nv];
     for axis in 0..3 {
-        let x: Vec<f64> = (0..nu * nv)
-            .map(|i| surface.control_points[i / nv][i % nv][axis])
-            .collect();
+        for i in 0..nu {
+            let row = &surface.control_points[i];
+            let base = i * nv;
+            for j in 0..nv {
+                x[base + j] = row[j][axis];
+            }
+        }
         let ax = form.spmv(&x)?;
         for i in 0..nu * nv {
             gradient[i / nv][i % nv][axis] = 2. * ax[i];
@@ -334,13 +344,14 @@ fn solve_reduced(
     let budget = Budget::from(&cg);
     let mut guard = budget.guard("surface-fairing.cg-solve");
     let mut relative_residual: f64 = 0.;
+    let mut b = Vec::with_capacity(m);
+    let mut x0 = Vec::with_capacity(m);
     for axis in 0..3 {
         guard.tick()?;
-        let b: Vec<f64> = rhs.iter().map(|r| r[axis]).collect();
-        let x0: Vec<f64> = free
-            .iter()
-            .map(|&f| points[f / nv][f % nv][axis])
-            .collect();
+        b.clear();
+        b.extend(rhs.iter().map(|r| r[axis]));
+        x0.clear();
+        x0.extend(free.iter().map(|&f| points[f / nv][f % nv][axis]));
         let solved = cg_solve(&system, &b, &x0, cg)?;
         numeric(
             solved.x.iter().all(|v| v.is_finite()),

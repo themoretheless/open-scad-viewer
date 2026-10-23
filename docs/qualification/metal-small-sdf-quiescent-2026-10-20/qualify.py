@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Reversible build/test quiescence, AA-first qualification, full SDF workflow.
-Only SIGSTOP/SIGCONT for competitors; never terminate them. A detached watchdog
-restores exact PID/start-time identities on timeout or owner death.
+"""Observe-only quiescence, AA-first qualification, full SDF workflow.
+Competing jobs are observed, never stopped. Contaminated windows cannot qualify.
+Legacy recovery resumes only exact identities recorded by older runner versions.
 """
 import os, sys, time, json, signal, subprocess, pathlib, re, hashlib, random, statistics, math, csv
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -66,41 +66,29 @@ def competitor(p):
     if name in {'cargo','rustc','rustdoc','clang','clang++','cc1','gcc','g++','ld','rust-lld','make','ninja','cmake','ctest','pytest'}: return True
     return bool(re.search(r'/(debug|release)/(build|deps)/',p['comm']) and re.search(r'[-_][0-9a-f]{16}$',name))
 
-def pause_new():
-    if time.monotonic()>deadline-2:raise RuntimeError('Quiescence lease expired')
-    snap=snapshot();selected={pid for pid,p in snap.items() if pid not in allowed and competitor(p)}
-    # Freeze the benchmark launcher too, so it cannot launch the next sample.
-    for pid in list(selected):
-        if not snap[pid].get('benchmark'):continue
-        parent=snap[pid]['ppid']
-        while parent in snap and parent not in allowed and pathlib.Path(snap[parent]['comm']).name.lower() in {'python','python3','python3.15','bash','sh','zsh','node'}:
-            selected.add(parent);parent=snap[parent]['ppid']
+def observe_competitors():
+    """Compatibility hook: observe competitors; never stop other sessions."""
+    if time.monotonic()>deadline-2:raise RuntimeError('Observation lease expired')
+    snap=snapshot();owned={os.getpid()}
+    # Only this runner's descendants are ours. Allowed ancestors must not
+    # exempt unrelated sessions launched by the same desktop application.
     while True:
-        expanded=selected|{pid for pid,p in snap.items() if p['ppid'] in selected and pid not in allowed}
+        expanded=owned|{pid for pid,p in snap.items() if p['ppid'] in owned}
+        if expanded==owned:break
+        owned=expanded
+    selected={pid for pid,p in snap.items() if pid not in allowed and pid not in owned and competitor(p) and 'T' not in p['state']}
+    while True:
+        expanded=selected|{pid for pid,p in snap.items() if p['ppid'] in selected and pid not in allowed and pid not in owned and 'T' not in p['state']}
         if expanded==selected:break
         selected=expanded
-    new=[]
-    # Parents first, then children: stop spawning work before freezing workers.
-    def depth(pid):
-        n=0;seen=set()
-        while pid in snap and pid not in seen:
-            seen.add(pid);pid=snap[pid]['ppid'];n+=1
-        return n
-    for pid in sorted(selected,key=depth):
-        p=snap[pid]
-        if 'T' in p['state']:continue
-        if not any(identity(p,old) for old in data['paused']):
-            data['paused'].append(dict(p));save(data) # journal before SIGSTOP
-        try:
-            os.kill(pid,signal.SIGSTOP);new.append(pid)
-        except ProcessLookupError:pass
-    if new:events.append({'time':time.time(),'paused':new})
-    return new
+    observed=sorted(selected)
+    if observed:events.append({'time':time.time(),'paused':[],'observed_competitors':observed})
+    return observed
 
 def settle():
     quiet=time.monotonic();limit=quiet+90
     while time.monotonic()-quiet<10:
-        if pause_new():quiet=time.monotonic()
+        if observe_competitors():quiet=time.monotonic()
         if time.monotonic()>limit:raise RuntimeError('No ten-second quiescent window')
         time.sleep(.5)
 
@@ -127,7 +115,7 @@ def run(phase,slot):
             child=subprocess.Popen([str(BINARY),'--exact','gpu::small_batch_tests::paired_polygonize','--ignored','--test-threads=1'],env=env,stdout=log,stderr=subprocess.STDOUT)
             allowed.add(child.pid);contaminated=[];started=time.monotonic()
             while child.poll() is None:
-                contaminated+=pause_new()
+                contaminated+=observe_competitors()
                 if time.monotonic()-started>100:
                     child.terminate();child.wait();raise RuntimeError('Own benchmark timed out')
                 time.sleep(.5)

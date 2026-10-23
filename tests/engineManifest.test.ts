@@ -57,7 +57,7 @@ describe('immutable geometry manifest archive', () => {
       packages: Record<string, { version?: string }>
     }
 
-    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v4')
+    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v5')
     expect(manifest.engineClass).toBe('mesh')
     expect(manifest.qualification).toMatchObject({
       status: 'qualified',
@@ -81,6 +81,8 @@ describe('immutable geometry manifest archive', () => {
       .toBe('baseline-pending')
     expect(archivedGeometryManifest('own-rust-node-v3')?.kernelFingerprint).toBe('sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1')
     expect(archivedGeometryManifest('brep-closed-v3')?.kernelFingerprint).toBe('sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1')
+    expect(archivedGeometryManifest('own-rust-node-v4')?.kernelFingerprint).toBe('sha256:b4cd5d582ad11bb4f11aebbc0567f98bbf33df7f8a2d57f3a28a2b1b00cc9e06')
+    expect(archivedGeometryManifest('brep-closed-v4')?.kernelFingerprint).toBe('sha256:b4cd5d582ad11bb4f11aebbc0567f98bbf33df7f8a2d57f3a28a2b1b00cc9e06')
     expect(archivedGeometryManifest('missing-v1')).toBeNull()
     expect(immutableEngineManifestToWire('mesh', 'own-rust-node-v1')).toMatchObject({
       engine_class: 'mesh',

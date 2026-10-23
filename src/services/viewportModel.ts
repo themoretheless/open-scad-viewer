@@ -6,6 +6,31 @@ export type StandardView = 'iso' | 'front' | 'back' | 'left' | 'right' | 'top' |
 export const ISO_YAW = Math.PI / 4
 export const ISO_PITCH = Math.atan(1 / Math.sqrt(2))
 
+export type ViewOrbitDirection = 'left' | 'right' | 'up' | 'down'
+
+/**
+ * Computes new orbit angles (yaw, pitch in radians) after stepping by 15° (fine) or 90° (quarter-turn).
+ * Pitch is clamped to `[-Math.PI / 2, Math.PI / 2]` and yaw is wrapped into `(-Math.PI, Math.PI]`.
+ */
+export function computeSteppedOrbitAngles(
+  yaw: number,
+  pitch: number,
+  direction: ViewOrbitDirection,
+  stepDegrees: 15 | 90 = 15,
+): { yaw: number; pitch: number } {
+  const stepRad = (stepDegrees * Math.PI) / 180
+  let nextYaw = yaw
+  let nextPitch = pitch
+  if (direction === 'left') nextYaw -= stepRad
+  else if (direction === 'right') nextYaw += stepRad
+  else if (direction === 'up') nextPitch += stepRad
+  else if (direction === 'down') nextPitch -= stepRad
+
+  nextYaw = Math.atan2(Math.sin(nextYaw), Math.cos(nextYaw))
+  nextPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, nextPitch))
+  return { yaw: nextYaw, pitch: nextPitch }
+}
+
 const ORIENTATIONS: Readonly<Record<StandardView, readonly [yaw: number, pitch: number]>> = Object.freeze({
   iso: [ISO_YAW, ISO_PITCH],
   front: [0, 0],

@@ -1,0 +1,1 @@
+import{f as e}from"./solid-gpu-view-uVPyzynu.js";var t=t=>e(`brep_nurbs_export_step_v9`,{model:t}),n=t=>e(`brep_nurbs_import_step_v10`,{text:t}),r=t=>e(`brep_nurbs_export_step_v10`,{source:t.source,graphIdentity:t.graphIdentity});export{t as n,n as r,r as t};

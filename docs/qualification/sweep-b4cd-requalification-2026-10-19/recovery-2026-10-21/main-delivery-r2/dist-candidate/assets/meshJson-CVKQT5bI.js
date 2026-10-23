@@ -1,0 +1,1 @@
+var e=e=>ArrayBuffer.isView(e)&&!(e instanceof DataView)&&!(e instanceof BigInt64Array)&&!(e instanceof BigUint64Array);function t(t,n){return JSON.stringify(t,(t,n)=>e(n)?Array.from(n):n,n)}export{t};

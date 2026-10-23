@@ -1,17 +1,34 @@
 <script setup lang="ts">
 import { nextTick, ref, useId, watch } from 'vue'
-import type { ShortcutHelpGroup } from '../services/commandRegistry'
+import type { ShortcutHelpGroup, ShortcutPlatform } from '../services/commandRegistry'
 
-const props = defineProps<{ open: boolean; groups: readonly ShortcutHelpGroup[]; locale: 'ru' | 'en' }>()
+const props = withDefaults(defineProps<{
+  open: boolean
+  groups: readonly ShortcutHelpGroup[]
+  locale: 'ru' | 'en'
+  platform?: ShortcutPlatform
+}>(), { platform: 'unknown' })
 const emit = defineEmits<{ close: [] }>()
 const labels = {
   ru: { title: 'Горячие клавиши', close: 'Закрыть', workspace: 'Файл и приложение', editor: 'Редактор', navigation: 'Навигация', selection: 'Выбор', inspection: 'Измерения и анализ', display: 'Отображение', note: 'Сочетания в разделе сцены работают, когда фокус не находится в поле ввода.' },
   en: { title: 'Keyboard shortcuts', close: 'Close', workspace: 'File and app', editor: 'Editor', navigation: 'Navigation', selection: 'Selection', inspection: 'Measure and inspect', display: 'Display', note: 'Viewport shortcuts work while focus is outside an editable field.' },
 } as const
-const titleId = `${useId()}-title`
+const instanceId = useId()
+const titleId = `${instanceId}-title`
+const noteId = `${instanceId}-note`
 const dialogRef = ref<HTMLElement | null>(null)
 const closeRef = ref<HTMLButtonElement | null>(null)
 let previousFocus: HTMLElement | null = null
+
+function formatShortcutForPlatform(shortcut: string): string {
+  if (props.platform === 'mac') {
+    return shortcut.replace(/Ctrl\/⌘\+/g, '⌘').replace(/Ctrl\+/g, '⌃').replace(/Alt\+/g, '⌥').replace(/Shift\+/g, '⇧')
+  }
+  if (props.platform === 'windows-linux') {
+    return shortcut.replace(/Ctrl\/⌘\+/g, 'Ctrl+').replace(/⌘/g, 'Meta+').replace(/⌥/g, 'Alt+').replace(/⇧/g, 'Shift+')
+  }
+  return shortcut
+}
 
 watch(() => props.open, async open => {
   if (open) {
@@ -40,11 +57,11 @@ function handleKeydown(event: KeyboardEvent) {
 <template>
   <Teleport to="body">
     <div v-if="open" class="shortcut-backdrop" @pointerdown.self="emit('close')">
-      <section ref="dialogRef" class="shortcut-dialog" role="dialog" aria-modal="true" :aria-labelledby="titleId" @keydown="handleKeydown">
+      <section ref="dialogRef" class="shortcut-dialog" role="dialog" aria-modal="true" :aria-labelledby="titleId" :aria-describedby="noteId" @keydown="handleKeydown">
         <header>
           <div>
             <h2 :id="titleId">{{ labels[locale].title }}</h2>
-            <p>{{ labels[locale].note }}</p>
+            <p :id="noteId">{{ labels[locale].note }}</p>
           </div>
           <button ref="closeRef" type="button" :aria-label="labels[locale].close" @click="emit('close')">×</button>
         </header>
@@ -56,7 +73,7 @@ function handleKeydown(event: KeyboardEvent) {
                 <dt>{{ row.label }}</dt>
                 <dd>
                   <template v-for="(shortcut, index) in row.shortcuts" :key="shortcut">
-                    <span v-if="index" aria-hidden="true"> / </span><kbd>{{ shortcut }}</kbd>
+                    <span v-if="index" aria-hidden="true"> / </span><kbd>{{ formatShortcutForPlatform(shortcut) }}</kbd>
                   </template>
                 </dd>
               </div>

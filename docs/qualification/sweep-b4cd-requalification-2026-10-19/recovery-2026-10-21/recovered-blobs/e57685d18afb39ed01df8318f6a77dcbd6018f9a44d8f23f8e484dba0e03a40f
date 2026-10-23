@@ -1,0 +1,228 @@
+//! Nominal paired tooth-flank placement, before root/tip closure and B-rep.
+use super::super::quintic_certificate::trig;
+use super::*;
+use crate::distance_bounds::{Interval as I, box_distance};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BevelSide {
+    Left,
+    Right,
+}
+#[derive(Clone, Debug)]
+pub struct PlacedBevelFlank {
+    pub tooth: usize,
+    pub side: BevelSide,
+    pub patches: Vec<Surface>,
+}
+#[derive(Clone, Debug)]
+pub struct BevelTeethCertificate {
+    pub world_error_upper: f64,
+    pub placement_control_difference_upper: f64,
+    /// Positive ideal half-thickness; this is not saved-profile embedding.
+    pub nominal_tip_half_angle: [f64; 2],
+    pub nominal_root_half_angle: [f64; 2],
+    pub flanks: usize,
+    pub surfaces: usize,
+}
+fn interval(x: [f64; 2]) -> Result<I> {
+    I::new(x[0], x[1])
+}
+fn phase(p: &BevelGearParameterBounds, tooth: usize, side: BevelSide) -> Result<I> {
+    let center = interval(p.tooth_step)?.mul(I::point(tooth as f64))?;
+    let offset = interval(p.half_pitch_tooth_angle)?.add(interval(p.pitch_involute_azimuth)?)?;
+    match side {
+        BevelSide::Left => center.sub(offset),
+        BevelSide::Right => center.add(offset),
+    }
+}
+fn azimuth(base: I, roll: I) -> Result<I> {
+    if roll.lo == 0. && roll.hi == 0. {
+        return Ok(I::point(0.));
+    }
+    let (s, _) = trig(base)?;
+    let w = s.mul(roll)?;
+    check(
+        w.lo >= 0. && w.hi < super::super::gear_parameters::pi()?.lo * 0.5,
+        "Bevel azimuth needs a proved first unwinding quadrant",
+    )?;
+    let (sw, cw) = trig(w)?;
+    check(
+        s.lo > 0. && sw.lo >= 0. && cw.lo > 0.,
+        "Bevel azimuth leaves the proved first unwinding quadrant",
+    )?;
+    roll.sub(parameters::atan(sw.div(cw.mul(s)?)?)?)
+}
+fn sectors(p: &BevelGearParameterBounds) -> Result<(I, I)> {
+    let offset = interval(p.half_pitch_tooth_angle)?.add(interval(p.pitch_involute_azimuth)?)?;
+    let base = interval(p.base_cone_angle)?;
+    let tip = offset.sub(azimuth(base, interval(p.roll[1])?)?)?;
+    let root = offset.sub(azimuth(base, interval(p.roll[0])?)?)?;
+    check(
+        tip.lo > 0. && root.lo > 0. && root.hi < interval(p.tooth_step)?.lo * 0.5,
+        "Bevel nominal flanks have a pointed/crossed tip or overlap adjacent tooth sectors",
+    )?;
+    Ok((tip, root))
+}
+/// Requalify the complete paired flank inventory against the actual saved
+/// original nominal source. Every original pole and knot is checked. Ideal
+/// source sectors are separated; actual closed-profile embedding is separate.
+pub fn certify_bevel_teeth(
+    source: &QualifiedNominalBevelFlank,
+    flanks: &[PlacedBevelFlank],
+) -> Result<BevelTeethCertificate> {
+    source.reverify()?;
+    let spec = source.specification();
+    check(
+        flanks.len() == 2 * spec.teeth,
+        "Bevel teeth need exactly one left/right flank per tooth",
+    )?;
+    let p = derive_bevel_gear_parameters(spec)?;
+    let (tip, root) = sectors(&p)?;
+    let mut difference = 0_f64;
+    let mut surfaces = 0;
+    for (index, flank) in flanks.iter().enumerate() {
+        let tooth = index / 2;
+        let side = if index % 2 == 0 {
+            BevelSide::Left
+        } else {
+            BevelSide::Right
+        };
+        check(
+            flank.tooth == tooth
+                && flank.side == side
+                && flank.patches.len() == source.patches().len(),
+            "Bevel flank inventory, side or original patch count changed",
+        )?;
+        let (s, c) = trig(phase(&p, tooth, side)?)?;
+        let reflection = if side == BevelSide::Left { 1. } else { -1. };
+        for (saved, original) in flank.patches.iter().zip(source.patches()) {
+            saved.validate()?;
+            check(
+                saved.degree_u == original.degree_u
+                    && saved.degree_v == original.degree_v
+                    && saved.knots_u == original.knots_u
+                    && saved.knots_v == original.knots_v
+                    && saved.weights == original.weights
+                    && saved.periodic_u == original.periodic_u
+                    && saved.periodic_v == original.periodic_v
+                    && saved.control_points.len() == original.control_points.len(),
+                "Placed bevel patch changed the original basis or radial ownership",
+            )?;
+            for (a, b) in saved.control_points.iter().zip(&original.control_points) {
+                check(a.len() == b.len(), "Placed bevel radial row size changed")?;
+                for (a, b) in a.iter().zip(b) {
+                    let x = I::point(b[0]);
+                    let y = I::point(b[1]).mul(I::point(reflection))?;
+                    let ideal = [
+                        c.mul(x)?.sub(s.mul(y)?)?,
+                        s.mul(x)?.add(c.mul(y)?)?,
+                        I::point(b[2]),
+                    ];
+                    let actual: Vec<_> = a.iter().map(|x| I::point(*x)).collect();
+                    difference = difference.max(box_distance(&actual, &ideal)?.1);
+                }
+            }
+            surfaces += 1;
+        }
+        for pair in flank.patches.windows(2) {
+            check(
+                pair[0].control_points.last() == pair[1].control_points.first(),
+                "Placed bevel patches no longer share an exact radial seam",
+            )?;
+        }
+    }
+    let error = I::point(source.error_upper()).add(I::point(difference))?.hi;
+    Ok(BevelTeethCertificate {
+        world_error_upper: error,
+        placement_control_difference_upper: difference,
+        nominal_tip_half_angle: [tip.lo, tip.hi],
+        nominal_root_half_angle: [root.lo, root.hi],
+        flanks: flanks.len(),
+        surfaces,
+    })
+}
+
+pub struct QualifiedBevelTeeth {
+    source: QualifiedNominalBevelFlank,
+    flanks: Vec<PlacedBevelFlank>,
+    certificate: BevelTeethCertificate,
+    tolerance: f64,
+}
+impl QualifiedBevelTeeth {
+    pub fn flanks(&self) -> &[PlacedBevelFlank] {
+        &self.flanks
+    }
+    pub fn specification(&self) -> BevelGearSpec {
+        self.source.specification()
+    }
+    pub fn source(&self) -> &QualifiedNominalBevelFlank {
+        &self.source
+    }
+    pub fn certificate(&self) -> &BevelTeethCertificate {
+        &self.certificate
+    }
+    pub fn reverify(&self) -> Result<()> {
+        let fresh = certify_bevel_teeth(&self.source, &self.flanks)?;
+        check(
+            fresh.world_error_upper <= self.tolerance
+                && fresh.world_error_upper == self.certificate.world_error_upper,
+            "Owned bevel tooth inventory or nominal error receipt changed",
+        )
+    }
+}
+/// Place both ideal spherical-involute working flanks of every tooth. A
+/// closed tooth outline, root/tip connections, caps/bore and B-rep remain separate.
+pub fn qualified_bevel_teeth(
+    spec: BevelGearSpec,
+    tolerance: f64,
+    max_patches_per_flank: usize,
+    max_surfaces: usize,
+) -> Result<QualifiedBevelTeeth> {
+    check(
+        tolerance.is_finite() && tolerance > 0. && (1..=8192).contains(&max_surfaces),
+        "Bevel teeth need positive tolerance and 1..8192 surface budget",
+    )?;
+    let source = qualified_nominal_bevel_flank(spec, tolerance * 0.5, max_patches_per_flank)?;
+    let p = source.parameters();
+    sectors(p)?;
+    check(
+        source.patches().len() * 2 * spec.teeth <= max_surfaces,
+        "Bevel tooth surface budget is insufficient",
+    )?;
+    let mut flanks = Vec::with_capacity(2 * spec.teeth);
+    for tooth in 0..spec.teeth {
+        for side in [BevelSide::Left, BevelSide::Right] {
+            let angle = phase(p, tooth, side)?;
+            let angle = angle.lo + (angle.hi - angle.lo) * 0.5;
+            let (s, c) = angle.sin_cos();
+            let reflection = if side == BevelSide::Left { 1. } else { -1. };
+            let mut patches = source.patches().to_vec();
+            for patch in &mut patches {
+                for row in &mut patch.control_points {
+                    for p in row {
+                        let x = p[0];
+                        let y = p[1] * reflection;
+                        p[0] = c * x - s * y;
+                        p[1] = s * x + c * y;
+                    }
+                }
+            }
+            flanks.push(PlacedBevelFlank {
+                tooth,
+                side,
+                patches,
+            });
+        }
+    }
+    let certificate = certify_bevel_teeth(&source, &flanks)?;
+    check(
+        certificate.world_error_upper <= tolerance,
+        "Bevel nominal placed-tooth error exceeds requested tolerance",
+    )?;
+    Ok(QualifiedBevelTeeth {
+        source,
+        flanks,
+        certificate,
+        tolerance,
+    })
+}

@@ -57,6 +57,7 @@ pub use crate::core::canonical;
 pub use crate::editing::direct_edit;
 pub use crate::editing::morph;
 pub use crate::editing::fairing;
+pub use crate::editing::fairing::{curvature_comb_samples, curve_torsion_at};
 pub use crate::analysis::geodesic;
 pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;
@@ -126,7 +127,9 @@ pub use crate::offset::chord::{
 };
 use numerics::curve_jets;
 pub use crate::offset::curve_offset;
+pub use crate::analysis::class_a::{gaussian_and_mean_curvature_grid, zebra_reflection_stripes};
 pub use crate::analysis::frechet;
+pub use crate::analysis::frechet::hausdorff_curve_discrete;
 pub use crate::construct::curves::curve_reconstruction;
 pub(crate) use crate::offset::diagnostics as curve_offset_diagnostics;
 pub use crate::offset::curve_offset_join;

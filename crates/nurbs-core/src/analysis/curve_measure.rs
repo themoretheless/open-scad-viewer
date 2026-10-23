@@ -204,7 +204,8 @@ fn measure_partition(curve:&Curve,domain:[f64;2],tolerance:f64,max_cells:usize)-
     if domain[0] == domain[1] {
         return Ok((report(Interval::point(0.), 0, tolerance, StopReason::Tolerance)?,Vec::new()));
     }
-    let mut heap = BinaryHeap::new();
+    let span_cap = curve.control_points.len().saturating_sub(curve.degree);
+    let mut heap = BinaryHeap::with_capacity(span_cap.max(8));
     let mut cells = 0;
     for span in curve.degree..curve.control_points.len() {
         let a = curve.knots[span].max(domain[0]);
@@ -492,7 +493,7 @@ pub fn divide_by_length(
     let shared_partition = division_partition::get(curve, tolerance / 8., max_cells)?;
     let (total,partition) = shared_partition.as_ref();
     let mut cells = total.cells;
-    let mut points = Vec::new();
+    let mut points = Vec::with_capacity(segments + 1);
     let mut prefix_cache=BTreeMap::new();
     let mut reason = StopReason::Tolerance;
     for i in 0..=segments {

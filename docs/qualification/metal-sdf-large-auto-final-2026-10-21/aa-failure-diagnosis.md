@@ -1,0 +1,7 @@
+# A/A failure: 4048-byte mesh input
+
+Series `run-1792580799783489000` stopped as required before A/B. Fifteen accepted A/A windows do not qualify the full matrix. The clean mesh84/32³ control had A/A=0.97992 and 95% bootstrap interval [0.92544,0.99816], relative width 1.07857 > 1.06. Pair-average latencies ranged about 1.42–2.59 ms, with ratios 0.749–1.277. No recognized rivals; GPU idle before admission and 0% one second after exit. During the fixture AGX aggregate utilization reached 37–40%, which includes this fixture and cannot prove another GPU client or a specific clock/power-state cause. Earlier two attempts were environmentally contaminated and remain rejected.
+
+The demonstrated failure is short-sample variability, not an upload regression. The old CSV has no block wall timestamps, so alignment with periodic observation/desktop activity cannot be established retrospectively. Preserve the failure instead of retrying identical controls until favorable.
+
+Next design increases fixed averaging for mesh/cross from 8 to 32 complete workflows and warm-up from 1500 to 3000 ms, retains 48 ABBA/BAAB blocks, and adds block wall timestamps plus observer polling cost. Other cases retain 8 workflows. It does not change the public workflow, arena selection, submission, synchronization, idle gates or numeric acceptance gates. Rebuild/freeze and restart the whole A/A-first matrix; all previous windows are diagnostic only. No production changes.

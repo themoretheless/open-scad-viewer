@@ -1,0 +1,404 @@
+#[cfg(feature = "codec")]
+#[path = "persistent_naming/serialization.rs"]
+mod serialization;
+use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
+use std::fmt;
+
+const INVALID_NAMING: &str = "BREP_INVALID_PERSISTENT_NAMING";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TopoKind {
+    Vertex,
+    Edge,
+    Loop,
+    Face,
+    Shell,
+    Body,
+    ControlPoint,
+}
+
+impl TopoKind {
+    pub const fn prefix(self) -> &'static str {
+        match self {
+            Self::Vertex => "v",
+            Self::Edge => "e",
+            Self::Loop => "l",
+            Self::Face => "f",
+            Self::Shell => "s",
+            Self::Body => "b",
+            Self::ControlPoint => "cp",
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Vertex => "vertex",
+            Self::Edge => "edge",
+            Self::Loop => "loop",
+            Self::Face => "face",
+            Self::Shell => "shell",
+            Self::Body => "body",
+            Self::ControlPoint => "control-point",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        Some(match value {
+            "vertex" => Self::Vertex,
+            "edge" => Self::Edge,
+            "loop" => Self::Loop,
+            "face" => Self::Face,
+            "shell" => Self::Shell,
+            "body" => Self::Body,
+            "control-point" => Self::ControlPoint,
+            _ => return None,
+        })
+    }
+
+    pub fn from_prefix(value: &str) -> Option<Self> {
+        Some(match value {
+            "v" => Self::Vertex,
+            "e" => Self::Edge,
+            "l" => Self::Loop,
+            "f" => Self::Face,
+            "s" => Self::Shell,
+            "b" => Self::Body,
+            "cp" => Self::ControlPoint,
+            _ => return None,
+        })
+    }
+}
+
+/// Canonical opaque topology identity. Its wire form is `<kind-prefix>:<32 lowercase hex>`.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TopoId {
+    kind: TopoKind,
+    bytes: [u8; 16],
+}
+
+impl TopoId {
+    pub const fn kind(self) -> TopoKind {
+        self.kind
+    }
+
+    pub fn parse(value: &str) -> Result<Self, &'static str> {
+        let (prefix, hex) = value
+            .split_once(':')
+            .ok_or("Topology ID is missing its prefix")?;
+        let kind = TopoKind::from_prefix(prefix).ok_or("Unknown topology ID prefix")?;
+        if hex.len() != 32
+            || !hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err("Topology ID payload must be 32 lowercase hexadecimal digits");
+        }
+        let mut bytes = [0; 16];
+        for (index, pair) in hex.as_bytes().as_chunks::<2>().0.iter().enumerate() {
+            let digit = |byte| match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                _ => unreachable!(),
+            };
+            bytes[index] = digit(pair[0]) << 4 | digit(pair[1]);
+        }
+        Ok(Self { kind, bytes })
+    }
+
+    /// Deterministically derives an opaque public identity from authored
+    /// provenance plus private geometry-signature evidence.
+    pub fn derive(
+        kind: TopoKind,
+        operation: &str,
+        occurrence: &str,
+        role: &str,
+        geometry_signature: &[u8],
+    ) -> Self {
+        let mut digest = Sha256::new();
+        digest.update(b"open-scad-viewer/topology-id/v2\0");
+        for part in [
+            kind.as_str().as_bytes(),
+            operation.as_bytes(),
+            occurrence.as_bytes(),
+            role.as_bytes(),
+            geometry_signature,
+        ] {
+            digest.update((part.len() as u64).to_be_bytes());
+            digest.update(part);
+        }
+        let digest = digest.finalize();
+        let mut bytes = [0; 16];
+        bytes.copy_from_slice(&digest[..16]);
+        Self { kind, bytes }
+    }
+
+    /// Explicitly migrates the old `<prefix>:<16hex>` representation. Legacy
+    /// values are deliberately rejected by normal parsing/deserialization.
+    pub fn migrate_legacy(value: &str) -> Result<Self, &'static str> {
+        let (prefix, hex) = value
+            .split_once(':')
+            .ok_or("Legacy topology ID is missing its prefix")?;
+        let kind = TopoKind::from_prefix(prefix).ok_or("Unknown legacy topology ID prefix")?;
+        if hex.len() != 16
+            || !hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err("Legacy topology ID payload must be 16 lowercase hexadecimal digits");
+        }
+        Ok(Self::derive(
+            kind,
+            "legacy-migration",
+            value,
+            "legacy",
+            hex.as_bytes(),
+        ))
+    }
+}
+
+impl fmt::Display for TopoId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let prefix = self.kind.prefix().as_bytes();
+        let mut buf = [0u8; 36];
+        let plen = prefix.len();
+        buf[..plen].copy_from_slice(prefix);
+        buf[plen] = b':';
+        for (i, &byte) in self.bytes.iter().enumerate() {
+            buf[plen + 1 + 2 * i] = HEX[(byte >> 4) as usize];
+            buf[plen + 1 + 2 * i + 1] = HEX[(byte & 0x0f) as usize];
+        }
+        let s = std::str::from_utf8(&buf[..plen + 33]).unwrap();
+        formatter.write_str(s)
+    }
+}
+
+impl fmt::Debug for TopoId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChangeKind {
+    Persisted,
+    Generated,
+    Modified,
+    Split,
+    Merge,
+    Deleted,
+}
+
+impl ChangeKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Persisted => "persisted",
+            Self::Generated => "generated",
+            Self::Modified => "modified",
+            Self::Split => "split",
+            Self::Merge => "merge",
+            Self::Deleted => "deleted",
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        Some(match value {
+            "persisted" => Self::Persisted,
+            "generated" => Self::Generated,
+            "modified" => Self::Modified,
+            "split" => Self::Split,
+            "merge" => Self::Merge,
+            "deleted" => Self::Deleted,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChangeProvenance {
+    pub operation: String,
+    pub operand: Option<String>,
+    pub occurrence: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TopologyChange {
+    pub kind: ChangeKind,
+    pub topo_kind: TopoKind,
+    pub parents: Vec<TopoId>,
+    pub children: Vec<TopoId>,
+    pub provenance: ChangeProvenance,
+    pub role: String,
+    pub anchor: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ChangeSet {
+    pub nodes: BTreeMap<TopoId, TopoKind>,
+    pub changes: Vec<TopologyChange>,
+}
+
+impl ChangeSet {
+    pub fn validate(&self) -> math_core::Result<()> {
+        use rustc_hash::{FxHashMap, FxHashSet};
+        let fail = |message| math_core::Error::new(INVALID_NAMING, message);
+        for (id, kind) in &self.nodes {
+            if id.kind() != *kind {
+                return Err(fail("Topology node kind conflicts with its ID prefix"));
+            }
+        }
+        let all_unique = |slice: &[TopoId]| -> bool {
+            for i in 0..slice.len() {
+                if slice[i + 1..].contains(&slice[i]) {
+                    return false;
+                }
+            }
+            true
+        };
+        let mut edges = FxHashMap::<TopoId, Vec<TopoId>>::with_capacity_and_hasher(
+            self.changes.len(),
+            Default::default(),
+        );
+        for change in &self.changes {
+            if change.provenance.operation.is_empty()
+                || change.provenance.occurrence.is_empty()
+                || change.role.is_empty()
+            {
+                return Err(fail(
+                    "Topology change provenance and role must be non-empty",
+                ));
+            }
+            if !all_unique(&change.parents) || !all_unique(&change.children) {
+                return Err(fail("Topology change endpoints must be unique"));
+            }
+            let cardinality_ok = match change.kind {
+                ChangeKind::Persisted | ChangeKind::Modified => {
+                    change.parents.len() == 1 && change.children.len() == 1
+                }
+                ChangeKind::Generated => change.parents.is_empty() && change.children.len() == 1,
+                ChangeKind::Split => change.parents.len() == 1 && change.children.len() >= 2,
+                ChangeKind::Merge => change.parents.len() >= 2 && change.children.len() == 1,
+                ChangeKind::Deleted => change.parents.len() == 1 && change.children.is_empty(),
+            };
+            if !cardinality_ok {
+                return Err(fail("Topology change cardinality does not match its kind"));
+            }
+            let identity_ok = match change.kind {
+                ChangeKind::Persisted => change.parents[0] == change.children[0],
+                ChangeKind::Modified => change.parents[0] != change.children[0],
+                // A split may preserve the parent's ID on one branch, and a
+                // merge may preserve one operand's ID. Those are legitimate
+                // persistent subrelations; cardinality remains strict and
+                // self-edges are omitted from the DAG traversal below.
+                ChangeKind::Split | ChangeKind::Merge => true,
+                ChangeKind::Generated | ChangeKind::Deleted => true,
+            };
+            if !identity_ok {
+                return Err(fail(
+                    "Topology change identity overlap does not match its kind",
+                ));
+            }
+            for id in change.parents.iter().chain(&change.children) {
+                if self.nodes.get(id) != Some(&change.topo_kind) {
+                    return Err(fail(
+                        "Topology change endpoint is missing or has the wrong kind",
+                    ));
+                }
+            }
+            for parent in &change.parents {
+                for child in &change.children {
+                    if parent != child {
+                        let list = edges.entry(*parent).or_default();
+                        if !list.contains(child) {
+                            list.push(*child);
+                        }
+                    }
+                }
+            }
+        }
+        fn visit(
+            node: TopoId,
+            edges: &FxHashMap<TopoId, Vec<TopoId>>,
+            visiting: &mut FxHashSet<TopoId>,
+            visited: &mut FxHashSet<TopoId>,
+        ) -> bool {
+            if visited.contains(&node) {
+                return true;
+            }
+            if !visiting.insert(node) {
+                return false;
+            }
+            if let Some(children) = edges.get(&node) {
+                for &child in children {
+                    if !visit(child, edges, visiting, visited) {
+                        return false;
+                    }
+                }
+            }
+            visiting.remove(&node);
+            visited.insert(node);
+            true
+        }
+        let mut visiting =
+            FxHashSet::with_capacity_and_hasher(self.nodes.len(), Default::default());
+        let mut visited =
+            FxHashSet::with_capacity_and_hasher(self.nodes.len(), Default::default());
+        for node in self.nodes.keys() {
+            if !visit(*node, &edges, &mut visiting, &mut visited) {
+                return Err(fail("Topology lineage must be acyclic"));
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn canonical_ids_are_strict_and_legacy_requires_migration() {
+        let id = TopoId::derive(TopoKind::Face, "op", "occ", "cap", b"surface");
+        assert_eq!(TopoId::parse(&id.to_string()).unwrap(), id);
+        assert!(TopoId::parse("f:0123456789abcdef").is_err());
+        assert!(TopoId::parse("e:0123456789abcdef0123456789ABCDEF").is_err());
+        let migrated = TopoId::migrate_legacy("f:0123456789abcdef").unwrap();
+        assert_eq!(migrated.kind(), TopoKind::Face);
+        assert_eq!(migrated.to_string().len(), 34);
+    }
+
+    #[test]
+    fn change_sets_enforce_existence_cardinality_and_dag() {
+        let a = TopoId::derive(TopoKind::Face, "op", "a", "cap", b"a");
+        let b = TopoId::derive(TopoKind::Face, "op", "b", "cap", b"b");
+        let provenance = ChangeProvenance {
+            operation: "op".into(),
+            operand: None,
+            occurrence: "occ".into(),
+        };
+        let mut set = ChangeSet {
+            nodes: [(a, TopoKind::Face), (b, TopoKind::Face)].into(),
+            changes: vec![TopologyChange {
+                kind: ChangeKind::Modified,
+                topo_kind: TopoKind::Face,
+                parents: vec![a],
+                children: vec![b],
+                provenance: provenance.clone(),
+                role: "cap".into(),
+                anchor: Some("top".into()),
+            }],
+        };
+        set.validate().unwrap();
+        set.changes.push(TopologyChange {
+            kind: ChangeKind::Modified,
+            topo_kind: TopoKind::Face,
+            parents: vec![b],
+            children: vec![a],
+            provenance,
+            role: "cap".into(),
+            anchor: None,
+        });
+        assert!(set.validate().is_err());
+    }
+}

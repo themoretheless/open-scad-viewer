@@ -1,6 +1,7 @@
 import packagedGeometryIdentity from '../generated/geometry-kernels/identity'
 import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from './currentRuntimeGeometryEvidence'
 import { RUNTIME_GEOMETRY_EVIDENCE_V3 } from './runtimeGeometryEvidenceV3'
+import { RUNTIME_GEOMETRY_EVIDENCE_V4 } from './runtimeGeometryEvidenceV4'
 import { OWN_RUST_CAD_EVIDENCE } from './ownRustCadEvidence'
 import type { GeometryQuality } from './build'
 import { sha256Hex } from './sha256'
@@ -424,10 +425,14 @@ function bindCurrentRuntime(
 const ownRustCadRuntimeV3 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v3', 'own-rust-cad-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
 const brepClosedRuntimeV3 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v3', 'rust-brep-closed-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
 
-const ownRustCadRuntimeV4 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v4', 'own-rust-cad-v4', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
-const brepClosedRuntimeV4 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v4', 'rust-brep-closed-v4', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
+const ownRustCadRuntimeV4 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v4', 'own-rust-cad-v4', RUNTIME_GEOMETRY_EVIDENCE_V4)
+const ownRustCadRuntimeV5 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v5', 'own-rust-cad-v5', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
+const brepClosedRuntimeV4 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v4', 'rust-brep-closed-v4', RUNTIME_GEOMETRY_EVIDENCE_V4)
+const brepClosedRuntimeV5 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v5', 'rust-brep-closed-v5', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v5': ownRustCadRuntimeV5,
+  'brep-closed-v5': brepClosedRuntimeV5,
   'own-rust-node-v4': ownRustCadRuntimeV4,
   'brep-closed-v4': brepClosedRuntimeV4,
   'own-rust-node-v3': ownRustCadRuntimeV3,
@@ -492,8 +497,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v4',
-  brep: 'brep-closed-v4',
+  mesh: 'own-rust-node-v5',
+  brep: 'brep-closed-v5',
 } as const)
 
 export type GeometryProviderAdmissionMode =

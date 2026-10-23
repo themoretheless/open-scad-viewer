@@ -1,0 +1,1 @@
+import{r as e}from"./svgWorkerClient-Bol7KcqO.js";export{e as createSvgWorkerClient};

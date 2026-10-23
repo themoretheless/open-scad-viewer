@@ -116,6 +116,7 @@ pub struct Construction3Report {
     pub context: ContextIdentity,
     pub work_used: u64,
 }
+#[inline]
 fn values(ctx: &PredicateContext<'_>, p: [LeafRef; 3]) -> Result<[AuthoredScalar; 3], InputError> {
     Ok([
         ctx.resolve(p[0])?.clone(),
@@ -134,8 +135,9 @@ fn inventory(
 ) -> Result<Inventory, InputError> {
     // At most twelve already-admitted roots, each with at most 256 nodes. Private
     // immutable constructors guarantee acyclicity before this bounded admission.
-    let mut seen = HashSet::new();
-    let mut pending = inputs.to_vec();
+    let mut seen = HashSet::with_capacity(16);
+    let mut pending = Vec::with_capacity(inputs.len() * 4);
+    pending.extend_from_slice(inputs);
     let mut depth = 0;
     let mut work = 0;
     while let Some(input) = pending.pop() {
@@ -214,6 +216,7 @@ fn plane(
         ctx,
     )
 }
+#[inline]
 fn dot(a: &HPoint, b: &HPoint, ctx: &mut PredicateContext<'_>) -> Result<Expansion, Reason> {
     let mut result = a[0].mul(&b[0], ctx)?;
     for i in 1..4 {
@@ -221,6 +224,7 @@ fn dot(a: &HPoint, b: &HPoint, ctx: &mut PredicateContext<'_>) -> Result<Expansi
     }
     Ok(result)
 }
+#[inline]
 fn delta(b: &HPoint, a: &HPoint, ctx: &mut PredicateContext<'_>) -> Result<[Expansion; 3], Reason> {
     Ok([
         b[0].mul(&a[3], ctx)?.sub(&a[0].mul(&b[3], ctx)?, ctx)?,
@@ -228,6 +232,7 @@ fn delta(b: &HPoint, a: &HPoint, ctx: &mut PredicateContext<'_>) -> Result<[Expa
         b[2].mul(&a[3], ctx)?.sub(&a[2].mul(&b[3], ctx)?, ctx)?,
     ])
 }
+#[inline]
 fn zero<const N: usize>(value: &[Expansion; N]) -> bool {
     value.iter().all(|x| x.sign() == Sign::Zero)
 }

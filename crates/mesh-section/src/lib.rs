@@ -608,6 +608,57 @@ pub fn svg_contours(
     bounded_svg_contours(planar_geometry::rings::nonzero(&triangles)?)
 }
 
+/// Computes the net cross-sectional area ($\text{mm}^2$) and total perimeter ($\text{mm}$) directly
+/// from 3D coplanar section loops (`polylines`). Each loop may be open or closed (if the last vertex
+/// does not repeat the first, the closing segment is included automatically). Holes with opposite
+/// orientation subtract from the signed area sum relative to the dominant plane normal.
+pub fn section_area_and_perimeter(polylines: &[Vec<[f64; 3]>]) -> (f64, f64) {
+    if polylines.is_empty() {
+        return (0.0, 0.0);
+    }
+    let mut total_perimeter = 0.0_f64;
+    let mut total_area_vec = [0.0_f64; 3];
+    let mut ref_origin: Option<[f64; 3]> = None;
+
+    for loop_pts in polylines {
+        if loop_pts.len() < 2 {
+            continue;
+        }
+        let closed_dup = loop_pts.len() >= 2 && loop_pts.first() == loop_pts.last();
+        let m = if closed_dup {
+            loop_pts.len() - 1
+        } else {
+            loop_pts.len()
+        };
+        if m < 2 {
+            continue;
+        }
+        let o = *ref_origin.get_or_insert(loop_pts[0]);
+        for i in 0..m {
+            let a = loop_pts[i];
+            let b = loop_pts[(i + 1) % m];
+            let dx = b[0] - a[0];
+            let dy = b[1] - a[1];
+            let dz = b[2] - a[2];
+            total_perimeter += (dx * dx + dy * dy + dz * dz).sqrt();
+            if m >= 3 {
+                let u = sub(a, o);
+                let v = sub(b, o);
+                let c = cross(u, v);
+                total_area_vec[0] += c[0];
+                total_area_vec[1] += c[1];
+                total_area_vec[2] += c[2];
+            }
+        }
+    }
+    let area = 0.5
+        * (total_area_vec[0] * total_area_vec[0]
+            + total_area_vec[1] * total_area_vec[1]
+            + total_area_vec[2] * total_area_vec[2])
+            .sqrt();
+    (area, total_perimeter)
+}
+
 #[cfg(test)]
 mod display_precision_tests {
     use super::*;
@@ -635,5 +686,26 @@ mod display_precision_tests {
             normal.contours[0].points,
             index.section(0.5).unwrap().contours[0].points
         );
+    }
+
+    #[test]
+    fn section_area_and_perimeter_computes_3d_coplanar_loops_with_holes() {
+        // 10x10 outer square in tilted plane z = x (Wait: if z = 5 constant, 10x10 has area 100, perimeter 40)
+        // With a 4x4 hole (CW orientation): area = 100 - 16 = 84, perimeter = 40 + 16 = 56
+        let outer = vec![
+            [0.0, 0.0, 5.0],
+            [10.0, 0.0, 5.0],
+            [10.0, 10.0, 5.0],
+            [0.0, 10.0, 5.0],
+        ];
+        let hole_cw = vec![
+            [3.0, 3.0, 5.0],
+            [3.0, 7.0, 5.0],
+            [7.0, 7.0, 5.0],
+            [7.0, 3.0, 5.0],
+        ];
+        let (area, perim) = section_area_and_perimeter(&[outer, hole_cw]);
+        assert!((area - 84.0).abs() < 1e-9, "got area={area}");
+        assert!((perim - 56.0).abs() < 1e-9, "got perim={perim}");
     }
 }

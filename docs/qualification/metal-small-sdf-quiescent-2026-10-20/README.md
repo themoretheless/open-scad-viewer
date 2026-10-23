@@ -1,3 +1,6 @@
+<!-- noninterference-2026-10-21 -->
+Current runners observe competing jobs and never suspend them. A busy or contaminated window cannot qualify. Earlier measurements retain their recorded runner hashes; their raw results have not been rewritten.
+
 # SDF batching, full-workflow qualification with CPU/GPU tests suspended, 2026-10-20
 
 The candidate is the previously rejected small-input SDF arena, restored from

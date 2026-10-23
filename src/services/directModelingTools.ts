@@ -90,3 +90,68 @@ export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: Orb
   const light = project ? project(SCRATCH_NORMAL) : projectDirectPoint(SCRATCH_NORMAL, camera)
   return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
 }
+
+/**
+ * Computes 3D translation offsets `[dx, dy, 0]` for a rectangular linear pattern of `countX × countY`
+ * instances spaced by `(spacingX, spacingY)` in millimeters.
+ */
+export function computeLinearPatternOffsets(
+  countX: number,
+  countY: number,
+  spacingX: number,
+  spacingY: number,
+): Array<[number, number, number]> {
+  if (!Number.isInteger(countX) || countX < 1 || countX > 256 || !Number.isInteger(countY) || countY < 1 || countY > 256) {
+    throw new RangeError('countX and countY must be integers between 1 and 256.')
+  }
+  if (!Number.isFinite(spacingX) || !Number.isFinite(spacingY)) {
+    throw new RangeError('spacingX and spacingY must be finite numbers.')
+  }
+  const offsets: Array<[number, number, number]> = []
+  for (let iy = 0; iy < countY; iy++) {
+    for (let ix = 0; ix < countX; ix++) {
+      const dx = ix * spacingX
+      const dy = iy * spacingY
+      offsets.push([dx === 0 ? 0 : dx, dy === 0 ? 0 : dy, 0])
+    }
+  }
+  return offsets
+}
+
+/**
+ * Computes circular pattern placements around the Z axis on a circle of `radiusMm`
+ * over `fullAngleDeg` (default 360°). When `|fullAngleDeg| === 360`, instances are spaced
+ * evenly by `fullAngleDeg / count`; for partial arcs (`|fullAngleDeg| < 360`), instances
+ * span endpoints from `0` to `fullAngleDeg` (`fullAngleDeg / (count - 1)`).
+ */
+export function computeCircularPatternTransforms(
+  count: number,
+  radiusMm: number,
+  fullAngleDeg = 360,
+): Array<{ offset: [number, number, number]; angleRad: number }> {
+  if (!Number.isInteger(count) || count < 1 || count > 256) {
+    throw new RangeError('count must be an integer between 1 and 256.')
+  }
+  if (!Number.isFinite(radiusMm) || radiusMm < 0) {
+    throw new RangeError('radiusMm must be a non-negative finite number.')
+  }
+  if (!Number.isFinite(fullAngleDeg) || Math.abs(fullAngleDeg) > 360 || (count > 1 && Math.abs(fullAngleDeg) === 0)) {
+    throw new RangeError('fullAngleDeg must be a finite non-zero angle within [-360, 360].')
+  }
+  if (count === 1) {
+    return [{ offset: [radiusMm === 0 ? 0 : radiusMm, 0, 0], angleRad: 0 }]
+  }
+  const isFullCircle = Math.abs(Math.abs(fullAngleDeg) - 360) < 1e-9
+  const stepDeg = isFullCircle ? fullAngleDeg / count : fullAngleDeg / (count - 1)
+  const transforms: Array<{ offset: [number, number, number]; angleRad: number }> = []
+  for (let i = 0; i < count; i++) {
+    const angleRad = ((i * stepDeg) * Math.PI) / 180
+    const ox = radiusMm * Math.cos(angleRad)
+    const oy = radiusMm * Math.sin(angleRad)
+    transforms.push({
+      offset: [Math.abs(ox) < 1e-12 ? 0 : ox, Math.abs(oy) < 1e-12 ? 0 : oy, 0],
+      angleRad: Math.abs(angleRad) < 1e-12 ? 0 : angleRad,
+    })
+  }
+  return transforms
+}

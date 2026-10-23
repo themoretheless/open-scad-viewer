@@ -154,14 +154,86 @@ pub fn naca5_camber_line(x: f64, constants: &Naca5Camber) -> (f64, f64) {
 /// Analytic profile sample source shared by the NACA constructors.
 enum MeanLine {
     FourDigit { camber: f64, position: f64 },
+    FiveDigit(Naca5Camber),
 }
 
 impl MeanLine {
     fn at(&self, x: f64) -> (f64, f64) {
         match self {
             MeanLine::FourDigit { camber, position } => naca4_camber(x, *camber, *position),
+            MeanLine::FiveDigit(constants) => naca5_camber_line(x, constants),
         }
     }
+}
+
+/// Evaluate the upper and lower 3D coordinates `([x_u, y_u, 0.], [x_l, y_l, 0.])` of a NACA 4-digit
+/// airfoil at normalized chord station `x` in `[0, 1]`.
+pub fn naca4_section_at(
+    code: u32,
+    x: f64,
+    chord: f64,
+    closed_te: bool,
+) -> Result<([f64; 3], [f64; 3])> {
+    require_finite_f64(x, "naca4_x")?;
+    require_finite_f64(chord, "naca4_chord")?;
+    check((0. ..=1.).contains(&x), "NACA station x must be in [0, 1]")?;
+    check(chord > 0. && chord <= 1e6, "Airfoil chord must be in (0, 1e6]")?;
+    check(
+        (1..=9999).contains(&code) && code / 1000 <= 9,
+        "NACA 4-digit code must be MPXX (e.g. 0012 passed as 12)",
+    )?;
+    let camber = (code / 1000) as f64 / 100.;
+    let position = ((code / 100) % 10) as f64 / 10.;
+    let thickness = (code % 100) as f64 / 100.;
+    check(
+        thickness >= 0.01,
+        "NACA thickness digits must encode at least 1 percent",
+    )?;
+    let mean = mean_line_4(camber, position)?;
+    let (yc, dyc) = mean.at(x);
+    let yt = naca4_half_thickness(x, thickness, closed_te);
+    let (sin, cos) = dyc.atan().sin_cos();
+    Ok((
+        [chord * (x - yt * sin), chord * (yc + yt * cos), 0.],
+        [chord * (x + yt * sin), chord * (yc - yt * cos), 0.],
+    ))
+}
+
+/// Standard NACA 5-digit profile builder from a 5-digit integer code `LPQXX`
+/// (e.g. `23012`: design lift digit `L = 2` -> $C_l = 0.3$, max-camber position
+/// digits `PQ = 30` -> $p = 0.15$ when $Q = 0$, and thickness `XX = 12` -> $t = 0.12$).
+pub fn naca5_airfoil(
+    code: u32,
+    chord: f64,
+    closed_te: bool,
+    samples: usize,
+    degree: usize,
+    controls: usize,
+) -> Result<Curve> {
+    check(
+        (10000..=99999).contains(&code),
+        "NACA 5-digit code must be LPQXX in 10000..=99999 (e.g. 23012)",
+    )?;
+    let l_digit = code / 10000;
+    let pq = (code / 100) % 100;
+    let q_digit = pq % 10;
+    let p_digit = pq / 10;
+    let xx = code % 100;
+    check(
+        q_digit == 0 && (1..=6).contains(&p_digit),
+        "NACA 5-digit standard mean line requires Q=0 and P in 1..=6 (e.g. 23012)",
+    )?;
+    let position = p_digit as f64 * 0.05;
+    // Standard NACA 230XX scales maximum camber by L / 2 relative to the L=2 (0.02 camber) baseline.
+    let camber = l_digit as f64 * 0.01;
+    let thickness = xx as f64 / 100.;
+    check(
+        (0.01..=0.4).contains(&thickness),
+        "NACA 5-digit thickness must be in [0.01, 0.40]",
+    )?;
+    let mean = MeanLine::FiveDigit(naca5_camber(position, camber)?);
+    let points = naca_points(&|x| mean.at(x), thickness, chord, closed_te, samples)?;
+    fit_open_bspline(&points, degree, controls, 0., Some(closed_te))
 }
 
 /// Ordered profile point loop (TE -> upper -> LE -> lower -> TE) for a
@@ -1169,5 +1241,18 @@ mod tests {
         };
         assert!(naca_points(&|x| mean.at(x), f64::NAN, 1., true, 64).is_err());
         assert!(naca_points(&|x| mean.at(x), 0.12, f64::INFINITY, true, 64).is_err());
+    }
+
+    #[test]
+    fn naca5_airfoil_code_and_naca4_section_evaluation() {
+        let curve = naca5_airfoil(23012, 1.0, true, 120, 3, 24).unwrap();
+        curve.validate().unwrap();
+        // Closed trailing edge pins first and last control points equal.
+        assert_eq!(curve.control_points.first(), curve.control_points.last());
+        let (upper, lower) = naca4_section_at(12, 0.3, 1.0, true).unwrap();
+        assert!((upper[0] - 0.3).abs() < 1e-12);
+        assert!((upper[1] + lower[1]).abs() < 1e-12);
+        assert!((upper[1] - 0.06).abs() < 1e-3);
+        assert!(naca5_airfoil(23112, 1.0, true, 120, 3, 24).is_err());
     }
 }

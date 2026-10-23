@@ -127,11 +127,11 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
     const map = rowMaps[r]
     if (!map || map.size === 0) continue
     const rowCols = colIdx.subarray(writePos, writePos + map.size)
-    let k = 0
-    for (const c of map.keys()) {
-      rowCols[k++] = c
-    }
-    rowCols.sort()
+        let k = 0
+        for (const c of map.keys()) {
+          rowCols[k++] = c
+        }
+        rowCols.sort()
     for (let i = 0; i < rowCols.length; i++) {
       const c = rowCols[i]!
       const v = map.get(c)!
@@ -154,12 +154,22 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
 }
 
 function csrSpMV(csr: CsrStiffnessMatrix, x: Float64Array, out: Float64Array) {
-  for (let r = 0; r < csr.numDofs; r++) {
+  const { numDofs, rowPtr, colIdx, values } = csr
+  for (let r = 0; r < numDofs; r++) {
     let sum = 0
-    const start = csr.rowPtr[r]!
-    const end = csr.rowPtr[r + 1]!
-    for (let k = start; k < end; k++) {
-      sum += csr.values[k]! * x[csr.colIdx[k]!]!
+    const start = rowPtr[r]!
+    const end = rowPtr[r + 1]!
+    let k = start
+    const stop4 = end - 3
+    for (; k < stop4; k += 4) {
+      sum +=
+        values[k]! * x[colIdx[k]!]! +
+        values[k + 1]! * x[colIdx[k + 1]!]! +
+        values[k + 2]! * x[colIdx[k + 2]!]! +
+        values[k + 3]! * x[colIdx[k + 3]!]!
+    }
+    for (; k < end; k++) {
+      sum += values[k]! * x[colIdx[k]!]!
     }
     out[r] = sum
   }

@@ -4,9 +4,9 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 
 | Crate | Owns |
 | --- | --- |
-| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, affine matrices (composition, rigid poses/inverses, Euler rotation, reflection, translation, scaling), shared `Error` / `ensure` |
+| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, affine matrices (composition, rigid poses/inverses, Euler rotation, reflection, translation, scaling), spatial morton/hash helpers (`spatial`), shared `Error` / `ensure` |
 | `value-codec` | JSON/binary value transport |
-| `gpu-compute` | Optional WGSL compute host |
+| `gpu-compute` | Optional WGSL compute host, UMA vs dUMA memory architecture profiles (`MemoryArchitecture::Uma` / `MemoryArchitecture::Duma`), 5-level hardware execution topology (`HardwareExecutionTopology`), matmul occupancy estimation |
 | `geometry-ops` | Deformations, `Triangles`, sweep frames |
 | `planar-geometry` | 2D paths, primitive contours, rings, Pathfinder (**crates.io**) |
 | `brep-topology` | Indexed B-rep incidence only |
@@ -18,11 +18,11 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 | `mesh-io` | Mesh codecs, 3MF OPC packaging and transactional scene export |
 | `manifold-core` | Full vertex-link manifoldness and conservative repair |
 | `polygon-core` | Owned triangle meshes, UV meshing, mesh CSG and compatibility adapters |
-| `subdivision-core` | Catmull–Clark cages |
-| `sdf-core` | Implicit fields and extraction |
-| `sketch-core` | 2D constraints |
-| `slicer-core` | Walls/infill from already-cut contours |
-| `gcode-core` | G-code encode/preview and G-code 3MF package |
+| `subdivision-core` | Catmull–Clark cages (`construct_and_edit`, `limit_and_quality`) |
+| `sdf-core` | Implicit fields, extraction, WGSL codegen, field evaluation, differential queries (`wgsl`, `field_eval`, `differential_and_queries`) |
+| `sketch-core` | 2D constraints, analytical Jacobians, Levenberg–Marquardt / QR solver (`residuals`, `geometry_ops`, `solver`) |
+| `slicer-core` | Walls/infill/supports/adhesion from already-cut contours (`infill`, `adhesion_and_support`) |
+| `gcode-core` | G-code encode/preview, kinematics statistics (`stats`), and G-code 3MF package |
 | `gcode-optimize` | Toolpath order/seam/simplify/comb + emit |
 | `printer-core` | Multi-vendor LAN job transport (Bambu / Moonraker / OctoPrint / Prusa / Creality / Snapmaker) |
 | `mechanical-core` | Typed gear profiles, planetary assemblies and thread meshes; optional SCAD adapter |

@@ -128,13 +128,85 @@ pub(super) fn triangle(h: &sb::Net, uv: [[i64; 2]; 3], work: &mut Work) -> Resul
     }
     Ok(out)
 }
-pub(super) fn corners(h: &Net) -> [P; 3] {
+/// Positive first weight layer proves a uniform single limit at a zero-weight
+/// vertex. Every zero weight must have zero numerator; no pole is discarded.
+pub(super) fn limits(h: &Net) -> Result<[P; 3]> {
+    if h.is_empty()
+        || h.iter().enumerate().any(|(i, r)| r.len() != h.len() - i)
+        || h.iter()
+            .flatten()
+            .any(|p| p[3] < Q::zero() || (p[3].is_zero() && p[..3].iter().any(|x| !x.is_zero())))
+    {
+        return Err(fail("invalid homogeneous atlas pole controls"));
+    }
     let n = h.len() - 1;
-    [
-        sb::point(&h[0][0]),
-        sb::point(&h[n][0]),
-        sb::point(&h[0][n]),
-    ]
+    let mut out = Vec::new();
+    for corner in 0..3 {
+        let p = match corner {
+            0 => &h[0][0],
+            1 => &h[n][0],
+            _ => &h[0][n],
+        };
+        if p[3] > Q::zero() {
+            out.push(sb::point(p));
+            continue;
+        }
+        let mut found = None;
+        for layer in 1..=n {
+            let row = h
+                .iter()
+                .enumerate()
+                .flat_map(|(i, r)| {
+                    r.iter().enumerate().filter_map(move |(j, p)| {
+                        let distance = match corner {
+                            0 => i + j,
+                            1 => n - i,
+                            _ => n - j,
+                        };
+                        (distance == layer).then_some(p)
+                    })
+                })
+                .collect::<Vec<_>>();
+            if row.iter().all(|p| p[3].is_zero()) {
+                continue;
+            }
+            if row.iter().any(|p| p[3] <= Q::zero()) {
+                return Err(fail("pole limit lacks a positive complete leading layer"));
+            }
+            let limit = sb::point(row[0]);
+            if row.iter().any(|p| sb::point(p) != limit) {
+                return Err(fail("atlas pole has direction-dependent limits"));
+            }
+            found = Some(limit);
+            break;
+        }
+        out.push(found.ok_or_else(|| fail("atlas pole has no finite proved limit"))?);
+    }
+    Ok(out.try_into().unwrap())
+}
+pub(super) fn corners(h: &Net) -> [P; 3] {
+    limits(h).expect("atlas charts must have validated homogeneous corner limits")
+}
+/// Cancel only exact common endpoint powers in all four homogeneous coordinates.
+fn cancel_endpoints(mut h: Vec<sb::H>) -> Vec<sb::H> {
+    for side in 0..2 {
+        if side == 1 {
+            h.reverse();
+        }
+        let n = h.len() - 1;
+        let zeros = h.iter().take_while(|p| p.iter().all(Q::is_zero)).count();
+        if zeros > 0 && zeros <= n {
+            h = (zeros..=n)
+                .map(|i| {
+                    std::array::from_fn(|k| &h[i][k] * choose(n, i) / choose(n - zeros, i - zeros))
+                })
+                .collect();
+        }
+        if side == 1 {
+            h.reverse();
+        }
+    }
+    h
 }
 /// Same denominator in both endpoints of S -> L. Degree elevation is exact.
 pub(super) fn homotopy(h: &Net, work: &mut Work) -> Result<[Net; 2]> {
@@ -184,9 +256,9 @@ pub(super) fn homotopy(h: &Net, work: &mut Work) -> Result<[Net; 2]> {
 pub(super) fn edges(h: &Net) -> [Vec<sb::H>; 3] {
     let n = h.len() - 1;
     [
-        (0..=n).map(|i| h[i][0].clone()).collect(),
-        (0..=n).map(|i| h[n - i][i].clone()).collect(),
-        (0..=n).map(|i| h[0][n - i].clone()).collect(),
+        cancel_endpoints((0..=n).map(|i| h[i][0].clone()).collect()),
+        cancel_endpoints((0..=n).map(|i| h[n - i][i].clone()).collect()),
+        cancel_endpoints((0..=n).map(|i| h[0][n - i].clone()).collect()),
     ]
 }
 /// Rational derivative numerators, with the common strictly positive W².
@@ -426,5 +498,50 @@ pub(super) fn compose(h: &sb::Net, uv: &Net, work: &mut Work) -> Result<Net> {
     if out.iter().flatten().any(|p| p[3] <= Q::zero()) {
         return Err(fail("trimmed atlas composed weights are not positive"));
     }
+    Ok(out)
+}
+
+/// Compose two rational triangular maps. The inner coordinates are barycentric
+/// (1-u-v,u,v); all homogeneous controls must lie in the closed source triangle.
+pub(super) fn compose_triangle(h: &Net, uv: &Net, work: &mut Work) -> Result<Net> {
+    let (n, d) = (h.len() - 1, uv.len() - 1);
+    if n * d > 16 {
+        return Err(fail("nonlinear chart composition degree budget exceeded"));
+    }
+    if uv
+        .iter()
+        .flatten()
+        .any(|p| p[3] <= Q::zero() || p[0] < Q::zero() || p[1] < Q::zero() || &p[0] + &p[1] > p[3])
+    {
+        return Err(fail("nonlinear chart transport leaves its source triangle"));
+    }
+    let u = scalar(uv, 0);
+    let v = scalar(uv, 1);
+    let w = difference(&difference(&scalar(uv, 3), &u), &v);
+    let powers = |p: &Scalar, work: &mut Work| -> Result<Vec<Scalar>> {
+        let mut out = vec![vec![vec![Q::one()]]];
+        for i in 0..n {
+            out.push(product(&out[i], p, work)?);
+        }
+        Ok(out)
+    };
+    let (u, v, w) = (powers(&u, work)?, powers(&v, work)?, powers(&w, work)?);
+    let mut out = (0..=n * d)
+        .map(|i| vec![std::array::from_fn(|_| Q::zero()); n * d + 1 - i])
+        .collect::<Net>();
+    for i in 0..=n {
+        for j in 0..=n - i {
+            let p = product(&product(&u[i], &v[j], work)?, &w[n - i - j], work)?;
+            let c = integer(multi(n, i, j) as i64);
+            for (a, row) in p.iter().enumerate() {
+                for (b, q) in row.iter().enumerate() {
+                    for k in 0..4 {
+                        out[a][b][k] += &h[i][j][k] * q * &c;
+                    }
+                }
+            }
+        }
+    }
+    transport::check(&out)?;
     Ok(out)
 }

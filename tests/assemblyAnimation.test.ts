@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../src/services/assemblyAnimation'
+import {evaluateAssemblyEasing,findPoseBoundingBoxOverlaps,sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../src/services/assemblyAnimation'
 import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
@@ -27,4 +27,16 @@ it('rotates a nonsymmetric body around all three axes without changing its volum
  expect(inspectPolygonMesh(final.mesh).signedVolumeMm3).toBeCloseTo(48)
  expect(final.mesh.positions).not.toEqual(doc.bodies[0].mesh.positions);expect(final.brep).toBeDefined();expect(serializeDirectDocument(doc)).toBe(before)
  clip.frames[1].poses[0].rotation=[NaN,0,0];expect(()=>validateAssemblyAnimation(doc,clip)).toThrow(/poses/)
+})
+
+it('evaluates easing curves and detects bounding box overlaps between bodies',()=>{
+ expect(evaluateAssemblyEasing(0,'easeInOutCubic')).toBe(0)
+ expect(evaluateAssemblyEasing(0.5,'easeInOutCubic')).toBeCloseTo(0.5,6)
+ expect(evaluateAssemblyEasing(1,'easeOutBack')).toBeCloseTo(1,6)
+ const doc=seed()
+ const brepB=createBrepBox([1,0,0],[3,2,2])
+ doc.bodies.push({id:'part-b',name:'Part B',brep:brepB,mesh:tessellateNurbsBrep(brepB,1)})
+ const overlaps=findPoseBoundingBoxOverlaps(doc)
+ expect(overlaps).toHaveLength(1)
+ expect(overlaps[0]).toMatchObject({aId:'part',bId:'part-b',overlapVolumeMm3:4})
 })

@@ -1,0 +1,384 @@
+//! Browser shell: exports the geometry linear-memory ABI as an import-free
+//! wasm32 module. All logic lives in `geometry-bridge`; this crate only adds
+//! the `extern "C"` surface the TypeScript host (`services/geometry`) uses.
+//! Responses are returned as packed u64 (len << 32 | ptr), which is sound
+//! because wasm32 linear memory pointers fit 32 bits.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_alloc(len: usize) -> usize {
+    geometry_bridge::abi::abi_alloc(len)
+}
+
+/// # Safety
+/// Pointers must reference live buffers allocated by this module, with their
+/// exact lengths. Mesh pointers must come from operation 9; freeing consumes
+/// them exactly once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_free(ptr: usize, len: usize) {
+    unsafe { geometry_bridge::abi::abi_free(ptr, len) }
+}
+
+/// # Safety
+/// Pointers must reference live buffers allocated by this module, with their
+/// exact lengths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
+    unsafe { geometry_bridge::abi::abi_request(op, ptr, len) }
+}
+
+/// # Safety
+/// ptr must reference a live mesh handle returned by operation 9.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_field(ptr: usize, field: u32) -> usize {
+    unsafe { geometry_bridge::abi::abi_mesh_field(ptr, field) }
+}
+
+/// # Safety
+/// ptr must reference a live mesh handle returned by operation 9; consumed once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_free(ptr: usize) {
+    unsafe { geometry_bridge::abi::abi_mesh_free(ptr) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers allocated by this
+/// module; they are only read.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_import_mesh(
+    stride: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers allocated by this
+/// module; they are only read.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_bvh_build(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_bvh_build(stride, leaf, vp, vl, ip, il) }
+}
+
+/// # Safety
+/// Buffer ranges must be live allocations owned by the caller in this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_picking_create(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_picking_create(stride, leaf, vp, vl, ip, il) }
+}
+
+/// # Safety
+/// All ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_solid_placement(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_solid_placement(vp, vl, ip, il, mp, ml, fmt) }
+}
+
+/// # Safety
+/// All ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_export_prepare(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+    float32: u32,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_export_prepare(vp, vl, ip, il, mp, ml, float32, fmt) }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_export_alloc(len: usize) -> usize {
+    geometry_bridge::abi::abi_export_alloc(len)
+}
+
+/// # Safety
+/// All ranges must be live caller-owned export staging buffers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_export_append(
+    handle: u32,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_export_append(handle, vp, vl, ip, il, mp, ml, fmt) }
+}
+
+/// # Safety
+/// All buffer pointers must reference live caller-owned buffers allocated by
+/// this module; they are only read.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn abi_semantic_edges(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mfp: usize,
+    mfl: usize,
+    mtp: usize,
+    mtl: usize,
+    weld: u32,
+    crease_dot_threshold: f64,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_semantic_edges(
+            vp,
+            vl,
+            ip,
+            il,
+            mfp,
+            mfl,
+            mtp,
+            mtl,
+            weld,
+            crease_dot_threshold,
+        )
+    }
+}
+
+/// # Safety
+/// Buffer ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_surface_groups(
+    stride: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    angle: f64,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_surface_groups(stride, vp, vl, ip, il, angle) }
+}
+
+/// Display mesh with crease-split normals for a retained solid handle.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {
+    geometry_bridge::abi::abi_render_mesh(id, crease_cosine)
+}
+
+/// Display mesh, BVH and semantic edges from the same retained solid.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_analyze_solid(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf: usize,
+) -> u64 {
+    geometry_bridge::abi::abi_analyze_solid(id, normal_cosine, edge_cosine, leaf)
+}
+
+/// Start/resume/cancel an owned analysis without exposing partial buffers.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_start(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf: usize,
+) -> u64 {
+    geometry_bridge::abi::abi_solid_analysis_start(id, normal_cosine, edge_cosine, leaf)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_step(job: u32) -> u64 {
+    geometry_bridge::abi::abi_solid_analysis_step(job)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_cancel(job: u32) {
+    geometry_bridge::abi::abi_solid_analysis_cancel(job)
+}
+
+/// # Safety
+/// The handle must reference a live result from `abi_bvh_build`,
+/// `abi_semantic_edges`, `abi_render_mesh` or `abi_analyze_solid`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
+    unsafe { geometry_bridge::abi::abi_array_field(handle, slot) }
+}
+
+/// # Safety
+/// The handle must reference a live analysis result; consumed once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_array_free(handle: usize) {
+    unsafe { geometry_bridge::abi::abi_array_free(handle) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_check(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+/// `mode`: 0 = Conservative, 1 = Full.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_repair(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    epsilon: f64,
+    mode: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_metrics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_metrics(vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// All vertex/index buffers must reference live caller-owned memory; read only.
+/// `op`: 0 = union, 1 = intersection, 2 = difference.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_boolean(
+    a_vp: usize,
+    a_vl: usize,
+    a_ip: usize,
+    a_il: usize,
+    a_fmt: u32,
+    b_vp: usize,
+    b_vl: usize,
+    b_ip: usize,
+    b_il: usize,
+    b_fmt: u32,
+    op: u32,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_manifold_boolean(
+            a_vp, a_vl, a_ip, a_il, a_fmt, b_vp, b_vl, b_ip, b_il, b_fmt, op,
+        )
+    }
+}
+
+/// # Safety
+/// Byte range must be a live caller-owned allocation from this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_decode(format:u32,ptr:usize,len:usize)->u64{
+ unsafe{geometry_bridge::abi::abi_mesh_decode(format,ptr,len)}
+}
+/// # Safety
+/// Float range must be a live caller-owned allocation from this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
+ unsafe{geometry_bridge::abi::abi_mesh_soup_render(ptr,len)}
+}
+
+/// # Safety
+/// vp/vl must reference a live caller-owned f64 buffer, read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
+    unsafe { geometry_bridge::abi::abi_transparent_bsp(width,vp,vl,limit,operations,tolerance) }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_add(a: f64, b: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_add(a, b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_mul(a: f64, b: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_mul(a, b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_certified_error_sqrt_two(value: f64) -> f64 {
+    geometry_bridge::abi::abi_certified_error_sqrt_two(value)
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_smooth_triangle_list(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    cos_crease: f64,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_smooth_triangle_list(vp, vl, ip, il, fmt, cos_crease) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_fill_vertex_normals(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_fill_vertex_normals(vp, vl, ip, il) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_expand_flat_triangles(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_expand_flat_triangles(vp, vl, ip, il, fmt) }
+}
+

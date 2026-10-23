@@ -339,8 +339,12 @@ mod tests {
         assert!(volume.shared_volume && volume.dual_scale);
         assert_eq!(volume.patch_radius, 2);
         assert!(browser_dense_options(129, 2).is_err());
+        let accurate = browser_dense_options(192, 3).unwrap();
+        assert_eq!(accurate.estimator, DenseEstimator::FrontoparallelSweep);
+        assert!(accurate.dual_scale && accurate.sparse_depth_prior && accurate.fusion_merge_pass);
+        assert_eq!(accurate.patch_radius, 2);
         assert!(
-            browser_dense_options(128, 3)
+            browser_dense_options(128, 4)
                 .unwrap_err()
                 .message
                 .contains("Unknown dense")
@@ -363,7 +367,7 @@ mod tests {
             legacy
         );
         assert!(
-            dispatch(json!({"action": "dense", "resolution": 128, "preset": 3}))
+            dispatch(json!({"action": "dense", "resolution": 128, "preset": 4}))
                 .unwrap_err()
                 .message
                 .contains("Unknown dense")

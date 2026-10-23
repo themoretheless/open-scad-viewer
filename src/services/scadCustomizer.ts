@@ -131,3 +131,85 @@ export function replaceCustomizerValue(source: string, parameter: CustomizerPara
 export function encodeCustomizerValue(value: CustomizerValue): string {
   return typeof value === 'string' ? JSON.stringify(value) : String(value)
 }
+
+function isValidCustomizerValue(value: unknown): value is CustomizerValue {
+  if (typeof value === 'boolean' || typeof value === 'string') return true
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+/** Serialize named OpenSCAD Customizer parameter presets into canonical JSON format. */
+export function exportCustomizerPresetsJson(
+  presets: Record<string, Record<string, CustomizerValue>>,
+): string {
+  const parameterSets: Record<string, Record<string, CustomizerValue>> = {}
+  for (const [presetName, values] of Object.entries(presets)) {
+    const trimmedName = presetName.trim()
+    if (!trimmedName) throw new Error('Preset name must not be empty.')
+    const cleanValues: Record<string, CustomizerValue> = {}
+    for (const [paramName, val] of Object.entries(values)) {
+      if (!isValidCustomizerValue(val)) {
+        throw new Error(`Invalid customizer value for "${paramName}" in preset "${trimmedName}".`)
+      }
+      cleanValues[paramName] = val
+    }
+    parameterSets[trimmedName] = cleanValues
+  }
+  return JSON.stringify({ fileFormatVersion: '1', parameterSets }, null, 2)
+}
+
+/** Parse OpenSCAD Customizer presets from either `{ parameterSets: ... }` or a flat preset record JSON. */
+export function importCustomizerPresetsJson(
+  jsonText: string,
+): Record<string, Record<string, CustomizerValue>> {
+  if (jsonText.length > 1048576) {
+    throw new Error('Customizer presets JSON exceeds 1 MiB.')
+  }
+  const parsed: unknown = JSON.parse(jsonText)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Invalid customizer presets JSON root.')
+  }
+  const rootObj = parsed as Record<string, unknown>
+  const rawSets =
+    rootObj.parameterSets && typeof rootObj.parameterSets === 'object' && !Array.isArray(rootObj.parameterSets)
+      ? (rootObj.parameterSets as Record<string, unknown>)
+      : rootObj
+
+  const result: Record<string, Record<string, CustomizerValue>> = {}
+  for (const [presetName, rawValues] of Object.entries(rawSets)) {
+    if (presetName === 'fileFormatVersion' && typeof rawValues === 'string') continue
+    if (!rawValues || typeof rawValues !== 'object' || Array.isArray(rawValues)) {
+      throw new Error(`Preset "${presetName}" must be an object mapping parameter names to values.`)
+    }
+    const presetRecord: Record<string, CustomizerValue> = {}
+    for (const [paramName, rawVal] of Object.entries(rawValues as Record<string, unknown>)) {
+      if (isValidCustomizerValue(rawVal)) {
+        presetRecord[paramName] = rawVal
+      } else {
+        throw new Error(`Invalid value for parameter "${paramName}" in preset "${presetName}".`)
+      }
+    }
+    result[presetName] = presetRecord
+  }
+  return result
+}
+
+/** Apply a named parameter preset record to OpenSCAD source code in one pass from end to start. */
+export function applyCustomizerPresetToSource(
+  source: string,
+  presetValues: Record<string, CustomizerValue>,
+): string {
+  const parameters = extractCustomizerParameters(source)
+  const matching = parameters
+    .filter(param => Object.prototype.hasOwnProperty.call(presetValues, param.name))
+    .sort((a, b) => b.valueStart - a.valueStart)
+
+  let updated = source
+  for (const param of matching) {
+    const nextValue = presetValues[param.name]!
+    if (!isValidCustomizerValue(nextValue)) {
+      throw new Error(`Invalid customizer preset value for parameter "${param.name}".`)
+    }
+    updated = replaceCustomizerValue(updated, param, nextValue)
+  }
+  return updated
+}

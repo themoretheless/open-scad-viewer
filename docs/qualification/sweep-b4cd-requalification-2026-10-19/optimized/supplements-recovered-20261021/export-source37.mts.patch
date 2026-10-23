@@ -1,0 +1,36 @@
+--- /private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/export-sweep-source-coverage-step.mts
++++ /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/sweep-b4cd-requalification-2026-10-19/optimized/supplements-recovered-20261021/export-source37.mts
+@@ -3,15 +3,15 @@
+ import {createHash} from 'node:crypto'
+ import {readFileSync,writeFileSync,mkdirSync,existsSync,appendFileSync,renameSync} from 'node:fs'
+ import {resolve,join} from 'node:path'
+-import {compileRushFrontend} from '../src/services/rushFrontend'
+-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+-import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+-import {exportDirectStepV5} from '../src/services/cadNurbsStep'
+-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+-import {evaluateNurbsCurve,reverseNurbsCurve} from '../src/services/nurbsCurve'
+-import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
++import {compileRushFrontend} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/rushFrontend.ts'
++import {buildOwnNurbsAsync} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/rushGraphNurbsKernel.ts'
++import {readNativeGeometryData} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/nativeGeometrySnapshot.ts'
++import {inspectProgressiveSweepSolidAdmission} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/sweepSolidAdmission.ts'
++import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/sweepViewportEvidence.ts'
++import {exportDirectStepV5} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/cadNurbsStep.ts'
++import {evaluateNurbsSurface} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/nurbsSurface.ts'
++import {evaluateNurbsCurve,reverseNurbsCurve} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/nurbsCurve.ts'
++import {sweepStepArtifactProvenance} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/sweep-step-provenance.mjs'
+ 
+ const [inventoryPath,destination]=process.argv.slice(2)
+ assert(inventoryPath&&destination,'Usage: export-sweep-source-coverage-step.mts INVENTORY.json NEW_OUTPUT_DIRECTORY')
+@@ -73,7 +73,7 @@
+   capFaces:caps,capHoleFaces:model.faces.filter((face:any)=>face.holes.length>0).length,
+   requireNativeSolid:true,nativeVolume:volume,nativeBoundary:volume.boundary,
+   boundaryError:readSweepBodyBoundaryViewportEvidence(mesh.nativeGeometry)??readSweepViewportEvidence(mesh.nativeGeometry),
+-  construction:data.sweepBodyBoundaryEvidence??data.sweepStationReconstruction??null,
++  construction:data.sweepBodyBoundaryEvidence??data.sweepStationReconstruction??{},
+   edges:model.edges.length,faceLoops:model.faces.map((face:any)=>({
+    outer:model.loops[face.outer].coedges.map((c:any)=>c.edge),
+    holes:face.holes.map((loop:number)=>model.loops[loop].coedges.map((c:any)=>c.edge))})),

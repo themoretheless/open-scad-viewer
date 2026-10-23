@@ -3,6 +3,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
 
+// Keep readable names for budgeted payloads and workers; content hashes identify
+// smaller lazy chunks without repeating long module names in every import URL.
+function runtimeChunkFileName(chunk: {name: string}) {
+  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools)$/.test(chunk.name)
+    ? 'assets/[name]-[hash].js' : 'assets/[hash].js'
+}
+
 // Split the heavy, independent subsystems into their own chunks so the parser,
 // renderer, and exporters aren't all forced into the main entry chunk.
 // Native rolldown codeSplitting groups: matched modules are captured without
@@ -10,7 +17,7 @@ import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
 // entry preload list.
 export default defineConfig({
   plugins: [compactWgslPlugin(),vue(),compactRuntimeChunks()],
-  worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { manualChunks(id) {
+  worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { chunkFileNames: runtimeChunkFileName, manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
     if (/src[\\/]services[\\/](wasmPacking|wasmBase91|wasmBrotliPacking)\.ts$/.test(id)) return 'worker-wasm-packing'
     if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
@@ -32,6 +39,7 @@ export default defineConfig({
         defaultWarn(warning)
       },
       output: {
+        chunkFileNames: runtimeChunkFileName,
         codeSplitting: {
           groups: [
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },

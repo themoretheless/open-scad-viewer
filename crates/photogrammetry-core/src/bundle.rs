@@ -164,36 +164,49 @@ pub fn outlier_mask(
     let mut min_cosine = vec![f64::INFINITY; positions.len()];
     if filter.min_parallax > 0. {
         let mut centers: Vec<Option<V3>> = vec![None; cameras.len()];
-        for a in 0..observations.len() {
-            if !keep[a] {
+        let mut rays = vec![[0.; 3]; observations.len()];
+        let mut offsets = vec![0usize; positions.len() + 1];
+        for (i, observation) in observations.iter().enumerate() {
+            if !keep[i] {
                 continue;
             }
-            let point = observations[a].point;
-            if centers[observations[a].camera].is_none() {
-                centers[observations[a].camera] =
-                    Some(cameras[observations[a].camera].as_ref().unwrap().center());
+            let cam = observation.camera;
+            let center = match centers[cam] {
+                Some(c) => c,
+                None => {
+                    let c = cameras[cam].as_ref().unwrap().center();
+                    centers[cam] = Some(c);
+                    c
+                }
+            };
+            rays[i] = unit(sub(positions[observation.point], center));
+            offsets[observation.point + 1] += 1;
+        }
+        for i in 1..offsets.len() {
+            offsets[i] += offsets[i - 1];
+        }
+        let mut grouped = vec![0usize; offsets[positions.len()]];
+        let mut cursor = offsets[..positions.len()].to_vec();
+        for (i, observation) in observations.iter().enumerate() {
+            if keep[i] {
+                let p = observation.point;
+                grouped[cursor[p]] = i;
+                cursor[p] += 1;
             }
-            let ray = unit(sub(
-                positions[point],
-                centers[observations[a].camera].unwrap(),
-            ));
-            for b in a + 1..observations.len() {
-                if !keep[b] || observations[b].point != point {
-                    continue;
-                }
-                if centers[observations[b].camera].is_none() {
-                    centers[observations[b].camera] =
-                        Some(cameras[observations[b].camera].as_ref().unwrap().center());
-                }
-                let other = unit(sub(
-                    positions[point],
-                    centers[observations[b].camera].unwrap(),
-                ));
-                let cosine = dot(ray, other);
-                if cosine < min_cosine[point] {
-                    min_cosine[point] = cosine;
+        }
+        for point in 0..positions.len() {
+            let group = &grouped[offsets[point]..offsets[point + 1]];
+            let mut best = f64::INFINITY;
+            for (idx_a, &a) in group.iter().enumerate() {
+                let ray_a = rays[a];
+                for &b in &group[idx_a + 1..] {
+                    let cosine = dot(ray_a, rays[b]);
+                    if cosine < best {
+                        best = cosine;
+                    }
                 }
             }
+            min_cosine[point] = best;
         }
     }
     let cosine_limit = filter.min_parallax.cos();
@@ -571,6 +584,7 @@ struct PointBlock {
     rhs: V3,
     cross: Range<usize>,
 }
+#[derive(Default)]
 struct Linearization {
     camera_hessian: Vec<f64>,
     camera_rhs: Vec<f64>,
@@ -578,21 +592,24 @@ struct Linearization {
     cross: Vec<CrossBlock>,
 }
 
-fn linearize(
+fn linearize_into(
     cameras: &[Option<Camera>],
     positions: &[V3],
     observations: &[Observation],
     layout: &Layout,
     delta: f64,
+    result: &mut Linearization,
     checkpoints: &mut Checkpoints,
-) -> Option<Linearization> {
+) -> Option<()> {
     let n = layout.dimension;
-    let mut result = Linearization {
-        camera_hessian: vec![0.; n * n],
-        camera_rhs: vec![0.; n],
-        points: Vec::with_capacity(layout.tracks.len()),
-        cross: Vec::with_capacity(observations.len()),
-    };
+    result.camera_hessian.clear();
+    result.camera_hessian.resize(n * n, 0.);
+    result.camera_rhs.clear();
+    result.camera_rhs.resize(n, 0.);
+    result.points.clear();
+    result.points.reserve(layout.tracks.len());
+    result.cross.clear();
+    result.cross.reserve(observations.len());
     for (index, track) in layout.tracks.iter().enumerate() {
         if !checkpoints.every(index, 32) {
             return None;
@@ -659,6 +676,28 @@ fn linearize(
             }
         }
     }
+    Some(())
+}
+
+#[cfg(test)]
+fn linearize(
+    cameras: &[Option<Camera>],
+    positions: &[V3],
+    observations: &[Observation],
+    layout: &Layout,
+    delta: f64,
+    checkpoints: &mut Checkpoints,
+) -> Option<Linearization> {
+    let mut result = Linearization::default();
+    linearize_into(
+        cameras,
+        positions,
+        observations,
+        layout,
+        delta,
+        &mut result,
+        checkpoints,
+    )?;
     Some(result)
 }
 
@@ -751,6 +790,7 @@ fn solve_reduced(
     rhs.iter().all(|v| v.is_finite()).then_some(())
 }
 
+#[cfg(test)]
 struct Step {
     cameras: Vec<f64>,
     points: Vec<V3>,
@@ -763,24 +803,28 @@ struct SchurScratch {
     scales: Vec<f64>,
     inverses: Vec<M3>,
     products: Vec<[[f64; 3]; 6]>,
+    step_points: Vec<V3>,
 }
-fn schur_step(
+fn schur_step_into(
     linear: &Linearization,
     damping: f64,
     scratch: &mut SchurScratch,
     checkpoints: &mut Checkpoints,
-) -> Option<Step> {
+) -> Option<()> {
     let n = linear.camera_rhs.len();
     scratch.h.clone_from(&linear.camera_hessian);
     scratch.rhs.clone_from(&linear.camera_rhs);
     scratch.inverses.clear();
     scratch.inverses.reserve(linear.points.len());
+    scratch.step_points.clear();
+    scratch.step_points.reserve(linear.points.len());
     let SchurScratch {
         h,
         rhs,
         scales,
         inverses,
         products,
+        step_points,
     } = scratch;
     for i in 0..n {
         h[i * n + i] += damping * h[i * n + i].max(1e-9);
@@ -830,27 +874,40 @@ fn schur_step(
         inverses.push(inverse);
     }
     solve_reduced(h, rhs, scales, checkpoints)?;
-    let cameras = rhs.clone();
-    let mut points = Vec::with_capacity(linear.points.len());
+    let cameras = &*rhs;
     for (index, (point, &inverse)) in linear.points.iter().zip(inverses.iter()).enumerate() {
         if !checkpoints.every(index, 128) {
             return None;
         }
-        let mut rhs = point.rhs;
+        let mut prhs = point.rhs;
         for w in &linear.cross[point.cross.clone()] {
-            for (i, value) in rhs.iter_mut().enumerate() {
+            for (i, value) in prhs.iter_mut().enumerate() {
                 *value -= (0..6)
                     .map(|j| w.values[j][i] * cameras[w.column + j])
                     .sum::<f64>();
             }
         }
-        let delta = mv(inverse, rhs);
+        let delta = mv(inverse, prhs);
         if !delta.iter().all(|v| v.is_finite()) {
             return None;
         }
-        points.push(delta);
+        step_points.push(delta);
     }
-    Some(Step { cameras, points })
+    Some(())
+}
+
+#[cfg(test)]
+fn schur_step(
+    linear: &Linearization,
+    damping: f64,
+    scratch: &mut SchurScratch,
+    checkpoints: &mut Checkpoints,
+) -> Option<Step> {
+    schur_step_into(linear, damping, scratch, checkpoints)?;
+    Some(Step {
+        cameras: scratch.rhs.clone(),
+        points: scratch.step_points.clone(),
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -860,7 +917,8 @@ fn candidate(
     linear: &Linearization,
     layout: &Layout,
     scale_camera: usize,
-    step: &Step,
+    step_cameras: &[f64],
+    step_points: &[V3],
     next_cameras: &mut Vec<Option<Camera>>,
     next_points: &mut Vec<V3>,
     checkpoints: &mut Checkpoints,
@@ -873,11 +931,11 @@ fn candidate(
         if let Some(column) = layout.columns[index] {
             next_cameras[index] = Some(perturb(
                 cameras[index].as_ref()?,
-                &step.cameras[column..column + 6],
+                &step_cameras[column..column + 6],
             ));
         }
     }
-    for (index, (point, delta)) in linear.points.iter().zip(&step.points).enumerate() {
+    for (index, (point, delta)) in linear.points.iter().zip(step_points).enumerate() {
         if !checkpoints.every(index, 256) {
             return None;
         }
@@ -964,6 +1022,7 @@ pub fn optimize(
     let mut current_points = positions.to_vec();
     let mut trial_cameras: Vec<Option<Camera>> = Vec::new();
     let mut trial_points: Vec<V3> = Vec::new();
+    let mut linear = Linearization::default();
     let mut schur_scratch = SchurScratch::default();
     let mut damping = options.initial_damping;
     for iteration in 0..options.max_iterations {
@@ -974,12 +1033,13 @@ pub fn optimize(
         if !checkpoints.check() {
             return Err(crate::error("Cancelled"));
         }
-        let linear = linearize(
+        linearize_into(
             &current_cameras,
             &current_points,
             observations,
             &layout,
             options.huber_delta,
+            &mut linear,
             &mut checkpoints,
         )
         .ok_or_else(|| crate::error("Cancelled"))?;
@@ -989,15 +1049,16 @@ pub fn optimize(
             if !checkpoints.check() {
                 return Err(crate::error("Cancelled"));
             }
-            let proposed = schur_step(&linear, damping, &mut schur_scratch, &mut checkpoints)
-                .and_then(|step| {
+            let proposed = schur_step_into(&linear, damping, &mut schur_scratch, &mut checkpoints)
+                .and_then(|()| {
                     candidate(
                         &current_cameras,
                         &current_points,
                         &linear,
                         &layout,
                         scale_camera,
-                        &step,
+                        &schur_scratch.rhs,
+                        &schur_scratch.step_points,
                         &mut trial_cameras,
                         &mut trial_points,
                         &mut checkpoints,

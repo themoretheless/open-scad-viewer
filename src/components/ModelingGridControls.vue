@@ -1,3 +1,7 @@
+<script lang="ts">
+import { computeAdaptiveGridStepMm, type AdaptiveGridStep } from '../services/modelingGrid'
+export { computeAdaptiveGridStepMm, type AdaptiveGridStep }
+</script>
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { GRID_UNITS, useModelingGrid, type GridUnit } from '../services/modelingGrid'

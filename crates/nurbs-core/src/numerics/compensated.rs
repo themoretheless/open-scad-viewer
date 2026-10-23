@@ -32,8 +32,15 @@ pub struct CompensatedValue {
 }
 
 impl CompensatedValue {
-    #[cfg(test)]
-    fn exact(value: f64) -> Self {
+    /// Construct a certified value with its outward-rounded error bound.
+    #[inline]
+    pub const fn new(value: f64, error_bound: f64) -> Self {
+        Self { value, error_bound }
+    }
+
+    /// Construct an exact value (`error_bound = 0.0`).
+    #[inline]
+    pub const fn exact(value: f64) -> Self {
         Self {
             value,
             error_bound: 0.,
@@ -43,6 +50,7 @@ impl CompensatedValue {
 
 /// Next representable float towards `+∞` (independent of `math_core`, so this
 /// module stays self-contained).
+#[inline]
 fn next_up(x: f64) -> f64 {
     if x.is_nan() || x == f64::INFINITY {
         return x;
@@ -57,6 +65,7 @@ fn next_up(x: f64) -> f64 {
 
 /// Knuth's `TwoSum`: exact transformation `a + b = s + e` with `s = fl(a+b)`.
 /// Six flops, no branch, valid for all finite `a, b` (barring overflow).
+#[inline]
 pub fn two_sum(a: f64, b: f64) -> (f64, f64) {
     let s = a + b;
     let bp = s - a;
@@ -67,6 +76,7 @@ pub fn two_sum(a: f64, b: f64) -> (f64, f64) {
 
 /// Dekker's `FastTwoSum`: same result as [`two_sum`] in three flops, but only
 /// valid when `|a| >= |b|`.
+#[inline]
 pub fn fast_two_sum(a: f64, b: f64) -> (f64, f64) {
     debug_assert!(a.abs() >= b.abs());
     let s = a + b;
@@ -76,6 +86,7 @@ pub fn fast_two_sum(a: f64, b: f64) -> (f64, f64) {
 
 /// Veltkamp–Dekker split of `a` into a high part with at most 26 significant
 /// bits and a non-overlapping low part: `a = hi + lo`.
+#[inline]
 pub fn split(a: f64) -> (f64, f64) {
     let c = SPLITTER * a;
     let hi = c - (c - a);
@@ -84,6 +95,7 @@ pub fn split(a: f64) -> (f64, f64) {
 }
 
 /// Dekker's `TwoProd` without FMA: exact `a * b = p + e`, 17 flops.
+#[inline]
 pub fn two_prod_split(a: f64, b: f64) -> (f64, f64) {
     let p = a * b;
     let (ah, al) = split(a);
@@ -93,6 +105,7 @@ pub fn two_prod_split(a: f64, b: f64) -> (f64, f64) {
 }
 
 /// `TwoProd` with FMA: exact `a * b = p + e`, 2 flops.
+#[inline]
 pub fn two_prod_fma(a: f64, b: f64) -> (f64, f64) {
     let p = a * b;
     let e = a.mul_add(b, -p);
@@ -101,26 +114,64 @@ pub fn two_prod_fma(a: f64, b: f64) -> (f64, f64) {
 
 /// Portable `TwoProd`: uses FMA when the target supports it, Dekker otherwise.
 /// `std::f64::mul_add` lowers to a hardware FMA on all tier-1 targets.
+#[inline]
 pub fn two_prod(a: f64, b: f64) -> (f64, f64) {
     two_prod_fma(a, b)
 }
 
 /// Outward-rounded magnitude product; zero stays zero (bounds stay tight).
+#[inline]
 fn mul_up(a: f64, b: f64) -> f64 {
     let p = a.abs() * b.abs();
     if p == 0. { 0. } else { next_up(p) }
 }
 
 /// Outward-rounded sum of non-negative magnitudes; zero stays zero.
+#[inline]
 fn add_up(a: f64, b: f64) -> f64 {
     let s = a + b;
     if s == 0. { 0. } else { next_up(s) }
 }
 
 /// `γ_k = k·u / (1 - k·u)`, outward rounded (overflow-safe for our budgets).
+#[inline]
 fn gamma(k: usize) -> f64 {
     let ku = k as f64 * U;
     next_up(ku / (1. - ku))
+}
+
+/// Compensated 3D dot product `a · b` in stack-only Ogita–Rump–Oishi EFT
+/// (`TwoProd` + `TwoSum`), delivering doubled-precision accuracy without
+/// heap allocation.
+#[inline]
+pub fn compensated_dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let (p0, e0) = two_prod(a[0], b[0]);
+    let (p1, e1) = two_prod(a[1], b[1]);
+    let (s1, sigma1) = two_sum(p0, p1);
+    let (p2, e2) = two_prod(a[2], b[2]);
+    let (s2, sigma2) = two_sum(s1, p2);
+    s2 + ((e0 + e1) + (sigma1 + e2) + sigma2)
+}
+
+/// Compensated 2x2 determinant `u0 * v1 - u1 * v0` via `TwoProd` and `TwoSum`.
+#[inline]
+fn compensated_det2(u0: f64, u1: f64, v0: f64, v1: f64) -> f64 {
+    let (p0, e0) = two_prod(u0, v1);
+    let (p1, e1) = two_prod(-u1, v0);
+    let (s, sigma) = two_sum(p0, p1);
+    s + (e0 + e1 + sigma)
+}
+
+/// Compensated 3D cross product `a × b` using Ogita–Rump–Oishi EFT
+/// (`TwoProd` + `TwoSum`) on each 2×2 minor, immune to catastrophic
+/// cancellation on nearly parallel vectors.
+#[inline]
+pub fn compensated_cross3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        compensated_det2(a[1], a[2], b[1], b[2]),
+        compensated_det2(a[2], a[0], b[2], b[0]),
+        compensated_det2(a[0], a[1], b[0], b[1]),
+    ]
 }
 
 // ---------------------------------------------------------------------------
@@ -773,5 +824,23 @@ mod tests {
         assert!(bezier_point(&[], 0.5).is_err());
         assert!(bezier_point(&[vec![0.], vec![1., 2.]], 0.5).is_err());
         assert!(bezier_point(&[vec![f64::INFINITY], vec![1.]], 0.5).is_err());
+    }
+
+    #[test]
+    fn compensated_dot3_and_cross3_recover_cancellation() {
+        // True dot3 = 1; naive f64 dot = 0.
+        let a = [1e16, 1., -1e16];
+        let b = [1e16, 1., 1e16];
+        assert_eq!(compensated_dot3(a, b), 1.);
+
+        // Nearly parallel vectors: u = (1, 1 + 2^-52, 0), v = (1 - 2^-52, 1, 0)
+        // z-component of u × v is 1*1 - (1 + eps)*(1 - eps) = eps^2 = 2^-104.
+        let eps = f64::EPSILON;
+        let u = [1., 1. + eps, 0.];
+        let v = [1. - eps, 1., 0.];
+        let c = compensated_cross3(u, v);
+        assert_eq!(c[0], 0.);
+        assert_eq!(c[1], 0.);
+        assert_eq!(c[2], eps * eps);
     }
 }

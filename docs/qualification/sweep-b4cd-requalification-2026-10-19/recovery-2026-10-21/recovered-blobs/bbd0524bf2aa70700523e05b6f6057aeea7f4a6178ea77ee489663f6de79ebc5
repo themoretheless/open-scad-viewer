@@ -1,0 +1,423 @@
+//! ZA worm-wheel envelope contact roots for perpendicular nonintersecting axes.
+//! Pointwise original-source certificates, not a complete wheel/tooth surface.
+use crate::{Result, check, distance_bounds::Interval as I, worm};
+#[derive(Clone, Copy, Debug)]
+pub struct Spec {
+    pub worm: worm::Spec,
+    pub teeth: usize,
+    /// Original axial-period start, in 0..worm.starts.
+    pub start: usize,
+    /// Translation along the generating worm's Z axis.
+    pub axial_shift: f64,
+}
+impl Default for Spec {
+    fn default() -> Self {
+        Self {
+            worm: worm::Spec::default(),
+            teeth: 40,
+            start: 0,
+            axial_shift: 0.,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Flank {
+    Descending,
+    Ascending,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Status {
+    TwoSimpleRoots,
+    Excluded,
+    Unresolved,
+}
+#[derive(Clone, Debug)]
+struct State {
+    r: I,
+    z: I,
+    k: I,
+    h: I,
+    ratio: I,
+    center: I,
+    a: I,
+    b: I,
+    c: I,
+    d: I,
+}
+fn iv(x: [f64; 2]) -> Result<I> {
+    I::new(x[0], x[1])
+}
+fn pair(x: I) -> [f64; 2] {
+    [x.lo, x.hi]
+}
+fn mid(x: I) -> f64 {
+    x.lo + (x.hi - x.lo) * 0.5
+}
+fn neg(x: I) -> Result<I> {
+    I::point(0.).sub(x)
+}
+fn state(spec: Spec, flank: Flank, u: f64, theta: f64) -> Result<State> {
+    check(
+        (12..=256).contains(&spec.teeth)
+            && spec.start < spec.worm.starts
+            && spec.axial_shift.is_finite()
+            && spec.axial_shift.abs() <= 1e6
+            && u.is_finite()
+            && (0. ..=1.).contains(&u)
+            && theta.is_finite()
+            && theta.abs() <= 8.,
+        "Wheel contacts need 12..256 teeth, bounded shift, profile U in [0,1], and roll in [-8,8]",
+    )?;
+    let p = worm::derive_parameters(spec.worm)?;
+    let sign = if spec.worm.hand == worm::Hand::Right {
+        1.
+    } else {
+        -1.
+    };
+    let h = I::point(spec.worm.axial_module)
+        .mul(I::point(spec.worm.starts as f64))?
+        .div(I::point(2.))?
+        .mul(I::point(sign))?;
+    let ratio = I::point(-sign * spec.worm.starts as f64).div(I::point(spec.teeth as f64))?;
+    let wheel_radius = I::point(spec.worm.axial_module)
+        .mul(I::point(spec.teeth as f64))?
+        .div(I::point(2.))?;
+    let center = iv(p.pitch_radius)?.add(wheel_radius)?;
+    let (s, c) = crate::involute::certified_trig(I::point(spec.worm.pressure_angle))?;
+    let tangent = s.div(c)?;
+    let (r0, r1, z0, z1, k) = match flank {
+        Flank::Descending => (
+            p.crest_radius,
+            p.root_radius,
+            p.profile_z[1],
+            p.profile_z[2],
+            neg(tangent)?,
+        ),
+        Flank::Ascending => (
+            p.root_radius,
+            p.crest_radius,
+            p.profile_z[3],
+            p.profile_z[4],
+            tangent,
+        ),
+    };
+    let lerp = |a: [f64; 2], b: [f64; 2]| -> Result<I> {
+        iv(a)?
+            .mul(I::point(1.).sub(I::point(u))?)?
+            .add(iv(b)?.mul(I::point(u))?)
+    };
+    let r = lerp(r0, r1)?;
+    let z = lerp(z0, z1)?
+        .add(iv(p.pitch)?.mul(I::point(spec.start as f64))?)?
+        .add(h.mul(I::point(theta))?)?
+        .add(I::point(spec.axial_shift))?;
+    let a = r.add(k.mul(z)?)?;
+    let b = neg(h.mul(z)?.div(r)?)?;
+    let c = iv(p.pitch_radius)?;
+    let d = a.mul(a)?.add(b.mul(b)?)?.sub(c.mul(c)?)?;
+    Ok(State {
+        r,
+        z,
+        k,
+        h,
+        ratio,
+        center,
+        a,
+        b,
+        c,
+        d,
+    })
+}
+fn residual(s: &State, beta: I) -> Result<I> {
+    let (sin, cos) = crate::involute::certified_trig(beta)?;
+    s.a.mul(cos)?.add(s.b.mul(sin)?)?.sub(s.c)
+}
+fn derivative(s: &State, beta: I) -> Result<I> {
+    let (sin, cos) = crate::involute::certified_trig(beta)?;
+    neg(s.a.mul(sin)?)?.add(s.b.mul(cos)?)
+}
+fn wheel_point(s: &State, beta: I, theta: f64) -> Result<[I; 3]> {
+    let (sin, cos) = crate::involute::certified_trig(beta)?;
+    let x = s.r.mul(cos)?.sub(s.center)?;
+    let y = s.r.mul(sin)?;
+    let phase = s.ratio.mul(beta.sub(I::point(theta))?)?;
+    let (sp, cp) = crate::involute::certified_trig(phase)?;
+    Ok([
+        cp.mul(x)?.sub(sp.mul(s.z)?)?,
+        y,
+        sp.mul(x)?.add(cp.mul(s.z)?)?,
+    ])
+}
+#[derive(Clone, Debug)]
+pub struct Contact {
+    beta: [f64; 2],
+    worm_rotation: [f64; 2],
+    wheel_point: [[f64; 2]; 3],
+    derivative: [f64; 2],
+    endpoint_residuals: [[f64; 2]; 2],
+    normal_housing: [[f64; 2]; 3],
+    relative_velocity: [[f64; 2]; 3],
+}
+impl Contact {
+    pub fn contact_angle(&self) -> [f64; 2] {
+        self.beta
+    }
+    pub fn worm_rotation(&self) -> [f64; 2] {
+        self.worm_rotation
+    }
+    pub fn wheel_point(&self) -> [[f64; 2]; 3] {
+        self.wheel_point
+    }
+    pub fn derivative(&self) -> [f64; 2] {
+        self.derivative
+    }
+    pub fn normal_housing(&self) -> [[f64; 2]; 3] {
+        self.normal_housing
+    }
+    pub fn relative_velocity(&self) -> [[f64; 2]; 3] {
+        self.relative_velocity
+    }
+    pub fn endpoint_residuals(&self) -> [[f64; 2]; 2] {
+        self.endpoint_residuals
+    }
+}
+#[derive(Clone, Debug)]
+pub struct ContactReport {
+    spec: Spec,
+    flank: Flank,
+    u: f64,
+    theta: f64,
+    status: Status,
+    contacts: Vec<Contact>,
+    reason: Option<&'static str>,
+}
+impl ContactReport {
+    pub fn status(&self) -> Status {
+        self.status
+    }
+    pub fn contacts(&self) -> &[Contact] {
+        &self.contacts
+    }
+    pub fn reason(&self) -> Option<&'static str> {
+        self.reason
+    }
+    /// Search-free replay from the actual original nominal worm and wheel data.
+    pub fn reverify(&self) -> Result<()> {
+        let s = state(self.spec, self.flank, self.u, self.theta)?;
+        match self.status {
+            Status::Excluded => check(
+                s.d.hi < 0. && self.contacts.is_empty(),
+                "Wheel exclusion no longer follows from original coefficients",
+            ),
+            Status::Unresolved => check(
+                self.contacts.is_empty(),
+                "Unresolved contacts cannot carry certified branches",
+            ),
+            Status::TwoSimpleRoots => {
+                let brackets: Vec<_> = self.contacts.iter().map(|c| c.beta).collect();
+                let fresh =
+                    verify_contact_brackets(self.spec, self.flank, self.u, self.theta, &brackets)?;
+                check(
+                    fresh.contacts.iter().zip(&self.contacts).all(|(a, b)| {
+                        a.wheel_point == b.wheel_point
+                            && a.derivative == b.derivative
+                            && a.endpoint_residuals == b.endpoint_residuals
+                            && a.worm_rotation == b.worm_rotation
+                            && a.normal_housing == b.normal_housing
+                            && a.relative_velocity == b.relative_velocity
+                    }),
+                    "Wheel source/contact receipt changed",
+                )
+            }
+        }
+    }
+}
+/// Independent interval sign/monotonicity proof. Positive discriminant and
+/// A,C>0 prove exactly two roots modulo 2*pi; disjoint opposite-sign brackets
+/// with nonzero derivative contain both, without trusting candidate trig.
+pub fn verify_contact_brackets(
+    spec: Spec,
+    flank: Flank,
+    u: f64,
+    theta: f64,
+    brackets: &[[f64; 2]],
+) -> Result<ContactReport> {
+    let s = state(spec, flank, u, theta)?;
+    check(
+        s.a.lo > 0. && s.c.lo > 0. && s.d.lo > 0. && brackets.len() == 2,
+        "Wheel contact pair lacks a positive simple-root discriminant",
+    )?;
+    let pi = crate::involute::certified_pi()?;
+    check(
+        brackets[0][1] < brackets[1][0],
+        "Wheel contact brackets overlap or are reordered",
+    )?;
+    let mut contacts = Vec::new();
+    for &b in brackets {
+        check(
+            b.iter().all(|x| x.is_finite()) && -pi.lo < b[0] && b[0] < b[1] && b[1] < pi.lo,
+            "Wheel contact bracket leaves the proved principal period",
+        )?;
+        let beta = iv(b)?;
+        let left = residual(&s, I::point(b[0]))?;
+        let right = residual(&s, I::point(b[1]))?;
+        check(
+            (left.hi < 0. && right.lo > 0.) || (left.lo > 0. && right.hi < 0.),
+            "Original wheel residual does not prove opposite endpoint signs",
+        )?;
+        let d = derivative(&s, beta)?;
+        check(
+            d.lo > 0. || d.hi < 0.,
+            "Wheel contact derivative is not separated from zero",
+        )?;
+        let (sn, cs) = crate::involute::certified_trig(beta)?;
+        let x = s.r.mul(cs)?;
+        let y = s.r.mul(sn)?;
+        let kr = s.k.mul(s.r)?;
+        let normal = [
+            s.h.mul(sn)?.sub(kr.mul(cs)?)?,
+            neg(s.h.mul(cs)?)?.sub(kr.mul(sn)?)?,
+            s.r,
+        ];
+        let velocity = [
+            neg(y)?.sub(s.ratio.mul(s.z)?)?,
+            x,
+            s.ratio.mul(x.sub(s.center)?)?,
+        ];
+        contacts.push(Contact {
+            beta: b,
+            worm_rotation: pair(beta.sub(I::point(theta))?),
+            wheel_point: wheel_point(&s, beta, theta)?.map(pair),
+            derivative: pair(d),
+            endpoint_residuals: [pair(left), pair(right)],
+            normal_housing: normal.map(pair),
+            relative_velocity: velocity.map(pair),
+        });
+    }
+    Ok(ContactReport {
+        spec,
+        flank,
+        u,
+        theta,
+        status: Status::TwoSimpleRoots,
+        contacts,
+        reason: None,
+    })
+}
+/// Pointwise envelope contacts for an infinite analytic continuation of one
+/// nominal ZA working flank. Worm axis Z; wheel axis Y through (center,0,0).
+/// Wheel/worm speed ratio is -hand*starts/teeth. No finite worm/wheel trimming,
+/// branch sheet coverage, NURBS approximation or closed wheel is asserted.
+pub fn contacts(
+    spec: Spec,
+    flank: Flank,
+    u: f64,
+    theta: f64,
+    angular_tolerance: f64,
+) -> Result<ContactReport> {
+    check(
+        angular_tolerance.is_finite() && angular_tolerance > 0. && angular_tolerance <= 0.1,
+        "Wheel contact angular tolerance must lie in (0,0.1]",
+    )?;
+    let s = state(spec, flank, u, theta)?;
+    let empty = |status, reason| ContactReport {
+        spec,
+        flank,
+        u,
+        theta,
+        status,
+        contacts: Vec::new(),
+        reason: Some(reason),
+    };
+    if s.d.hi < 0. {
+        return Ok(empty(Status::Excluded, "negative-contact-discriminant"));
+    }
+    if s.d.lo <= 0. {
+        return Ok(empty(
+            Status::Unresolved,
+            "tangent-or-discriminant-unresolved",
+        ));
+    }
+    if s.a.lo <= 0. {
+        return Ok(empty(
+            Status::Unresolved,
+            "principal-contact-chart-unproven",
+        ));
+    }
+    let a = mid(s.a);
+    let b = mid(s.b);
+    let c = mid(s.c);
+    let center = b.atan2(a);
+    let opening = (c / a.hypot(b)).acos();
+    let radius = angular_tolerance * 0.25;
+    let brackets = [center - opening, center + opening]
+        .map(|x| [(x - radius).next_down(), (x + radius).next_up()]);
+    if brackets
+        .iter()
+        .any(|b| !b[0].is_finite() || !b[1].is_finite() || b[1] - b[0] > angular_tolerance)
+    {
+        return Ok(empty(
+            Status::Unresolved,
+            "contact-bracket-precision-unrepresentable",
+        ));
+    }
+    match verify_contact_brackets(spec, flank, u, theta, &brackets) {
+        Ok(report) => Ok(report),
+        Err(_) => Ok(empty(
+            Status::Unresolved,
+            "contact-sign-or-derivative-unproven",
+        )),
+    }
+}
+
+mod chart;
+pub use chart::{ChartBounds, ChartCover, ChartDomain, cover_chart, enclose_chart};
+
+mod expression;
+mod fit;
+mod interpolation;
+mod taylor;
+pub use fit::{GridCertificate, QualifiedEnvelopeGrid, certify_envelope_grid, fit_chart};
+
+pub use fit::verify_packed_grid;
+
+mod stock;
+pub use stock::{StockChartBounds, StockInterior, StockIntersection, intersect_stock_cylinder};
+
+pub use fit::{certify_stock_grid, fit_stock_chart};
+
+mod root;
+pub use root::{
+    RootChart, RootChartBounds, RootContactCertificate, RootEmbedding, RootPart, root_chart,
+};
+
+pub use fit::{QualifiedRootGrid, certify_root_grid, fit_root_chart, verify_packed_root_grid};
+
+mod axial;
+pub use axial::{AxialChartBounds, AxialDomain, AxialRootChart, axial_root_chart};
+
+pub use fit::{
+    QualifiedAxialRootGrid, certify_axial_root_grid, fit_axial_root, verify_packed_axial_root,
+};
+
+mod axial_stock;
+pub use axial_stock::{AxialStockIntersection, axial_stock_intersection};
+
+pub use fit::{
+    QualifiedAxialStockGrid, certify_axial_stock_grid, fit_axial_stock, verify_packed_axial_stock,
+};
+
+mod axial_tip;
+pub use axial_tip::{AxialTipChart, axial_tip_chart};
+
+pub use fit::{
+    QualifiedAxialTipGrid, certify_axial_tip_grid, fit_axial_tip, verify_packed_axial_tip,
+};
+
+mod axial_source;
+mod axial_network;
+pub use axial_network::{AxialSideNetwork, axial_side_network};
+pub use axial_source::{AxialInstance, AxialSource, axial_instance};
+pub use fit::{QualifiedAxialGrid, qualify_axial_grid, regrid_axial_source};
+
+pub use fit::{place_axial_surfaces, qualify_axial_instance, regrid_axial_instance};

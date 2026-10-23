@@ -1,0 +1,354 @@
+use super::*;
+#[derive(Clone, Debug)]
+pub(super) struct Poly {
+    pub faces: Vec<Face>,
+}
+fn clean(mut f: Face) -> Face {
+    f.dedup();
+    if f.len() > 1 && f.first() == f.last() {
+        f.pop();
+    }
+    loop {
+        if f.len() < 3 {
+            return vec![];
+        }
+        let found = (0..f.len()).find(|i| {
+            zero(&cross(
+                &sub(&f[*i], &f[(*i + f.len() - 1) % f.len()]),
+                &sub(&f[(*i + 1) % f.len()], &f[*i]),
+            ))
+        });
+        if let Some(i) = found {
+            f.remove(i);
+        } else {
+            break;
+        }
+    }
+    let i = f.iter().enumerate().min_by_key(|(_, p)| *p).unwrap().0;
+    f.rotate_left(i);
+    f
+}
+fn flat_hull(points: Vec<P>, h: &Plane) -> Face {
+    let drop = (0..3).find(|i| !h[*i].is_zero()).unwrap();
+    let axes = (0..3).filter(|i| *i != drop).collect::<Vec<_>>();
+    let mut p = points;
+    p.sort_by(|a, b| (&a[axes[0]], &a[axes[1]]).cmp(&(&b[axes[0]], &b[axes[1]])));
+    p.dedup();
+    if p.len() < 3 {
+        return vec![];
+    }
+    let turn = |a: &P, b: &P, c: &P| {
+        (&b[axes[0]] - &a[axes[0]]) * (&c[axes[1]] - &a[axes[1]])
+            - (&b[axes[1]] - &a[axes[1]]) * (&c[axes[0]] - &a[axes[0]])
+    };
+    let mut low: Vec<P> = vec![];
+    for x in &p {
+        while low.len() > 1 && turn(&low[low.len() - 2], &low[low.len() - 1], x) <= Q::zero() {
+            low.pop();
+        }
+        low.push(x.clone())
+    }
+    let mut high: Vec<P> = vec![];
+    for x in p.iter().rev() {
+        while high.len() > 1 && turn(&high[high.len() - 2], &high[high.len() - 1], x) <= Q::zero() {
+            high.pop();
+        }
+        high.push(x.clone())
+    }
+    low.pop();
+    high.pop();
+    low.extend(high);
+    if low.len() < 3 {
+        return vec![];
+    }
+    let n = cross(&sub(&low[1], &low[0]), &sub(&low[2], &low[0]));
+    let hn = [h[0].clone(), h[1].clone(), h[2].clone()];
+    if dot(&n, &hn).is_negative() {
+        low.reverse()
+    }
+    clean(low)
+}
+impl Poly {
+    pub fn vertices(&self) -> Vec<P> {
+        self.faces
+            .iter()
+            .flatten()
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+    pub fn contains(&self, p: &P) -> bool {
+        self.faces.iter().all(|f| eval(&plane(f), p) <= Q::zero())
+    }
+    pub fn clip(&self, h: &Plane, work: &mut Work) -> Result<Option<Self>> {
+        let pts = self.vertices();
+        work.charge(pts.len())?;
+        if pts.iter().all(|p| eval(h, p) <= Q::zero()) {
+            return Ok(Some(self.clone()));
+        }
+        if pts.iter().all(|p| eval(h, p) >= Q::zero()) {
+            return Ok(None);
+        }
+        let mut faces = Vec::new();
+        let mut cap = Vec::new();
+        for f in &self.faces {
+            let mut out = Vec::new();
+            for i in 0..f.len() {
+                let a = &f[i];
+                let b = &f[(i + 1) % f.len()];
+                let x = eval(h, a);
+                let y = eval(h, b);
+                work.charge(1)?;
+                if x <= Q::zero() {
+                    out.push(a.clone());
+                    if x.is_zero() {
+                        cap.push(a.clone())
+                    }
+                }
+                if x.is_negative() && y.is_positive() || x.is_positive() && y.is_negative() {
+                    let t = &x / (&x - &y);
+                    let p = std::array::from_fn(|j| &a[j] + &t * (&b[j] - &a[j]));
+                    guard(&p)?;
+                    out.push(p.clone());
+                    cap.push(p)
+                }
+            }
+            let f = clean(out);
+            if f.len() >= 3 {
+                faces.push(f)
+            }
+        }
+        let f = flat_hull(cap, h);
+        if f.len() < 3 {
+            return Err(fail("clipping cap is degenerate"));
+        }
+        faces.push(f);
+        if faces.len() > 512 {
+            return Err(fail("convex cell facet budget exceeded"));
+        }
+        Ok(Some(Self { faces }))
+    }
+}
+pub(super) fn bounding_box(points: &[P]) -> Result<Poly> {
+    if points.is_empty() {
+        return Err(fail("cannot bound empty points"));
+    }
+    let lo: P = std::array::from_fn(|i| points.iter().map(|p| p[i].clone()).min().unwrap());
+    let hi: P = std::array::from_fn(|i| points.iter().map(|p| p[i].clone()).max().unwrap());
+    if (0..3).any(|i| lo[i] >= hi[i]) {
+        return Err(fail("source has no three-dimensional extent"));
+    }
+    let corners = (0..8)
+        .map(|b| {
+            std::array::from_fn(|i| {
+                if b & (1 << i) == 0 {
+                    lo[i].clone()
+                } else {
+                    hi[i].clone()
+                }
+            })
+        })
+        .collect::<Vec<P>>();
+    let mut faces = Vec::new();
+    for i in 0..3 {
+        for positive in [false, true] {
+            let value = if positive { &hi[i] } else { &lo[i] };
+            let mut h = [Q::zero(), Q::zero(), Q::zero(), Q::zero()];
+            h[i] = if positive { Q::one() } else { -Q::one() };
+            h[3] = value * &h[i];
+            faces.push(flat_hull(
+                corners.iter().filter(|p| p[i] == *value).cloned().collect(),
+                &h,
+            ))
+        }
+    }
+    Ok(Poly { faces })
+}
+pub(super) fn hull(points: Vec<P>, work: &mut Work) -> Result<Poly> {
+    let p = points
+        .into_iter()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    if p.len() < 4 {
+        return Err(fail("convex sum is lower dimensional"));
+    }
+    let a = 0;
+    let b = 1;
+    let c = (2..p.len())
+        .find(|i| !zero(&cross(&sub(&p[b], &p[a]), &sub(&p[*i], &p[a]))))
+        .ok_or_else(|| fail("collinear convex sum"))?;
+    let h = plane(&[p[a].clone(), p[b].clone(), p[c].clone()]);
+    let d = (0..p.len())
+        .find(|i| !eval(&h, &p[*i]).is_zero())
+        .ok_or_else(|| fail("coplanar convex sum"))?;
+    let inside = centroid(&[p[a].clone(), p[b].clone(), p[c].clone(), p[d].clone()]);
+    let mut faces = vec![[a, b, c], [a, d, b], [b, d, c], [c, d, a]];
+    let orient = |t: &mut [usize; 3]| {
+        let h = plane(&t.map(|i| p[i].clone()));
+        if eval(&h, &inside).is_positive() {
+            t.swap(1, 2)
+        }
+    };
+    for t in &mut faces {
+        orient(t)
+    }
+    for i in 0..p.len() {
+        if [a, b, c, d].contains(&i) {
+            continue;
+        }
+        let mut edges = BTreeMap::<(usize, usize), (usize, usize)>::new();
+        let mut keep = Vec::new();
+        for t in faces {
+            work.charge(1)?;
+            let h = plane(&t.map(|i| p[i].clone()));
+            if eval(&h, &p[i]).is_positive() {
+                for j in 0..3 {
+                    let (a, b) = (t[j], t[(j + 1) % 3]);
+                    let key = (a.min(b), a.max(b));
+                    if edges.remove(&key).is_none() {
+                        edges.insert(key, (a, b));
+                    }
+                }
+            } else {
+                keep.push(t)
+            }
+        }
+        for (_, (a, b)) in edges {
+            let mut t = [a, b, i];
+            if zero(&cross(&sub(&p[b], &p[a]), &sub(&p[i], &p[a]))) {
+                return Err(fail("degenerate incremental hull horizon"));
+            }
+            orient(&mut t);
+            keep.push(t)
+        }
+        if keep.len() > 4096 {
+            return Err(fail("convex hull triangle budget exceeded"));
+        }
+        faces = keep;
+    }
+    let mut incidence = BTreeMap::<(usize, usize), (usize, i32)>::new();
+    for t in &faces {
+        for j in 0..3 {
+            let (a, b) = (t[j], t[(j + 1) % 3]);
+            let e = incidence.entry((a.min(b), a.max(b))).or_default();
+            e.0 += 1;
+            e.1 += if a < b { 1 } else { -1 }
+        }
+    }
+    if incidence.values().any(|e| *e != (2, 0)) {
+        return Err(fail("incremental hull is not a closed oriented chain"));
+    }
+    let planes = faces
+        .iter()
+        .map(|t| normalized(&plane(&t.map(|i| p[i].clone())), true))
+        .collect::<BTreeSet<_>>();
+    let mut result = bounding_box(&p)?;
+    for h in planes {
+        work.charge(p.len())?;
+        if p.iter().any(|q| eval(&h, q).is_positive()) {
+            return Err(fail("hull has a false supporting plane"));
+        }
+        result = result.clip(&h, work)?.ok_or_else(|| fail("empty hull"))?
+    }
+    Ok(result)
+}
+pub(super) fn boundary(cells: &[Poly], work: &mut Work) -> Result<(Vec<P>, Vec<[u32; 3]>)> {
+    boundary_centered(cells,work,false)
+}
+pub(super) fn boundary_dyadic(cells:&[Poly],work:&mut Work)->Result<(Vec<P>,Vec<[u32;3]>)>{boundary_centered(cells,work,true)}
+fn boundary_centered(cells:&[Poly],work:&mut Work,dyadic:bool)->Result<(Vec<P>,Vec<[u32;3]>)>{
+    let mut faces = BTreeMap::<Vec<P>, Face>::new();
+    for c in cells {
+        for f in &c.faces {
+            let key = f
+                .iter()
+                .cloned()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>();
+            if let Some(other) = faces.remove(&key) {
+                if normalized(&plane(&other), true) != neg(&normalized(&plane(f), true)) {
+                    return Err(fail("same-side duplicated arrangement face"));
+                }
+            } else {
+                faces.insert(key, f.clone());
+            }
+        }
+    }
+    let vertices = faces
+        .values()
+        .flatten()
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    if vertices.len() > 8192 {
+        return Err(fail("boundary vertex subdivision budget exceeded"));
+    }
+    let mut triangles = Vec::<[P; 3]>::new();
+    let mut all = BTreeSet::new();
+    for f in faces.values() {
+        // Strictly positive dyadic barycentric weights preserve convex-face
+        // interiors while avoiding gratuitous 1/3 coordinates on dyadic input.
+        // The legacy polyhedral recipe keeps its original centroid witnesses.
+        let center = if dyadic {
+            let n=f.len().next_power_of_two();
+            std::array::from_fn(|k|(f.iter().map(|p|p[k].clone()).sum::<Q>()+&f.last().unwrap()[k]*integer((n-f.len())as i64))/integer(n as i64))
+        }else{centroid(f)};
+        guard(&center)?;
+        all.insert(center.clone());
+        for i in 0..f.len() {
+            let a = &f[i];
+            let b = &f[(i + 1) % f.len()];
+            let d = sub(b, a);
+            let axis = (0..3).find(|j| !d[*j].is_zero()).unwrap();
+            let mut edge = Vec::new();
+            for x in &vertices {
+                work.charge(1)?;
+                let t = (&x[axis] - &a[axis]) / &d[axis];
+                if t >= Q::zero() && t <= Q::one() && zero(&cross(&sub(x, a), &d)) {
+                    edge.push((t, x.clone()))
+                }
+            }
+            edge.sort();
+            for e in edge.windows(2) {
+                all.insert(e[0].1.clone());
+                all.insert(e[1].1.clone());
+                triangles.push([center.clone(), e[0].1.clone(), e[1].1.clone()]);
+            }
+        }
+    }
+    if all.len() > 32768 || triangles.len() > 65536 {
+        return Err(fail("output boundary size exceeded"));
+    }
+    let p = all.into_iter().collect::<Vec<_>>();
+    let map = p
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (p.clone(), i as u32))
+        .collect::<BTreeMap<_, _>>();
+    let mut t = triangles
+        .into_iter()
+        .map(|f| {
+            let mut t = f.map(|p| map[&p]);
+            let i = t.iter().enumerate().min_by_key(|(_, v)| *v).unwrap().0;
+            t.rotate_left(i);
+            t
+        })
+        .collect::<Vec<_>>();
+    t.sort();
+    t.dedup();
+    let mut edges = BTreeMap::<(u32, u32), i32>::new();
+    for f in &t {
+        for i in 0..3 {
+            let (a, b) = (f[i], f[(i + 1) % 3]);
+            *edges.entry((a.min(b), a.max(b))).or_default() += if a < b { 1 } else { -1 }
+        }
+    }
+    if edges.values().any(|n| *n != 0) {
+        return Err(fail("output boundary has an unmatched oriented edge"));
+    }
+    Ok((p, t))
+}

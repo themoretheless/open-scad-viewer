@@ -53,7 +53,7 @@ pub fn inspect_with_exact(
     })
 }
 fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Result<Report> {
-    let mut shells = Vec::new();
+    let mut shells = Vec::with_capacity(model.shells.len());
     for (shell, s) in model.shells.iter().enumerate() {
         let mut uses = std::collections::BTreeMap::<usize, Vec<bool>>::new();
         for face_use in &s.faces {
@@ -62,7 +62,7 @@ fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Re
                 for c in &model.loops[wire].coedges {
                     if !model.edges[c.edge].degenerate {
                         uses.entry(c.edge)
-                            .or_default()
+                            .or_insert_with(|| Vec::with_capacity(2))
                             .push(c.reversed ^ face_use.reversed);
                     }
                 }

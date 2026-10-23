@@ -1,0 +1,1 @@
+var e=e=>/^\s*\/\/\s*@rush(?:\/1)?(?=\s|$)/.test(e),t=e,n=t=>e(t)?`.r`:`.scad`,r=/\.(scad|r)$/i,i=`.scad,.r,text/plain`,a=(e,t)=>r.test(e)?e:`${e}${n(t)}`;export{a,n as i,r as n,t as r,i as t};

@@ -3,6 +3,13 @@
 //! this module does not certify volume validity or orientation.
 use crate::{Error, Model, Result, ray_parity, shell_distance};
 
+/// Witness direction candidates used for ray-parity classification of separated shells.
+const WITNESS_RAY_DIRECTIONS: [[f64; 3]; 3] = [
+    [1., 0.317, 0.173],
+    [-0.219, 1., 0.413],
+    [0.271, -0.193, 1.],
+];
+
 pub struct Report {
     pub boundary_separation_certified: bool,
     pub boundary: shell_distance::ShellDistance,
@@ -54,10 +61,9 @@ pub fn inspect(
             return Ok(report);
         }
     }
-    let directions = [[1., 0.317, 0.173], [-0.219, 1., 0.413], [0.271, -0.193, 1.]];
     for side in 0..2 {
         if cells == 0 || domains == 0 { break; }
-        let result = ray_parity::classify_point(if side == 0 {b} else {a}, points[side], &directions,
+        let result = ray_parity::classify_point(if side == 0 {b} else {a}, points[side], &WITNESS_RAY_DIRECTIONS,
             tolerance_uv, (cells / (2-side)).max(1), (domains / (2-side)).max(1))?;
         cells -= result.cells;
         domains -= result.domain_cells;
@@ -105,10 +111,9 @@ pub(crate) fn classify_exact_boundary_witnesses(a:&Model,b:&Model,report:&mut Re
     let mut cells=max_cells-report.boundary.cells;
     let mut domains=max_domains-report.boundary.domain_cells;
     report.boundary_separation_certified=true;
-    let directions=[[1.,0.317,0.173],[-0.219,1.,0.413],[0.271,-0.193,1.]];
     for (side,point) in [pa,pb].into_iter().enumerate(){
         if cells==0 || domains==0 {break;}
-        let r=ray_parity::classify_point(if side==0 {b}else{a},point,&directions,tolerance_uv,
+        let r=ray_parity::classify_point(if side==0 {b}else{a},point,&WITNESS_RAY_DIRECTIONS,tolerance_uv,
             (cells/(2-side)).max(1),(domains/(2-side)).max(1))?;
         cells-=r.cells;domains-=r.domain_cells;
         report.witness_parity[side]=Some(r);

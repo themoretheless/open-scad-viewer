@@ -32,6 +32,26 @@ pub struct UnrollReport {
     pub max_abs_distortion: f64,
 }
 
+impl UnrollReport {
+    /// Root-mean-square area distortion across all triangulated quad cells.
+    pub fn rms_area_distortion(&self) -> f64 {
+        if self.distortion.is_empty() {
+            return 0.;
+        }
+        let sum_sq: f64 = self.distortion.iter().map(|d| d * d).sum();
+        (sum_sq / self.distortion.len() as f64).sqrt()
+    }
+
+    /// Mean absolute area distortion across all triangulated quad cells.
+    pub fn mean_abs_area_distortion(&self) -> f64 {
+        if self.distortion.is_empty() {
+            return 0.;
+        }
+        let sum_abs: f64 = self.distortion.iter().map(|d| d.abs()).sum();
+        sum_abs / self.distortion.len() as f64
+    }
+}
+
 fn domains(s: &Surface) -> [[f64; 2]; 2] {
     [
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
@@ -262,6 +282,8 @@ mod tests {
         assert!(check.max_gaussian_curvature < 1e-9);
         let report = unroll_ruled_report(&s, 1e-9, 10000).unwrap();
         assert!(report.max_abs_distortion < 1e-8, "distortion {}", report.max_abs_distortion);
+        assert!(report.rms_area_distortion() < 1e-8);
+        assert!(report.mean_abs_area_distortion() < 1e-8);
         // Rectangle: generators (u, height) along x, strips (v) straight up.
         let n = (report.uv_grid.len() as f64).sqrt() as usize - 1;
         let height = report.uv_grid[n * (n + 1)][0];
@@ -283,6 +305,8 @@ mod tests {
         assert!(check.is_developable, "K max {}", check.max_gaussian_curvature);
         let report = unroll_ruled_report(&s, 1e-9, 10000).unwrap();
         assert!(report.max_abs_distortion < 1e-8, "distortion {}", report.max_abs_distortion);
+        assert!(report.rms_area_distortion() < 1e-8);
+        assert!(report.mean_abs_area_distortion() < 1e-8);
         // Outer boundary arc length (u=0 row of the profile loop) ≈ 2π·R.
         let n = (report.uv_grid.len() as f64).sqrt() as usize - 1;
         let outer: f64 = (1..=n)

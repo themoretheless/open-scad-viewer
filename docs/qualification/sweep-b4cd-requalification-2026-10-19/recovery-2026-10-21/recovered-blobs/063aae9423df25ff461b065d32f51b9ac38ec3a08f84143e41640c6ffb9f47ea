@@ -1,0 +1,351 @@
+//! Whole-homotopy embedding proof for coordinate rounding. Every moving
+//! triangle pair remains disjoint except for its shared abstract simplex.
+//! Sufficient exact certificates refuse when an embedding cannot be proved.
+use super::*;
+#[derive(Clone, Debug)]
+pub struct Report {
+    pub precision: &'static str,
+    pub pairs: usize,
+    pub separated: usize,
+    pub shared_edges: usize,
+    pub shared_vertices: usize,
+    pub identity: bool,
+}
+type Polynomial = Vec<Q>;
+type Motion = [P; 2];
+fn plus(a: &[Q], b: &[Q]) -> Polynomial {
+    let mut p = vec![Q::zero(); a.len().max(b.len())];
+    for (i, x) in a.iter().enumerate() {
+        p[i] += x
+    }
+    for (i, x) in b.iter().enumerate() {
+        p[i] += x
+    }
+    p
+}
+fn product(a: &[Q], b: &[Q]) -> Polynomial {
+    let mut p = vec![Q::zero(); a.len() + b.len() - 1];
+    for (i, x) in a.iter().enumerate() {
+        for (j, y) in b.iter().enumerate() {
+            p[i + j] += x * y
+        }
+    }
+    p
+}
+fn diff(a: &Motion, b: &Motion) -> [Polynomial; 3] {
+    std::array::from_fn(|i| {
+        vec![
+            &a[0][i] - &b[0][i],
+            (&a[1][i] - &a[0][i]) - (&b[1][i] - &b[0][i]),
+        ]
+    })
+}
+fn pcross(a: &[Polynomial; 3], b: &[Polynomial; 3]) -> [Polynomial; 3] {
+    std::array::from_fn(|i| {
+        let (j, k) = ((i + 1) % 3, (i + 2) % 3);
+        plus(
+            &product(&a[j], &b[k]),
+            &product(&a[k], &b[j]).iter().map(|x| -x).collect::<Vec<_>>(),
+        )
+    })
+}
+fn pdot(a: &[Polynomial; 3], b: &[Polynomial; 3]) -> Polynomial {
+    (0..3).fold(vec![Q::zero()], |p, i| plus(&p, &product(&a[i], &b[i])))
+}
+fn choose(n: usize, k: usize) -> i64 {
+    let mut x = 1;
+    for i in 0..k {
+        x = x * (n - i) as i64 / (i + 1) as i64
+    }
+    x
+}
+fn positive(p: &[Q]) -> bool {
+    let n = p.len() - 1;
+    (0..=n).all(|i| {
+        (0..=i)
+            .map(|j| &p[j] * Q::new(choose(i, j).into(), choose(n, j).into()))
+            .sum::<Q>()
+            > Q::zero()
+    })
+}
+fn constant(p: &P) -> [Polynomial; 3] {
+    std::array::from_fn(|i| vec![p[i].clone()])
+}
+fn valid_triangle(t: &[Motion; 3]) -> bool {
+    let n = pcross(&diff(&t[1], &t[0]), &diff(&t[2], &t[0]));
+    let reference = cross(&sub(&t[1][0], &t[0][0]), &sub(&t[2][0], &t[0][0]));
+    positive(&pdot(&n, &constant(&reference)))
+}
+fn ranges(p: &[P], n: &P) -> (Q, Q) {
+    let values = p.iter().map(|p| dot(n, p)).collect::<Vec<_>>();
+    (
+        values.iter().min().unwrap().clone(),
+        values.iter().max().unwrap().clone(),
+    )
+}
+fn axis_separates(a: &[P], b: &[P], n: &P) -> bool {
+    if zero(n) {
+        return false;
+    }
+    let (x, y) = ranges(a, n);
+    let (u, v) = ranges(b, n);
+    y < u || v < x
+}
+fn separated(a: &[P], b: &[P], work: &mut Work) -> Result<bool> {
+    for i in 0..3 {
+        if a.iter().map(|p| &p[i]).max().unwrap() < b.iter().map(|p| &p[i]).min().unwrap()
+            || b.iter().map(|p| &p[i]).max().unwrap() < a.iter().map(|p| &p[i]).min().unwrap()
+        {
+            return Ok(true);
+        }
+    }
+    for p in [a, b] {
+        for i in 0..p.len() {
+            for j in i + 1..p.len() {
+                for k in j + 1..p.len() {
+                    work.charge(1)?;
+                    if axis_separates(a, b, &cross(&sub(&p[j], &p[i]), &sub(&p[k], &p[i]))) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+    }
+    for i in 0..a.len() {
+        for j in i + 1..a.len() {
+            for k in 0..b.len() {
+                for l in k + 1..b.len() {
+                    work.charge(1)?;
+                    if axis_separates(a, b, &cross(&sub(&a[j], &a[i]), &sub(&b[l], &b[k]))) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+/// Search exact supporting planes using closest-point candidates on all faces
+/// of dimension <=2 of the small vector hull. A candidate is admitted only if
+/// all input vectors are strictly on its positive side.
+fn pointed(v: &[P], work: &mut Work) -> Result<bool> {
+    let valid = |n: &P| !zero(n) && v.iter().all(|p| dot(n, p) > Q::zero());
+    for p in v {
+        if valid(p) {
+            return Ok(true);
+        }
+    }
+    for i in 0..v.len() {
+        for j in i + 1..v.len() {
+            work.charge(1)?;
+            let d = sub(&v[j], &v[i]);
+            let den = dot(&d, &d);
+            if den.is_zero() {
+                continue;
+            }
+            let t = -dot(&v[i], &d) / den;
+            let n = std::array::from_fn(|k| &v[i][k] + &t * &d[k]);
+            if valid(&n) {
+                return Ok(true);
+            }
+        }
+    }
+    for i in 0..v.len() {
+        for j in i + 1..v.len() {
+            for k in j + 1..v.len() {
+                work.charge(1)?;
+                let a = sub(&v[j], &v[i]);
+                let b = sub(&v[k], &v[i]);
+                let n = cross(&a, &b);
+                let den = dot(&n, &n);
+                if den.is_zero() {
+                    continue;
+                }
+                let scale = dot(&n, &v[i]) / den;
+                let candidate = n.map(|x| x * &scale);
+                if valid(&candidate) {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+fn edge_safe(a: &Motion, b: &Motion, p: &Motion, q: &Motion) -> bool {
+    let e = diff(b, a);
+    let u = diff(p, a);
+    let v = diff(q, a);
+    let det = pdot(&e, &pcross(&u, &v));
+    positive(&det)
+        || positive(&det.iter().map(|x| -x).collect::<Vec<_>>())
+        || positive(
+            &pdot(&pcross(&e, &u), &pcross(&e, &v))
+                .iter()
+                .map(|x| -x)
+                .collect::<Vec<_>>(),
+        )
+}
+pub(super) fn prove(
+    exact: &[P],
+    positions: &[f64],
+    triangles: &[[u32; 3]],
+    precision: &'static str,
+) -> Result<Report> {
+    if positions.len() != exact.len() * 3 {
+        return Err(fail("rounded coordinate census mismatch"));
+    }
+    let motions = exact
+        .iter()
+        .zip(positions.chunks_exact(3))
+        .map(|(p, x)| {
+            if x.iter().any(|x| !x.is_finite()) {
+                return Err(fail("nonfinite rounded coordinate"));
+            }
+            Ok([
+                p.clone(),
+                std::array::from_fn(|i| Q::from_float(x[i]).unwrap()),
+            ])
+        })
+        .collect::<Result<Vec<Motion>>>()?;
+    let mut r = Report {
+        precision,
+        pairs: 0,
+        separated: 0,
+        shared_edges: 0,
+        shared_vertices: 0,
+        identity: motions.iter().all(|m| m[0] == m[1]),
+    };
+    if r.identity {
+        return Ok(r);
+    }
+    let mut work = Work::default();
+    for t in triangles {
+        let m = t.map(|i| motions[i as usize].clone());
+        if !valid_triangle(&m) {
+            return Err(fail("rounding homotopy can collapse or reverse a triangle"));
+        }
+    }
+    for (i, a) in triangles.iter().enumerate() {
+        for b in &triangles[i + 1..] {
+            work.charge(1)?;
+            r.pairs += 1;
+            let shared = a
+                .iter()
+                .copied()
+                .filter(|i| b.contains(i))
+                .collect::<Vec<_>>();
+            match shared.len() {
+                0 => {
+                    let x = a
+                        .iter()
+                        .flat_map(|i| motions[*i as usize].clone())
+                        .collect::<Vec<_>>();
+                    let y = b
+                        .iter()
+                        .flat_map(|i| motions[*i as usize].clone())
+                        .collect::<Vec<_>>();
+                    if !separated(&x, &y, &mut work)? {
+                        return Err(fail(
+                            "rounding separation of disjoint triangles is unproved",
+                        ));
+                    }
+                    r.separated += 1
+                }
+                1 => {
+                    let origin = &motions[shared[0] as usize];
+                    let mut v = Vec::new();
+                    for (t, sign) in [(a, 1), (b, -1)] {
+                        for i in t {
+                            if *i == shared[0] {
+                                continue;
+                            }
+                            for endpoint in 0..2 {
+                                let d = sub(&motions[*i as usize][endpoint], &origin[endpoint]);
+                                v.push(d.map(|q| q * integer(sign)))
+                            }
+                        }
+                    }
+                    if !pointed(&v, &mut work)? {
+                        return Err(fail("rounding vertex-star separation is unproved"));
+                    }
+                    r.shared_vertices += 1
+                }
+                2 => {
+                    let p = *a.iter().find(|i| !shared.contains(i)).unwrap();
+                    let q = *b.iter().find(|i| !shared.contains(i)).unwrap();
+                    if !edge_safe(
+                        &motions[shared[0] as usize],
+                        &motions[shared[1] as usize],
+                        &motions[p as usize],
+                        &motions[q as usize],
+                    ) {
+                        return Err(fail("rounding edge-star separation is unproved"));
+                    }
+                    r.shared_edges += 1
+                }
+                _ => return Err(fail("duplicate rounded abstract triangle")),
+            }
+        }
+    }
+    Ok(r)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn detects_a_thin_feature_collapse() {
+        let p = vec![
+            [Q::one(), Q::zero(), Q::zero()],
+            [
+                Q::one() + Q::new(1.into(), (1u64 << 30).into()),
+                Q::zero(),
+                Q::zero(),
+            ],
+            [Q::one(), Q::one(), Q::zero()],
+        ];
+        let f = p
+            .iter()
+            .flatten()
+            .map(|q| q.to_f64().unwrap() as f32 as f64)
+            .collect::<Vec<_>>();
+        assert!(prove(&p, &f, &[[0, 1, 2]], "f32").is_err())
+    }
+    #[test]
+    fn rejects_crossing_disconnected_triangles() {
+        let p = vec![
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [0, 1, 1],
+        ]
+        .into_iter()
+        .map(|p| p.map(integer))
+        .collect::<Vec<_>>();
+        let f = vec![
+            0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., -1., 1., 0., -1., 0., 1., -1.,
+        ];
+        assert!(prove(&p, &f, &[[0, 1, 2], [3, 4, 5]], "test").is_err())
+    }
+    #[test]
+    fn proves_a_nonzero_uniform_translation_with_shared_stars() {
+        let p = vec![[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [-1, 0, 0]]
+            .into_iter()
+            .map(|p| p.map(integer))
+            .collect::<Vec<_>>();
+        let f = p
+            .iter()
+            .flat_map(|p| {
+                [
+                    p[0].to_f64().unwrap() + 0.125,
+                    p[1].to_f64().unwrap(),
+                    p[2].to_f64().unwrap(),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let r = prove(&p, &f, &[[0, 1, 2], [0, 2, 3], [0, 3, 4]], "test").unwrap();
+        assert_eq!(r.pairs, 3);
+        assert!(r.shared_edges > 0 && r.shared_vertices > 0)
+    }
+}

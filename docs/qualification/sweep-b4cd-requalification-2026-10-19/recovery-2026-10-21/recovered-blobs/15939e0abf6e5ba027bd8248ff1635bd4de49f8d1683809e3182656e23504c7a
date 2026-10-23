@@ -1,0 +1,16 @@
+[package]
+name = "raster-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+wgpu.workspace = true
+gpu-compute = { workspace = true }
+
+[dev-dependencies]
+# WGSL validation for the shipped shaders. The version tracks the wgpu 30 line
+# so `cargo test` compiles exactly what the browser's WebGPU and the native
+# wgpu backend will compile.
+naga.workspace = true

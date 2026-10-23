@@ -1,6 +1,81 @@
-import type { GcodePreviewResult } from './geometry/polygon'
+import type { GcodePreviewMove, GcodePreviewResult } from './geometry/polygon'
 import type { GcodeSceneMesh } from './gcodePreviewProtocol'
 import { GCODE_MOVE_ROW_WIDTH, gcodePreviewMoveRows } from './gcodePreviewTransport'
+
+export interface GcodeLayerSummary {
+  layerCount: number
+  totalMoves: number
+  extrusionMoves: number
+  travelMoves: number
+  printDistanceMm: number
+  travelDistanceMm: number
+  travelToExtrusionRatio: number
+  bounds: GcodeMeshBounds | null
+}
+
+/**
+ * Computes print vs. travel distance, move breakdown, travel-to-extrusion length ratio,
+ * and 3D bounding box for a sequence of G-code preview moves.
+ */
+export function computeGcodeLayerSummary(moves: readonly GcodePreviewMove[]): GcodeLayerSummary {
+  if (!moves.length) {
+    return {
+      layerCount: 0,
+      totalMoves: 0,
+      extrusionMoves: 0,
+      travelMoves: 0,
+      printDistanceMm: 0,
+      travelDistanceMm: 0,
+      travelToExtrusionRatio: 0,
+      bounds: null,
+    }
+  }
+  const layers = new Set<number>()
+  let extrusionMoves = 0
+  let travelMoves = 0
+  let printDistanceMm = 0
+  let travelDistanceMm = 0
+  let minX = Infinity, minY = Infinity, minZ = Infinity
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+
+  for (let i = 0; i < moves.length; i++) {
+    const move = moves[i]!
+    layers.add(move.layerIndex)
+    if (move.x < minX) minX = move.x
+    if (move.y < minY) minY = move.y
+    if (move.z < minZ) minZ = move.z
+    if (move.x > maxX) maxX = move.x
+    if (move.y > maxY) maxY = move.y
+    if (move.z > maxZ) maxZ = move.z
+
+    if (move.extruded) extrusionMoves++
+    else travelMoves++
+
+    if (i > 0) {
+      const prev = moves[i - 1]!
+      const dist = Math.hypot(move.x - prev.x, move.y - prev.y, move.z - prev.z)
+      if (Number.isFinite(dist)) {
+        if (move.extruded) printDistanceMm += dist
+        else travelDistanceMm += dist
+      }
+    }
+  }
+
+  const travelToExtrusionRatio = printDistanceMm > 0 ? travelDistanceMm / printDistanceMm : 0
+  return {
+    layerCount: layers.size,
+    totalMoves: moves.length,
+    extrusionMoves,
+    travelMoves,
+    printDistanceMm,
+    travelDistanceMm,
+    travelToExtrusionRatio,
+    bounds: {
+      min: [minX, minY, minZ],
+      max: [maxX, maxY, maxZ],
+    },
+  }
+}
 
 export interface GcodeMeshBounds { min: [number, number, number]; max: [number, number, number] }
 /** Exact bounds in scene coordinates, without materializing a second mesh. */

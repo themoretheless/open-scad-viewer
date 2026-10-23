@@ -5,6 +5,32 @@ export const GRID_UNITS = { mm: 1, cm: 10, m: 1000, in: 25.4 } as const
 export type GridUnit = keyof typeof GRID_UNITS
 export function validGridStep(value: number) { return Number.isFinite(value) && value >= 0.000001 && value <= 1e6 }
 export function convertGridSize(value: number, from: GridUnit, to: GridUnit) { return value * GRID_UNITS[from] / GRID_UNITS[to] }
+
+export interface AdaptiveGridStep {
+  majorStepMm: number
+  minorStepMm: number
+  label: string
+}
+
+/**
+ * Computes decade-based adaptive grid major/minor steps (0.1 / 1 / 10 / 100 / 1000 mm)
+ * based on the current camera zoom distance in millimeters.
+ */
+export function computeAdaptiveGridStepMm(cameraDistanceMm: number): AdaptiveGridStep {
+  if (!Number.isFinite(cameraDistanceMm) || cameraDistanceMm <= 0) {
+    return { majorStepMm: 10, minorStepMm: 1, label: '10 mm / 1 mm' }
+  }
+  if (cameraDistanceMm < 25) {
+    return { majorStepMm: 1, minorStepMm: 0.1, label: '1 mm / 0.1 mm' }
+  }
+  if (cameraDistanceMm < 250) {
+    return { majorStepMm: 10, minorStepMm: 1, label: '10 mm / 1 mm' }
+  }
+  if (cameraDistanceMm < 2500) {
+    return { majorStepMm: 100, minorStepMm: 10, label: '100 mm / 10 mm' }
+  }
+  return { majorStepMm: 1000, minorStepMm: 100, label: '1000 mm / 100 mm' }
+}
 const savedUnit = storageGet('scad-grid-unit')
 const unit = ref<GridUnit>(savedUnit && Object.hasOwn(GRID_UNITS, savedUnit) ? savedUnit as GridUnit : 'mm')
 const savedStep = Number(storageGet('scad-grid-step'))

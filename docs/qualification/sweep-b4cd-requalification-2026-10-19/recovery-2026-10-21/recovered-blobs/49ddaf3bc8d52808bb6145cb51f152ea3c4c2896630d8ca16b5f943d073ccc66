@@ -1,0 +1,171 @@
+/** Original-request native construction transport. This report proves boundary
+ * error only; it does not authenticate serialized copies for later operations
+ * or admit a Solid. Construction and proof derivation live in Rust. */
+import {callGeometryRust} from './geometry/kernel'
+import type {NurbsCurve} from './nurbsCurve'
+import {sweepAffineLawPayload,sweepFrameLawPayload,type ProgressiveMiterReport,type ProgressiveMiterOptions,type NurbsScaleLaw} from './nurbsConstructors'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from './nurbsSweepEmbedding'
+import type {SweepSectionCorrection} from './nurbsSectionProjection'
+import type {SweepRetainedChartEvidence} from './nurbsSweepRetainedCharts'
+import type {NurbsBrep} from './geometry/brep'
+import type {SweepBoundaryCertificate} from './sweepBoundaryCertificate'
+export interface MiterOwnedSourceRequest {
+ loops:NurbsCurve[][]
+ points:[number,number,number][]
+ /** Native scalar law controls are [value,0,0]; twist values are radians. */
+ scale:NurbsCurve
+ twist:NurbsCurve
+ normal:[number,number,number]
+ closed:boolean
+ miterLimit:number
+ initialSteps:number
+ maxSteps:number
+ maxDeviation:number
+ axisScale?:NurbsCurve
+ centerLaw?:NurbsCurve
+ frameAxis?:NurbsCurve
+ frameNormal?:NurbsCurve
+ orientationGuide?:NurbsCurve
+ circleCorrection?:{quantum:number;tolerance:number;maxWork:number|null}
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number|null;authoredFrame?:boolean}
+ limits?:{
+  maxProducts:number;maxFaces:number;exactWork:number
+  correspondenceMaxFaces?:number;capMaxEdges?:number;wallCells?:number
+  /** Independent cap phases; omitted values retain exactWork as the default. */
+  domainExactWork?:number;projectionExactWork?:number
+  domainTolerance:number;domainPairs:number;domainCells:number;projectionCells:number
+  capRegions:{maxWalls:number;maxExactWork:number;maxChartCells:number;maxTrimPairs:number;maxTrimCells:number;maxTrimDomainCells:number}
+ }
+}
+export interface MiterOwnedBoundaryReport {
+ method:'original-request-owned-miter-boundary'
+ retentionMode?:'direct'|'progressive'
+ capEndpoints?:[boolean,boolean]|null
+ model:NurbsBrep
+ sections:NurbsCurve[][][]
+ sourceSections:NurbsCurve[][]
+ sectionCorrection:Omit<SweepSectionCorrection,'sections'>|null
+ retainedWallCharts:SweepRetainedChartEvidence
+ edges:number
+ maxSteps:number
+ sharpStationIndices:number[]
+ closed:boolean
+ budget:number
+ boundaryCertificate:SweepBoundaryCertificate
+ levels:ProgressiveMiterReport[]
+ solidGeometryCertified:false
+ globalEmbeddingCertified:false
+}
+/** Direct geometry has no scalar/frame laws or refinement settings. Rust owns
+ * neutral source construction and all wall/cap error derivation. */
+export type DirectMiterOwnedSourceRequest=Pick<MiterOwnedSourceRequest,
+ 'loops'|'points'|'normal'|'closed'|'miterLimit'|'maxDeviation'|'circleCorrection'|'capCorrection'|'limits'> & {direct:true;capEndpoints?:[boolean,boolean]}
+export type MiterOwnedRequest=MiterOwnedSourceRequest|DirectMiterOwnedSourceRequest
+/** No approximation tolerance is invented for the unchanged direct source.
+ * Explicit cap repair retains its own budget; circle repair requires the
+ * separately authored whole-boundary tolerance and is excluded here. */
+export type UnbudgetedDirectMiterSourceRequest=Omit<DirectMiterOwnedSourceRequest,'maxDeviation'|'circleCorrection'> & {
+ maxDeviation?:never;circleCorrection?:never;automaticCaps?:true
+}
+export interface AnnularMiterOwnedBoundaryReport extends MiterOwnedBoundaryReport {
+ capRepresentation:'radial-annular'|'legacy'
+ /** Two logical end caps; a cap can own multiple retained faces. */
+ capFaceGroups:[number[],number[]]
+ capFaces:number[]
+ /** Separate selection for the optional exact planar-cap optimization. */
+ planarCapFaces:number[]
+ retainedSmoothness:{
+  walls:import('./miterProfileSmoothness').MiterProfileSmoothness
+  maxWork:number;totalExactWork:number
+  auditOrder?:'caps-first'
+  geometricMaxCells?:number;geometricCells?:number
+  capInternalSeams:{method:'retained-annular-cap-internal-jets';edgeIds:number[];extractionComplete:boolean;
+   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number;geometricG2?:import('./geometricG2').GeometricG2Report}[]
+  capWallContinuity:'C0';fullBoundarySmoothnessCertified:false
+ }|null
+ retainedAnnularFilling:{
+  method:'authored-affine-endpoint-annular-filling'
+  sourceFillingCovered:boolean
+  filledCapErrorUpper:[number,number]|null
+  withinBudget:boolean
+  exactWork:number
+  fillingExactWork:number
+  capConstructionExactWork:number
+  products:number
+  endpointCells:number
+  projectiveReparameterizedPatches:number
+  sourceUvFacesInjective:boolean
+  sourceUvPairsClassified:boolean
+  reason:string
+  solidGeometryCertified:false
+ }|null
+}
+/** Rust derives the filled source bound and both complete cap groups. This
+ * transport does not infer cap faces from array position or authorize Solid. */
+export const constructAnnularMiterOwnedBoundary=(source:MiterOwnedRequest,audits:{smoothnessMaxWork?:number}={}):AnnularMiterOwnedBoundaryReport=>
+ callGeometryRust<AnnularMiterOwnedBoundaryReport>('brep_miter_annular_owned_construct',{...source,...audits})
+export type UnbudgetedAnnularMiterBoundaryReport=Omit<AnnularMiterOwnedBoundaryReport,'budget'|'boundaryCertificate'|'retainedAnnularFilling'> & {
+ budget:null
+ boundaryCertificate:Omit<SweepBoundaryCertificate,'budget'|'withinBudget'|'reason'> & {
+  budget:null;withinBudget:null;reason:SweepBoundaryCertificate['reason']|'no-authored-tolerance'
+ }
+ retainedAnnularFilling:(Omit<NonNullable<AnnularMiterOwnedBoundaryReport['retainedAnnularFilling']>,'withinBudget'> & {withinBudget:null})|null
+}
+/** Constructor selection, numerical bounds and null tolerance semantics are
+ * all derived in Rust. This function only transports the original request. */
+export const constructUnbudgetedDirectMiterBoundary=(source:UnbudgetedDirectMiterSourceRequest,audits:{smoothnessMaxWork?:number}={}):UnbudgetedAnnularMiterBoundaryReport=>
+ callGeometryRust<UnbudgetedAnnularMiterBoundaryReport>('brep_miter_annular_owned_construct',{...source,...audits})
+export const constructMiterOwnedBoundary=(source:MiterOwnedRequest):MiterOwnedBoundaryReport=>{
+ const body=callGeometryRust<MiterOwnedBoundaryReport>('brep_miter_owned_construct',source)
+ if('direct' in source){
+  if(body.retentionMode!=='direct')throw new Error('Native direct miter ownership is unavailable in this kernel')
+  if(source.capEndpoints&&(!body.capEndpoints||source.capEndpoints.some((selected,index)=>body.capEndpoints![index]!==selected)))
+   throw new Error('Native direct cap endpoint selection is unavailable in this kernel')
+ }
+ return body
+}
+
+/** Replays original construction in the receiving realm. No serialized model
+ * or supplied numerical certificate participates in native boundary admission. */
+export const reconstructMiterOwnedBoundary=(source:MiterOwnedRequest,options:{quantum:number;tolerance:number;maxWork:number;budget:number;requireSolid?:boolean;wallCells?:number;volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets;expectedSourceModel?:NurbsBrep;expectedSourceCertificate?:SweepBoundaryCertificate;expectedSections?:NurbsCurve[][][];expectedSharp?:number[]}):{
+ model:NurbsBrep|null
+ candidate:import('./geometry/brep').SmoothStationWallCandidate|null
+ boundaryCertificate:SweepBoundaryCertificate|null
+ sharpStationIndices:number[]
+ reason:string
+ retainedWallCharts:SweepRetainedChartEvidence|null
+ volume:import('./nurbsSweepEmbedding').SweepVolumeAudit|null
+ solidGeometryCertified:boolean
+ globalEmbeddingCertified:false
+}=>callGeometryRust('brep_miter_owned_reconstruct',{source,...options})
+
+/** Wire normalization for the existing public degrees/vector-law API. Native
+ * construction owns face planning, refinement, correction and boundary proof. */
+export function constructProgressiveMiterOwnedBoundary(
+ loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,
+):MiterOwnedBoundaryReport {
+ return constructMiterOwnedBoundary(progressiveMiterOwnedRequest(loops,points,scale,twist,options))
+}
+export function progressiveMiterOwnedRequest(
+ loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,
+):MiterOwnedSourceRequest {
+ const affine=sweepAffineLawPayload(options)
+ const frames=options.frameAxis||options.frameNormal?sweepFrameLawPayload({orientation:'authored',frameAxis:options.frameAxis,frameNormal:options.frameNormal}):{}
+ const correction=(b:ProgressiveMiterOptions['circleCorrection'])=>b?{...b,maxWork:Number.isFinite(b.maxWork)?b.maxWork:null}:undefined
+ const cap=options.capCorrection
+ return {loops,points,
+  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(x=>[x,0,0]),weights:scale.weights,periodic:false},
+  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(x=>[x*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
+  normal:options.normal,closed:options.closed??false,miterLimit:options.miterLimit??4,initialSteps:options.initialSteps??1,maxSteps:options.maxSteps??64,maxDeviation:options.maxDeviation,
+  ...(affine.axis_scale?{axisScale:affine.axis_scale}:{}),...(affine.center_law?{centerLaw:affine.center_law}:{}),
+  ...(frames.frame_axis?{frameAxis:frames.frame_axis,frameNormal:frames.frame_normal}:{}),
+  ...(options.orientationGuide?{orientationGuide:options.orientationGuide}:{}),
+  circleCorrection:correction(options.circleCorrection),capCorrection:cap?{...correction(cap)!,authoredFrame:cap.authoredFrame}:undefined,
+  limits:{maxProducts:options.retainedDecompositionBudgets?.maxProducts??100000,maxFaces:options.retainedDecompositionBudgets?.maxFaces??1024,
+   correspondenceMaxFaces:1024,capMaxEdges:1024,wallCells:options.retainedWallMaxInjectivityCells??10000,exactWork:1000000,
+   domainExactWork:options.capDomainBudgets?.maxExactWork??1000000,projectionExactWork:options.capProjectionBudgets?.maxExactWork??1000000,
+   domainTolerance:options.capDomainBudgets?.tolerance??.001,domainPairs:options.capDomainBudgets?.maxPairs??1000,
+   domainCells:options.capDomainBudgets?.maxCells??10000,projectionCells:options.capProjectionBudgets?.maxCells??10000,
+   capRegions:(options.volumeBudgets??DEFAULT_SWEEP_VOLUME_BUDGETS).capBudgets},
+ }
+}

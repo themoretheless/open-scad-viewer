@@ -1,0 +1,7 @@
+# Reduced-observer A/A still rejected
+
+Series run-1792591888080760000 stopped on its first clean mesh84 control: ratio 1.0199924, 95% CI [0.9823954, 1.0439447], width 1.0626523 >1.06. All frozen hashes unchanged; no AB. Reduced observer cost did not establish stable measurements.
+
+Over the 16.685-second fixture/exit observation interval, cumulative CPU time increased by 7.67 s for the Codex renderer, 2.78 s for the Talk renderer, 1.67 s NotificationCenter, 1.59 s Codex Service and 0.37 s the observer. Total sampled CPU idle ranged 69.2–82.2%. These observations identify concurrent desktop activity but do not prove it caused individual timing deviations; process CPU telemetry excludes other UIDs, and aggregate AGX includes our fixture. No processes were stopped.
+
+Sampling design also has avoidable temporal separation: old ABBA performed 32 contiguous full workflows per position, grouping variants into roughly 60-ms slices. Next design keeps 32 workflows per position, 48 blocks, 3-second warmup, exact complete-workflow timers and original acceptance gates, but repeats one-workflow ABBA cycles within each block and then averages. Other cases analogously keep eight cycles. This brings compared variants closer in time without selecting samples or increasing the sample count. All old series remain rejected and excluded. Rebuild/freeze and start all AA from zero. This is a measurement-design revision, not a claimed production improvement.

@@ -1,0 +1,18 @@
+[package]
+name = "gcode-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+crc32fast = "=1.5.2"
+math-core = { workspace = true }
+printer-core = { workspace = true }
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_print_export"
+path = "examples/bench_print_export.rs"

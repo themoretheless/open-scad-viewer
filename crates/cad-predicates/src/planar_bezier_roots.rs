@@ -41,6 +41,7 @@ pub struct PlanarScalarDecision {
 /// Exact positive content reduction keeps repeated-root PRS coefficients
 /// small. The bounded integer fast path is optional: wider expansions retain
 /// their exact coefficients and the normal work/precision guards still apply.
+#[inline]
 fn primitive_common(
     values: &mut [Expansion],
     ctx: &mut PredicateContext<'_>,
@@ -50,14 +51,17 @@ fn primitive_common(
     }
     Expansion::reduce_projective(values, ctx)
 }
+#[inline]
 fn trim(p: &mut Poly) {
     while p.len() > 1 && p.last().unwrap().sign() == Sign::Zero {
         p.pop();
     }
 }
+#[inline]
 fn zero(p: &Poly) -> bool {
     p.iter().all(|c| c.sign() == Sign::Zero)
 }
+#[inline]
 fn normalize(p: &mut Poly, ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
     trim(p);
     primitive_common(p, ctx)?;
@@ -140,9 +144,11 @@ fn sub(a: &Poly, b: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reaso
     trim(&mut out);
     Ok(out)
 }
+#[inline]
 fn scaled(a: &Poly, b: &Expansion, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     a.iter().map(|a| a.mul(b, ctx)).collect()
 }
+#[inline]
 fn derivative(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> {
     if p.len() == 1 {
         return Ok(vec![Expansion::scalar(0.)]);
@@ -151,6 +157,7 @@ fn derivative(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Poly, Reason> 
         .map(|i| p[i].mul(&Expansion::integer(i as u64, ctx)?, ctx))
         .collect()
 }
+#[inline]
 fn at(p: &Poly, t: f64, ctx: &mut PredicateContext<'_>) -> Result<Sign, Reason> {
     let t = Expansion::scalar(t);
     let mut result = Expansion::scalar(0.);
@@ -205,7 +212,8 @@ fn sturm(p: &Poly, ctx: &mut PredicateContext<'_>) -> Result<Vec<Poly>, Reason> 
     let p_len = p.len();
     let mut d = derivative(&p, ctx)?;
     normalize(&mut d, ctx)?;
-    let mut chain = vec![p];
+    let mut chain = Vec::with_capacity(p_len + 1);
+    chain.push(p);
     if zero(&d) {
         return Ok(chain);
     }
@@ -276,7 +284,7 @@ pub(crate) fn isolate(
         return Ok(roots);
     }
     let (chain, mut gcd) = square_free_chain(p, ctx)?;
-    let mut gcd_chains = Vec::new();
+    let mut gcd_chains = Vec::with_capacity(gcd.len());
     while gcd.len() > 1 {
         let (sf, next) = square_free_chain(&gcd, ctx)?;
         gcd_chains.push(sf);
@@ -285,12 +293,13 @@ pub(crate) fn isolate(
         }
         gcd = next;
     }
-    let mut boxes = Vec::new();
+    let mut boxes = Vec::with_capacity(p.len());
     if at(&chain[0], 0., ctx)? == Sign::Zero {
         boxes.push([0., 0.]);
     }
     let initial = count(&chain, 0., 1., ctx)?;
-    let mut pending = vec![(0., 1., initial, 0usize)];
+    let mut pending = Vec::with_capacity(16);
+    pending.push((0., 1., initial, 0usize));
     while let Some((lo, hi, number, depth)) = pending.pop() {
         ctx.charge(1)?;
         if number == 0 {
@@ -319,7 +328,7 @@ pub(crate) fn isolate(
         pending.push((lo, mid, left, depth + 1));
     }
     boxes.sort_by(|a, b| a[0].total_cmp(&b[0]));
-    let mut roots = Vec::new();
+    let mut roots = Vec::with_capacity(boxes.len());
     for interval in boxes {
         let mut multiplicity = 1;
         for sf in &gcd_chains {

@@ -36,7 +36,7 @@ pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f
         return Err(Error::new("BREP_INVALID_INPUT", "Nesting requires nonempty closed shells, positive tolerances and bounded work"));
     }
     let total_pairs = n*(n-1)/2;
-    let mut out = Report { pairs: Vec::new(), total_pairs, cells: 0, domain_cells: 0, parents: None, roles_consistent: None };
+    let mut out = Report { pairs: Vec::with_capacity(total_pairs.min(max_pairs)), total_pairs, cells: 0, domain_cells: 0, parents: None, roles_consistent: None };
     let shells = (0..n).map(|i| solid_audit::isolated_outward_shell(model,i,false)).collect::<Result<Vec<_>>>()?;
     // Index only this invocation's fresh complete proof. Keep the exact
     // separation predicates; avoid rescanning every record for every face pair.

@@ -17,6 +17,7 @@ pub mod parallel;
 mod registration;
 mod rounding;
 pub use rounding::{next_down, next_up};
+pub mod spatial;
 mod stats;
 mod transform_error;
 mod types;
@@ -59,6 +60,12 @@ pub use nearest_two::{
     nearest_two_first_only, nearest_two_ratios_accelerated,
 };
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
+pub use spatial::{
+    Aabb3, CatmullRomSpline3, DualQuat, Frustum, Obb3, Plane3, Quat, Ray3, barycentric_coords_3d,
+    closest_point_on_triangle_3d, evaluate_catmull_rom_3d, evaluate_catmull_rom_tangent_3d,
+    plane_from_points_pca, ray_triangle_intersect_moller_trumbore, solve_linear_3x3,
+    symmetric_eigen3,
+};
 pub use stats::{
     POINT_CLOUD_STATS_WGSL, PointCloudStats, point_cloud_stats, point_cloud_stats_accelerated,
     transformed_point_cloud_stats, transformed_point_cloud_stats_accelerated,

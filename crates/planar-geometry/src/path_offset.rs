@@ -97,17 +97,17 @@ pub fn offset_closed_rings(rings: &Rings, opts: &OffsetOptions) -> Result<Rings>
     check(!source.is_empty(), "Offset source normalized empty")?;
 
     let half = opts.distance.abs();
-    let mut bands: Rings = Vec::new();
+    let stroke = crate::stroke::StrokeOptions {
+        width: 2. * half,
+        join: opts.join,
+        miter_limit: opts.miter_limit,
+        ..Default::default()
+    };
+    let arc_tolerance = half * (1. - (std::f64::consts::PI / opts.segments as f64).cos());
+    let tolerance = opts.tolerance.min(arc_tolerance.max(f64::EPSILON * half));
+    let mut bands: Rings = Vec::with_capacity(source.len() * 2);
     for ring in &source {
         let path = BezierPath::from_polyline(ring, true)?;
-        let stroke = crate::stroke::StrokeOptions {
-            width: 2. * half,
-            join: opts.join,
-            miter_limit: opts.miter_limit,
-            ..Default::default()
-        };
-        let arc_tolerance = half * (1. - (std::f64::consts::PI / opts.segments as f64).cos());
-        let tolerance = opts.tolerance.min(arc_tolerance.max(f64::EPSILON * half));
         for contour in crate::stroke::outline_stroke_tol(&path, &stroke, tolerance)? {
             bands.push(contour.to_ring(tolerance)?);
         }
@@ -145,7 +145,8 @@ pub fn offset_closed_path(
     opts: &OffsetOptions,
 ) -> Result<Vec<BezierPath>> {
     check(outer.closed, "Offset path must be closed")?;
-    let mut rings = vec![outer.to_ring(opts.tolerance)?];
+    let mut rings = Vec::with_capacity(1 + holes.len());
+    rings.push(outer.to_ring(opts.tolerance)?);
     for h in holes {
         check(h.closed, "Offset hole must be closed")?;
         rings.push(h.to_ring(opts.tolerance)?);

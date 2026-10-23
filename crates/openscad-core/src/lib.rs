@@ -34,6 +34,9 @@ pub mod serialize;
 pub mod value;
 
 pub use ast::{ExpressionArgument, ModuleParam, Statement, ViewportModifier};
+pub use builtins::{
+    fold_constant_expr, lookup_table_interpolate, vector_cross_2d, vector_cross_3d, vector_norm,
+};
 pub use lexer::{TT, tokenize};
 pub use parser::Parser;
 

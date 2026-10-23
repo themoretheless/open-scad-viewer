@@ -4,6 +4,7 @@ use crate::{Result, check};
 use rustc_hash::FxHashMap;
 use std::collections::BTreeSet;
 
+pub type Point = math_core::V2;
 pub type Rings = Vec<Vec<math_core::V2>>;
 pub use math_core::{cross2, sub2};
 pub fn area(r: &[[f64; 2]]) -> f64 {
@@ -14,6 +15,267 @@ pub fn area(r: &[[f64; 2]]) -> f64 {
         .map(|i| cross2(sub2(r[i], origin), sub2(r[i + 1], origin)))
         .sum::<f64>()
         / 2.
+}
+
+/// Total Euclidean perimeter of a collection of closed polygon rings.
+pub fn perimeter(rings: &Rings) -> f64 {
+    let mut total = 0.0;
+    for r in rings {
+        if r.len() < 2 {
+            continue;
+        }
+        let n = if r.len() > 2 && r.first() == r.last() {
+            r.len() - 1
+        } else {
+            r.len()
+        };
+        if n < 2 {
+            continue;
+        }
+        for i in 0..n {
+            let a = r[i];
+            let b = r[(i + 1) % n];
+            total += (b[0] - a[0]).hypot(b[1] - a[1]);
+        }
+    }
+    total
+}
+
+/// Area-weighted 2D centroid of a collection of closed polygon rings (including holes
+/// with opposite winding). Falls back to vertex-average centroid if the signed area
+/// vanishes, or returns `None` if `rings` has no finite vertices.
+pub fn centroid(rings: &Rings) -> Option<[f64; 2]> {
+    let mut area2_sum = 0.0;
+    let mut cx_sum = 0.0;
+    let mut cy_sum = 0.0;
+    let mut vx_sum = 0.0;
+    let mut vy_sum = 0.0;
+    let mut v_count = 0usize;
+
+    for r in rings {
+        let n = if r.len() > 1 && r.first() == r.last() {
+            r.len() - 1
+        } else {
+            r.len()
+        };
+        for &p in &r[..n] {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return None;
+            }
+            vx_sum += p[0];
+            vy_sum += p[1];
+            v_count += 1;
+        }
+        if n < 3 {
+            continue;
+        }
+        let origin = r[0];
+        for i in 1..n - 1 {
+            let u = sub2(r[i], origin);
+            let v = sub2(r[i + 1], origin);
+            let cross = cross2(u, v);
+            area2_sum += cross;
+            cx_sum += cross * (origin[0] + r[i][0] + r[i + 1][0]);
+            cy_sum += cross * (origin[1] + r[i][1] + r[i + 1][1]);
+        }
+    }
+    if v_count == 0 {
+        return None;
+    }
+    if area2_sum.abs() > 1e-15 {
+        Some([cx_sum / (3.0 * area2_sum), cy_sum / (3.0 * area2_sum)])
+    } else {
+        Some([vx_sum / v_count as f64, vy_sum / v_count as f64])
+    }
+}
+
+/// Axis-aligned 2D bounding box `(min_xy, max_xy)` enclosing all finite vertices in `rings`.
+/// Returns `None` if `rings` contains no vertices or any vertex coordinate is non-finite.
+pub fn bounding_box(rings: &Rings) -> Option<([f64; 2], [f64; 2])> {
+    let mut min = [f64::INFINITY; 2];
+    let mut max = [f64::NEG_INFINITY; 2];
+    let mut any = false;
+    for r in rings {
+        for &p in r {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return None;
+            }
+            min[0] = min[0].min(p[0]);
+            min[1] = min[1].min(p[1]);
+            max[0] = max[0].max(p[0]);
+            max[1] = max[1].max(p[1]);
+            any = true;
+        }
+    }
+    any.then_some((min, max))
+}
+
+/// Planar second moments of area $(I_{xx}, I_{yy}, I_{xy})$ about the coordinate origin $(0, 0)$
+/// for a collection of oriented closed polygon rings (CCW outer contours contribute positively,
+/// CW holes contribute negatively) via Green's theorem:
+/// - $I_{xx} = \iint y^2 \, dA$
+/// - $I_{yy} = \iint x^2 \, dA$
+/// - $I_{xy} = \iint x y \, dA$
+pub fn moments_of_inertia_2d(rings: &Rings) -> (f64, f64, f64) {
+    let mut ixx_sum = 0.0;
+    let mut iyy_sum = 0.0;
+    let mut ixy_sum = 0.0;
+    for r in rings {
+        let n = if r.len() > 1 && r.first() == r.last() {
+            r.len() - 1
+        } else {
+            r.len()
+        };
+        if n < 3 {
+            continue;
+        }
+        for i in 0..n {
+            let [x0, y0] = r[i];
+            let [x1, y1] = r[(i + 1) % n];
+            if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() {
+                return (0.0, 0.0, 0.0);
+            }
+            let c = x0 * y1 - x1 * y0;
+            ixx_sum += c * (y0 * y0 + y0 * y1 + y1 * y1);
+            iyy_sum += c * (x0 * x0 + x0 * x1 + x1 * x1);
+            ixy_sum += c * (x0 * y1 + 2.0 * x0 * y0 + 2.0 * x1 * y1 + x1 * y0);
+        }
+    }
+    (ixx_sum / 12.0, iyy_sum / 12.0, ixy_sum / 24.0)
+}
+
+/// Computes the 2D area-weighted centroid, principal moments of inertia $(I_{\max}, I_{\min})$
+/// about the centroid, and principal axis orientation angle
+/// $\theta = \frac{1}{2} \operatorname{atan2}(-2 I_{xy}, I_{xx} - I_{yy})$ (in radians) for `rings`.
+/// Returns `None` if `rings` has non-finite coordinates or zero signed area.
+pub fn principal_axes_2d(rings: &Rings) -> Option<([f64; 2], f64, f64, f64)> {
+    let c = centroid(rings)?;
+    let mut area_sum = 0.0;
+    let mut shifted = Vec::with_capacity(rings.len());
+    for r in rings {
+        area_sum += area(r);
+        let mut sr = Vec::with_capacity(r.len());
+        for &p in r {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return None;
+            }
+            sr.push([p[0] - c[0], p[1] - c[1]]);
+        }
+        shifted.push(sr);
+    }
+    if area_sum.abs() <= 1e-15 {
+        return None;
+    }
+    let (ixx, iyy, ixy) = moments_of_inertia_2d(&shifted);
+    let avg = 0.5 * (ixx + iyy);
+    let radius = (0.5 * (ixx - iyy)).hypot(ixy);
+    let i_max = avg + radius;
+    let i_min = avg - radius;
+    let theta = 0.5 * (-2.0 * ixy).atan2(ixx - iyy);
+    Some((c, i_max, i_min, theta))
+}
+
+/// Ratio of the net profile area `|Σ area(ring)|` to the area of the 2D convex hull
+/// [`hull2`] enclosing all vertices of `rings`, clamped to `[0.0, 1.0]`.
+/// Useful for DFM and 2D sheet nesting efficiency analysis (returns `0.0` for empty or
+/// zero-hull-area profiles).
+pub fn convexity_ratio(rings: &Rings) -> f64 {
+    let mut all_pts = Vec::new();
+    let mut net_area = 0.0;
+    for r in rings {
+        for &p in r {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return 0.0;
+            }
+            all_pts.push(p);
+        }
+        net_area += area(r);
+    }
+    if all_pts.len() < 3 {
+        return 0.0;
+    }
+    let hull = hull2(all_pts);
+    let hull_area = area(&hull).abs();
+    if hull_area <= 1e-15 {
+        return 0.0;
+    }
+    (net_area.abs() / hull_area).clamp(0.0, 1.0)
+}
+
+/// Computes the exact 2D minimum enclosing circle `(center, radius)` for `points`.
+/// Returns `None` if `points` is empty or contains non-finite coordinates.
+pub fn minimum_bounding_circle(points: &[Point]) -> Option<(Point, f64)> {
+    if points.is_empty() || points.iter().flatten().any(|v| !v.is_finite()) {
+        return None;
+    }
+    if points.len() == 1 {
+        return Some((points[0], 0.0));
+    }
+    let mut pts = points.to_vec();
+    pts.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    pts.dedup();
+    if pts.len() == 1 {
+        return Some((pts[0], 0.0));
+    }
+    let hull = hull2(pts);
+    let n = hull.len();
+    if n == 2 {
+        let a = hull[0];
+        let b = hull[1];
+        let center = [0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])];
+        let r = 0.5 * (b[0] - a[0]).hypot(b[1] - a[1]);
+        return Some((center, r));
+    }
+    let encloses_all = |c: Point, r: f64| -> bool {
+        let tol = 1e-9 * (1.0 + r);
+        hull.iter()
+            .all(|&p| (p[0] - c[0]).hypot(p[1] - c[1]) <= r + tol)
+    };
+    let mut best: Option<(Point, f64)> = None;
+    let mut update = |c: Point, r: f64| {
+        if r.is_finite()
+            && best.map_or(true, |(_, br)| r < br)
+            && encloses_all(c, r)
+        {
+            best = Some((c, r));
+        }
+    };
+    // Candidate 2-point diameter circles on the convex hull.
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let a = hull[i];
+            let b = hull[j];
+            let c = [0.5 * (a[0] + b[0]), 0.5 * (a[1] + b[1])];
+            let r = 0.5 * (b[0] - a[0]).hypot(b[1] - a[1]);
+            update(c, r);
+        }
+    }
+    // Candidate 3-point circumcircles on the convex hull.
+    for i in 0..n {
+        for j in (i + 1)..n {
+            for k in (j + 1)..n {
+                let a = hull[i];
+                let b = hull[j];
+                let c = hull[k];
+                let d = 2.0
+                    * (a[0] * (b[1] - c[1])
+                        + b[0] * (c[1] - a[1])
+                        + c[0] * (a[1] - b[1]));
+                if d.abs() <= 1e-14 {
+                    continue;
+                }
+                let a2 = a[0] * a[0] + a[1] * a[1];
+                let b2 = b[0] * b[0] + b[1] * b[1];
+                let c2 = c[0] * c[0] + c[1] * c[1];
+                let ux = (a2 * (b[1] - c[1]) + b2 * (c[1] - a[1]) + c2 * (a[1] - b[1])) / d;
+                let uy = (a2 * (c[0] - b[0]) + b2 * (a[0] - c[0]) + c2 * (b[0] - a[0])) / d;
+                let center = [ux, uy];
+                let r = (a[0] - ux).hypot(a[1] - uy);
+                update(center, r);
+            }
+        }
+    }
+    best
 }
 fn winding(p: [f64; 2], rings: &Rings) -> i32 {
     let mut winding = 0;
@@ -62,7 +324,7 @@ pub fn hull2(mut p: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     if p.len() < 3 {
         return p;
     }
-    let mut h = Vec::new();
+    let mut h = Vec::with_capacity(p.len() + 1);
     for &v in &p {
         while h.len() >= 2
             && cross2(
@@ -568,9 +830,9 @@ pub fn offset_join(rings: &Rings, distance: f64, join: &str, segments: usize) ->
     if distance == 0. {
         return Ok(rings.clone());
     }
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(rings.len());
     for r in rings {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(r.len() * 2);
         for i in 0..r.len() {
             let p = r[(i + r.len() - 1) % r.len()];
             let q = r[i];
@@ -959,5 +1221,70 @@ mod tests {
         let r = planar(&a, &b, "xor").unwrap();
         let s: f64 = r.iter().map(|ring| area(ring).abs()).sum();
         assert!((s - 24.).abs() < 1e-6, "xor area={s}");
+    }
+
+    #[test]
+    fn perimeter_and_centroid_handle_holes_and_degeneracy() {
+        let outer = rectangle([0., 0.], [10., 10.]);
+        let hole: Vec<_> = rectangle([2., 2.], [4., 4.]).into_iter().rev().collect();
+        let rings = vec![outer.clone(), hole];
+        assert!((perimeter(&vec![outer]) - 40.).abs() < 1e-12);
+        assert!((perimeter(&rings) - 48.).abs() < 1e-12);
+        let c = centroid(&rings).unwrap();
+        // Area of outer = 100 at (5,5); area of hole = -4 at (3,3).
+        // Combined centroid = (100*5 - 4*3)/96 = 488/96 = 61/12.
+        assert!((c[0] - 61. / 12.).abs() < 1e-12);
+        assert!((c[1] - 61. / 12.).abs() < 1e-12);
+
+        // Degenerate zero-area collinear ring falls back to vertex average.
+        let line_ring = vec![vec![[0., 0.], [2., 0.], [4., 0.]]];
+        assert_eq!(centroid(&line_ring), Some([2., 0.]));
+        assert_eq!(centroid(&vec![]), None);
+    }
+
+    #[test]
+    fn bounding_box_and_moments_of_inertia_2d_with_holes() {
+        let outer = rectangle([0., 0.], [4., 6.]);
+        let hole: Vec<_> = rectangle([1., 1.], [3., 5.]).into_iter().rev().collect();
+        let rings = vec![outer.clone(), hole];
+        assert_eq!(bounding_box(&rings), Some(([0., 0.], [4., 6.])));
+        assert_eq!(bounding_box(&vec![]), None);
+
+        // Single rectangle [0, b] x [0, h] with b=4, h=6:
+        // Ixx = b * h^3 / 3 = 4 * 216 / 3 = 288
+        // Iyy = h * b^3 / 3 = 6 * 64 / 3 = 128
+        // Ixy = b^2 * h^2 / 4 = 16 * 36 / 4 = 144
+        let (ixx, iyy, ixy) = moments_of_inertia_2d(&vec![outer]);
+        assert!((ixx - 288.0).abs() < 1e-10);
+        assert!((iyy - 128.0).abs() < 1e-10);
+        assert!((ixy - 144.0).abs() < 1e-10);
+
+        // Hollow rectangle: subtract hole [1, 3] x [1, 5]:
+        // Hole Ixx = (3 - 1) * (5^3 - 1^3) / 3 = 2 * 124 / 3 = 248 / 3
+        // Hole Iyy = (5 - 1) * (3^3 - 1^3) / 3 = 4 * 26 / 3 = 104 / 3
+        // Hole Ixy = ((3^2 - 1^2)/2) * ((5^2 - 1^2)/2) = 4 * 12 = 48
+        let (h_ixx, h_iyy, h_ixy) = moments_of_inertia_2d(&rings);
+        assert!((h_ixx - (288.0 - 248.0 / 3.0)).abs() < 1e-10);
+        assert!((h_iyy - (128.0 - 104.0 / 3.0)).abs() < 1e-10);
+        assert!((h_ixy - (144.0 - 48.0)).abs() < 1e-10);
+
+        // Principal axes of rectangle [0, 4] x [0, 6]:
+        // Centroid = (2, 3), Ixx_c = 4 * 6^3 / 12 = 72, Iyy_c = 6 * 4^3 / 12 = 32, Ixy_c = 0.
+        let (cent, i_max, i_min, theta) =
+            principal_axes_2d(&vec![rectangle([0., 0.], [4., 6.])]).unwrap();
+        assert!((cent[0] - 2.0).abs() < 1e-12 && (cent[1] - 3.0).abs() < 1e-12);
+        assert!((i_max - 72.0).abs() < 1e-10);
+        assert!((i_min - 32.0).abs() < 1e-10);
+        assert!(theta.abs() < 1e-12);
+
+        // Convexity ratio: solid rectangle has ratio 1.0; hollow rectangle (24 - 8 = 16 / 24) has ratio 2/3.
+        assert!((convexity_ratio(&vec![rectangle([0., 0.], [4., 6.])]) - 1.0).abs() < 1e-12);
+        assert!((convexity_ratio(&rings) - (2.0 / 3.0)).abs() < 1e-12);
+
+        // Minimum bounding circle of [0, 4] x [0, 6]: center = (2, 3), radius = sqrt(2^2 + 3^2) = sqrt(13).
+        let (mbc_c, mbc_r) =
+            minimum_bounding_circle(&rectangle([0., 0.], [4., 6.])).unwrap();
+        assert!((mbc_c[0] - 2.0).abs() < 1e-12 && (mbc_c[1] - 3.0).abs() < 1e-12);
+        assert!((mbc_r - 13.0_f64.sqrt()).abs() < 1e-12);
     }
 }

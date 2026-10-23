@@ -1,0 +1,32 @@
+--- /private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/verify-sweep-source-composition.mts
++++ /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/sweep-b4cd-requalification-2026-10-19/optimized/supplements-recovered-20261021/source-composition.mts
+@@ -3,22 +3,22 @@
+ import {createHash} from 'node:crypto'
+ import {readFileSync,writeFileSync,existsSync} from 'node:fs'
+ import {resolve,join} from 'node:path'
+-import {callGeometryRust} from '../src/services/geometry/kernel'
+-import {checkRetainedAxisAudit} from './retained-axis-audit-contract.mjs'
+-import {checkCompleteFacePairCover} from './sweep-face-pair-cover.mjs'
+-import {checkRetainedEdgeCoverage} from './sweep-retained-edge-coverage.mjs'
++import {callGeometryRust} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/src/services/geometry/kernel.ts'
++import {checkRetainedAxisAudit} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/retained-axis-audit-contract.mjs'
++import {checkCompleteFacePairCover} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/sweep-face-pair-cover.mjs'
++import {checkRetainedEdgeCoverage} from 'file:///private/tmp/osv-sweep-b4cd-interval-candidate-20261019/scripts/sweep-retained-edge-coverage.mjs'
+ 
+ const [directory,output]=process.argv.slice(2)
+ assert(directory&&output&&!existsSync(output),'Supply qualification directory and a new result path')
+ const root=resolve(directory),inputs:Record<string,string>={}
+ const sha=(data:string|Buffer)=>createHash('sha256').update(data).digest('hex')
+ function read(path:string):any {const data=readFileSync(path);inputs[path]=sha(data);return JSON.parse(data.toString())}
+-const gate=read(join(root,'v11-original-source-step37-occt-20261018.json'))
++const gate=read(join(root,'source-step37.json'))
+ assert.equal(gate.state,'complete');assert.equal(gate.passed,true)
+ const manifest=read(gate.manifest);assert.equal(inputs[gate.manifest],gate.manifestSha256)
+ const occt=read(gate.report);assert.equal(inputs[gate.report],gate.reportSha256);assert.equal(occt.passed,true)
+-const intrinsic=read(join(root,'v11-original-source-interiors37-20261018/result.json'))
+-const gaps=read(join(root,'v11-retained-proof-gaps9-20261018.json'))
++const intrinsic=read(join(root,'source-interiors37/result.json'))
++const gaps=read(join(root,'retained-proof-gaps9.json'))
+ for(const report of [intrinsic,gaps]) {
+  assert.equal(report.passed,true);assert.equal(report.manifestSha256,gate.manifestSha256)
+  assert.equal(report.geometryWasmSha256,gate.geometryWasmSha256)

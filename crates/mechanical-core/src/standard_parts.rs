@@ -843,7 +843,7 @@ pub struct KeywaySpec {
     pub hub_groove_depth_t2_mm: f64,
 }
 
-/// Looks up DIN 6885 parallel key and keyway dimensions for a shaft diameter in [6, 130] mm.
+/// Looks up DIN 6885 / ISO R773 parallel key and keyway dimensions for a shaft diameter in [6, 130] mm.
 pub fn shaft_keyway_din6885(shaft_diameter_mm: f64) -> Result<KeywaySpec> {
     if !shaft_diameter_mm.is_finite() || !(6.0..=130.0).contains(&shaft_diameter_mm) {
         return Err(err(
@@ -893,6 +893,79 @@ pub fn shaft_keyway_din6885(shaft_diameter_mm: f64) -> Result<KeywaySpec> {
     })
 }
 
+/// Alias for [`shaft_keyway_din6885`]: standard parallel shaft key & keyway dimensions
+/// ($b \times h$, shaft groove depth $t_1$, hub groove depth $t_2$) per DIN 6885 / ISO R773.
+pub fn keyway_din_6885(shaft_diameter_mm: f64) -> Result<KeywaySpec> {
+    shaft_keyway_din6885(shaft_diameter_mm)
+}
+
+/// Generates the exact 2D equidistant epitrochoid profile loop (`samples` vertices) for a cycloidal
+/// speed reducer disc with `num_lobes` lobes ($N$), outer ring pin circle radius $R$ (`pin_circle_radius_mm`),
+/// roller pin radius $R_r$ (`pin_radius_mm`), and eccentric shaft offset $e$ (`eccentricity_mm`).
+pub fn cycloidal_disc_profile(
+    pin_circle_radius_mm: f64,
+    pin_radius_mm: f64,
+    num_lobes: usize,
+    eccentricity_mm: f64,
+    samples: usize,
+) -> Result<Vec<[f64; 2]>> {
+    if !pin_circle_radius_mm.is_finite() || !(2.0..=2000.0).contains(&pin_circle_radius_mm) {
+        return Err(err(
+            "cycloidal_disc",
+            "pin_circle_radius_mm must be finite and between 2 and 2000 mm.",
+        ));
+    }
+    if !pin_radius_mm.is_finite()
+        || pin_radius_mm <= 0.1
+        || pin_radius_mm >= 0.5 * pin_circle_radius_mm
+    {
+        return Err(err(
+            "cycloidal_disc",
+            "pin_radius_mm must be positive and less than 0.5 * pin_circle_radius_mm.",
+        ));
+    }
+    if !(3..=200).contains(&num_lobes) {
+        return Err(err(
+            "cycloidal_disc",
+            "num_lobes must be between 3 and 200.",
+        ));
+    }
+    let n_pins = (num_lobes + 1) as f64;
+    let max_ecc = pin_circle_radius_mm / n_pins;
+    if !eccentricity_mm.is_finite() || eccentricity_mm <= 0.01 || eccentricity_mm >= max_ecc {
+        return Err(err(
+            "cycloidal_disc",
+            "eccentricity_mm must be positive and strictly less than pin_circle_radius_mm / (num_lobes + 1) to prevent cusps.",
+        ));
+    }
+    if !(16..=8192).contains(&samples) {
+        return Err(err(
+            "cycloidal_disc",
+            "samples must be between 16 and 8192.",
+        ));
+    }
+    let r = pin_circle_radius_mm;
+    let rr = pin_radius_mm;
+    let e = eccentricity_mm;
+    let n = num_lobes as f64;
+    let mut profile = Vec::with_capacity(samples);
+    for i in 0..samples {
+        let theta = TAU * (i as f64) / (samples as f64);
+        let (sin_t, cos_t) = theta.sin_cos();
+        let (sin_nt, cos_nt) = (n * theta).sin_cos();
+        let (sin_n1t, cos_n1t) = ((n + 1.0) * theta).sin_cos();
+        // Contact angle psi between roller pin and trochoid normal:
+        // tan(psi) = sin(N * theta) / (R / (e * (N + 1)) - cos(N * theta))
+        let num = sin_nt;
+        let den = r / (e * n_pins) - cos_nt;
+        let psi = num.atan2(den);
+        let x = r * cos_t - rr * (theta - psi).cos() - e * cos_n1t;
+        let y = -r * sin_t + rr * (theta - psi).sin() + e * sin_n1t;
+        profile.push([x, y]);
+    }
+    Ok(profile)
+}
+
 /// DIN 471 (external shaft) / DIN 472 (internal bore) circlip groove specification.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RetainingRingGrooveSpec {
@@ -937,6 +1010,113 @@ pub fn retaining_ring_groove(
         groove_diameter_d2_mm: d2,
         groove_width_m_mm: m,
         ring_thickness_s_mm: s,
+    })
+}
+
+/// DIN 471 external shaft retaining ring (circlip) and groove specification.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RetainingRingSpec {
+    pub shaft_diameter_d1_mm: f64,
+    pub groove_diameter_d2_mm: f64,
+    pub groove_width_m_mm: f64,
+    pub ring_thickness_s_mm: f64,
+    /// Minimum shaft shoulder edge margin $n_{\min}$ (mm) required to prevent groove shear-out.
+    pub min_edge_margin_n_mm: f64,
+}
+
+/// Computes DIN 471 external shaft retaining ring (circlip) groove diameter $d_2$, groove width $m$,
+/// ring thickness $s$, and minimum shaft edge margin $n_{\min}$ for shaft diameters in $[3, 100]\text{ mm}$.
+pub fn retaining_ring_din_471(shaft_diameter_mm: f64) -> Result<RetainingRingSpec> {
+    if !shaft_diameter_mm.is_finite() || !(3.0..=100.0).contains(&shaft_diameter_mm) {
+        return Err(err(
+            "retaining_ring_din_471",
+            "Shaft diameter for DIN 471 retaining ring must be between 3 and 100 mm.",
+        ));
+    }
+    let d = shaft_diameter_mm;
+    let (s, m, radial_depth) = if d < 5.0 {
+        (0.4, 0.5, 0.2)
+    } else if d < 7.0 {
+        (0.7, 0.8, 0.25)
+    } else if d < 10.0 {
+        (0.8, 0.9, 0.3)
+    } else if d < 18.0 {
+        (1.0, 1.1, 0.45)
+    } else if d < 25.0 {
+        (1.2, 1.3, 0.6)
+    } else if d < 35.0 {
+        (1.5, 1.6, 0.75)
+    } else if d < 50.0 {
+        (1.75, 1.85, 1.0)
+    } else {
+        (2.0, 2.15, 1.25)
+    };
+    let d2 = d - 2.0 * radial_depth;
+    let n_min = (3.0 * radial_depth).max(0.6);
+    Ok(RetainingRingSpec {
+        shaft_diameter_d1_mm: d,
+        groove_diameter_d2_mm: d2,
+        groove_width_m_mm: m,
+        ring_thickness_s_mm: s,
+        min_edge_margin_n_mm: n_min,
+    })
+}
+
+/// ISO 2338 (type m6) unhardened precision cylindrical dowel pin and H7 locating hole specification.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DowelPinSpec {
+    pub nominal_diameter_mm: f64,
+    pub length_mm: f64,
+    pub pin_min_diameter_mm: f64,
+    pub pin_max_diameter_mm: f64,
+    pub hole_h7_min_diameter_mm: f64,
+    pub hole_h7_max_diameter_mm: f64,
+    pub chamfer_length_mm: f64,
+    pub recommended_min_engagement_mm: f64,
+}
+
+/// Computes ISO 2338 cylindrical dowel pin m6 diameter tolerance limits, mating H7 locating hole
+/// limits, end chamfer length, and recommended minimum press engagement depth.
+pub fn dowel_pin_iso_2338(nominal_diameter_mm: f64, length_mm: f64) -> Result<DowelPinSpec> {
+    if !nominal_diameter_mm.is_finite() || !(1.0..=50.0).contains(&nominal_diameter_mm) {
+        return Err(err(
+            "dowel_pin_iso_2338",
+            "Nominal dowel pin diameter must be between 1.0 and 50.0 mm.",
+        ));
+    }
+    if !length_mm.is_finite()
+        || length_mm < 2.0 * nominal_diameter_mm
+        || length_mm > 20.0 * nominal_diameter_mm
+    {
+        return Err(err(
+            "dowel_pin_iso_2338",
+            "Dowel pin length_mm must be between 2 * nominal_diameter_mm and 20 * nominal_diameter_mm.",
+        ));
+    }
+    let d = nominal_diameter_mm;
+    // ISO 286 m6 pin limits (um) and H7 hole limits (um) by diameter step
+    let (m6_ei_um, m6_es_um, h7_es_um, chamfer_mm) = if d <= 3.0 {
+        (2.0, 8.0, 10.0, 0.4)
+    } else if d <= 6.0 {
+        (4.0, 12.0, 12.0, 0.8)
+    } else if d <= 10.0 {
+        (6.0, 15.0, 15.0, 1.2)
+    } else if d <= 18.0 {
+        (7.0, 18.0, 18.0, 1.6)
+    } else if d <= 30.0 {
+        (8.0, 21.0, 21.0, 2.0)
+    } else {
+        (9.0, 25.0, 25.0, 2.5)
+    };
+    Ok(DowelPinSpec {
+        nominal_diameter_mm: d,
+        length_mm,
+        pin_min_diameter_mm: d + m6_ei_um * 1e-3,
+        pin_max_diameter_mm: d + m6_es_um * 1e-3,
+        hole_h7_min_diameter_mm: d,
+        hole_h7_max_diameter_mm: d + h7_es_um * 1e-3,
+        chamfer_length_mm: chamfer_mm,
+        recommended_min_engagement_mm: (1.5 * d).min(0.45 * length_mm),
     })
 }
 
@@ -1179,6 +1359,219 @@ pub fn helical_spring_analysis(o: &HelicalSpringOptions) -> Result<HelicalSpring
     })
 }
 
+/// ISO 3601 full O-ring gland specification including inner/outer gland diameters and fill ratio.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OringGlandSpec {
+    pub cord_diameter_mm: f64,
+    pub inner_diameter_mm: f64,
+    pub gland_inner_diameter_mm: f64,
+    pub gland_outer_diameter_mm: f64,
+    pub groove_depth_mm: f64,
+    pub groove_width_mm: f64,
+    pub compression_ratio: f64,
+    pub gland_fill_ratio: f64,
+    pub corner_radius_mm: f64,
+}
+
+/// Computes ISO 3601 axial/radial O-ring gland dimensions from cord diameter (`cord_diameter_mm`),
+/// O-ring inner diameter (`inner_diameter_mm`), and `static_seal` flag (`true` for static seal, `false` for dynamic).
+pub fn oring_gland_spec(
+    cord_diameter_mm: f64,
+    inner_diameter_mm: f64,
+    static_seal: bool,
+) -> Result<OringGlandSpec> {
+    if !cord_diameter_mm.is_finite() || !(1.0..=10.0).contains(&cord_diameter_mm) {
+        return Err(err(
+            "o_ring",
+            "O-ring cord_diameter_mm must be between 1.0 and 10.0 mm.",
+        ));
+    }
+    if !inner_diameter_mm.is_finite() || !(2.0..=1000.0).contains(&inner_diameter_mm) {
+        return Err(err(
+            "o_ring",
+            "O-ring inner_diameter_mm must be between 2.0 and 1000.0 mm.",
+        ));
+    }
+    let groove = o_ring_groove_spec(cord_diameter_mm, !static_seal)?;
+    let gland_outer = inner_diameter_mm + 2.0 * groove.groove_depth_h_mm;
+    let oring_area = PI * (0.5 * cord_diameter_mm).powi(2);
+    let gland_area = groove.groove_depth_h_mm * groove.groove_width_b_mm;
+    Ok(OringGlandSpec {
+        cord_diameter_mm,
+        inner_diameter_mm,
+        gland_inner_diameter_mm: inner_diameter_mm,
+        gland_outer_diameter_mm: gland_outer,
+        groove_depth_mm: groove.groove_depth_h_mm,
+        groove_width_mm: groove.groove_width_b_mm,
+        compression_ratio: groove.compression_ratio,
+        gland_fill_ratio: oring_area / gland_area.max(1e-9),
+        corner_radius_mm: groove.corner_radius_mm,
+    })
+}
+
+/// Epicyclic planetary gearset kinematic and geometric specification.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlanetaryGearsetSpec {
+    pub sun_teeth: usize,
+    pub planet_teeth: usize,
+    pub ring_teeth: usize,
+    pub num_planets: usize,
+    pub module_mm: f64,
+    pub center_distance_mm: f64,
+    pub sun_pitch_diameter_mm: f64,
+    pub planet_pitch_diameter_mm: f64,
+    pub ring_pitch_diameter_mm: f64,
+    /// Reduction ratio with fixed ring gear, sun input, carrier output: $1 + Z_{\text{ring}} / Z_{\text{sun}}$.
+    pub sun_to_carrier_ratio: f64,
+    /// Clear gap between adjacent planet tip circles in millimeters.
+    pub adjacent_planet_tip_clearance_mm: f64,
+}
+
+/// Computes epicyclic planetary gearset parameters and verifies concentricity ($Z_{\text{ring}} = Z_{\text{sun}} + 2 Z_{\text{planet}}$),
+/// equal-spacing assembly condition ($(Z_{\text{sun}} + Z_{\text{ring}}) \bmod N_{\text{planets}} = 0$),
+/// and adjacent planet tip clearance.
+pub fn planetary_gearset_params(
+    sun_teeth: usize,
+    planet_teeth: usize,
+    num_planets: usize,
+    module_mm: f64,
+) -> std::result::Result<PlanetaryGearsetSpec, String> {
+    if sun_teeth < 6 || planet_teeth < 6 {
+        return Err("Sun and planet tooth counts must be at least 6.".into());
+    }
+    if !(2..=8).contains(&num_planets) {
+        return Err("Number of planets must be between 2 and 8.".into());
+    }
+    if !module_mm.is_finite() || !(0.1..=100.0).contains(&module_mm) {
+        return Err("Module must be finite and between 0.1 and 100 mm.".into());
+    }
+    let ring_teeth = sun_teeth + 2 * planet_teeth;
+    if !(sun_teeth + ring_teeth).is_multiple_of(num_planets) {
+        return Err(format!(
+            "Assembly condition failed: (Z_sun + Z_ring) = {} is not divisible by num_planets = {}.",
+            sun_teeth + ring_teeth,
+            num_planets
+        ));
+    }
+    let zs = sun_teeth as f64;
+    let zp = planet_teeth as f64;
+    let zr = ring_teeth as f64;
+    let center_distance_mm = 0.5 * module_mm * (zs + zp);
+    let planet_tip_diameter_mm = module_mm * (zp + 2.0);
+    let center_to_center = 2.0 * center_distance_mm * (PI / num_planets as f64).sin();
+    let tip_clearance = center_to_center - planet_tip_diameter_mm;
+    if tip_clearance <= 0.0 {
+        return Err(format!(
+            "Adjacent planet tips collide (clearance = {tip_clearance:.3} mm)."
+        ));
+    }
+    Ok(PlanetaryGearsetSpec {
+        sun_teeth,
+        planet_teeth,
+        ring_teeth,
+        num_planets,
+        module_mm,
+        center_distance_mm,
+        sun_pitch_diameter_mm: module_mm * zs,
+        planet_pitch_diameter_mm: module_mm * zp,
+        ring_pitch_diameter_mm: module_mm * zr,
+        sun_to_carrier_ratio: 1.0 + zr / zs,
+        adjacent_planet_tip_clearance_mm: tip_clearance,
+    })
+}
+
+/// ISO 2901 / DIN 103 metric trapezoidal lead screw ($30^\circ$ flank angle) geometric and mechanical specification.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LeadScrewSpec {
+    pub nominal_diameter_mm: f64,
+    pub pitch_mm: f64,
+    pub starts: usize,
+    pub pitch_diameter_d2_mm: f64,
+    pub root_diameter_d3_mm: f64,
+    pub lead_mm: f64,
+    pub lead_angle_rad: f64,
+    pub lead_angle_deg: f64,
+    pub friction_angle_rad: f64,
+    pub friction_angle_deg: f64,
+    pub self_locking: bool,
+    pub forward_efficiency: f64,
+    /// Raising torque required per Newton of axial load ($T / F$ in $\text{N}\cdot\text{m}/\text{N}$).
+    pub raising_torque_per_n_nm: f64,
+}
+
+/// Computes ISO 2901 / DIN 103 metric trapezoidal thread ($30^\circ$ total thread angle, $\beta = 15^\circ$)
+/// pitch diameter $d_2 = d - 0.5 p$, root diameter $d_3 = d - p - 2 a_c$, lead $l = p \cdot n$,
+/// helix lead angle $\lambda$, thread-flank friction angle $\rho$, self-locking status ($\lambda < \rho$),
+/// forward mechanical efficiency $\eta$, and raising torque per Newton of axial load.
+pub fn lead_screw_trapezoidal_iso_2901(
+    nominal_dia_mm: f64,
+    pitch_mm: f64,
+    starts: usize,
+    friction_coeff: f64,
+) -> Result<LeadScrewSpec> {
+    if !nominal_dia_mm.is_finite() || !(6.0..=200.0).contains(&nominal_dia_mm) {
+        return Err(err(
+            "lead_screw",
+            "nominal_dia_mm must be finite and between 6 and 200 mm.",
+        ));
+    }
+    if !pitch_mm.is_finite()
+        || !(1.0..=24.0).contains(&pitch_mm)
+        || nominal_dia_mm <= 2.2 * pitch_mm
+    {
+        return Err(err(
+            "lead_screw",
+            "pitch_mm must be between 1 and 24 mm with nominal_dia_mm > 2.2 * pitch_mm.",
+        ));
+    }
+    if !(1..=8).contains(&starts) {
+        return Err(err("lead_screw", "starts must be between 1 and 8."));
+    }
+    if !friction_coeff.is_finite() || !(0.0..=0.8).contains(&friction_coeff) {
+        return Err(err(
+            "lead_screw",
+            "friction_coeff must be finite and between 0.0 and 0.8.",
+        ));
+    }
+    // ISO 2901 crest clearance a_c by pitch
+    let a_c = if pitch_mm <= 1.5 {
+        0.15
+    } else if pitch_mm <= 5.0 {
+        0.25
+    } else if pitch_mm <= 12.0 {
+        0.5
+    } else {
+        1.0
+    };
+    let d2 = nominal_dia_mm - 0.5 * pitch_mm;
+    let d3 = nominal_dia_mm - pitch_mm - 2.0 * a_c;
+    let lead = pitch_mm * (starts as f64);
+    let lambda = (lead / (PI * d2)).atan();
+    // ISO trapezoidal thread has 30 deg total angle (15 deg half-angle beta)
+    let cos_beta = 15.0_f64.to_radians().cos();
+    let mu_prime = friction_coeff / cos_beta;
+    let rho = mu_prime.atan();
+    let self_locking = lambda < rho;
+    let eta = (lambda.tan() / (lambda + rho).tan()).clamp(0.0, 1.0);
+    let torque_per_n_nm = 0.5 * (d2 * 1e-3) * (lambda + rho).tan();
+
+    Ok(LeadScrewSpec {
+        nominal_diameter_mm: nominal_dia_mm,
+        pitch_mm,
+        starts,
+        pitch_diameter_d2_mm: d2,
+        root_diameter_d3_mm: d3,
+        lead_mm: lead,
+        lead_angle_rad: lambda,
+        lead_angle_deg: lambda.to_degrees(),
+        friction_angle_rad: rho,
+        friction_angle_deg: rho.to_degrees(),
+        self_locking,
+        forward_efficiency: eta,
+        raising_torque_per_n_nm: torque_per_n_nm,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1292,6 +1685,57 @@ mod tests {
         assert_eq!(spring.spring_index, 8.0);
         assert!(spring.wahl_factor > 1.15);
         assert!(spring.deflection_mm > 0.0);
+
+        let gland = oring_gland_spec(2.5, 20.0, true).unwrap();
+        assert_eq!(gland.gland_inner_diameter_mm, 20.0);
+        assert!(gland.gland_outer_diameter_mm > 23.0);
+        assert!(gland.gland_fill_ratio > 0.65 && gland.gland_fill_ratio < 0.90);
+
+        let pset = planetary_gearset_params(18, 18, 3, 1.5).unwrap();
+        assert_eq!(pset.ring_teeth, 54);
+        assert!((pset.sun_to_carrier_ratio - 4.0).abs() < 1e-9);
+        assert!((pset.center_distance_mm - 27.0).abs() < 1e-9);
+        assert!(planetary_gearset_params(17, 18, 3, 1.5).is_err()); // 17 + 53 = 70 not divisible by 3
+
+        let kw_iso = keyway_din_6885(25.0).unwrap();
+        assert_eq!(kw_iso.key_width_b_mm, 8.0);
+        assert_eq!(kw_iso.key_height_h_mm, 7.0);
+        assert_eq!(kw_iso.shaft_groove_depth_t1_mm, 4.0);
+        assert_eq!(kw_iso.hub_groove_depth_t2_mm, 3.3);
+
+        let cyc = cycloidal_disc_profile(40.0, 3.0, 11, 1.2, 360).unwrap();
+        assert_eq!(cyc.len(), 360);
+        // At theta = 0, x = R - Rr - e = 40 - 3 - 1.2 = 35.8, y = 0
+        assert!((cyc[0][0] - 35.8).abs() < 1e-6);
+        assert!(cyc[0][1].abs() < 1e-6);
+        // Excessive eccentricity >= R / (N + 1) = 40 / 12 = 3.333 is rejected
+        assert!(cycloidal_disc_profile(40.0, 3.0, 11, 3.5, 360).is_err());
+
+        let din471 = retaining_ring_din_471(20.0).unwrap();
+        assert_eq!(din471.shaft_diameter_d1_mm, 20.0);
+        assert!((din471.groove_diameter_d2_mm - 18.8).abs() < 1e-6);
+        assert!((din471.groove_width_m_mm - 1.3).abs() < 1e-6);
+        assert!((din471.ring_thickness_s_mm - 1.2).abs() < 1e-6);
+        assert!((din471.min_edge_margin_n_mm - 1.8).abs() < 1e-6);
+
+        let dowel = dowel_pin_iso_2338(6.0, 24.0).unwrap();
+        assert!((dowel.pin_min_diameter_mm - 6.004).abs() < 1e-6);
+        assert!((dowel.pin_max_diameter_mm - 6.012).abs() < 1e-6);
+        assert!((dowel.hole_h7_min_diameter_mm - 6.0).abs() < 1e-6);
+        assert!((dowel.hole_h7_max_diameter_mm - 6.012).abs() < 1e-6);
+
+        // Tr8x8 (4-start, 2 mm pitch, 8 mm lead) 3D printer Z-axis lead screw vs Tr8x2 (1-start, self-locking)
+        let tr8x8 = lead_screw_trapezoidal_iso_2901(8.0, 2.0, 4, 0.15).unwrap();
+        assert!((tr8x8.pitch_diameter_d2_mm - 7.0).abs() < 1e-6);
+        assert!((tr8x8.root_diameter_d3_mm - 5.5).abs() < 1e-6);
+        assert!((tr8x8.lead_mm - 8.0).abs() < 1e-6);
+        assert!(!tr8x8.self_locking); // 4-start Tr8x8 has ~19.99 deg lead angle > ~8.8 deg friction angle
+        assert!(tr8x8.forward_efficiency > 0.65);
+
+        let tr8x2 = lead_screw_trapezoidal_iso_2901(8.0, 2.0, 1, 0.15).unwrap();
+        assert!(tr8x2.self_locking); // Single-start Tr8x2 has ~5.2 deg lead angle < ~8.8 deg friction angle
+        assert!(tr8x2.forward_efficiency > 0.30 && tr8x2.forward_efficiency < 0.45);
+        assert!(tr8x2.raising_torque_per_n_nm > 0.0005);
     }
 }
 

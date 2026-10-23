@@ -26,8 +26,12 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
             .all(|v| v.is_finite()),
         "Non-finite profile coordinate",
     )?;
-    let mut m = FillMesh::default();
-    let mut ring: Vec<usize> = vec![];
+    let total_cap = vertex_count + holes.len() * 2;
+    let mut m = FillMesh {
+        positions: Vec::with_capacity(total_cap),
+        indices: Vec::new(),
+    };
+    let mut ring: Vec<usize> = Vec::with_capacity(total_cap);
     for p in outer {
         ring.push(m.positions.len());
         m.positions.push(*p);
@@ -37,14 +41,15 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
     }
     let point = |m: &FillMesh, i: usize| m.positions[i];
     let mut work = 0;
-    let mut ordered_holes = holes.to_vec();
-    ordered_holes.sort_by(|a, b| {
-        a.iter()
-            .map(|p| p[0])
-            .fold(f64::INFINITY, f64::min)
-            .total_cmp(&b.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min))
-    });
-    for mut h in ordered_holes {
+    let mut ordered_holes: Vec<(f64, Vec<[f64; 2]>)> = holes
+        .iter()
+        .map(|h| {
+            let min_x = h.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min);
+            (min_x, h.clone())
+        })
+        .collect();
+    ordered_holes.sort_by(|a, b| a.0.total_cmp(&b.0));
+    for (_, mut h) in ordered_holes {
         if area(&h) > 0. {
             h.reverse()
         }
@@ -134,7 +139,7 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
             "Profile triangulation work budget exceeded",
         )?;
         let index = index.ok_or_else(|| crate::error("No visible bridge for profile hole"))?;
-        let mut ids = Vec::new();
+        let mut ids = Vec::with_capacity(h.len() + 2);
         for p in h {
             ids.push(m.positions.len());
             m.positions.push(p)

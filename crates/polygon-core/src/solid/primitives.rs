@@ -134,6 +134,121 @@ pub fn sphere(radius: f64, n: usize) -> Result<Mesh> {
     }
     clean(m)
 }
+
+/// Closed watertight torus primitive centered at the origin in the XY plane with major radius
+/// `major_radius` and tube radius `minor_radius`.
+pub fn torus(
+    major_radius: f64,
+    minor_radius: f64,
+    major_segments: usize,
+    minor_segments: usize,
+) -> Mesh {
+    let maj = major_segments.clamp(3, 256);
+    let min = minor_segments.clamp(3, 128);
+    if !major_radius.is_finite()
+        || !minor_radius.is_finite()
+        || minor_radius <= 0.0
+        || major_radius <= minor_radius
+    {
+        return empty();
+    }
+    let mut m = Mesh {
+        positions: Vec::with_capacity(maj * min * 3),
+        indices: Vec::with_capacity(maj * min * 6),
+        uv: None,
+    };
+    for i in 0..maj {
+        let u = std::f64::consts::TAU * (i as f64 / maj as f64);
+        let (su, cu) = u.sin_cos();
+        for j in 0..min {
+            let v = std::f64::consts::TAU * (j as f64 / min as f64);
+            let (sv, cv) = v.sin_cos();
+            let r = major_radius + minor_radius * cv;
+            m.positions.extend([r * cu, r * su, minor_radius * sv]);
+        }
+    }
+    for i in 0..maj {
+        let i_next = (i + 1) % maj;
+        for j in 0..min {
+            let j_next = (j + 1) % min;
+            let a = i * min + j;
+            let b = i_next * min + j;
+            let c = i_next * min + j_next;
+            let d = i * min + j_next;
+            m.indices.extend([a, b, c, a, c, d]);
+        }
+    }
+    clean(m).unwrap_or_else(|_| empty())
+}
+
+/// Closed watertight capsule (cylindrical shaft of length `height` centered at the origin along Z
+/// capped by two hemispheres of `radius`).
+pub fn capsule(radius: f64, height: f64, segments: usize) -> Mesh {
+    let n = segments.clamp(4, 256);
+    if !radius.is_finite() || radius <= 0.0 || !height.is_finite() || height < 0.0 {
+        return empty();
+    }
+    let hemi_rings = (n / 4).max(2);
+    let half_h = 0.5 * height;
+    let has_cyl = half_h > 1e-12;
+    let total_rings = 2 * hemi_rings + usize::from(has_cyl);
+    let mut m = Mesh {
+        positions: Vec::with_capacity((total_rings + 1) * n * 3),
+        indices: Vec::with_capacity(total_rings * n * 6),
+        uv: None,
+    };
+    for j in 0..=total_rings {
+        let (r, z) = if j == 0 {
+            (0.0, half_h + radius)
+        } else if j == total_rings {
+            (0.0, -half_h - radius)
+        } else if j <= hemi_rings {
+            let theta = std::f64::consts::FRAC_PI_2 * (j as f64 / hemi_rings as f64);
+            (radius * theta.sin(), half_h + radius * theta.cos())
+        } else {
+            let k = j - hemi_rings - usize::from(has_cyl);
+            let theta =
+                std::f64::consts::FRAC_PI_2 * (1.0 + k as f64 / hemi_rings as f64);
+            (radius * theta.sin(), -half_h + radius * theta.cos())
+        };
+        for i in 0..n {
+            let phi = std::f64::consts::TAU * (i as f64 / n as f64);
+            m.positions.extend([r * phi.cos(), r * phi.sin(), z]);
+        }
+    }
+    for j in 0..total_rings {
+        for i in 0..n {
+            let a = j * n + i;
+            let b = j * n + (i + 1) % n;
+            m.indices.extend([a, a + n, b + n, a, b + n, b]);
+        }
+    }
+    clean(m).unwrap_or_else(|_| empty())
+}
+
+/// Closed watertight cone or truncated cone frustum along $+Z \in [0, \text{height}]$ with base
+/// radius `bottom_radius` at $z = 0$ and top radius `top_radius` at $z = \text{height}$.
+/// Supports both pointed cones (`top_radius == 0.0` or `bottom_radius == 0.0`) and general
+/// frustums (`bottom_radius > 0.0` and `top_radius > 0.0`).
+pub fn cone_frustum(
+    bottom_radius: f64,
+    top_radius: f64,
+    height: f64,
+    segments: usize,
+) -> Mesh {
+    let n = segments.clamp(3, 512);
+    if !bottom_radius.is_finite()
+        || !top_radius.is_finite()
+        || !height.is_finite()
+        || height <= 0.0
+        || bottom_radius < 0.0
+        || top_radius < 0.0
+        || (bottom_radius <= 1e-12 && top_radius <= 1e-12)
+    {
+        return empty();
+    }
+    cylinder(height, bottom_radius, top_radius, n, false).unwrap_or_else(|_| empty())
+}
 pub fn clean(mut m: Mesh) -> Result<Mesh> {
     m = crate::solid::proximity::weld_exact(&m)?;
     let mut indices = Vec::new();
@@ -640,6 +755,10 @@ mod tests {
             cube([2., 3., 4.], false).unwrap(),
             sphere(3., 24).unwrap(),
             cylinder(4., 2., 0., 24, false).unwrap(),
+            torus(5., 1.5, 24, 16),
+            capsule(2., 6., 24),
+            cone_frustum(3., 1.5, 5., 24),
+            cone_frustum(3., 0., 5., 24),
         ] {
             let r = m.inspect().unwrap();
             assert!(r.closed, "{r:?}");

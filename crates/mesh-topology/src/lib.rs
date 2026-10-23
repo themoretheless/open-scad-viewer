@@ -16,7 +16,10 @@ pub use edges::{
     extract_semantic_edges_cooperative,
 };
 pub use indexed::{EdgeCounts, EdgeUses};
-pub use inspection::Inspection;
+pub use inspection::{
+    DihedralAngleStats, Inspection, connected_components_count, dihedral_angle_stats, genus,
+    vertex_valence_stats,
+};
 pub use math_core::{Error, Result};
 pub use view::MeshView;
 

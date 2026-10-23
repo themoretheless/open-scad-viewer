@@ -177,3 +177,137 @@ impl ComputeProgram<'_> {
         Ok(())
     }
 }
+
+/// Cache-blocked 8x8 register-tiled CPU `f32` matrix multiplication `(rows × inner) @ (inner × cols)`
+/// aligned with the 8x8 matrix tile primitive (`simdgroup_matrix` 8x8 on Apple Silicon / AVX/NEON
+/// register blocking).
+///
+/// Uses an 8x8 register tile for interior blocks with zero inner-loop bounds checks, and clean
+/// scalar cleanup for boundary rows/columns.
+pub fn matmul_f32_tiled_8x8(
+    a: &[f32],
+    b: &[f32],
+    rows: usize,
+    inner: usize,
+    cols: usize,
+) -> Vec<f32> {
+    let total_out = rows.saturating_mul(cols);
+    let mut out = vec![0.0_f32; total_out];
+    if rows == 0 || cols == 0 || inner == 0 {
+        return out;
+    }
+    assert!(
+        a.len() >= rows.saturating_mul(inner) && b.len() >= inner.saturating_mul(cols),
+        "matmul_f32_tiled_8x8 input slices shorter than declared matrix dimensions"
+    );
+
+    const TILE: usize = 8;
+    const KC_BLOCK: usize = 64;
+
+    let full_rows = (rows / TILE) * TILE;
+    let full_cols = (cols / TILE) * TILE;
+
+    for kc in (0..inner).step_by(KC_BLOCK) {
+        let k_end = (kc + KC_BLOCK).min(inner);
+
+        // 8x8 register-tiled interior micro-kernel
+        for i0 in (0..full_rows).step_by(TILE) {
+            for j0 in (0..full_cols).step_by(TILE) {
+                let mut acc = [[0.0_f32; TILE]; TILE];
+                for r in 0..TILE {
+                    let out_row = &out[(i0 + r) * cols + j0..(i0 + r) * cols + j0 + TILE];
+                    acc[r].copy_from_slice(out_row);
+                }
+
+                for k in kc..k_end {
+                    let b_row = &b[k * cols + j0..k * cols + j0 + TILE];
+                    let b0 = b_row[0];
+                    let b1 = b_row[1];
+                    let b2 = b_row[2];
+                    let b3 = b_row[3];
+                    let b4 = b_row[4];
+                    let b5 = b_row[5];
+                    let b6 = b_row[6];
+                    let b7 = b_row[7];
+
+                    for (r, acc_row) in acc.iter_mut().enumerate() {
+                        let a_val = a[(i0 + r) * inner + k];
+                        acc_row[0] = a_val.mul_add(b0, acc_row[0]);
+                        acc_row[1] = a_val.mul_add(b1, acc_row[1]);
+                        acc_row[2] = a_val.mul_add(b2, acc_row[2]);
+                        acc_row[3] = a_val.mul_add(b3, acc_row[3]);
+                        acc_row[4] = a_val.mul_add(b4, acc_row[4]);
+                        acc_row[5] = a_val.mul_add(b5, acc_row[5]);
+                        acc_row[6] = a_val.mul_add(b6, acc_row[6]);
+                        acc_row[7] = a_val.mul_add(b7, acc_row[7]);
+                    }
+                }
+
+                for (r, acc_row) in acc.iter().enumerate() {
+                    let out_row = &mut out[(i0 + r) * cols + j0..(i0 + r) * cols + j0 + TILE];
+                    out_row.copy_from_slice(acc_row);
+                }
+            }
+
+            // Right-edge column remainder for full row blocks
+            if full_cols < cols {
+                for r in 0..TILE {
+                    let row_idx = i0 + r;
+                    let a_row = &a[row_idx * inner + kc..row_idx * inner + k_end];
+                    let out_rem = &mut out[row_idx * cols + full_cols..row_idx * cols + cols];
+                    for (offset, &a_val) in a_row.iter().enumerate() {
+                        let k = kc + offset;
+                        let b_rem = &b[k * cols + full_cols..k * cols + cols];
+                        for (o, &b_val) in out_rem.iter_mut().zip(b_rem.iter()) {
+                            *o = a_val.mul_add(b_val, *o);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom-edge row remainder across all columns
+        for row_idx in full_rows..rows {
+            let a_row = &a[row_idx * inner + kc..row_idx * inner + k_end];
+            let out_row = &mut out[row_idx * cols..(row_idx + 1) * cols];
+            for (offset, &a_val) in a_row.iter().enumerate() {
+                let k = kc + offset;
+                let b_row = &b[k * cols..(k + 1) * cols];
+                for (o, &b_val) in out_row.iter_mut().zip(b_row.iter()) {
+                    *o = a_val.mul_add(b_val, *o);
+                }
+            }
+        }
+    }
+
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matmul_f32_tiled_8x8_matches_naive_across_tile_and_remainder_shapes() {
+        for (m, k, n) in [(8, 8, 8), (16, 16, 16), (11, 13, 17), (1, 65, 9), (9, 70, 15)] {
+            let a: Vec<f32> = (0..(m * k)).map(|i| ((i % 17) as f32) * 0.25 - 1.5).collect();
+            let b: Vec<f32> = (0..(k * n)).map(|i| ((i % 13) as f32) * 0.5 - 2.0).collect();
+            let got = matmul_f32_tiled_8x8(&a, &b, m, k, n);
+            assert_eq!(got.len(), m * n);
+            for r in 0..m {
+                for c in 0..n {
+                    let mut expected = 0.0_f32;
+                    for p in 0..k {
+                        expected += a[r * k + p] * b[p * n + c];
+                    }
+                    assert!(
+                        (got[r * n + c] - expected).abs() < 1e-4,
+                        "mismatch at ({r}, {c}) for shape ({m}, {k}, {n}): got {}, expected {expected}",
+                        got[r * n + c]
+                    );
+                }
+            }
+        }
+        assert!(matmul_f32_tiled_8x8(&[], &[], 0, 0, 0).is_empty());
+    }
+}
