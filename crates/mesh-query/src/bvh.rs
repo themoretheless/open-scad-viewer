@@ -75,10 +75,9 @@ pub struct MeshBvh {
 
 fn next_power_of_two(value: usize) -> usize {
     if value <= 1 {
-        1
-    } else {
-        value.next_power_of_two()
+        return 1;
     }
+    2usize.pow((value as f64).log2().ceil() as u32)
 }
 
 /// Per-record buffers for the valid triangles. Invariant (established once in
@@ -321,8 +320,7 @@ impl Builder<'_> {
     async fn build_nodes<const C: bool>(&mut self, count: usize, work: &mut Work<C>) {
         // Push right before left: visiting in preorder preserves the exact
         // recursive node numbering, partition order and floating-point stores.
-        let mut pending = Vec::with_capacity(64);
-        pending.push((0, count, None::<usize>));
+        let mut pending = vec![(0, count, None::<usize>)];
         while let Some((start, end, parent_slot)) = pending.pop() {
             if work.tick() {
                 yield_once().await;
@@ -533,18 +531,13 @@ async fn build_impl<const C: bool>(
     // Establishes the `Builder` invariant its unchecked accessors rely on.
     assert_eq!(centroids.len(), valid_count * 3);
     assert_eq!(triangle_bounds.len(), valid_count * 6);
-    let order = if C {
-        let mut order = Vec::with_capacity(valid_count);
-        for record in 0..valid_count as u32 {
-            if work.tick() {
-                yield_once().await;
-            }
-            order.push(record);
+    let mut order = Vec::with_capacity(valid_count);
+    for record in 0..valid_count as u32 {
+        if work.tick() {
+            yield_once().await;
         }
-        order
-    } else {
-        (0..valid_count as u32).collect()
-    };
+        order.push(record);
+    }
     let mut builder = Builder {
         triangle_bounds: &triangle_bounds,
         centroids: &centroids,

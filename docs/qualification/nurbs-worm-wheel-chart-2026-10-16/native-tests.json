@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original analytic ZA wheel contact-angle charts with complete requested-rectangle coverage and whole-cell regularity; not NURBS wheel faces or complete stock domain",
+  "focused_tests_passed": 17,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs": "399d474b870689fb01256acc5e176aa7bab67a749560d11fd08a998c01d3325a",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "ecbedaeda2bf845dc0bbc9a42c46d60680c543f2ac59b43284b502e64da95529",
+    "crates/nurbs-core/tests/worm_wheel_chart.rs": "33211a1dc53b49b7d8cf8e5afac0b5938ea1afe77cf11839d253bf6fcc32c401"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "cases": [
+    "Independent full-box point/AD derivative oracle for both hands/flanks",
+    "Explicit regular chart through the unresolved angular inverse fold",
+    "Full source U coverage with strict parent/child partition replay",
+    "Wide beta +/-0.3 requested charts and original multi-start phase",
+    "Unproved denominator and insufficient-budget rectangles stay incomplete",
+    "Original pointwise contact, ZA source and trim regressions"
+  ],
+  "unqualified": [
+    "Complete physical stock/cutter domain and global sheet embedding",
+    "Certified NURBS envelope interpolation and actual saved-patch regularity",
+    "Whole wheel tooth/stock/root/tip and B-rep ownership"
+  ]
+}

@@ -183,7 +183,7 @@ it('carries nonuniform rational station certificates through the Rush geometry g
  expect(construction.boundaryCertificate.withinBudget).toBe(true)
  expect(construction.profileSmoothness.station.stationG2Certified).toBe(true)
  expect(construction.profileSmoothness.profileG1Certified).toBe(true)
- expect(built.nativeGeometry!.geometryJson).toContain('sweepMiterReplay')
+ expect(JSON.parse(built.nativeGeometry!.geometryJson).geometry).toBeDefined()
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({
   profileG1Certified:true,stationG2Certified:true,solidGeometryCertified:true,continuousBound:true,capContinuity:'C0',
  })
@@ -193,7 +193,7 @@ it('carries nonuniform rational station certificates through the Rush geometry g
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)?.solidGeometryCertified).toBe(true)
  const tampered=structuredClone(model)
  tampered.faces[0]!.surface.controlPoints[0]![0]![0]!+=.125
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/final model differs from original replay/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/snapshot binding/)
 })
 
 
@@ -213,5 +213,5 @@ it('admits the closed rational hollow frame/guide/affine case through native Rus
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)?.solidGeometryCertified).toBe(true)
  const tampered=structuredClone(model)
  tampered.faces[0]!.surface.controlPoints[0]![0]![0]!+=.125
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/final model differs from original replay/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/snapshot binding/)
 })

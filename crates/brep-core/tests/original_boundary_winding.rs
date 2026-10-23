@@ -55,7 +55,10 @@ fn actual_irrational_curve_cuts_are_compared_before_ray_contribution() {
     let owner = fill(&[vec![arch, base], box_wire], &[-1, 1]);
     assert_eq!(winding(owner.clone(), [q(0, 1), q(1, 1)]), [1]);
     assert_eq!(winding(owner.clone(), [q(0, 1), q(5, 4)]), [1]);
-    assert!(p::own_original_boundary_winding(owner.clone(), [q(0,1),q(3,2)], Default::default()).is_err());
+    // This original component edge is internal to the retained union.
+    assert_eq!(winding(owner.clone(), [q(0,1),q(3,2)]),[1]);
+    // The actual retained outer edge must still refuse a winding query.
+    assert!(p::own_original_boundary_winding(owner.clone(),[q(-4,1),q(2,1)],Default::default()).is_err());
     assert_eq!(winding(owner.clone(), [q(-5,1),q(3,2)]), [0]);
     assert_eq!(winding(owner.clone(), [q(0, 1), q(7, 2)]), [1]);
     assert_eq!(winding(owner, [q(5, 1), q(3, 2)]), [0]);

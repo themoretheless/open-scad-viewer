@@ -1,62 +1,26 @@
 //! Whole-chart injectivity under one fixed exact integer linear projection.
 //! Sampling may propose a projection elsewhere, but never certifies this result.
 use crate::{
-    Result, check, distance_bounds::Interval as I, surface::Surface, surface_measure::jets,
+    check, distance_bounds::Interval as I, surface::Surface, surface_measure::jets, Result,
 };
+mod bernstein_minors;
+
+#[derive(Clone, Debug)]
+pub struct ProfileParameterization {
+    pub weights: [f64; 2],
+    pub derivative_lower: f64,
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub certified: bool,
     pub cells: usize,
     pub projection: [[i8; 3]; 2],
+    pub row_weights: [f64; 2],
+    pub profile_parameterization: Option<ProfileParameterization>,
     pub reason: Option<&'static str>,
 }
 pub fn inspect(s: &Surface, projection: [[i8; 3]; 2], max_cells: usize) -> Result<Report> {
     inspect_with_depth(s, projection, max_cells, 12)
-}
-/// Linear projection commutes with the rational basis when every projected
-/// Euclidean pole is exactly representable. Never substitute rounded poles.
-fn exact_projected_surface(s: &Surface, projection: [[i8; 3]; 2]) -> Option<Surface> {
-    use crate::exact_curve_segments::{exact_add, exact_mul};
-    let mut out = s.clone();
-    for (source, target) in s
-        .control_points
-        .iter()
-        .flatten()
-        .zip(out.control_points.iter_mut().flatten())
-    {
-        for row in 0..2 {
-            let mut value = 0.;
-            for k in 0..3 {
-                value = exact_add(value, exact_mul(source[k], projection[row][k] as f64)?)?;
-            }
-            target[row] = value;
-        }
-        target[2] = 0.;
-    }
-    Some(out)
-}
-/// With weights constant along V, the first control row is an independent
-/// polynomial station curve. Exact pole subtraction gives S=P(V)+R(U,V),
-/// hence Su=Ru and Sv=Pv+Rv. Never replace a pole by a rounded difference.
-fn exact_station_split(s: &Surface) -> Option<(Surface, Surface)> {
-    if s.weights.iter().any(|row| row.iter().any(|w| *w != row[0])) {
-        return None;
-    }
-    let mut relative = s.clone();
-    let mut position = s.clone();
-    for u in 0..s.control_points.len() {
-        for v in 0..s.control_points[0].len() {
-            for k in 0..3 {
-                relative.control_points[u][v][k] = crate::exact_curve_segments::exact_add(
-                    s.control_points[u][v][k],
-                    -s.control_points[0][v][k],
-                )?;
-            }
-            position.control_points[u][v] = s.control_points[0][v].clone();
-            position.weights[u][v] = 1.;
-        }
-    }
-    Some((relative, position))
 }
 fn inspect_with_depth(
     s: &Surface,
@@ -64,9 +28,49 @@ fn inspect_with_depth(
     max_cells: usize,
     max_depth: usize,
 ) -> Result<Report> {
+    let first = inspect_metric(s, projection, [1., 1.], max_cells, max_depth)?;
+    if first.certified || first.cells == max_cells {
+        return Ok(first);
+    }
+    let mut second = inspect_weighted(s, projection, max_cells - first.cells, max_depth)?;
+    second.cells += first.cells;
+    Ok(second)
+}
+fn inspect_weighted(
+    s: &Surface,
+    projection: [[i8; 3]; 2],
+    max_cells: usize,
+    max_depth: usize,
+) -> Result<Report> {
+    let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];
+    let v = 0.5 * s.knots_v[s.degree_v] + 0.5 * s.knots_v[s.control_points[0].len()];
+    let Some((du, dv)) = s.evaluate(u, v)?.first_derivatives() else {
+        return inspect_metric(s, projection, [1., 1.], 0, max_depth);
+    };
+    let diagonal = [
+        (0..3).map(|k| projection[0][k] as f64 * du[k]).sum::<f64>(),
+        (0..3).map(|k| projection[1][k] as f64 * dv[k]).sum::<f64>(),
+    ];
+    let scale = (diagonal[0] / diagonal[1]).abs();
+    if !scale.is_finite() || scale <= 0. || scale == 1. {
+        return inspect_metric(s, projection, [1., 1.], 0, max_depth);
+    }
+    // A sampled diagonal only proposes the fixed metric. Every chart cell
+    // still requires the complete outward SPD proof; failures charge its budget.
+    inspect_metric(s, projection, [scale, 1.], max_cells, max_depth)
+}
+
+fn inspect_metric(
+    s: &Surface,
+    projection: [[i8; 3]; 2],
+    row_weights: [f64;2],
+    max_cells: usize,
+    max_depth: usize,
+) -> Result<Report> {
     s.validate()?;
     check(
         max_cells <= 100000
+            && row_weights.iter().all(|v|v.is_finite() && *v>0.)
             && s.control_points.iter().flatten().all(|p| p.len() == 3)
             && projection.iter().flatten().all(|v| (-64..=64).contains(v)),
         "Invalid linear projection or cell budget",
@@ -80,19 +84,19 @@ fn inspect_with_depth(
     let working = projected_surface.as_ref().unwrap_or(s);
     let station_split = exact_station_split(working).map(|(r,p)|(r,p,1))
         .or_else(|| {
-            // Pure axis permutation gives the same exact subtraction rule for
-            // a polynomial U station curve with weights independent of U.
             let transposed=crate::surface_edit::transpose(working).ok()?;
             let (r,p)=exact_station_split(&transposed)?;
             Some((crate::surface_edit::transpose(&r).ok()?,crate::surface_edit::transpose(&p).ok()?,0))
         });
-    let mut working_span = jets::FirstStableSpanCache::new(working);
-    let mut split_spans = station_split.as_ref().map(|(relative, position,_)|
-        (jets::FirstStableSpanCache::new(relative), jets::FirstStableSpanCache::new(position)));
+    let mut working_span=jets::FirstStableSpanCache::new(working);
+    let mut split_spans=station_split.as_ref().map(|(relative,position,_)|
+        (jets::FirstStableSpanCache::new(relative),jets::FirstStableSpanCache::new(position)));
     let mut out = Report {
         certified: false,
         cells: 0,
         projection,
+        row_weights,
+        profile_parameterization:None,
         reason: Some("linear-monotone-projection-unproved"),
     };
     let degrees = [s.degree_u, s.degree_v];
@@ -110,6 +114,17 @@ fn inspect_with_depth(
         out.reason = Some("continuous-rectangle-domain-unproved");
         return Ok(out);
     }
+    // Gale--Nikaido, Math. Ann. 159 (1965), Theorem 4: a C1 map whose
+    // Jacobian is a P-matrix everywhere on a rectangle is globally injective.
+    // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
+    // A C0 knot join is excluded from this alternative. Strong monotonicity
+    // below remains valid for the existing piecewise smooth continuous case.
+    let continuously_differentiable = (0..2).all(|k| {
+        knots[k]
+            .iter()
+            .filter(|v| **v > knots[k][degrees[k]] && **v < knots[k][counts[k]])
+            .all(|v| knots[k].iter().filter(|x| *x == v).count() < degrees[k])
+    });
     let mut pending = Vec::new();
     for u in degrees[0]..counts[0] {
         for v in degrees[1]..counts[1] {
@@ -129,13 +144,6 @@ fn inspect_with_depth(
             }
         }
     }
-    // Gale & Nikaido, Math. Ann.159 (1965), Theorem4: a differentiable
-    // map with a P-Jacobian throughout a rectangle is globally injective.
-    // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
-    // Unlike symmetric positivity, this alternative is not used across C0
-    // knot lines. Basis C1 is a sufficient differentiability prerequisite.
-    let c1_basis=(0..2).all(|axis|degrees[axis]>=1&&knots[axis].iter().filter(|&&k|knots[axis][degrees[axis]]<k&&k<knots[axis][counts[axis]])
-        .all(|k|knots[axis].iter().filter(|x|*x==k).count()<degrees[axis]));
     while let Some((span, domain, depth)) = pending.pop() {
         if out.cells == max_cells {
             out.reason = Some("cell-budget-exhausted");
@@ -143,19 +151,24 @@ fn inspect_with_depth(
         }
         out.cells += 1;
         let result = (|| -> Result<i8> {
+            if continuously_differentiable
+                && bernstein_minors::certify(s, span, domain, projection).unwrap_or(false)
+            {
+                return Ok(1);
+            }
             // Differentiate the original homogeneous span before restricting
             // its value image. Query-cell differences amplify interval widths
             // on small translated rational walls and waste the shared budget.
-            let derivatives = if let Some((relative, position)) = &mut split_spans {
-                let r = relative.calculate(span, domain)?;
-                let p = position.calculate(span, domain)?;
+            let derivatives = if let Some((relative,position))=&mut split_spans {
+                let r=relative.calculate(span,domain)?;
+                let p=position.calculate(span,domain)?;
                 let mut derivatives=[r[1],r[2]];
                 let axis=station_split.as_ref().unwrap().2;
                 for k in 0..3 {derivatives[axis][k]=derivatives[axis][k].add(p[axis+1][k])?;}
                 derivatives
             } else {
-                let j = working_span.calculate(span, domain)?;
-                [j[1], j[2]]
+                let j=working_span.calculate(span,domain)?;
+                [j[1],j[2]]
             };
             let mut projected = [[I::point(0.); 2]; 2];
             for row in 0..2 {
@@ -184,7 +197,7 @@ fn inspect_with_depth(
             // independent outward enclosures of the same Jacobian. Neither
             // dominates for every retained chart. Intersect them rather than
             // losing the tighter enclosure on corrected miter walls.
-            let restricted = jets::calculate_first(working, span, domain)?;
+            let restricted = jets::calculate_first(working,span,domain)?;
             for row in 0..2 {
                 for axis in 0..2 {
                     let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
@@ -214,16 +227,18 @@ fn inspect_with_depth(
                     )?;
                 }
             }
+            for row in 0..2 { for axis in 0..2 { projected[row][axis]=projected[row][axis].mul(I::point(row_weights[row]))?; } }
             let [[uu, uv], [vu, vv]] = projected;
             if uu.hi <= 0. || vv.hi <= 0. {
                 return Ok(-1);
             }
             let off = uv.add(vu)?.mul(I::point(0.5))?;
             let radius = I::point(off.lo.abs().max(off.hi.abs()));
-            let positive_diagonal=uu.lo>0.&&vv.lo>0.;
-            let symmetric=positive_diagonal&&uu.mul(vv)?.sub(radius.mul(radius)?)?.lo>0.;
-            let p_matrix=c1_basis&&positive_diagonal&&uu.mul(vv)?.sub(uv.mul(vu)?)?.lo>0.;
-            Ok(i8::from(symmetric||p_matrix))
+            let diagonal = uu.lo > 0. && vv.lo > 0.;
+            let strong_monotonicity = diagonal && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.;
+            let p_matrix =
+                continuously_differentiable && diagonal && uu.mul(vv)?.sub(uv.mul(vu)?)?.lo > 0.;
+            Ok(i8::from(strong_monotonicity || p_matrix))
         })();
         match result {
             Ok(1) => (),
@@ -258,40 +273,100 @@ fn inspect_with_depth(
 }
 /// Exact comparisons of retained corner controls only propose a projection.
 /// The full outward proof remains mandatory; no corner sample certifies a chart.
-/// A proposal is never a certificate: inspect the actual whole surface first,
-/// then spend only the remaining shared allowance on generic candidates.
-pub fn inspect_candidate_with_hint(
-    s: &Surface,
-    hint: Option<[[i8; 3]; 2]>,
-    max_cells: usize,
-) -> Result<Report> {
-    let Some(projection) = hint else {
-        return inspect_candidate(s, max_cells);
-    };
-    let first = inspect(s, projection, max_cells)?;
+fn inspect_candidate_original(s: &Surface, max_cells: usize) -> Result<Report> {
+    s.validate()?;
+    if let Some((polynomial, parameterization)) = polynomial_profile_image(s)? {
+        let mut report = inspect_candidate_projected(&polynomial, max_cells)?;
+        report.profile_parameterization = Some(parameterization);
+        return Ok(report);
+    }
+    inspect_candidate_projected(s, max_cells)
+}
+/// Exact positive profile reparameterization of a retained quintic image.
+pub fn polynomial_profile_image(s: &Surface) -> Result<Option<(Surface, ProfileParameterization)>> {
+    s.validate()?;
+    // Constant longitudinal weights on a linear-profile quintic wall change
+    // only its profile traversal. Prove the identical polynomial image under
+    // the exact positive rational bijection, without modifying the source.
+    if s.degree_u == 1
+        && s.degree_v == 5
+        && s.knots_u == [0., 0., 1., 1.]
+        && s.control_points.len() == 2
+        && !s.periodic_u
+        && s.weights.iter().all(|row| row.iter().all(|w| *w == row[0]))
+    {
+        let weights = [s.weights[0][0], s.weights[1][0]];
+        if weights != [1., 1.] && weights.iter().all(|w| (1e-100..=1e100).contains(w)) {
+            let lower = I::point(weights[0].min(weights[1]))
+                .div(I::point(weights[0].max(weights[1])))?
+                .lo;
+            if lower > 0. {
+                let mut polynomial = s.clone();
+                polynomial.weights.iter_mut().for_each(|row| row.fill(1.));
+                return Ok(Some((
+                    polynomial,
+                    ProfileParameterization {
+                        weights,
+                        derivative_lower: lower,
+                    },
+                )));
+            }
+        }
+    }
+    Ok(None)
+}
+impl ProfileParameterization {
+    pub fn inverse_interval(&self, lambda: [f64; 2]) -> Result<[f64; 2]> {
+        Self {
+            weights: [self.weights[1], self.weights[0]],
+            derivative_lower: self.derivative_lower,
+        }
+        .map_interval(lambda)
+        .map(|mapped| mapped.0)
+    }
+
+    pub fn map_interval(&self, u: [f64; 2]) -> Result<([f64; 2], [f64; 2])> {
+        check(
+            u[0] >= 0.
+                && u[1] <= 1.
+                && u[0] <= u[1]
+                && self.weights.iter().all(|w| (1e-100..=1e100).contains(w)),
+            "Invalid rational profile interval",
+        )?;
+        let x = I::new(u[0], u[1])?;
+        let a = I::point(self.weights[0]);
+        let b = I::point(self.weights[1]);
+        let denominator = a.mul(I::point(1.).sub(x)?)?.add(b.mul(x)?)?.intersect(
+            self.weights[0].min(self.weights[1]),
+            self.weights[0].max(self.weights[1]),
+        )?;
+        let mapped = b.mul(x)?.div(denominator)?.intersect(0., 1.)?;
+        let derivative = a.mul(b)?.div(denominator.mul(denominator)?)?;
+        Ok(([mapped.lo, mapped.hi], [derivative.lo, derivative.hi]))
+    }
+}
+fn inspect_candidate_projected(s: &Surface, max_cells: usize) -> Result<Report> {
+    // Preserve the legacy unit-metric candidates and their shared budget first.
+    // New metric proposals cannot consume work needed by existing certificates.
+    // New degree-five linear-profile walls benefit from the metric during each
+    // candidate attempt. Legacy source charts retain their original ordering.
+    let quintic = s.degree_u == 1 && s.degree_v == 5;
+    let first = inspect_candidate_proposals(s, max_cells, quintic)?;
     if first.certified || first.cells == max_cells {
         return Ok(first);
     }
-    let mut fallback = inspect_candidate(s, max_cells - first.cells)?;
-    fallback.cells += first.cells;
-    Ok(fallback)
-}
-pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
-    // Preserve every already successful original proposal and its work/report.
-    // A finer integer dual map is only a proposal after the original cover
-    // failed; acceptance still proves the same full-domain outward inequality.
-    let mut report = inspect_candidate_basic(s, max_cells)?;
-    for resolution in [32., 64.] {
-        if report.certified || report.cells == max_cells { break; }
-        let Some(projection) = midpoint_projection_at_resolution(s, resolution)? else { break; };
-        if projection == report.projection { continue; }
-        let mut next = inspect_with_depth(s, projection, max_cells - report.cells, 14)?;
-        next.cells += report.cells;
-        report = next;
+    let independent = (0..3).any(|k| {
+        first.projection[0][k] as i16 * first.projection[1][(k + 1) % 3] as i16
+            != first.projection[1][k] as i16 * first.projection[0][(k + 1) % 3] as i16
+    });
+    if !independent {
+        return Ok(first);
     }
-    Ok(report)
+    let mut second = inspect_weighted(s, first.projection, max_cells - first.cells, 14)?;
+    second.cells += first.cells;
+    Ok(second)
 }
-fn inspect_candidate_basic(s: &Surface, max_cells: usize) -> Result<Report> {
+fn inspect_candidate_proposals(s: &Surface, max_cells: usize, weighted: bool) -> Result<Report> {
     s.validate()?;
     check(
         max_cells <= 100000 && s.control_points.iter().flatten().all(|p| p.len() == 3),
@@ -326,42 +401,20 @@ fn inspect_candidate_basic(s: &Surface, max_cells: usize) -> Result<Report> {
         projection[0][k] as i16 * projection[1][(k + 1) % 3] as i16
             != projection[1][k] as i16 * projection[0][(k + 1) % 3] as i16
     });
-    let mut first = if !independent {
+    let first = if !independent {
         Report {
             certified: false,
             cells: 0,
             projection,
+            row_weights: [1., 1.],
+            profile_parameterization: None,
             reason: Some("linear-projection-proposal-unproved"),
         }
     } else {
-        inspect(s, projection, max_cells.min(16))?
+        inspect_proposal(s, projection, max_cells, 12, weighted)?
     };
     if first.certified || first.cells == max_cells {
         return Ok(first);
-    }
-    // Longitudinal motion can overwhelm a corner-sign proposal on a thin
-    // spatial wall. Try the midpoint dual map with a bounded portion first;
-    // its sampled construction is only a proposal, never positive evidence.
-    if let Some(candidate) = midpoint_projection(s)? {
-        if candidate != projection {
-            let mut hinted =
-                inspect_with_depth(s, candidate, (max_cells - first.cells).min(512), 14)?;
-            hinted.cells += first.cells;
-            if hinted.certified || hinted.cells == max_cells {
-                return Ok(hinted);
-            }
-            first.cells = hinted.cells;
-        }
-    }
-    // Preserve the original candidate as a full-budget fallback; a short
-    // preliminary search is not treated as a negative geometry certificate.
-    if independent && first.cells < max_cells {
-        let mut retry = inspect(s, projection, max_cells - first.cells)?;
-        retry.cells += first.cells;
-        if retry.certified || retry.cells == max_cells {
-            return Ok(retry);
-        }
-        first = retry;
     }
     // A rounded transverse direction only proposes another fixed integer map.
     // Every cell is proved again, with the remaining shared work budget.
@@ -386,31 +439,17 @@ fn inspect_candidate_basic(s: &Surface, max_cells: usize) -> Result<Report> {
     if !independent || alternative == projection {
         return Ok(first);
     }
-    let mut second = inspect(s, alternative, max_cells - first.cells)?;
+    let mut second = inspect_proposal(s, alternative, max_cells - first.cells, 12, weighted)?;
     second.cells += first.cells;
     if second.certified || second.cells == max_cells {
         return Ok(second);
     }
-    let Some(candidate) = midpoint_projection(s)? else {
-        return Ok(second);
-    };
-    if candidate == alternative || candidate == projection {
-        return Ok(second);
-    }
-    let mut third = inspect_with_depth(s, candidate, max_cells - second.cells, 14)?;
-    third.cells += second.cells;
-    Ok(third)
-}
-fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
-    midpoint_projection_at_resolution(s, 16.)
-}
-fn midpoint_projection_at_resolution(s: &Surface, resolution: f64) -> Result<Option<[[i8; 3]; 2]>> {
-    // Midpoint tangents propose dual directions. Every actual acceptance still
-    // requires one fixed integer map's whole-domain outward interval proof.
+    // Midpoint tangents propose dual directions. The sampled jet supplies no
+    // evidence: only the fixed integer map's whole-domain interval proof counts.
     let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];
     let v = 0.5 * s.knots_v[s.degree_v] + 0.5 * s.knots_v[s.control_points[0].len()];
     let Some((du, dv)) = s.evaluate(u, v)?.first_derivatives() else {
-        return Ok(None);
+        return Ok(second);
     };
     let dot = |a: [f64; 3], b: [f64; 3]| (0..3).map(|k| a[k] * b[k]).sum::<f64>();
     let uu = dot(du, du);
@@ -424,151 +463,126 @@ fn midpoint_projection_at_resolution(s: &Surface, resolution: f64) -> Result<Opt
     for row in 0..2 {
         let scale = dual[row].iter().map(|x| x.abs()).fold(0., f64::max);
         if !scale.is_finite() || scale <= 0. {
-            return Ok(None);
+            return Ok(second);
         }
-        candidate[row] = dual[row].map(|x| (resolution * x / scale).round() as i8);
+        candidate[row] = dual[row].map(|x| (16. * x / scale).round() as i8);
     }
     let independent = (0..3).any(|k| {
         candidate[0][k] as i16 * candidate[1][(k + 1) % 3] as i16
             != candidate[1][k] as i16 * candidate[0][(k + 1) % 3] as i16
     });
-    Ok(independent.then_some(candidate))
+    if !independent || candidate == alternative || candidate == projection {
+        return Ok(second);
+    }
+    let mut third = inspect_proposal(s, candidate, max_cells - second.cells, 14, weighted)?;
+    third.cells += second.cells;
+    Ok(third)
 }
+fn inspect_proposal(
+    s: &Surface,
+    projection: [[i8; 3]; 2],
+    max_cells: usize,
+    depth: usize,
+    weighted: bool,
+) -> Result<Report> {
+    if weighted {
+        let first = inspect_weighted(s, projection, max_cells, depth)?;
+        if first.certified || first.cells == max_cells {
+            return Ok(first);
+        }
+        let mut second = inspect_metric(s, projection, [1., 1.], max_cells - first.cells, depth)?;
+        second.cells += first.cells;
+        Ok(second)
+    } else {
+        inspect_metric(s, projection, [1., 1.], max_cells, depth)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn station_split_refuses_variable_station_weights_and_rounded_differences() {
-        let mut s = quarter();
-        let before = s.clone();
-        assert!(exact_station_split(&s).is_some());
-        assert_eq!(s, before);
-        s.weights[1][1] = s.weights[1][1] * 2.;
-        assert!(exact_station_split(&s).is_none());
-        s = before;
-        s.control_points[0][0][0] = 1.;
-        s.control_points[1][0][0] = 2_f64.powi(-54);
-        assert!(exact_station_split(&s).is_none());
-    }
-    #[test]
-    fn small_translated_spatial_wall_uses_original_span_jets_under_finite_work() {
-        let mut s = Surface {
-            degree_u: 2,
-            degree_v: 1,
-            knots_u: vec![0., 0., 0., 1., 1., 1.],
-            knots_v: vec![0., 0., 1., 1.],
-            control_points: vec![
-                vec![
-                    vec![-0.7062272226232672, 0.5675679493147961, 0.5968080444325607],
-                    vec![-0.7474669927920602, 0.49724679499522595, 0.5426947020020663],
-                ],
-                vec![
-                    vec![-0.699565435445212, 0.5608768152774212, 0.5998523983908421],
-                    vec![-0.7405573704272115, 0.4909357350407962, 0.546020243648579],
-                ],
-                vec![
-                    vec![-0.6943107816690395, 0.5634326861227221, 0.5920719792065087],
-                    vec![-0.7351112988881411, 0.4937291108059471, 0.5384203254299099],
-                ],
-            ],
-            weights: vec![vec![1.; 2], vec![0.7071067811865476; 2], vec![1.; 2]],
-            periodic_u: false,
-            periodic_v: false,
-        };
-        let before = s.clone();
-        let proof = inspect_candidate(&s, 100).unwrap();
-        assert!(proof.certified, "{proof:?}");
-        assert!(proof.cells > 0 && proof.cells <= 100);
-        assert!(!inspect(&s, proof.projection, 0).unwrap().certified);
-        assert_eq!(s, before);
-        // Same authored image on shifted non-unit knot domains: stable jets
-        // differentiate in the original span, never in the query-cell width.
-        s.knots_u = vec![23., 23., 23., 25., 25., 25.];
-        s.knots_v = vec![-7., -7., -5., -5.];
-        assert!(inspect_candidate(&s, 100).unwrap().certified);
-        eprintln!(
-            "thin spatial wall injectivity cells={} projection={:?}",
-            proof.cells, proof.projection
-        );
-    }
-    #[test]
-    fn pole_projection_requires_exact_arithmetic_and_keeps_rational_basis() {
-        let s = quarter();
-        let p = exact_projected_surface(&s, [[1, 1, 0], [0, 0, 1]]).unwrap();
-        assert_eq!(s.weights, p.weights);
-        assert_eq!(s.knots_u, p.knots_u);
-        assert_eq!(s.knots_v, p.knots_v);
-        assert_eq!(s.degree_u, p.degree_u);
-        assert_eq!(s.degree_v, p.degree_v);
-        for (a, b) in s
-            .control_points
-            .iter()
-            .flatten()
-            .zip(p.control_points.iter().flatten())
-        {
-            assert_eq!(b[0], a[0] + a[1]);
-            assert_eq!(b[1], a[2]);
-            assert_eq!(b[2], 0.);
-        }
-        let mut rounded = s.clone();
-        rounded.control_points[0][0][0] = 1.;
-        rounded.control_points[0][0][1] = 2_f64.powi(-54);
-        let before = rounded.clone();
-        assert!(exact_projected_surface(&rounded, [[1, 1, 0], [0, 0, 1]]).is_none());
-        assert_eq!(rounded, before);
-    }
-    #[test]
-    fn finer_dual_certifies_original_sheared_wall_without_crediting_a_proposal() {
-        let s = Surface {
-            degree_u: 2,
-            degree_v: 1,
-            knots_u: vec![0., 0., 0., 1., 1., 1.],
-            knots_v: vec![0., 0., 1., 1.],
-            control_points: vec![
-                vec![
-                    vec![0.6530574994261776, -0.4177342973963124, 2.8505263778629866],
-                    vec![0.6902224237062069, -0.39135860255547433, 3.564086526338608],
-                ],
-                vec![
-                    vec![1.2456075346925495, 0.11617155954812869, 3.9102440379557444],
-                    vec![1.3054479503736172, 0.15174399496075583, 4.637554869660337],
-                ],
-                vec![
-                    vec![0.5905981815837974, 0.5726061673805435, 3.6546149667003553],
-                    vec![0.6121768723162396, 0.5936397910373246, 4.317133369542564],
-                ],
-            ],
-            weights: vec![vec![1.; 2]; 3],
-            periodic_u: false,
-            periodic_v: false,
-        };
-        let saved=s.clone();
-        let original=inspect_candidate_basic(&s,10000).unwrap();
-        // The whole-chart P-Jacobian gate now also certifies this basic
-        // projection. Success is independently replayed on the original face;
-        // the older symmetric-Jacobian refusal is not a required outcome.
-        assert!(original.certified, "{original:?}");
-        assert!(inspect(&s, original.projection, 10000).unwrap().certified);
-        let proof = inspect_candidate(&s, 10000).unwrap();
-        assert!(proof.certified && proof.cells < 10000, "{proof:?}");
-        for budget in [0,proof.cells-1] {
-            assert!(!inspect_candidate(&s,budget).unwrap().certified);
-        }
-        assert_eq!(s,saved);
-        let transported = inspect(&s, [[0, 17, -1], [-15, -14, 16]], 10000);
-        assert!(transported.unwrap().certified);
-    }
-
     use super::*;
     #[test]
-    fn long_station_motion_keeps_p_jacobian_and_transverse_certificates() {
+    fn fixed_rational_profile_bijection_preserves_the_source_and_budget() {
+        let s = Surface {
+            degree_u: 1,
+            degree_v: 5,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1.],
+            control_points: (0..2)
+                .map(|u| (0..6).map(|v| vec![u as f64, v as f64 / 5., 0.]).collect())
+                .collect(),
+            weights: vec![vec![1.; 6], vec![2.; 6]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let before = s.clone();
+        let proof = inspect_candidate(&s, 1000).unwrap();
+        assert!(proof.certified);
+        let source = proof.profile_parameterization.unwrap();
+        assert_eq!(source.weights, [1., 2.]);
+        assert!(source.derivative_lower > 0. && source.derivative_lower <= 0.5);
+        assert_eq!(s, before);
+        let denied = inspect_candidate(&s, 0).unwrap();
+        assert!(!denied.certified && denied.cells == 0);
+        let mut changed = s.clone();
+        changed.weights[1][2] = 3.;
+        assert!(inspect_candidate(&changed, 1000)
+            .unwrap()
+            .profile_parameterization
+            .is_none());
+    }
+    #[test]
+    fn fixed_p_matrix_and_weighted_metric_are_proved_on_the_whole_chart() {
+        let s = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![-16., 16., 0.]],
+                vec![vec![0.125, 0.125, 0.], vec![-15.875, 16.125, 0.]],
+            ],
+            weights: vec![vec![1., 1.]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let map = [[1, 0, 0], [0, 1, 0]];
+        // The constant Jacobian has positive diagonal and determinant 4,
+        // while its symmetric part is indefinite. The C1 P-matrix proof now
+        // admits this shear independently of the weighted SPD alternative.
+        assert_eq!(0.125_f64*16. - (-16.)*0.125,4.);
+        assert!(0.125_f64*16. - ((-16_f64+0.125)/2.).powi(2) < 0.);
+        assert!(inspect_metric(&s, map, [1.,1.],64,1).unwrap().certified);
+        let weighted=inspect_weighted(&s,map,64,1).unwrap();
+        assert!(weighted.certified);
+        assert_eq!(weighted.row_weights,[1./128.,1.]);
+        let r = inspect(&s, map, 64).unwrap();
+        assert!(r.certified);
+        assert_eq!(r.row_weights,[1.,1.]);
+        assert!(r.cells <= 64);
+        for budget in [0] {
+            let refused = inspect(&s, map, budget).unwrap();
+            assert!(!refused.certified);
+            assert!(refused.cells <= budget);
+        }
+        for budget in [1,2] {
+            let proved=inspect(&s,map,budget).unwrap();
+            assert!(proved.certified && proved.cells<=budget);
+        }
+        let mut singular = s.clone();
+        singular.control_points[1][0] = vec![0.125, -0.125, 0.];
+        singular.control_points[1][1] = vec![-15.875, 15.875, 0.];
+        assert!(!inspect(&singular, map, 64).unwrap().certified);
+        assert!(inspect_metric(&s, map, [-1., 1.], 64, 1).is_err());
+    }
+    #[test]
+    fn transverse_proposal_does_not_mix_long_station_motion_into_profile_row() {
         let mut s = quarter();
         for row in &mut s.control_points {
             for (v, p) in row.iter_mut().enumerate() {
                 p[2] = 100. * v as f64 + p[0];
             }
         }
-        // Long station shear defeats symmetric positivity, but the exact
-        // projected P-Jacobian remains admissible on this smooth rectangle.
         assert!(
             inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
                 .unwrap()
@@ -576,12 +590,7 @@ mod tests {
         );
         let r = inspect_candidate(&s, 1000).unwrap();
         assert!(r.certified, "{r:?}");
-        assert!(
-            inspect(&s, [[-1, 1, 0], [0, 0, 1]], 1000)
-                .unwrap()
-                .certified
-        );
-        assert!(inspect(&s, r.projection, 1000).unwrap().certified);
+        assert_eq!(r.projection, [[-1, 1, 0], [0, 0, 1]]);
         assert!(!inspect_candidate(&s, 0).unwrap().certified);
     }
     #[test]
@@ -643,20 +652,113 @@ mod tests {
     }
 }
 
+pub fn inspect_candidate_with_hint(
+    s: &Surface,
+    hint: Option<[[i8; 3]; 2]>,
+    max_cells: usize,
+) -> Result<Report> {
+    let Some(projection) = hint else {
+        return inspect_candidate(s, max_cells);
+    };
+    let first = inspect(s, projection, max_cells)?;
+    if first.certified || first.cells == max_cells {
+        return Ok(first);
+    }
+    let mut fallback = inspect_candidate(s, max_cells - first.cells)?;
+    fallback.cells += first.cells;
+    Ok(fallback)
+}
+
+fn exact_projected_surface(s: &Surface, projection: [[i8; 3]; 2]) -> Option<Surface> {
+    use crate::exact_curve_segments::{exact_add, exact_mul};
+    let mut out = s.clone();
+    for (source, target) in s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(out.control_points.iter_mut().flatten())
+    {
+        for row in 0..2 {
+            let mut value = 0.;
+            for k in 0..3 {
+                value = exact_add(value, exact_mul(source[k], projection[row][k] as f64)?)?;
+            }
+            target[row] = value;
+        }
+        target[2] = 0.;
+    }
+    Some(out)
+}
+/// With weights constant along V, the first control row is an independent
+/// polynomial station curve. Exact pole subtraction gives S=P(V)+R(U,V),
+/// hence Su=Ru and Sv=Pv+Rv. Never replace a pole by a rounded difference.
+fn exact_station_split(s: &Surface) -> Option<(Surface, Surface)> {
+    if s.weights.iter().any(|row| row.iter().any(|w| *w != row[0])) {
+        return None;
+    }
+    let mut relative = s.clone();
+    let mut position = s.clone();
+    for u in 0..s.control_points.len() {
+        for v in 0..s.control_points[0].len() {
+            for k in 0..3 {
+                relative.control_points[u][v][k] = crate::exact_curve_segments::exact_add(
+                    s.control_points[u][v][k],
+                    -s.control_points[0][v][k],
+                )?;
+            }
+            position.control_points[u][v] = s.control_points[0][v].clone();
+            position.weights[u][v] = 1.;
+        }
+    }
+    Some((relative, position))
+}
+
 #[cfg(test)]
-mod p_matrix_regressions {
-    use super::*;
-    fn shear(c0:bool,fold:bool)->Surface {
-        let xs=if c0 {vec![0.,0.5,1.]}else{vec![0.,1.]};
-        let points=xs.iter().map(|&u|[0.,1.].into_iter().map(|v|vec![u+if fold{2.}else{10.}*v,if fold{2.*u+v}else{-0.05*u+v},0.]).collect()).collect();
-        Surface{degree_u:1,degree_v:1,knots_u:if c0{vec![0.,0.,0.5,1.,1.]}else{vec![0.,0.,1.,1.]},knots_v:vec![0.,0.,1.,1.],control_points:points,weights:vec![vec![1.;2];xs.len()],periodic_u:false,periodic_v:false}
+#[path = "surface_linear_monotonicity/tests.rs"]
+mod retained_route_tests;
+
+pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+    // Preserve every already successful original proposal and its work/report.
+    // A finer integer dual map is only a proposal after the original cover
+    // failed; acceptance still proves the same full-domain outward inequality.
+    let mut report = inspect_candidate_original(s, max_cells)?;
+    for resolution in [32., 64.] {
+        if report.certified || report.cells == max_cells { break; }
+        let Some(projection) = midpoint_projection_at_resolution(s, resolution)? else { break; };
+        if projection == report.projection { continue; }
+        let mut next = inspect_with_depth(s, projection, max_cells - report.cells, 14)?;
+        next.cells += report.cells;
+        report = next;
     }
-    #[test]
-    fn p_jacobian_accepts_nonsymmetric_c1_charts_and_refuses_folds_or_unproved_c1() {
-        let identity=[[1,0,0],[0,1,0]];
-        assert!(inspect(&shear(false,false),identity,1).unwrap().certified);
-        assert!(!inspect(&shear(false,true),identity,32).unwrap().certified);
-        assert!(!inspect(&shear(true,false),identity,32).unwrap().certified);
-        assert!(!inspect(&shear(false,false),identity,0).unwrap().certified);
+    Ok(report)
+}
+fn midpoint_projection_at_resolution(s: &Surface, resolution: f64) -> Result<Option<[[i8; 3]; 2]>> {
+    // Midpoint tangents propose dual directions. Every actual acceptance still
+    // requires one fixed integer map's whole-domain outward interval proof.
+    let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];
+    let v = 0.5 * s.knots_v[s.degree_v] + 0.5 * s.knots_v[s.control_points[0].len()];
+    let Some((du, dv)) = s.evaluate(u, v)?.first_derivatives() else {
+        return Ok(None);
+    };
+    let dot = |a: [f64; 3], b: [f64; 3]| (0..3).map(|k| a[k] * b[k]).sum::<f64>();
+    let uu = dot(du, du);
+    let uv = dot(du, dv);
+    let vv = dot(dv, dv);
+    let dual: [[f64; 3]; 2] = [
+        std::array::from_fn(|k| vv * du[k] - uv * dv[k]),
+        std::array::from_fn(|k| uu * dv[k] - uv * du[k]),
+    ];
+    let mut candidate = [[0_i8; 3]; 2];
+    for row in 0..2 {
+        let scale = dual[row].iter().map(|x| x.abs()).fold(0., f64::max);
+        if !scale.is_finite() || scale <= 0. {
+            return Ok(None);
+        }
+        candidate[row] = dual[row].map(|x| (resolution * x / scale).round() as i8);
     }
+    let independent = (0..3).any(|k| {
+        candidate[0][k] as i16 * candidate[1][(k + 1) % 3] as i16
+            != candidate[1][k] as i16 * candidate[0][(k + 1) % 3] as i16
+    });
+    Ok(independent.then_some(candidate))
 }

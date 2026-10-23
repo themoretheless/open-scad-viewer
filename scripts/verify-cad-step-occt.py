@@ -98,7 +98,7 @@ def main(directory, make_preview=True):
         BRepBndLib.AddOptimal_s(shape, box, False, False)
         bounds = [[point.X(), point.Y(), point.Z()] for point in [box.CornerMin(), box.CornerMax()]]
         properties = GProp_GProps()
-        BRepGProp.VolumeProperties_s(shape, properties)
+        integration_error = BRepGProp.VolumeProperties_s(shape, properties, Eps=1e-10)
         volume = properties.Mass()
         error = max(abs(a - b) for actual, expected in zip(bounds, part['expected']['boundsMm']) for a, b in zip(actual, expected))
         volume_error = abs(volume - part['expected']['volumeMm3'])
@@ -116,7 +116,8 @@ def main(directory, make_preview=True):
         row = dict(name=part['name'], stepSha256=digest, valid=valid, solids=solids,
                    faces=count_shapes(shape, TopAbs_FACE), uniqueEdges=edges, uniqueVertices=vertices,
                    topologyPassed=topology_passed, topologyExpectations=topology_expected, boundsMm=bounds, volumeMm3=volume,
-                   maxBoundsErrorMm=error, volumeErrorMm3=volume_error, passed=passed,
+                   maxBoundsErrorMm=error, volumeErrorMm3=volume_error,
+                   volumeIntegrationRelativeError=integration_error, passed=passed,
                    previewTriangles=len(faces))
         rows.append(row)
         if 'lowerVolumeMm3' in part['expected']:

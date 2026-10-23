@@ -648,3 +648,7 @@ pub fn inspect_owned(
     });
     Ok(OwnedInspection {report,positions})
 }
+
+#[path="surface_g2_pcurves/collar_owned.rs"]
+mod collar_owned;
+pub use collar_owned::{OwnedCollarInspection,inspect_owned_collar};

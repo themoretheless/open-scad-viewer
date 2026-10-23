@@ -1,0 +1,84 @@
+{
+  "id": "own-rust-cad-v28",
+  "successorOf": "docs/qualification/own-rust-cad-v27.json",
+  "previousSha256": "9646c6c3eea8e1137bf3c437299e705252f20f4cd2818f893fff548e61a4b6be",
+  "recordedAt": "2026-10-02",
+  "purpose": "Append-only fingerprint of the cleanly rebuilt loft kernel and current source bundle for G0 v36 / G1 v53. Preserve v27 as publication evidence; no qualification result is imported.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "54539bb039b8047ba4bc5c030d7361655c0172f58ec85c78c95da106de146cf6",
+    "byteLength": 9676259,
+    "variants": [
+      {
+        "sha256": "54539bb039b8047ba4bc5c030d7361655c0172f58ec85c78c95da106de146cf6",
+        "byteLength": 9676259,
+        "builder": "macos-aarch64",
+        "evidence": "Clean local build with nightly-2026-09-16; Node 22 and 26 optimizers produce identical bytes."
+      },
+      {
+        "sha256": "58889ee35bbf97aa6bb7f8bd01404928668cdddccec7a349934b797fe8d88d5c",
+        "byteLength": null,
+        "builder": "linux-x86_64",
+        "evidence": "GitHub jobs 110629675240 and 110629675250 independently report this rebuilt digest on 9f9c29a1. Length was not recorded; exact SHA-256 remains mandatory."
+      },
+      {
+        "sha256": "c30474a3b4b6ddf0134d59a897d3b1dd1d2e93dc9c15adebdf5db47b94768b5c",
+        "byteLength": 9676099,
+        "builder": "linux-aarch64",
+        "evidence": "Clean Ubuntu container build with nightly-2026-09-16 and Node 22.23.0."
+      }
+    ]
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "65230207a302426b7b0ebfaaa87834f5d5a56d651b068caeb419046e91cd5725",
+    "paths": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "crates/nurbs-core/src/gordon.rs",
+      "crates/nurbs-core/src/guided_loft.rs",
+      "crates/nurbs-core/src/loft_alignment.rs",
+      "crates/nurbs-core/src/loft_continuity.rs",
+      "crates/nurbs-core/src/natural_loft.rs",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV10.test.ts",
+      "tests/brepQualificationV11.test.ts",
+      "tests/brepQualificationV12.test.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "npmLockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+    "rustLockfileSha256": "ba03ef15f1a195c613fa74f9393843d49826d0b195305b540cd63c77db847c2c"
+  },
+  "claimBoundary": [
+    "This enumerates exact observed build artifacts; compiler hosts are not assumed to produce identical bytes. It is not an external clean qualification run.",
+    "It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.",
+    "It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology."
+  ]
+}

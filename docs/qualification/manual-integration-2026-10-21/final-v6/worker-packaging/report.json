@@ -1,0 +1,163 @@
+{
+  "browser": "151.0.7922.34",
+  "files": {
+    "svg": "svg.worker-8JFMiPpE.js",
+    "gcode": "gcodePreview.worker-Cb-0m0Ns.js"
+  },
+  "result": {
+    "preview": {
+      "version": 1,
+      "id": 1,
+      "ok": true,
+      "result": {
+        "svg": "<svg viewBox=\"0 0 75.59055 37.795277\" width=\"20mm\" height=\"10mm\" xmlns=\"http://www.w3.org/2000/svg\">\n    <g transform=\"matrix(3.7795277 0 0 3.7795277 0 0)\">\n        <path fill=\"#000000\" stroke=\"none\" d=\"M 0 0 L 20 0 L 20 10 L 0 10 Z\"/>\n    </g>\n</svg>\n",
+        "widthMm": 20,
+        "heightMm": 10,
+        "warnings": []
+      }
+    },
+    "extrusion": {
+      "version": 1,
+      "id": 2,
+      "ok": true,
+      "result": {
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20mm\" height=\"10mm\" viewBox=\"0 0 20 10\"><path fill=\"black\" fill-rule=\"evenodd\" d=\"M0 10 L20 10 L20 0 L0 0 Z\"/></svg>",
+        "widthMm": 20,
+        "heightMm": 10,
+        "warnings": [],
+        "source": "linear_extrude(height=3) polygon(points=[[0,0],[20,0],[20,10],[0,10]],paths=[[0,1,2,3]]);"
+      }
+    },
+    "parsed": {
+      "version": 1,
+      "id": 3,
+      "ok": true,
+      "result": {
+        "gcode": "G21\nG90\nM82\nG92 E0\nG1 X0 Y0 Z0.2 F1200\nG1 X10 Y0 E1\nG1 X10 Y10 E2\n",
+        "preview": {
+          "bounds": {
+            "max": [
+              10,
+              10,
+              0.2
+            ],
+            "min": [
+              0,
+              0,
+              0.2
+            ]
+          },
+          "depositedVolumeMm3": 4.81056375080937,
+          "estimatedTimeS": 1,
+          "extrusionMm": 2,
+          "layers": 1,
+          "printDistanceMm": 20,
+          "travelDistanceMm": 0,
+          "moves": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0.2,
+              "e": 0,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": false
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "z": 0.2,
+              "e": 1,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": true
+            },
+            {
+              "x": 10,
+              "y": 10,
+              "z": 0.2,
+              "e": 2,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": true
+            }
+          ]
+        },
+        "dialect": "unknown G-code (tolerant preview)",
+        "native": false,
+        "generator": "unknown",
+        "flavor": null,
+        "firmware": null
+      }
+    },
+    "invalid": {
+      "version": 1,
+      "id": 4,
+      "ok": false,
+      "error": "Invalid G-code preview request."
+    },
+    "recovered": {
+      "version": 1,
+      "id": 5,
+      "ok": true,
+      "result": {
+        "gcode": "G21\nG90\nM82\nG92 E0\nG1 X0 Y0 Z0.2 F1200\nG1 X10 Y0 E1\nG1 X10 Y10 E2\n",
+        "preview": {
+          "bounds": {
+            "max": [
+              10,
+              10,
+              0.2
+            ],
+            "min": [
+              0,
+              0,
+              0.2
+            ]
+          },
+          "depositedVolumeMm3": 4.81056375080937,
+          "estimatedTimeS": 1,
+          "extrusionMm": 2,
+          "layers": 1,
+          "printDistanceMm": 20,
+          "travelDistanceMm": 0,
+          "moves": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0.2,
+              "e": 0,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": false
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "z": 0.2,
+              "e": 1,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": true
+            },
+            {
+              "x": 10,
+              "y": 10,
+              "z": 0.2,
+              "e": 2,
+              "feedrateMmS": 20,
+              "layerIndex": 0,
+              "extruded": true
+            }
+          ]
+        },
+        "dialect": "unknown G-code (tolerant preview)",
+        "native": false,
+        "generator": "unknown",
+        "flavor": null,
+        "firmware": null
+      }
+    }
+  },
+  "pageErrors": []
+}

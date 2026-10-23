@@ -164,7 +164,9 @@ pub fn tessellate(
         }
     }
     let n = segments;
-    let evaluated_patches = math_core::par_try_map(surfaces, 1, |s| -> Result<([Vec<f64>; 2], Vec<[f64; 3]>)> {
+    let mut points: Vec<[f64; 3]> = Vec::new();
+    let mut grids = Vec::new();
+    for s in surfaces {
         let d = domain(s);
         let grid: [Vec<f64>; 2] = std::array::from_fn(|axis| {
             (0..=n)
@@ -183,18 +185,11 @@ pub fn tessellate(
             grid.iter().all(|g| g.windows(2).all(|p| p[0] < p[1])),
             "Shared grid reached precision limit",
         )?;
-        let mut patch_points: Vec<[f64; 3]> = Vec::with_capacity((n + 1) * (n + 1));
         for &u in &grid[0] {
             for &v in &grid[1] {
-                patch_points.push(s.evaluate(u, v)?.point.try_into().unwrap());
+                points.push(s.evaluate(u, v)?.point.try_into().unwrap());
             }
         }
-        Ok::<_, crate::Error>((grid, patch_points))
-    })?;
-    let mut points: Vec<[f64; 3]> = Vec::with_capacity(surfaces.len() * (n + 1) * (n + 1));
-    let mut grids = Vec::with_capacity(surfaces.len());
-    for (grid, patch_points) in evaluated_patches {
-        points.extend(patch_points);
         grids.push(grid);
     }
     let mut parent: Vec<_> = (0..points.len()).collect();

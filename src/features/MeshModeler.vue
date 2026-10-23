@@ -39,7 +39,7 @@ import {
   type MeshWorkspaceDocument,
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
-import { projectMeshModelerFaces } from '../services/meshModelerProjection'
+import { projectMeshModelerObject,cachedMeshModelerStats } from '../services/meshModelerProjection'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
@@ -78,10 +78,10 @@ watch(() => props.open, async open => {
   }
 }, { immediate: true })
 const selection = ref('')
-const selectMode = shallowRef<MeshSelectMode>('object')
-const selectedVerts = shallowRef<number[]>([])
-const selectedFaces = shallowRef<number[]>([])
-const selectedEdges = shallowRef<number[]>([])
+const selectMode = ref<MeshSelectMode>('object')
+const selectedVerts = ref<number[]>([])
+const selectedFaces = ref<number[]>([])
+const selectedEdges = ref<number[]>([])
 const dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
 const proportionalEdit = ref(false)
 const proportionalRadius = ref(5)
@@ -90,16 +90,16 @@ const insetAmount = ref(0.5)
 const mergeDistance = ref(0.01)
 const brushRadius = ref(5)
 const brushStrength = ref(1)
-const brushKind = shallowRef<SculptKind>('grab')
-const brushFalloff = shallowRef<SculptFalloff>('smooth')
+const brushKind = ref<SculptKind>('grab')
+const brushFalloff = ref<SculptFalloff>('smooth')
 const brushMirror = ref<[boolean, boolean, boolean]>([false, false, false])
 const brushIsFraction = computed(() => isFractionalSculptKind(brushKind.value))
 const twistAmount = ref(0.1)
-const booleanOp = shallowRef<'union' | 'difference' | 'intersection'>('union')
+const booleanOp = ref<'union' | 'difference' | 'intersection'>('union')
 const booleanTarget = ref('')
-const camera = shallowRef(defaultDirectCamera())
+const camera = ref(defaultDirectCamera())
 const view = ref(140)
-const center = shallowRef<[number, number]>([0, 0])
+const center = ref<[number, number]>([0, 0])
 const workspace = ref<HTMLElement>()
 const fileInput = ref<HTMLInputElement>()
 // LMB / RMB drag orbits, Shift or middle drag pans; a drag past the threshold swallows the following click so picking stays intact.
@@ -138,16 +138,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, { immediate: true })
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
-const meshStatsCache = new WeakMap<PolygonMesh, ReturnType<typeof meshObjectStats> & { edges: number }>()
-const stats = computed(() => {
-  if (!kernelReady.value || !selected.value) return null
-  const mesh = selected.value.mesh
-  const cached = meshStatsCache.get(mesh)
-  if (cached) return cached
-  const result = { ...meshObjectStats(mesh), edges: getEdgeList(mesh).length }
-  meshStatsCache.set(mesh, result)
-  return result
-})
+const stats=computed(()=>kernelReady.value&&selected.value?cachedMeshModelerStats(selected.value.mesh):null)
 
 function syncHistoryFlags() {
   undoable.value = history.canUndo
@@ -532,30 +523,7 @@ function getEdgeList(mesh: PolygonMesh): Array<[number, number]> {
 }
 
 function projected(object: MeshWorkspaceDocument['objects'][number]) {
-  if (!object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
-  const cam = camera.value
-  const tris = projectMeshModelerFaces(object.mesh, cam)
-  const verts: Array<{ x: number; y: number; id: number }> = []
-  const pos = object.mesh.positions
-  if (selectMode.value === 'vertex') {
-    for (let i = 0, o = 0; o < pos.length; i++, o += 3) {
-      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
-      verts.push({ x: p[0], y: -p[1], id: i })
-    }
-  }
-  const edges = selectMode.value === 'edge' ? (() => {
-    const edgeList = getEdgeList(object.mesh)
-    const vertexCount = pos.length / 3
-    const projX = new Float64Array(vertexCount)
-    const projY = new Float64Array(vertexCount)
-    for (let i = 0, o = 0; i < vertexCount; i++, o += 3) {
-      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
-      projX[i] = p[0]
-      projY[i] = -p[1]
-    }
-    return edgeList.map(([a, b], id) => ({ id, x1: projX[a], y1: projY[a], x2: projX[b], y2: projY[b] }))
-  })() : []
-  return { tris, verts, edges }
+  return projectMeshModelerObject(object,camera.value,selectMode.value,getEdgeList)
 }
 
 // Dragging a vertex, edge or face moves the current selection in the screen plane (LMB, no modifiers);
@@ -886,131 +854,4 @@ const sceneFaces = computed(() => {
   </div>
 </template>
 
-<style scoped>
-.mesh-workspace {
-  user-select: none;
-  position: fixed;
-  inset: var(--workspace-top, var(--topbar-h, 40px)) 0 var(--statusbar-h, 24px);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
-}
-@media (max-width: 750px) { .mesh-workspace { inset: 0; } }
-.mesh-bar {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.mesh-bar .hint { margin-right: auto; }
-.mesh-bar .command-search { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; background: var(--bg); color: var(--text-dim); border-radius: 8px; padding: 6px 10px; }
-.mesh-bar .command-search span { flex: 1; text-align: left; }
-.mesh-bar .command-search kbd { font: 11px var(--font-mono, monospace); padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; }
-.mesh-bar .icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-.mesh-bar button, .dock-props button, .dock-props select, .dock-props input {
-  background: var(--surface-raised);
-  color: inherit;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.3rem 0.55rem;
-  font: inherit;
-  cursor: pointer;
-}
-.mesh-bar button:hover:not(:disabled), .dock-props button:hover:not(:disabled) { background: var(--hover); }
-.mesh-bar button:disabled, .dock-props button:disabled { opacity: .45; cursor: default; }
-.mesh-bar button:focus-visible, .dock-props button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.mesh-bar .close { margin-left: 0.25rem; }
-.mesh-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.pane-tools { min-height: 46px; padding: 7px 12px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--surface); }
-.pane-tools .subtle { flex: 1; color: var(--text-dim); font-size: 12px; }
-.pane-tools .error { flex-basis: 100%; margin: 0; }
-.tool-icon { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--text); cursor: pointer; }
-.tool-icon:hover { background: var(--hover); }
-.tool-icon[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
-.tool-divider { width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
-.mesh-stage { flex: 1; min-height: 0; display: flex; }
-.mesh-stage-view { flex: 1; min-width: 0; position: relative; }
-.side-dock { flex: 0 0 344px; display: flex; min-height: 0; border-left: 1px solid var(--border); background: var(--bg); }
-.side-dock.collapsed { flex-basis: 46px; }
-.dock-rail { flex: 0 0 46px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-right: 1px solid var(--border); }
-.dock-rail button { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.dock-rail button:hover { color: var(--text); background: var(--hover); }
-.dock-rail button[aria-selected=true] { color: var(--text); background: var(--surface-raised); }
-.dock-rail-spacer { flex: 1; }
-.dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
-.dock-heading { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
-.dock-heading span { color: var(--text-dim); font-weight: 400; }
-.scene-list { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 1px; }
-.scene-list li > button { width: 100%; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-family: var(--font-mono, monospace); font-size: 12.5px; cursor: pointer; }
-.scene-list li > button:hover { background: var(--hover); }
-.scene-list li > button[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); outline: 1px solid var(--accent); outline-offset: -1px; }
-.scene-list small { margin-left: auto; font-size: 11px; color: var(--text-dim); font-family: var(--font-ui, sans-serif); }
-.dot { width: 8px; height: 8px; border-radius: 2px; background: #c3b7a3; }
-.scene-empty { padding: 16px 12px; color: var(--text-dim); font-size: 12px; line-height: 1.5; }
-.dock-props { display: flex; flex-direction: column; gap: 0.75rem; padding: 12px 14px; }
-@media (max-width: 750px) { .side-dock { display: none; } }
-.file-menu { position: relative; }
-.file-menu > summary { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; padding: 0.3rem 0.55rem; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; }
-.file-menu > summary::-webkit-details-marker { display: none; }
-.file-menu > div { position: absolute; right: 0; top: 40px; z-index: 7; width: 270px; display: grid; gap: 6px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 30px #0004; }
-.file-menu button, .file-menu select { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.3rem 0.55rem; font: inherit; cursor: pointer; text-align: left; }
-.file-row { display: flex; gap: 6px; }
-.file-row select { flex: 1; }
-.dock-props h3 { margin: 0 0 0.35rem; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
-.dock-props label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; margin: 0.2rem 0; }
-.dock-props ul { list-style: none; padding: 0; margin: 0.35rem 0 0; }
-.dock-props li button { width: 100%; text-align: left; margin-top: 0.2rem; }
-.dock-props button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
-.row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-.mesh-view { width: 100%; height: 100%; background: var(--canvas-bg); }
-.mesh-view-wrap { position: absolute; inset: 0; min-width: 0; min-height: 0; }
-.mesh-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; pointer-events: none; color: var(--text-dim); padding: 24px; }
-.mesh-empty strong { font-size: 18px; font-weight: 500; }
-.mesh-empty span { font-size: 12px; max-width: 300px; }
-.mesh-view .face { fill: #5c5954; stroke: #1e1d1b; stroke-width: 0.15; cursor: pointer; }
-.mesh-view .face.selected { fill: var(--accent); }
-.mesh-view .edge { stroke: #e9c9a5; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
-.mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
-.mesh-view .vert { fill: #eee; cursor: grab; }
-.mesh-view .vert.selected { fill: #e76f51; }
-.tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; color: var(--text-dim); }
-.stats { font-size: 0.8rem; color: var(--text-dim); }
-.error { color: var(--danger); font-size: 0.85rem; }
-</style>
-
-<style scoped>
-/* Quiet chrome, viewport first: matches the app shell and the Solid workspace. */
-.mesh-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
-.mesh-bar > strong, .mesh-bar > .command-search { display: none; }
-.mesh-bar button:not(.primary), .mesh-bar summary, .dock-props button:not(.primary) { border-color: transparent; background: transparent; border-radius: 6px; }
-.mesh-bar button:hover:not(:disabled), .mesh-bar summary:hover, .dock-props button:hover:not(:disabled) { background: var(--hover); }
-.mesh-body { position: relative; }
-.pane-tools {
-  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
-  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.pane-tools .tool-icon { width: 30px; height: 30px; border-color: transparent; background: transparent; }
-.pane-tools .tool-icon:hover { background: var(--hover); }
-.pane-tools .tool-icon[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: transparent; }
-.pane-tools .tool-divider { height: 16px; background: var(--hairline); }
-.mesh-body > :deep(.modeling-grid-controls) {
-  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
-}
-.mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
-</style>
-
-<style scoped>
-/* Same header as Solid: history on the left, selection count, file menu on the right. */
-.mesh-undo { order: 0; }
-.mesh-redo { order: 1; }
-.mesh-bar .hint { order: 2; }
-.mesh-bar .ws-count { order: 3; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
-.mesh-file { order: 4; }
-</style>
+<style scoped src="./styles/mesh-modeler.css"></style>

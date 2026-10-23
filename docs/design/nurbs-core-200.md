@@ -341,7 +341,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0026 | торическая спираль | integrated |
 | NURBS-0027 | торический узел | integrated |
 | NURBS-0028 | пространственная интерполяция | integrated |
-| NURBS-0029 | геодезическая | native |
+| NURBS-0029 | геодезическая | planned |
 | NURBS-0030 | пересечение поверхностей | planned |
 | NURBS-0031 | плоский патч | integrated |
 | NURBS-0032 | билинейный патч | integrated |
@@ -362,7 +362,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0047 | катеноид | integrated |
 | NURBS-0048 | вращение профиля | integrated |
 | NURBS-0049 | винтовая поверхность профиля | integrated |
-| NURBS-0050 | суперэллипсоид | native |
+| NURBS-0050 | суперэллипсоид | planned |
 | NURBS-0051 | extrusion | integrated |
 | NURBS-0052 | ruled | integrated |
 | NURBS-0053 | loft | integrated |
@@ -372,7 +372,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0057 | Gordon | integrated |
 | NURBS-0058 | трёхграничный патч | integrated |
 | NURBS-0059 | многограничное заполнение | integrated |
-| NURBS-0060 | поверхность по облаку | native |
+| NURBS-0060 | поверхность по облаку | planned |
 | NURBS-0061 | труба постоянного радиуса | integrated |
 | NURBS-0062 | переменного радиуса | integrated |
 | NURBS-0063 | profile sweep | integrated |
@@ -382,7 +382,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0067 | closed sweep | native |
 | NURBS-0068 | огибающая сфер | native |
 | NURBS-0069 | лента вдоль пути | integrated |
-| NURBS-0070 | пружина с профилем | native |
+| NURBS-0070 | пружина с профилем | planned |
 | NURBS-0071 | переход круг–круг | integrated |
 | NURBS-0072 | круг–прямоугольник | integrated |
 | NURBS-0073 | эллипс–эллипс | integrated |
@@ -474,7 +474,7 @@ NURBS-0162: Original rational de Boor подтверждает noninterpolated c
 | NURBS-0159 | кривизна и кручение пространственной кривой | native |
 | NURBS-0160 | главные кривизны и направления поверхности | native |
 | NURBS-0161 | параметрические изолинии поверхности | native |
-| NURBS-0162 | пересечение кривой с плоскостью | native |
+| NURBS-0162 | пересечение кривой с плоскостью | planned |
 | NURBS-0163 | пересечение двух пространственных кривых | planned |
 | NURBS-0164 | пересечение кривой с поверхностью | planned |
 | NURBS-0165 | пересечение луча с поверхностью | native |

@@ -211,3 +211,21 @@ fn changed_original_surface_and_pcurve_are_freshly_recomputed() {
     assert_eq!(bad.decision, Decision::CorrespondenceExceedsTolerance);
     assert!(bad.witness_parameter.is_some());
 }
+
+#[test]
+fn original_multispan_extraction_preserves_jets_and_refuses_cross_chart_maps() {
+    let (s, pc, c) = case();
+    let refined = nurbs_core::surface_edit::insert(&s, Axis::U, 0.125, 1).unwrap();
+    let refined = nurbs_core::surface_edit::insert(&refined, Axis::V, 0.125, 1).unwrap();
+    let saved = refined.clone();
+    let proof = inspect(&refined, &pc, &c);
+    assert_eq!(proof.decision, Decision::WithinTolerance);
+    check_independent_formula(&pc, &c, 1., proof.upper.unwrap());
+    assert_eq!(refined, saved);
+    let mut changed = refined.clone();
+    changed.control_points.last_mut().unwrap()[1][2] += 0.01;
+    assert_ne!(inspect(&changed, &pc, &c).decision, Decision::WithinTolerance);
+    let crossing = nurbs_core::surface_edit::insert(&s, Axis::U, 0.5, 1).unwrap();
+    assert!(surface_collar::inspect_g2(&crossing, &pc, [0.05, 0.1], &c,
+        [1e-7, 1e-5, 1e-4], 100000, 2000000).is_err());
+}

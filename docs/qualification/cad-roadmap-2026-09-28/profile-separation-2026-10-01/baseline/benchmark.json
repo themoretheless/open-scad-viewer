@@ -1,0 +1,20 @@
+{
+  "scope": "Node/WASM retained region validation only; excludes UI, worker messaging and rendering",
+  "kernel": {
+    "sha256": "9de77a21ce7a63fa0ee1069ff6c424be075584e0f2d9f7b92ebeac572eeb6313",
+    "byteLength": 9600320
+  },
+  "fixtureSha256": "1ba9b0d31e2cab58eab60c06bd94c975ea684423e8c6d2bc4723957e9fc8c824",
+  "resultSha256": "2da426745c2f3e60d4b94aa269ca113150ba5750660b2c1886b036db047ef799",
+  "iterations": 5,
+  "samplesMs": [
+    1197.7415420000002,
+    1211.0553329999998,
+    1305.5112500000005,
+    1198.038375,
+    1201.9442499999996
+  ],
+  "medianMs": 1201.9442499999996,
+  "maxMs": 1305.5112500000005,
+  "sourcePreserved": true
+}

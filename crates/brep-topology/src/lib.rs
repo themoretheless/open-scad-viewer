@@ -31,14 +31,6 @@ pub const MAX_ENTITIES: usize = 16384;
 pub const MAX_FACES: usize = 1024;
 pub const MAX_COEDGES: usize = 32768;
 
-/// Indexed B-rep entity identifier aliases.
-pub type VertexId = usize;
-pub type EdgeId = usize;
-pub type LoopId = usize;
-pub type FaceId = usize;
-pub type ShellId = usize;
-pub type BodyId = usize;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Vertex<V = [f64; 3]> {
     pub point: V,
@@ -141,7 +133,7 @@ pub struct Model<C, S, P, V = [f64; 3]> {
 /// payload edits need no entries; tolerance changes need none either.
 /// Under-reporting is a contract violation: the snapshot may then publish a
 /// candidate the full validator would reject.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct EditScope {
     full: bool,
     vertices: Vec<usize>,
@@ -308,6 +300,9 @@ impl<C, S, P> Model<C, S, P> {
     }
 }
 /// Topological invariants (Euler-Poincaré characteristic, genus) and fast adjacency queries.
+/// Edge index within a `Model`.
+pub type EdgeId = usize;
+
 pub mod explorer {
     use super::{EdgeId, Model};
     use rustc_hash::FxHashSet;
@@ -427,6 +422,33 @@ pub mod explorer {
         out
     }
 
+    /// Sorted deduplicated indices of faces sharing at least one non-degenerate edge with `face_id`.
+    pub fn adjacent_faces<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
+        let edges: FxHashSet<usize> = face_edges(model, face_id)
+            .into_iter()
+            .filter(|&e| model.edges.get(e).is_some_and(|ed| !ed.degenerate))
+            .collect();
+        if edges.is_empty() {
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        for (fi, f) in model.faces.iter().enumerate() {
+            if fi == face_id {
+                continue;
+            }
+            let shares = std::iter::once(&f.outer).chain(&f.holes).any(|&l| {
+                model
+                    .loops
+                    .get(l)
+                    .is_some_and(|w| w.coedges.iter().any(|c| edges.contains(&c.edge)))
+            });
+            if shares {
+                out.push(fi);
+            }
+        }
+        out
+    }
+
     fn edge_to_faces_table<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<Vec<usize>> {
         let mut table = vec![Vec::new(); model.edges.len()];
         for (fi, f) in model.faces.iter().enumerate() {
@@ -445,33 +467,6 @@ pub mod explorer {
         }
         table
     }
-
-    /// Sorted deduplicated indices of faces sharing at least one non-degenerate edge with `face_id`.
-    pub fn adjacent_faces<C, S, P, V>(model: &Model<C, S, P, V>, face_id: usize) -> Vec<usize> {
-        let Some(f) = model.faces.get(face_id) else {
-            return Vec::new();
-        };
-        let edge_to_faces = edge_to_faces_table(model);
-        let mut out = Vec::new();
-        for &loop_id in std::iter::once(&f.outer).chain(&f.holes) {
-            let Some(wire) = model.loops.get(loop_id) else {
-                continue;
-            };
-            for coedge in &wire.coedges {
-                if let Some(faces) = edge_to_faces.get(coedge.edge) {
-                    for &nb in faces {
-                        if nb != face_id {
-                            out.push(nb);
-                        }
-                    }
-                }
-            }
-        }
-        out.sort_unstable();
-        out.dedup();
-        out
-    }
-
     fn edge_coedge_counts<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<usize> {
         let mut counts = vec![0usize; model.edges.len()];
         for f in &model.faces {
@@ -490,7 +485,6 @@ pub mod explorer {
         }
         counts
     }
-
     /// Sorted indices of non-degenerate boundary edges (used by exactly 1 face coedge).
     pub fn boundary_edges<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<EdgeId> {
         edge_coedge_counts(model)
@@ -499,7 +493,6 @@ pub mod explorer {
             .filter_map(|(ei, count)| (count == 1).then_some(ei))
             .collect()
     }
-
     /// Sorted indices of non-degenerate non-manifold edges (used by 3 or more face coedges).
     pub fn non_manifold_edges<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<EdgeId> {
         edge_coedge_counts(model)
@@ -508,7 +501,6 @@ pub mod explorer {
             .filter_map(|(ei, count)| (count > 2).then_some(ei))
             .collect()
     }
-
     /// Number of connected components of faces across the model (where two faces are adjacent
     /// if they share at least one non-degenerate edge).
     pub fn connected_face_components<C, S, P, V>(model: &Model<C, S, P, V>) -> usize {
@@ -548,6 +540,7 @@ pub mod explorer {
         }
         components
     }
+
 }
 
 impl<C, S, P, V> Model<C, S, P, V> {
@@ -596,7 +589,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
         explorer::non_manifold_edges(self)
     }
 
-    /// Number of connected face components (faces connected via shared non-degenerate edges).
+    /// Number of connected components of faces across non-degenerate shared edges.
     pub fn connected_face_components(&self) -> usize {
         explorer::connected_face_components(self)
     }
@@ -1131,323 +1124,6 @@ impl<T: RevisionState> RevisionCheckout<T> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn revision_exhaustion_never_wraps_or_publishes_candidate() {
-        let snapshot = TopologySnapshot::new(sheet(), |point| {
-            require(point.iter().all(|x| x.is_finite()), "Invalid point")
-        })
-        .unwrap();
-        let mut store = TopologyStore::new(snapshot);
-        store.revision = u64::MAX;
-        let old_tolerance = store.snapshot().model().tolerance_mm;
-        let edit = store
-            .checkout()
-            .prepare(|m| {
-                m.tolerance_mm = 2e-6;
-                Ok(())
-            })
-            .unwrap();
-        assert_eq!(
-            store.commit(edit).unwrap_err().code,
-            "BREP_REVISION_EXHAUSTED"
-        );
-        assert_eq!(store.revision(), u64::MAX);
-        assert_eq!(store.snapshot().model().tolerance_mm, old_tolerance);
-    }
-    #[test]
-    fn history_is_bounded_and_branching_invalidates_redo() {
-        let snapshot = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        let mut store = TopologyStore::new(snapshot);
-        assert!(!store.undo().unwrap());
-        assert!(!store.redo().unwrap());
-        assert_eq!(store.revision(), 0);
-        for i in 0..40 {
-            let tx = store
-                .checkout()
-                .prepare(|m| {
-                    m.tolerance_mm = (i + 1) as f64 * 1e-6;
-                    Ok(())
-                })
-                .unwrap();
-            store.commit(tx).unwrap();
-        }
-        assert_eq!(store.history_lengths(), (MAX_TOPOLOGY_HISTORY, 0));
-        for _ in 0..MAX_TOPOLOGY_HISTORY {
-            assert!(store.undo().unwrap());
-        }
-        assert!(!store.undo().unwrap());
-        assert_eq!(store.history_lengths(), (0, MAX_TOPOLOGY_HISTORY));
-        assert_eq!(store.snapshot().model().tolerance_mm, 8e-6);
-        assert!(store.redo().unwrap());
-        let tx = store
-            .checkout()
-            .prepare(|m| {
-                m.tolerance_mm = 5e-6;
-                Ok(())
-            })
-            .unwrap();
-        store.commit(tx).unwrap();
-        assert!(!store.redo().unwrap());
-        assert_eq!(store.history_lengths(), (2, 0));
-        store.revision = u64::MAX;
-        assert!(store.undo().is_err());
-        assert_eq!(store.history_lengths(), (2, 0));
-        assert_eq!(store.snapshot().model().tolerance_mm, 5e-6);
-    }
-    #[test]
-    fn restored_history_cannot_change_owner_admission_policy() {
-        let original = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        let foreign = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
-        assert!(TopologyStore::from_history(original.clone(), vec![foreign], vec![]).is_err());
-        assert!(TopologyStore::from_history(original.clone(), vec![original], vec![]).is_ok());
-    }
-    #[test]
-    fn prepared_state_cannot_substitute_its_admission_policy() {
-        #[derive(Clone)]
-        struct OwnerState {
-            value: u32,
-            policy: u32,
-        }
-        impl RevisionState for OwnerState {
-            type Model = u32;
-            fn model(&self) -> &u32 {
-                &self.value
-            }
-            fn same_admission_policy(&self, other: &Self) -> bool {
-                self.policy == other.policy
-            }
-            fn try_edit(&self, edit: impl FnOnce(&mut u32) -> Result<()>) -> Result<Self> {
-                let mut next = self.clone();
-                edit(&mut next.value)?;
-                next.policy += 1; // Deliberately faulty owner implementation.
-                Ok(next)
-            }
-        }
-        let store = RevisionStore::new(OwnerState {
-            value: 7,
-            policy: 1,
-        });
-        let result = store.checkout().prepare(|v| {
-            *v = 9;
-            Ok(())
-        });
-        assert!(matches!(
-            result,
-            Err(Error {
-                code: "BREP_TRANSACTION_POLICY_MISMATCH",
-                ..
-            })
-        ));
-        assert_eq!(*store.snapshot().model(), 7);
-        assert_eq!(store.revision(), 0);
-        assert_eq!(store.history_lengths(), (0, 0));
-    }
-    fn sheet() -> Model<(), (), ()> {
-        Model {
-            vertices: vec![
-                Vertex {
-                    point: [0., 0., 0.],
-                },
-                Vertex {
-                    point: [1., 0., 0.],
-                },
-                Vertex {
-                    point: [0., 1., 0.],
-                },
-            ],
-            edges: vec![
-                Edge {
-                    degenerate: false,
-                    vertices: [0, 1],
-                    curve: (),
-                },
-                Edge {
-                    degenerate: false,
-                    vertices: [1, 2],
-                    curve: (),
-                },
-                Edge {
-                    degenerate: false,
-                    vertices: [2, 0],
-                    curve: (),
-                },
-            ],
-            loops: vec![Loop {
-                coedges: (0..3)
-                    .map(|edge| Coedge {
-                        edge,
-                        reversed: false,
-                        pcurve: (),
-                    })
-                    .collect(),
-            }],
-            faces: vec![Face {
-                surface: (),
-                outer: 0,
-                holes: vec![],
-            }],
-            shells: vec![Shell {
-                faces: vec![FaceUse {
-                    face: 0,
-                    reversed: false,
-                }],
-                closed: false,
-            }],
-            bodies: vec![],
-            tolerance_mm: 1e-7,
-        }
-    }
-    #[test]
-    fn no_geometry_kernel_required() {
-        sheet().validate_topology().unwrap();
-    }
-    #[test]
-    #[cfg(feature = "codec")]
-    fn legacy_tolerance_migrates_to_versioned_context() {
-        let model = sheet();
-        let mut value = value_codec::Serialize::to_value(&model);
-        value.as_object_mut().unwrap().remove("toleranceContext");
-        let restored: Model<(), (), ()> = value_codec::Deserialize::from_value(value).unwrap();
-        let context = restored.tolerance_context().unwrap();
-        assert_eq!(context.spatial_bounds().on_mm, model.tolerance_mm);
+#[path = "tests/tests_integration.rs"]
+mod tests;
 
-        let canonical = value_codec::Serialize::to_value(&restored);
-        assert!(canonical.get("toleranceMm").is_some());
-        assert!(canonical.get("toleranceContext").is_some());
-    }
-    #[test]
-    #[cfg(feature = "codec")]
-    fn conflicting_legacy_and_context_tolerances_are_rejected() {
-        let mut value = value_codec::Serialize::to_value(&sheet());
-        *value.get_mut("toleranceMm").unwrap() = value_codec::Serialize::to_value(&2e-6_f64);
-        assert!(<Model<(), (), ()> as value_codec::Deserialize>::from_value(value).is_err());
-    }
-    #[test]
-    fn closed_shell_requires_two_opposite_uses() {
-        let mut m = sheet();
-        m.shells[0].closed = true;
-        assert!(m.validate_topology().is_err());
-    }
-    #[test]
-    fn bodies_cannot_reference_open_shells() {
-        let mut m = sheet();
-        m.bodies.push(Body {
-            outer_shell: 0,
-            inner_shells: vec![],
-        });
-        assert!(m.validate_topology().is_err());
-    }
-    #[test]
-    fn broken_reference_is_a_typed_error() {
-        let mut m = sheet();
-        m.loops[0].coedges[1].edge = 99;
-        assert_eq!(
-            m.validate_topology().unwrap_err().code,
-            "BREP_INVALID_TOPOLOGY"
-        );
-    }
-
-    #[test]
-    fn explorer_euler_characteristic_genus_and_adjacency() {
-        let m = sheet();
-        // Triangle sheet: V=3, E=3, F=1 => chi = 3 - 3 + 1 = 1.
-        assert_eq!(m.euler_characteristic(), 1);
-        assert_eq!(m.shell_euler_characteristic(0), Some(1));
-        assert_eq!(m.shell_genus(0), None); // open shell
-        assert_eq!(m.vertex_edges(0), vec![0, 2]);
-        assert_eq!(m.face_edges(0), vec![0, 1, 2]);
-        assert!(m.adjacent_faces(0).is_empty());
-        assert_eq!(m.boundary_edges(), vec![0, 1, 2]);
-        assert!(m.non_manifold_edges().is_empty());
-        assert_eq!(m.connected_face_components(), 1);
-
-        // Closed tetrahedron: V=4, E=6, F=4 => chi = 2, genus = 0.
-        let tet = Model {
-            vertices: vec![
-                Vertex { point: [0., 0., 0.] },
-                Vertex { point: [1., 0., 0.] },
-                Vertex { point: [0., 1., 0.] },
-                Vertex { point: [0., 0., 1.] },
-            ],
-            edges: vec![
-                Edge { degenerate: false, vertices: [0, 1], curve: () },
-                Edge { degenerate: false, vertices: [1, 2], curve: () },
-                Edge { degenerate: false, vertices: [2, 0], curve: () },
-                Edge { degenerate: false, vertices: [0, 3], curve: () },
-                Edge { degenerate: false, vertices: [1, 3], curve: () },
-                Edge { degenerate: false, vertices: [2, 3], curve: () },
-            ],
-            loops: vec![
-                Loop {
-                    coedges: vec![
-                        Coedge { edge: 0, reversed: true, pcurve: () },
-                        Coedge { edge: 2, reversed: true, pcurve: () },
-                        Coedge { edge: 1, reversed: true, pcurve: () },
-                    ],
-                },
-                Loop {
-                    coedges: vec![
-                        Coedge { edge: 0, reversed: false, pcurve: () },
-                        Coedge { edge: 4, reversed: false, pcurve: () },
-                        Coedge { edge: 3, reversed: true, pcurve: () },
-                    ],
-                },
-                Loop {
-                    coedges: vec![
-                        Coedge { edge: 1, reversed: false, pcurve: () },
-                        Coedge { edge: 5, reversed: false, pcurve: () },
-                        Coedge { edge: 4, reversed: true, pcurve: () },
-                    ],
-                },
-                Loop {
-                    coedges: vec![
-                        Coedge { edge: 2, reversed: false, pcurve: () },
-                        Coedge { edge: 3, reversed: false, pcurve: () },
-                        Coedge { edge: 5, reversed: true, pcurve: () },
-                    ],
-                },
-            ],
-            faces: (0..4)
-                .map(|i| Face {
-                    surface: (),
-                    outer: i,
-                    holes: vec![],
-                })
-                .collect(),
-            shells: vec![Shell {
-                faces: (0..4)
-                    .map(|face| FaceUse {
-                        face,
-                        reversed: false,
-                    })
-                    .collect(),
-                closed: true,
-            }],
-            bodies: vec![Body {
-                outer_shell: 0,
-                inner_shells: vec![],
-            }],
-            tolerance_mm: 1e-7,
-        };
-        tet.validate_topology().unwrap();
-        assert_eq!(tet.euler_characteristic(), 2);
-        assert_eq!(tet.shell_euler_characteristic(0), Some(2));
-        assert_eq!(tet.shell_genus(0), Some(0));
-        assert_eq!(tet.genus(), 0);
-        assert_eq!(tet.adjacent_faces(0), vec![1, 2, 3]);
-        assert!(tet.boundary_edges().is_empty());
-        assert!(tet.non_manifold_edges().is_empty());
-        assert_eq!(tet.connected_face_components(), 1);
-
-        // Add a third coedge use of edge 0 to create a non-manifold edge in an unvalidated model.
-        let mut nm = tet.clone();
-        nm.loops[2].coedges.push(Coedge {
-            edge: 0,
-            reversed: false,
-            pcurve: (),
-        });
-        assert_eq!(nm.non_manifold_edges(), vec![0]);
-    }
-}

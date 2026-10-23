@@ -34,16 +34,10 @@ async function run(): Promise<void> {
   assert('default Vite Worker exact 256 entity boundary', exact.meshes[0]?.entityId?.length === 256)
   assert('default Vite Worker realm terminated after success', defaultLane.snapshot().workersTerminated === 1)
 
-  let defaultOversizedCode: string | undefined
-  try {
-    await defaultLane.evaluate('assert(true) if(true) let(x=2) cube(x);')
-  } catch (error) {
-    if (error instanceof ManifoldPlanQualificationWorkerRemoteError) {
-      defaultOversizedCode = error.code
-    }
-  }
-  assert('default Vite Worker rejects 257 identity before publication',
-    defaultOversizedCode === 'QUALIFICATION_RESULT_UNPUBLISHABLE')
+  const longIdentity = await defaultLane.evaluate('assert(true) if(true) let(x=2) cube(x);')
+  assert('default Vite Worker publishes Rust-hashed long identity within protocol budget',
+    /^entity:sha256:[a-f0-9]{64}$/.test(longIdentity.meshes[0]?.entityId ?? '')
+      && longIdentity.meshes[0]?.entityId.length <= 256)
   const recovered = await defaultLane.evaluate('cube(1);')
   assert('default lane recovers in fresh realm', recovered.volume === 1
     && defaultLane.snapshot().workersStarted === 3

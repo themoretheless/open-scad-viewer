@@ -8,6 +8,8 @@ export interface BrepProfile {
   kind: 'brep-profile'
   loops: NurbsCurve[][]
   areaMm2: number
+  /** Outward integration enclosure for admitted general NURBS. */
+  areaIntervalMm2?: [number,number]
   toleranceMm: number
   geometryStatus: 'numerical_uncertified'|'bounded_approximation'
   minkowskiCertificate?:BrepMinkowskiCertificate
@@ -26,12 +28,12 @@ export function booleanBrepProfiles(a:BrepProfile,b:BrepProfile,operation:BrepPr
   return callGeometryRust('brep_profile_boolean',{a:a.loops,b:b.loops,operation,toleranceMm})
 }
 
-/** Signed Green area of one connected retained curve loop, without a mesh. */
+/** Signed Green area of one connected line/circular-arc loop, without a mesh. */
 export function signedAreaBrepProfileLoop(loop:NurbsCurve[],toleranceMm=1e-7):number {
   return callGeometryRust('brep_profile_signed_area',{loop,toleranceMm})
 }
 
-export type AuthoredBrepProfile = {kind:'bezier';path:import('./path2d').BezierPathJson}| {kind:'circle';radius:number}|{kind:'rectangle';size:readonly number[];center:boolean}|{kind:'polygon';rings:readonly (readonly (readonly number[])[])[]}
+export type AuthoredBrepProfile = {kind:'circle';radius:number}|{kind:'rectangle';size:readonly number[];center:boolean}|{kind:'polygon';rings:readonly (readonly (readonly number[])[])[]}
 export const authorBrepProfile=(definition:AuthoredBrepProfile):BrepProfile=>callGeometryRust('brep_profile_author',definition)
 
 export const transformBrepProfile=(profile:BrepProfile,matrix:readonly number[]):BrepProfile=>callGeometryRust('brep_profile_transform',{loops:profile.loops,matrix,toleranceMm:profile.toleranceMm})

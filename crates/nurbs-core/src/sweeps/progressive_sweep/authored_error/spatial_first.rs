@@ -105,11 +105,13 @@ pub(super) fn section_interpolation(
             continue;
         }
         let width = I::point(1.).div(I::point((count - 1) as f64))?;
+        for subdivisions in [4,8,16] {
+        if segment_bounds[i]<=sweep.options.max_deviation || out.cells>=max_cells {break;}
         let mut integral = vec![I::point(0.); qs.len()];
         let mut complete = true;
-        for part in 0..4 {
+        for part in 0..subdivisions {
             let at = |j: usize| -> Result<I> {
-                I::point((i * 4 + j) as f64).div(I::point(((count - 1) * 4) as f64))
+                I::point((i * subdivisions + j) as f64).div(I::point(((count - 1) * subdivisions) as f64))
             };
             let a = at(part)?;
             let b = at(part + 1)?;
@@ -135,7 +137,7 @@ pub(super) fn section_interpolation(
                     defect[k] = image.first[k].sub(slope)?;
                 }
                 integral[j] = integral[j].add(
-                    crate::numerics::interval_vec3::norm(defect)?.mul(width.div(I::point(4.))?)?,
+                    crate::numerics::interval_vec3::norm(defect)?.mul(width.div(I::point(subdivisions as f64))?)?,
                 )?;
             }
         }
@@ -153,6 +155,8 @@ pub(super) fn section_interpolation(
                 .into_iter()
                 .fold(endpoint, f64::max);
             segment_bounds[i] = segment_bounds[i].min(refined);
+        }
+        if !complete {break;}
         }
     }
     let error = segment_bounds.into_iter().fold(endpoint, f64::max);

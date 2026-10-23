@@ -30,7 +30,7 @@ const imageReports = computed(() => new Map(diagnostics.value?.images.map(image 
 const timings = shallowRef<PhotoTimings | null>(null)
 const runInputs = shallowRef<PhotoReportInput[]>([])
 let runSettings = {dense: true, resolution: 128, maxImageSide: 960, densePreset: 'baseline' as PhotoDensePreset}
-const densePreset = shallowRef<PhotoDensePreset>('baseline')
+const densePreset = ref<PhotoDensePreset>('baseline')
 const dense = ref(true), resolution = ref(128), widthMm = ref<number | null>(null)
 watch(densePreset, preset => { if (preset === 'dual-scale-volume') resolution.value = 128 })
 const validWidth = computed(() => typeof widthMm.value === 'number' && Number.isFinite(widthMm.value) && widthMm.value > 0)
@@ -39,7 +39,7 @@ const solidCompatible = computed(() => {
   const candidate = surface.value?.documentSurface ?? surface.value
   return !!candidate && photoCanAppend(candidate)
 })
-const previewMode = shallowRef<PhotoPreviewMode>('points')
+const previewMode = ref<PhotoPreviewMode>('points')
 const panel = ref<HTMLDetailsElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
 const viewportError = ref(''), files = ref<HTMLInputElement | null>(null)
@@ -363,7 +363,8 @@ onBeforeUnmount(() => {
    <p v-if="surface?.denseDiagnostics?.evaluatedHypotheses!==undefined" class="muted">{{ru?'Проверено вариантов глубины':'Depth hypotheses evaluated'}}: {{surface.denseDiagnostics.evaluatedHypotheses.toLocaleString()}} · {{ru?'сопоставлений участков':'source patches'}}: {{surface.denseDiagnostics.evaluatedSourcePatches?.toLocaleString()}} · {{ru?'выборок пикселей':'pixel samples'}}: {{surface.denseDiagnostics.sampledSourcePixels?.toLocaleString()}}.</p>
    <p v-if="timings?.preparationMs!==undefined">{{ru?'Передача и исправление снимков':'Upload and photo correction'}}: {{(timings.preparationMs/1000).toFixed(2)}} s.</p>
    <p v-if="timings">{{ru?'Камеры':'Cameras'}}: {{(timings.sparseMs/1000).toFixed(2)}} s · {{ru?'Глубина и поверхность':'Depth and surface'}}: {{(timings.denseMs/1000).toFixed(2)}} s.</p>
-   <p v-if="timings?.sparsePath==='gpu'" class="muted">{{ru?'Сопоставление на GPU':'GPU matching'}}: {{(timings.sparsePrepareMs!/1000).toFixed(2)}} + {{(timings.sparseMatchMs!/1000).toFixed(2)}} + {{(timings.sparseFinishMs!/1000).toFixed(2)}} s ({{ru?'подготовка, GPU, сборка':'prepare, GPU, finish'}}).</p>
+   <p v-if="timings?.sparsePath==='gpu'" class="muted">{{ru?'Сопоставление на GPU':'GPU matching'}}: {{(timings.sparsePrepareMs!/1000).toFixed(2)}} + {{(timings.sparseMatchMs!/1000).toFixed(2)}} + {{(timings.sparseFinishMs!/1000).toFixed(2)}} s ({{ru?'подготовка, GPU, сборка':'prepare, GPU, finish'}})<template v-if="timings.gpuMemoryArchitecture"> · {{timings.gpuMemoryArchitecture==='uma'?'UMA':'dUMA'}}</template>.</p>
+   <p v-else-if="timings?.gpuMemoryArchitecture" class="muted">{{ru?'Память GPU':'GPU memory'}}: {{timings.gpuMemoryArchitecture==='uma'?'UMA':'dUMA'}}.</p>
    <button type="button" @click="saveReport">{{ru?'Скачать отчёт JSON':'Download JSON report'}}</button>
   </details>
   <p class="muted">{{ru?'Экспериментальная реконструкция: возможны пропуски, фон и разрывы. Поддерживаются JPG, PNG и WebP; обработка остаётся на устройстве.':'Experimental reconstruction: gaps, background, and discontinuities are possible. JPG, PNG, and WebP; processing stays on device.'}}</p>

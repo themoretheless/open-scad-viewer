@@ -1,6 +1,6 @@
 use super::{Result, Value, field};
 use value_codec::json;
-fn validity_limits(v: &Value) -> Result<brep_core::volume_validity::Limits> {
+pub(super) fn validity_limits(v: &Value) -> Result<brep_core::volume_validity::Limits> {
     Ok(brep_core::volume_validity::Limits {
         boundary: brep_core::boundary_embedding::Limits {
             exact_work: field(v, "exactWork")?,
@@ -49,10 +49,12 @@ pub fn measure(v: Value) -> Result<Value> {
         json!({"faces":faces,"firstUv":w.first_uv,"secondUv":w.second_uv,
         "pointIntervalMm":w.point,"contractionUpper":w.contraction_upper})
     });
+    let separation=r.separation_witness(&a,&b).map(|w|json!({"faces":w.faces,
+        "parameters":w.geometry.parameters,"points":w.geometry.points,"pointEnclosures":w.geometry.point_enclosures}));
     Ok(
         json!({"method":"certified-volume-distance","scope":"closed-material-sets",
         "validity":validity,"distanceIntervalMm":r.distance_interval_mm,"materialOverlap":r.material_overlap,
-        "converged":r.converged,"reason":r.reason,"contact":contact,
+        "converged":r.converged,"reason":r.reason,"contact":contact,"separationWitness":separation,
         "totalShellPairs":r.total_pairs,"visitedShellPairs":r.pairs.len(),"contactPairsVisited":r.contact_pairs_visited,
         "cells":r.cells,"domainCells":r.domain_cells,"toleranceMm":tolerance_mm,"toleranceUv":tolerance_uv,
         "limits":{"maxPairs":limits.pairs,"maxContactPairs":limits.contact_pairs,"maxCells":limits.cells,"maxDomainCells":limits.domain_cells,"validity":config}}),
@@ -78,19 +80,85 @@ mod tests {
         for f in &mut reversed.shells[0].faces {
             f.reversed = !f.reversed;
         }
+        let cavity = brep_core::operations::boolean(
+            &brep_core::cuboid([0.; 3], [10.; 3]).unwrap(),
+            &brep_core::cuboid([2.; 3], [8.; 3]).unwrap(),
+            "difference",
+        )
+        .unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 4.).unwrap();
+        let mut raised = cylinder.clone();
+        for v in &mut raised.vertices {
+            v.point[2] += 7.;
+        }
+        for e in &mut raised.edges {
+            for p in &mut e.curve.control_points {
+                p[2] += 7.;
+            }
+        }
+        for f in &mut raised.faces {
+            for row in &mut f.surface.control_points {
+                for p in row {
+                    p[2] += 7.;
+                }
+            }
+        }
+        let meshes = [&cylinder, &raised].map(|m| {
+            crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":m,"segments":16})).unwrap()
+        });
+        let sphere = brep_core::analytic::sphere(3.).unwrap();
+        let mut shifted = sphere.clone();
+        for v in &mut shifted.vertices {
+            v.point[0] += 8.;
+        }
+        for e in &mut shifted.edges {
+            for p in &mut e.curve.control_points {
+                p[0] += 8.;
+            }
+        }
+        for f in &mut shifted.faces {
+            for row in &mut f.surface.control_points {
+                for p in row {
+                    p[0] += 8.;
+                }
+            }
+        }
+        let sphere_meshes = [&sphere, &shifted].map(|m| {
+            crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":m,"segments":16})).unwrap()
+        });
         let inputs = [
             request(a.clone(), brep_core::cuboid([0.5; 3], [1.5; 3]).unwrap()),
             request(a.clone(), reversed),
             request(
-                a,
+                a.clone(),
                 brep_core::cuboid([1., 0.5, 0.5], [3., 1.5, 1.5]).unwrap(),
             ),
+            request(
+                a,
+                brep_core::cuboid([5., 0.5, 0.5], [6., 1.5, 1.5]).unwrap(),
+            ),
+            request(cavity, brep_core::cuboid([3.; 3], [4.; 3]).unwrap()),
+            request(cylinder, raised),
+            request(sphere, shifted),
         ];
         let cases = inputs
             .into_iter()
-            .map(|input| {
+            .enumerate()
+            .map(|(i, input)| {
                 let result = crate::dispatch(input.clone()).unwrap();
-                json!({"request":input,"result":result})
+                let mut value = json!({"request":input,"result":result});
+                if i == 5 {
+                    value["displayMeshes"] = json!(meshes);
+                    value["expectedDistanceMm"] = json!(3.);
+                }
+                if i == 6 {
+                    assert_eq!(result["reason"], json!("separated-volumes"));
+                    assert_eq!(result["validity"][0]["proven"], json!(true));
+                    assert_eq!(result["validity"][1]["proven"], json!(true));
+                    value["displayMeshes"] = json!(sphere_meshes);
+                    value["expectedDistanceMm"] = json!(2.);
+                }
+                value
             })
             .collect::<Vec<_>>();
         std::fs::write(

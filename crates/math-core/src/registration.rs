@@ -1,6 +1,6 @@
 use crate::{
     Acceleration, Error, ID, M3, Result, V3, add, det, finite, mm, mv,
-    nearest_neighbor_accelerated, scale, sub, svd, tr,
+    nearest_neighbor_accelerated, scale, sub, svd, tr, transform_points,
     transformed_squared_distance_pair_sum_accelerated,
 };
 
@@ -155,8 +155,6 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
     }
 
     let mut current = source.to_vec();
-    let mut from = Vec::with_capacity(source.len());
-    let mut to = Vec::with_capacity(source.len());
     let mut transform = RigidTransform::default();
     let mut last_mse = f64::INFINITY;
     let mut report = IcpReport {
@@ -167,8 +165,8 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
     };
     for iteration in 0..options.max_iterations {
         let pairs = nearest_neighbor_accelerated(&current, target, options.acceleration);
-        from.clear();
-        to.clear();
+        let mut from = Vec::with_capacity(source.len());
+        let mut to = Vec::with_capacity(source.len());
         for (i, &(j, squared)) in pairs.iter().enumerate() {
             if j == u32::MAX || max_squared.is_some_and(|cap| squared > cap) {
                 continue;
@@ -201,9 +199,7 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
             break;
         }
         last_mse = mse;
-        for p in &mut current {
-            *p = add(mv(delta.rotation, *p), delta.translation);
-        }
+        current = transform_points(&current, delta.rotation, delta.translation);
         transform = next_transform;
     }
     Ok(report)

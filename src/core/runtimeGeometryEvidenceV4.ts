@@ -1,4 +1,4 @@
-// Publish with the exact-artifact qualification record referenced below.
+// Immutable archived v4 qualification binding.
 export const RUNTIME_GEOMETRY_EVIDENCE_V4 = Object.freeze({
   "wasmSha256": "b4cd5d582ad11bb4f11aebbc0567f98bbf33df7f8a2d57f3a28a2b1b00cc9e06",
   "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",

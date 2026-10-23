@@ -1,0 +1,46 @@
+{
+  "parser": "OpenCascade/cadquery-ocp",
+  "cases": [
+    {
+      "case": "closed-shared-seam",
+      "valid": true,
+      "samples": 25,
+      "max_position_error": 2.220446049250313e-16,
+      "v_derivative_samples": 25,
+      "max_v_derivative_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "multiple-interior-guides",
+      "valid": true,
+      "samples": 25,
+      "max_position_error": 4.440892098500626e-16,
+      "v_derivative_samples": 0,
+      "max_v_derivative_error": null
+    },
+    {
+      "case": "rational-clamped",
+      "valid": true,
+      "samples": 25,
+      "max_position_error": 4.440892098500626e-16,
+      "v_derivative_samples": 0,
+      "max_v_derivative_error": null
+    },
+    {
+      "case": "rational-guided",
+      "valid": true,
+      "samples": 25,
+      "max_position_error": 4.440892098500626e-16,
+      "v_derivative_samples": 0,
+      "max_v_derivative_error": null
+    },
+    {
+      "case": "rational-natural",
+      "valid": true,
+      "samples": 25,
+      "max_position_error": 4.440892098500626e-16,
+      "v_derivative_samples": 0,
+      "max_v_derivative_error": null
+    }
+  ],
+  "scope": "sampled STEP/source preservation; not a continuous error certificate"
+}

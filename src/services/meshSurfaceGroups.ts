@@ -14,7 +14,7 @@ export function inferSurfaceIds(vertices:Float32Array,indices:Uint32Array,angleD
    if(id===undefined){id=remap.size;remap.set(source,id);for(let k=0;k<6;k++)packed.push(vertices[source*6+k])}
    mapped[i]=id
   }
-  return surfaceGroupsInKernel(new Float32Array(packed),mapped,6,angleDegrees)
+  return surfaceGroupsInKernel(Float32Array.from(packed),mapped,6,angleDegrees)
  }
  return surfaceGroupsInKernel(vertices,indices,6,angleDegrees)
 }

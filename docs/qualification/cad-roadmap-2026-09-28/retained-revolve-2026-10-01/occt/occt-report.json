@@ -1,0 +1,105 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "rational-torus",
+      "stepSha256": "6a2de7a66d4b6b691efd9ca8ae0436ec697052ebc5053234b3515ccd680e1c6f",
+      "valid": true,
+      "solids": 1,
+      "faces": 16,
+      "boundsMm": [
+        [
+          -6.000000100000002,
+          -1.0000001000000003,
+          -6.000000100000001
+        ],
+        [
+          6.000000100000001,
+          1.0000001000000003,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 98.69604401089364,
+      "maxBoundsErrorMm": 1.0000000205678816e-07,
+      "volumeErrorMm3": 5.684341886080802e-14,
+      "passed": true,
+      "previewTriangles": 6166
+    },
+    {
+      "name": "holed-full",
+      "stepSha256": "4d49baaef2c5c71253ed5ef51a9b2516d062ed6371c074a72b3544edb1a7e983",
+      "valid": true,
+      "solids": 1,
+      "faces": 32,
+      "boundsMm": [
+        [
+          -6.000000100000001,
+          -1e-07,
+          -6.000000100000001
+        ],
+        [
+          6.000000100000001,
+          4.0000001,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 282.74333882045136,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.6300313038518652e-09,
+      "passed": true,
+      "previewTriangles": 1532
+    },
+    {
+      "name": "disconnected-full",
+      "stepSha256": "4124934baa6423d7ec0603688a324162c0a12b9dea9236685a8135bffd06c160",
+      "valid": true,
+      "solids": 2,
+      "faces": 32,
+      "boundsMm": [
+        [
+          -6.000000100000001,
+          -1e-07,
+          -6.000000100000001
+        ],
+        [
+          6.000000100000001,
+          3.0000001000000003,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 56.5486677640903,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 5.259792601464142e-10,
+      "passed": true,
+      "previewTriangles": 1200
+    },
+    {
+      "name": "holed-quarter",
+      "stepSha256": "51d6ac39348fb80db23b086f7bfbc66b385afa5d7616ef04d55fbf5308bffc5e",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -9.999999981630298e-08,
+          -1e-07,
+          -6.0000001
+        ],
+        [
+          6.000000100000001,
+          4.0000001,
+          1e-07
+        ]
+      ],
+      "volumeMm3": 70.68583470754747,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.7771242255548714e-09,
+      "passed": true,
+      "previewTriangles": 396
+    }
+  ]
+}

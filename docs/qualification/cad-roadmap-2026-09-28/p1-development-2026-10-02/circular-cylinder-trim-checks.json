@@ -1,0 +1,31 @@
+{
+  "schema": "cad-p1-circular-cylinder-trim/1",
+  "state": "authored trimmed cylinder support face; original solid not edited",
+  "rustTestsPassed": 8,
+  "endRadiusPairs": [
+    [
+      0,
+      1.25
+    ],
+    [
+      1.25,
+      0
+    ],
+    [
+      0.5,
+      1.25
+    ]
+  ],
+  "uvContactBoundary": "degree-3 polynomial u and height law; 3D contact rail shares parameter",
+  "surfaceChart": "rational angular rail extrusion; degree inherited from contact rail",
+  "contactSamples": 123,
+  "sampleToleranceMm": 1e-10,
+  "uvCorruptionRefused": true,
+  "nativeOpenFaceValid": true,
+  "originalBodyModified": false,
+  "planeTrimImplemented": false,
+  "closedSolidAssembled": false,
+  "independentTrimOracleVerified": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}

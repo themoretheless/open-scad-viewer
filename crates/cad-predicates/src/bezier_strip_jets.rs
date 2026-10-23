@@ -6,15 +6,6 @@ use crate::{
     LeafRef, PredicateContext, Sign, exact_inputs,
 };
 
-pub(crate) fn small_integer(value:&AuthoredScalar)->Option<f64>{
-    let x=match *value {
-        AuthoredScalar::Binary64Bits(bits)=>f64::from_bits(bits),
-        AuthoredScalar::RationalConstant {numerator,denominator:1}=>numerator as f64,
-        _=>return None,
-    };
-    (x.is_finite() && x.fract()==0. && x.abs()<2_f64.powi(48)).then_some(x)
-}
-
 pub fn rational_bezier_strip_jet_identity(
     ctx: &mut PredicateContext<'_>,
     a: &[Vec<[LeafRef; 4]>],
@@ -45,27 +36,6 @@ pub fn rational_bezier_strip_jet_identity(
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
     let result = (|| {
         ctx.charge(values.len() as u64)?;
-        let pa=a[0].len()-1;let pb=b[0].len()-1;
-        // All intermediate sums/differences below are integers of magnitude
-        // below2^51, hence exactly represented by binary64. This is an exact
-        // arithmetic path, with the same bounded work accounting as expansions.
-        if pa==pb && let Some(integers)=values.iter().map(small_integer).collect::<Option<Vec<_>>>() {
-            ctx.charge(values.len() as u64)?;
-            if integers[integers.len()-2]==1. && integers[..integers.len()-2].chunks_exact(4).all(|p|p[3]==1.) {
-                let start_b=a.len()*(pa+1)*4;
-                for i in 0..a.len(){for axis in 0..3 {
-                    ctx.charge(20)?;
-                    let at=|side:usize,j:usize|integers[if side==0 {(i*(pa+1)+j)*4+axis}
-                        else{start_b+(i*(pb+1)+j)*4+axis}];
-                    let da=at(0,1)-at(0,0);let db=at(1,1)-at(1,0);
-                    if at(0,0)!=at(1,0) || da+db!=0. {return Ok(BezierIdentity::Different);}
-                    if order==2 && pa>1 && (at(0,2)-at(0,1)-da)!=(at(1,2)-at(1,1)-db) {
-                        return Ok(BezierIdentity::Different);
-                    }
-                }}
-                return Ok(BezierIdentity::Equal);
-            }
-        }
         let x = exact_inputs(&values, ctx)?;
         let scale = &x[x.len() - 2];
         let unit = x.last().unwrap();
@@ -79,30 +49,6 @@ pub fn rational_bezier_strip_jet_identity(
         let pa = a[0].len() - 1;
         let pb = b[0].len() - 1;
         let start_b = a.len() * (pa + 1) * 4;
-        // With equal degree, unit normal scale and a shared constant cross
-        // weight in each row, the nonzero degree/weight factors cancel exactly.
-        // Compare Euclidean differences directly, retaining all authored bits.
-        let shared_weights=pa==pb && scale.sub(unit,ctx)?.sign()==Sign::Zero && (0..a.len()).all(|i| {
-            let weight=&values[(i*(pa+1))*4+3];
-            (0..=pa).all(|j|values[(i*(pa+1)+j)*4+3]==*weight
-                && values[start_b+(i*(pb+1)+j)*4+3]==*weight)
-        });
-        if shared_weights {
-            for i in 0..a.len() {for axis in 0..3 {
-                let at=|side:usize,j:usize|&x[if side==0 {(i*(pa+1)+j)*4+axis}
-                    else{start_b+(i*(pb+1)+j)*4+axis}];
-                if at(0,0).sub(at(1,0),ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
-                let da=at(0,1).sub(at(0,0),ctx)?;
-                let db=at(1,1).sub(at(1,0),ctx)?;
-                if da.add(&db,ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
-                if order==2 && pa>1 {
-                    let aa=at(0,2).sub(at(0,1),ctx)?.sub(&da,ctx)?;
-                    let bb=at(1,2).sub(at(1,1),ctx)?.sub(&db,ctx)?;
-                    if aa.sub(&bb,ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
-                }
-            }}
-            return Ok(BezierIdentity::Equal);
-        }
         for i in 0..a.len() {
             let h = |side: usize, layer: usize, axis: usize| -> Expansion {
                 let (start, p) = if side == 0 { (0, pa) } else { (start_b, pb) };

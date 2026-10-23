@@ -335,14 +335,14 @@ fn native_edits_honor_control_net_budgets() {
         degree_u: 1,
         degree_v: 1,
         knots_u: std::iter::once(0.)
-            .chain((0..32).map(|i| i as f64))
-            .chain(std::iter::once(31.))
+            .chain((0..256).map(|i| i as f64))
+            .chain(std::iter::once(255.))
             .collect(),
         knots_v: vec![0., 0., 1., 1.],
-        control_points: (0..32)
+        control_points: (0..256)
             .map(|i| vec![vec![i as f64, 0., 0.], vec![i as f64, 1., 0.]])
             .collect(),
-        weights: vec![vec![1., 1.]; 32],
+        weights: vec![vec![1., 1.]; 256],
         periodic_u: false,
         periodic_v: false,
     };

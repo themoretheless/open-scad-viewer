@@ -36,12 +36,86 @@ export interface WgslVariant {
   readonly wgsl: string
 }
 
+export type WebGpuMemoryArchitecture = 'uma' | 'duma'
+
+export interface WebGpuMemoryArchitectureProfile {
+  readonly architecture: WebGpuMemoryArchitecture
+  readonly label: string
+  readonly unifiedPhysicalRam: boolean
+  readonly mappedAtCreationPrimaryUpload: boolean
+  readonly preferredUploadStrategy: 'mapped_at_creation_shared_primary' | 'staging_ring_to_device_local_vram'
+  readonly preferredReadbackStrategy: 'unified_shared_staging_readback' | 'dma_copy_to_staging_then_map'
+}
+
 export interface WebGpuCapabilitySnapshot {
   readonly available: boolean
+  readonly memoryArchitecture?: WebGpuMemoryArchitecture
+  readonly memoryProfile?: WebGpuMemoryArchitectureProfile
   readonly webgpuFeatures: readonly string[]
   readonly wgslLanguageFeatures: readonly string[]
   readonly subgroupMinSize: number | null
   readonly subgroupMaxSize: number | null
+}
+
+/**
+ * Classifies a WebGPU adapter into UMA (Unified Memory Architecture, e.g. Apple
+ * Silicon Metal / integrated unified DRAM) vs dUMA (Discrete / Decoupled Memory
+ * Architecture, e.g. NVIDIA / AMD PCIe discrete VRAM).
+ */
+export function detectAdapterMemoryArchitecture(adapter: GPUAdapter): WebGpuMemoryArchitecture {
+  const info = (adapter as GPUAdapter & {
+    info?: { vendor?: string; architecture?: string; description?: string; device?: string }
+  }).info
+  const vendor = (info?.vendor ?? '').toLowerCase()
+  const arch = (info?.architecture ?? '').toLowerCase()
+  const desc = `${info?.description ?? ''} ${info?.device ?? ''}`.toLowerCase()
+  if (
+    vendor.includes('apple') ||
+    arch.includes('metal') ||
+    arch.includes('apple') ||
+    arch.includes('uma') ||
+    desc.includes('apple m')
+  ) {
+    return 'uma'
+  }
+  if (
+    vendor.includes('nvidia') ||
+    vendor.includes('amd') ||
+    arch.includes('ampere') ||
+    arch.includes('ada') ||
+    arch.includes('hopper') ||
+    arch.includes('blackwell') ||
+    arch.includes('turing') ||
+    arch.includes('rdna')
+  ) {
+    return 'duma'
+  }
+  const ua = typeof navigator !== 'undefined' ? (navigator.userAgent ?? '').toLowerCase() : ''
+  if (ua.includes('mac') && !desc.includes('radeon') && !desc.includes('nvidia')) {
+    return 'uma'
+  }
+  return 'duma'
+}
+
+export function memoryArchitectureProfile(architecture: WebGpuMemoryArchitecture): WebGpuMemoryArchitectureProfile {
+  if (architecture === 'uma') {
+    return {
+      architecture: 'uma',
+      label: 'UMA (Unified Memory Architecture)',
+      unifiedPhysicalRam: true,
+      mappedAtCreationPrimaryUpload: true,
+      preferredUploadStrategy: 'mapped_at_creation_shared_primary',
+      preferredReadbackStrategy: 'unified_shared_staging_readback',
+    }
+  }
+  return {
+    architecture: 'duma',
+    label: 'dUMA (Discrete Memory Architecture)',
+    unifiedPhysicalRam: false,
+    mappedAtCreationPrimaryUpload: false,
+    preferredUploadStrategy: 'staging_ring_to_device_local_vram',
+    preferredReadbackStrategy: 'dma_copy_to_staging_then_map',
+  }
 }
 
 export function requiredWebGpuFeaturesForWgsl(wgsl: string): WebGpuFeatureName[] {

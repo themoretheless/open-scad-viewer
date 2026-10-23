@@ -1,0 +1,159 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-Dl2AGhr5.js",
+      "sha256": "3285e0221198e647264fd8baf82f7e85248f554bf48bd91472ad7344dc50459c"
+    },
+    "wasm": {
+      "sha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe"
+    },
+    "sourceSha256": "909c2d0f0cb66992466f08952aa1dea086336b5ab9de1d38743fe36f5865f889"
+  },
+  "browser": "157.0.8081.0",
+  "keyboard": false,
+  "tabs": 0,
+  "gpuActive": true,
+  "rotated": false,
+  "facePlane": false,
+  "diagonal": true,
+  "plane": {
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "u": [
+      1,
+      0,
+      0
+    ],
+    "v": [
+      0,
+      1,
+      0
+    ]
+  },
+  "previewMatchesLegend": true,
+  "rectangleDimensions": [
+    10,
+    6
+  ],
+  "slotAreaMm2": 32.56638061757005,
+  "nominalSlotAreaMm2": 32.56637061435917,
+  "slotWidthMm": 4,
+  "gestureSlots": true,
+  "gestureSpecs": [
+    {
+      "a": [
+        -2.842170943040401e-14,
+        0
+      ],
+      "b": [
+        2.9999974991997362,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        2.0000025008002353,
+        0
+      ],
+      "b": [
+        4.999999999999972,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        4.000005001600499,
+        0
+      ],
+      "b": [
+        7.000002500800235,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        5.9999949983994725,
+        0
+      ],
+      "b": [
+        9.000005001600499,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        7.999997499199736,
+        0
+      ],
+      "b": [
+        10.999994998399472,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        9.999999999999972,
+        0
+      ],
+      "b": [
+        12.999997499199736,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        12.000002500800235,
+        0
+      ],
+      "b": [
+        14.999999999999973,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        14.000005001600499,
+        0
+      ],
+      "b": [
+        17.000002500800235,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        15.999994998399472,
+        0
+      ],
+      "b": [
+        19.000005001600503,
+        4.000005001600471
+      ]
+    },
+    {
+      "a": [
+        17.999997499199736,
+        0
+      ],
+      "b": [
+        20.99999499839947,
+        4.000005001600471
+      ]
+    }
+  ],
+  "pointerNominalDeviationMm": 0.000007073331261910515,
+  "preparedApplyNoRecompute": false,
+  "requests": 55,
+  "localizedWorkerFailure": true,
+  "retry": true,
+  "lateCancelledReplyIgnored": true,
+  "supersededReplyIgnored": true,
+  "invalidInputNoDispatch": true,
+  "twentySequentialCreations": true,
+  "twentyUndoRedo": true,
+  "reloadExact": true,
+  "currentStepExports": 2
+}

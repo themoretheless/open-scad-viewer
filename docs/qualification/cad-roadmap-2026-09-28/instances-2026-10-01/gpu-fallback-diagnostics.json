@@ -1,0 +1,20 @@
+{
+  "navigatorGpu": true,
+  "diagnostics": [
+    {
+      "event": "adapter",
+      "available": true
+    },
+    {
+      "event": "adapter",
+      "available": true
+    },
+    {
+      "event": "lost",
+      "reason": "unknown",
+      "message": "A valid external Instance reference no longer exists."
+    }
+  ],
+  "gpuCanvasVisible": false,
+  "backend": "Объекты 4Треугольники 1 116Объём 9 375,63Площадь 3 994,72Готово · 128 ms"
+}

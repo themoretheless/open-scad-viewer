@@ -596,30 +596,6 @@ it('carries authored retained-patch rejection even when sampled refinement is wi
  expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.005,accepted:true})).toBe(true)
  expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:undefined})).toBe(false)
 })
-it('preserves Rust refusal when original arc correspondence is unproved despite a small sampled error',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'closed-fixed',sections:33,
-  accepted:false,continuousBound:false,sampledControlDeviation:.1506154836804442,budget:1,
-  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousBound:undefined})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousBound:'false'})).toBe(false)
-})
-it('preserves a native rejected grid despite an already proved continuous bound',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'guided',sections:33,
-  accepted:false,continuousBound:true,sampledControlDeviation:.020295133847206135,budget:2,
-  continuousErrorUpper:1.6839649899328561,knownProfileErrorUpper:1.6839649899328561,
-  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- for(const change of [{continuousErrorUpper:undefined,knownProfileErrorUpper:undefined},
-  {continuousErrorUpper:NaN},{continuousErrorUpper:Infinity},{accepted:true,continuousBound:false},
-  {accepted:true,continuousErrorUpper:3,knownProfileErrorUpper:3},
-  {accepted:true,sampledControlDeviation:3}]) {
-  expect(isGeometryWorkerEvent({...preview,...change})).toBe(false)
- }
-})
 it('uses scoped partial-profile evidence for admission without fabricating a full continuous bound',()=>{
  const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'profiles',sections:9,
   accepted:false,sampledControlDeviation:0,knownProfileErrorUpper:.02,budget:.01,
@@ -665,4 +641,17 @@ it('validates bounded sweep acknowledgements without accepting unknown fields',(
  const ack={...envelope,type:'sweep-preview-ack',nodeId:'miter',sections:21}
  expect(isGeometryWorkerRequest(ack)).toBe(true)
  for(const change of [{sections:1},{sections:1026},{sections:2.5},{nodeId:''},{sourceSha256:'bad'},{quality:'draft'},{extra:true}])expect(isGeometryWorkerRequest({...ack,...change})).toBe(false)
+})
+
+
+it('transports native conservative sweep refusal without inventing a whole-union bound',()=>{
+ const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'original',sections:10,
+  accepted:false,continuousBound:false,sampledControlDeviation:.001,budget:1,
+  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
+ preview.meshes[0]!.provenance.forEach(run=>run.source=null)
+ expect(isGeometryWorkerEvent(preview)).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,continuousBound:true,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,continuousBound:true,continuousErrorUpper:.01,accepted:true})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,continuousBound:true,continuousErrorUpper:2,accepted:true})).toBe(false)
 })

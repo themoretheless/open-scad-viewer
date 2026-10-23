@@ -69,9 +69,11 @@ it('reconstructs a closed corrected frame/guide/affine hollow Solid with profile
  expect(report.profileSmoothness.station.extractionComplete).toBe(true)
  expect(report.profileSmoothness.station.edgeIds).toHaveLength(128)
  const joins=report.profileSmoothness.station.g2.seams as {certified:boolean;reason:string}[]
- expect(joins.filter(join=>join.certified)).toHaveLength(96)
- expect(joins.filter(join=>!join.certified)).toHaveLength(32)
- expect(joins.filter(join=>!join.certified).every(join=>join.reason==='constant-projective-jet-relation-different')).toBe(true)
+ // Main's complete-axis audit stops after the first sharp C0 seam and
+ // explicitly marks the unvisited tail, leaving work for the profile proof.
+ expect(joins).toHaveLength(128)
+ expect(joins[0]).toMatchObject({certified:false,reason:'constant-projective-jet-relation-different'})
+ expect(joins.slice(1).every(join=>!join.certified&&join.reason==='seam-audit-skipped-after-refusal')).toBe(true)
  expect(report.sharpStationIndices).toEqual([0,4,8,12])
  expect(report.candidate.wallDisplacementUpper).toBeGreaterThan(0)
  expect(report.boundaryErrorUpper).toBeGreaterThan(report.candidate.wallDisplacementUpper)
@@ -92,3 +94,18 @@ it.each(['half','one','two'])('carries noncircular conic %s weights through Rush
  expect(asyncBuilt.nativeGeometry).toEqual(built.nativeGeometry)
  expect(()=>buildOwnNurbs(compileRushFrontend(text.replace('quantum: 0.125mm, max_work: 10000','quantum: 0.125mm, max_work: 1')).document,request)).toThrow(/work-limit/)
 },120000)
+
+it('retains G2 of canonical circular profile joins through a closed authored frame, guide and affine Rush body',()=>{
+ const source=readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r','utf8')
+ const graph=compileRushFrontend(source).document,before=structuredClone(graph)
+ const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ const built=buildOwnNurbs(graph,request)
+ const report=built.report.construction![node.id] as any
+ expect(report.profileSmoothness).toMatchObject({extractionComplete:true,unclassifiedFaces:[],unpairedEdges:[],profileG1Certified:true,
+  profile:{exactG1G2Certified:true,certifiedOrder:2,unresolvedSeams:[]},fullBoundarySmoothnessCertified:false})
+ expect(report.profileSmoothness.profile.seams.length).toBeGreaterThan(0)
+ expect(report.profileSmoothness.totalExactWork).toBeLessThanOrEqual(report.profileSmoothness.maxWork)
+ expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({nodeId:node.id,profileG1Certified:true,profileG2Certified:true,
+  stationContinuity:'C0',capContinuity:'absent'})
+ expect(graph).toEqual(before)
+})

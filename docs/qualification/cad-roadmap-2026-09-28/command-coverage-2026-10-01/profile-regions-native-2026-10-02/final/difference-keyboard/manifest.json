@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Browser retained union","file":"browser-retained.step","sha256":"2c2e192e4acf73c9c5de506995a09dcc06097efaa830ba470147a7bd13272377","expected":{"volumeMm3":177.16814692820412,"boundsMm":[[-4,-3,0],[4,3,5]]}}]}

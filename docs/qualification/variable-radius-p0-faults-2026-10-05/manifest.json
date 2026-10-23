@@ -1,0 +1,8 @@
+{
+  "mousePassed": true,
+  "keyboardPassed": true,
+  "scope": "variable-radius edge fillet: transport failure, Retry, cancellation and real late successful worker reply",
+  "scriptSha256": "74527df190849041729a25b90c85508e58d49582eaa3699cb4fd7657e5f3b120",
+  "wasmSha256": "6c65564f24078a69f30cebe05ba64152b19ee1343242e01a888ce7e98dfd74d7",
+  "fullP0MatrixComplete": false
+}

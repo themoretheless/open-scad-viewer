@@ -787,6 +787,8 @@ impl Compiler {
                 let depth=match (name,key.as_str()) {
                     ("brep_natural_loft","sections")=>Some(3),
                     ("brep_capped_loft","start"|"end"|"sides")=>Some(2),
+                    ("brep_capped_loft","cap_surfaces")=>Some(1),
+                    ("brep_capped_loft","cap_trims")=>Some(3),
                     ("loft_match_surface","sections"|"guides")=>Some(1),
                     ("loft_match_surface","start_reference"|"end_reference")=>Some(0),
                     _=>None,
@@ -795,7 +797,51 @@ impl Compiler {
             }
             return self.add(node);
         }
-        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" {
+        if name=="loft_embedding_limits" {
+            if input.is_some() {return Err(crate::error("Embedding limits cannot take a geometry receiver"));}
+            let mut limits=json!({"exactWork":1000000,"trimPairs":10000,"trimCells":100000,
+                "trimDomainCells":1000000,"spans":10000,"facePairs":10000,"faceCells":1000000,
+                "faceDomainCells":1000000,"faceCellsPerPair":10000,"faceDomainCellsPerPair":10000});
+            let mut seen=std::collections::BTreeSet::new();
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Embedding limits must be named"))?;
+                if limits.get(&key).is_none() || !seen.insert(key.clone()) {return Err(crate::error("Invalid or repeated embedding limit"));}
+                limits[&key]=raw(value)?;
+            }
+            return Ok(V::Json(limits));
+        }
+        if name=="loft_parameter_map" {
+            if input.is_some() { return Err(crate::error("Parameter maps cannot take a geometry receiver")); }
+            let mut fields=json!({});
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Parameter map options must be named"))?;
+                let key=if key=="control_values" {"controlValues".to_string()} else {key};
+                if !["domain","range","controlValues","weights","composition","pieces"].contains(&key.as_str()) || fields.get(&key).is_some() {
+                    return Err(crate::error("Invalid or repeated parameter map option"));
+                }
+                fields[&key]=raw(value)?;
+            }
+            if fields.get("composition").is_some() || fields.get("pieces").is_some() {
+                if fields.as_object().unwrap().len()!=1 { return Err(crate::error("Map composition/pieces cannot be mixed with scalar controls")); }
+                if let Some(items)=fields.get("pieces") {
+                    let mut pieces=Vec::new();
+                    for item in items.as_array().ok_or_else(||crate::error("Map pieces must be an array"))? {
+                        let values=item["pieces"].as_array().ok_or_else(||crate::error("Piece entries must be leaf parameter maps"))?;
+                        pieces.extend(values.iter().cloned());
+                    }
+                    fields["pieces"]=json!(pieces);
+                }
+                return Ok(V::Json(fields));
+            }
+            if fields.as_object().unwrap().is_empty() {
+                fields=json!({"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,1.],"weights":[1.,1.]});
+            }
+            for key in ["domain","range","controlValues","weights"] {
+                if fields.get(key).is_none() { return Err(crate::error(format!("Parameter map requires {key}"))); }
+            }
+            return Ok(V::Json(json!({"pieces":[fields]})));
+        }
+        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" || name=="natural_loft_surface" {
             let mut node=json!({"op":name});
             let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("Loft requires named parameters"))?;
             node["parameters"]=raw(args.remove(at).1)?;
@@ -808,6 +854,21 @@ impl Compiler {
                 let at=args.iter().position(|(n,_)|n.as_deref()==Some(field)).ok_or_else(||crate::error(format!("Guided loft requires named {field}")))?;
                 node[field]=raw(args.remove(at).1)?;
             }
+            if name=="auto_guided_loft_surface" {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("parameter_tolerance")) {
+                    node["parameter_tolerance"]=raw(args.remove(at).1)?;
+                }
+            }
+            for key in ["construction","error_budget","max_cells","max_map_evaluations","section_mappings"] {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                    let value=raw(args.remove(at).1)?;
+                    node[key]=if key=="construction" {
+                        let mode=value["text"].as_str().ok_or_else(||crate::error("Loft construction must be a string"))?;
+                        if !["cartesian","homogeneous"].contains(&mode){return Err(crate::error("Invalid loft construction"));}
+                        json!(mode)
+                    } else {value};
+                }
+            }
             for key in ["start_tangents","end_tangents"] {
                 if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
                 else if name=="control_tangent_loft_surface" {return Err(crate::error(format!("Loft requires named {key}")));}
@@ -816,7 +877,7 @@ impl Compiler {
             if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Loft sections must be positional"));}
             let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
             for(_,value)in args{inputs.push(self.geometry(value)?);}
-            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Loft requires 2..11 sections"));}
+            if !(2..=86).contains(&inputs.len()){return Err(crate::error("Loft requires 2..86 sections"));}
             node["inputs"]=json!(inputs);return self.add(node);
         }
         if name=="clamped_loft_surface" {
@@ -831,7 +892,7 @@ impl Compiler {
             if !(2..=11).contains(&inputs.len()){return Err(crate::error("Clamped loft requires 2..11 sections"));}
             node["inputs"]=json!(inputs);return self.add(node);
         }
-        if name=="natural_loft_surface" || name=="closed_loft_surface" {
+        if name=="closed_loft_surface" {
             let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("natural_loft_surface requires named parameters"))?;
             let parameters=raw(args.remove(at).1)?;
             if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("natural loft sections must be positional"));}
@@ -876,20 +937,20 @@ impl Compiler {
                         _=>return Err(crate::error("cap_correction_authored_frame expects true or false")),
                     };
                 }
-                for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
+                for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
             }
             {
-                if name=="brep_miter_sweep" {
-                    for key in ["max_deviation"] {
-                        if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
-                    }
-                }
-                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {
+                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
                 }
             }
-            if name=="brep_miter_sweep" && node.get("max_deviation").is_none() && ["circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"].iter().any(|key|node.get(*key).is_some()) {
-                return Err(crate::error("Direct miter circle correction requires max_deviation"));
+            if name=="brep_miter_sweep" {
+                for key in ["max_deviation","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}
+                }
+                if node.get("max_deviation").is_none() && ["circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"].iter().any(|key|node.get(*key).is_some()) {
+                    return Err(crate::error("Direct miter circle correction requires max_deviation"));
+                }
             }
             if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("miter_limit")) {node["miter_limit"]=raw(args.remove(at).1)?;}
             if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("closed")) {
@@ -944,9 +1005,6 @@ impl Compiler {
                 }
                 for key in ["orientation","spacing","initial_sections","max_sections","length_tolerance","length_max_cells","contact_parameter","contact_profile","rmf_transport_steps","error_max_cells","error_max_products"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
-                        if ["rmf_transport_steps","error_max_cells","error_max_products"].contains(&key) && !["progressive_sweep","brep_progressive_sweep"].contains(&name) {
-                            return Err(crate::error("Spatial RMF proof options require progressive_sweep or brep_progressive_sweep"));
-                        }
                         let value=raw(args.remove(at).1)?;
                         node[key]=if ["orientation","spacing"].contains(&key) {
                             J::String(value.as_str().or_else(||value.get("text").and_then(J::as_str)).ok_or_else(||crate::error(format!("{key} must be a text choice")))?.to_owned())
@@ -2120,325 +2178,16 @@ impl Compiler {
     }
 }
 pub fn compile(statements: Vec<Statement>) -> R<J> { compile_with_ids(statements, false) }
-pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
-    let mut c = Compiler {
-        nodes: vec![],
-        parameters: vec![],
-        controls: vec![],
-        constraints: vec![],
-        checks: vec![],
-        collections: Set::new(),
-        structs: Map::new(),
-        traits: Map::new(),
-        trait_envs: Map::new(),
-        implementations: Map::new(),
 
-        active: Types::new(),
-        serial: 0,
-        stable_ids,
-        owner: String::new(),
-        owner_serial: 0,
-        show_serial: 0,
-        author_ids: Set::new(),
-        check_serial: 0,
-        expansions: 0,
-    };
-    let mut e = Env::new();
-    let mut root = String::new();
-    let mut segments = None;
-    for statement in statements {
-        let a = statement.node;
-        c.owner.clear();
-        c.owner_serial = 0;
-        let result: R<()> = try {
-            let name = s(&a, "name");
-            match s(&a, "kind") {
-                "bind" => {
-                    if e.contains_key(name) {
-                        do yeet crate::error(format!("Duplicate name {name}"));
-                    }
-                    c.owner = if let Some(id) = a.get("author_id").and_then(J::as_str) {
-                        if !c.author_ids.insert(id.to_owned()) { do yeet crate::error(format!("Duplicate node ID {id}")); }
-                        format!("ri_{id}")
-                    } else { format!("rb_{name}") };
-                    c.owner_serial = 0;
-                    let v = c.eval(&a["value"], &e, 0)?;
-                    if matches!(&v, V::Void(_)) {
-                        do yeet crate::error("Function has no return value");
-                    }
-                    if c.needs_assertion(&v) {
-                        c.statement_checks(&v);
-                    }
-                    if let V::Json(j) = &v
-                        && j.get("geometry").is_some()
-                    {
-                        root = s(j, "geometry").into()
-                    }
-                    e.insert(name.into(), v);
-                }
-                "trait" => {
-                    if c.traits.contains_key(name)
-                        || c.structs.contains_key(name)
-                        || [
-                            "int", "f32", "f64", "str", "length", "angle", "Geometry", "Vec",
-                        ]
-                        .contains(&name)
-                    {
-                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
-                    }
-                    c.validate_trait(&a)?;
-                    c.traits.insert(name.into(), a.clone());
-                    c.trait_envs.insert(name.into(), e.clone());
-                }
-                "impl" => c.register_impl(&a, &e)?,
-                "struct" => {
-                    if c.structs.contains_key(name)
-                        || c.traits.contains_key(name)
-                        || [
-                            "int", "f32", "f64", "str", "length", "angle", "Geometry", "Vec",
-                        ]
-                        .contains(&name)
-                    {
-                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
-                    }
-                    c.structs.insert(name.into(), a.clone());
-                    let g = arr(&a, "generics")
-                        .iter()
-                        .map(|g| g.as_str().unwrap().into())
-                        .collect();
-                    for f in arr(&a, "fields") {
-                        c.validate(&f["type"], &g, &Set::from([name.into()]))?
-                    }
-                }
-                "destructure" => {
-                    let v = c.eval(&a["value"], &e, 0)?;
-                    if c.needs_assertion(&v) {
-                        c.statement_checks(&v);
-                    }
-                    let checks = c.bind(&a["pattern"], v, &mut e)?;
-                    if !checks.is_empty() {
-                        c.statement_checks(&V::Void(checks));
-                    }
-                }
-                "validate" | "assert" => c.check(s(&a, "kind"), &a["value"], &e)?,
-                "segments" => {
-                    if segments.is_some() {
-                        do yeet crate::error("Duplicate segments declaration");
-                    }
-                    segments = Some(a["value"].clone())
-                }
-                "param" => {
-                    if e.contains_key(name) {
-                        do yeet crate::error(format!("Duplicate name {name}"));
-                    }
-                    c.parameters.push(a["parameter"].clone());
-                    c.controls.push(a["control"].clone());
-                    e.insert(name.into(), V::Json(json!({"param":name})));
-                }
-                "show" => {
-                    c.show_serial += 1;
-                    c.owner = format!("rs_{}", c.show_serial);
-                    c.owner_serial = 0;
-                    let v = c.eval(&a["value"], &e, 0)?;
-                    root = c.geometry(v)?
-                }
-                "statement" => {
-                    let value = c.eval(&a["value"], &e, 0)?;
-                    c.statement_checks(&value);
-                }
-                _ => do yeet crate::error("Unknown statement"),
-            }
-        };
-        result
-            .map_err(|e| crate::error(format!("Rush line {}: {}", statement.line, e)))?;
-    }
-    if root.is_empty() {
-        return Err(crate::error("No geometry to show"));
-    }
-    let mut result = json!({"nodes":c.nodes,"parameters":c.parameters,"customizer":c.controls,"root":root,"constraints":c.constraints,"checks":c.checks});
-    if let Some(s) = segments {
-        result["segments"] = s
-    }
-    Ok(result)
-}
-fn signature(name: &str) -> Option<&'static [&'static str]> {
-    Some(match name {
-        "polygon" => &["points"],
-        "polygon_profile" => &["outer", "holes"],
-        "polygon_extrude" => &["vector"],
-        "polygon_sweep" => &["path", "up"],
-        "polygon_loft" => &["sections"],
-        "triangle_mesh" => &["vertices", "triangles"],
-        "mesh_to_nurbs_brep" => &[],
-        "mesh_to_sdf" => &[],
-        "mesh_to_subdivision" => &["iterations"],
-        "subdivision_tessellate" => &["levels"],
-        "mesh_to_nurbs" => &[],
-        "mesh_fit_nurbs" => &["max_deviation"],
-        "nurbs_patches_tessellate" => &["segments"],
-        "subdivision" => &["vertices", "faces", "levels"],
-        "sdf_sphere" => &["center", "radius"],
-        "sdf_box" => &["center", "half_size"],
-        "sdf_torus" => &["center", "major_radius", "minor_radius"],
-        "sdf_tessellate" => &["min", "max", "cells"],
-        "sdf_offset" => &["distance"],
-        "sdf_translate" => &["vector"],
-        "brep_box" => &["min", "max"],
-        "brep_sphere" => &["radius"],
-        "brep_torus" => &["major_radius", "minor_radius"],
-        "brep_cylinder" => &["radius", "height"],
-        "brep_frustum" => &["bottom_radius", "top_radius", "height"],
-        "brep_tube" => &["outer_radius", "inner_radius", "height"],
-        "brep_gear" => &[
-            "module",
-            "teeth",
-            "height",
-            "pressure_angle",
-            "helix_angle",
-            "herringbone",
-            "bore",
-            "internal",
-            "rim_width",
-            "clearance",
-            "backlash",
-        ],
-        "brep_revolve" => &["angle"],
-        "brep_extrude" => &["height"],
-        "brep_extrude_curves" => &["loops", "z_min", "z_max"],
-        "brep_chamfer" => &["edges", "size"],
-        "brep_fillet" => &["edges", "radius", "segments"],
-        "brep_tessellate" => &["segments"],
-        "brep_smooth_sweep_stations" => &["wall_tolerance","quantum","max_work","smoothness_max_work"],
-        "brep_smooth_miter_stations" => &["wall_tolerance","quantum","max_work","max_deviation"],
-        "nurbs_surface" => &[
-            "degree_u",
-            "degree_v",
-            "knots_u",
-            "knots_v",
-            "control_points",
-            "weights",
-        ],
-        "nurbs_curve" => &["degree", "knots", "control_points", "weights", "periodic"],
-        "parabola_curve" | "hyperbola_curve" => &["center", "axis_u", "axis_v", "start", "end"],
-        "elliptic_cylinder_surface" => &["center", "radius_x", "radius_y", "height"],
-        "cone_frustum_surface" => &["center", "bottom_radius", "top_radius", "height"],
-        "quadratic_patch" => &["bounds", "coefficients"],
-        "line_curve" => &["start", "end"],
-        "bezier_curve" => &["points", "weights"],
-        "round_polyline_curve" => &["points", "radius", "closed"],
-        "transition_polyline_curve" => &["points", "setback", "closed"],
-        "closed_spline_curve" => &["points", "parameters"],
-        "clamped_spline_curve" => &["points", "parameters", "start_tangent", "end_tangent"],
-        "natural_spline_curve" => &["points", "parameters"],
-        "hermite_curve" => &["points", "tangents", "parameters"],
-        "clothoid_curve" => &["center", "length", "start_curvature", "end_curvature", "phase_degrees", "max_deviation"],
-        "spherical_spiral_curve" => &["center", "radius", "longitude_turns", "latitude_turns", "longitude_phase_degrees", "latitude_phase_degrees", "max_deviation"],
-        "toroidal_spiral_curve" => &["center", "major_radius", "minor_radius", "major_turns", "minor_turns", "major_phase_degrees", "minor_phase_degrees", "max_deviation"],
-        "torus_knot_curve" => &["center", "major_radius", "minor_radius", "p", "q", "major_phase_degrees", "minor_phase_degrees", "max_deviation"],
-        "helicoid_patches" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
-        "circle_rectangle_transition" => &["circle_center","circle_normal","circle_seam","circle_radius","rectangle_center","rectangle_axis_u","rectangle_axis_v"],
-        "ellipse_transition_surface" => &["start_center","start_axis_u","start_axis_v","end_center","end_axis_u","end_axis_v"],
-        "circle_transition_surface" => &["start_center","start_normal","start_seam","start_radius","end_center","end_normal","end_seam","end_radius"],
-        "helicoid_surface" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
-        "catenoid_patches" => &["center", "scale", "start_z", "end_z", "max_deviation"],
-        "catenoid_surface" => &["center", "scale", "start_z", "end_z", "max_deviation"],
-        "catenary_curve" => &["center", "scale", "start_x", "end_x", "max_deviation"],
-        "archimedean_spiral_curve" => &["center", "start_radius", "end_radius", "start_degrees", "end_degrees", "max_deviation"],
-        "epicycloid_curve" => &["center", "fixed_radius", "rolling_radius", "start_degrees", "end_degrees", "max_deviation"],
-        "hypocycloid_curve" => &["center", "fixed_radius", "rolling_radius", "start_degrees", "end_degrees", "max_deviation"],
-        "trochoid_curve" => &["center", "rolling_radius", "tracing_radius", "start_degrees", "end_degrees", "max_deviation"],
-        "cycloid_curve" => &["center", "radius", "start_degrees", "end_degrees", "max_deviation"],
-        "lissajous_curve" => &["center", "amplitudes", "frequencies", "phases_degrees", "max_deviation"],
-        "logarithmic_spiral_curve" => &["center", "radius", "growth", "start_degrees", "end_degrees", "max_deviation"],
-        "involute_curve" => &["center", "radius", "start_degrees", "end_degrees", "max_deviation"],
-        "helix_curve" => &["center", "radius", "height", "turns", "phase_degrees", "max_deviation"],
-        "elliptic_helix_curve" => &["center", "radius_x", "radius_y", "height", "turns", "phase_degrees", "max_deviation"],
-        "variable_pitch_helix_curve" => &["center", "radius", "height", "turns", "start_pitch", "end_pitch", "phase_degrees", "max_deviation"],
-        "conical_helix_curve" => &["center", "start_radius", "end_radius", "height", "turns", "phase_degrees", "max_deviation"],
-        "formula_curve" | "formula_surface" => &["domain", "expressions"],
-        "sphere_surface" => &["center", "radius"],
-        "cylinder_surface" | "cone_surface" => &["center", "radius", "height"],
-        "plane_patch" => &["origin", "axis_u", "axis_v"],
-        "grid_spline_surface" => &["points", "parameters_u", "parameters_v"],
-        "hermite_patch" => &["corners", "tangent_u", "tangent_v", "twist"],
-        "bilinear_patch" => &["corners"],
-        "bezier_surface" => &["points", "weights"],
-        "polyline_curve" => &["points", "closed"],
-        "circle_curve" => &["center", "normal", "radius"],
-        "circle_arc" => &["center", "normal", "radius", "start_degrees", "sweep_degrees"],
-        "hyperboloid_one_sheet" => &["center", "radii", "start", "end"],
-        "hyperboloid_two_sheet" => &["center", "radii", "start", "end", "lower"],
-        "polynomial_graph" => &["bounds", "coefficients"],
-        "polynomial_curve" | "polynomial_surface" | "rational_polynomial_curve" | "rational_polynomial_surface" => &["domain", "coefficients"],
-        "ellipse_arc" => &["center", "axis_u", "axis_v", "start_degrees", "sweep_degrees"],
-        "ellipsoid_surface" => &["center", "radii"],
-        "torus_surface" => &["center", "major_radius", "radial_radius", "axial_radius"],
-        "ribbon_surface" => &["width_law", "normal", "sections", "max_deviation"],
-        "variable_pipe_surface" => &["radius_law", "normal", "sections", "max_deviation"],
-        "pipe_surface" => &["radius", "normal", "sections", "max_deviation"],
-        "screw_surface" => &["origin", "axis", "height", "turns", "phase_degrees", "max_deviation"],
-        "surface_extrude_patches" => &["vector"],
-        "surface_extrude" => &["vector"],
-        "surface_revolve" => &["origin", "axis", "angle"],
-        "tessellate" => &["segments_u", "segments_v"],
-        "thicken" => &["vector"],
-        "transform" => &["matrix"],
-        "gear" => &[
-            "teeth",
-            "module",
-            "thickness",
-            "pressure_angle",
-            "bore",
-            "backlash",
-            "clearance",
-            "internal",
-            "rim_width",
-            "flank_segments",
-            "helix_angle",
-            "herringbone",
-        ],
-        "planetary_gears" => &[
-            "sun_teeth",
-            "planet_teeth",
-            "planet_count",
-            "module",
-            "thickness",
-            "pressure_angle",
-            "bore",
-            "backlash",
-            "clearance",
-            "rim_width",
-            "flank_segments",
-            "carrier_angle",
-            "helix_angle",
-            "herringbone",
-        ],
-        "planetary_spinner" => &[
-            "inner_radius",
-            "outer_radius",
-            "bore",
-            "gap",
-            "height",
-            "helix_angle",
-        ],
-        "circle" => &["radius"],
-        "rectangle" => &["size"],
-        "box" => &["size"],
-        "sphere" => &["radius"],
-        "cylinder" => &["radius", "height"],
-        "extrude" => &["height"],
-        "revolve" => &["angle"],
-        "translate" => &["vector"],
-        "rotate" => &["vector"],
-        "scale" => &["vector"],
-        "offset" => &["distance"],
-        "mirror" => &["normal"],
-        _ => return None,
-    })
-}
+mod signatures;
+use signatures::signature;
 
 include!("lower_query.rs");
 
 include!("lower_match.rs");
 
 include!("lower_traits.rs");
+
+#[path = "lower/compilation_contract.rs"]
+mod compilation_contract;
+pub use compilation_contract::compile_with_ids;

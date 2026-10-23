@@ -1,0 +1,25 @@
+import {writeFileSync,readFileSync,existsSync} from 'node:fs'
+import {bezierNurbsCurve,checkedProfileSweepNurbsSurface,circleNurbsCurve} from '../../src/services/nurbsConstructors'
+import {trimNurbsSurface,isoNurbsCurve,evaluateNurbsSurface} from '../../src/services/nurbsSurface'
+import {createBrepSectionLoftSurfaces} from '../../src/services/geometry/brep'
+import {exportDirectStepV5,importDirectStepV5} from '../../src/services/cadNurbsStep'
+const ring=[[4.8,0,-.2],[5.2,0,-.2],[5.2,0,.2],[4.8,0,.2]]
+const path=circleNurbsCurve([0,0,0],[0,0,1],5)
+const reports=ring.map((p,i)=>checkedProfileSweepNurbsSurface(bezierNurbsCurve([p,ring[(i+1)%4]]),path,{degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]},[1,0,0],17,.1))
+writeFileSync('tmp/profile-periodic-step/reports.json',JSON.stringify(reports.map(r=>r.report),null,2))
+if(reports.some(r=>!r.surface))throw Error('Periodic fixture refused')
+const walls=reports.map(r=>r.surface!)
+const sections=Array.from({length:17},(_,i)=>[walls.map(w=>isoNurbsCurve(w,'v',i/16))])
+let sides=[Array.from({length:16},(_,i)=>walls.map(w=>trimNurbsSurface(w,[0,1,i/16,(i+1)/16]))).flat()]
+writeFileSync('tmp/profile-periodic-step/raw-patches.json',JSON.stringify(sides[0]))
+if(existsSync('tmp/profile-periodic-step/normalized.json')) sides=[JSON.parse(readFileSync('tmp/profile-periodic-step/normalized.json','utf8'))]
+writeFileSync('tmp/profile-periodic-step/samples.json',JSON.stringify(sides[0].map(s=>[.17,.5,.83].flatMap(u=>[0,.13,.5,.87,1].map(v=>({u,v,...evaluateNurbsSurface(s,u,v)}))))))
+const model=createBrepSectionLoftSurfaces(sections,sides,true)
+writeFileSync('tmp/profile-periodic-step/model-samples.json',JSON.stringify(model.faces.map(f=>[.17,.5,.83].flatMap(u=>[0,.13,.5,.87,1].map(v=>({u,v,...evaluateNurbsSurface(f.surface,u,v)}))))))
+const text=exportDirectStepV5(model).text
+writeFileSync('tmp/profile-periodic-step/periodic.step',text)
+const imported=importDirectStepV5(text).model
+console.log(model.faces.length,imported.faces.length)
+let worst=0
+for(const f of model.faces){const u=.37,v=.29,p=evaluateNurbsSurface(f.surface,u,v).point;worst=Math.max(worst,Math.min(...imported.faces.flatMap(g=>[u,1-u].map(t=>{const q=evaluateNurbsSurface(g.surface,t,v).point;return Math.hypot(...p.map((x,j)=>x-q[j]))}))))}
+if(worst>1e-8)throw Error('Native STEP geometry mismatch');console.log('native STEP point max',worst)

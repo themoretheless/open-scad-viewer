@@ -1,7 +1,27 @@
-// Exact artifact checked by the own Rust CAD qualification corpus.
+// Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
+import packagedArtifact from '../generated/geometry-kernels/identity'
+export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
+  {
+    "sha256": "14ab9ca344465d272de4d402118b88a138ff574dd29dad9cbabe86ffbc4368a4",
+    "byteLength": 12142979
+  },
+  {
+    "sha256": "b009f02f131014a271a2140a892590c409f23d865c66eb21ffa94352edd8a844",
+    "byteLength": 13749770
+  },
+  {
+    "sha256": "2ff06f662379e92193ff80849ce03bac9ab28c82d00223ff9a48e4d0307ca058",
+    "byteLength": 13751449
+  }
+])
+export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {
+  if (!Number.isSafeInteger(artifact.byteLength) || artifact.byteLength <= 0 || artifact.byteLength > 16 * 1024 * 1024) return null
+  return OWN_RUST_CAD_ARTIFACTS.find(item => item.sha256 === artifact.sha256 && (item.byteLength === null || item.byteLength === artifact.byteLength))?.sha256 ?? null
+}
 export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
-  "wasmSha256": "b783c7abd74b8ff3b27cddf4d45daa2444ac610798273785db9c6d3ea1fb2770",
+  // Runtime identity follows packaged bytes; qualification freezing separately rejects unrecorded artifacts.
+  "wasmSha256": packagedArtifact.sha256,
   "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
   "lockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
-  "rustLockfileSha256": "df7afb01351f9a2154b6bbb4c9f6e53f31d66e753f0b1f2d542d96776523ada8"
+  "rustLockfileSha256": "0c68303e41d40ad569ee29e786b134fc6d51753f51bc3e09d3a71421b63bf369"
 })

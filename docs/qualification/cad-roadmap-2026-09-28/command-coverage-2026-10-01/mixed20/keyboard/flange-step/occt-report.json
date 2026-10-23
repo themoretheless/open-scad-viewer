@@ -1,0 +1,57 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "flange-ui20-0",
+      "stepSha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -13.000000100000005,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          27.00000010000001,
+          20.00000010000001,
+          12.000000100000005
+        ]
+      ],
+      "volumeMm3": 13460.190784993792,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.8995600587222725e-07,
+      "passed": true,
+      "previewTriangles": 7354
+    },
+    {
+      "name": "flange-ui20-1",
+      "stepSha256": "d35e76c1186650060cf68edbad85e64db75cacc8cdd6dbbb1efe18dbd17f67a5",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -13.000000100000005,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          27.00000010000001,
+          20.00000010000001,
+          12.000000100000005
+        ]
+      ],
+      "volumeMm3": 13460.190784993792,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.8995600587222725e-07,
+      "passed": true,
+      "previewTriangles": 7354
+    }
+  ]
+}

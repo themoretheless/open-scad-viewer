@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-16",
+  "scope": "Complete source-owned finite ZA-generated wheel candidate, every period, admitted physical planar ends, full saved boundary closure; global solid geometry unqualified",
+  "tests": {
+    "body": {
+      "passed": 1,
+      "log": "current-body-tests.log"
+    },
+    "limits": {
+      "passed": 2,
+      "log": "current-limits-tests.log"
+    },
+    "simplicity": {
+      "passed": 7,
+      "log": "final-trim-simplicity-tests.log"
+    },
+    "trim_region": {
+      "passed": 3,
+      "log": "trim-region-tests.log"
+    },
+    "predicates": {
+      "passed": 5,
+      "log": "predicate-identity-tests.log"
+    },
+    "owned_boundaries": {
+      "passed": 16,
+      "log": "current-owned-boundary-tests.log"
+    },
+    "boolean_regressions": {
+      "passed": 3,
+      "log": "boolean-regressions.log"
+    }
+  },
+  "unique_tests": 37,
+  "model": {
+    "teeth": 40,
+    "source_side_grids": 240,
+    "packed_side_supports": 720,
+    "planar_end_faces": 2,
+    "faces": 722,
+    "edges": 1680,
+    "vertices": 960,
+    "cap_contour_curves_each": 240,
+    "cap_trim_pairs_each": 28680,
+    "cap_trim_cells_each": 28440,
+    "cap_domain_cells_each": 560,
+    "requested_side_tolerance_mm": 0.0001,
+    "side_flux_volume_mm3": 5066.968079279912,
+    "independent_section_volume_mm3": 5066.966275699841
+  },
+  "wasm_check": "final-wasm.log",
+  "solid_geometry_certified": false,
+  "ideal_finite_body_error_upper": null,
+  "current_source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_source.rs": "2d13724d7bc072403d6347ee6646b95e41b3686e9cdba1cf46b9ca81e3cebc6d",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_network.rs": "f503d83d015ba9ae79d0f1aff268d5c3a0718764d17e4829ec66ee100b9fcbd6",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs": "550374778ae3bb8b3e38179574ed533fc54a69a9edf3e3ed59d84b30b90a93c9",
+    "crates/brep-core/src/worm/wheel.rs": "ca546703f34bbff7fadf43adca9a67461d485a05341ce5f1fedb7cf66055cef3",
+    "crates/brep-core/src/worm/wheel/body.rs": "edbb77a8423542a5acd2d1b33fe6632fdcef1ad46ef59474e1b864392b24eb36",
+    "crates/brep-core/tests/worm_wheel_caps.rs": "616c31e3072ca6a62c0ba2795284322ec6a78989a8b00357e9cac20f7d7887cd",
+    "crates/nurbs-core/src/trim/trim_simplicity.rs": "9bd966ad82462bb5144357fe58031262a7c3b529e00285a56d04137f980d7320",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement.rs": "24c1f0f55d501a7174a90a9056c10a47bea766f080d7f7a49a915f27008f135b",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs": "4a4e77e398b7963a8f4bdb34fc332eb0337dd8f4469930d34b6856424936dbf7",
+    "crates/cad-predicates/src/bezier_identity.rs": "3e81af5958e08b96b5bd335f77c70e5d73b54ffdf0d16359a7c2739e05e7f095"
+  },
+  "snapshot_note": "The complete body pipeline passed before adding convenience builder/getters; those additions compile and their invalid-input paths pass separately. This is focused evidence, not a frozen full-repository test run. Earlier failed cap-budget and tiny-budget regressions are preserved and repaired by the final logs."
+}

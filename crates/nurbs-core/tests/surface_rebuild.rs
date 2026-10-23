@@ -113,7 +113,7 @@ fn periodic_axis_rebuild_preserves_wrap_and_analytic_profile() {
 #[test]
 fn invalid_requests_fail() {
     let s = panel();
-    for (degree, count) in [(0, 2), (26, 30), (2, 2), (1, 33)] {
+    for (degree, count) in [(0, 2), (26, 30), (2, 2), (1, 257)] {
         assert!(rebuild_surface_report(&s, Axis::U, degree, count, 0.1, None).is_err());
     }
     for budget in [-1., f64::NAN, f64::INFINITY] {

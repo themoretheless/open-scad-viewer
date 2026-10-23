@@ -1,24 +1,14 @@
 <script setup lang="ts">
 import {sceneSnapPoints} from '../services/mainSnapping'
-import {computed,ref,shallowRef,toRaw} from 'vue'
+import {computed,ref} from 'vue'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../services/rendererContracts'
 import {sceneBody,sceneFace,type MainOperation,type MainParameters} from '../services/mainModeling'
 import {cross3,unit3,type Vec3} from '../services/directSketchGeometry'
 const props=defineProps<{meshes:MeshData[];selected:number|null;selection:number[];hit:PickHit|null;operation:MainOperation|null;parameters:MainParameters;project:(p:readonly number[])=>[number,number]|null;revision:number;box:boolean}>()
 const emit=defineEmits<{parameters:[p:MainParameters];preview:[];apply:[];cancel:[];select:[indices:number[]];boxDone:[]}>()
-function clonePlain<T>(value:T):T{
- const raw=toRaw(value)
- if(Array.isArray(raw))return raw.map(clonePlain) as unknown as T
- if(raw&&typeof raw==='object'&&!ArrayBuffer.isView(raw)){
-  const out:Record<string,unknown>={}
-  for(const k of Object.keys(raw))out[k]=clonePlain((raw as Record<string,unknown>)[k])
-  return out as T
- }
- return raw
-}
 const snapCandidates=computed(()=>props.operation==='move'?sceneSnapPoints(props.meshes,props.selection):[])
-const snapTarget=shallowRef<number[]|null>(null)
+const snapTarget=ref<number[]|null>(null)
 const svg=ref<SVGSVGElement>(),rectangle=ref<{a:number[];b:number[]}|null>(null)
 const bodies=computed(()=>props.meshes.map(sceneBody))
 const center=computed<Vec3>(()=>{
@@ -61,14 +51,14 @@ const planeCenter=computed(()=>{const c=center.value,n=normal.value;return add(c
 const planePoints=computed(()=>{const n=normal.value,u=unit3(cross3(n,Math.abs(n[0])<.8?[1,0,0]:[0,1,0])),v=cross3(n,u);return [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b])=>add(add(planeCenter.value,u,a*size.value),v,b*size.value))})
 const rings=computed(()=>axes.map((axis,k)=>{const u=axes[(k+1)%3],v=axes[(k+2)%3];return Array.from({length:65},(_,i)=>add(add(center.value,u,Math.cos(i*Math.PI/32)*size.value),v,Math.sin(i*Math.PI/32)*size.value))}))
 const faceCenter=computed(()=>topology.value?.topology.faces[topology.value.face]?.center)
-function facePath(triangles:number[]){const t=topology.value;if(!t)return '';const ind=t.body.mesh.indices,pos=t.body.mesh.positions;return triangles.map(i=>{const o=i*3,i0=ind[o]*3,i1=ind[o+1]*3,i2=ind[o+2]*3,p0=project([pos[i0],pos[i0+1],pos[i0+2]]),p1=project([pos[i1],pos[i1+1],pos[i1+2]]),p2=project([pos[i2],pos[i2+1],pos[i2+2]]);return p0&&p1&&p2?`M ${p0[0]},${p0[1]} L ${p1[0]},${p1[1]} L ${p2[0]},${p2[1]} Z`:''}).join(' ')}
-const edges=computed(()=>{const t=topology.value;if(!t)return [];const pos=t.body.mesh.positions;return t.topology.edges.map(e=>{const a=e.a*3,b=e.b*3;return [[pos[a],pos[a+1],pos[a+2]],[pos[b],pos[b+1],pos[b+2]]]})})
+function facePath(triangles:number[]){const t=topology.value;if(!t)return '';return triangles.map(i=>{const p=Array.from(t.body.mesh.indices.slice(i*3,i*3+3),j=>project(Array.from(t.body.mesh.positions.slice(j*3,j*3+3))));return p.every(Boolean)?'M '+p.map(v=>v!.join(',')).join(' L ')+' Z':''}).join(' ')}
+const edges=computed(()=>{const t=topology.value;if(!t)return [];return t.topology.edges.map(e=>[Array.from(t.body.mesh.positions.slice(e.a*3,e.a*3+3)),Array.from(t.body.mesh.positions.slice(e.b*3,e.b*3+3))])})
 let drag:{start:number[];direction:number[];factor:number;before:MainParameters;kind:string;axis:number;origin:number[];pointer:number;rotationSign:number;moved:boolean}|null=null
 function begin(e:PointerEvent,kind:string,axis:number,origin:Vec3,direction:Vec3){
  const a=project(origin),b=project(add(origin,direction,size.value));if(!a||!b)return
  e.preventDefault();e.stopPropagation();svg.value?.focus();svg.value?.setPointerCapture(e.pointerId)
  const u=project(add(origin,axes[(axis+1)%3],size.value)),v=project(add(origin,axes[(axis+2)%3],size.value)),rotationSign=u&&v?Math.sign((u[0]-a[0])*(v[1]-a[1])-(u[1]-a[1])*(v[0]-a[0]))||1:1
- drag={rotationSign,moved:false,start:[e.clientX,e.clientY],direction:[b[0]-a[0],b[1]-a[1]],factor:size.value,before:clonePlain(props.parameters),kind,axis,origin:a,pointer:e.pointerId}
+ drag={rotationSign,moved:false,start:[e.clientX,e.clientY],direction:[b[0]-a[0],b[1]-a[1]],factor:size.value,before:JSON.parse(JSON.stringify(props.parameters)),kind,axis,origin:a,pointer:e.pointerId}
 }
 function move(e:PointerEvent){
  if(rectangle.value){const r=svg.value!.getBoundingClientRect();rectangle.value.b=[e.clientX-r.left,e.clientY-r.top];return}

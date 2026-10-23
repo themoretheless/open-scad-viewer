@@ -1,0 +1,37 @@
+{
+  "schema": "sweep-main-merge-verification/1",
+  "mergedMain": "bd2ffba81b0deb5356277286828e7b1bb0ba6ea9",
+  "priorSweepHead": "974d01b0079ba1a9ff0dc04993c8d7adddf9fcae",
+  "geometryWasm": {
+    "sha256": "5957407ec75bf80f110795fa720185fe1a7a85a547cd61996361051dd0dd629d",
+    "byteLength": 12102683
+  },
+  "nativeCoreTests": 684,
+  "nativeBridgeTests": 7,
+  "wasmRushRegressionTests": 186,
+  "browserScenarios": 10,
+  "browserWidths": [
+    1440,
+    600
+  ],
+  "distArtifacts": 151,
+  "packedGeometryBytes": 4021240,
+  "checks": [
+    "Vue and MCP type checks",
+    "production Vite build",
+    "distribution byte identity verification",
+    "git diff --check origin/main"
+  ],
+  "evidenceHashes": {
+    "docs/qualification/sweep-main-merge-2026-10-06/native-core.txt": "d15ddd6182c2598aa652f6e38aa5bb8f642a637dd385ad0159e2581ceded33dc",
+    "docs/qualification/sweep-main-merge-2026-10-06/native-bridge.txt": "a505ac93686f4bc1f0498046b30daede3ed1561ca9603fcf24a5eadceb6dd093",
+    "docs/qualification/sweep-main-merge-2026-10-06/wasm-rush.txt": "f2496c75501ff0cb3a4fae9c0e2acc23334816dc49b67f82840a39b93ce8bc00",
+    "docs/qualification/sweep-main-merge-2026-10-06/browser.json": "ee2f696f4969c461a9da08368f472aa983f06f313f0951f985750fbe5ca28159"
+  },
+  "limitations": [
+    "Finite sweep regression and browser qualification; no new universal geometry guarantee.",
+    "No new scalar sweep STEP round-trip qualification.",
+    "Historical records retain their original artifact hashes.",
+    "Hosted CI status must be checked separately; prior runs were blocked by GitHub billing."
+  ]
+}

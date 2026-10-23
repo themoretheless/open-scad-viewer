@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+(node:71714) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  288 passed (288)
+   Start at  00:47:31
+   Duration  67.13s (transform 1.82s, setup 0ms, import 1.98s, tests 65.04s, environment 10ms)

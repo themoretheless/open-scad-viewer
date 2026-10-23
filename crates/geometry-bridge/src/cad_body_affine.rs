@@ -360,7 +360,6 @@ mod instance_tests {
     }
 }
 
-/// Parameterized placements; the domain algorithm belongs to geometry-ops.
 pub fn live_pattern(v: Value) -> Result<Value> {
     use geometry_ops::live_pattern::{Pattern, placements};
     let p: Value = field(&v, "pattern")?;

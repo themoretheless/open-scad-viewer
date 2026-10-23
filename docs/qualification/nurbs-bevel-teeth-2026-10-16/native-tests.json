@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-16",
+  "scope": "Complete paired spherical working-flank inventory with original nominal placement error; not closed gear",
+  "focused_tests_passed": 18,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/spherical/teeth.rs": "e57685d18afb39ed01df8318f6a77dcbd6018f9a44d8f23f8e484dba0e03a40f",
+    "crates/nurbs-core/src/construct/curves/involute/spherical/parameters.rs": "52999b48a04bd18d7d8bff5b3ea44f09da1514abc0a1e71bbd2ceed5e5b385f6",
+    "crates/nurbs-core/src/construct/curves/involute/spherical.rs": "c85e1e00ec0c088957957e91ac502edbc781c6ed7cd333cccd5b80109331f431",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "aca0d528e117418c77c63ab151facfbf6f2cf9fad167219626b3c7031bef68ea",
+    "crates/nurbs-core/tests/bevel_teeth.rs": "066580f4984a50d69c5ddc02fe7182cc963bf93c0e1f36d4f858a2908fcf6b41"
+  },
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "claims": [
+    "Exactly one left/right pair per nominal tooth",
+    "Continuous source-bound saved-control placement error including nominal phase uncertainty",
+    "Original patch basis and exact radial seam ownership",
+    "First-quadrant monotone ideal flank sector separation",
+    "Opaque complete inventory revalidation"
+  ],
+  "unqualified": [
+    "Closed tooth root/tip transitions",
+    "Original saved complete profile embedding",
+    "Sewn B-rep faces and closed gear body"
+  ]
+}

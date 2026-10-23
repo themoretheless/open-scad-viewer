@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {encodeBase91,encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase112,encodeVariableBase113,encodeTripleBase113,encodeTripleBase114,encodeTripleBase117,encodeTripleBase118,alphabet,alphabet92,decodeBase91 as decodeBuildBase91} from '../scripts/wasm-base91.mjs'
+import {encodeBase91,encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118,alphabet,alphabet92,decodeBase91 as decodeBuildBase91} from '../scripts/wasm-base91.mjs'
 import {decodeBase91} from '../src/services/wasmBase91'
-it.each([encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase112,encodeVariableBase113])('variable pairs preserve all word values, alignments, zeros and quoted literals (%#)',encode=>{
+it.each([encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118])('variable pairs preserve all word values, alignments, zeros and quoted literals (%#)',encode=>{
  const corpus=Uint8Array.from({length:65536*2},(_,i)=>i%2?Math.floor(i/2)>>8:Math.floor(i/2)&255)
  for(const bytes of [corpus,...Array.from({length:258},(_,n)=>new Uint8Array(n)),...Array.from({length:258},(_,n)=>Uint8Array.from({length:n},(_,i)=>(i*137+(i>>3))&255))]){
   const packed=encode(bytes)
@@ -82,59 +82,12 @@ it('refuses base108 control aliases, overflow, truncation and nonzero padding',(
  }
 })
 
-it('rejects malformed base112 controls, sizes and padding after JS emission',async()=>{
- const {transformSync}=await import('esbuild')
- const bytes=Uint8Array.from({length:131072},(_,i)=>(i*137+(i>>3))&255)
- const packed=encodeVariableBase112(bytes)
- const emitted=transformSync(`globalThis.__packed='${packed}'`,{minify:true,target:'es2022'}).code
- const restored=Function(`${emitted};return globalThis.__packed`)()
- delete (globalThis as Record<string,unknown>).__packed
- expect(restored).toBe(packed)
- expect(decodeBase91(restored)).toEqual(bytes)
- expect(decodeBuildBase91(restored)).toEqual(bytes)
- const digits=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92+String.fromCharCode(22,23,24,25)
- const one=encodeVariableBase112(Uint8Array.of(7)),word=263
- const padding=one.slice(0,12)+digits[word%112]+digits[Math.floor(word/112)]
- for(const bad of ['bBx:ffffffff','bBx:00000001\n!','bBx:00000001\x1a!',one.slice(0,-2),one+'!!',padding]){
-  expect(()=>decodeBase91(bad)).toThrow()
-  expect(()=>decodeBuildBase91(bad)).toThrow()
- }
-})
 
-it('preserves base113 emission and refuses control aliases and padding',async()=>{
- const {transformSync}=await import('esbuild')
- const bytes=Uint8Array.from({length:131072},(_,i)=>(i*137+(i>>3))&255)
- const packed=encodeVariableBase113(bytes)
- const emitted=transformSync(`returnValue='${packed}'`,{minify:true,target:'es2022'}).code
- const restored=Function(`let returnValue;${emitted};return returnValue`)()
- expect(restored).toBe(packed)
- expect(decodeBase91(restored)).toEqual(bytes)
- expect(decodeBuildBase91(restored)).toEqual(bytes)
- const one=encodeVariableBase113(Uint8Array.of(7))
- const digits=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92+String.fromCharCode(22,23,24,25,26),word=263
- for(const bad of ['bCx:ffffffff','bCx:00000001\n!','bCx:00000001\x1b!',one.slice(0,-2),one+'!!',one.slice(0,12)+digits[word%113]+digits[Math.floor(word/113)]]){
-  expect(()=>decodeBase91(bad)).toThrow()
-  expect(()=>decodeBuildBase91(bad)).toThrow()
- }
-})
-
-it.each([encodeTripleBase113,encodeTripleBase114,encodeTripleBase117,encodeTripleBase118])('roundtrips triple-word boundaries, JS emission and refuses incomplete or aliased words (%#)',async encode=>{
- const {transformSync}=await import('esbuild')
- const base=encode===encodeTripleBase113?113:encode===encodeTripleBase114?114:encode===encodeTripleBase117?117:118
- const digits=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92+String.fromCharCode(22,23,24,25,26)+(base===114?String.fromCharCode(28):base===117?String.fromCharCode(28,29,30,31):base===118?String.fromCharCode(28,29,30,31,127):'')
- const corpus=Uint8Array.from({length:3*1048576},(_,i)=>(Math.floor(i/3)>>(8*(i%3)))&255)
- for(const bytes of [corpus,...Array.from({length:259},(_,n)=>new Uint8Array(n)),...Array.from({length:259},(_,n)=>Uint8Array.from({length:n},(_,i)=>(i*137+(i>>3))&255))]){
-  const packed=encode(bytes)
-  expect(decodeBase91(packed)).toEqual(bytes)
-  expect(decodeBuildBase91(packed)).toEqual(bytes)
-  if(bytes.length)expect(()=>decodeBase91(packed,bytes.length-1)).toThrow()
- }
- const packed=encode(corpus.subarray(0,65536))
- const emitted=transformSync(`returnValue='${packed}'`,{minify:true,target:'es2022'}).code
- expect(Function(`let returnValue;${emitted};return returnValue`)()).toBe(packed)
- const one=encode(Uint8Array.of(7)),word=263
- const padding=one.slice(0,12)+digits[word%base]+digits[Math.floor(word/base)%base]+digits[Math.floor(word/(base*base))]
- for(const bad of [one.slice(0,4)+'ffffffff',one.slice(0,4)+'00000001\n!!',one.slice(0,4)+'00000001\x1b!!',one.slice(0,-1),one.slice(0,-3),one+'!!!',padding]){
+it('refuses dense control aliases, nonzero padding and overlong data',()=>{
+ const digits=String.fromCharCode(22,23,24,25,26,28,29,30,31,127)+String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92
+ const packed=encodeVariableBase118(Uint8Array.of(7)),word=263
+ const padding=packed.slice(0,12)+digits[word%120]+digits[Math.floor(word/120)]
+ for(const bad of ['bBx:ffffffff','bBx:00000001\n!','bBx:00000001\x00!',packed.slice(0,-2),packed+'!!',padding]){
   expect(()=>decodeBase91(bad)).toThrow()
   expect(()=>decodeBuildBase91(bad)).toThrow()
  }

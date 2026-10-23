@@ -1,0 +1,30 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   '[WebGPURenderer] frame failed Error: [Invalid Texture] is invalid due to a previous error.\n' +
++     ' - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n' +
++     '\n' +
++     '    at http://127.0.0.1:55699/assets/renderer-BK9MHEdw.js:407:61798'
++ ]
+- []
+
+    at file:///private/tmp/open-scad-viewer-cad-resume/scripts/check-solid-scene-state-browser.mjs:135:9 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    '[WebGPURenderer] frame failed Error: [Invalid Texture] is invalid due to a previous error.\n' +
+      ' - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n' +
+      '\n' +
+      '    at http://127.0.0.1:55699/assets/renderer-BK9MHEdw.js:407:61798'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.10.0

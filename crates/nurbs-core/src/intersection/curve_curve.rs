@@ -227,87 +227,9 @@ fn push_point(report: &mut CurveCurveReport, component: CcComponent) {
     }
 }
 
-fn krawczyk_cc(
-    first: &Curve,
-    second: &Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    floor: f64,
-) -> Result<Option<(f64, f64)>> {
-    let width_t = ta[1] - ta[0];
-    let width_u = tb[1] - tb[0];
-    if width_t.max(width_u) > floor.max(2_f64.powi(-24)) {
-        return Ok(None);
-    }
-    let (mut t, mut u) = ((ta[0] + ta[1]) * 0.5, (tb[0] + tb[1]) * 0.5);
-    // Unified guard backing the fixed 12-step Newton polish (item 1065).
-    let mut guard = Budget::with_iterations(12)?.guard("cc_krawczyk_newton");
-    for _ in 0..12 {
-        guard.tick()?;
-        let ja = first.evaluate(t)?;
-        let jb = second.evaluate(u)?;
-        let Some(ref a1) = ja.d1 else {
-            return Ok(None);
-        };
-        let Some(ref b1) = jb.d1 else {
-            return Ok(None);
-        };
-        let va = point3(a1)?;
-        let vb = point3(b1)?;
-        let r = [
-            ja.point[0] - jb.point[0],
-            ja.point[1] - jb.point[1],
-            ja.point[2] - jb.point[2],
-        ];
-        // Project residual onto the two dominant axes of va×vb plane.
-        let n = cross3(va, vb);
-        let nn = norm3(n);
-        if nn <= TRANSVERSE_SINE * norm3(va) * norm3(vb) {
-            return Ok(None);
-        }
-        let e1 = va;
-        let e2 = cross3(n, va);
-        let ne2 = norm3(e2);
-        if !ne2.is_finite() || ne2 <= 0. {
-            return Ok(None);
-        }
-        let e2 = e2.map(|x| x / ne2);
-        let e1n = norm3(e1).max(f64::from_bits(1));
-        let e1 = e1.map(|x| x / e1n);
-        let ft = [dot3(r, e1), dot3(r, e2)];
-        let j00 = dot3(va, e1);
-        let j01 = -dot3(vb, e1);
-        let j10 = 0.;
-        let j11 = -dot3(vb, e2);
-        let det = j00 * j11 - j01 * j10;
-        if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
-            return Ok(None);
-        }
-        let inv_det = 1. / det;
-        let dt = (j11 * ft[0] - j01 * ft[1]) * inv_det;
-        let du = (-j10 * ft[0] + j00 * ft[1]) * inv_det;
-        t -= dt;
-        u -= du;
-        if !(ta[0] <= t && t <= ta[1] && tb[0] <= u && u <= tb[1]) {
-            return Ok(None);
-        }
-        if dt.abs().max(du.abs()) <= floor {
-            break;
-        }
-    }
-    // Krawczyk contraction: image of the box under Newton stays inside.
-    let radius_t = width_t * 0.45;
-    let radius_u = width_u * 0.45;
-    if (t - (ta[0] + ta[1]) * 0.5).abs() <= radius_t
-        && (u - (tb[0] + tb[1]) * 0.5).abs() <= radius_u
-    {
-        // Isolated parameters must be finite before they enter a report (1093).
-        require_finite_point(&[t, u], "krawczyk parameters")?;
-        Ok(Some((t, u)))
-    } else {
-        Ok(None)
-    }
-}
+#[path = "curve_curve/box_certification.rs"]
+mod box_certification;
+use box_certification::*;
 
 fn admit_coincidence(
     input: &CurveIntersectionBox<'_>,
@@ -625,7 +547,18 @@ pub fn intersect_curve_curve_report(
     second: &Curve,
     tolerance: Option<ToleranceContext>,
 ) -> Result<CurveCurveIntersection> {
-    intersect_curve_curve_report_with_clip(first, second, tolerance, CLIP_ROUNDS_PER_BOX)
+    intersect_curve_curve_bounded_report(first,second,tolerance,MAX_BOXES)
+}
+
+pub fn intersect_curve_curve_bounded_report(
+    first: &Curve,
+    second: &Curve,
+    tolerance: Option<ToleranceContext>,
+    max_boxes: usize,
+) -> Result<CurveCurveIntersection> {
+    check((1..=MAX_BOXES).contains(&max_boxes),"Curve intersection needs 1..8192 boxes")?;
+
+    intersect_curve_curve_report_with_clip_bounded(first, second, tolerance, CLIP_ROUNDS_PER_BOX, max_boxes)
 }
 
 /// Per-box fat-line clip round budget for the production entry point.
@@ -638,6 +571,16 @@ pub(crate) fn intersect_curve_curve_report_with_clip(
     second: &Curve,
     tolerance: Option<ToleranceContext>,
     clip_budget: usize,
+) -> Result<CurveCurveIntersection> {
+    intersect_curve_curve_report_with_clip_bounded(first,second,tolerance,clip_budget,MAX_BOXES)
+}
+
+pub(crate) fn intersect_curve_curve_report_with_clip_bounded(
+    first: &Curve,
+    second: &Curve,
+    tolerance: Option<ToleranceContext>,
+    clip_budget: usize,
+    max_boxes: usize,
 ) -> Result<CurveCurveIntersection> {
     admit_curve(first)?;
     admit_curve(second)?;
@@ -669,13 +612,13 @@ pub(crate) fn intersect_curve_curve_report_with_clip(
     )?;
     // Unified runaway insurance (item 1065): pops are bounded by the initial
     // span pairs plus at most four split children and one clip requeue per
-    // counted box. MAX_BOXES keeps its unresolved-entry semantics.
-    let mut guard = Budget::new(MAX_SPANS + 5 * MAX_BOXES + 1, 49, u64::MAX)?
+    // counted box. max_boxes keeps its unresolved-entry semantics.
+    let mut guard = Budget::new(MAX_SPANS + 5 * max_boxes + 1, 49, u64::MAX)?
         .guard("cc_subdivision");
     while let Some((ta, tb, ha, hb, depth)) = pending.pop_front() {
         guard.tick()?;
         guard.check()?;
-        if report.boxes_visited >= MAX_BOXES {
+        if report.boxes_visited >= max_boxes {
             report.unresolved.push(UnresolvedCurveIntersection {
                 parameter_box: [ta[0], ta[1], tb[0], tb[1]],
                 reason: UnresolvedReason::ResourceBoundary,
@@ -829,51 +772,5 @@ pub(crate) fn intersect_curve_curve_report_with_clip(
 }
 
 #[cfg(test)]
-mod guard_tests {
-    use super::*;
-
-    fn bezier(points: &[[f64; 3]]) -> Curve {
-        let n = points.len();
-        Curve {
-            degree: n - 1,
-            knots: [vec![0.; n], vec![1.; n]].concat(),
-            control_points: points.iter().map(|p| p.to_vec()).collect(),
-            weights: vec![1.; n],
-            periodic: false,
-        }
-    }
-
-    #[test]
-    fn nan_control_point_is_rejected_at_the_boundary() {
-        let a = bezier(&[[0., 0., 0.], [1., 1., 0.]]);
-        let mut b = bezier(&[[0., 1., 0.], [1., 0., 0.]]);
-        b.control_points[1][0] = f64::NAN;
-        let err = intersect_curve_curve_report(&a, &b, None).err().expect("invalid intersection input must fail");
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-    }
-
-    #[test]
-    fn crossing_pair_resolves_with_guards_active() {
-        // The unified guards must not perturb the certified result.
-        let a = bezier(&[[0., 0., 0.], [2., 2., 0.]]);
-        let b = bezier(&[[0., 2., 0.], [2., 0., 0.]]);
-        let r = intersect_curve_curve_report(&a, &b, None).unwrap();
-        assert_eq!(r.report.components.len(), 1);
-        assert!(r.report.unresolved.is_empty());
-        let c = &r.report.components[0];
-        assert!((c.first - 0.5).abs() < 1e-9 && (c.second - 0.5).abs() < 1e-9);
-        assert!(c.point.iter().all(|v| v.is_finite()));
-    }
-
-    #[test]
-    fn krawczyk_newton_guard_matches_iteration_cap() {
-        // Guard sized exactly at the Newton cap: 12 ticks pass, the 13th fails.
-        let mut guard = Budget::with_iterations(12).unwrap().guard("cc_krawczyk_newton");
-        for _ in 0..12 {
-            guard.tick().unwrap();
-        }
-        let err = guard.tick().unwrap_err();
-        assert_eq!(err.code, crate::RESOURCE_LIMIT, "{err:?}");
-        assert!(err.contains("cc_krawczyk_newton"));
-    }
-}
+#[path = "curve_curve/tests/guard_tests_integration.rs"]
+mod guard_tests;

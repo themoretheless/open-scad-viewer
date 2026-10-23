@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "completedOn": "2026-10-16",
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_coherent": 5,
+    "periodic_trim_contacts": 28,
+    "periodic_trim_support": 13,
+    "periodic_trim_weighted": 7,
+    "profile_certificate_unit": 47,
+    "periodic_winding_regions": 8,
+    "winding_regularization": 5
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/coherent.rs": "f1e46a2fc3f91497884136728d44305be635f96e9d9aa1b5c00dfa3803fbe7ec",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "0dd2d2bf941243374dc0e169eda7f2a952bf2285f697af638b0a0ca61d6d0ecb",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "7c818b64934c124ec2ab5af211943094e5ab773640ad8e00e33334e135e0e121",
+    "crates/nurbs-core/tests/periodic_trim_coherent.rs": "4339c35c4aa84d0a338c022afb8f3bd4d73bea89e8af9719020bf04ead78acde",
+    "crates/nurbs-core/tests/periodic_trim_weighted.rs": "14bd8eb24feb7ff7bb4a1ac3b6e1991278a8595602d26c09c83e150619b3c698",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent.rs": "33a03daa16e6ddb03e560804fdff42cace88abccbae133d322d35e784c6bd083",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "2387ce31788451fddee4a010beb3b8c26019d26669e6e261ee09ec327b76d337",
+    "crates/brep-core/src/profile_certificate/winding.rs": "ef65b09287355fdd1a3581c4fdc73d3f57e548833ffeccf549f50ed6eeed8c81",
+    "crates/brep-core/src/profile_certificate.rs": "60e0efbb053d81991e46dd48d18785726e016da9a43e022faf411c4133125cdf",
+    "crates/brep-core/tests/periodic_winding_regions.rs": "35a3461a0b74c7e0a0ef6f6eb5fa1f7a623a39f60e0b0fcb000955020192cddb"
+  },
+  "scope": "Genuine copy-coherent quotient/source winding proof connected to weighted chart construction and independently verified candidate UV regions; no ordinary full-copy embedding or owned supporting-surface faces.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "sameParameterCopiesIntegrated": true,
+  "fullOriginalWeightedAnchorUsed": true,
+  "allThreeClassificationStagesShareAllowance": true,
+  "projectiveWeightAliasesMatchedExactly": true,
+  "scaledReverseCancellationOrderIndependent": true,
+  "generalReversedSourceHomotopyQualified": false,
+  "ownedSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false
+}

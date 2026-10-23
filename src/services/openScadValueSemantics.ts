@@ -4,6 +4,7 @@ import {
   type RangeValue,
   type Value,
 } from './openscadCompiler'
+import { nextUp } from '../core/float'
 
 export interface OpenScadValueSemanticsContext {
   readonly warn: (message: string) => void
@@ -37,7 +38,7 @@ export function materializeOpenScadRange(
   context: OpenScadValueSemanticsContext,
 ): Value[] {
   const output: Value[] = []
-  if (range.step === 0 || !(Number.isFinite(range.start) && Number.isFinite(range.step) && Number.isFinite(range.end))) {
+  if (range.step === 0 || ![range.start, range.step, range.end].every(Number.isFinite)) {
     context.warn('Invalid range bounds produce an empty range')
     return register(output, 'range', context)
   }
@@ -333,18 +334,6 @@ function compareValues(left: Value, right: Value): number | undefined {
 }
 
 const MAX_UINT32 = 0xffff_ffff
-
-function nextUp(value: number): number {
-  if (Number.isNaN(value) || value === Infinity) return value
-  if (value === 0) return Number.MIN_VALUE
-  const buffer = new ArrayBuffer(8)
-  const view = new DataView(buffer)
-  view.setFloat64(0, value, false)
-  let bits = view.getBigUint64(0, false)
-  bits = value > 0 ? bits + 1n : bits - 1n
-  view.setBigUint64(0, bits, false)
-  return view.getFloat64(0, false)
-}
 
 function rangeItemCount(range: RangeValue): number {
   const { start, step, end } = range

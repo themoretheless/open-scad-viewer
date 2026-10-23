@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-pPPjE_Jj.js",
+      "sha256": "6d50c74ca9296c2a18d5b872db86594a6c79710a8e89b9cd4f460a63beb088f2"
+    },
+    "wasmSha256": "ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84",
+    "sourceSha256": "b66630dcf1ab183e2ca7b57247272eaa12fdb5f9c2b7370890a373fd589315ce"
+  },
+  "staleRegionChecked": false,
+  "stalePreparationChecked": false,
+  "completeDocumentChecks": true,
+  "browserReloadExact": true,
+  "browser": "151.0.7922.34",
+  "profileWorkerCancelled": false,
+  "operation": "Prepare profile",
+  "retainedArcs": false,
+  "retainedGeneralNurbs": true,
+  "rationalWeights": false,
+  "generalAreaMm2": 4.666666666666662,
+  "exactExtrusion": true,
+  "gpuFallback": false,
+  "gpuRecovered": false,
+  "renderedTriangles": 0,
+  "cancel": true,
+  "undo": true,
+  "repeat": true,
+  "jsonReload": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 10
+}

@@ -495,7 +495,9 @@ pub fn build_trihedral_strips(
                 &strips[b].patch.model, 0,
                 limits.tolerances[0], limits.tolerance_uv,
                 (remaining / 2).min(1024).max(1),
-                (remaining - remaining / 2).min(4096),
+                // Initial broad trim queries must leave work for the actual
+                // subdivision cover; this remains inside the shared caller limit.
+                (remaining - remaining / 2).min(65536),
             )?;
             work.charge(distance.cells + distance.domain_cells, 0)?;
             // Convergence to the minimum is unnecessary for disjointness, but
@@ -503,7 +505,7 @@ pub fn build_trihedral_strips(
             if !distance.lower_bound_mm.is_finite()
                 || distance.lower_bound_mm <= limits.tolerances[0]
             {
-                return Err(refused("Mutual strip separation remains unproven"));
+                return Err(refused(&format!("Mutual strip separation remains unproven for [{a},{b}]: lower={}, cells={}, domains={}",distance.lower_bound_mm,distance.cells,distance.domain_cells)));
             }
             separation.push(StripSeparation { strips: [a,b], distance });
         }

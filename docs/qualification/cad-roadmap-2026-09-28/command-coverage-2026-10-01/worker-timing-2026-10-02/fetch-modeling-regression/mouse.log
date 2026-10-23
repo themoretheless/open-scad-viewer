@@ -1,0 +1,14 @@
+{
+  gpuActive: true,
+  browser: '157.0.8081.0',
+  workerRequests: 5,
+  applyWithoutNewWorkerRequest: true,
+  cancelledLateSuccess: true,
+  invalidInput: true,
+  fieldErrors: true,
+  undoRedo: true,
+  objectHistory: true,
+  keyboard: false,
+  tabPresses: 0,
+  downloads: 16
+}

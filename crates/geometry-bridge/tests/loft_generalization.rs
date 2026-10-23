@@ -1,0 +1,403 @@
+use nurbs_core::{
+    curve::Curve,
+    surface::{Axis, Surface},
+};
+use value_codec::{Value, json};
+fn request() -> Value {
+    let a = Surface {
+        degree_u: 2,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 1., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        weights: vec![vec![1.; 2]; 3],
+        periodic_u: false,
+        periodic_v: false,
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+            vec![vec![0.5, 0., 0.25], vec![0.5, 1., 0.25]],
+            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+        ],
+    };
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p[2] += 1.;
+    }
+    let edges = |s: &Surface| {
+        vec![vec![
+            s.iso(Axis::V, 0.).unwrap(),
+            s.iso(Axis::U, 1.).unwrap(),
+            s.iso(Axis::V, 1.).unwrap().reverse().unwrap(),
+            s.iso(Axis::U, 0.).unwrap().reverse().unwrap(),
+        ]]
+    };
+    let (start, end): (Vec<Vec<Curve>>, Vec<Vec<Curve>>) = (edges(&a), edges(&b));
+    let sides = vec![
+        start[0]
+            .iter()
+            .zip(&end[0])
+            .map(|(a, b)| nurbs_core::surface::loft(&[a.clone(), b.clone()]).unwrap())
+            .collect::<Vec<_>>(),
+    ];
+    let p = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let trims = vec![
+        p.windows(2)
+            .map(|p| {
+                nurbs_core::paths::bezier(p.iter().map(|p| p.to_vec()).collect(), None).unwrap()
+            })
+            .collect::<Vec<_>>(),
+    ];
+    json!({"op":"brep_nurbs_capped_loft_with_caps","start":start,"end":end,"sides":sides,
+        "caps":[json!({"surface":a,"trims":trims.clone()}),json!({"surface":b,"trims":trims})],
+        "toleranceUv":1e-9,"embeddingLimits":{"exactWork":1000000,"trimPairs":1000,"trimCells":10000,
+            "trimDomainCells":100000,"spans":1000,"facePairs":100,"faceCells":100000,
+            "faceDomainCells":100000,"faceCellsPerPair":1000,"faceDomainCellsPerPair":1000}})
+}
+#[test]
+fn json_nonplanar_loft_requires_global_embedding_and_two_caps() {
+    let request = request();
+    let result = geometry_bridge::dispatch(request.clone()).unwrap();
+    let model: brep_core::Model = value_codec::from_value(result).unwrap();
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert!((model.faces[4].surface.evaluate(0.5, 0.5).unwrap().point[2] - 0.125).abs() < 1e-12);
+    let mut incomplete = request.clone();
+    incomplete["embeddingLimits"]["facePairs"] = json!(1);
+    assert!(geometry_bridge::dispatch(incomplete).is_err());
+    let mut bad = request.clone();
+    bad["caps"] = json!([]);
+    assert!(geometry_bridge::dispatch(bad).is_err());
+    let mut crossing = request;
+    let mut side: Surface = value_codec::from_value(crossing["sides"][0][0].clone()).unwrap();
+    side = side.edit_axis(Axis::V, |c| c.elevate(2)).unwrap();
+    side.control_points[1][1][1] = 5.;
+    crossing["sides"][0][0] = value_codec::to_value(side).unwrap();
+    assert!(geometry_bridge::dispatch(crossing).is_err());
+}
+
+#[test]
+fn json_multispan_section_mapping_retains_the_original_section() {
+    let start = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+        weights: vec![1., 0.75, 1.],
+        periodic: false,
+    };
+    let mut end = start.clone();
+    for p in &mut end.control_points {
+        p[2] += 2.;
+    }
+    let mapping = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,0.25,1.],"weights":[1.,1.,1.]}]});
+    let materialization = json!({"op":"curve_materialize_reparameterization_bounded","curve":start,
+        "mapping":mapping,"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let mapped = geometry_bridge::dispatch(materialization.clone()).unwrap();
+    assert_eq!(mapped["certificate"]["exact"], false);
+    assert_eq!(mapped["certificate"]["retention"]["accepted"], true);
+    let mut depleted = materialization;
+    depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+    let loft = geometry_bridge::dispatch(
+        json!({"op":"surface_natural_loft","curves":[start.clone(),end],
+        "parameters":[0.,1.],"section_mappings":[mapping.clone(),mapping]}),
+    )
+    .unwrap();
+    let surface: Surface = value_codec::from_value(loft).unwrap();
+    for u in [0., 0.13, 0.37, 0.6180339887498949, 0.83, 1.] {
+        let expected = start.evaluate((u + u * u) * 0.5).unwrap().point;
+        for (v, z) in [(0., 0.), (1., 2.)] {
+            let actual = surface.evaluate(u, v).unwrap().point;
+            for axis in 0..3 {
+                assert!(
+                    (actual[axis] - expected[axis] - if axis == 2 { z } else { 0. }).abs() <= 1e-6
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn json_loft_accepts_subdivision_certified_monotonic_section_map() {
+    let start = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+        weights: vec![1., 0.75, 1.],
+        periodic: false,
+    };
+    let mut end = start.clone();
+    for point in &mut end.control_points {
+        point[2] += 2.;
+    }
+    let mapping = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+        "controlValues":[0.,0.6,0.4,1.],"weights":[1.,1.,1.,1.]}]});
+    let loft = geometry_bridge::dispatch(json!({"op":"surface_natural_loft",
+        "curves":[start.clone(),end],"parameters":[0.,1.],
+        "section_mappings":[mapping.clone(),mapping]}))
+    .unwrap();
+    let surface: Surface = value_codec::from_value(loft).unwrap();
+    // Independently evaluate the authored cubic Bernstein polynomial.
+    for sample in 0..=1000 {
+        let u = sample as f64 / 1000.;
+        let t = 1.8 * u * (1. - u).powi(2) + 1.2 * u * u * (1. - u) + u.powi(3);
+        let expected = start.evaluate(t).unwrap().point;
+        for (v, z) in [(0., 0.), (1., 2.)] {
+            let actual = surface.evaluate(u, v).unwrap().point;
+            let error = (0..3)
+                .map(|axis| {
+                    (actual[axis] - expected[axis] - if axis == 2 { z } else { 0. }).powi(2)
+                })
+                .sum::<f64>()
+                .sqrt();
+            assert!(error <= 1e-6, "u={u}, v={v}, error={error}");
+        }
+    }
+}
+
+#[test]
+fn json_cartesian_gordon_retains_incompatible_weights_and_refuses_incomplete_audit() {
+    let line = |a: [f64; 3], b: [f64; 3], weights: Vec<f64>| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a.to_vec(), b.to_vec()],
+        weights,
+        periodic: false,
+    };
+    let mut u = [
+        line([0., 0., 0.], [1., 0., 0.], vec![1., 2.]),
+        line([0., 1., 0.], [1., 1., 1.], vec![3., 1.]),
+    ];
+    for knot in &mut u[0].knots {
+        *knot = 2. + 5. * *knot;
+    }
+    let v = [
+        line([0., 0., 0.], [0., 1., 0.], vec![2., 1.]),
+        line([1., 0., 0.], [1., 1., 1.], vec![1., 4.]),
+    ];
+    let request = json!({"op":"surface_gordon_cartesian","u_curves":u,"v_curves":v,
+        "parameters_u":[0.,1.],"parameters_v":[0.,1.],"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let result = geometry_bridge::dispatch(request.clone()).unwrap();
+    assert_eq!(result["certificate"]["exact"], false);
+    let certificates = result["certificate"]["curves"].as_array().unwrap();
+    assert_eq!(certificates.len(), 4);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+        assert!(certificate["errorUpper"].as_f64().unwrap() <= 1e-6);
+    }
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for sample in 0..=100 {
+        let t = sample as f64 / 100.;
+        for (i, curve) in u.iter().enumerate() {
+            let actual = surface.evaluate(t, i as f64).unwrap().point;
+            let [start, end] = curve.domain();
+            let expected = curve.evaluate(start + t * (end - start)).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-12);
+            }
+        }
+    }
+    let mut clamped = request.clone();
+    let targets = [
+        nurbs_core::primitives::line([0., 0.5, 0.], [0., 4., 4.]).unwrap(),
+        nurbs_core::primitives::line([0., 2., 0.], [0., 0.25, 0.25]).unwrap(),
+    ];
+    clamped["boundary_tangents"] = json!(targets);
+    let result = geometry_bridge::dispatch(clamped.clone()).unwrap();
+    let certificates = result["certificate"]["tangents"].as_array().unwrap();
+    assert_eq!(certificates.len(), 2);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+    }
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for i in 0..=100 {
+        let u = i as f64 / 100.;
+        for end in 0..2 {
+            let actual = surface
+                .evaluate(u, end as f64)
+                .unwrap()
+                .first_derivatives()
+                .unwrap()
+                .1;
+            let expected = targets[end].evaluate(u).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-10);
+            }
+        }
+    }
+    clamped["maxCells"] = json!(1);
+    clamped["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(clamped).is_err());
+    let mut depleted = request;
+    depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+}
+
+#[test]
+fn json_cartesian_guided_loft_retains_independent_guide_weights() {
+    let sections = [
+        nurbs_core::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+        nurbs_core::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+    ];
+    let mut guide = nurbs_core::primitives::line([0.5, 0., 0.], [0.5, 0., 1.]).unwrap();
+    guide.weights = vec![1., 2.];
+    let request = json!({"op":"surface_guided_loft_cartesian","curves":sections,
+        "parameters":[0.,1.],"guides":[guide],"guide_parameters":[0.5],
+        "errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let result = geometry_bridge::dispatch(request.clone()).unwrap();
+    assert_eq!(result["certificate"]["operation"], "cartesian-guided-loft");
+    assert_eq!(result["certificate"]["exact"], false);
+    assert_eq!(result["certificate"]["curves"].as_array().unwrap().len(), 5);
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for i in 0..=100 {
+        let v = i as f64 / 100.;
+        let expected = guide.evaluate(v).unwrap().point;
+        let actual = surface.evaluate(0.5, v).unwrap().point;
+        for k in 0..3 {
+            assert!((actual[k] - expected[k]).abs() < 1e-11);
+        }
+    }
+    let mut automatic = request.clone();
+    automatic["op"] = json!("surface_auto_guided_loft_cartesian");
+    automatic["budget"] = json!(1e-6);
+    let aligned = geometry_bridge::dispatch(automatic.clone()).unwrap();
+    assert_eq!(
+        aligned["certificate"]["operation"],
+        "cartesian-auto-guided-loft"
+    );
+    assert_eq!(
+        aligned["certificate"]["curves"].as_array().unwrap().len(),
+        5
+    );
+    assert!((aligned["guide_parameters"][0].as_f64().unwrap() - 0.5).abs() < 1e-8);
+    for error in aligned["guide_error_upper"].as_array().unwrap() {
+        assert!(error.as_f64().unwrap() <= 1e-6);
+    }
+    automatic["maxCells"] = json!(1);
+    automatic["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(automatic).is_err());
+    let field = |z| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0., z]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut clamped = request.clone();
+    clamped["boundary_tangents"] = json!([field(2.), field(0.5)]);
+    let result = geometry_bridge::dispatch(clamped.clone()).unwrap();
+    let certificates = result["certificate"]["tangents"].as_array().unwrap();
+    assert_eq!(certificates.len(), 2);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+        assert!(certificate["errorUpper"].as_f64().unwrap() <= 1e-6);
+    }
+    let mut auto_clamped = clamped.clone();
+    auto_clamped["op"] = json!("surface_auto_guided_loft_cartesian");
+    auto_clamped["budget"] = json!(1e-6);
+    let result = geometry_bridge::dispatch(auto_clamped.clone()).unwrap();
+    assert_eq!(
+        result["certificate"]["tangents"].as_array().unwrap().len(),
+        2
+    );
+    for certificate in result["certificate"]["tangents"].as_array().unwrap() {
+        assert_eq!(certificate["accepted"], true);
+    }
+    auto_clamped["maxCells"] = json!(1);
+    auto_clamped["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(auto_clamped).is_err());
+    clamped["maxCells"] = json!(1);
+    clamped["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(clamped).is_err());
+    let mut authored = request.clone();
+    authored["parameters"] = json!([2., 7.]);
+    authored["start_tangents"] = json!([[0., 0., 0.4], [0., 0., 0.4]]);
+    authored["end_tangents"] = json!([[0., 0., 0.1], [0., 0., 0.1]]);
+    for operation in [
+        "surface_guided_loft_cartesian",
+        "surface_auto_guided_loft_cartesian",
+    ] {
+        authored["op"] = json!(operation);
+        authored["budget"] = json!(1e-6);
+        let result = geometry_bridge::dispatch(authored.clone()).unwrap();
+        for certificate in result["certificate"]["tangents"].as_array().unwrap() {
+            assert_eq!(certificate["accepted"], true);
+            assert_eq!(certificate["targetUnits"], "authored-dP/dt");
+            assert_eq!(certificate["stationDomain"], json!([2., 7.]));
+        }
+        let mut conflicting = authored.clone();
+        conflicting["boundary_tangents"] = json!([field(2.), field(0.5)]);
+        assert!(geometry_bridge::dispatch(conflicting).is_err());
+        let mut incomplete = authored.clone();
+        incomplete["maxCells"] = json!(1);
+        incomplete["maxMapEvaluations"] = json!(1);
+        assert!(geometry_bridge::dispatch(incomplete).is_err());
+    }
+    let mut tangents = request.clone();
+    tangents["start_tangents"] = json!([[0., 0., 1.], [0., 0., 1.]]);
+    assert!(geometry_bridge::dispatch(tangents).is_err());
+    let mut depleted = request;
+    depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+}
+
+#[test]
+fn mapped_cartesian_loft_bounds_original_weighted_sections_and_curved_guide() {
+    let mut a = nurbs_core::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap();
+    a.weights = vec![1., 2.];
+    a.knots = vec![2., 2., 7., 7.];
+    let mut b = a.clone();
+    b.weights = vec![3., 1.];
+    for p in &mut b.control_points {
+        p[2] = 2.;
+    }
+    let guide = nurbs_core::paths::bezier(
+        vec![vec![0., 0., 0.], vec![0., 0.4, 1.], vec![0., 0., 2.]],
+        Some(vec![1., 2., 1.]),
+    )
+    .unwrap();
+    let factor = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+        "controlValues":[0.,0.2,1.],"weights":[1.,0.75,1.]}]});
+    let mappings = json!([Value::Null,{"composition":[factor.clone(),factor]}]);
+    let mut request = json!({"op":"surface_guided_loft_cartesian","curves":[a.clone(),b.clone()],
+        "parameters":[2.,7.],"section_mappings":mappings,"guides":[guide.clone()],
+        "guide_parameters":[0.],"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    for operation in [
+        "surface_guided_loft_cartesian",
+        "surface_auto_guided_loft_cartesian",
+    ] {
+        request["op"] = json!(operation);
+        request["budget"] = json!(1e-6);
+        let result = geometry_bridge::dispatch(request.clone()).unwrap();
+        let certificates = result["original_section_certificates"].as_array().unwrap();
+        assert_eq!(certificates.len(), 2);
+        for (i, c) in certificates.iter().enumerate() {
+            assert_eq!(c["accepted"], true);
+            assert_eq!(c["operation"], "original-composed-loft-section-retention");
+            assert!(c["errorUpper"].as_f64().unwrap() <= 1e-6);
+            if operation == "surface_auto_guided_loft_cartesian" {
+                assert_eq!(result["section_error_upper"][i], c["errorUpper"]);
+            }
+        }
+        let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+        for i in 0..=100 {
+            let u = i as f64 / 100.;
+            let factor = |x: f64| {
+                let t = 1. - x;
+                (0.3 * t * x + x * x) / (t * t + 1.5 * t * x + x * x)
+            };
+            let f = factor(factor(u));
+            let p = surface.evaluate(u, 1.).unwrap().point;
+            assert!((p[0] - f / (3. * (1. - f) + f)).abs() < 1e-10);
+            let actual = surface.evaluate(0., u).unwrap().point;
+            let expected = guide.evaluate(u).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-10);
+            }
+        }
+        let mut depleted = request.clone();
+        depleted["maxCells"] = json!(1);
+        depleted["maxMapEvaluations"] = json!(1);
+        assert!(geometry_bridge::dispatch(depleted).is_err());
+    }
+}

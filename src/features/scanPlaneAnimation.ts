@@ -9,7 +9,7 @@ export function advanceScanPlane(
   elapsedMs: number,
   oneWayMs = 8_000,
 ): { offset: number; direction: ScanDirection } {
-  if (!(Number.isFinite(offset) && Number.isFinite(min) && Number.isFinite(max) && Number.isFinite(elapsedMs) && Number.isFinite(oneWayMs)) || max < min || oneWayMs <= 0) {
+  if (![offset, min, max, elapsedMs, oneWayMs].every(Number.isFinite) || max < min || oneWayMs <= 0) {
     throw new RangeError('Scan range and timing must be finite and ordered')
   }
   const range = max - min

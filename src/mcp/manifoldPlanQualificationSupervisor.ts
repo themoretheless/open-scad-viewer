@@ -95,6 +95,9 @@ function boundedDuration(value: number, label: string, maximum: number, allowZer
 
 function defaultWorkerFactory(_workerEpoch: number): Worker {
   return new Worker(new URL('./manifoldPlanQualification.worker.mjs', import.meta.url), {
+    // The bootstrap registers its own TS loader. Inheriting --import tsx
+    // registers a second loader realm for every short-lived worker.
+    execArgv: [],
     stdout: true,
     stderr: true,
   })

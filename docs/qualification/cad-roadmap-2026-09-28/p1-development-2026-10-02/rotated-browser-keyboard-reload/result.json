@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "mode": "corner",
+  "inputMode": "keyboard",
+  "contextSwitch": false,
+  "oversizeRefusal": true,
+  "localized": true,
+  "reduceRadiusRecovery": true,
+  "undoRedo": true,
+  "reload": true,
+  "applyWithoutRecompute": true,
+  "lateResponseAfterCancelAndReopen": true,
+  "errors": []
+}

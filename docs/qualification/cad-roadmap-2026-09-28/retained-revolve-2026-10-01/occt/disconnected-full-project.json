@@ -1,0 +1,233 @@
+{
+  "version": 1,
+  "bodies": [],
+  "sketches": [
+    {
+      "id": "profile",
+      "name": "disconnected-full",
+      "closed": true,
+      "points": [
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "retainedProfile": {
+        "areaMm2": 2,
+        "geometryStatus": "numerical_uncertified",
+        "kind": "brep-profile",
+        "loops": [
+          [
+            {
+              "controlPoints": [
+                [
+                  3,
+                  0
+                ],
+                [
+                  4,
+                  0
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  4,
+                  0
+                ],
+                [
+                  4,
+                  1
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  4,
+                  1
+                ],
+                [
+                  3,
+                  1
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  3,
+                  1
+                ],
+                [
+                  3,
+                  0
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            }
+          ],
+          [
+            {
+              "controlPoints": [
+                [
+                  5,
+                  2
+                ],
+                [
+                  6,
+                  2
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  6,
+                  2
+                ],
+                [
+                  6,
+                  3
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  6,
+                  3
+                ],
+                [
+                  5,
+                  3
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            },
+            {
+              "controlPoints": [
+                [
+                  5,
+                  3
+                ],
+                [
+                  5,
+                  2
+                ]
+              ],
+              "degree": 1,
+              "knots": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "periodic": false,
+              "weights": [
+                1,
+                1
+              ]
+            }
+          ]
+        ],
+        "toleranceMm": 1e-7
+      }
+    }
+  ]
+}

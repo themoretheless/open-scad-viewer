@@ -220,24 +220,14 @@ export function nextPaletteCommandIndex(
   return (start + direction + commands.length) % commands.length
 }
 
-const NORMALIZED_TEXT_CACHE = new Map<string, string>()
-const MAX_NORMALIZED_CACHE_ENTRIES = 2048
-
 export function normalizeCommandText(value: string): string {
-  const cached = NORMALIZED_TEXT_CACHE.get(value)
-  if (cached !== undefined) return cached
-  const normalized = value
+  return value
     .normalize('NFKD')
     .replace(/\p{M}+/gu, '')
     .toLocaleLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
     .replace(/\s+/g, ' ')
-  if (NORMALIZED_TEXT_CACHE.size >= MAX_NORMALIZED_CACHE_ENTRIES) {
-    NORMALIZED_TEXT_CACHE.clear()
-  }
-  NORMALIZED_TEXT_CACHE.set(value, normalized)
-  return normalized
 }
 
 interface PreparedSearchField {
@@ -377,61 +367,40 @@ function typoThreshold(length: number): number {
   return length < 7 ? 1 : 2
 }
 
-let dlRow0 = new Uint16Array(64)
-let dlRow1 = new Uint16Array(64)
-let dlRow2 = new Uint16Array(64)
-
 /** Bounded optimal-string-alignment distance, including adjacent transpositions. */
 function damerauLevenshtein(a: string, b: string, maximum: number): number {
   const left = Array.from(a)
   const right = Array.from(b)
-  const leftLen = left.length
-  const rightLen = right.length
-  if (Math.abs(leftLen - rightLen) > maximum) return NO_MATCH
+  if (Math.abs(left.length - right.length) > maximum) return NO_MATCH
 
-  const cols = rightLen + 1
-  if (dlRow0.length < cols) {
-    dlRow0 = new Uint16Array(cols)
-    dlRow1 = new Uint16Array(cols)
-    dlRow2 = new Uint16Array(cols)
-  }
-  let prev2 = dlRow0
-  let prev = dlRow1
-  let curr = dlRow2
-  for (let j = 0; j <= rightLen; j += 1) prev[j] = j
+  const matrix = Array.from({ length: left.length + 1 }, () => new Array<number>(right.length + 1).fill(0))
+  for (let i = 0; i <= left.length; i += 1) matrix[i]![0] = i
+  for (let j = 0; j <= right.length; j += 1) matrix[0]![j] = j
 
-  for (let i = 1; i <= leftLen; i += 1) {
-    curr[0] = i
+  for (let i = 1; i <= left.length; i += 1) {
     let rowMinimum = NO_MATCH
-    const leftChar = left[i - 1]
-    const prevLeftChar = i > 1 ? left[i - 2] : ''
-    for (let j = 1; j <= rightLen; j += 1) {
-      const rightChar = right[j - 1]
-      const substitution = leftChar === rightChar ? 0 : 1
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitution = left[i - 1] === right[j - 1] ? 0 : 1
       let distance = Math.min(
-        prev[j] + 1,
-        curr[j - 1] + 1,
-        prev[j - 1] + substitution,
+        matrix[i - 1]![j]! + 1,
+        matrix[i]![j - 1]! + 1,
+        matrix[i - 1]![j - 1]! + substitution,
       )
       if (
         i > 1
         && j > 1
-        && leftChar === right[j - 2]
-        && prevLeftChar === rightChar
+        && left[i - 1] === right[j - 2]
+        && left[i - 2] === right[j - 1]
       ) {
-        distance = Math.min(distance, prev2[j - 2] + 1)
+        distance = Math.min(distance, matrix[i - 2]![j - 2]! + 1)
       }
-      curr[j] = distance
-      if (distance < rowMinimum) rowMinimum = distance
+      matrix[i]![j] = distance
+      rowMinimum = Math.min(rowMinimum, distance)
     }
     if (rowMinimum > maximum) return NO_MATCH
-    const tmp = prev2
-    prev2 = prev
-    prev = curr
-    curr = tmp
   }
 
-  const result = prev[rightLen]
+  const result = matrix[left.length]![right.length]!
   return result <= maximum ? result : NO_MATCH
 }
 

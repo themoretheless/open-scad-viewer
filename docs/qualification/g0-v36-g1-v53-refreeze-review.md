@@ -1,13 +1,7 @@
-# G0 v36 / G1 v53 no-claim re-freeze
+# G0 v36 / G1 v53 byte refresh
 
-This append-only amendment preserves G0 v35, G1 v52, and all earlier artifacts byte-for-byte. V52 cannot admit further evidence because a file it binds changed.
+This successor binds the loft kernel after a clean Cargo rebuild, current sources and the worker bootstrap that avoids an inherited second TS loader. It preserves v35/v52 and all earlier bytes and reuses hosted-runner environment freeze v34 unchanged. Own Rust CAD v28 adds the explicit loft implementation paths to the source bundle.
 
-The drift is reviewed:
+The candidate begins with zero completed clean runs and work units. This refresh executes no qualification row and approves no G0, G1 or production cutover.
 
-- **Source bundle and manifest.** The concurrent process edited bound files again after the G0 v35 / G1 v52 publish: `crates/Cargo.toml` (dependency pin) and `crates/manifold-core/src/lib.rs`. The own-Rust source-bundle digest and the crates workspace manifest fingerprint changed accordingly.
-- **Kernel.** The packed own-Rust geometry kernel WASM fingerprint is taken from current bytes; it is unchanged unless the concurrent process rebuilt it, in which case the rebuilt bytes are the frozen ones.
-- **Notices and lockfiles.** `THIRD_PARTY_NOTICES.md`, `package-lock.json` and `crates/Cargo.lock` are byte-identical to own-rust-cad-v27, and the own-Rust oracle stays at v3.
-
-V53 recomputes every artifact and canonical bundle digest from current bytes, re-binds the exact GitHub Actions workflow, evidence-producing harness, fragment selectors (now selecting v53), and the unchanged hosted-runner identity freeze (`g1-github-actions-v34.json`, retained as the active environment freeze). Own-Rust evidence advances to `own-rust-cad-v28.json` with refreshed fingerprints.
-
-The matrix remains 4740 planned work units. V53 starts with zero completed runs and zero completed units, imports no prior result, makes no qualification claim, and authorizes no production cutover.
+macOS ARM64 and Linux ARM64 clean builds differ before optimization; Node 22 and 26 optimize the macOS input identically. Linux x64 independently reports the same digest on Node 20 and 22 in CI. The successor enumerates these observed artifact hashes. Qualification freezing refuses unknown hashes; runtime metadata reports the actual packaged digest without claiming qualification; this is no cross-host byte-reproducibility claim. Windows fixture-mutation tests normalize CRLF before appending STEP entities.

@@ -6,7 +6,7 @@ use crate::{
     Result, check,
     curve::Curve,
     curve_distance::enclosure,
-    distance_bounds::{Interval, box_distance},
+    distance_bounds::{Interval, box_distance, midpoint as mid},
     resource,
 };
 #[cfg(feature = "codec")]
@@ -95,9 +95,6 @@ struct Piece {
     domain: [f64; 2],
     bounds: [Interval; 2],
     ends: [Endpoint; 2],
-}
-fn mid(a: f64, b: f64) -> f64 {
-    a * 0.5 + b * 0.5
 }
 fn hull(a: [Interval; 2], b: [Interval; 2]) -> [Interval; 2] {
     std::array::from_fn(|k| Interval {

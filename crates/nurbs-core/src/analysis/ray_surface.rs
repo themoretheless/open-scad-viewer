@@ -2,11 +2,12 @@
 //! inclusions with an invertible preconditioner and contraction certify roots.
 //! Unresolved cells remain explicit; this module does not classify solid volume.
 use crate::{
-    Result, check,
+    check,
     distance_bounds::Interval as I,
     resource,
     surface::Surface,
     surface_distance::{interpolate, rectangle_bounds},
+    Result,
 };
 type Net = Vec<Vec<[I; 2]>>;
 #[derive(Debug)]
@@ -16,6 +17,8 @@ pub struct Root {
 }
 #[derive(Debug)]
 pub struct Report {
+    pub profile_parameterization:
+        Option<crate::surface_linear_monotonicity::ProfileParameterization>,
     pub roots: Vec<Root>,
     pub unresolved: Vec<[[f64; 2]; 2]>,
     pub cells: usize,
@@ -53,7 +56,7 @@ fn hull(values: impl Iterator<Item = I>) -> I {
     )
 }
 fn midpoint(x: I) -> f64 {
-    x.lo * 0.5 + x.hi * 0.5
+    crate::distance_bounds::midpoint(x.lo, x.hi)
 }
 fn signed_div(a: I, b: f64) -> Result<I> {
     if b > 0. {
@@ -128,19 +131,22 @@ fn net(
     }
     Ok(out)
 }
-fn average(a: [I; 2], b: [I; 2]) -> Result<[I; 2]> {
+fn blend(a: [I; 2], b: [I; 2], t: f64) -> Result<[I; 2]> {
     Ok([
-        a[0].mul(I::point(0.5))?.add(b[0].mul(I::point(0.5))?)?,
-        a[1].mul(I::point(0.5))?.add(b[1].mul(I::point(0.5))?)?,
+        a[0].mul(I::point(1. - t))?.add(b[0].mul(I::point(t))?)?,
+        a[1].mul(I::point(1. - t))?.add(b[1].mul(I::point(t))?)?,
     ])
 }
-fn split_line(mut row: Vec<[I; 2]>) -> Result<[Vec<[I; 2]>; 2]> {
+fn split_line(row: Vec<[I; 2]>) -> Result<[Vec<[I; 2]>; 2]> {
+    split_line_at(row, 0.5)
+}
+fn split_line_at(mut row: Vec<[I; 2]>, t: f64) -> Result<[Vec<[I; 2]>; 2]> {
     let n = row.len();
     let mut left = vec![row[0]];
     let mut right = vec![row[n - 1]];
     for count in (1..n).rev() {
         for j in 0..count {
-            row[j] = average(row[j], row[j + 1])?
+            row[j] = blend(row[j], row[j + 1], t)?
         }
         left.push(row[0]);
         right.push(row[count - 1])
@@ -153,7 +159,7 @@ fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
     let mut out = [net.clone(), net.clone()];
     if axis == 0 {
         for v in 0..nv {
-            let pair = split_line((0..nu).map(|u| net[u][v]).collect())?;
+            let pair = split_line_at((0..nu).map(|u| net[u][v]).collect(), 0.375)?;
             for side in 0..2 {
                 for u in 0..nu {
                     out[side][u][v] = pair[side][u]
@@ -162,7 +168,7 @@ fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
         }
     } else {
         for u in 0..nu {
-            let pair = split_line(net[u].clone())?;
+            let pair = split_line_at(net[u].clone(), 0.375)?;
             for side in 0..2 {
                 out[side][u] = pair[side].clone()
             }
@@ -181,6 +187,31 @@ enum Verdict {
     Excluded,
     Unique([I; 2]),
     Unresolved,
+}
+// Domain endpoints must agree exactly with the Bernstein subdivision recipe.
+// Rounded endpoints would silently move a certified/excluded cell. Stop with
+// explicit unresolved coverage when the next dyadic split is not representable.
+fn exact_split(lo: f64, hi: f64) -> Option<f64> {
+    fn sum_error(a: f64, b: f64, sum: f64) -> f64 {
+        let z = sum - a;
+        (a - (sum - z)) + (b - z)
+    }
+    let width = hi - lo;
+    let part = width * 0.375;
+    let mid = lo + part;
+    if !width.is_finite()
+        || !mid.is_finite()
+        || width < f64::MIN_POSITIVE * 18014398509481984.
+        || sum_error(hi, -lo, width) != 0.
+        || width.mul_add(0.375, -part) != 0.
+        || sum_error(lo, part, mid) != 0.
+        || mid <= lo
+        || mid >= hi
+    {
+        None
+    } else {
+        Some(mid)
+    }
 }
 fn krawczyk(net: &Net) -> Result<Verdict> {
     if (0..2).any(|k| {
@@ -272,6 +303,37 @@ pub fn intersections(
     tolerance_uv: f64,
     max_cells: usize,
 ) -> Result<Report> {
+    if let Some((polynomial, parameterization)) =
+        crate::surface_linear_monotonicity::polynomial_profile_image(s)?
+    {
+        let tolerance = I::point(tolerance_uv)
+            .mul(I::point(parameterization.derivative_lower))?
+            .lo;
+        if tolerance > 0. && tolerance.is_finite() {
+            let mut report =
+                intersections_original(&polynomial, origin, direction, tolerance, max_cells)?;
+            // Isolation and complete-domain coverage are preserved by the exact
+            // positive bijection. UV enclosures refer to the original source;
+            // geometric ray-parameter intervals remain unchanged.
+            for root in &mut report.roots {
+                root.uv[0] = parameterization.inverse_interval(root.uv[0])?;
+            }
+            for uv in &mut report.unresolved {
+                uv[0] = parameterization.inverse_interval(uv[0])?;
+            }
+            report.profile_parameterization = Some(parameterization);
+            return Ok(report);
+        }
+    }
+    intersections_original(s, origin, direction, tolerance_uv, max_cells)
+}
+fn intersections_original(
+    s: &Surface,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    max_cells: usize,
+) -> Result<Report> {
     s.validate()?;
     check(
         origin.iter().chain(&direction).all(|x| x.is_finite())
@@ -312,6 +374,7 @@ pub fn intersections(
         }
     }
     let mut report = Report {
+        profile_parameterization: None,
         roots: Vec::new(),
         unresolved: Vec::new(),
         cells: 0,
@@ -361,11 +424,13 @@ pub fn intersections(
                 1
             };
         let [lo, hi] = cell.domain[axis];
-        let mid = lo + (hi - lo) * 0.5;
-        if mid <= lo || mid >= hi {
+        // A dyadic asymmetric split keeps common mid-plane roots inside cells.
+        // Roots on any actual cell boundary still require strict certification;
+        // changing the split never turns an unresolved root into an exclusion.
+        let Some(mid) = exact_split(lo, hi) else {
             report.unresolved.push(unresolved_domain(&cell)?);
             continue;
-        }
+        };
         let [left, right] = split(&cell.net, axis)?;
         for (net, range) in [(left, [lo, mid]), (right, [mid, hi])] {
             let mut domain = cell.domain;
@@ -411,6 +476,38 @@ pub fn parameter_bounds(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rational_quintic_ray_isolation_returns_original_parameter_enclosures() {
+        let surface = Surface {
+            degree_u: 1,
+            degree_v: 5,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1.],
+            control_points: (0..2)
+                .map(|u| (0..6).map(|v| vec![u as f64, v as f64 / 5., 0.]).collect())
+                .collect(),
+            weights: vec![vec![1.; 6], vec![2.; 6]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let before = surface.clone();
+        let result = intersections(&surface, [0.25, 0.37, -1.], [0., 0., 1.], 1e-8, 10000).unwrap();
+        assert!(result.complete && result.profile_parameterization.is_some());
+        assert_eq!(result.roots.len(), 1);
+        let root = &result.roots[0];
+        assert!(root.uv[0][0] <= 1. / 7. && root.uv[0][1] >= 1. / 7.);
+        assert!(root.parameter[0] <= 1. && root.parameter[1] >= 1.);
+        assert!(root.uv[0][1] - root.uv[0][0] <= 1e-8);
+        assert_eq!(surface, before);
+        let mut folded = surface.clone();
+        for row in &mut folded.control_points {
+            for (p, y) in row.iter_mut().zip([0., 1., 1., -1., -1., 0.]) {
+                p[1] = y;
+            }
+        }
+        let denied = intersections(&folded, [0.25, 0.2, -1.], [0., 0., 1.], 1e-8, 1).unwrap();
+        assert!(!denied.complete && !denied.unresolved.is_empty() && denied.cells <= 1);
+    }
     fn plane() -> Surface {
         Surface {
             degree_u: 1,
@@ -467,6 +564,17 @@ mod tests {
             assert!(root.uv[0][0] <= u && root.uv[0][1] >= u);
             assert!(root.parameter[0] <= 1. + u && root.parameter[1] >= 1. + u)
         }
+    }
+    #[test]
+    fn mid_plane_crossings_survive_subdivision_and_rounding_stays_explicit() {
+        let r = intersections(&folded(), [0., 0.5, -1.], [0., 0., 1.], 1e-7, 10000).unwrap();
+        assert!(r.complete);
+        assert_eq!(r.roots.len(), 2);
+        for root in &r.roots {
+            assert!(root.uv[1][0] <= 0.5 && root.uv[1][1] >= 0.5);
+        }
+        assert_eq!(exact_split(0., 1.), Some(0.375));
+        assert_eq!(exact_split(0.5, 0.5_f64.next_up()), None);
     }
     #[test]
     fn tangency_coincidence_and_limits_never_claim_empty_coverage() {
@@ -565,5 +673,6 @@ pub fn ray_intersections(
         roots,
         unresolved,
         cells: line.cells,
+        profile_parameterization: line.profile_parameterization,
     })
 }

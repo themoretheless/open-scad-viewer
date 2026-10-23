@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "suiteTests": {
+    "nurbs_core_unit": 1342,
+    "planar_curve_crossings": 6
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/planar_curve_curve.rs": "8e51495ecfcbd582a58ebaa0d07bd24a05835641132feabbc69d8d93c04ad50b",
+    "crates/nurbs-core/tests/planar_curve_crossings.rs": "15a37d14603ca99354c3bd05b77892a450c9b5e5ca30b7696b78900294c59cd6"
+  },
+  "scope": "checked affine 3D lines, original planar rational transverse roots and literal overlap; unsupported contacts remain unresolved",
+  "generalSpatialCurveRootsQualified": false,
+  "topologyAuthorshipGranted": false,
+  "wasmEditorStepQualified": false
+}

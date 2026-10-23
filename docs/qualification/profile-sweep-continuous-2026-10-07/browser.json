@@ -1,0 +1,73 @@
+{
+  "schema": "scalar-sweep-browser/1",
+  "scope": "Finite browser build, refusal and recovery scenarios; no Solid or global geometry guarantee.",
+  "recordedAt": "2026-10-07T13:10:23.372Z",
+  "geometryWasmSha256": "2aac69cb7606de2192ac55163f42e609b4417566e313f2c8d92de1dc4172d0b0",
+  "distIndexSha256": "15d314fe321fcd7aeef50e629b9194acaee30eb23ba97db603cd414834a5087f",
+  "cases": [
+    {
+      "width": 1440,
+      "label": "scaled-rational",
+      "sourceSha256": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "profile-rmf",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "continuous-budget-refusal",
+      "sourceSha256": "8b579e085b0fc886618ffa5676801b35b9df065787c0d625a67eb4e2359a1541",
+      "message": "Node n4: Node n3: Profile sweep continuous deviation is unproved within 1e-10mm (deviation-or-work-budget-exceeded); refine sections or split the path",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "positive-scale-refusal",
+      "message": "Node n4: Node n3: Sweep scale must be a positive scalar [value,0,0] law",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "recovery",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "scaled-rational",
+      "sourceSha256": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "profile-rmf",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "continuous-budget-refusal",
+      "sourceSha256": "8b579e085b0fc886618ffa5676801b35b9df065787c0d625a67eb4e2359a1541",
+      "message": "Node n4: Node n3: Profile sweep continuous deviation is unproved within 1e-10mm (deviation-or-work-budget-exceeded); refine sections or split the path",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "positive-scale-refusal",
+      "message": "Node n4: Node n3: Sweep scale must be a positive scalar [value,0,0] law",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "recovery",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    }
+  ],
+  "browser": "151.0.7922.34",
+  "passed": true
+}

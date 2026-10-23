@@ -17,10 +17,10 @@
 //! wgpu sweep and then the CPU sweep in charge.
 
 use super::wgpu;
-use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 use compute_core::{Binding, Kernel};
+use gpu_compute::MemoryArchitecture;
 
 const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
@@ -126,6 +126,8 @@ pub struct GrayAtlas {
 pub struct GpuSweep {
     device: wgpu::Device,
     queue: wgpu::Queue,
+    /// Active memory architecture (`MemoryArchitecture::Uma` vs `MemoryArchitecture::Duma`).
+    memory_architecture: MemoryArchitecture,
     /// Native `sweep_select` (linear-indexed, register-resident selection).
     kernel: Kernel,
     /// The browser-shared `sweep` entry (raw scores), kept for qualification.
@@ -174,35 +176,61 @@ impl GpuSweep {
         Self {
             device: context.device.clone(),
             queue: context.queue.clone(),
+            memory_architecture: context.memory_architecture(),
             kernel,
             scores_kernel,
         }
     }
 
+    pub fn memory_architecture(&self) -> MemoryArchitecture {
+        self.memory_architecture
+    }
+
     /// Uploads every present raster once; `images[i] = Some((values, width, height))`.
+    /// Under [`MemoryArchitecture::Uma`] (Apple Silicon Metal `StorageModeShared`),
+    /// writes directly into the mapped primary GPU buffer without allocating a
+    /// temporary host byte `Vec` or staging copy; under [`MemoryArchitecture::Duma`],
+    /// initializes through wgpu's staging upload path.
     pub fn upload_grays(&self, images: &[Option<(&[f32], usize, usize)>]) -> GrayAtlas {
         let total: usize = images
             .iter()
             .flatten()
             .map(|(values, _, _)| values.len())
             .sum();
-        let mut bytes = Vec::with_capacity(total.max(4) * 4);
+        let size = (total.max(4) * 4) as u64;
         let mut meta = Vec::with_capacity(images.len());
+        let mut offset_floats = 0u32;
         for image in images {
             meta.push(image.map(|(values, width, height)| {
-                let offset = (bytes.len() / 4) as u32;
-                bytes.extend_from_slice(&gpu_compute::pack_f32(values));
+                let offset = offset_floats;
+                offset_floats += values.len() as u32;
                 (offset, width as u32, height as u32)
             }));
         }
-        bytes.resize(bytes.len().max(16), 0);
-        let buffer = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let buffer = gpu_compute::create_buffer_initialized(
+            &self.device,
+            &wgpu::BufferDescriptor {
                 label: Some("grays"),
-                contents: &bytes,
+                size,
                 usage: wgpu::BufferUsages::STORAGE,
-            });
+                mapped_at_creation: true,
+            },
+            |mut mapping| {
+                let mut byte_offset = 0usize;
+                for (values, _, _) in images.iter().flatten() {
+                    let bytes = gpu_compute::f32_le_bytes(values);
+                    let end = byte_offset + bytes.len();
+                    mapping
+                        .slice(byte_offset..end)
+                        .copy_from_slice(&bytes);
+                    byte_offset = end;
+                }
+                if byte_offset < size as usize {
+                    mapping.slice(byte_offset..size as usize).fill(0);
+                }
+            },
+        )
+        .expect("gray atlas initialization failed");
         GrayAtlas { buffer, meta }
     }
 
@@ -300,46 +328,68 @@ impl SweepBatch<'_> {
             ((pixels * 16) as u64, 16u64)
         };
         let buf = |label: &str, bytes: &[u8], usage| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: bytes,
-                usage,
-            })
+            let size = (bytes.len().max(16) + 3) & !3;
+            gpu_compute::create_buffer_initialized(
+                device,
+                &wgpu::BufferDescriptor {
+                    label: Some(label),
+                    size: size as u64,
+                    usage,
+                    mapped_at_creation: true,
+                },
+                |mut mapping| {
+                    mapping.slice(..bytes.len()).copy_from_slice(bytes);
+                    if bytes.len() < size {
+                        mapping.slice(bytes.len()..size).fill(0);
+                    }
+                },
+            )
+            .expect("sweep input buffer initialization failed")
         };
         let params_buf = buf("params", &params_bytes, wgpu::BufferUsages::UNIFORM);
         let hyp_buf = buf(
             "hyps",
-            &gpu_compute::pack_f32(&job.hypotheses),
+            &gpu_compute::f32_le_bytes(&job.hypotheses),
             wgpu::BufferUsages::STORAGE,
         );
         let srcf_buf = buf("srcf", &srcf, wgpu::BufferUsages::STORAGE);
         let srcm_buf = buf("srcm", &srcm, wgpu::BufferUsages::STORAGE);
         let bins_buf = buf(
             "bins",
-            &gpu_compute::pack_u32(&job.bins),
+            &gpu_compute::u32_le_bytes(&job.bins),
             wgpu::BufferUsages::STORAGE,
         );
+        let uma = self.sweep.memory_architecture == MemoryArchitecture::Uma;
+        // Under UMA (Apple Silicon Metal StorageModeShared with MAPPABLE_PRIMARY_BUFFERS),
+        // the active output buffer is allocated with STORAGE | MAP_READ and mapped directly
+        // after submission — zero staging buffer allocation and zero copy_buffer_to_buffer.
+        // Under dUMA (discrete VRAM), outputs stay STORAGE | COPY_SRC in device-local VRAM
+        // and DMA-copy into a MAP_READ | COPY_DST staging buffer.
+        let scores_usage = if uma && raw_scores {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::MAP_READ
+        } else {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC
+        };
+        let out_usage = if uma && !raw_scores {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::MAP_READ
+        } else {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC
+        };
         // Whichever output the entry point does not write stays a 16-byte
         // placeholder satisfying the shared layout.
         let scores_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("scores"),
             size: scores_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: scores_usage,
             mapped_at_creation: false,
         });
         let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("selection"),
             size: result_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: out_usage,
             mapped_at_creation: false,
         });
         let read_bytes = result_bytes.max(scores_bytes);
-        let read_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("read"),
-            size: read_bytes,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
         fn entry(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
             wgpu::BindGroupEntry {
                 binding,
@@ -375,10 +425,22 @@ impl SweepBatch<'_> {
             &bind,
             kernel.workgroup_count(pixels as u32),
         );
-        let copied = if raw_scores { &scores_buf } else { &out_buf };
-        self.encoder
-            .copy_buffer_to_buffer(copied, 0, &read_buf, 0, read_bytes);
-        self.reads.push((read_buf, read_bytes as usize));
+        let active_out = if raw_scores { &scores_buf } else { &out_buf };
+        if uma {
+            // UMA zero-copy readback: read directly from the shared output buffer.
+            self.reads.push((active_out.clone(), read_bytes as usize));
+        } else {
+            // dUMA staged readback: DMA copy from device-local VRAM into a host-mappable staging buffer.
+            let read_buf = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("read"),
+                size: read_bytes,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            self.encoder
+                .copy_buffer_to_buffer(active_out, 0, &read_buf, 0, read_bytes);
+            self.reads.push((read_buf, read_bytes as usize));
+        }
         self.keep.extend([
             params_buf, hyp_buf, srcf_buf, srcm_buf, bins_buf, scores_buf, out_buf,
         ]);
@@ -683,6 +745,7 @@ mod tests {
             Err(gpu_compute::ReadbackError::MissingUsage)
         ));
         assert!(sweep.batch(&atlas).try_finish().unwrap().is_empty());
+        assert_eq!(sweep.memory_architecture(), context.memory_architecture());
     }
 
     /// The browser binds only entries 0..=5 for the `sweep` entry point; the

@@ -1,0 +1,2513 @@
+{
+  "schema": "open-scad-viewer/qualification-refreeze-status",
+  "schemaVersion": 1,
+  "statusId": "g0-v38-g1-v55-refreeze-status-v1",
+  "recordedAt": "2026-10-03",
+  "reason": "Register the exact newly observed Linux PR 28 kernel alongside macOS, retaining unchanged loft source and all archived qualification records.",
+  "qualificationClaim": "none",
+  "qualificationApproval": "not-approved",
+  "g0Closed": false,
+  "priorEvidenceTreatment": "discovery-only",
+  "priorResultsMayBeImported": false,
+  "candidateRunId": "semantic-manifold-g1-candidate-run-v55",
+  "completedWorkUnits": 0,
+  "completedCleanRuns": 0,
+  "plannedWorkUnits": 4740,
+  "pendingRows": [
+    {
+      "id": "oracle-differential",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 650
+    },
+    {
+      "id": "comparator-mutations",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 180
+    },
+    {
+      "id": "semantic-special-terminals",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 40
+    },
+    {
+      "id": "node-worker-identifiers",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 60
+    },
+    {
+      "id": "browser-chromium-actual-vite",
+      "environmentIds": [
+        "vite-chromium"
+      ],
+      "cleanRunsRequiredPerEnvironment": 3,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 30
+    },
+    {
+      "id": "browser-webkit-actual-vite",
+      "environmentIds": [
+        "vite-webkit"
+      ],
+      "cleanRunsRequiredPerEnvironment": 3,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 30
+    },
+    {
+      "id": "mcp-supervisor-hard-kill",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22",
+        "macos-node20",
+        "windows-node20"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 260
+    },
+    {
+      "id": "mcp-stdio-store-isolation",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22",
+        "macos-node20",
+        "windows-node20"
+      ],
+      "cleanRunsRequiredPerEnvironment": 10,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 240
+    },
+    {
+      "id": "dependency-and-cutover-audit",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 10
+    },
+    {
+      "id": "mcp-memory-slope",
+      "environmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "cleanRunsRequiredPerEnvironment": 5,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 240
+    },
+    {
+      "id": "browser-memory-slope",
+      "environmentIds": [
+        "vite-chromium",
+        "vite-webkit"
+      ],
+      "cleanRunsRequiredPerEnvironment": 3,
+      "completedCleanRuns": 0,
+      "completedWorkUnits": 0,
+      "plannedWorkUnits": 3000
+    }
+  ],
+  "archives": [
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v35.json",
+      "sha256": "8f066d5d8da9526da752751f674e2fbe35baab07d11b0abe0a321ea685cea89b"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v52.json",
+      "sha256": "db43d33b49e94b822838a6d6c424fb3c2b35894c9a0ce35f18c104cb9d3c3d0c"
+    },
+    {
+      "path": "docs/qualification/g0-v35-g1-v52-refreeze-status-v1.json",
+      "sha256": "ea0b447fd913aeb5a29232948bd06024afc8c6c0913d1721b307a60a21b23165"
+    },
+    {
+      "path": "docs/qualification/g0-v35-g1-v52-refreeze-review.md",
+      "sha256": "7c731bb20808e79b750d1a2e3bc30adb247f7ffa8df46f5643c56ee4a405d480"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v1.json",
+      "sha256": "4c2a286ea9567ddef66d2a0335a4960bddc94921b662c9e34af063b480cb8af3"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+      "sha256": "d040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v3.json",
+      "sha256": "c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v4.json",
+      "sha256": "38b9fac7b3e03a301b0dfdeadf514572f337feff37b186089d968f3afa9e5a46"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v5.json",
+      "sha256": "9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v6.json",
+      "sha256": "ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v7.json",
+      "sha256": "6a364833e07040d59cd47564bfb791ff97f9bca812239b5f72ce19423a23dcbf"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v8.json",
+      "sha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v10.json",
+      "sha256": "cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v11.json",
+      "sha256": "5ae685b005bbbeaf3e7c84cf06011f4136e997cf7f6dfab38e439c72ca34ec19"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v12.json",
+      "sha256": "1af08861746409347f5f2b931c7d794dffc9df3c0321c27cb534b93a3eac3be7"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v16.json",
+      "sha256": "4d74667880d6214105fb8d6f0c423ef1a016c45fdd011ef336431c33521b749c"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v17.json",
+      "sha256": "c331887ec7e77d9d7c641eafa322adf6d6c41e07efcf5d92a9530d4bb1abd9a0"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v18.json",
+      "sha256": "2dbc8fd89e57620112638d8d57714aef555470d6d89b3b9c1ee886168ca796ab"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "sha256": "b928af58435dfeada9a68de5c65e07f8d25c43c9af622e2b6c80b6db141419b5"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v20.json",
+      "sha256": "4ce1d2a7855d22684f59ed6ab1c20537b2f957a4cba1c98509d4b8b14927ea73"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v21.json",
+      "sha256": "88206f45c60ca20698e20fd3c4a7a1dbca43d70793d7db7eace2c554c0bb97fe"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v22.json",
+      "sha256": "51315ca494ad19f26fbff68c214014797accb27c0d8e08dcea37e3558222ae02"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v23.json",
+      "sha256": "1880dcbbeef6397950a0785390a4f4cc6b3953a31c0a0e3b8c7818bb6204f5e4"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v24.json",
+      "sha256": "b7cc6981df661eb4376aff55df31fa2ebee8d26789657c886b583506d2af6871"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v25.json",
+      "sha256": "a6dc720d9d268e5c0c00f6d35c14bc31b7f161524be469f1cf5baf1029f94ba4"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v26.json",
+      "sha256": "ea2ec44a572c785a597d88f2ab308cfd3b7b5fbdb007b9a088f2a8b4b6baed40"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v27.json",
+      "sha256": "8a7f733ee3f3bfaa53b960829fcb5edb3c6513cd5aad7ea50e2e924e23842d0b"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v28.json",
+      "sha256": "7fd747ed8e802ea6fe153da578a08fca1f1b0cec25623a77aede0c861eec45a2"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v29.json",
+      "sha256": "860a4544054e07c30db50a900a6100573a8dd2f140772d523bce00ac6f0bcd35"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v30.json",
+      "sha256": "9023a87ca106ebeb71a70d0a7e39e0942b436d4725ac2877f54d1d4f1cd24cff"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v31.json",
+      "sha256": "183e4632cd31fef567d08e4493e960c611685fc6d5a8caa4d8a2ef9c959c054e"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v32.json",
+      "sha256": "5588d2ef69b02b35daff7164407d0a925680fbd13ebc56cf7955e7e80eed9a07"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v33.json",
+      "sha256": "7dbfd95693a33131adca0fc8a29d412ae21658ea732fe9a5b52d0e21e0ddb23f"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v34.json",
+      "sha256": "e89a6a738d2ba22709fe38fbd7ccc5108743820118a019658be2bb3323a549db"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v35.json",
+      "sha256": "72ab87d35b71a43cb92f6e937df41178db650ef18bfc3e09737b38186c9cf031"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v36.json",
+      "sha256": "6a0611b45b2cdee900807f112657143fe7942ce4a69bbc505b53c15f608186f2"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v37.json",
+      "sha256": "1532e6f73c61cdbcbe8da17a79f4738c2b8bbae31eaf487112a2bb40e053792c"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v38.json",
+      "sha256": "360821de40c7e846028491c177e3a73741d49d9c5491529fae5afe57d3196d22"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v39.json",
+      "sha256": "ba3df337816f03e5ed921aea2afe53862eba472b30b544d15695fc6c4ad84072"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v40.json",
+      "sha256": "2ad9ea534a75fea707435daa96072817db2526cb407558e546e962cbeb064703"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v41.json",
+      "sha256": "3b570749fc0c235232d59cba1e313bc01de121e2436e71280d96a2e28f5c7747"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v42.json",
+      "sha256": "6d6fac25372cff64de610a7c03d70fa6c75d2cd22293539e2ca2a6a8a9505daa"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v43.json",
+      "sha256": "ef4042147af835a21c9e6d9503e6c3223239927e4142d3fc0eadaad6700830f3"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v44.json",
+      "sha256": "6ac86600bf3a0035547ec21974c51315412a4fcd6acd0064b3f96b843ea8d033"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v45.json",
+      "sha256": "ad782f013e7afd303463679ca24bcdb8ebee23104bcfd2d3bc0e23f351c4006b"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v46.json",
+      "sha256": "92d1860cb53a92fabd1543525aeb649ba5b6fa940fa2ffbb55f1e9cde6ac6045"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v47.json",
+      "sha256": "007c76bb6d5ac55d344864db0e6f2f658b7d99106c05b75c17b67290d8b67578"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v48.json",
+      "sha256": "2018a5f444d7dff4e6aee8abdc0b2b86668dfcf87979faccc6ff356af08047fe"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v49.json",
+      "sha256": "f087d8f60d7261a5327cf09ef886e7de3b2dba85c86890a616dccf730e39bd2d"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v50.json",
+      "sha256": "fe8cc8ac89f88fbf32c64e49e33a06552674e82ef2a32fbe323e9aaa820aa973"
+    },
+    {
+      "path": "docs/qualification/g0-v17-g1-v34-refreeze-status-v1.json",
+      "sha256": "ad10d6a990af2fd89d918c77332738bd5021e521904923b73503ee86f64ebde6"
+    },
+    {
+      "path": "docs/qualification/g0-v18-g1-v35-refreeze-status-v1.json",
+      "sha256": "13ccd67872d2b3453f94841e0157b25fbf016bff3e97a90412b8dfbd0a1d595a"
+    },
+    {
+      "path": "docs/qualification/g0-v19-g1-v36-refreeze-status-v1.json",
+      "sha256": "f340f0c350dd5facae5e898a36806f272e7dc877b3517461b6f30f3d52a92f25"
+    },
+    {
+      "path": "docs/qualification/g0-v20-g1-v37-refreeze-status-v1.json",
+      "sha256": "83ea9b7f47236409c80e6b3f844dfd080a7b23857a363366174e6cc55122f436"
+    },
+    {
+      "path": "docs/qualification/g0-v21-g1-v38-refreeze-status-v1.json",
+      "sha256": "8e7baef32969ba130e7882aae4d908fee74e7f8f1b14f4a6e4a7270886b251fa"
+    },
+    {
+      "path": "docs/qualification/g0-v22-g1-v39-refreeze-status-v1.json",
+      "sha256": "6630ccfce51ee2779d13c338eea44b3c7bfdbd010c6edcb676b4d70868d31bba"
+    },
+    {
+      "path": "docs/qualification/g0-v23-g1-v40-refreeze-status-v1.json",
+      "sha256": "1e2a1465c452a33b2586c12902149fd1f3759b411e8ffece1f28884b0ed904ab"
+    },
+    {
+      "path": "docs/qualification/g0-v24-g1-v41-refreeze-status-v1.json",
+      "sha256": "920fce97603bccdb829e434434af84123ab917d267a8501efcdbbe4ef0a1f9b3"
+    },
+    {
+      "path": "docs/qualification/g0-v25-g1-v42-refreeze-status-v1.json",
+      "sha256": "4db0d782b46dac44a0d71bec3ce9d442efc6fb8c3d873f3835ebc545516e567b"
+    },
+    {
+      "path": "docs/qualification/g0-v26-g1-v43-refreeze-status-v1.json",
+      "sha256": "364c4a2b781cee4f67f1ffcf26c8fd527ac2b156a55427afba232873ad79ba2b"
+    },
+    {
+      "path": "docs/qualification/g0-v27-g1-v44-refreeze-status-v1.json",
+      "sha256": "5fd0de46341f4f3e88ef4d4ef3a282562d8360086f5eefc8bf30bfdec24a3b1c"
+    },
+    {
+      "path": "docs/qualification/g0-v28-g1-v45-refreeze-status-v1.json",
+      "sha256": "aed03ce8948faa29418749d46d37942e78ec01b0fba5dc91cc687c25d69cf4b6"
+    },
+    {
+      "path": "docs/qualification/g0-v29-g1-v46-refreeze-status-v1.json",
+      "sha256": "1d439419517aa909af6347bb0cdb27f97feb5f73b1c610f31e23cff13e8c15a2"
+    },
+    {
+      "path": "docs/qualification/g0-v30-g1-v47-refreeze-status-v1.json",
+      "sha256": "bcd9817148a44efcdb09363156ffe12171d1b600d43a50ba4fafe7c079ac4edf"
+    },
+    {
+      "path": "docs/qualification/g0-v31-g1-v48-refreeze-status-v1.json",
+      "sha256": "5f42e89a3022d293e93eb8f3e313ee26746a1bf032354a649a309a53e08c35e7"
+    },
+    {
+      "path": "docs/qualification/g0-v32-g1-v49-refreeze-status-v1.json",
+      "sha256": "3b9cbd88e3536b3dccdeb6adc1fad69061cf21e50c590b883cb6e45e408994da"
+    },
+    {
+      "path": "docs/qualification/g0-v33-g1-v50-refreeze-status-v1.json",
+      "sha256": "58bb7c880dc1a4b164317f72e8b24600d2199f68dd97e1de60041cc43d0c046b"
+    },
+    {
+      "path": "docs/qualification/g0-v17-g1-v34-refreeze-review.md",
+      "sha256": "6b5d012113950b23710dc2e7e0d24944f0a742303a8383d4444d6eb391e5befc"
+    },
+    {
+      "path": "docs/qualification/g0-v18-g1-v35-refreeze-review.md",
+      "sha256": "d679c5f98e0ec80b30cca43ff58651eebc9fa53a9ba475229965eeb6db1898c1"
+    },
+    {
+      "path": "docs/qualification/g0-v19-g1-v36-refreeze-review.md",
+      "sha256": "d72a0ca39c17fdf7daa62d655cd4944ab32cc8229c205edc869cfb747f1b8de2"
+    },
+    {
+      "path": "docs/qualification/g0-v20-g1-v37-refreeze-review.md",
+      "sha256": "f020e018a61e6cf9bb0fcbc4819f5a628b61d8fa8f1ed8826660f2529378f6de"
+    },
+    {
+      "path": "docs/qualification/g0-v21-g1-v38-refreeze-review.md",
+      "sha256": "bb04f6215550df547617c01de3da5f9e32f997807952e0b880f59a359545fd31"
+    },
+    {
+      "path": "docs/qualification/g0-v22-g1-v39-refreeze-review.md",
+      "sha256": "eb0403b718108314e1a11d113f87351deedbcfe902245fc612664da9c81d0784"
+    },
+    {
+      "path": "docs/qualification/g0-v23-g1-v40-refreeze-review.md",
+      "sha256": "81cbc8111c0f87eef345ab90b6964e4d873e7325865168aa8790572fb36d85d8"
+    },
+    {
+      "path": "docs/qualification/g0-v24-g1-v41-refreeze-review.md",
+      "sha256": "c269e7458689f4413c92fc368f934ddbf07ea44ae7714005128f467d28322a95"
+    },
+    {
+      "path": "docs/qualification/g0-v25-g1-v42-refreeze-review.md",
+      "sha256": "a6c44131d19e405551a7ab9412fb43c526d51e80eac6f4233102d2e313ac437f"
+    },
+    {
+      "path": "docs/qualification/g0-v26-g1-v43-refreeze-review.md",
+      "sha256": "e23939daf91d0c282e264bb687cbc9ac89e91f76800591d8fc3f8075f557fe71"
+    },
+    {
+      "path": "docs/qualification/g0-v27-g1-v44-refreeze-review.md",
+      "sha256": "27e9e0770c3c921197c633bf04811e89cd023c0c35b655521732a16c0cfa994a"
+    },
+    {
+      "path": "docs/qualification/g0-v28-g1-v45-refreeze-review.md",
+      "sha256": "5940f0148ef513747fd15837902305d7496b7375dddbba1a0345482f5049edf8"
+    },
+    {
+      "path": "docs/qualification/g0-v29-g1-v46-refreeze-review.md",
+      "sha256": "8f3f642a30b61a2a20dbb22aab552545ec862507adf36e58c699b989b531dab7"
+    },
+    {
+      "path": "docs/qualification/g0-v30-g1-v47-refreeze-review.md",
+      "sha256": "4b9cd9a253306afee36aeb6b44be069a443cb5b56687def592c26e1f0b71f9c2"
+    },
+    {
+      "path": "docs/qualification/g0-v31-g1-v48-refreeze-review.md",
+      "sha256": "a14bc549873c507ead96e9234155ae3361464af46690f63e7f57083aa0b4c2ed"
+    },
+    {
+      "path": "docs/qualification/g0-v32-g1-v49-refreeze-review.md",
+      "sha256": "d7423e3d7a37ce78c707edf1369393e1eacb8a63520ab3ead3c883f25ed016db"
+    },
+    {
+      "path": "docs/qualification/g0-v33-g1-v50-refreeze-review.md",
+      "sha256": "2938bf2fc2023a142afe9860890b08896985e489099f16d682eeddce931bf598"
+    },
+    {
+      "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
+      "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25"
+    },
+    {
+      "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
+      "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9"
+    },
+    {
+      "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
+      "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d"
+    },
+    {
+      "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
+      "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e"
+    },
+    {
+      "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
+      "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7"
+    },
+    {
+      "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
+      "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887"
+    },
+    {
+      "path": "docs/qualification/g0-v8-g1-v25-refreeze-status-v1.json",
+      "sha256": "8d9edcf9f625cfa9620f87d597c05e259d568bda5863e2d3aa13b6ca7c850845"
+    },
+    {
+      "path": "docs/qualification/g0-v10-g1-v27-refreeze-status-v1.json",
+      "sha256": "faef038c289bccc878be5de8a6b9abfc33fffa614adc7da3295e35479d9a7973"
+    },
+    {
+      "path": "docs/qualification/g0-v11-g1-v28-refreeze-status-v1.json",
+      "sha256": "43dce53f3c2423996aefb64cbb08af020e24ff5fe758cb1573a7bb950684c068"
+    },
+    {
+      "path": "docs/qualification/g0-v12-g1-v29-refreeze-status-v1.json",
+      "sha256": "99d779b63aa1689a691c4152b616b3712000bc9f06f8648a871f713b118be25c"
+    },
+    {
+      "path": "docs/qualification/g0-v16-g1-v33-refreeze-status-v1.json",
+      "sha256": "7ca84a52754237b09ce0d0e2baaa0a79f18516fcca858b6d397a747c36df5f10"
+    },
+    {
+      "path": "docs/qualification/g0-v6-g1-v23-refreeze-review.md",
+      "sha256": "182970eb33bcb479d6b0c4258f665d5023a13ee059a39644fce2a202b0f75666"
+    },
+    {
+      "path": "docs/qualification/g0-v7-g1-v24-refreeze-review.md",
+      "sha256": "97ccdb97fae739eeea04d3301287adb3ebc78ce3073c4ca4ca67507b8d328df6"
+    },
+    {
+      "path": "docs/qualification/g0-v8-g1-v25-refreeze-review.md",
+      "sha256": "ad46d89bdfbaf1b8883f85e5c4079a8ce5727db3615770b3c596fafce23f9fc5"
+    },
+    {
+      "path": "docs/qualification/g0-v9-g1-v26-refreeze-review.md",
+      "sha256": "ea9f86e6cea8f8192b38da470339d144a5ab15dfc02499b2ba2fa367a392de55"
+    },
+    {
+      "path": "docs/qualification/g0-v10-g1-v27-refreeze-review.md",
+      "sha256": "26746d7642c58877e7725baa75803a52f5b2811bbbd4dcae62d2e916a36f4d86"
+    },
+    {
+      "path": "docs/qualification/g0-v11-g1-v28-refreeze-review.md",
+      "sha256": "4e34ca2cc6344772f169252a5ab33e3257f7a341baf288aafe4ba109c67e2210"
+    },
+    {
+      "path": "docs/qualification/g0-v12-g1-v29-refreeze-review.md",
+      "sha256": "4fa39795f01fb3b366bd6ea8d622ff38d25d3ff1f55995aa0f9d63de71ae20e6"
+    },
+    {
+      "path": "docs/qualification/g0-v13-g1-v30-refreeze-review.md",
+      "sha256": "84db2030df75d13b2af69266a163cb890cdff8809b1156789819258508f428b3"
+    },
+    {
+      "path": "docs/qualification/g0-v14-g1-v31-refreeze-review.md",
+      "sha256": "56291b7b527eddb8c81bbb38a0d94ff91197f5a8c97692ab90e8ce441514a55e"
+    },
+    {
+      "path": "docs/qualification/g0-v15-g1-v32-refreeze-review.md",
+      "sha256": "22b8c19bd8b0332aab425c29bde0d61e9bb438eba1c805d510c4275cba677130"
+    },
+    {
+      "path": "docs/qualification/g0-v16-g1-v33-refreeze-review.md",
+      "sha256": "8fcbb8414c1d3310cd0af4be11b9f84950d3beb46ee5050a487bea74e320b9c1"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v1.json",
+      "sha256": "050a1dd7a30d19dd85a8ed16fd724f7579c2430f1d7bf03ed68009d46bd2cbfa"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v2.json",
+      "sha256": "90452963dfdc47e492725c6bcd60a2dcdc7ffa748f848e95831c5d5750f5f0a2"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v3.json",
+      "sha256": "40c7d885b34013270f45b4f2cd7ce29bb83293ee61bf8c60c11a6613bd3f282c"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v4.json",
+      "sha256": "4d8b69fd2afeb6c828f0ab79b1ddaf6dac68b83a5b9b8bc0a3f59a5b63320ee1"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v5.json",
+      "sha256": "a5c4b365263d74b6d539d7f6539bcc4a571d055bd518b70ec1bb93dd6df2d9ee"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v6.json",
+      "sha256": "5a0ef0359fd6c1f5ddad43715d621cd549da9a319dde9454e06dec9e67835566"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v7.json",
+      "sha256": "6cf7e79bd0240b41ec7dbd7acedeb9a5818e72af13803e976ca19cf57d77d000"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v8.json",
+      "sha256": "ccede0404cc9655c9acac317dbf9b63bf1ee4aa3453c0cd3f337cf5b9d7b5b5f"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v9.json",
+      "sha256": "0efdfe73a0b43f5190d2cc66a594dd1909399852d6a6a485fd41997fe563cf21"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
+      "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v11.json",
+      "sha256": "e758898a3539a91360ad4e52458dc4d0413e6c000f55043bdf0a216c496e3d0d"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v12.json",
+      "sha256": "3534a6f16b6443cd6898863b86985feb4278aebcc6024faadc0423a0de51faea"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v13.json",
+      "sha256": "c736b508bade157c2a466c35963953e982ec4ef080219c7b0c271d4a1f0ada1b"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v14.json",
+      "sha256": "15ff9a8eb6631ae9a425853b72df88384c9e218bdc46e83f1a3414961b90fb41"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v15.json",
+      "sha256": "fecc5f2f3b08b98549f9b34f3c80c659cfb698b889e46461c9726acfdd4a9a1a"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v16.json",
+      "sha256": "f421e75e4ef19ffc6cef0d36745428ea086e3797b911ed84dd00a5c2636b1622"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v17.json",
+      "sha256": "ce0f2121aa0014dcc9439e63654e71502fa33f13a07564a65a8e0ec22ff993e4"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v18.json",
+      "sha256": "7e129bd193d33ee6c4205c26e6f9b5747e13d48cea06800946a1ef639f5f99ce"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v19.json",
+      "sha256": "14fb0fdc79532dcd9a8bed3a93128f152fe3b68cc56529b6cc83561b5b899ed3"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v20.json",
+      "sha256": "c5d903ba5b7383ea79df20626de6f24c1cef9a564bb977adde5b5a362d75b9e6"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v21.json",
+      "sha256": "bfb889481c1a1b1f360380599858be9d117500e9f3ceb311cc8a642a7a10682b"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v22.json",
+      "sha256": "63a55e60751a35af3c676de1a537477e845ea2439db7199cb4e14e89bdd56ea6"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v23.json",
+      "sha256": "a62609ebefe2f07994266b3bce8641c368de8280d7ff690d318f411c74810c0d"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v24.json",
+      "sha256": "05f572b7afd1311f7056b2cb3102ef117d67a7d8cb48c5a81057685d0bc5b7c4"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v25.json",
+      "sha256": "2361b59e14acadd72b94d348083390cd3ca74a906049aea582e37453297889c8"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v26.json",
+      "sha256": "0016bbc4ef57c02e17f61a9f4d1d84e21d37c444f15e061f77554bf357f12967"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v27.json",
+      "sha256": "84f3fe996f3694b3a051e077ed4150a1e64d81c390559f44df69213bdc216866"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v28.json",
+      "sha256": "04a958f79231395c9a009e20a5b7d3abe91246e8fbfc5a1bccb89abeeb6bf79e"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v29.json",
+      "sha256": "509e61dc8c915ef19303927c9f025868137e3112fc95fede8970370ccd76220c"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v30.json",
+      "sha256": "466890322e840b9dacb2fd449ba7ac5fee972fd0c7dc22d616e5eaf06c143047"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v31.json",
+      "sha256": "b0303dbc26372b348078902dfd4a85d707bf2522eaa114423b6062a93b374052"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v32.json",
+      "sha256": "c4f7abb174659a84d7f5167ee04e5d3ff79746b0048ba84e428ad94e9e8765db"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v33.json",
+      "sha256": "27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v34.json",
+      "sha256": "9402f364ceb07eee2e123cd1fc47effdd3bd393d616585b44d539a0bdbd9204a"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v51.json",
+      "sha256": "adb19d0b929b05dc213bacb891c3562215c3f299d9461f888348ad8035679142"
+    },
+    {
+      "path": "docs/qualification/g0-v34-g1-v51-refreeze-status-v1.json",
+      "sha256": "025e788c83c0801c99e39f7a07e8326011391277713e99838284acbb5d5723fa"
+    },
+    {
+      "path": "docs/qualification/g0-v34-g1-v51-refreeze-review.md",
+      "sha256": "2dc562c264ae65ad046d71150c3ccce69803bb79a37087f9e58e99b305f3d99d"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v36.json",
+      "sha256": "d2d93ab69dae34f1198869387b318e7f76a03d0be338e20c8034e35f8a7ff54c"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v37.json",
+      "sha256": "9f1afc54a4131dc8cb124d382042341888c8aff221cc1df80c27f58fb8c078ff"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v53.json",
+      "sha256": "bef38472fc8ec6f9821482810ffc2c1c2311fcc71215264fe965a8b441822155"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v54.json",
+      "sha256": "61c8d5d93c48fbdb58e60bb219eda315ac53f6df4284ca1758563e61837ecc6e"
+    },
+    {
+      "path": "docs/qualification/g0-v36-g1-v53-refreeze-status-v1.json",
+      "sha256": "ce54ee140d6142381b8bbf4cbad53d1d71aea16aab6e1f779690b168811f89f3"
+    },
+    {
+      "path": "docs/qualification/g0-v37-g1-v54-refreeze-status-v1.json",
+      "sha256": "a34d957fb47094865ec246047d47412f602bad128d153dd4e721fc602d86622e"
+    },
+    {
+      "path": "docs/qualification/g0-v36-g1-v53-refreeze-review.md",
+      "sha256": "1128f32ece26df16c263df33f1558c67744e9aaa5612e06ee1b11b7f3c2c4344"
+    },
+    {
+      "path": "docs/qualification/g0-v37-g1-v54-refreeze-review.md",
+      "sha256": "d5ceb5b0aebf727060a3fbf11251cdc45a5fb7d25710e97b38b5eee2a9dba43d"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "fingerprint",
+      "path": "docs/qualification/g0-toolchain-fingerprints-v38.json",
+      "sha256": "b6f1367765d4e8a85d0ba454816fbdd54aa9281aa3144e1ba813af35d4871c64",
+      "byteLength": 24831
+    },
+    {
+      "id": "plan",
+      "path": "docs/qualification/semantic-manifold-g1-plan-v55.json",
+      "sha256": "0cb7ce594bff47923c479e2b163cf7c98a1e88c315f52c3a980d845a6621ff09",
+      "byteLength": 72384
+    }
+  ],
+  "inputSnapshot": {
+    "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+    "sha256": "3c8c16da80bad967fb265777313a950b2145f8fe8603aea8f6ab397d95197f10",
+    "byteLength": 37065,
+    "files": [
+      {
+        "path": ".gitattributes",
+        "sha256": "80917c2134b1fc140f8e1cc37864023ed74baab5bb659a858b9d818e9532fccf",
+        "byteLength": 154
+      },
+      {
+        "path": ".github/workflows/g1-qualification-clean.yml",
+        "sha256": "f1c9ad391d695a2cd81c23e265bdda13908e503c04c5c3bd5915c0fec3abc3fc",
+        "byteLength": 12138
+      },
+      {
+        "path": ".npmrc",
+        "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+        "byteLength": 59
+      },
+      {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+        "byteLength": 7475
+      },
+      {
+        "path": "crates/Cargo.lock",
+        "sha256": "ba03ef15f1a195c613fa74f9393843d49826d0b195305b540cd63c77db847c2c",
+        "byteLength": 77889
+      },
+      {
+        "path": "crates/Cargo.toml",
+        "sha256": "ce4c5c46c39ff2bcec897e5b33ea95ba63c758b634a1c1f5a0c8945544a86056",
+        "byteLength": 2444
+      },
+      {
+        "path": "crates/brep-core/src/analysis.rs",
+        "sha256": "091c0757f7ed81c33c9da0db7d3395b2600abfb4b004909937cf3e7ff8227d5b",
+        "byteLength": 64237
+      },
+      {
+        "path": "crates/brep-core/src/analytic.rs",
+        "sha256": "c8119179779b24ff7156872dd97c28a98321f343fefc3bc073d014f9c8e9b263",
+        "byteLength": 52639
+      },
+      {
+        "path": "crates/brep-core/src/analytic/loft.rs",
+        "sha256": "a39fcdeafd9f58f8b9985d02bdb1074593ccd7c34ab4c7cfa933fd47e77c479b",
+        "byteLength": 15252
+      },
+      {
+        "path": "crates/brep-core/src/analytic_features.rs",
+        "sha256": "221fc9581f08e2cfd1485d23a6ee629c17e6984f5dcc479f7b4868907940dbd7",
+        "byteLength": 143535
+      },
+      {
+        "path": "crates/brep-core/src/close_topology.rs",
+        "sha256": "f95d3e721444bb0816868b0c6a5db078235eb16f00a2c91854ad18f8b830f415",
+        "byteLength": 44443
+      },
+      {
+        "path": "crates/brep-core/src/iges_interchange_v2.rs",
+        "sha256": "4a0a45a4898fb7f70dae0ceaa3c80fb4e52340f47b9cf4c5c5775804a18b7d46",
+        "byteLength": 47650
+      },
+      {
+        "path": "crates/brep-core/src/imprint_pipeline.rs",
+        "sha256": "31ad7da22c4d391ea3efc8e8790a0f11e51168a477eb7b761c4d3cb70b492c06",
+        "byteLength": 55995
+      },
+      {
+        "path": "crates/brep-core/src/intersections.rs",
+        "sha256": "871b7dde51fca286bebce114eab7bac0d7a872abf129a500c35fcaffe7f51569",
+        "byteLength": 342376
+      },
+      {
+        "path": "crates/brep-core/src/lib.rs",
+        "sha256": "9a1b73b3453f0f70859f6b4576d25c5fe9f55f5721f0b7fc776c2b6840144dd9",
+        "byteLength": 70710
+      },
+      {
+        "path": "crates/brep-core/src/nurbs_ss_g6.rs",
+        "sha256": "9aa3f5a36a6b65e3f853e3ef3bcdce9966725bf7e997dd50909b877def697100",
+        "byteLength": 184927
+      },
+      {
+        "path": "crates/brep-core/src/operations.rs",
+        "sha256": "afbffa215584469d66e9a58e6bf1a40db50f595a4d434bb06dad6e05d8d7fe49",
+        "byteLength": 112904
+      },
+      {
+        "path": "crates/brep-core/src/solid_audit.rs",
+        "sha256": "2cfa5248675be3ff0a0b2e96f37584649c734f5f5ed6c0ae96bc6fad8ca0864c",
+        "byteLength": 29375
+      },
+      {
+        "path": "crates/brep-core/src/step_interchange_v3.rs",
+        "sha256": "8b8fc1a42ab889d1b79d90c97312110da59d03df89e0cef0dfa7c7ddec2c4aa2",
+        "byteLength": 249191
+      },
+      {
+        "path": "crates/brep-core/src/transactions.rs",
+        "sha256": "74664d71c003743ffcc6b1709cc1543fcd720a2ff83a4611774ae497a594c618",
+        "byteLength": 17081
+      },
+      {
+        "path": "crates/brep-core/src/trim_sew.rs",
+        "sha256": "aecf521fd3d32ebe09ecce22aa81142e08835b9931405e8efe2ed165fb1f7a91",
+        "byteLength": 90798
+      },
+      {
+        "path": "crates/brep-core/src/uv_arrangement.rs",
+        "sha256": "a58de9124e8c7ffe99b7cc6669de0cf2b97cfd9cff84f731b2d497acca132c68",
+        "byteLength": 60489
+      },
+      {
+        "path": "crates/brep-topology/src/lib.rs",
+        "sha256": "54d709e2b51467e39cc71ee3f38b28220f61b36016807ce9492d6aaa6d88aeb9",
+        "byteLength": 55232
+      },
+      {
+        "path": "crates/geometry-bridge/src/brep.rs",
+        "sha256": "660966397c21fa155a7456384ca5c3884b4622356b88047f77c1509e00d1b31c",
+        "byteLength": 61448
+      },
+      {
+        "path": "crates/geometry-bridge/src/lib.rs",
+        "sha256": "718032f7d67c3002bf2ef440bc72ca56db2fda8a736f7d37d7684e85bfe7f4a6",
+        "byteLength": 86089
+      },
+      {
+        "path": "crates/geometry-bridge/src/tests.rs",
+        "sha256": "6d8e2110f1ef450423b75f1aa28f6d55be6e5af992df9fb03d0f07710912bdf2",
+        "byteLength": 41150
+      },
+      {
+        "path": "crates/modelgraph-runtime/src/nurbs.rs",
+        "sha256": "21914da6789ee459a78c11158eb86f5cd5c22ad22b56377f9f53b638f8e9ee12",
+        "byteLength": 42445
+      },
+      {
+        "path": "crates/modelgraph-text/src/lower.rs",
+        "sha256": "cd79b78337d61c1d90e9baf3e8ef8948b75b67ca5f4a347d86f7295b9f6e734c",
+        "byteLength": 95183
+      },
+      {
+        "path": "crates/nurbs-core/src/gordon.rs",
+        "sha256": "2c6c1af8653b487d31e684a4405498dd8c9b9538c99c18f7a81139bae4d15c3b",
+        "byteLength": 15141
+      },
+      {
+        "path": "crates/nurbs-core/src/gordon_tangent_audit.rs",
+        "sha256": "1e4b9b8740134b0baf5bf0c137e1112fcc8101512bc6cee7fbf28d3dafafd8c7",
+        "byteLength": 9995
+      },
+      {
+        "path": "crates/nurbs-core/src/gordon_tangent_fields.rs",
+        "sha256": "2306e2409611b60216dffa9a3d64c2df65f48038bed9478109b33361a5a6f556",
+        "byteLength": 7401
+      },
+      {
+        "path": "crates/nurbs-core/src/guided_loft.rs",
+        "sha256": "c43474aa90c4cb3a495df3e9cbdcee72261d37f927ffa725c481c9ea13408066",
+        "byteLength": 25176
+      },
+      {
+        "path": "crates/nurbs-core/src/loft_alignment.rs",
+        "sha256": "d1371b333096599bf36a9ee147cdcba40ec5309d6c615a25ce51af0818358b45",
+        "byteLength": 18476
+      },
+      {
+        "path": "crates/nurbs-core/src/loft_continuity.rs",
+        "sha256": "58d4af1c6e57465f55b4f4ee574ec88e9f4b05a3f87072629d8465ba755c62b6",
+        "byteLength": 14001
+      },
+      {
+        "path": "crates/nurbs-core/src/loft_reparameterization.rs",
+        "sha256": "e13ff6f29fa1366ad03115d7769c8cdedc4fe5c1a036430a7e81c5fd72272903",
+        "byteLength": 21586
+      },
+      {
+        "path": "crates/nurbs-core/src/natural_loft.rs",
+        "sha256": "3ada74324ed317bbe1d751c009925dcf4415113213b1212a4587364ce20bb2dc",
+        "byteLength": 19502
+      },
+      {
+        "path": "crates/nurbs-core/src/reparameterization_residual.rs",
+        "sha256": "73acd115149b0757f01485694aec5f9aa6a40c386c0b52fb12f69eaa73af3863",
+        "byteLength": 15409
+      },
+      {
+        "path": "crates/nurbs-core/src/reparameterization_retention.rs",
+        "sha256": "61e9a1bd559993395cd2ab80d583ee35b46d682086a2c498eaff3d1b1b4f52dd",
+        "byteLength": 15789
+      },
+      {
+        "path": "crates/nurbs-core/src/transport.rs",
+        "sha256": "5de4517366d4db8be0d9221ba4b240bad367cbf8d559e9835e5f9c91573aabc1",
+        "byteLength": 34048
+      },
+      {
+        "path": "docs/languages/modelgraph-nurbs-1.schema.json",
+        "sha256": "426a10a85f5aec246d4a4e6cd37568ef1df067c7f5066f4725317eed2117cc61",
+        "byteLength": 669196
+      },
+      {
+        "path": "docs/qualification/PLAYWRIGHT_THIRD_PARTY_NOTICE.md",
+        "sha256": "0433c3f42241024d9ac8c0d53d5b9b112e8e3c2791fce713c3592664558a71b1",
+        "byteLength": 1708
+      },
+      {
+        "path": "docs/qualification/environment-freeze/g1-github-actions-v34.json",
+        "sha256": "c4896e1dab35ce3169770949220bed92501ea0c7d526840a93814b6e60afb2b7",
+        "byteLength": 3366
+      },
+      {
+        "path": "docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json",
+        "sha256": "8d32d1b27ea32aae931468be2f85fd526113bd9be960be4b841bb6c85a2432ff",
+        "byteLength": 6762
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v1.json",
+        "sha256": "4c2a286ea9567ddef66d2a0335a4960bddc94921b662c9e34af063b480cb8af3",
+        "byteLength": 2726
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v10.json",
+        "sha256": "cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3",
+        "byteLength": 8250
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v11.json",
+        "sha256": "5ae685b005bbbeaf3e7c84cf06011f4136e997cf7f6dfab38e439c72ca34ec19",
+        "byteLength": 8431
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v12.json",
+        "sha256": "1af08861746409347f5f2b931c7d794dffc9df3c0321c27cb534b93a3eac3be7",
+        "byteLength": 9952
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v16.json",
+        "sha256": "4d74667880d6214105fb8d6f0c423ef1a016c45fdd011ef336431c33521b749c",
+        "byteLength": 14235
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v17.json",
+        "sha256": "c331887ec7e77d9d7c641eafa322adf6d6c41e07efcf5d92a9530d4bb1abd9a0",
+        "byteLength": 12602
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v18.json",
+        "sha256": "2dbc8fd89e57620112638d8d57714aef555470d6d89b3b9c1ee886168ca796ab",
+        "byteLength": 29365
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+        "sha256": "b928af58435dfeada9a68de5c65e07f8d25c43c9af622e2b6c80b6db141419b5",
+        "byteLength": 17046
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+        "sha256": "d040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76",
+        "byteLength": 2684
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v20.json",
+        "sha256": "4ce1d2a7855d22684f59ed6ab1c20537b2f957a4cba1c98509d4b8b14927ea73",
+        "byteLength": 19050
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v21.json",
+        "sha256": "88206f45c60ca20698e20fd3c4a7a1dbca43d70793d7db7eace2c554c0bb97fe",
+        "byteLength": 18941
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v22.json",
+        "sha256": "51315ca494ad19f26fbff68c214014797accb27c0d8e08dcea37e3558222ae02",
+        "byteLength": 17228
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v23.json",
+        "sha256": "1880dcbbeef6397950a0785390a4f4cc6b3953a31c0a0e3b8c7818bb6204f5e4",
+        "byteLength": 18612
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v24.json",
+        "sha256": "b7cc6981df661eb4376aff55df31fa2ebee8d26789657c886b583506d2af6871",
+        "byteLength": 16671
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v25.json",
+        "sha256": "a6dc720d9d268e5c0c00f6d35c14bc31b7f161524be469f1cf5baf1029f94ba4",
+        "byteLength": 20707
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v26.json",
+        "sha256": "ea2ec44a572c785a597d88f2ab308cfd3b7b5fbdb007b9a088f2a8b4b6baed40",
+        "byteLength": 20375
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v27.json",
+        "sha256": "8a7f733ee3f3bfaa53b960829fcb5edb3c6513cd5aad7ea50e2e924e23842d0b",
+        "byteLength": 19721
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v28.json",
+        "sha256": "7fd747ed8e802ea6fe153da578a08fca1f1b0cec25623a77aede0c861eec45a2",
+        "byteLength": 18531
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v29.json",
+        "sha256": "860a4544054e07c30db50a900a6100573a8dd2f140772d523bce00ac6f0bcd35",
+        "byteLength": 24957
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v3.json",
+        "sha256": "c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171",
+        "byteLength": 3987
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v30.json",
+        "sha256": "9023a87ca106ebeb71a70d0a7e39e0942b436d4725ac2877f54d1d4f1cd24cff",
+        "byteLength": 20855
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v31.json",
+        "sha256": "183e4632cd31fef567d08e4493e960c611685fc6d5a8caa4d8a2ef9c959c054e",
+        "byteLength": 19651
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v32.json",
+        "sha256": "5588d2ef69b02b35daff7164407d0a925680fbd13ebc56cf7955e7e80eed9a07",
+        "byteLength": 22596
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v33.json",
+        "sha256": "7dbfd95693a33131adca0fc8a29d412ae21658ea732fe9a5b52d0e21e0ddb23f",
+        "byteLength": 20687
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v34.json",
+        "sha256": "9402f364ceb07eee2e123cd1fc47effdd3bd393d616585b44d539a0bdbd9204a",
+        "byteLength": 21028
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v35.json",
+        "sha256": "8f066d5d8da9526da752751f674e2fbe35baab07d11b0abe0a321ea685cea89b",
+        "byteLength": 25135
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v36.json",
+        "sha256": "d2d93ab69dae34f1198869387b318e7f76a03d0be338e20c8034e35f8a7ff54c",
+        "byteLength": 22137
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v37.json",
+        "sha256": "9f1afc54a4131dc8cb124d382042341888c8aff221cc1df80c27f58fb8c078ff",
+        "byteLength": 28048
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v4.json",
+        "sha256": "38b9fac7b3e03a301b0dfdeadf514572f337feff37b186089d968f3afa9e5a46",
+        "byteLength": 3062
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v5.json",
+        "sha256": "9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040",
+        "byteLength": 2433
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v6.json",
+        "sha256": "ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf",
+        "byteLength": 2910
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v7.json",
+        "sha256": "6a364833e07040d59cd47564bfb791ff97f9bca812239b5f72ce19423a23dcbf",
+        "byteLength": 2543
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v8.json",
+        "sha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62",
+        "byteLength": 5767
+      },
+      {
+        "path": "docs/qualification/g0-v10-g1-v27-refreeze-review.md",
+        "sha256": "26746d7642c58877e7725baa75803a52f5b2811bbbd4dcae62d2e916a36f4d86",
+        "byteLength": 856
+      },
+      {
+        "path": "docs/qualification/g0-v10-g1-v27-refreeze-status-v1.json",
+        "sha256": "faef038c289bccc878be5de8a6b9abfc33fffa614adc7da3295e35479d9a7973",
+        "byteLength": 47254
+      },
+      {
+        "path": "docs/qualification/g0-v11-g1-v28-refreeze-review.md",
+        "sha256": "4e34ca2cc6344772f169252a5ab33e3257f7a341baf288aafe4ba109c67e2210",
+        "byteLength": 646
+      },
+      {
+        "path": "docs/qualification/g0-v11-g1-v28-refreeze-status-v1.json",
+        "sha256": "43dce53f3c2423996aefb64cbb08af020e24ff5fe758cb1573a7bb950684c068",
+        "byteLength": 48687
+      },
+      {
+        "path": "docs/qualification/g0-v12-g1-v29-refreeze-review.md",
+        "sha256": "4fa39795f01fb3b366bd6ea8d622ff38d25d3ff1f55995aa0f9d63de71ae20e6",
+        "byteLength": 714
+      },
+      {
+        "path": "docs/qualification/g0-v12-g1-v29-refreeze-status-v1.json",
+        "sha256": "99d779b63aa1689a691c4152b616b3712000bc9f06f8648a871f713b118be25c",
+        "byteLength": 51126
+      },
+      {
+        "path": "docs/qualification/g0-v13-g1-v30-refreeze-review.md",
+        "sha256": "84db2030df75d13b2af69266a163cb890cdff8809b1156789819258508f428b3",
+        "byteLength": 827
+      },
+      {
+        "path": "docs/qualification/g0-v14-g1-v31-refreeze-review.md",
+        "sha256": "56291b7b527eddb8c81bbb38a0d94ff91197f5a8c97692ab90e8ce441514a55e",
+        "byteLength": 770
+      },
+      {
+        "path": "docs/qualification/g0-v15-g1-v32-refreeze-review.md",
+        "sha256": "22b8c19bd8b0332aab425c29bde0d61e9bb438eba1c805d510c4275cba677130",
+        "byteLength": 440
+      },
+      {
+        "path": "docs/qualification/g0-v16-g1-v33-refreeze-review.md",
+        "sha256": "8fcbb8414c1d3310cd0af4be11b9f84950d3beb46ee5050a487bea74e320b9c1",
+        "byteLength": 621
+      },
+      {
+        "path": "docs/qualification/g0-v16-g1-v33-refreeze-status-v1.json",
+        "sha256": "7ca84a52754237b09ce0d0e2baaa0a79f18516fcca858b6d397a747c36df5f10",
+        "byteLength": 58708
+      },
+      {
+        "path": "docs/qualification/g0-v17-g1-v34-refreeze-review.md",
+        "sha256": "6b5d012113950b23710dc2e7e0d24944f0a742303a8383d4444d6eb391e5befc",
+        "byteLength": 1533
+      },
+      {
+        "path": "docs/qualification/g0-v17-g1-v34-refreeze-status-v1.json",
+        "sha256": "ad10d6a990af2fd89d918c77332738bd5021e521904923b73503ee86f64ebde6",
+        "byteLength": 58806
+      },
+      {
+        "path": "docs/qualification/g0-v18-g1-v35-refreeze-review.md",
+        "sha256": "d679c5f98e0ec80b30cca43ff58651eebc9fa53a9ba475229965eeb6db1898c1",
+        "byteLength": 1831
+      },
+      {
+        "path": "docs/qualification/g0-v18-g1-v35-refreeze-status-v1.json",
+        "sha256": "13ccd67872d2b3453f94841e0157b25fbf016bff3e97a90412b8dfbd0a1d595a",
+        "byteLength": 71001
+      },
+      {
+        "path": "docs/qualification/g0-v19-g1-v36-refreeze-review.md",
+        "sha256": "d72a0ca39c17fdf7daa62d655cd4944ab32cc8229c205edc869cfb747f1b8de2",
+        "byteLength": 1488
+      },
+      {
+        "path": "docs/qualification/g0-v19-g1-v36-refreeze-status-v1.json",
+        "sha256": "f340f0c350dd5facae5e898a36806f272e7dc877b3517461b6f30f3d52a92f25",
+        "byteLength": 64074
+      },
+      {
+        "path": "docs/qualification/g0-v20-g1-v37-refreeze-review.md",
+        "sha256": "f020e018a61e6cf9bb0fcbc4819f5a628b61d8fa8f1ed8826660f2529378f6de",
+        "byteLength": 1815
+      },
+      {
+        "path": "docs/qualification/g0-v20-g1-v37-refreeze-status-v1.json",
+        "sha256": "83ea9b7f47236409c80e6b3f844dfd080a7b23857a363366174e6cc55122f436",
+        "byteLength": 65812
+      },
+      {
+        "path": "docs/qualification/g0-v21-g1-v38-refreeze-review.md",
+        "sha256": "bb04f6215550df547617c01de3da5f9e32f997807952e0b880f59a359545fd31",
+        "byteLength": 1475
+      },
+      {
+        "path": "docs/qualification/g0-v21-g1-v38-refreeze-status-v1.json",
+        "sha256": "8e7baef32969ba130e7882aae4d908fee74e7f8f1b14f4a6e4a7270886b251fa",
+        "byteLength": 67443
+      },
+      {
+        "path": "docs/qualification/g0-v22-g1-v39-refreeze-review.md",
+        "sha256": "eb0403b718108314e1a11d113f87351deedbcfe902245fc612664da9c81d0784",
+        "byteLength": 2121
+      },
+      {
+        "path": "docs/qualification/g0-v22-g1-v39-refreeze-status-v1.json",
+        "sha256": "6630ccfce51ee2779d13c338eea44b3c7bfdbd010c6edcb676b4d70868d31bba",
+        "byteLength": 68589
+      },
+      {
+        "path": "docs/qualification/g0-v23-g1-v40-refreeze-review.md",
+        "sha256": "81cbc8111c0f87eef345ab90b6964e4d873e7325865168aa8790572fb36d85d8",
+        "byteLength": 1788
+      },
+      {
+        "path": "docs/qualification/g0-v23-g1-v40-refreeze-status-v1.json",
+        "sha256": "1e2a1465c452a33b2586c12902149fd1f3759b411e8ffece1f28884b0ed904ab",
+        "byteLength": 69891
+      },
+      {
+        "path": "docs/qualification/g0-v24-g1-v41-refreeze-review.md",
+        "sha256": "c269e7458689f4413c92fc368f934ddbf07ea44ae7714005128f467d28322a95",
+        "byteLength": 1780
+      },
+      {
+        "path": "docs/qualification/g0-v24-g1-v41-refreeze-status-v1.json",
+        "sha256": "920fce97603bccdb829e434434af84123ab917d267a8501efcdbbe4ef0a1f9b3",
+        "byteLength": 70840
+      },
+      {
+        "path": "docs/qualification/g0-v25-g1-v42-refreeze-review.md",
+        "sha256": "a6c44131d19e405551a7ab9412fb43c526d51e80eac6f4233102d2e313ac437f",
+        "byteLength": 3045
+      },
+      {
+        "path": "docs/qualification/g0-v25-g1-v42-refreeze-status-v1.json",
+        "sha256": "4db0d782b46dac44a0d71bec3ce9d442efc6fb8c3d873f3835ebc545516e567b",
+        "byteLength": 74041
+      },
+      {
+        "path": "docs/qualification/g0-v26-g1-v43-refreeze-review.md",
+        "sha256": "e23939daf91d0c282e264bb687cbc9ac89e91f76800591d8fc3f8075f557fe71",
+        "byteLength": 2299
+      },
+      {
+        "path": "docs/qualification/g0-v26-g1-v43-refreeze-status-v1.json",
+        "sha256": "364c4a2b781cee4f67f1ffcf26c8fd527ac2b156a55427afba232873ad79ba2b",
+        "byteLength": 75718
+      },
+      {
+        "path": "docs/qualification/g0-v27-g1-v44-refreeze-review.md",
+        "sha256": "27e9e0770c3c921197c633bf04811e89cd023c0c35b655521732a16c0cfa994a",
+        "byteLength": 1839
+      },
+      {
+        "path": "docs/qualification/g0-v27-g1-v44-refreeze-status-v1.json",
+        "sha256": "5fd0de46341f4f3e88ef4d4ef3a282562d8360086f5eefc8bf30bfdec24a3b1c",
+        "byteLength": 76558
+      },
+      {
+        "path": "docs/qualification/g0-v28-g1-v45-refreeze-review.md",
+        "sha256": "5940f0148ef513747fd15837902305d7496b7375dddbba1a0345482f5049edf8",
+        "byteLength": 1518
+      },
+      {
+        "path": "docs/qualification/g0-v28-g1-v45-refreeze-status-v1.json",
+        "sha256": "aed03ce8948faa29418749d46d37942e78ec01b0fba5dc91cc687c25d69cf4b6",
+        "byteLength": 77387
+      },
+      {
+        "path": "docs/qualification/g0-v29-g1-v46-refreeze-review.md",
+        "sha256": "8f3f642a30b61a2a20dbb22aab552545ec862507adf36e58c699b989b531dab7",
+        "byteLength": 2101
+      },
+      {
+        "path": "docs/qualification/g0-v29-g1-v46-refreeze-status-v1.json",
+        "sha256": "1d439419517aa909af6347bb0cdb27f97feb5f73b1c610f31e23cff13e8c15a2",
+        "byteLength": 82931
+      },
+      {
+        "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
+        "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25",
+        "byteLength": 34523
+      },
+      {
+        "path": "docs/qualification/g0-v30-g1-v47-refreeze-review.md",
+        "sha256": "4b9cd9a253306afee36aeb6b44be069a443cb5b56687def592c26e1f0b71f9c2",
+        "byteLength": 1824
+      },
+      {
+        "path": "docs/qualification/g0-v30-g1-v47-refreeze-status-v1.json",
+        "sha256": "bcd9817148a44efcdb09363156ffe12171d1b600d43a50ba4fafe7c079ac4edf",
+        "byteLength": 82249
+      },
+      {
+        "path": "docs/qualification/g0-v31-g1-v48-refreeze-review.md",
+        "sha256": "a14bc549873c507ead96e9234155ae3361464af46690f63e7f57083aa0b4c2ed",
+        "byteLength": 1459
+      },
+      {
+        "path": "docs/qualification/g0-v31-g1-v48-refreeze-status-v1.json",
+        "sha256": "5f42e89a3022d293e93eb8f3e313ee26746a1bf032354a649a309a53e08c35e7",
+        "byteLength": 82605
+      },
+      {
+        "path": "docs/qualification/g0-v32-g1-v49-refreeze-review.md",
+        "sha256": "d7423e3d7a37ce78c707edf1369393e1eacb8a63520ab3ead3c883f25ed016db",
+        "byteLength": 1611
+      },
+      {
+        "path": "docs/qualification/g0-v32-g1-v49-refreeze-status-v1.json",
+        "sha256": "3b9cbd88e3536b3dccdeb6adc1fad69061cf21e50c590b883cb6e45e408994da",
+        "byteLength": 85718
+      },
+      {
+        "path": "docs/qualification/g0-v33-g1-v50-refreeze-review.md",
+        "sha256": "2938bf2fc2023a142afe9860890b08896985e489099f16d682eeddce931bf598",
+        "byteLength": 1625
+      },
+      {
+        "path": "docs/qualification/g0-v33-g1-v50-refreeze-status-v1.json",
+        "sha256": "58bb7c880dc1a4b164317f72e8b24600d2199f68dd97e1de60041cc43d0c046b",
+        "byteLength": 86016
+      },
+      {
+        "path": "docs/qualification/g0-v34-g1-v51-refreeze-review.md",
+        "sha256": "2dc562c264ae65ad046d71150c3ccce69803bb79a37087f9e58e99b305f3d99d",
+        "byteLength": 1781
+      },
+      {
+        "path": "docs/qualification/g0-v34-g1-v51-refreeze-status-v1.json",
+        "sha256": "025e788c83c0801c99e39f7a07e8326011391277713e99838284acbb5d5723fa",
+        "byteLength": 87949
+      },
+      {
+        "path": "docs/qualification/g0-v35-g1-v52-refreeze-review.md",
+        "sha256": "7c731bb20808e79b750d1a2e3bc30adb247f7ffa8df46f5643c56ee4a405d480",
+        "byteLength": 536
+      },
+      {
+        "path": "docs/qualification/g0-v35-g1-v52-refreeze-status-v1.json",
+        "sha256": "ea0b447fd913aeb5a29232948bd06024afc8c6c0913d1721b307a60a21b23165",
+        "byteLength": 95153
+      },
+      {
+        "path": "docs/qualification/g0-v36-g1-v53-refreeze-review.md",
+        "sha256": "1128f32ece26df16c263df33f1558c67744e9aaa5612e06ee1b11b7f3c2c4344",
+        "byteLength": 1037
+      },
+      {
+        "path": "docs/qualification/g0-v36-g1-v53-refreeze-status-v1.json",
+        "sha256": "ce54ee140d6142381b8bbf4cbad53d1d71aea16aab6e1f779690b168811f89f3",
+        "byteLength": 93328
+      },
+      {
+        "path": "docs/qualification/g0-v37-g1-v54-refreeze-review.md",
+        "sha256": "d5ceb5b0aebf727060a3fbf11251cdc45a5fb7d25710e97b38b5eee2a9dba43d",
+        "byteLength": 779
+      },
+      {
+        "path": "docs/qualification/g0-v37-g1-v54-refreeze-status-v1.json",
+        "sha256": "a34d957fb47094865ec246047d47412f602bad128d153dd4e721fc602d86622e",
+        "byteLength": 100805
+      },
+      {
+        "path": "docs/qualification/g0-v38-g1-v55-refreeze-review.md",
+        "sha256": "4ea726ab32ee4e68c96c478422b105e93705e0407819d0559302a7bf8194374a",
+        "byteLength": 585
+      },
+      {
+        "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
+        "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d",
+        "byteLength": 35189
+      },
+      {
+        "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
+        "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e",
+        "byteLength": 35260
+      },
+      {
+        "path": "docs/qualification/g0-v6-g1-v23-refreeze-review.md",
+        "sha256": "182970eb33bcb479d6b0c4258f665d5023a13ee059a39644fce2a202b0f75666",
+        "byteLength": 922
+      },
+      {
+        "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
+        "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7",
+        "byteLength": 36450
+      },
+      {
+        "path": "docs/qualification/g0-v7-g1-v24-refreeze-review.md",
+        "sha256": "97ccdb97fae739eeea04d3301287adb3ebc78ce3073c4ca4ca67507b8d328df6",
+        "byteLength": 999
+      },
+      {
+        "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
+        "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887",
+        "byteLength": 37699
+      },
+      {
+        "path": "docs/qualification/g0-v8-g1-v25-refreeze-review.md",
+        "sha256": "ad46d89bdfbaf1b8883f85e5c4079a8ce5727db3615770b3c596fafce23f9fc5",
+        "byteLength": 703
+      },
+      {
+        "path": "docs/qualification/g0-v8-g1-v25-refreeze-status-v1.json",
+        "sha256": "8d9edcf9f625cfa9620f87d597c05e259d568bda5863e2d3aa13b6ca7c850845",
+        "byteLength": 45149
+      },
+      {
+        "path": "docs/qualification/g0-v9-g1-v26-refreeze-review.md",
+        "sha256": "ea9f86e6cea8f8192b38da470339d144a5ab15dfc02499b2ba2fa367a392de55",
+        "byteLength": 671
+      },
+      {
+        "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
+        "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9",
+        "byteLength": 36650
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v10.json",
+        "sha256": "0281cdf28d2ab1d6873140c76ec606d95bf3650fd29594fad978b4b4488b91cd",
+        "byteLength": 2886
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v11.json",
+        "sha256": "ba0158fd85641edd77286f5c4627ddaae934d9308f975ff53ef1a4aabdf919e4",
+        "byteLength": 2868
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v12.json",
+        "sha256": "a38f806ab5e09523b1267b32bd9798d9f909084815cf292bcf8390515c506957",
+        "byteLength": 2988
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v13.json",
+        "sha256": "e68e18d86e59c71227b89775aedc9ec736d1e111ea60e9542a59f529be94f5ae",
+        "byteLength": 2930
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v14.json",
+        "sha256": "fe7896e45d2a520498aee4f4da0b7b0bfaa302c6dde5150c860bcc8d4967dd24",
+        "byteLength": 2914
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v15.json",
+        "sha256": "cff11d63fe2d111c9c3cf5180c0a7a059815244d1780167fe5ad8fd49c4fb8e0",
+        "byteLength": 2928
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v16.json",
+        "sha256": "fd4147855f6e8c899ab61eef90edbeb592510ab569f03ecd6a6f4e1d975c7c84",
+        "byteLength": 3015
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v17.json",
+        "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+        "byteLength": 3465
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v18.json",
+        "sha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
+        "byteLength": 3457
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v19.json",
+        "sha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
+        "byteLength": 3503
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v2.json",
+        "sha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+        "byteLength": 1874
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v20.json",
+        "sha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
+        "byteLength": 3179
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v21.json",
+        "sha256": "e309d0b9381d396536926bb3446ad95549c7ebb7cd091e5af81be45b744a270c",
+        "byteLength": 3422
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v22.json",
+        "sha256": "35df7d03e21877f77186a6ca2aa2848fcca0a233a3630599f1d547c57e26fa73",
+        "byteLength": 3316
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v23.json",
+        "sha256": "3c189bdaa302e4bff4f407f772c31983a2a5bf6b25873f38775b29f0939d9dc5",
+        "byteLength": 3143
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v24.json",
+        "sha256": "0dd47ee4f238a0e2e4b3c1547c14711bbebba8b4d16ca16f26c9258077175a7c",
+        "byteLength": 3216
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v25.json",
+        "sha256": "acd8ab94479c640308960a1272762924477fdb9439dc453801673f451d3ae9c1",
+        "byteLength": 3190
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v26.json",
+        "sha256": "2a0c9b20aaac4e4eb7d753a667fbe88c0124ced5b20df7147ae4a576f038f483",
+        "byteLength": 3289
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v27.json",
+        "sha256": "9646c6c3eea8e1137bf3c437299e705252f20f4cd2818f893fff548e61a4b6be",
+        "byteLength": 2856
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v28.json",
+        "sha256": "df39564596e4a68b6bcec6b7fd0d1a369eb9e07def2bb1e78fd6f6223bb75b0b",
+        "byteLength": 4058
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v29.json",
+        "sha256": "ed39ed3c55b33c3a6b9ef734d2813f83b6fbc6b73672d2134f43284db60ba32c",
+        "byteLength": 4086
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v3.json",
+        "sha256": "6ca6e8ea8a5b54be7711dc49a179b232a671ce17613d079ff12a087b12a12f7b",
+        "byteLength": 1894
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v30.json",
+        "sha256": "2ad3734f556c01825ba1da90fff0dd2790ffd89249e19ed49a3424e4e4aec353",
+        "byteLength": 4478
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v4.json",
+        "sha256": "fa09bf87b3cd821b489475c19469646fa0e841f89f76251bd959d74c6e9842c6",
+        "byteLength": 2020
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v5.json",
+        "sha256": "c6100705c560fc3008e379e20a48ff737ecbb8bbf280f2f1204c370f6c5fc504",
+        "byteLength": 2066
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v6.json",
+        "sha256": "c08740e378a28d8794bb1d7237a6b696d89b4ca6dfb1725f52c4b39321dbe94d",
+        "byteLength": 2272
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v7.json",
+        "sha256": "9733e8d4b7f6be5634fd173aad2a4eb71d8e57d620b98234e3672d0851cff232",
+        "byteLength": 2553
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v8.json",
+        "sha256": "d3e6a09e69da39a1270a85c2aebd0f622ed058f92cdae776a0ce26ac7f14dc30",
+        "byteLength": 2631
+      },
+      {
+        "path": "docs/qualification/own-rust-cad-v9.json",
+        "sha256": "6da773063cf79d1027ece338d408a6593072e188b47d053b0965a5df9d473af0",
+        "byteLength": 2753
+      },
+      {
+        "path": "docs/qualification/playwright-license-manifest-v1.json",
+        "sha256": "ca6b12d581fdb7added7c5b7e144a8b5b20ae946417ec6e663a8bda348df1b6a",
+        "byteLength": 3846
+      },
+      {
+        "path": "docs/qualification/qualification-plan.schema.json",
+        "sha256": "bef7603ef5f9a05d5198882952041d87bb19cb0fec4c99ddc6083e88b392e12e",
+        "byteLength": 33862
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v1.json",
+        "sha256": "050a1dd7a30d19dd85a8ed16fd724f7579c2430f1d7bf03ed68009d46bd2cbfa",
+        "byteLength": 62613
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
+        "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9",
+        "byteLength": 77107
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v11.json",
+        "sha256": "e758898a3539a91360ad4e52458dc4d0413e6c000f55043bdf0a216c496e3d0d",
+        "byteLength": 77094
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v12.json",
+        "sha256": "3534a6f16b6443cd6898863b86985feb4278aebcc6024faadc0423a0de51faea",
+        "byteLength": 76954
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v13.json",
+        "sha256": "c736b508bade157c2a466c35963953e982ec4ef080219c7b0c271d4a1f0ada1b",
+        "byteLength": 76967
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v14.json",
+        "sha256": "15ff9a8eb6631ae9a425853b72df88384c9e218bdc46e83f1a3414961b90fb41",
+        "byteLength": 76942
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v15.json",
+        "sha256": "fecc5f2f3b08b98549f9b34f3c80c659cfb698b889e46461c9726acfdd4a9a1a",
+        "byteLength": 76946
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v16.json",
+        "sha256": "f421e75e4ef19ffc6cef0d36745428ea086e3797b911ed84dd00a5c2636b1622",
+        "byteLength": 77037
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v17.json",
+        "sha256": "ce0f2121aa0014dcc9439e63654e71502fa33f13a07564a65a8e0ec22ff993e4",
+        "byteLength": 76788
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v18.json",
+        "sha256": "7e129bd193d33ee6c4205c26e6f9b5747e13d48cea06800946a1ef639f5f99ce",
+        "byteLength": 71464
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v19.json",
+        "sha256": "14fb0fdc79532dcd9a8bed3a93128f152fe3b68cc56529b6cc83561b5b899ed3",
+        "byteLength": 71302
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v2.json",
+        "sha256": "90452963dfdc47e492725c6bcd60a2dcdc7ffa748f848e95831c5d5750f5f0a2",
+        "byteLength": 65005
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v20.json",
+        "sha256": "c5d903ba5b7383ea79df20626de6f24c1cef9a564bb977adde5b5a362d75b9e6",
+        "byteLength": 71362
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v21.json",
+        "sha256": "bfb889481c1a1b1f360380599858be9d117500e9f3ceb311cc8a642a7a10682b",
+        "byteLength": 71243
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v22.json",
+        "sha256": "63a55e60751a35af3c676de1a537477e845ea2439db7199cb4e14e89bdd56ea6",
+        "byteLength": 71246
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v23.json",
+        "sha256": "a62609ebefe2f07994266b3bce8641c368de8280d7ff690d318f411c74810c0d",
+        "byteLength": 71327
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v24.json",
+        "sha256": "05f572b7afd1311f7056b2cb3102ef117d67a7d8cb48c5a81057685d0bc5b7c4",
+        "byteLength": 71356
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v25.json",
+        "sha256": "2361b59e14acadd72b94d348083390cd3ca74a906049aea582e37453297889c8",
+        "byteLength": 71464
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v26.json",
+        "sha256": "0016bbc4ef57c02e17f61a9f4d1d84e21d37c444f15e061f77554bf357f12967",
+        "byteLength": 71436
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v27.json",
+        "sha256": "84f3fe996f3694b3a051e077ed4150a1e64d81c390559f44df69213bdc216866",
+        "byteLength": 71458
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v28.json",
+        "sha256": "04a958f79231395c9a009e20a5b7d3abe91246e8fbfc5a1bccb89abeeb6bf79e",
+        "byteLength": 71443
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v29.json",
+        "sha256": "509e61dc8c915ef19303927c9f025868137e3112fc95fede8970370ccd76220c",
+        "byteLength": 71443
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v3.json",
+        "sha256": "40c7d885b34013270f45b4f2cd7ce29bb83293ee61bf8c60c11a6613bd3f282c",
+        "byteLength": 64947
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v30.json",
+        "sha256": "466890322e840b9dacb2fd449ba7ac5fee972fd0c7dc22d616e5eaf06c143047",
+        "byteLength": 71455
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v31.json",
+        "sha256": "b0303dbc26372b348078902dfd4a85d707bf2522eaa114423b6062a93b374052",
+        "byteLength": 71463
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v32.json",
+        "sha256": "c4f7abb174659a84d7f5167ee04e5d3ff79746b0048ba84e428ad94e9e8765db",
+        "byteLength": 71418
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v33.json",
+        "sha256": "27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda",
+        "byteLength": 71489
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v34.json",
+        "sha256": "e89a6a738d2ba22709fe38fbd7ccc5108743820118a019658be2bb3323a549db",
+        "byteLength": 72442
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v35.json",
+        "sha256": "72ab87d35b71a43cb92f6e937df41178db650ef18bfc3e09737b38186c9cf031",
+        "byteLength": 72486
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v36.json",
+        "sha256": "6a0611b45b2cdee900807f112657143fe7942ce4a69bbc505b53c15f608186f2",
+        "byteLength": 72495
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v37.json",
+        "sha256": "1532e6f73c61cdbcbe8da17a79f4738c2b8bbae31eaf487112a2bb40e053792c",
+        "byteLength": 72562
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v38.json",
+        "sha256": "360821de40c7e846028491c177e3a73741d49d9c5491529fae5afe57d3196d22",
+        "byteLength": 72522
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v39.json",
+        "sha256": "ba3df337816f03e5ed921aea2afe53862eba472b30b544d15695fc6c4ad84072",
+        "byteLength": 72510
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v4.json",
+        "sha256": "4d8b69fd2afeb6c828f0ab79b1ddaf6dac68b83a5b9b8bc0a3f59a5b63320ee1",
+        "byteLength": 77544
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v40.json",
+        "sha256": "2ad9ea534a75fea707435daa96072817db2526cb407558e546e962cbeb064703",
+        "byteLength": 72659
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v41.json",
+        "sha256": "3b570749fc0c235232d59cba1e313bc01de121e2436e71280d96a2e28f5c7747",
+        "byteLength": 72455
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v42.json",
+        "sha256": "6d6fac25372cff64de610a7c03d70fa6c75d2cd22293539e2ca2a6a8a9505daa",
+        "byteLength": 72678
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v43.json",
+        "sha256": "ef4042147af835a21c9e6d9503e6c3223239927e4142d3fc0eadaad6700830f3",
+        "byteLength": 72676
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v44.json",
+        "sha256": "6ac86600bf3a0035547ec21974c51315412a4fcd6acd0064b3f96b843ea8d033",
+        "byteLength": 72626
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v45.json",
+        "sha256": "ad782f013e7afd303463679ca24bcdb8ebee23104bcfd2d3bc0e23f351c4006b",
+        "byteLength": 72559
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v46.json",
+        "sha256": "92d1860cb53a92fabd1543525aeb649ba5b6fa940fa2ffbb55f1e9cde6ac6045",
+        "byteLength": 72516
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v47.json",
+        "sha256": "007c76bb6d5ac55d344864db0e6f2f658b7d99106c05b75c17b67290d8b67578",
+        "byteLength": 72508
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v48.json",
+        "sha256": "2018a5f444d7dff4e6aee8abdc0b2b86668dfcf87979faccc6ff356af08047fe",
+        "byteLength": 72490
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v49.json",
+        "sha256": "f087d8f60d7261a5327cf09ef886e7de3b2dba85c86890a616dccf730e39bd2d",
+        "byteLength": 72627
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v5.json",
+        "sha256": "a5c4b365263d74b6d539d7f6539bcc4a571d055bd518b70ec1bb93dd6df2d9ee",
+        "byteLength": 77458
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v50.json",
+        "sha256": "fe8cc8ac89f88fbf32c64e49e33a06552674e82ef2a32fbe323e9aaa820aa973",
+        "byteLength": 72551
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v51.json",
+        "sha256": "adb19d0b929b05dc213bacb891c3562215c3f299d9461f888348ad8035679142",
+        "byteLength": 72552
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v52.json",
+        "sha256": "db43d33b49e94b822838a6d6c424fb3c2b35894c9a0ce35f18c104cb9d3c3d0c",
+        "byteLength": 72332
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v53.json",
+        "sha256": "bef38472fc8ec6f9821482810ffc2c1c2311fcc71215264fe965a8b441822155",
+        "byteLength": 72388
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v54.json",
+        "sha256": "61c8d5d93c48fbdb58e60bb219eda315ac53f6df4284ca1758563e61837ecc6e",
+        "byteLength": 72402
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v6.json",
+        "sha256": "5a0ef0359fd6c1f5ddad43715d621cd549da9a319dde9454e06dec9e67835566",
+        "byteLength": 77397
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v7.json",
+        "sha256": "6cf7e79bd0240b41ec7dbd7acedeb9a5818e72af13803e976ca19cf57d77d000",
+        "byteLength": 76981
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v8.json",
+        "sha256": "ccede0404cc9655c9acac317dbf9b63bf1ee4aa3453c0cd3f337cf5b9d7b5b5f",
+        "byteLength": 77439
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v9.json",
+        "sha256": "0efdfe73a0b43f5190d2cc66a594dd1909399852d6a6a485fd41997fe563cf21",
+        "byteLength": 76924
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+        "byteLength": 86657
+      },
+      {
+        "path": "package.json",
+        "sha256": "0377955e34b57af575d7d1da5f22ff19b5d4f4d6c2b8bb0a4b9f86416618f004",
+        "byteLength": 7758
+      },
+      {
+        "path": "rust-toolchain.toml",
+        "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a",
+        "byteLength": 191
+      },
+      {
+        "path": "scripts/g1-github-actions.mjs",
+        "sha256": "fd792b1906518e49c32ee6dae71d8e43de13ccae49f7c932b42aee427939281a",
+        "byteLength": 32655
+      },
+      {
+        "path": "scripts/qualificationPlaywrightPackage.mjs",
+        "sha256": "6368a5c8ff653fe1fd598faceb5c4e4a8587553dc4c66bab9411408cafb785ce",
+        "byteLength": 16495
+      },
+      {
+        "path": "scripts/qualificationRefreezeCore.mjs",
+        "sha256": "a7d37bd525aa1ddae028468b9fa1cdb64306513f9886ec641f7a417add3b1e14",
+        "byteLength": 3109
+      },
+      {
+        "path": "scripts/refresh-qualification-fingerprints.mjs",
+        "sha256": "ece4dc5dbaf89b21af425f1047c0043ec644b695c5f73cad33befdf4df8629ea",
+        "byteLength": 36011
+      },
+      {
+        "path": "scripts/run-browser-qualification-supervisor.mjs",
+        "sha256": "6a31bd2a4e7fd6b504ad2d2633a0f39de33a04b9db41ebf5885adafe50435a42",
+        "byteLength": 14338
+      },
+      {
+        "path": "scripts/run-browser-qualification.mjs",
+        "sha256": "bd5f99b80b8f420efc25559ba4440fcf8e4805b0f4a8f7ee5497d5b02f3d80dd",
+        "byteLength": 48212
+      },
+      {
+        "path": "scripts/run-g1-candidate-clean-fragment.mjs",
+        "sha256": "007bcdec3703afb5e6705024ae834d00117bb1fc776f7e6a9e8a9baa3e24bee7",
+        "byteLength": 11403
+      },
+      {
+        "path": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+        "sha256": "26f5161e140b075be615a69393e57d7bb6b9e11ecab863815a9c3f158cd99c29",
+        "byteLength": 7667
+      },
+      {
+        "path": "scripts/run-manifold-g1-memory-qualification.mjs",
+        "sha256": "d65eda0efae4623d7a811fc8855a37d8ff4a33cd0deddadae35046b1b37c8c97",
+        "byteLength": 38809
+      },
+      {
+        "path": "src/components/CommandPalette.vue",
+        "sha256": "d6ed17d90cae1bcf446ae44856b3ad4b800ebf003fc9eb7b62ecc206e7f2239c",
+        "byteLength": 11300
+      },
+      {
+        "path": "src/components/CustomizerPanel.vue",
+        "sha256": "a6b33f8efb1170f5b924714b37af8dbe77a4e0a0a58380c4949dc038561fa3df",
+        "byteLength": 4871
+      },
+      {
+        "path": "src/components/ExampleGallery.vue",
+        "sha256": "7fd8fdb2803e979ecda8ef972847dd258172287cf2a08a1e45b94b532dae5e43",
+        "byteLength": 8679
+      },
+      {
+        "path": "src/components/InspectPanel.vue",
+        "sha256": "3779bc33f023343d42a312c726accb9e2a8cd03b8a5c12d05029c1dc15066425",
+        "byteLength": 26824
+      },
+      {
+        "path": "src/components/KeyboardShortcuts.vue",
+        "sha256": "1b65bda339d55844aa0eda495fce488b15b2b8372a1fd1f920512fc066545c40",
+        "byteLength": 5104
+      },
+      {
+        "path": "src/components/SceneOutliner.vue",
+        "sha256": "5fe5ce6948127a25203e0e06fdc495616dd2971ceac5a1de7832bc6916d61ecb",
+        "byteLength": 24889
+      },
+      {
+        "path": "src/components/ViewCube.vue",
+        "sha256": "0bf4ca09d69fa876c88348931485f8a1c1cf85ccd13438fc7349295536da6adc",
+        "byteLength": 9691
+      },
+      {
+        "path": "src/components/cadPanels.types.ts",
+        "sha256": "70c4b50439e07ead8a2c0df79da4aae64d21f754021ced9b40d353dda93da87f",
+        "byteLength": 1274
+      },
+      {
+        "path": "src/core/build.ts",
+        "sha256": "5df2633aeffd833cb9aa4bcbdf6c455d28aff7319fe64fbe246eb2cbcaa6970b",
+        "byteLength": 1632
+      },
+      {
+        "path": "src/core/geometryExecution.ts",
+        "sha256": "795fbab0956656bb8328379ebf4b199a7c6a7f4398f39c57cae5d931330a187c",
+        "byteLength": 25443
+      },
+      {
+        "path": "src/core/geometryRouting.ts",
+        "sha256": "929a67a383c3b31be93d85880415d2c0da78eb02a4c4a1b93724b73bd585cb05",
+        "byteLength": 6773
+      },
+      {
+        "path": "src/core/languageContract.ts",
+        "sha256": "ee3c9bad28f4fc64e379adc0658acdf4aca225046d82b0dd3e0dce70f37fab4d",
+        "byteLength": 2240
+      },
+      {
+        "path": "src/core/mesh.ts",
+        "sha256": "26eef7e1cb9eb36e2801d30e91970f2ae979c180644aa68121671297e2e4fafd",
+        "byteLength": 4095
+      },
+      {
+        "path": "src/core/nativeGeometry.ts",
+        "sha256": "2c24eaa25850849171df5bece7a018018929ccba5f0ed06e7c8441249ec16a4d",
+        "byteLength": 3265
+      },
+      {
+        "path": "src/core/openScad2021Contract.ts",
+        "sha256": "5c46c2e731d5f64dd370916de36884a37ef76559bec15c4d743e28acfda5b80f",
+        "byteLength": 24828
+      },
+      {
+        "path": "src/core/ownRustCadEvidence.ts",
+        "sha256": "25403963b3421d09a9562c002d68888ad5479caeeda88c0a94519db655140a66",
+        "byteLength": 1332
+      },
+      {
+        "path": "src/core/qualityTargets.ts",
+        "sha256": "0e31c35b22908fb52a5b457b6df89fcb30e962ffa642769e06443a66b004990b",
+        "byteLength": 215
+      },
+      {
+        "path": "src/core/scene.ts",
+        "sha256": "ff029ec60f3abc6f96a7d0d3fc8e05fe2eda679464fef66b66ced6d290291d84",
+        "byteLength": 8938
+      },
+      {
+        "path": "src/core/semanticProgram.ts",
+        "sha256": "362f04f01542725cfdc4c3dfa6ceb1ac873b4da4f45609d3dc01a44464b39e99",
+        "byteLength": 22014
+      },
+      {
+        "path": "src/core/sha256.ts",
+        "sha256": "6a77e763817c7f99acc137fdf307ab252159b47f668ee0ef299bbb16743fd615",
+        "byteLength": 3655
+      },
+      {
+        "path": "src/data/examples.ts",
+        "sha256": "5c0312a71cc5efbd00bf4aa08380c9428da9ef22e1ea92a2f727859570376729",
+        "byteLength": 4722
+      },
+      {
+        "path": "src/mcp/boundedTransport.ts",
+        "sha256": "c5618d55c1d9a67dda871371ced3ff307f26478413857f84b44c2e82eb5afd27",
+        "byteLength": 11045
+      },
+      {
+        "path": "src/mcp/createServer.ts",
+        "sha256": "d1a2d1434bfbdc7be4e86a9d11631a80ead9ae54ff48216bc614ba09b7e3040a",
+        "byteLength": 115235
+      },
+      {
+        "path": "src/mcp/duckdbModelStore.ts",
+        "sha256": "9eaafe9c98ae92d46423605af2e9d6679f65608988fd2507ac25327fd58bb428",
+        "byteLength": 82270
+      },
+      {
+        "path": "src/mcp/engineManifest.ts",
+        "sha256": "fb20d61c1dfc7321e09fe290a1e094591fb9b49f91bc0704a85dcbe55bbf3ec2",
+        "byteLength": 1825
+      },
+      {
+        "path": "src/mcp/errorContract.ts",
+        "sha256": "6c5e53ef2833427b19b5eb866e8cc96fdf47fe463eaa1bedc0dfb04fa85351ff",
+        "byteLength": 1690
+      },
+      {
+        "path": "src/mcp/geometryService.ts",
+        "sha256": "13835038859c6b71a97e627fed48a5785003da55dcc46a8603a1d21e4d73f95d",
+        "byteLength": 21672
+      },
+      {
+        "path": "src/mcp/manifoldPlanQualification.worker.ts",
+        "sha256": "40279ac5e104d0618c7ec6f1c6ae7ab5c21b0780490e57df6375fb16b7b42f73",
+        "byteLength": 877
+      },
+      {
+        "path": "src/mcp/manifoldPlanQualificationSupervisor.ts",
+        "sha256": "343677a4130862062b97304efe623eedd493ff7ecf789290658f527d4f98884c",
+        "byteLength": 17086
+      },
+      {
+        "path": "src/mcp/modelStore.ts",
+        "sha256": "4a5ce51b8efa2117e03f6b16f6d4ec39c9d6cfa67301e08b3b9dcdfbbad7fada",
+        "byteLength": 7372
+      },
+      {
+        "path": "src/mcp/publicError.ts",
+        "sha256": "0beea98441f07746f3ace9f65e79cfa08f074188bd56318fc6add59e366bb189",
+        "byteLength": 20306
+      },
+      {
+        "path": "src/services/cadGeometryKernel.ts",
+        "sha256": "558aca26dbd51158130548f917321d1febe6125b822c52bdb2164d5a19d04551",
+        "byteLength": 7224
+      },
+      {
+        "path": "src/services/cadIges.ts",
+        "sha256": "903e14ff2af3389f004699bb870ae8b10f15bcb8c873804bab147f0489cf4f6b",
+        "byteLength": 1087
+      },
+      {
+        "path": "src/services/cadKernelOps.ts",
+        "sha256": "3e91c8a9fa04a0906768408ed3584ab28c7ecb6ce3c69802e1c56e5417aeab83",
+        "byteLength": 17525
+      },
+      {
+        "path": "src/services/cadNurbsStep.ts",
+        "sha256": "b0d44be60adf9630e26c98129a8e85a7144147341b0e1e8b1b00d2655f373b10",
+        "byteLength": 12061
+      },
+      {
+        "path": "src/services/geometry/brep.ts",
+        "sha256": "79613da0907585812bc0d764d179495a412af9362e2db7c5f05ccc321f12f7e1",
+        "byteLength": 27451
+      },
+      {
+        "path": "src/services/geometry/brepCapability.ts",
+        "sha256": "815050a804674aedf6b661fc3394f5410d9bf3bcc2cde9c1562d087b9629e8b1",
+        "byteLength": 27299
+      },
+      {
+        "path": "src/services/geometryBuildEngine.ts",
+        "sha256": "0d87867a9e900d4e8496a02bb248399200c15525a71cd27c3ddad32edb79bf63",
+        "byteLength": 25004
+      },
+      {
+        "path": "src/services/geometryKernel.ts",
+        "sha256": "4da34149feb6b4a3021db57a44c37b95427ae68b16fecdbe349dc6371242baf3",
+        "byteLength": 3007
+      },
+      {
+        "path": "src/services/geometryWorkerProtocol.ts",
+        "sha256": "74d57c08433ba40f13d9d503fda9689e2a2bdc8fa9f21a71f56f6ec6d36fa286",
+        "byteLength": 33613
+      },
+      {
+        "path": "src/services/legacyV5Assembler.ts",
+        "sha256": "fde65a054e2bf922e4a103cd58ff56fde134cb109b45e130e6bf4f06e3f6be56",
+        "byteLength": 12610
+      },
+      {
+        "path": "src/services/manifoldPlanBackend.ts",
+        "sha256": "2e7008722861b3c8e78862909f56617ca215365ad5826514ed0a733649eb2774",
+        "byteLength": 23534
+      },
+      {
+        "path": "src/services/manifoldPlanEvaluator.ts",
+        "sha256": "aff1c1bc042a0aa59a3f0e107802d86b9d57c20fc5117c0e4b80397234d18bfc",
+        "byteLength": 10256
+      },
+      {
+        "path": "src/services/manifoldPlanQualificationProtocol.ts",
+        "sha256": "747ee75f111e5d848ab51dcf70a3726e01a0482248aa1b30d7360eb5d77bf82e",
+        "byteLength": 15276
+      },
+      {
+        "path": "src/services/manifoldPlanQualificationWorkerLane.ts",
+        "sha256": "3afa9d487455ba8a05e4768189602b7156530d585773e0a0147ccd7c9b8b1dbe",
+        "byteLength": 13126
+      },
+      {
+        "path": "src/services/math3d.ts",
+        "sha256": "a76db0cfc30b0db876ec6c5f0b3fd509087197896b481e0f4de5f66aa6809148",
+        "byteLength": 10121
+      },
+      {
+        "path": "src/services/meshBvh.ts",
+        "sha256": "a2849283be68e9b49a090555f8080914054a055faaa58b475c03e642b5009545",
+        "byteLength": 4746
+      },
+      {
+        "path": "src/services/meshExport.ts",
+        "sha256": "19854d4c087454fe319a07c0bdb302fc13898b2469950a1ad1154945ff74517b",
+        "byteLength": 1228
+      },
+      {
+        "path": "src/services/meshInspection.ts",
+        "sha256": "5f011a4c43df38aa0b3495b4650813c56c4166db5bb51980761686b601aa136f",
+        "byteLength": 10787
+      },
+      {
+        "path": "src/services/meshTopology.ts",
+        "sha256": "992273d9a2c34dc005e0b44d2f0e34f9616a968a7964da55e08b21d91699073f",
+        "byteLength": 4077
+      },
+      {
+        "path": "src/services/modelGraphNurbsKernel.ts",
+        "sha256": "ab5ce2d074bc7c51dd55089badc07b37ade41b769869d5c5d3d76a65b28600d7",
+        "byteLength": 33729
+      },
+      {
+        "path": "src/services/nurbsConstructors.ts",
+        "sha256": "395e213201a650bcf985546664d04ea547d1b95257f0d415a584a0271b9aeeb9",
+        "byteLength": 9867
+      },
+      {
+        "path": "src/services/nurbsFoundation.ts",
+        "sha256": "ddd5006a09f05b8cd41c5795f279ed4ac095fd5b788c970ba9b721af1c87191a",
+        "byteLength": 23664
+      },
+      {
+        "path": "src/services/openscadCompiler.ts",
+        "sha256": "f0cd73087c8334c024f4f8ddf9e50019d41acda081b97fb5dd501a78854508ae",
+        "byteLength": 40474
+      },
+      {
+        "path": "src/services/openscadErrors.ts",
+        "sha256": "70c90d5398d02339e42a3e679423866d7a540621698267fc6d640bdf6a386328",
+        "byteLength": 2034
+      },
+      {
+        "path": "src/services/openscadParser.ts",
+        "sha256": "c055ca80594dd79d35568418821ce063a3bb69d9afcfc5d2cd62d0dccf26186b",
+        "byteLength": 141729
+      },
+      {
+        "path": "src/services/openscadSemanticLowerer.ts",
+        "sha256": "952b1641d8567853989dc858ddd9caf2df4cdf56150bcb7b90524c10e310b02b",
+        "byteLength": 128221
+      },
+      {
+        "path": "src/services/scadCustomizer.ts",
+        "sha256": "622ddeb97359412df9b43fcf61a6e7125cb1126cecb8fdbf077fed2d45d0f444",
+        "byteLength": 4695
+      },
+      {
+        "path": "src/services/semanticProgramCodec.ts",
+        "sha256": "cecb8a6462f8333bba30b9b7c1b369dc64093893375c39471c7583560fa1ea3d",
+        "byteLength": 26847
+      },
+      {
+        "path": "src/services/semanticProgramExecutor.ts",
+        "sha256": "e9c816a2db623cedd303bc4cef089f2168dcc48e3e3b4cc58209317a3ba3a668",
+        "byteLength": 31536
+      },
+      {
+        "path": "src/services/semanticProgramLowerer.ts",
+        "sha256": "bbf37a0e817bbb850a0778fdeb43311b3366ff5a5b9498cd9b0d9f185b1098e8",
+        "byteLength": 1349
+      },
+      {
+        "path": "src/services/semanticProgramTrust.ts",
+        "sha256": "f697ce7bee026dab711fc1d5574c7110bf5341d455575cec6998e0d72d8c19d7",
+        "byteLength": 924
+      },
+      {
+        "path": "src/services/semanticProgramValidator.ts",
+        "sha256": "46b2d7ff1bd10bb819958801a5c0f9c5bfc9a878e12d63a5adcd7862fb3aff76",
+        "byteLength": 130231
+      },
+      {
+        "path": "src/workers/geometry.worker.ts",
+        "sha256": "4fdcd2cdbe066b46af563a91ad854f3c143ec02eb80999a02106612ec2bb0a41",
+        "byteLength": 14791
+      },
+      {
+        "path": "src/workers/manifoldPlanQualification.worker.ts",
+        "sha256": "ce3de8e3f95dd648a0858b177a346ff0eecd3dfd64f6653f8ac7ffdd07ab4d48",
+        "byteLength": 842
+      },
+      {
+        "path": "tests/brepInterchangeV11.test.ts",
+        "sha256": "1e48fd8dd56e87887de90c8a294748cb436004d230ec6b3530f39e4a06c25324",
+        "byteLength": 1579
+      },
+      {
+        "path": "tests/brepQualificationV10.test.ts",
+        "sha256": "5d90fda128991f58bf46d5188c93eb790f012ea5325726d250eae95707041406",
+        "byteLength": 4792
+      },
+      {
+        "path": "tests/brepQualificationV11.test.ts",
+        "sha256": "064dc7d0c6b4e3aabc915d41a3ba3fd02121b6ba864abf092d0dd020b30e8b3f",
+        "byteLength": 2030
+      },
+      {
+        "path": "tests/brepQualificationV12.test.ts",
+        "sha256": "69e4728d2674845e340f1e0670c5232dd7aad58f86c460aa466b2694f69ca008",
+        "byteLength": 2784
+      },
+      {
+        "path": "tests/brepQualificationV8.test.ts",
+        "sha256": "4c7c3e7dac22b6c0f013cdd84f391d4965f3567e7a00cd193727376687433ccb",
+        "byteLength": 3290
+      },
+      {
+        "path": "tests/brepQualificationV9.test.ts",
+        "sha256": "28c88bbb87c0cab45cbb2fa13e4b397e4064d4b7bd9981dcfe1cbbc1c90d82f2",
+        "byteLength": 5064
+      },
+      {
+        "path": "tests/browserMemoryQualificationRunner.test.ts",
+        "sha256": "a5d57433e7ca32a3b5da6506c2c6470fb828b3c06e5610a26fcc001cf443c5de",
+        "byteLength": 19652
+      },
+      {
+        "path": "tests/browserQualificationRunner.test.ts",
+        "sha256": "527f152d88e56636caa290fd442817b2105860c6d29dcbec5cef7dfb4fe10716",
+        "byteLength": 23032
+      },
+      {
+        "path": "tests/browserQualificationSupervisor.test.ts",
+        "sha256": "6f0dcc44b336dc79b99eb53a1fe13638467c921cb45e4452ff43beb48205e54d",
+        "byteLength": 4565
+      },
+      {
+        "path": "tests/fixtures/browser-memory-qualification.html",
+        "sha256": "dfbb75014ac1db712c96344c8ec7069ff7078aaf0155475616f870299895e6e2",
+        "byteLength": 489
+      },
+      {
+        "path": "tests/fixtures/browser-memory-qualification.ts",
+        "sha256": "a97daf634634c37080fe87cfa3e0f7288d8cb42ac300ab289055d20785a02cb8",
+        "byteLength": 2177
+      },
+      {
+        "path": "tests/fixtures/browser-qualification-supervisor-child.mjs",
+        "sha256": "36c997a7a380bb7bf2353bb14605104507b691fe8d82d71a137384878b47c583",
+        "byteLength": 933
+      },
+      {
+        "path": "tests/fixtures/browser-qualification.html",
+        "sha256": "e38d075e5f1fb141842ab3b965e4acf76470bd3069307647ad7f2c907bba7d0f",
+        "byteLength": 461
+      },
+      {
+        "path": "tests/fixtures/browser-qualification.ts",
+        "sha256": "a39a869d0dd9a0e759776a06f512b81ca2fbd9000fa53ffaa582a12e481a1bce",
+        "byteLength": 5009
+      },
+      {
+        "path": "tests/fixtures/browser-qualification.worker.ts",
+        "sha256": "e32832546d10cc34603a52722ce5c0d55189a7a41a2ead2f57eab935c370b935",
+        "byteLength": 5110
+      },
+      {
+        "path": "tests/fixtures/manifold-plan-oracle-v1.json",
+        "sha256": "a6b4d6025aa59081501d4c54bce921857512cd492714efda560a31b946184897",
+        "byteLength": 44525
+      },
+      {
+        "path": "tests/fixtures/mcp-manifold-plan-memory-probe.ts",
+        "sha256": "0c1124fa6ec5d372e240c20da7e952080f0ad2c91f660f91c7e57eb9e47ea54d",
+        "byteLength": 1458
+      },
+      {
+        "path": "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
+        "sha256": "9b40b46cde5f702ed3a28ee206e3a07856497d1a22170cbe8b8071d895d855f8",
+        "byteLength": 3371
+      },
+      {
+        "path": "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
+        "sha256": "451aaa40c2b1467a1eec965f63a957da452086d8bf8c7c638dbec0420bd1156b",
+        "byteLength": 1261
+      },
+      {
+        "path": "tests/fixtures/mcp-shadow-stdio-server.ts",
+        "sha256": "c9c53d356f42face3018c549952346f1ed25f365a986f986c5c675ab4564c6b1",
+        "byteLength": 5650
+      },
+      {
+        "path": "tests/fixtures/web-worker-node-harness.ts",
+        "sha256": "f801cb51e061c5ef16dd3512e586368acbeb1fc879f8e7e588d9007548a7de74",
+        "byteLength": 2230
+      },
+      {
+        "path": "tests/geometryWorkerRealBoundary.test.ts",
+        "sha256": "014c2b3625b7e64b8fedd6195de79370dee5dccbe7f0ce23c6fab8584552b032",
+        "byteLength": 9964
+      },
+      {
+        "path": "tests/legacyDirectEvaluatorOracle.test.ts",
+        "sha256": "5e4bea00e2cbc7d68745d352d1ee364eb1ab8e66cb97a422a6c3ed7f513e9ea3",
+        "byteLength": 26272
+      },
+      {
+        "path": "tests/manifoldPlanBackend.test.ts",
+        "sha256": "37d70a492e09821fb96ffbccfe82c5d4fe46bfac2ffaa9094f820bd2a0442a69",
+        "byteLength": 31560
+      },
+      {
+        "path": "tests/manifoldPlanQualificationWorkerLane.test.ts",
+        "sha256": "624149d00b7fd61bc56bba4ade607ede06ce8afd90fec3e607f40e437f2ccfff",
+        "byteLength": 6599
+      },
+      {
+        "path": "tests/mcpManifoldPlanMemorySlope.test.ts",
+        "sha256": "cabf52e453a9ff9c8f97ffeacd5e7b643b9def53715cd841b0896dc05550245b",
+        "byteLength": 3818
+      },
+      {
+        "path": "tests/mcpManifoldPlanQualificationStdio.test.ts",
+        "sha256": "704bcc49deada881cee04c1570e2c18ada9cfe79645662de929a96d0b6baece2",
+        "byteLength": 10407
+      },
+      {
+        "path": "tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+        "sha256": "f2ed882f0e2052f01314470e34438b77a1a7427ed400c6e3057c45fbe4249324",
+        "byteLength": 13578
+      },
+      {
+        "path": "tests/support/referenceFrozenLegacyOutcome.ts",
+        "sha256": "3f1c898bb9a1ec0b2a500c432fc9c6d3d33023044f74cd04867ed63a73ade977",
+        "byteLength": 12329
+      },
+      {
+        "path": "tests/support/referenceLegacyDirectEvaluatorOracle.ts",
+        "sha256": "1933dad63321167de44d65cef75d85cb2cc7b3f2a4d84bccf21ac141e557dab8",
+        "byteLength": 33741
+      },
+      {
+        "path": "tools/browser-qualification/package-lock.json",
+        "sha256": "0a2e7f09703398ff090367d55e1f39b88b363e5267126edf699a2e78fedc471f",
+        "byteLength": 1843
+      },
+      {
+        "path": "tools/browser-qualification/package.json",
+        "sha256": "639d9e0c47a413b3d87e86fc0ef6e6aae546034810d475c5f58ff9ce8835b0e4",
+        "byteLength": 230
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "19e835e265d2c4b4060c9ea60c87567b10c6298920d29f1e2211dcf1ae41d4fa",
+        "byteLength": 520
+      },
+      {
+        "path": "vite.qualification.config.ts",
+        "sha256": "437b2a1e74f45bb83c91e8a62a200b821ad75045c44abda7536447d0540727a2",
+        "byteLength": 647
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "8e5792a0c9195f2d92033ff8357a77b655b011415cd01bc20c2bb76f4ba517d0",
+        "byteLength": 1027
+      }
+    ]
+  },
+  "changedBindings": [
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-11",
+      "previousSha256": "15447697ea2f0af02ddba74045efdb40564ac957ca7b7ab6630e529039ba5b31",
+      "currentSha256": "25403963b3421d09a9562c002d68888ad5479caeeda88c0a94519db655140a66"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-workflow",
+      "previousSha256": "e0edff2d4b82bcdcd33184e5f46803829e2c90532928e01078373cb94e41a765",
+      "currentSha256": "f1c9ad391d695a2cd81c23e265bdda13908e503c04c5c3bd5915c0fec3abc3fc"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-github-harness",
+      "previousSha256": "d30ffca71c2ad2dd21a559ca27b1b739bb418488c7b69a76abdc07bfeb3158b0",
+      "currentSha256": "fd792b1906518e49c32ee6dae71d8e43de13ccae49f7c932b42aee427939281a"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-clean-fragment-selector",
+      "previousSha256": "9683ac1b13d2c7fc32aa7580a6623a0857e1747992ec51b899b43c7ec881a313",
+      "currentSha256": "007bcdec3703afb5e6705024ae834d00117bb1fc776f7e6a9e8a9baa3e24bee7"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "g1-v34-ubuntu-selector",
+      "previousSha256": "faf642ff5870a540e25db7e68251c4e43783585a7e132e2f50bba82541f4fae2",
+      "currentSha256": "26f5161e140b075be615a69393e57d7bb6b9e11ecab863815a9c3f158cd99c29"
+    },
+    {
+      "kind": "g1-bundle",
+      "id": "g1-candidate-bundle",
+      "previousSha256": "521b81d6fa3918b9f787e0917931db25b1c2d9f930d24ee83663c41cc80245fe",
+      "currentSha256": "bcc1dc7f07f252fa9db1906b5da0e77f60f0edb0b6cafb70e6e7f5d945e74da6"
+    },
+    {
+      "kind": "g1-bundle",
+      "id": "g1-qualification-harness-bundle",
+      "previousSha256": "fe4ea1d9388ff10673cc92495e86c524939a266540e82bc24277a63be493227d",
+      "currentSha256": "59cd4d650f14349dac25494d6e633ce0ad27a5b61b9a46ab348e9c190d094039"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "own-rust-cad-v30-evidence",
+      "previousSha256": null,
+      "currentSha256": "2ad3734f556c01825ba1da90fff0dd2790ffd89249e19ed49a3424e4e4aec353"
+    }
+  ],
+  "executionNotes": [
+    "This artifact records a new freeze, not an execution result. All 4740 units remain mandatory.",
+    "The workflow, GitHub harness, and two fragment helpers select v55 and are frozen inputs; no v54 fragment is imported.",
+    "No result artifact, test invocation, clean-run approval or production authorization is created by this script."
+  ]
+}

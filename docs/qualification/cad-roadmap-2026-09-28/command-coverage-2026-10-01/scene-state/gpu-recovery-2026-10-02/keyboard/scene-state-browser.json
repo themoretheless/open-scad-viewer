@@ -1,0 +1,17 @@
+{
+  "staleGpuInitialization": true,
+  "gpuRecovery": true,
+  "gpuActive": true,
+  "gpuChecks": 18,
+  "browser": "157.0.8081.0",
+  "keyboard": true,
+  "tabPresses": 1662,
+  "downloads": 19,
+  "groupCreateHistory": true,
+  "groupMoveHistory": true,
+  "groupDeleteHistory": true,
+  "sourceDeleteLocalized": true,
+  "lockedGroupDeleteLocalized": true,
+  "workspaceReload": true,
+  "finalReload": true
+}

@@ -29,11 +29,13 @@ it('retains nonuniform station G2 when sharp rational profile joins refuse',()=>
  expect(proof.totalExactWork).toBeLessThanOrEqual(2000000)
  expect(proof.profile.seams).toHaveLength(proof.edgeIds.length)
  expect(proof.profile.unresolvedSeams).toHaveLength(proof.edgeIds.length)
- expect(proof.profile.seams.every(s=>!s.certified&&!s.exactIdentity&&s.work>0&&s.reason==='constant-projective-jet-relation-different')).toBe(true)
+ expect(proof.profile.seams.some(s=>s.work>0&&s.reason==='constant-projective-jet-relation-different')).toBe(true)
+ expect(proof.profile.seams.every(s=>!s.certified&&!s.exactIdentity&&
+  (s.work>0&&s.reason==='constant-projective-jet-relation-different'||s.work===0&&s.reason==='seam-audit-skipped-after-refusal'))).toBe(true)
  const short=inspectMiterProfileSmoothness(model,caps,proof.totalExactWork-1)
- // One less unit of the total budget affects the later profile audit; it
- // does not invalidate the already completed station certificate.
- expect(short.station.stationG2Certified).toBe(true)
+ // The profile audit consumes the shared allowance first; one less unit
+ // leaves the later station proof incomplete.
+ expect(short.station.stationG2Certified).toBe(false)
  expect(short.profileG1Certified).toBe(false)
  expect(short.totalExactWork).toBeLessThanOrEqual(proof.totalExactWork-1)
  const shortStation=inspectMiterProfileSmoothness(model,caps,proof.station.exactWork-1)

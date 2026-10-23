@@ -1,0 +1,127 @@
+{
+  "scope": "finite UI scenarios; held dispatch proves lifecycle cancellation, not mid-kernel interruption latency",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "assertions": [
+        {
+          "case": "cartesian-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-auto-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-mapped-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "mapped-natural-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "authored-nonplanar-cap-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "embedding-budget-refusal",
+          "status": "refused"
+        },
+        {
+          "case": "solid-budget-refusal",
+          "status": "refused without publishing a body"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "superseded exact worker terminated"
+        },
+        {
+          "case": "solid-publication",
+          "status": "one retained six-face B-rep"
+        },
+        {
+          "case": "restore",
+          "status": "Solid restored after reload"
+        }
+      ],
+      "pageErrors": [],
+      "render": "headless CPU fallback; no GPU qualification",
+      "bodyText": "cancel-build.r\nSolid\nMesh\nПоиск действий\nCtrl K\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n// @rush/1\n// Authored nonplanar caps; UV trims are dimensionless. Coordinates are millimeters.\na = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,0],[0,1,0]],[[0.5,0,0.25],[0.5,1,0.25]],[[1,0,0],[1,1,0]]],weights: [[1,1],[1,1],[1,1]])\na0 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[0,0,0],[0.5,0,0.25],[1,0,0]],weights: [1,1,1])\na1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0,0],[1,1,0]],weights: [1,1])\na2 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[1,1,0],[0.5,1,0.25],[0,1,0]],weights: [1,1,1])\na3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1,0],[0,0,0]],weights: [1,1])\nb = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,1],[0,1,1]],[[0.5,0,1.25],[0.5,1,1.25]],[[1,0,1],[1,1,1]]],weights: [[1,1],[1,1],[1,1]])\nb0 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[0,0,1],[0.5,0,1.25],[1,0,1]],weights: [1,1,1])\nb1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0,1],[1,1,1]],weights: [1,1])\nb2 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[1,1,1],[0.5,1,1.25],[0,1,1]],weights: [1,1,1])\nb3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1,1],[0,0,1]],weights: [1,1])\ns0 = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,0],[0,0,1]],[[0.5,0,0.25],[0.5,0,1.25]],[[1,0,0],[1,0,1]]],weights: [[1,1],[1,1],[1,1]])\ns1 = nurbs_surface(degree_u: 1,degree_v: 1,knots_u: [0,0,1,1],knots_v: [0,0,1,1],control_points: [[[1,0,0],[1,0,1]],[[1,1,0],[1,1,1]]],weights: [[1,1],[1,1]])\ns2 = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[1,1,0],[1,1,1]],[[0.5,1,0.25],[0.5,1,1.25]],[[0,1,0],[0,1,1]]],weights: [[1,1],[1,1],[1,1]])\ns3 = nurbs_surface(degree_u: 1,degree_v: 1,knots_u: [0,0,1,1],knots_v: [0,0,1,1],control_points: [[[0,1,0],[0,1,1]],[[0,0,0],[0,0,1]]],weights: [[1,1],[1,1]])\nt0 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,0],[1,0]],weights: [1,1])\nt1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0],[1,1]],weights: [1,1])\nt2 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,1],[0,1]],weights: [1,1])\nt3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1],[0,0]],weights: [1,1])\nlimits = loft_embedding_limits()\nshow brep_capped_loft(start: [[a0,a1,a2,a3]],end: [[b0,b1,b2,b3]],sides: [[s0,s1,s2,s3]],cap_surfaces: [a,b],cap_trims: [[[t0,t1,t2,t3]],[[t0,t1,t2,t3]]],embedding_limits: limits,tolerance_uv: 0.000000001)\n\n// revised while Solid was building\n\n\nОбъекты 1\nТреугольники 4 796\nОбъём 1\nПлощадь 6,08\nГотово · 350 ms\nКлетка\nmm\ncm\nm\nin\nШейдер\nphong\npbr\nmatcap\ntoon\nunlit\nПресет\n— выбрать —\nDefault Plastic\nBrushed Metal\nMatte\nEmissive\nPlastic\nRubber\nGlass\nAnodized Aluminum\nТема\nDefault\nDark Contrast\nLight\nЦвет\nМеталл\nШерох.\nТени\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nNo compatible WebGPU adapter was found.\nПовторить запуск 3D\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n4 796 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nCPU · SVG\nManifold\n↶\n↷\nМышь\nИнструменты\n?\nГотовлю привязки к телам… Esc\nОбновляю отображение… Esc\nФайл\nСоздавать в \nБез группы\ncancel-build\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n83 FPS · 8.3 ms\nСцена\n1\ncancel-build\n◎\n✎\n×\nn19\nB-rep\n●\n◇\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "assertions": [
+        {
+          "case": "cartesian-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-auto-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-mapped-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "mapped-natural-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "authored-nonplanar-cap-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "embedding-budget-refusal",
+          "status": "refused"
+        },
+        {
+          "case": "solid-budget-refusal",
+          "status": "refused without publishing a body"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "superseded exact worker terminated"
+        },
+        {
+          "case": "solid-publication",
+          "status": "one retained six-face B-rep"
+        },
+        {
+          "case": "restore",
+          "status": "Solid restored after reload"
+        }
+      ],
+      "pageErrors": [],
+      "render": "headless CPU fallback; no GPU qualification",
+      "bodyText": "cancel-build.r\nSolid\nMesh\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n// @rush/1\n// Authored nonplanar caps; UV trims are dimensionless. Coordinates are millimeters.\na = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,0],[0,1,0]],[[0.5,0,0.25],[0.5,1,0.25]],[[1,0,0],[1,1,0]]],weights: [[1,1],[1,1],[1,1]])\na0 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[0,0,0],[0.5,0,0.25],[1,0,0]],weights: [1,1,1])\na1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0,0],[1,1,0]],weights: [1,1])\na2 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[1,1,0],[0.5,1,0.25],[0,1,0]],weights: [1,1,1])\na3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1,0],[0,0,0]],weights: [1,1])\nb = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,1],[0,1,1]],[[0.5,0,1.25],[0.5,1,1.25]],[[1,0,1],[1,1,1]]],weights: [[1,1],[1,1],[1,1]])\nb0 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[0,0,1],[0.5,0,1.25],[1,0,1]],weights: [1,1,1])\nb1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0,1],[1,1,1]],weights: [1,1])\nb2 = nurbs_curve(degree: 2,knots: [0,0,0,1,1,1],control_points: [[1,1,1],[0.5,1,1.25],[0,1,1]],weights: [1,1,1])\nb3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1,1],[0,0,1]],weights: [1,1])\ns0 = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[0,0,0],[0,0,1]],[[0.5,0,0.25],[0.5,0,1.25]],[[1,0,0],[1,0,1]]],weights: [[1,1],[1,1],[1,1]])\ns1 = nurbs_surface(degree_u: 1,degree_v: 1,knots_u: [0,0,1,1],knots_v: [0,0,1,1],control_points: [[[1,0,0],[1,0,1]],[[1,1,0],[1,1,1]]],weights: [[1,1],[1,1]])\ns2 = nurbs_surface(degree_u: 2,degree_v: 1,knots_u: [0,0,0,1,1,1],knots_v: [0,0,1,1],control_points: [[[1,1,0],[1,1,1]],[[0.5,1,0.25],[0.5,1,1.25]],[[0,1,0],[0,1,1]]],weights: [[1,1],[1,1],[1,1]])\ns3 = nurbs_surface(degree_u: 1,degree_v: 1,knots_u: [0,0,1,1],knots_v: [0,0,1,1],control_points: [[[0,1,0],[0,1,1]],[[0,0,0],[0,0,1]]],weights: [[1,1],[1,1]])\nt0 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,0],[1,0]],weights: [1,1])\nt1 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,0],[1,1]],weights: [1,1])\nt2 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[1,1],[0,1]],weights: [1,1])\nt3 = nurbs_curve(degree: 1,knots: [0,0,1,1],control_points: [[0,1],[0,0]],weights: [1,1])\nlimits = loft_embedding_limits()\nshow brep_capped_loft(start: [[a0,a1,a2,a3]],end: [[b0,b1,b2,b3]],sides: [[s0,s1,s2,s3]],cap_surfaces: [a,b],cap_trims: [[[t0,t1,t2,t3]],[[t0,t1,t2,t3]]],embedding_limits: limits,tolerance_uv: 0.000000001)\n\n// revised while Solid was building\n\n\nОбъекты 1\nТреугольники 4 796\nОбъём 1\nПлощадь 6,08\nГотово · 353 ms\nКлетка\nmm\ncm\nm\nin\nШейдер\nphong\npbr\nmatcap\ntoon\nunlit\nПресет\n— выбрать —\nDefault Plastic\nBrushed Metal\nMatte\nEmissive\nPlastic\nRubber\nGlass\nAnodized Aluminum\nТема\nDefault\nDark Contrast\nLight\nЦвет\nМеталл\nШерох.\nТени\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nNo compatible WebGPU adapter was found.\nПовторить запуск 3D\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n4 796 тр.\nCPU · SVG\nManifold\n↶\n↷\nМышь\nИнструменты\n?\nГотовлю привязки к телам… Esc\nОбновляю отображение… Esc\nФайл\nСоздавать в \nБез группы\ncancel-build\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n87 FPS · 8.3 ms\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ]
+}

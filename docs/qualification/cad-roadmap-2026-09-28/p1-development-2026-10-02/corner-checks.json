@@ -1,0 +1,16 @@
+{
+  "schema": "cad-p1-corner-extension/1",
+  "scope": "all eight axis-aligned cuboid corners, equal radius; general P1 incomplete",
+  "rustTestsPassed": 39,
+  "serviceStepAndPackingTestsPassed": 34,
+  "typecheckPassed": true,
+  "productionBuildPassed": true,
+  "distVerificationPassed": true,
+  "wasmSha256": "21a4f4375b4a292c3dd7c8b0471596742a44cf1bd62042f38870030fa3c696b2",
+  "wasmBytes": 9614435,
+  "independentStepCases": 48,
+  "independentStepPassed": true,
+  "maxBoundsErrorMm": 1.0000000116860974e-07,
+  "maxVolumeErrorMm3": 4.6331456360348966e-07,
+  "browserAllCornersVerified": false
+}

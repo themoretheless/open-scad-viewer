@@ -98,10 +98,7 @@ export function extractSemanticEdges(
 
 function validateIndices(indices: Uint32Array, vertexCount: number) {
   for (let i = 0; i < indices.length; i++) {
-    const index = indices[i]
-    if (index >= vertexCount) {
-      throw new RangeError(`triangleIndices contains out-of-range vertex index ${index}`)
-    }
+    validateVertexIndex(indices[i], vertexCount, 'triangleIndices')
   }
 }
 

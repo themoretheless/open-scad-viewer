@@ -91,3 +91,53 @@ fn certified_tessellation_has_typed_budget_mutation_and_sphere_successor() {
     assert!(sphere.surface_to_mesh_deviation_mm <= 0.1);
     assert!(sphere.tessellation.built.report.closed);
 }
+
+#[test]
+fn rotated_holed_concave_boolean_chains_preserve_volume_and_manifold_seams() {
+    let mut stock = brep_core::extrude_polygon_with_holes(
+        &[[3., 2.], [3., 5.], [0., 5.], [0., 0.], [5., 0.], [5., 2.]],
+        &[vec![[1., 1.], [1., 2.], [2., 2.], [2., 1.]]],
+        0.,
+        2.,
+    )
+    .unwrap();
+    let mut cutter = cuboid([0., 0., -1.], [2.5, 6., 3.]).unwrap();
+    let (sin, cos) = 0.37_f64.sin_cos();
+    let rotate = |p: &mut [f64]| {
+        let x = p[0];
+        let y = p[1];
+        p[0] = cos * x - sin * y;
+        p[1] = sin * x + cos * y;
+    };
+    for model in [&mut stock, &mut cutter] {
+        for vertex in &mut model.0.vertices {
+            rotate(&mut vertex.point);
+        }
+        for edge in &mut model.0.edges {
+            for p in &mut edge.curve.control_points {
+                rotate(p);
+            }
+        }
+        for face in &mut model.0.faces {
+            for row in &mut face.surface.control_points {
+                for p in row {
+                    rotate(p);
+                }
+            }
+        }
+    }
+    for (operation, volume, next_volume) in [
+        ("intersection", 23., 60.),
+        ("difference", 13., 73.),
+        ("union", 73., 73.),
+    ] {
+        let result = brep_core::boolean(&stock, &cutter, operation).unwrap();
+        let mesh = nurbs(&result, 2).unwrap();
+        assert!(mesh.built.report.closed, "{operation}");
+        assert!((mesh.built.report.signed_volume_mm3 - volume).abs() < 1e-6);
+        let again = brep_core::boolean(&result, &cutter, "union").unwrap();
+        let mesh = nurbs(&again, 2).unwrap();
+        assert!(mesh.built.report.closed);
+        assert!((mesh.built.report.signed_volume_mm3 - next_volume).abs() < 1e-6);
+    }
+}

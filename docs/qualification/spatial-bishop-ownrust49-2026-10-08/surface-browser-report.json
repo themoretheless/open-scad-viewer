@@ -1,0 +1,36 @@
+{
+  "schema": "spatial-bishop-browser/1",
+  "scope": "Finite spatial G2 surface Rush rendering and typed scale refusal; no closed Solid shell proof.",
+  "geometryWasmSha256": "1d13d91300a279b45cbcf552ee41369262f19bfc109a3d31f5ccaed325774676",
+  "distIndexSha256": "d4e5f3b44b80e6c0b0e13c98c336588ae3df416cad500c9d6c42130ecd8c0fc4",
+  "selectionCatalogSha256": "b9807444c644d3342922cbf557b0fd684c80ee5d7de00b10c1942ad92f012f15",
+  "cases": [
+    {
+      "width": 1440,
+      "file": "spatial-bishop-g2-surface-6.r",
+      "sourceSha256": "65f1ef34aef7d0d10375b92acd152db8648d26ef6f749ffea6fe67ec79acf695",
+      "checks": [
+        "spatial-rush-build",
+        "mesh-svg-1024-faces",
+        "invalid-scale-refusal",
+        "fresh-success-after-refusal"
+      ],
+      "errors": [],
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "file": "spatial-bishop-g2-surface-6.r",
+      "sourceSha256": "65f1ef34aef7d0d10375b92acd152db8648d26ef6f749ffea6fe67ec79acf695",
+      "checks": [
+        "spatial-rush-build",
+        "mesh-svg-1024-faces",
+        "invalid-scale-refusal",
+        "fresh-success-after-refusal"
+      ],
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "browser": "151.0.7922.34"
+}

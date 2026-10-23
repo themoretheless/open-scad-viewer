@@ -1,0 +1,14 @@
+{
+  "schema": "cad-p1-circular-sheet/1",
+  "rustTestsPassed": 6,
+  "nativeSheetValidation": "one open shell, no body, explicit pole edge and agreeing UV loop; claiming a volume body refuses",
+  "independentOracle": "OpenCascade 8 via cadquery-ocp",
+  "independentCases": 9,
+  "independentOpenFaceValidityPassed": true,
+  "maxPointErrorMm": 1.4210854715202004e-14,
+  "maxNormalAlignmentError": 4.440892098500626e-16,
+  "independentScope": "OCCT constructs faces from NURBS surfaces; native coedge import and sewn-solid validity not checked",
+  "solidTrimmingAndSewImplemented": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}

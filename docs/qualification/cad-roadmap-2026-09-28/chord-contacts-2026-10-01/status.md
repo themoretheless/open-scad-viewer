@@ -1,0 +1,11 @@
+# Represented chord contacts and repeated traversals
+
+Source implementation adds exact binary64 orientation fallback, shared endpoint and interior contacts, collinear overlap splitting, directed source occurrence retention, and cancellation of opposite passes before fill classification. NonZero and EvenOdd retain their distinct winding behavior. Retraced spikes and bridges do not add filled boundaries.
+
+Qualification: 212 native unit tests and 1 doctest passed, including 32 chord tests; TypeScript checking passed; 3 diagnostics service tests passed; diff whitespace check passed.
+
+Scope remains represented reconstructed chord geometry. Original rational offset topology is not certified. Multiway coincident proper crossings remain outside qualified support.
+
+The updated optimized browser WASM is 9,494,753 bytes. Real-worker/service qualification passed 21 tests, including diagonal overlap, exact interior contact versus a separated chord, large-coordinate translation, and bounded incomplete enumeration. The browser-new-wasm scenario passed twenty constructions, keyboard history/export activation, full undo/redo, reload, late reply cancellation/document replacement and error recovery. Preview screenshot was inspected. Distribution verification passed: 135 artifacts, 18,679,023 total bytes. All 732 CAD regression tests in 62 files passed (62.54 seconds). Mixed-part keyboard browser qualification passed: bracket, enclosure and flange each completed 20 edits (Push/Pull, Boolean, transform and admitted fillet), full undo/redo and reload; dimensional bounds and topology identities were checked against fixture expectations after each edit. The mixed run began on the previous distribution; later reloads used the rebuilt distribution. This supports the exercised modeling/history classes, not arbitrary fillets or the full P0 matrix. Selected snapshots and an SHA256 manifest retain evidence; all snapshots remain in the local qualification directory.
+
+Current-chain browser reinspection passed with one proper crossing. An independent Python Fraction calculation on the 121 represented binary64 segments confirmed the pair [2,118] (current-chain-oracle.json). The old fixed expectation of four crossings is now an explicit fixture argument. Escape and coordinate edits clear the diagnostic result and late held replies cannot restore it.

@@ -1,0 +1,187 @@
+{
+  "allFacesInjective": true,
+  "allPairsClassified": true,
+  "boundaryEmbeddingCertified": true,
+  "caps": [
+    {
+      "allowedBoundaries": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          7
+        ],
+        [
+          3,
+          10
+        ]
+      ],
+      "capCertified": true,
+      "face": 4,
+      "planarControlHullCertified": true,
+      "reason": null,
+      "unresolvedWalls": []
+    },
+    {
+      "allowedBoundaries": [
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          9
+        ],
+        [
+          3,
+          11
+        ]
+      ],
+      "capCertified": true,
+      "face": 5,
+      "planarControlHullCertified": true,
+      "reason": null,
+      "unresolvedWalls": []
+    }
+  ],
+  "exactBoundaryCertified": true,
+  "linearCells": 120,
+  "nextPair": null,
+  "pairs": [
+    {
+      "allowedBoundary": true,
+      "faces": [
+        0,
+        1
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": false,
+      "faces": [
+        0,
+        2
+      ],
+      "reason": "pair-disjoint"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        0,
+        3
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        0,
+        4
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        0,
+        5
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        1,
+        2
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": false,
+      "faces": [
+        1,
+        3
+      ],
+      "reason": "pair-disjoint"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        1,
+        4
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        1,
+        5
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        2,
+        3
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        2,
+        4
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        2,
+        5
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        3,
+        4
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": true,
+      "faces": [
+        3,
+        5
+      ],
+      "reason": "shared-boundary"
+    },
+    {
+      "allowedBoundary": false,
+      "faces": [
+        4,
+        5
+      ],
+      "reason": "pair-disjoint"
+    }
+  ],
+  "solidGeometryCertified": false,
+  "spans": 10,
+  "totalPairs": 15,
+  "trimCertified": true,
+  "unresolvedFaces": []
+}

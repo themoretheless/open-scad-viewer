@@ -1,0 +1,104 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "focused_integration": {
+    "passed": 91,
+    "failed": 0,
+    "log": "focused.log"
+  },
+  "cad_predicates_library": {
+    "passed": 61,
+    "failed": 0,
+    "log": "predicates.log"
+  },
+  "corruption_replay": {
+    "passed": 1,
+    "failed": 0,
+    "log": "replay.log"
+  },
+  "nurbs_library": {
+    "passed": 1371,
+    "failed": 0,
+    "log": "full-nurbs-library.log"
+  },
+  "wasm": "both crates pass",
+  "full_integration_snapshot": {
+    "suites": 194,
+    "passed": 952,
+    "failed": 0,
+    "ignored": 0,
+    "exit_code": 0,
+    "scope": "Complete integration snapshot built before projective correspondence changes; new runtime covered by later focused/library gates",
+    "log": "../nurbs-ss-fiber-atlas-2026-10-16/full-integration.log"
+  },
+  "source_sha256": {
+    "crates/cad-predicates/src/bezier_projective_correspondence.rs": "5621db47ae1ce75f15b13ea4f48d675951eda47210ca87f52c56f2008ab40416",
+    "crates/nurbs-core/src/trim/periodic_trim/coherent/projective.rs": "46fe92b43bf6ffeeb8e01074959459fa102d8df59f3813058a36edda00485672",
+    "crates/nurbs-core/src/trim/periodic_trim/coherent.rs": "7d69b663d3e869dc9979fc04b8529c14eb6016f902137f53442083ad361a44a0",
+    "crates/nurbs-core/tests/periodic_projective_correspondence.rs": "a01ae02b79731dddec0db271f9a4736e6c851d6f31c02ac950b4dc051475c603",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "d7a1fab85608a595395d3122fcf386768531c36be1f6176867003aa8e6e4896c",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "7b82027773500825c490b7e7b8e0f0e481dee5fe0c0de2e7c8fe645ef1ce37ad",
+    "crates/brep-core/src/profile_certificate/winding/periodic/coherent.rs": "0424debef64e9aa7e263719ae52884999907b46278ce868e36e30567e3dec023",
+    "crates/brep-core/tests/periodic_projective_regions.rs": "d77cb32db67c96a771b31d9b7e71c0f697542e968db3c02ca40e0b08bda910e3"
+  },
+  "scope": [
+    "original rational Bezier full source curves, degrees1..32",
+    "positive global fractional-linear map; optional reverse",
+    "paired complete Bezier seam partitions, at most256 pieces",
+    "exact global endpoint map and local restricted factors",
+    "separate owned synchronized homotopy receipt with fresh shared-work replay",
+    "representative isotopy and full original winding retained",
+    "weighted candidate graph compaction binds actual source/piece references and retained raw curves, preserving signed multiplicity",
+    "owned B-rep source proof kind retained and freshly checked through nonzero regions, actual-support binding and owned faces; exact nonlinear seam case gives2 faces/1 shared shore, original surface unchanged"
+  ],
+  "remaining": [
+    "general nonlinear multi-span original source family correspondence",
+    "general inter-wire contact regularization",
+    "NURBS-0030 physical SS branch graphs/world traces/trim ownership"
+  ],
+  "former_boolean_failures": {
+    "passed": 3,
+    "failed": 0,
+    "log": "boolean.log"
+  },
+  "weighted_integration": {
+    "passed": 21,
+    "failed": 0,
+    "log": "weighted.log",
+    "note": "supersedes same 21 cases inside earlier 91 focused checks; do not double count"
+  },
+  "final_projective_tests": {
+    "passed": 6,
+    "failed": 0,
+    "log": "final-projective-tests.log",
+    "note": "same six projective cases after retained raw source references and signed cancellation assertions; supersedes earlier six"
+  },
+  "doctests": {
+    "passed": 2,
+    "failed": 0,
+    "log": "doctests.log"
+  },
+  "brep_periodic": {
+    "passed": 17,
+    "failed": 0,
+    "log": "brep-periodic.log",
+    "scope": "after weighted graph change, before projective B-rep source proof kind"
+  },
+  "brep_regions": {
+    "passed": 19,
+    "failed": 0,
+    "log": "brep-regions.log",
+    "scope": "two new region/face cases plus17 existing periodic regions and actual-support cases; supersedes earlier17"
+  },
+  "brep_replay": {
+    "passed": 2,
+    "failed": 0,
+    "log": "brep-replay.log"
+  }
+}

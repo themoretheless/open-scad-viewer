@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original unique stock-cylinder intersections, blank material side, implicit source derivatives and stock-trimmed NURBS fits with replayable continuous error; not a complete wheel",
+  "tests": {
+    "native-tests": {
+      "passed": 17,
+      "failed_summaries": 0
+    },
+    "boolean-tests": {
+      "passed": 3,
+      "failed_summaries": 0
+    },
+    "uv-simplicity-tests": {
+      "passed": 3,
+      "failed_summaries": 0
+    },
+    "current-focused-tests": {
+      "passed": 21,
+      "failed_summaries": 0
+    },
+    "implicit-math-tests": {
+      "passed": 2,
+      "failed_summaries": 0
+    },
+    "final-prepared-tests": {
+      "passed": 23,
+      "failed_summaries": 0
+    },
+    "final-math-tests": {
+      "passed": 2,
+      "failed_summaries": 0
+    },
+    "full-core-recheck": {
+      "passed": 1943,
+      "failed": 0,
+      "ignored": 0
+    },
+    "full-brep-tests": {
+      "passed": 1305,
+      "failed": 0,
+      "ignored": 3
+    }
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "076eddb80ff052e15e024c05482f416f46a31f545d1e892d050bd75f08324a43",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/stock.rs": "8ed2f0e35c928a33d945ca01131c30385a95711df2d7397ec237f67419346e7a",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs": "db329de894b4d77629675b62a86f295f0eb259b417915bb40d7c74ccdfc5b0ae",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/expression.rs": "df71bc6a301d3935187c96fdeaefc935fd01e23c0261a5ddb15a7d8b2538d42f",
+    "crates/nurbs-core/tests/worm_wheel_stock.rs": "08621dedb6437c1a4b1aeb574ec12d1ede157b1e1cbf939aa5b94fdf1cba645f",
+    "crates/nurbs-core/tests/uv_simplicity.rs": "6c2cb2bfd31280343cc81c0fb3c7e05d14e38e75b3c794432c2efdb6840558f5",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/taylor.rs": "7f116b39a289611b94d5d2c1abd8e4013b2b3863a227d59d10ff8ba4d0d5b262",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs": "34b9791f2e06afb5e4fcea9187ae88347bc3096db32e294475a499ead0ce9455",
+    "crates/nurbs-core/src/domains.rs": "d1b72cfec1434c92ba9fe502c889635e0af49287c73621a3efb86bd2aac59220",
+    "docs/design/nurbs-api-domains.json": "40f0bff87273a30ebc61304e9b97983e02adf470ec98cc2071bcfb4bb305a4f4"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "full_native_status": "passed compiled snapshots: 1941 core + 1305 B-rep native tests; 2 core doctests; 3 explicitly ignored B-rep diagnostics",
+  "limits": [
+    "No swept-cutter admissibility proof or complete generated root transitions",
+    "No stock-tip/axial boundary or closed replicated worm-wheel body",
+    "General surface intersections and periodic owned faces remain planned",
+    "Full suite evidence is a compiled snapshot; final focused and WASM gates cover newer stock-source changes"
+  ],
+  "api_map_public_modules": 182,
+  "wasm_check": "passed",
+  "full_core_status": "passed compiled snapshot: 1941 native tests and 2 doctests; newer stock-chart changes independently pass current focused and implicit math checks",
+  "stock_contact_angle_example": [
+    -0.15,
+    0.15
+  ],
+  "maximum_angular_sign_cells": 16,
+  "current_focused_status": "passed: 23 integration, 2 Taylor math and 3 Boolean checks",
+  "examples": [
+    {
+      "case": "default descending flank beta [-0.01,0.01]",
+      "tolerance": 0.001,
+      "quintic_cells": 2,
+      "packed_surfaces": 1,
+      "error_upper": 2.3910317955793932e-08
+    },
+    {
+      "case": "default ascending flank beta [-0.01,0.01]",
+      "tolerance": 0.001,
+      "quintic_cells": 2,
+      "packed_surfaces": 1,
+      "error_upper": 2.2937546534879198e-08
+    },
+    {
+      "case": "left two-start original start 1 ascending beta [-0.15,0.15]",
+      "tolerance": 0.0001,
+      "quintic_cells": 64,
+      "packed_surfaces": 4,
+      "error_upper": 4.4763921189421845e-09
+    }
+  ],
+  "maximum_derivative_rectangles": 65536,
+  "full_native_tests_passed": 3246,
+  "doctests_passed": 2,
+  "focused_tests_passed": 28,
+  "ignored_diagnostics": 3,
+  "static_checks": {
+    "rustfmt": "passed explicit changed files",
+    "api_map": "passed 182 public modules",
+    "catalog_audit": "passed 197 implemented, 3 planned"
+  }
+}

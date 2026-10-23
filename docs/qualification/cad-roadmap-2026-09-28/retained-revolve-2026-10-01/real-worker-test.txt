@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 14 skipped (15)
+   Start at  16:34:45
+   Duration  1.13s (transform 579ms, setup 0ms, import 683ms, tests 358ms, environment 0ms)

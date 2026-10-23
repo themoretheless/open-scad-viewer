@@ -1,3 +1,4 @@
+export { brepCapability, assertBrepCapabilityAllowsTopology, assertNoManifoldFallbackOnBrepFailure } from './brepCapability/brepCapability'
 /** Honest B-rep capability maturity for WASM / MCP / SemanticProgram seams. */
 
 export type BrepCapabilityMaturity =
@@ -230,8 +231,8 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'exact-variable-radius-fillet/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
-    notes: 'Exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face; constant-radius substitution and valence-3 networks remain typed-refuse',
-    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1-qualified.json',
+    notes: 'Exact linear cross-section radius law on one straight edge of an audited orthogonal cuboid under rigid placement; rational conical patch. General rolling-ball envelopes, constant-radius substitution and corner networks remain outside this cell.',
+    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1-rigid-qualified.json',
   }),
   Object.freeze({
     id: 'exact-parallel-frame-sweep/1',
@@ -514,27 +515,3 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     qualificationPlan: 'docs/qualification/plans/exact-layered-prism-edge-fillet-1.json',
   }),
 ])
-
-export function brepCapability(id: string): BrepCapabilityDescriptor | undefined {
-  return BREP_CAPABILITY_MATRIX.find(entry => entry.id === id)
-}
-
-export function assertBrepCapabilityAllowsTopology(id: string): void {
-  const entry = brepCapability(id)
-  if (!entry) throw new Error(`Unknown B-rep capability: ${id}`)
-  if (entry.maturity === 'Unavailable' || entry.maturity === 'ResearchOnly') {
-    throw new Error(`B-rep capability ${id} is ${entry.maturity}; refuse topology change`)
-  }
-  if (!entry.permitsTopologyChange) {
-    throw new Error(`B-rep capability ${id} does not permit topology change`)
-  }
-}
-
-/** Rollback drill: revoked / stale LKG must not fall through to Manifold. */
-export function assertNoManifoldFallbackOnBrepFailure(capabilityId: string): void {
-  const entry = brepCapability(capabilityId)
-  if (!entry) throw new Error(`Unknown B-rep capability: ${capabilityId}`)
-  if (entry.maturity === 'Unavailable') {
-    throw new Error(`B-rep capability ${capabilityId} unavailable; refuse Manifold cross-route`)
-  }
-}

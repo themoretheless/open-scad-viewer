@@ -47,6 +47,9 @@ pub fn certify_seam_glued_rectangle(
     let mut report = Report {
         proven: false,
         projection: None,
+        linear_projection: None,
+        projective_projection: None,
+        polar_projection: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",

@@ -1,0 +1,31 @@
+{
+  keyboard: true,
+  tabs: 658,
+  gpuActive: true,
+  reloadExact: true,
+  browser: '157.0.8081.0',
+  faceA: 9,
+  faceB: 0,
+  expectedMm: 2.1360009363293826,
+  displayedIntervalMm: [ 2.13600023408, 2.13691566721 ],
+  nativeResult: {
+    cells: 41,
+    converged: true,
+    distanceIntervalMm: [ 2.136000234083315, 2.136915667206546 ],
+    domainCells: 1461,
+    maxCells: 100000,
+    maxDomainCells: 8000000,
+    method: 'interval-trimmed-surface-subdivision',
+    parameters: [ [Array], [Array] ],
+    pointEnclosures: [ [Array], [Array] ],
+    points: [ [Array], [Array] ],
+    reason: 'tolerance',
+    scope: 'trimmed-surfaces-bounded-joins',
+    toleranceMm: 0.001,
+    toleranceUv: 1e-7
+  },
+  requests: 6,
+  cancelledWorkerTerminated: true,
+  invalidFaceLocalized: true,
+  documentUnchanged: true
+}

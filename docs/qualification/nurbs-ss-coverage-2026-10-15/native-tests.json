@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-15",
+  "passed": true,
+  "tests": {
+    "nurbsCore": 7,
+    "brepAdmission": 8
+  },
+  "scope": "Partial original-source SS reductions, explicit unproved coverage, structural query adapters and tolerance-context lineage",
+  "generalSurfaceSurfaceComplete": false,
+  "topologyAuthorship": false,
+  "semanticProofReplayedByWireValidator": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "163d7a2c41dcb660cf43a3854fb819bcd4932491284ea03847f4e231a4613716",
+    "crates/nurbs-core/src/intersection/ss_intersection/rectilinear.rs": "2231bf3c95cd36239fcd24750bf8292d8cf5bf25e936306e0f04804abcb3368e",
+    "crates/nurbs-core/src/intersection/ss_intersection/report.rs": "1a6e106427faabfbe18b697a0f7726dd6edd991498c6c8f3f50706f5f9691bd5",
+    "crates/nurbs-core/src/intersection/ss_intersection/serialization.rs": "10c24b711b64fe017906d9ad14c8466d132add2f4be8dd952a625366e34403b0",
+    "crates/nurbs-core/tests/ss_coverage.rs": "01eaf98b2b3879274a5a1aebba3d51b57a8bb577b894535deed900dbc5dce323",
+    "crates/brep-core/src/nurbs_ss_general.rs": "a288b4410c840e46bfe14db7e4e713890b1e9a15d084efa28935a022057f74bd",
+    "crates/brep-core/src/nurbs_ss_general/serialization.rs": "5e890ab5561e01cfd970abf118312fa4eae098e88ec99ede4220e9ea0ff67619",
+    "crates/brep-core/tests/ss_report_admission.rs": "1a37a64d559602a4701a956dc3b25a84680bda24b160a8aed576b725ded94e05"
+  },
+  "postVerificationDocumentationOnly": {
+    "file": "crates/brep-core/src/nurbs_ss_general.rs",
+    "currentSha256": "6d09e268a70c1bd126175b24b4ae9ab5ba0af8c8d062a17de1bd6a4d291fe38e",
+    "change": "Clarify structural scope; no behavior change"
+  }
+}

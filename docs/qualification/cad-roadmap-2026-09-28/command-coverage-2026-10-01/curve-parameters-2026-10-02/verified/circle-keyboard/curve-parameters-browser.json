@@ -1,0 +1,22 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-BWTHPtJN.js",
+      "sha256": "759498bf6a25dc961a8ade40f40fc2082ffd65b056d0943fd61eb47c0a7b5754"
+    },
+    "wasmSha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe",
+    "sourceSha256": "c4fcc570b7063459c5974527e864f5ca6381daba0cb4002375e29346e146afac"
+  },
+  "browser": "157.0.8081.0",
+  "arc": false,
+  "keyboard": true,
+  "tabPresses": 400,
+  "invalidRadius": true,
+  "invalidArcSweep": false,
+  "invalidSweepNoDispatch": false,
+  "cancel": true,
+  "undoRedo": true,
+  "reloadExact": true,
+  "exactParameters": true,
+  "independentPointToleranceMm": 1e-9
+}

@@ -14,7 +14,8 @@ ALLOWED = {
     "compute-cuda": {"gpu-compute", "tensor-core"},
     "compute-mlx": {"tensor-core"},
     "raster-core": {"gpu-compute"},
-    "osv-math": {"compute-core", "gpu-compute", "tensor-core", "compute-cuda", "compute-mlx"},
+    "osv-math": set(),
+    "osv-math-compute": {"osv-math", "compute-core", "gpu-compute", "tensor-core", "compute-cuda", "compute-mlx"},
 }
 
 
@@ -37,7 +38,7 @@ def main():
             target = dependency["name"]
             if target in ALLOWED and target not in allowed:
                 problems.append(f"{name} must not depend on {target}")
-            if name == "osv-math" and target in allowed and not dependency["optional"]:
+            if name == "osv-math-compute" and target in allowed - {"osv-math"} and not dependency["optional"]:
                 problems.append(f"{name} -> {target} must remain optional")
     def normal_dependencies(name, *features):
         tree = cargo(
@@ -59,9 +60,9 @@ def main():
     # defeat independent backend loading and the small tensor contract crate.
     for dependency in sorted(normal_dependencies("compute-mlx") & (gpu_dependencies - {"compute-mlx"})):
         problems.append(f"MLX adapter unexpectedly includes {dependency}")
-    for dependency in sorted(normal_dependencies("osv-math", "--features", "tensor") & gpu_dependencies):
+    for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor") & gpu_dependencies):
         problems.append(f"Tensor geometry contracts unexpectedly include {dependency}")
-    for dependency in sorted(normal_dependencies("osv-math", "--features", "tensor-mlx") & (gpu_dependencies - {"compute-mlx"})):
+    for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor-mlx") & (gpu_dependencies - {"compute-mlx"})):
         problems.append(f"MLX-only tensor geometry unexpectedly includes {dependency}")
     if problems:
         print("\n".join(problems), file=sys.stderr)

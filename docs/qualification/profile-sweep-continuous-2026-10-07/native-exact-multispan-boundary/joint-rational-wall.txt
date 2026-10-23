@@ -1,0 +1,262 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unused import: `Expansion`
+ --> cad-predicates/src/line_chart_identity.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, ParameterDecision, ParameterIdentity,
+  |                              ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Expansion`
+ --> cad-predicates/src/quadratic_curve_separator.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, PredicateContext, Reason, Sign,
+  |                              ^^^^^^^^^
+
+warning: `cad-predicates` (lib) generated 2 warnings (run `cargo fix --lib -p cad-predicates` to apply 2 suggestions)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3251:4
+     |
+3251 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3252:4
+     |
+3252 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3256:4
+     |
+3256 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3260:4
+     |
+3260 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `DistanceStopReason` is never used
+   --> nurbs-core/src/distance_bounds.rs:106:10
+    |
+106 | pub enum DistanceStopReason {
+    |          ^^^^^^^^^^^^^^^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/gordon_tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: `nurbs-core` (lib) generated 7 warnings
+   Compiling brep-core v0.1.0 (/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/brep-core)
+warning: function `progressive_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:562:8
+    |
+562 | pub fn progressive_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `progressive_affine_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:572:8
+    |
+572 | pub fn progressive_affine_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_authored_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:596:8
+    |
+596 | pub fn progressive_authored_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_guided_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:622:8
+    |
+622 | pub fn progressive_guided_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_body_laws` is never used
+   --> brep-core/src/analytic/rational_loft.rs:645:4
+    |
+645 | fn progressive_body_laws(
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:176:8
+    |
+176 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:182:8
+    |
+182 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:193:8
+    |
+193 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:232:8
+    |
+232 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `brep-core` (lib) generated 9 warnings
+warning: function `law` is never used
+  --> brep-core/tests/rational_section_loft.rs:87:4
+   |
+87 | fn law(a: f64, b: f64) -> Curve {
+   |    ^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `brep-core` (test "rational_section_loft") generated 1 warning
+warning: `brep-core` (lib test) generated 9 warnings (9 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.78s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/4214d529fd646c3b/out/brep_core-4214d529fd646c3b)
+
+running 1 test
+test analytic::rational_loft::nonuniform_wall_regression::retained_multispan_wall_edges_reverse_knots_with_their_controls ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 933 filtered out; finished in 0.07s
+
+     Running tests/arbitrary_axis_boolean.rs (crates/target/debug/build/brep-core/0a27a5c3534c2f72/out/arbitrary_axis_boolean-0a27a5c3534c2f72)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/curved_boolean_audit.rs (crates/target/debug/build/brep-core/4ecb73a939d78fbf/out/curved_boolean_audit-4ecb73a939d78fbf)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/guided_loft_step.rs (crates/target/debug/build/brep-core/0f01f150ab94a07c/out/guided_loft_step-0f01f150ab94a07c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/identity_decode.rs (crates/target/debug/build/brep-core/5cca6a1c67b965d6/out/identity_decode-5cca6a1c67b965d6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/mass_properties_audit.rs (crates/target/debug/build/brep-core/826779a56e4460e8/out/mass_properties_audit-826779a56e4460e8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/mass_serialized_boolean.rs (crates/target/debug/build/brep-core/5d7e2ea983593657/out/mass_serialized_boolean-5d7e2ea983593657)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/nonplanar_loft_caps.rs (crates/target/debug/build/brep-core/96518f1c19b798ff/out/nonplanar_loft_caps-96518f1c19b798ff)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/planar_edit_review.rs (crates/target/debug/build/brep-core/bb78ab9493f76b7f/out/planar_edit_review-bb78ab9493f76b7f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/prism.rs (crates/target/debug/build/brep-core/b2a001b78101c50c/out/prism-b2a001b78101c50c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/prism_frame.rs (crates/target/debug/build/brep-core/74cf411fbc9fc943/out/prism_frame-74cf411fbc9fc943)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/prism_intervals.rs (crates/target/debug/build/brep-core/e1a56802b5b31f14/out/prism_intervals-e1a56802b5b31f14)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/rational_section_loft.rs (crates/target/debug/build/brep-core/eb3ab34969fb58d4/out/rational_section_loft-eb3ab34969fb58d4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/regularized_boolean.rs (crates/target/debug/build/brep-core/3822d40520d3428b/out/regularized_boolean-3822d40520d3428b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/stepped_prism.rs (crates/target/debug/build/brep-core/0db2f405ed4da329/out/stepped_prism-0db2f405ed4da329)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running tests/stepped_prism_frame.rs (crates/target/debug/build/brep-core/a30ba251e6fc16e7/out/stepped_prism_frame-a30ba251e6fc16e7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/tolerant_ssi.rs (crates/target/debug/build/brep-core/d830b6a515886e45/out/tolerant_ssi-d830b6a515886e45)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/topology_identity.rs (crates/target/debug/build/brep-core/65079ddbf715b589/out/topology_identity-65079ddbf715b589)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+     Running tests/topology_transactions.rs (crates/target/debug/build/brep-core/f551a180d50cd153/out/topology_transactions-f551a180d50cd153)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/validation_sampler.rs (crates/target/debug/build/brep-core/c540953bffee2995/out/validation_sampler-c540953bffee2995)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+

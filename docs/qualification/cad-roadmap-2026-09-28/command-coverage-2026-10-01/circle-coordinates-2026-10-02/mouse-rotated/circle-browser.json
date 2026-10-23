@@ -1,0 +1,35 @@
+{
+  "browser": "157.0.8081.0",
+  "keyboard": false,
+  "tabs": 0,
+  "gpuActive": true,
+  "rotated": true,
+  "plane": {
+    "origin": [
+      5,
+      10,
+      15
+    ],
+    "u": [
+      0,
+      1,
+      0
+    ],
+    "v": [
+      0,
+      0,
+      1
+    ]
+  },
+  "exactCoordinates": true,
+  "invalidInput": true,
+  "invalidRadiusValues": [
+    "bad",
+    0,
+    -1,
+    1000001
+  ],
+  "cancelledDraftUnchanged": true,
+  "undoRedo": true,
+  "reloadExact": true
+}

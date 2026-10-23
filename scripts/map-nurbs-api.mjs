@@ -1,17 +1,32 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = p => readFileSync(resolve(root, p), 'utf8')
 const domains = JSON.parse(read('docs/design/nurbs-api-domains.json'))
-const source = read('crates/nurbs-core/src/lib.rs')
-const modules = [...source.matchAll(/^pub mod (\w+);/gm)].map(x => x[1]).filter(x => x !== 'domains')
-for (const match of source.matchAll(/^pub use ([^;]+);/gm)) {
-  const path = match[1]
-  if (path.startsWith('transport::') || path.startsWith('math_core::') || path === 'distance_bounds::DistanceStopReason') continue
-  const items = path.includes('{') ? path.split('{')[1].split('}')[0].split(',').map(x => x.trim()).filter(Boolean) : [path]
-  for (const item of items) modules.push(item.split(/\s+as\s+/).at(-1).split('::').at(-1))
-}
+const library = read('crates/nurbs-core/src/lib.rs').replace(/pub use ([\w:]+)::\{([^{}]+)\};/g,
+  (_, prefix, entries) => entries.split(',').map(entry => entry.trim()).filter(Boolean)
+    .map(entry => `pub use ${prefix}::${entry};`).join('\n'))
+// The catalog describes the compatibility API. Structural parents own the
+// moved modules; their public module re-exports retain the original flat API.
+const exports = [...library.matchAll(/^pub use ((?:crate::)?[\w:]+)(?: as (\w+))?;/gm)]
+const moduleExports = exports.filter(([_, path]) => {
+  const parts=path.replace(/^crate::/,'').split('::')
+  const source=parts.join('/'),name=parts.at(-1)
+  const parent='crates/nurbs-core/src/'+parts.slice(0,-1).join('/')
+  const parentFile=[parent+'.rs',parent+'/mod.rs'].find(p=>existsSync(resolve(root,p)))
+  const moduleExists=existsSync(resolve(root,'crates/nurbs-core/src',source+'.rs')) ||
+    existsSync(resolve(root,'crates/nurbs-core/src',source,'mod.rs'))
+  return moduleExists && !!parentFile &&
+    new RegExp(`\\bpub\\s+mod\\s+${name}\\s*[;{]`).test(read(parentFile))
+})
+const parents = new Set(moduleExports.map(([_, path]) => path.replace(/^crate::/, '').split('::')[0]))
+const catalogModules = new Set(Object.values(domains).flat())
+const modules = [...new Set([
+  ...[...library.matchAll(/^pub mod (\w+);/gm)].map(x => x[1]).filter(x => x !== 'domains' && (!parents.has(x) || catalogModules.has(x))),
+  ...moduleExports.map(([_, path, alias]) => alias ?? path.split('::').at(-1)),
+])]
+
 const owner = new Map()
 for (const [domain, names] of Object.entries(domains)) {
   for (const name of names) {
@@ -20,7 +35,8 @@ for (const [domain, names] of Object.entries(domains)) {
     owner.set(name, domain)
   }
 }
-for (const name of modules) if (!owner.has(name)) throw new Error(`Unassigned public module: ${name}`)
+const unassigned = modules.filter(name => !owner.has(name))
+if (unassigned.length) throw new Error(`Unassigned public modules: ${unassigned.join(', ')}`)
 const facade = read('crates/nurbs-core/src/domains.rs')
 for (const [domain, names] of Object.entries(domains)) {
   const block = facade.match(new RegExp(`pub mod ${domain} \\{([^}]+)\\}`))?.[1]

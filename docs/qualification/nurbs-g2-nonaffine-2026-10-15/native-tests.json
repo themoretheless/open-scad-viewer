@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "testsPassed": 7,
+  "testsFailed": 0,
+  "runtimeSeconds": 118.99,
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test surface_g2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/join/surface_g2.rs": "f89a6dc86609776aa567c37b57d467a06455988f2091ac4281b3ea7b2646bc35",
+    "crates/nurbs-core/tests/surface_g2.rs": "94313fb954e8d43129cb266324341c1e61a02e5f9c6169aa23290a7df195f69b"
+  },
+  "scope": "Original-surface continuous G2 bounds under supplied monotone piecewise affine maps and numerically inferred endpoint-fixed open-seam maps",
+  "closedPhaseInference": false,
+  "topologyAuthorship": false,
+  "wasmEditorStepQualified": false,
+  "priorBudgetProbe": {
+    "cells": 4000,
+    "tensorTolerance": 0.15,
+    "tensorUpper": 0.15059479070776655,
+    "decision": "Unresolved"
+  },
+  "finalVerificationBudget": 6000
+}

@@ -1,0 +1,2517 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-11",
+  "status": "passed",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml --workspace",
+  "exitCode": 0,
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "passed": 5697,
+  "failed": 0,
+  "ignored": 6,
+  "targetCount": 357,
+  "rawLog": {
+    "path": "docs/qualification/main-integration-20261010/native.log",
+    "sha256": "ad81a5d95cd3f7f6476fbeaccc2740959428e082434ec8166e4236447a040b09"
+  },
+  "targets": [
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/brep-core/bd6aaeb8263ff3d5/out/brep_core-bd6aaeb8263ff3d5)",
+      "passed": 1083,
+      "failed": 0,
+      "ignored": 4,
+      "seconds": 436.3
+    },
+    {
+      "target": "Running tests/arbitrary_axis_boolean.rs (crates/target/debug/build/brep-core/010334ea0e5afafa/out/arbitrary_axis_boolean-010334ea0e5afafa)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.18
+    },
+    {
+      "target": "Running tests/curved_boolean_audit.rs (crates/target/debug/build/brep-core/9fbac6186f49f9e2/out/curved_boolean_audit-9fbac6186f49f9e2)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 3.82
+    },
+    {
+      "target": "Running tests/dbg_fillet.rs (crates/target/debug/build/brep-core/673f12cc05df1ae4/out/dbg_fillet-673f12cc05df1ae4)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.26
+    },
+    {
+      "target": "Running tests/identity_decode.rs (crates/target/debug/build/brep-core/45dfc33f9a118a7d/out/identity_decode-45dfc33f9a118a7d)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running tests/intersection_engine_on_models.rs (crates/target/debug/build/brep-core/e991b846e76cacca/out/intersection_engine_on_models-e991b846e76cacca)",
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running tests/mass_properties_audit.rs (crates/target/debug/build/brep-core/7644eb10e260e143/out/mass_properties_audit-7644eb10e260e143)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 6.4
+    },
+    {
+      "target": "Running tests/mass_serialized_boolean.rs (crates/target/debug/build/brep-core/e3ecca2ed06bf23c/out/mass_serialized_boolean-e3ecca2ed06bf23c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 18.78
+    },
+    {
+      "target": "Running tests/planar_cap.rs (crates/target/debug/build/brep-core/8ac0379aa4d7428f/out/planar_cap-8ac0379aa4d7428f)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 12.55
+    },
+    {
+      "target": "Running tests/planar_edit_review.rs (crates/target/debug/build/brep-core/061b6323e27b4bb2/out/planar_edit_review-061b6323e27b4bb2)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.31
+    },
+    {
+      "target": "Running tests/prism.rs (crates/target/debug/build/brep-core/6397bb96134d16d3/out/prism-6397bb96134d16d3)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 11.38
+    },
+    {
+      "target": "Running tests/prism_frame.rs (crates/target/debug/build/brep-core/4a8e4b38eb179cc3/out/prism_frame-4a8e4b38eb179cc3)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.49
+    },
+    {
+      "target": "Running tests/prism_intervals.rs (crates/target/debug/build/brep-core/3a0b7a36e4efe83b/out/prism_intervals-3a0b7a36e4efe83b)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 3.63
+    },
+    {
+      "target": "Running tests/rack.rs (crates/target/debug/build/brep-core/3d1098172a76f53b/out/rack-3d1098172a76f53b)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.66
+    },
+    {
+      "target": "Running tests/regularized_boolean.rs (crates/target/debug/build/brep-core/41ef52a5254529bc/out/regularized_boolean-41ef52a5254529bc)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.58
+    },
+    {
+      "target": "Running tests/stepped_prism.rs (crates/target/debug/build/brep-core/87630fad8a382552/out/stepped_prism-87630fad8a382552)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 5.75
+    },
+    {
+      "target": "Running tests/stepped_prism_frame.rs (crates/target/debug/build/brep-core/030f6aaf4be4ea7a/out/stepped_prism_frame-030f6aaf4be4ea7a)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 5.42
+    },
+    {
+      "target": "Running tests/sweep_cap_contacts.rs (crates/target/debug/build/brep-core/43597df25303d1e1/out/sweep_cap_contacts-43597df25303d1e1)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.2
+    },
+    {
+      "target": "Running tests/sweep_retained_caps.rs (crates/target/debug/build/brep-core/78031fda3324ca09/out/sweep_retained_caps-78031fda3324ca09)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.12
+    },
+    {
+      "target": "Running tests/sweep_retained_walls.rs (crates/target/debug/build/brep-core/5c7f5b422aa47de3/out/sweep_retained_walls-5c7f5b422aa47de3)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/thread.rs (crates/target/debug/build/brep-core/5caa17540b121b20/out/thread-5caa17540b121b20)",
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 69.41
+    },
+    {
+      "target": "Running tests/tolerant_ssi.rs (crates/target/debug/build/brep-core/65ffa7dd97d975ea/out/tolerant_ssi-65ffa7dd97d975ea)",
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 233.86
+    },
+    {
+      "target": "Running tests/topology_identity.rs (crates/target/debug/build/brep-core/c233aafa5f991e64/out/topology_identity-c233aafa5f991e64)",
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.13
+    },
+    {
+      "target": "Running tests/topology_transactions.rs (crates/target/debug/build/brep-core/ba302505688756d1/out/topology_transactions-ba302505688756d1)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.23
+    },
+    {
+      "target": "Running tests/validation_sampler.rs (crates/target/debug/build/brep-core/80b0e497136abb0b/out/validation_sampler-80b0e497136abb0b)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.72
+    },
+    {
+      "target": "Running tests/watertight.rs (crates/target/debug/build/brep-core/3cc6e0df28e378e4/out/watertight-3cc6e0df28e378e4)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/brep-intersect/215c1a73946c9d8e/out/brep_intersect-215c1a73946c9d8e)",
+      "passed": 129,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.55
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/brep-topology/a9c47b51fdb169cf/out/brep_topology-a9c47b51fdb169cf)",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/exact_vertices.rs (crates/target/debug/build/brep-topology/9d68f21333be187d/out/exact_vertices-9d68f21333be187d)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/incremental_revalidation.rs (crates/target/debug/build/brep-topology/b9bc283545bbe41c/out/incremental_revalidation-b9bc283545bbe41c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.52
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/bridge-analysis/7e88c76558b1a4a2/out/bridge_analysis-7e88c76558b1a4a2)",
+      "passed": 21,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/bridge-cam/7b0e80a2b6e3cc7c/out/bridge_cam-7b0e80a2b6e3cc7c)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/bridge-codec/fa192c55034b0d85/out/bridge_codec-fa192c55034b0d85)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/bridge-svg/8b9a7f6c311ffdf7/out/bridge_svg-8b9a7f6c311ffdf7)",
+      "passed": 72,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.36
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/cad-predicates/88b4a62cf077612b/out/cad_predicates-88b4a62cf077612b)",
+      "passed": 47,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/construction3_recipes.rs (crates/target/debug/build/cad-predicates/d6d5968426a917df/out/construction3_recipes-d6d5968426a917df)",
+      "passed": 23,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.7
+    },
+    {
+      "target": "Running tests/construction_recipes.rs (crates/target/debug/build/cad-predicates/f396efd69dca5c01/out/construction_recipes-f396efd69dca5c01)",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "Running tests/independent_oracle.rs (crates/target/debug/build/cad-predicates/2adc54bd69ca2a2c/out/independent_oracle-2adc54bd69ca2a2c)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/cad-step/4360d5ad35438f0f/out/cad_step-4360d5ad35438f0f)",
+      "passed": 71,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 27.51
+    },
+    {
+      "target": "Running tests/analysis_freeform.rs (crates/target/debug/build/cad-step/acb3ef216cfa169a/out/analysis_freeform-acb3ef216cfa169a)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running tests/close_topology_interchange.rs (crates/target/debug/build/cad-step/65621430f926fc56/out/close_topology_interchange-65621430f926fc56)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.18
+    },
+    {
+      "target": "Running tests/guided_loft_step.rs (crates/target/debug/build/cad-step/b620cb7fe4f3a735/out/guided_loft_step-b620cb7fe4f3a735)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running tests/nonplanar_loft_caps.rs (crates/target/debug/build/cad-step/924c9fda965a93cd/out/nonplanar_loft_caps-924c9fda965a93cd)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.16
+    },
+    {
+      "target": "Running tests/prism_step.rs (crates/target/debug/build/cad-step/86181fd9a4af8182/out/prism_step-86181fd9a4af8182)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.16
+    },
+    {
+      "target": "Running tests/rational_section_loft.rs (crates/target/debug/build/cad-step/6352c206afa9fda1/out/rational_section_loft-6352c206afa9fda1)",
+      "passed": 20,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 8.79
+    },
+    {
+      "target": "Running tests/source_body_step.rs (crates/target/debug/build/cad-step/e3675ba5f0edde17/out/source_body_step-e3675ba5f0edde17)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.23
+    },
+    {
+      "target": "Running tests/source_exchange_step.rs (crates/target/debug/build/cad-step/163536e493206e71/out/source_exchange_step-163536e493206e71)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 7.47
+    },
+    {
+      "target": "Running tests/step_v1.rs (crates/target/debug/build/cad-step/be177e6a6f3bad1b/out/step_v1-be177e6a6f3bad1b)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/compute-core/d75940adf144f535/out/compute_core-d75940adf144f535)",
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.21
+    },
+    {
+      "target": "Running tests/batch.rs (crates/target/debug/build/compute-core/c6ba16e1cf539a51/out/batch-c6ba16e1cf539a51)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running tests/binary64.rs (crates/target/debug/build/compute-core/35ec8bdb422870da/out/binary64-35ec8bdb422870da)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.14
+    },
+    {
+      "target": "Running tests/contracts.rs (crates/target/debug/build/compute-core/2eb284bc1fbdc5c3/out/contracts-2eb284bc1fbdc5c3)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "Running tests/dot.rs (crates/target/debug/build/compute-core/82cf47f4b22cc001/out/dot-82cf47f4b22cc001)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.39
+    },
+    {
+      "target": "Running tests/evaluation.rs (crates/target/debug/build/compute-core/88e5a982a2e9528b/out/evaluation-88e5a982a2e9528b)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.39
+    },
+    {
+      "target": "Running tests/fused_sum.rs (crates/target/debug/build/compute-core/5116654d67209cd6/out/fused_sum-5116654d67209cd6)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.27
+    },
+    {
+      "target": "Running tests/fusion.rs (crates/target/debug/build/compute-core/615699750714435d/out/fusion-615699750714435d)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.61
+    },
+    {
+      "target": "Running tests/fusion_contract.rs (crates/target/debug/build/compute-core/c94226a0a151bfcb/out/fusion_contract-c94226a0a151bfcb)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running tests/kernels.rs (crates/target/debug/build/compute-core/a46b505a8e67075e/out/kernels-a46b505a8e67075e)",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.82
+    },
+    {
+      "target": "Running tests/matrix.rs (crates/target/debug/build/compute-core/1925ef04d9bd8985/out/matrix-1925ef04d9bd8985)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.58
+    },
+    {
+      "target": "Running tests/reduction.rs (crates/target/debug/build/compute-core/20de8dc158fa2b60/out/reduction-20de8dc158fa2b60)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 3.3
+    },
+    {
+      "target": "Running tests/runtime.rs (crates/target/debug/build/compute-core/7a7aeb0f6e617853/out/runtime-7a7aeb0f6e617853)",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.17
+    },
+    {
+      "target": "Running tests/selection.rs (crates/target/debug/build/compute-core/ad2da17e6fc277a2/out/selection-ad2da17e6fc277a2)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.55
+    },
+    {
+      "target": "Running tests/tensor.rs (crates/target/debug/build/compute-core/fe0c4bf7bf56189c/out/tensor-fe0c4bf7bf56189c)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.2
+    },
+    {
+      "target": "Running tests/tensor_attention.rs (crates/target/debug/build/compute-core/485c03c057d09a94/out/tensor_attention-485c03c057d09a94)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.24
+    },
+    {
+      "target": "Running tests/tensor_backend.rs (crates/target/debug/build/compute-core/50b335dc5146dbb0/out/tensor_backend-50b335dc5146dbb0)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running tests/tensor_convolution.rs (crates/target/debug/build/compute-core/d021e19a687ee402/out/tensor_convolution-d021e19a687ee402)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.3
+    },
+    {
+      "target": "Running tests/tensor_index.rs (crates/target/debug/build/compute-core/1105c623df93ed2a/out/tensor_index-1105c623df93ed2a)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.4
+    },
+    {
+      "target": "Running tests/tensor_low.rs (crates/target/debug/build/compute-core/e1f8cf8f01c1d1c8/out/tensor_low-e1f8cf8f01c1d1c8)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.46
+    },
+    {
+      "target": "Running tests/tensor_low_attention.rs (crates/target/debug/build/compute-core/501d5cead9b19fbb/out/tensor_low_attention-501d5cead9b19fbb)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.49
+    },
+    {
+      "target": "Running tests/tensor_low_index.rs (crates/target/debug/build/compute-core/e387f1f96ccac8a0/out/tensor_low_index-e387f1f96ccac8a0)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.83
+    },
+    {
+      "target": "Running tests/tensor_low_normalization.rs (crates/target/debug/build/compute-core/32700ca73cbabdbd/out/tensor_low_normalization-32700ca73cbabdbd)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.44
+    },
+    {
+      "target": "Running tests/tensor_low_ops.rs (crates/target/debug/build/compute-core/91cb52b93ff7d618/out/tensor_low_ops-91cb52b93ff7d618)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.65
+    },
+    {
+      "target": "Running tests/tensor_low_scatter.rs (crates/target/debug/build/compute-core/cc4fe5197057887a/out/tensor_low_scatter-cc4fe5197057887a)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.75
+    },
+    {
+      "target": "Running tests/tensor_normalization.rs (crates/target/debug/build/compute-core/e595dbbc34a9b65b/out/tensor_normalization-e595dbbc34a9b65b)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.32
+    },
+    {
+      "target": "Running tests/tensor_reduce.rs (crates/target/debug/build/compute-core/ac99c605f7750a86/out/tensor_reduce-ac99c605f7750a86)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.33
+    },
+    {
+      "target": "Running tests/tensor_scatter.rs (crates/target/debug/build/compute-core/e4e85abb8610e694/out/tensor_scatter-e4e85abb8610e694)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.48
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/compute-cuda/055f8c6336f8c47a/out/compute_cuda-055f8c6336f8c47a)",
+      "passed": 156,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/convolution.rs (crates/target/debug/build/compute-cuda/24e6af71c5c90af4/out/convolution-24e6af71c5c90af4)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/cuda_tensor.rs (crates/target/debug/build/compute-cuda/51fdc015c155fdbf/out/cuda_tensor-51fdc015c155fdbf)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/evaluation.rs (crates/target/debug/build/compute-cuda/575d8cad9c4aa8c0/out/evaluation-575d8cad9c4aa8c0)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/float64.rs (crates/target/debug/build/compute-cuda/59a6756723be4f3b/out/float64-59a6756723be4f3b)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/float64_indexing.rs (crates/target/debug/build/compute-cuda/0153a2a932e48dab/out/float64_indexing-0153a2a932e48dab)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/graph.rs (crates/target/debug/build/compute-cuda/512ee391d83d7bef/out/graph-512ee391d83d7bef)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/prepared.rs (crates/target/debug/build/compute-cuda/a9d9e72308506c01/out/prepared-a9d9e72308506c01)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/prepared_indexing.rs (crates/target/debug/build/compute-cuda/ebce16fa19c72d1c/out/prepared_indexing-ebce16fa19c72d1c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/prepared_statistics.rs (crates/target/debug/build/compute-cuda/e47dabbffb226ef6/out/prepared_statistics-e47dabbffb226ef6)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/prepared_typed.rs (crates/target/debug/build/compute-cuda/c92dbecf679b7bde/out/prepared_typed-c92dbecf679b7bde)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/compute-mlx/dc232e2b7be18733/out/compute_mlx-dc232e2b7be18733)",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running tests/attention.rs (crates/target/debug/build/compute-mlx/b95179921296c8fd/out/attention-b95179921296c8fd)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.16
+    },
+    {
+      "target": "Running tests/compiled.rs (crates/target/debug/build/compute-mlx/19107be387887664/out/compiled-19107be387887664)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.08
+    },
+    {
+      "target": "Running tests/compiled_attention.rs (crates/target/debug/build/compute-mlx/af0e34d4b42eeba3/out/compiled_attention-af0e34d4b42eeba3)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.05
+    },
+    {
+      "target": "Running tests/compiled_indexing.rs (crates/target/debug/build/compute-mlx/4e53d0a4a9454ab8/out/compiled_indexing-4e53d0a4a9454ab8)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.75
+    },
+    {
+      "target": "Running tests/compiled_scan_compaction.rs (crates/target/debug/build/compute-mlx/60f7d7ed40b218f6/out/compiled_scan_compaction-60f7d7ed40b218f6)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.28
+    },
+    {
+      "target": "Running tests/compiled_scatter.rs (crates/target/debug/build/compute-mlx/ae3e411deb242ace/out/compiled_scatter-ae3e411deb242ace)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.55
+    },
+    {
+      "target": "Running tests/compiled_statistics.rs (crates/target/debug/build/compute-mlx/b426a53f47f69d87/out/compiled_statistics-b426a53f47f69d87)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 10.4
+    },
+    {
+      "target": "Running tests/compiled_typed.rs (crates/target/debug/build/compute-mlx/90e59b9f2d0e0297/out/compiled_typed-90e59b9f2d0e0297)",
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 4.38
+    },
+    {
+      "target": "Running tests/convolution.rs (crates/target/debug/build/compute-mlx/623d878d137edf82/out/convolution-623d878d137edf82)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.13
+    },
+    {
+      "target": "Running tests/evaluation.rs (crates/target/debug/build/compute-mlx/ddf0fc9fe7352492/out/evaluation-ddf0fc9fe7352492)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "Running tests/index.rs (crates/target/debug/build/compute-mlx/c357348df8369919/out/index-c357348df8369919)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "Running tests/low_attention.rs (crates/target/debug/build/compute-mlx/a22f7261a45e995d/out/low_attention-a22f7261a45e995d)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.34
+    },
+    {
+      "target": "Running tests/low_index.rs (crates/target/debug/build/compute-mlx/b5fb81e45342eee6/out/low_index-b5fb81e45342eee6)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.39
+    },
+    {
+      "target": "Running tests/low_matmul.rs (crates/target/debug/build/compute-mlx/2c34afe782b9f7cc/out/low_matmul-2c34afe782b9f7cc)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.34
+    },
+    {
+      "target": "Running tests/low_ops.rs (crates/target/debug/build/compute-mlx/fd98ffe8626c1398/out/low_ops-fd98ffe8626c1398)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.39
+    },
+    {
+      "target": "Running tests/low_precision.rs (crates/target/debug/build/compute-mlx/d71399f2213da577/out/low_precision-d71399f2213da577)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.28
+    },
+    {
+      "target": "Running tests/low_scatter.rs (crates/target/debug/build/compute-mlx/cbde958ff2ff0650/out/low_scatter-cbde958ff2ff0650)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.46
+    },
+    {
+      "target": "Running tests/low_statistics.rs (crates/target/debug/build/compute-mlx/145a495b19a503e4/out/low_statistics-145a495b19a503e4)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.16
+    },
+    {
+      "target": "Running tests/native.rs (crates/target/debug/build/compute-mlx/a89e299f03dcd638/out/native-a89e299f03dcd638)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "Running tests/reduction.rs (crates/target/debug/build/compute-mlx/95a9af871926cc78/out/reduction-95a9af871926cc78)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.19
+    },
+    {
+      "target": "Running tests/scatter.rs (crates/target/debug/build/compute-mlx/0bbfac0cd0728f85/out/scatter-0bbfac0cd0728f85)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.1
+    },
+    {
+      "target": "Running tests/statistics.rs (crates/target/debug/build/compute-mlx/2b8d78050bf90db1/out/statistics-2b8d78050bf90db1)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.11
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/gcode-core/81e1ac598b7ea55a/out/gcode_core-81e1ac598b7ea55a)",
+      "passed": 29,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.25
+    },
+    {
+      "target": "Running tests/configured_job.rs (crates/target/debug/build/gcode-core/e455a36d1807516e/out/configured_job-e455a36d1807516e)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/feedrate_override.rs (crates/target/debug/build/gcode-core/956da4370eb60daa/out/feedrate_override-956da4370eb60daa)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/firmware_state.rs (crates/target/debug/build/gcode-core/daf6ba37fca624e3/out/firmware_state-daf6ba37fca624e3)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/foreign_extrusion.rs (crates/target/debug/build/gcode-core/ebe7e2bf67473e2e/out/foreign_extrusion-ebe7e2bf67473e2e)",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/foreign_regressions.rs (crates/target/debug/build/gcode-core/acb9c623c78d26bb/out/foreign_regressions-acb9c623c78d26bb)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "Running tests/foreign_retraction_contract.rs (crates/target/debug/build/gcode-core/54695a6db8e7d396/out/foreign_retraction_contract-54695a6db8e7d396)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/job.rs (crates/target/debug/build/gcode-core/df8af254ee93942b/out/job-df8af254ee93942b)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/preview.rs (crates/target/debug/build/gcode-core/9a3f39e4adf3a425/out/preview-9a3f39e4adf3a425)",
+      "passed": 27,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.24
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/gcode-optimize/cc336a643a08403c/out/gcode_optimize-cc336a643a08403c)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/optimize.rs (crates/target/debug/build/gcode-optimize/4166b4fc9819c278/out/optimize-4166b4fc9819c278)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/geometry-bridge/17cb6a1999ade3f8/out/geometry_bridge-17cb6a1999ade3f8)",
+      "passed": 321,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 313.26
+    },
+    {
+      "target": "Running tests/analytic_brep_tessellation.rs (crates/target/debug/build/geometry-bridge/54f06e07a0899c85/out/analytic_brep_tessellation-54f06e07a0899c85)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.79
+    },
+    {
+      "target": "Running tests/box_sphere_tessellation.rs (crates/target/debug/build/geometry-bridge/8dc783eabd39c835/out/box_sphere_tessellation-8dc783eabd39c835)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 97.78
+    },
+    {
+      "target": "Running tests/build_surfaces.rs (crates/target/debug/build/geometry-bridge/1eb3535ec6b91bca/out/build_surfaces-1eb3535ec6b91bca)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/gcode.rs (crates/target/debug/build/geometry-bridge/8192aa4b8e801542/out/gcode-8192aa4b8e801542)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/gear_tessellation.rs (crates/target/debug/build/geometry-bridge/44d7427464c3e088/out/gear_tessellation-44d7427464c3e088)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 28.66
+    },
+    {
+      "target": "Running tests/loft_generalization.rs (crates/target/debug/build/geometry-bridge/d5ba447583f95958/out/loft_generalization-d5ba447583f95958)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.84
+    },
+    {
+      "target": "Running tests/owned_brep_dispatch.rs (crates/target/debug/build/geometry-bridge/6a7590e988c1d7ab/out/owned_brep_dispatch-6a7590e988c1d7ab)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.17
+    },
+    {
+      "target": "Running tests/sweep_pipeline.rs (crates/target/debug/build/geometry-bridge/6f198e25ae3f73d8/out/sweep_pipeline-6f198e25ae3f73d8)",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 26.67
+    },
+    {
+      "target": "Running tests/sweep_retained_caps.rs (crates/target/debug/build/geometry-bridge/0cbc59aa8dab102b/out/sweep_retained_caps-0cbc59aa8dab102b)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.3
+    },
+    {
+      "target": "Running tests/tolerant_sweep_tessellation.rs (crates/target/debug/build/geometry-bridge/8a56dece75826371/out/tolerant_sweep_tessellation-8a56dece75826371)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 108.67
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/geometry-ops/2746ea94d91f46e6/out/geometry_ops-2746ea94d91f46e6)",
+      "passed": 49,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/geometry-wasm/0cd1ad3d5aaed7ea/out/geometry_wasm-0cd1ad3d5aaed7ea)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/gpu-compute/ea71c90cab7aa39e/out/gpu_compute-ea71c90cab7aa39e)",
+      "passed": 24,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "Running tests/features.rs (crates/target/debug/build/gpu-compute/864e2ca76563c83a/out/features-864e2ca76563c83a)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/memory.rs (crates/target/debug/build/gpu-compute/90745d76a0409d0c/out/memory-90745d76a0409d0c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/profiling.rs (crates/target/debug/build/gpu-compute/ad3049b6ba4e271e/out/profiling-ad3049b6ba4e271e)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running tests/readback.rs (crates/target/debug/build/gpu-compute/eff990a2c6bed064/out/readback-eff990a2c6bed064)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/languages-bridge/ff6175c0ad339df5/out/languages_bridge-ff6175c0ad339df5)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/rush_declarative.rs (crates/target/debug/build/languages-bridge/f338543d8c8a2849/out/rush_declarative-f338543d8c8a2849)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/languages-wasm/1e3b426db8e40c53/out/languages_wasm-1e3b426db8e40c53)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/laser-core/cf00930711c2cd50/out/laser_core-cf00930711c2cd50)",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/manifold-core/dcc2c1e2e1d3792a/out/manifold_core-dcc2c1e2e1d3792a)",
+      "passed": 24,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/property.rs (crates/target/debug/build/manifold-core/5c3d82827a9c6677/out/property-5c3d82827a9c6677)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.06
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/manifold-ops/ff9c7158c5bb7e07/out/manifold_ops-ff9c7158c5bb7e07)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mechanical-core/c22c17351baa5658/out/mechanical_core-c22c17351baa5658)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.12
+    },
+    {
+      "target": "Running tests/native_geometry.rs (crates/target/debug/build/mechanical-core/d6e52670eb243364/out/native_geometry-d6e52670eb243364)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mechanics-core/5fc447f479b199d7/out/mechanics_core-5fc447f479b199d7)",
+      "passed": 98,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.24
+    },
+    {
+      "target": "Running tests/section.rs (crates/target/debug/build/mechanics-core/804df683135616dc/out/section-804df683135616dc)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mesh-io/ed20e5f29b77f2c0/out/mesh_io-ed20e5f29b77f2c0)",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mesh-query/0d97c64a22074fa7/out/mesh_query-0d97c64a22074fa7)",
+      "passed": 17,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.12
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mesh-section/ec2fbefb47e65c18/out/mesh_section-ec2fbefb47e65c18)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/mesh-topology/b11f7c8de60371be/out/mesh_topology-b11f7c8de60371be)",
+      "passed": 20,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.42
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/nurbs-core/904423777ba9337c/out/nurbs_core-904423777ba9337c)",
+      "passed": 1537,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 175.77
+    },
+    {
+      "target": "Running tests/affine_bounds.rs (crates/target/debug/build/nurbs-core/601b2df9e7207a6e/out/affine_bounds-601b2df9e7207a6e)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/chord_region.rs (crates/target/debug/build/nurbs-core/48273107ce69b243/out/chord_region-48273107ce69b243)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/conditioning.rs (crates/target/debug/build/nurbs-core/b4a34032380ac860/out/conditioning-b4a34032380ac860)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/coordinate_frame.rs (crates/target/debug/build/nurbs-core/f35c6cada0c10eea/out/coordinate_frame-f35c6cada0c10eea)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_chain.rs (crates/target/debug/build/nurbs-core/4537272222005ab1/out/curve_chain-4537272222005ab1)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_deviation.rs (crates/target/debug/build/nurbs-core/eb77cb10269fe91e/out/curve_deviation-eb77cb10269fe91e)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.88
+    },
+    {
+      "target": "Running tests/curve_differential.rs (crates/target/debug/build/nurbs-core/4be648232b169c3b/out/curve_differential-4be648232b169c3b)",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_join.rs (crates/target/debug/build/nurbs-core/03711dd7064b5cb2/out/curve_join-03711dd7064b5cb2)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_measure.rs (crates/target/debug/build/nurbs-core/447ab17da60967ca/out/curve_measure-447ab17da60967ca)",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.74
+    },
+    {
+      "target": "Running tests/curve_offset.rs (crates/target/debug/build/nurbs-core/d973f631debb562b/out/curve_offset-d973f631debb562b)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running tests/curve_pair_distance.rs (crates/target/debug/build/nurbs-core/91685cf740928024/out/curve_pair_distance-91685cf740928024)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running tests/curve_plane.rs (crates/target/debug/build/nurbs-core/06b52d0e44bf3359/out/curve_plane-06b52d0e44bf3359)",
+      "passed": 36,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.14
+    },
+    {
+      "target": "Running tests/curve_pullback.rs (crates/target/debug/build/nurbs-core/e1cc17a10280d15b/out/curve_pullback-e1cc17a10280d15b)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_rebuild.rs (crates/target/debug/build/nurbs-core/911b89e3ddb4679b/out/curve_rebuild-911b89e3ddb4679b)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.55
+    },
+    {
+      "target": "Running tests/curve_self_intersection.rs (crates/target/debug/build/nurbs-core/61f8cd0c8cb9893b/out/curve_self_intersection-61f8cd0c8cb9893b)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/curve_surface_distance.rs (crates/target/debug/build/nurbs-core/7e6d94fade9e3be4/out/curve_surface_distance-7e6d94fade9e3be4)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/curve_surface_overlap_regressions.rs (crates/target/debug/build/nurbs-core/f2a9080da9473c06/out/curve_surface_overlap_regressions-f2a9080da9473c06)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/curve_tessellation.rs (crates/target/debug/build/nurbs-core/f9e41ed52e269a60/out/curve_tessellation-f9e41ed52e269a60)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/degree_reduction.rs (crates/target/debug/build/nurbs-core/a21d155576059956/out/degree_reduction-a21d155576059956)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/function_surface.rs (crates/target/debug/build/nurbs-core/cd691fd600e77a23/out/function_surface-cd691fd600e77a23)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/helical_sweep.rs (crates/target/debug/build/nurbs-core/9354a1848efbdcdb/out/helical_sweep-9354a1848efbdcdb)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.33
+    },
+    {
+      "target": "Running tests/involute_quintic.rs (crates/target/debug/build/nurbs-core/af2f2d096a25ee13/out/involute_quintic-af2f2d096a25ee13)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "Running tests/knot_removal.rs (crates/target/debug/build/nurbs-core/5c122d3cd67e03f5/out/knot_removal-5c122d3cd67e03f5)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.39
+    },
+    {
+      "target": "Running tests/loft_capacity.rs (crates/target/debug/build/nurbs-core/4532c8d716fcdf71/out/loft_capacity-4532c8d716fcdf71)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.57
+    },
+    {
+      "target": "Running tests/machining_profiles.rs (crates/target/debug/build/nurbs-core/2e4ce367da6a4d14/out/machining_profiles-2e4ce367da6a4d14)",
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.88
+    },
+    {
+      "target": "Running tests/native_edits.rs (crates/target/debug/build/nurbs-core/8485f63692daf4cd/out/native_edits-8485f63692daf4cd)",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.32
+    },
+    {
+      "target": "Running tests/nearest_point.rs (crates/target/debug/build/nurbs-core/dde83732d07adb19/out/nearest_point-dde83732d07adb19)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/offset_join.rs (crates/target/debug/build/nurbs-core/ea80e05b1e8fe906/out/offset_join-ea80e05b1e8fe906)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/periodic_seam.rs (crates/target/debug/build/nurbs-core/7df57af1facf87d5/out/periodic_seam-7df57af1facf87d5)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "Running tests/periodic_seam_candidates.rs (crates/target/debug/build/nurbs-core/a90d93caa4bae52e/out/periodic_seam_candidates-a90d93caa4bae52e)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.32
+    },
+    {
+      "target": "Running tests/periodic_surface_verification.rs (crates/target/debug/build/nurbs-core/c128954622812924/out/periodic_surface_verification-c128954622812924)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.95
+    },
+    {
+      "target": "Running tests/profile_offset.rs (crates/target/debug/build/nurbs-core/753df0ad3a259a9d/out/profile_offset-753df0ad3a259a9d)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "Running tests/rack.rs (crates/target/debug/build/nurbs-core/33672de0bf720247/out/rack-33672de0bf720247)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "Running tests/ray_surface.rs (crates/target/debug/build/nurbs-core/18ab7eb56571af19/out/ray_surface-18ab7eb56571af19)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/section_phase.rs (crates/target/debug/build/nurbs-core/90c15fb72597a75a/out/section_phase-90c15fb72597a75a)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.14
+    },
+    {
+      "target": "Running tests/sections.rs (crates/target/debug/build/nurbs-core/ddfe62b4d3345de2/out/sections-ddfe62b4d3345de2)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/shared_tessellation.rs (crates/target/debug/build/nurbs-core/5196ae7ce2e767ea/out/shared_tessellation-5196ae7ce2e767ea)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/surface_deviation.rs (crates/target/debug/build/nurbs-core/3e6c7974bdb6ff0e/out/surface_deviation-3e6c7974bdb6ff0e)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/surface_differential.rs (crates/target/debug/build/nurbs-core/1090d92c6f62bb9e/out/surface_differential-1090d92c6f62bb9e)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/surface_distance_queries.rs (crates/target/debug/build/nurbs-core/0da39f383d477b42/out/surface_distance_queries-0da39f383d477b42)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/surface_g1.rs (crates/target/debug/build/nurbs-core/85b7c3f243328151/out/surface_g1-85b7c3f243328151)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.72
+    },
+    {
+      "target": "Running tests/surface_g2.rs (crates/target/debug/build/nurbs-core/87ed76f7866b4044/out/surface_g2-87ed76f7866b4044)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 34.89
+    },
+    {
+      "target": "Running tests/surface_jet_inspection.rs (crates/target/debug/build/nurbs-core/a78b899f811273a8/out/surface_jet_inspection-a78b899f811273a8)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/surface_join.rs (crates/target/debug/build/nurbs-core/f708496813d96e2c/out/surface_join-f708496813d96e2c)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.31
+    },
+    {
+      "target": "Running tests/surface_measure.rs (crates/target/debug/build/nurbs-core/68a39ec00d928435/out/surface_measure-68a39ec00d928435)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.78
+    },
+    {
+      "target": "Running tests/surface_parameter_bounds.rs (crates/target/debug/build/nurbs-core/9e1ca5993f8e6932/out/surface_parameter_bounds-9e1ca5993f8e6932)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/surface_rebuild.rs (crates/target/debug/build/nurbs-core/52a27740e43f7bca/out/surface_rebuild-52a27740e43f7bca)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running tests/surface_regularity.rs (crates/target/debug/build/nurbs-core/3f1f1616b1f8a3bc/out/surface_regularity-3f1f1616b1f8a3bc)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/surface_self_intersection.rs (crates/target/debug/build/nurbs-core/2d6b754d6108c1b1/out/surface_self_intersection-2d6b754d6108c1b1)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/surface_shape_operator.rs (crates/target/debug/build/nurbs-core/9a14e20a2d786c8d/out/surface_shape_operator-9a14e20a2d786c8d)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/surface_simplification.rs (crates/target/debug/build/nurbs-core/5d3068c5b3293dac/out/surface_simplification-5d3068c5b3293dac)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/surface_tessellation.rs (crates/target/debug/build/nurbs-core/881d77c570e4ef0e/out/surface_tessellation-881d77c570e4ef0e)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/thread.rs (crates/target/debug/build/nurbs-core/625d5d27aaa42aa9/out/thread-625d5d27aaa42aa9)",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 10.42
+    },
+    {
+      "target": "Running tests/thread_natural_edges.rs (crates/target/debug/build/nurbs-core/91296c3fbaefb0e7/out/thread_natural_edges-91296c3fbaefb0e7)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.32
+    },
+    {
+      "target": "Running tests/uv_closure.rs (crates/target/debug/build/nurbs-core/27da71477d355a1f/out/uv_closure-27da71477d355a1f)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/uv_point.rs (crates/target/debug/build/nurbs-core/617e726a18b7fd60/out/uv_point-617e726a18b7fd60)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/uv_simplicity.rs (crates/target/debug/build/nurbs-core/67ce4ebc844b571d/out/uv_simplicity-67ce4ebc844b571d)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/weight_edit.rs (crates/target/debug/build/nurbs-core/6340015ad4e9fe09/out/weight_edit-6340015ad4e9fe09)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/nurbs-intersect/07978908bfea43e1/out/nurbs_intersect-07978908bfea43e1)",
+      "passed": 108,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.14
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/openscad-core/3ac6dd27fd8d107f/out/openscad_core-3ac6dd27fd8d107f)",
+      "passed": 75,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.58
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/osv-math/75f52321da53f478/out/math_core-75f52321da53f478)",
+      "passed": 81,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.29
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/osv-math-compute/e2ea97ec1e297aea/out/math_compute-e2ea97ec1e297aea)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_bounds.rs (crates/target/debug/build/osv-math-compute/76b32ff6f8ac89c4/out/device_bounds-76b32ff6f8ac89c4)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_chamfer.rs (crates/target/debug/build/osv-math-compute/6ac2cdabb4808441/out/device_chamfer-6ac2cdabb4808441)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_distance_pairs.rs (crates/target/debug/build/osv-math-compute/ad1af831f81c7485/out/device_distance_pairs-ad1af831f81c7485)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_local_plane.rs (crates/target/debug/build/osv-math-compute/590c7917c6eabf37/out/device_local_plane-590c7917c6eabf37)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_moments.rs (crates/target/debug/build/osv-math-compute/14b64491ae2fb19b/out/device_moments-14b64491ae2fb19b)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_nearest_four.rs (crates/target/debug/build/osv-math-compute/61a3244d35bb899c/out/device_nearest_four-61a3244d35bb899c)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_nearest_neighbor.rs (crates/target/debug/build/osv-math-compute/a132c9ab21758d61/out/device_nearest_neighbor-a132c9ab21758d61)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_nearest_two.rs (crates/target/debug/build/osv-math-compute/c8e2644ed7ffb32a/out/device_nearest_two-c8e2644ed7ffb32a)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_stats.rs (crates/target/debug/build/osv-math-compute/f41dad157f6134c3/out/device_stats-f41dad157f6134c3)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/device_transform_error.rs (crates/target/debug/build/osv-math-compute/4c6f85f56a6f78bf/out/device_transform_error-4c6f85f56a6f78bf)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/gpu_nearest_cooperative.rs (crates/target/debug/build/osv-math-compute/bb78fee434ea89a7/out/gpu_nearest_cooperative-bb78fee434ea89a7)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/gpu_plans.rs (crates/target/debug/build/osv-math-compute/dcffaa9059bacef4/out/gpu_plans-dcffaa9059bacef4)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/gpu_recorded_domains.rs (crates/target/debug/build/osv-math-compute/d11c5e1bafd68328/out/gpu_recorded_domains-d11c5e1bafd68328)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/gpu_stable_stats.rs (crates/target/debug/build/osv-math-compute/11f119575e800a3f/out/gpu_stable_stats-11f119575e800a3f)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/tensor_f64.rs (crates/target/debug/build/osv-math-compute/5f56bfb997c1aa21/out/tensor_f64-5f56bfb997c1aa21)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/tensor_math.rs (crates/target/debug/build/osv-math-compute/b44f63d7ce0ac461/out/tensor_math-b44f63d7ce0ac461)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/photogrammetry-core/4ad4c091a2501189/out/photogrammetry_core-4ad4c091a2501189)",
+      "passed": 121,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 14.64
+    },
+    {
+      "target": "Running tests/dense_accuracy.rs (crates/target/debug/build/photogrammetry-core/1abcbb0c08d3175a/out/dense_accuracy-1abcbb0c08d3175a)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 49.65
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/photogrammetry-ffi/7e532834870afdf1/out/photogrammetry_ffi-7e532834870afdf1)",
+      "passed": 16,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 0.08
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/photogrammetry-wasm/7357874852cee21d/out/photogrammetry_wasm-7357874852cee21d)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/planar-geometry/a08efe05f9af2a11/out/planar_geometry-a08efe05f9af2a11)",
+      "passed": 156,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 1.53
+    },
+    {
+      "target": "Running tests/curvex_parity.rs (crates/target/debug/build/planar-geometry/12bbc55cd3c075c6/out/curvex_parity-12bbc55cd3c075c6)",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/profile_triangulation.rs (crates/target/debug/build/planar-geometry/ec83e5872e59cfbd/out/profile_triangulation-ec83e5872e59cfbd)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.35
+    },
+    {
+      "target": "Running tests/stroke_robustness.rs (crates/target/debug/build/planar-geometry/ac2e2e312c4c82bb/out/stroke_robustness-ac2e2e312c4c82bb)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/polygon-core/9a0971d96653a6dc/out/polygon_core-9a0971d96653a6dc)",
+      "passed": 98,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.76
+    },
+    {
+      "target": "Running tests/sections.rs (crates/target/debug/build/polygon-core/c3a566bfbed97315/out/sections-c3a566bfbed97315)",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/printer-cli/59049eef45dc3607/out/printer_cli-59049eef45dc3607)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/main.rs (crates/target/debug/build/printer-cli/0cd58d794d38e547/out/printer_cli-0cd58d794d38e547)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/cli.rs (crates/target/debug/build/printer-cli/6b1606458db39876/out/cli-6b1606458db39876)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/printer-core/e8ad357b857e2dc3/out/printer_core-e8ad357b857e2dc3)",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/bambu_lan.rs (crates/target/debug/build/printer-core/d27496b1438e5395/out/bambu_lan-d27496b1438e5395)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/http_hosts.rs (crates/target/debug/build/printer-core/3be62f120bb62bee/out/http_hosts-3be62f120bb62bee)",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/raster-core/0d3470068cd298e0/out/raster_core-0d3470068cd298e0)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/bin/wgsl_export.rs (crates/target/debug/build/raster-core/d6ffd79e4269fcf8/out/wgsl_export-d6ffd79e4269fcf8)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/frame.rs (crates/target/debug/build/raster-core/dff778896c42f257/out/frame-dff778896c42f257)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.1
+    },
+    {
+      "target": "Running tests/render.rs (crates/target/debug/build/raster-core/e2682e7092998279/out/render-e2682e7092998279)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "Running tests/shaders.rs (crates/target/debug/build/raster-core/0ebead830a6ebfd4/out/shaders-0ebead830a6ebfd4)",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/rush-frontend/28ca22a849ef9e16/out/rush_frontend-28ca22a849ef9e16)",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/archimedean_spiral.rs (crates/target/debug/build/rush-frontend/6c9350905b751ed7/out/archimedean_spiral-6c9350905b751ed7)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/catenary.rs (crates/target/debug/build/rush-frontend/9923aa287ea908b0/out/catenary-9923aa287ea908b0)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/catenoid.rs (crates/target/debug/build/rush-frontend/3f8546049e44c5da/out/catenoid-3f8546049e44c5da)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/catenoid_patches.rs (crates/target/debug/build/rush-frontend/3bb7f505adda87ae/out/catenoid_patches-3bb7f505adda87ae)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/circle_rectangle_transition.rs (crates/target/debug/build/rush-frontend/90baae4162364b5e/out/circle_rectangle_transition-90baae4162364b5e)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/circle_transition.rs (crates/target/debug/build/rush-frontend/6fe7e34f4d7c5c74/out/circle_transition-6fe7e34f4d7c5c74)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/circular_rolling.rs (crates/target/debug/build/rush-frontend/9f4a99ca8f494e52/out/circular_rolling-9f4a99ca8f494e52)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/clothoid.rs (crates/target/debug/build/rush-frontend/eb1ec1583d9f8590/out/clothoid-eb1ec1583d9f8590)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/ellipse_transition.rs (crates/target/debug/build/rush-frontend/475fe9e8d20fe516/out/ellipse_transition-475fe9e8d20fe516)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/frontend.rs (crates/target/debug/build/rush-frontend/42bb12589667196e/out/frontend-42bb12589667196e)",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/helicoid.rs (crates/target/debug/build/rush-frontend/9f250a72207ef029/out/helicoid-9f250a72207ef029)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/helicoid_patches.rs (crates/target/debug/build/rush-frontend/b8c7e82751edce12/out/helicoid_patches-b8c7e82751edce12)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/helix.rs (crates/target/debug/build/rush-frontend/c5f0b5bd93fc8223/out/helix-c5f0b5bd93fc8223)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/helix_variants.rs (crates/target/debug/build/rush-frontend/94d70b1bc8459866/out/helix_variants-94d70b1bc8459866)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/involute.rs (crates/target/debug/build/rush-frontend/413fbf4bbe685e47/out/involute-413fbf4bbe685e47)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/lissajous.rs (crates/target/debug/build/rush-frontend/2c5c97c1b9d4a293/out/lissajous-2c5c97c1b9d4a293)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/loft.rs (crates/target/debug/build/rush-frontend/55f01a127a581a77/out/loft-55f01a127a581a77)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/logarithmic_spiral.rs (crates/target/debug/build/rush-frontend/785e50aab5885aaa/out/logarithmic_spiral-785e50aab5885aaa)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/pipe.rs (crates/target/debug/build/rush-frontend/b9d1f60853a35a17/out/pipe-b9d1f60853a35a17)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/profile_sweep.rs (crates/target/debug/build/rush-frontend/32449c53d036af60/out/profile_sweep-32449c53d036af60)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/progressive_sweep.rs (crates/target/debug/build/rush-frontend/0f7bf4bb99b5b795/out/progressive_sweep-0f7bf4bb99b5b795)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running tests/ribbon.rs (crates/target/debug/build/rush-frontend/4e32dc419d1bf854/out/ribbon-4e32dc419d1bf854)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/rush_declarative_parity.rs (crates/target/debug/build/rush-frontend/dceb768f4439e8dc/out/rush_declarative_parity-dceb768f4439e8dc)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.31
+    },
+    {
+      "target": "Running tests/scaled_sweep.rs (crates/target/debug/build/rush-frontend/0f937fbacdbcd563/out/scaled_sweep-0f937fbacdbcd563)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/screw_surface.rs (crates/target/debug/build/rush-frontend/73b17a85f53d894c/out/screw_surface-73b17a85f53d894c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/spherical_spiral.rs (crates/target/debug/build/rush-frontend/62ad7551585d3eaf/out/spherical_spiral-62ad7551585d3eaf)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/toroidal.rs (crates/target/debug/build/rush-frontend/0953e526183ffb8b/out/toroidal-0953e526183ffb8b)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/trochoid.rs (crates/target/debug/build/rush-frontend/22d0404ca0eb2837/out/trochoid-22d0404ca0eb2837)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/twist_sweep.rs (crates/target/debug/build/rush-frontend/a4fceba1a82a6eb7/out/twist_sweep-a4fceba1a82a6eb7)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/two_guide_sweep.rs (crates/target/debug/build/rush-frontend/4c40a2a09f7212f6/out/two_guide_sweep-4c40a2a09f7212f6)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/variable_pipe.rs (crates/target/debug/build/rush-frontend/da918bc18d6b69a9/out/variable_pipe-da918bc18d6b69a9)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/variable_pitch_helix.rs (crates/target/debug/build/rush-frontend/0e7a4dd169ce9be9/out/variable_pitch_helix-0e7a4dd169ce9be9)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/rush-runtime/a84ca00aad6107ba/out/rush_runtime-a84ca00aad6107ba)",
+      "passed": 58,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "Running tests/emitter_parity.rs (crates/target/debug/build/rush-runtime/f40d4954b5b90b43/out/emitter_parity-f40d4954b5b90b43)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/sdf-core/c5105aa1521efd6c/out/sdf_core-c5105aa1521efd6c)",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/sketch-core/c4dd950f6eee7598/out/sketch_core-c4dd950f6eee7598)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/slicer-core/4a5cc132d7fcecce/out/slicer_core-4a5cc132d7fcecce)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.03
+    },
+    {
+      "target": "Running tests/toolpath.rs (crates/target/debug/build/slicer-core/c164c2b549d2ba95/out/toolpath-c164c2b549d2ba95)",
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.19
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/subdivision-core/cf4a4d88ab7d3511/out/subdivision_core-cf4a4d88ab7d3511)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/tensor-core/0cb4a2ecef31e15c/out/tensor_core-0cb4a2ecef31e15c)",
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.08
+    },
+    {
+      "target": "Running tests/attention.rs (crates/target/debug/build/tensor-core/54c4cf9ace9f1cc6/out/attention-54c4cf9ace9f1cc6)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/indexing.rs (crates/target/debug/build/tensor-core/53954974b3cc9c87/out/indexing-53954974b3cc9c87)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/layout.rs (crates/target/debug/build/tensor-core/09fa65d924979f93/out/layout-09fa65d924979f93)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/low_attention.rs (crates/target/debug/build/tensor-core/14f3086de4cadd1e/out/low_attention-14f3086de4cadd1e)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/low_ops.rs (crates/target/debug/build/tensor-core/3b2fd612271496c9/out/low_ops-3b2fd612271496c9)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/low_scatter.rs (crates/target/debug/build/tensor-core/6edcc81540834a55/out/low_scatter-6edcc81540834a55)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/reduction.rs (crates/target/debug/build/tensor-core/dc514954b769a260/out/reduction-dc514954b769a260)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/scatter.rs (crates/target/debug/build/tensor-core/76cbdd1dafdfa26f/out/scatter-76cbdd1dafdfa26f)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/statistics.rs (crates/target/debug/build/tensor-core/2fe2c0cb690ff2fa/out/statistics-2fe2c0cb690ff2fa)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/value-codec/34d15a03018d4a82/out/value_codec-34d15a03018d4a82)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running tests/strict_json.rs (crates/target/debug/build/value-codec/4ec457901bad986c/out/strict_json-4ec457901bad986c)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/vr-core/91496af5a034299b/out/vr_core-91496af5a034299b)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Running unittests src/lib.rs (crates/target/debug/build/wasm-brotli/8a04e5e81a1d2e95/out/wasm_brotli-8a04e5e81a1d2e95)",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "Doc-tests brep_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests brep_intersect",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests brep_topology",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests bridge_analysis",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests bridge_cam",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests bridge_codec",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests bridge_svg",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests cad_predicates",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests cad_step",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests compute_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests compute_cuda",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests compute_mlx",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests gcode_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests gcode_optimize",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests geometry_bridge",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests geometry_ops",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests gpu_compute",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests languages_bridge",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests laser_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests manifold_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests manifold_ops",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mechanical_core",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mechanics_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mesh_io",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mesh_query",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mesh_section",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests mesh_topology",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests nurbs_core",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests nurbs_intersect",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests openscad_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests math_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests math_compute",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests photogrammetry_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests photogrammetry_ffi",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests planar_geometry",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests polygon_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests printer_cli",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests printer_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests raster_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests rush_frontend",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests rush_runtime",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests sdf_core",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests sketch_core",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests slicer_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests subdivision_core",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests tensor_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests value_codec",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests vr_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    {
+      "target": "Doc-tests wasm_brotli",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    }
+  ]
+}

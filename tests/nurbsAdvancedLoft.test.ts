@@ -45,3 +45,10 @@ it('preserves the new capped loft as authoritative BRep through the editor Solid
  expect(inspectNurbsBrep(solid.bodies[0]!.brep!)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
  expect(meshObjectStats(meshDataToEditablePolygon(scene.meshes[0]!)!).closed).toBe(true)
 })
+
+it('keeps parameter correspondence strict even with a large spatial budget',()=>{
+ const guide=lineNurbsCurve([.25,0,0],[.75,0,2])
+ expect(()=>autoGuidedLoftNurbsCurves([section(0),section(2)],[0,1],[guide],10)).toThrow(/inconsistent U stations/)
+ const source=readFileSync('examples/rush/auto-guided-loft.r','utf8')
+ expect(()=>compileRushFrontend(source.replace('budget: 0.000001mm','budget: 0.000001mm,parameter_tolerance: 0.00000001mm'))).toThrow()
+})

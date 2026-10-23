@@ -66,16 +66,25 @@ fn invalid_ray_and_budget_fail() {
 }
 
 #[test]
-fn subdivision_boundary_root_stays_covered_when_unresolved() {
-    let r = ray_intersections(&plane(), [2., 2., 0.], [0., 0., 2.], 1e-6, 1000).unwrap();
+fn subdivision_boundary_root_stays_covered_with_complete_and_limited_search() {
     let u = 3.25;
     let v = -3. + 4. / 3.;
-    let covered = r
-        .roots
-        .iter()
-        .map(|x| x.uv)
-        .chain(r.unresolved.iter().copied())
-        .any(|uv| uv[0][0] <= u && u <= uv[0][1] && uv[1][0] <= v && v <= uv[1][1]);
-    assert!(covered);
-    assert!(!r.complete);
+    for (accuracy, budget, complete) in [(1e-6, 1000, true), (1e-30, 1, false)] {
+        let r = ray_intersections(&plane(), [2., 2., 0.], [0., 0., 2.], accuracy, budget).unwrap();
+        let covered = r
+            .roots
+            .iter()
+            .map(|x| x.uv)
+            .chain(r.unresolved.iter().copied())
+            .any(|uv| uv[0][0] <= u && u <= uv[0][1] && uv[1][0] <= v && v <= uv[1][1]);
+        assert!(covered, "{r:?}");
+        assert_eq!(r.complete, complete, "{r:?}");
+        assert!(r.cells <= budget);
+        if complete {
+            assert_eq!(r.roots.len(), 1);
+            assert!(r.roots[0].parameter[0] <= 1. && 1. <= r.roots[0].parameter[1]);
+        } else {
+            assert!(!r.unresolved.is_empty());
+        }
+    }
 }

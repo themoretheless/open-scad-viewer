@@ -152,18 +152,22 @@ impl Renderer {
             image.rgb.chunks_exact(3).map(|v| [v[0], v[1], v[2], 0]),
         )
         .expect("rectification source update failed");
+        let uma = context.memory_architecture() == gpu_compute::MemoryArchitecture::Uma;
+        let out_usage = if uma {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::MAP_READ
+        } else {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC
+        };
         let output = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_output"),
             size: (pixels * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: out_usage,
             mapped_at_creation: false,
         });
         let valid = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_valid"),
             size: 4,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
+            usage: out_usage | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         queue.write_buffer(&valid, 0, &1u32.to_le_bytes());

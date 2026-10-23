@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "testsPassed": 3,
+  "testsFailed": 0,
+  "runtimeSeconds": 9.26,
+  "command": "CARGO_PROFILE_TEST_DEBUG=0 cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --jobs 1 --no-default-features --features codec --target-dir /tmp/nurbs-periodic-verified-L6P5rB --test gear_flank --test trimmed_shell",
+  "logSelection": "gear_flank integration suite; subsequent shell suite is superseded by the standalone five-test shell qualification",
+  "sourceSha256": {
+    "crates/brep-core/src/gear.rs": "2807fb5abd6678835835cef8c47ecf2fde8389d71f204d734d6827de91fc46f1",
+    "crates/brep-core/tests/gear_flank.rs": "c93c37464f6ffd8d741147787a49141a10a01474ca79bdecdfad841ade1ee8d2"
+  },
+  "variants": [
+    "spur",
+    "helical",
+    "herringbone",
+    "internal"
+  ],
+  "fullGearSpecDerivationCertified": false,
+  "helicalSweepRoundingCertified": false
+}

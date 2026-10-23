@@ -1,0 +1,2146 @@
+{
+  "artifact": {
+    "geometryWasmSha256": "f35b9f0276f32cc1058b5c02d8493a7e3b809e5c664063f48489fea81aa3e061",
+    "indexSha256": "8e8e7fc6c7dae4d6a67900f459a99ef7098c509acdceb163061acc523ee9e084"
+  },
+  "ok": true,
+  "selfIntersection": true,
+  "projective": {
+    "absenceProven": false,
+    "allFacesInjective": true,
+    "allPairsClassified": false,
+    "allPairsDisjoint": false,
+    "allPairsVisited": true,
+    "boxesTruncated": true,
+    "cells": 828,
+    "contactPairCount": 0,
+    "disjointPairCount": 4,
+    "domainCells": 2368,
+    "exportedBoxCount": 64,
+    "faces": [
+      {
+        "face": 0,
+        "result": {
+          "contractionUpper": 3.0412709387898764e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 113
+        }
+      },
+      {
+        "face": 1,
+        "result": {
+          "contractionUpper": 3.042011087472962e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 113
+        }
+      },
+      {
+        "face": 2,
+        "result": {
+          "contractionUpper": 3.0412709387898764e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 113
+        }
+      },
+      {
+        "face": 3,
+        "result": {
+          "contractionUpper": 3.042011087472962e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 113
+        }
+      },
+      {
+        "face": 4,
+        "result": {
+          "contractionUpper": 3.0412709387898764e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 129
+        }
+      },
+      {
+        "face": 5,
+        "result": {
+          "contractionUpper": 3.042011087472962e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 129
+        }
+      },
+      {
+        "face": 6,
+        "result": {
+          "contractionUpper": 3.0412709387898764e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 129
+        }
+      },
+      {
+        "face": 7,
+        "result": {
+          "contractionUpper": 3.042011087472962e-13,
+          "linearProjection": null,
+          "projection": null,
+          "projectiveProjection": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              3
+            ]
+          ],
+          "proven": true,
+          "reason": "global-projective-projection-contraction",
+          "spans": 129
+        }
+      }
+    ],
+    "limits": {
+      "cellsPerPair": 50,
+      "domainCellsPerPair": 5000,
+      "maxBoxes": 64,
+      "maxCells": 1000,
+      "maxDomainCells": 100000,
+      "maxPairs": 10000
+    },
+    "maxSpans": 1000,
+    "method": "interval-trimmed-face-contacts",
+    "nextPair": null,
+    "pairs": [
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          0,
+          1
+        ],
+        "sharedBoundary": {
+          "edge": 2,
+          "faces": [
+            0,
+            1
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 144,
+        "faces": [
+          0,
+          2
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.0078125,
+                0.015625
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.0078125
+              ],
+              [
+                0,
+                0.0078125
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0.0078125,
+                0.015625
+              ],
+              [
+                0,
+                0.0078125
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          0,
+          3
+        ],
+        "sharedBoundary": {
+          "edge": 0,
+          "faces": [
+            0,
+            3
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 282,
+        "faces": [
+          0,
+          4
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 33,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 74,
+        "faces": [
+          0,
+          5
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 1,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0,
+                0.03125
+              ],
+              [
+                0.96875,
+                1
+              ]
+            ],
+            [
+              [
+                0.984375,
+                1
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 7,
+        "domainCells": 8,
+        "faces": [
+          0,
+          6
+        ],
+        "sharedBoundary": null,
+        "status": "pair-disjoint",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 84,
+        "faces": [
+          0,
+          7
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0,
+                0.03125
+              ]
+            ],
+            [
+              [
+                0.015625,
+                0.03125
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0.015625,
+                0.03125
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          1,
+          2
+        ],
+        "sharedBoundary": {
+          "edge": 4,
+          "faces": [
+            1,
+            2
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 144,
+        "faces": [
+          1,
+          3
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.0078125,
+                0.015625
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.0078125
+              ],
+              [
+                0,
+                0.0078125
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0.0078125,
+                0.015625
+              ],
+              [
+                0,
+                0.0078125
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 84,
+        "faces": [
+          1,
+          4
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0,
+                0.03125
+              ]
+            ],
+            [
+              [
+                0.015625,
+                0.03125
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0,
+                0.015625
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.96875,
+                1
+              ],
+              [
+                0.015625,
+                0.03125
+              ]
+            ],
+            [
+              [
+                0,
+                0.015625
+              ],
+              [
+                0.984375,
+                1
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 282,
+        "faces": [
+          1,
+          5
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 33,
+        "unresolvedBoxes": [
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0,
+                0.25
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.5,
+                0.75
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.75,
+                1
+              ],
+              [
+                0.25,
+                0.5
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0,
+                0.5
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0.25,
+                0.5
+              ],
+              [
+                0.75,
+                1
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                0.5,
+                1
+              ],
+              [
+                0.5,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0.25
+              ],
+              [
+                0.5,
+                0.75
+              ]
+            ]
+          ]
+        ],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 74,
+        "faces": [
+          1,
+          6
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 1,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 7,
+        "domainCells": 8,
+        "faces": [
+          1,
+          7
+        ],
+        "sharedBoundary": null,
+        "status": "pair-disjoint",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          2,
+          3
+        ],
+        "sharedBoundary": {
+          "edge": 6,
+          "faces": [
+            2,
+            3
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 7,
+        "domainCells": 8,
+        "faces": [
+          2,
+          4
+        ],
+        "sharedBoundary": null,
+        "status": "pair-disjoint",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 84,
+        "faces": [
+          2,
+          5
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 282,
+        "faces": [
+          2,
+          6
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 33,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 74,
+        "faces": [
+          2,
+          7
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 1,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 74,
+        "faces": [
+          3,
+          4
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 1,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 7,
+        "domainCells": 8,
+        "faces": [
+          3,
+          5
+        ],
+        "sharedBoundary": null,
+        "status": "pair-disjoint",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 84,
+        "faces": [
+          3,
+          6
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 282,
+        "faces": [
+          3,
+          7
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 33,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          4,
+          5
+        ],
+        "sharedBoundary": {
+          "edge": 9,
+          "faces": [
+            4,
+            5
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 144,
+        "faces": [
+          4,
+          6
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          4,
+          7
+        ],
+        "sharedBoundary": {
+          "edge": 8,
+          "faces": [
+            4,
+            7
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          5,
+          6
+        ],
+        "sharedBoundary": {
+          "edge": 10,
+          "faces": [
+            5,
+            6
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 50,
+        "domainCells": 144,
+        "faces": [
+          5,
+          7
+        ],
+        "sharedBoundary": null,
+        "status": "pair-unresolved",
+        "unresolvedBoxCount": 3,
+        "unresolvedBoxes": [],
+        "witness": null
+      },
+      {
+        "cells": 0,
+        "domainCells": 0,
+        "faces": [
+          6,
+          7
+        ],
+        "sharedBoundary": {
+          "edge": 11,
+          "faces": [
+            6,
+            7
+          ],
+          "kind": "opposite-sides"
+        },
+        "status": "shared-boundary",
+        "unresolvedBoxCount": 0,
+        "unresolvedBoxes": [],
+        "witness": null
+      }
+    ],
+    "scope": "within-face-and-distinct-face-pairs",
+    "sharedBoundaryPairCount": 8,
+    "solidGeometryStatus": "not-certified",
+    "spans": 968,
+    "toleranceUv": 1e-8,
+    "totalPairs": 28,
+    "unresolvedBoxCount": 160,
+    "unresolvedPairCount": 16,
+    "unvisitedPairs": 0,
+    "visitedPairs": 28
+  },
+  "keyboard": true,
+  "tabs": 2779,
+  "contactPairCount": 6,
+  "cubeSharedBoundaries": 12,
+  "cubeClassified": true,
+  "curvedSharedBoundaries": 12,
+  "curvedUnresolvedPairs": 0,
+  "partial": true,
+  "invalidInput": true,
+  "retry": true,
+  "cancel": true,
+  "restart": true,
+  "selectionCancellation": true,
+  "modelSwitchCancellation": true,
+  "staleReplyAfterImport": true,
+  "unchanged": true,
+  "errors": []
+}

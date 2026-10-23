@@ -83,17 +83,19 @@ pub fn ball_silhouette_excludes(s: &Surface, c: &Curve, tolerance: f64) -> Resul
         || s.control_points[0].len() != s.degree_v + 1
         || s.periodic_u
         || s.periodic_v
-        || c.weights[0] != c.weights[2]
     {
         return Ok(false);
     }
-    let w = c.weights[1] / c.weights[0];
-    if !(0. < w && w < 1.) {
+    // This projective weight ratio is invariant under a positive fractional
+    // reparameterization. It only proposes a center: the original weighted
+    // coefficients below independently enclose both complete images.
+    let omega=(c.weights[1]/c.weights[0])*(c.weights[1]/c.weights[2]);
+    if !(0. < omega && omega < 1.) {
         return Ok(false);
     }
     let p = &c.control_points;
     let center: [f64; 3] =
-        std::array::from_fn(|k| ((p[0][k] + p[2][k]) * 0.5 - w * w * p[1][k]) / (1. - w * w));
+        std::array::from_fn(|k| ((p[0][k] + p[2][k]) * 0.5 - omega * p[1][k]) / (1. - omega));
     let radius2 = (0..3).map(|k| (p[0][k] - center[k]).powi(2)).sum::<f64>();
     if !radius2.is_finite() || !center.iter().all(|x| x.is_finite()) {
         return Ok(false);
@@ -154,6 +156,15 @@ mod tests {
             weights: vec![1., 0.5_f64.sqrt(), 1.],
             periodic: false,
         }
+    }
+    #[test]
+    fn projective_rim_clock_keeps_the_same_original_ball_exclusion() {
+        let s=patch();let mut c=rim();c.weights=vec![1.,1.,2.];
+        let before=c.clone();
+        assert!(ball_silhouette_excludes(&s,&c,1e-5).unwrap());
+        assert_eq!(c,before);
+        c.control_points[1][0]+=0.01;
+        assert!(!ball_silhouette_excludes(&s,&c,1e-5).unwrap());
     }
     #[test]
     fn whole_rational_ball_bound_excludes_rim_and_refuses_a_larger_surface() {

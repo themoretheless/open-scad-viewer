@@ -133,8 +133,6 @@ impl DenseOptions {
             dual_scale: true,
             sparse_depth_prior: true,
             patch_radius: 2,
-            fusion_merge_pass: true,
-            min_component_triangles: 4,
             ..Self::default()
         }
     }

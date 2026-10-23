@@ -40,5 +40,5 @@ it.each([
  expect(volume.orientations.every(o=>o.outward===o.expectedOutward)).toBe(true)
  const changed=structuredClone(data.geometry)
  changed.faces[0].surface.controlPoints[0][0][0]+=.01
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,changed)).toThrow('Owned affine final model differs from original replay')
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,changed)).toThrow(/final model differs from (the snapshot binding|original replay)/)
 })

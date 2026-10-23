@@ -63,6 +63,12 @@ impl ByteReadback {
         Ok(())
     }
 
+    /// Records a readback from `source`:
+    /// - Under [`crate::MemoryArchitecture::Uma`] (Apple Silicon Metal `StorageModeShared`),
+    ///   if `source` already carries `MAP_READ` (a mappable primary storage buffer) and `offset == 0`,
+    ///   maps `source` directly on submission with zero staging buffer allocation or DMA copy.
+    /// - Under [`crate::MemoryArchitecture::Duma`] (or when `source` is device-private),
+    ///   allocates a `COPY_DST | MAP_READ` staging buffer and records a DMA `copy_buffer_to_buffer`.
     pub fn copy_buffer(
         device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
@@ -71,11 +77,20 @@ impl ByteReadback {
         size: u64,
     ) -> Result<Self, ReadbackError> {
         Self::range(source, offset, size)?;
+        if size == 0 {
+            if !source.usage().intersects(wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::MAP_READ) {
+                return Err(ReadbackError::MissingUsage);
+            }
+            return Ok(Self::empty(device));
+        }
+        if crate::device_memory_architecture(device) == crate::MemoryArchitecture::Uma
+            && offset == 0
+            && source.usage().contains(wgpu::BufferUsages::MAP_READ)
+        {
+            return Self::map_on_submit(device, encoder, source, size);
+        }
         if !source.usage().contains(wgpu::BufferUsages::COPY_SRC) {
             return Err(ReadbackError::MissingUsage);
-        }
-        if size == 0 {
-            return Ok(Self::empty(device));
         }
         let staging = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU readback"),

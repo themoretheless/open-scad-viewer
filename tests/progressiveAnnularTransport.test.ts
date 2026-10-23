@@ -3,10 +3,12 @@ import type {NurbsCurve} from '../src/services/nurbsCurve'
 import type {ProgressiveBrepBody} from '../src/services/geometry/brep'
 const calls=vi.hoisted(()=>({rust:vi.fn(),audit:vi.fn()}))
 vi.mock('../src/services/geometry/kernel',()=>({callGeometryRust:calls.rust}))
+// These fixtures use default laws; native law encoding has separate ABI tests.
+vi.mock('../src/services/nurbsConstructors',async original=>({...await original<object>(),sweepAffineLawPayload:()=>({}),sweepFrameLawPayload:()=>({}),sweepGuidePayload:()=>({})}))
 vi.mock('../src/services/nurbsSweepEmbedding',async original=>({
  ...await original<object>(),inspectSweepVolumeAndCharts:calls.audit,
 }))
-import {createProgressiveBrepProfileBody,readNativeSweepPlanarCapFaces,reconstructCertifiedProgressiveStations,transformNurbsBrep} from '../src/services/geometry/brep'
+import {proposeProgressiveBrepProfileBody as createProgressiveBrepProfileBody,readNativeSweepPlanarCapFaces,reconstructCertifiedProgressiveStations,transformNurbsBrep} from '../src/services/geometry/brep'
 // Transport-only doubles. Rust unit/ABI and actual-model audits qualify geometry.
 const curve:NurbsCurve={degree:1,knots:[0,0,1,1],controlPoints:[[0,0,0],[0,0,1]],weights:[1,1],periodic:false}
 const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}

@@ -1,0 +1,7 @@
+[
+  {
+    "message": "[Invalid Texture] is invalid due to a previous error.\n - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n",
+    "width": 611,
+    "height": 415
+  }
+]

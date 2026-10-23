@@ -446,6 +446,8 @@ fn inspect_candidate_bounded(
             certified: false,
             cells: 0,
             projection: [[1, 0, 0], [0, 1, 0]],
+            row_weights: [1.,1.],
+            profile_parameterization: None,
             reason: Some("corner-interior-uninspected"),
         },
         admitted: false,

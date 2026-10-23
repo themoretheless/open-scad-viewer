@@ -1,0 +1,97 @@
+{
+  "scope": "local native and selected UI regression; final WASM and browser acceptance pending",
+  "fullCommandMatrixComplete": false,
+  "nativeIgnored": 3,
+  "nativeRegressionIncludesMidpointGuard": false,
+  "finalAreaSuiteIncludesMidpointGuard": true,
+  "p0TestPattern": "complete command registry|retry|late|cancels native NURBS",
+  "evidence": [
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/native-regression.log.gz",
+      "sha256": "3176d1527486d2c4776b7d3a53cda8caabfb7c330ebed662735f2509e4a32260",
+      "passed": 1327
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/area-final.log.gz",
+      "sha256": "9ddcf3bf27412cd6e0b90d9b2be06d881ace603dfa306cc813c8e21733016357",
+      "passed": 5
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/analytic-tessellation.log.gz",
+      "sha256": "c346fa49a708c6e266f54c2280a04b7e5db59961d3670ef08094c1fc2f70ad4b",
+      "passed": 5
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/p0-recovery.log.gz",
+      "sha256": "c7e3fe89dfaa3a3c6c959154a0ad43514c556e8d68127237272023c10dbee3b3",
+      "passed": 45
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/p0-storage-async.log.gz",
+      "sha256": "70dcf4ab0ae1c1126e01dbb9f977d9eebb0d52741453efe289371a4b418f601f",
+      "passed": 28
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/p0-superseded-put.log.gz",
+      "sha256": "1459bb38c694d4b8ac705037c128ae77c005d85852a604f82a13d93b1352920a",
+      "passed": 8
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/draft-pending-browser.json",
+      "sha256": "41c3e20c6091380b809642987dfba54f7ba69a9f61e7b9431e78fc1a5b45681a",
+      "scope": "pending-write cancellation, retry and competing writers"
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/wasm-profile-worker.log.gz",
+      "sha256": "c6eb19538bb577328612a9e9af4ef27174b96d4fbe673cf8c421e8a0b2c07b8b",
+      "passed": 29,
+      "wasmSha256": "a86645ce1295debbd1de0e9d48e438f8cf6b5ce045e8dc41f78f31563f0e4068",
+      "includesMidpointGuard": false
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/draft-concurrency-browser.json",
+      "sha256": "fa665d20794a57593cbdb3dcdb039a218465c941a726140fde2e839c360d6eba",
+      "scope": "new interface concurrent tabs, renderer crashes, corrupt cache, real quota and persistent browser restart"
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/polynomial-nonuniform.log.gz",
+      "sha256": "6eea64d9fbe61c484e3cf6f80f2479984b1e979c4e47f6c2b9a86ca84a91ec5b",
+      "passed": 7,
+      "scope": "uniform and nonuniform knots, constant weights 2, known volume 150",
+      "includesMidpointGuard": false
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/interface-dist.log.gz",
+      "sha256": "cd19fffccf12d540a1e581ba3ed012ed07dd81c9185123bf7bd0948c5fc541ac",
+      "scope": "pre-guard interface dist budgets; 150 artifacts, 7891053 asset bytes",
+      "includesMidpointGuard": false
+    }
+  ],
+  "sources": [
+    {
+      "path": "crates/nurbs-core/src/planar_area.rs",
+      "sha256": "83862ddb00eac287dc1c8a3d9338cc972a1f63fc342f08315b7d04217fb8c534"
+    },
+    {
+      "path": "crates/brep-core/src/profile_region.rs",
+      "sha256": "6efd260004484087047fd06bc8f93ee3bc5fe89ee25aed08a0293bb3d67ca256"
+    },
+    {
+      "path": "crates/geometry-bridge/src/brep.rs",
+      "sha256": "58b4818e9381842fb76c80df300d0a8d9129bca1855615b671ddf52acdc39839"
+    },
+    {
+      "path": "tests/mainSolidWorkerRealBoundary.test.ts",
+      "sha256": "918ed8cf87803211a02b3eb51b8d14245ea5896c4055e9791127c16661ce4687"
+    },
+    {
+      "path": "src/services/solidDraftHeadStore.ts",
+      "sha256": "5fc90e3b959d5b230f84d10c420741110ab4316fea6bf5df45ccd8fc148ef058"
+    },
+    {
+      "path": "tests/solidDraftHeadStore.test.ts",
+      "sha256": "6e168cfa954df8eb9d293dd918e0921bda495ca102feef3a9cf8665140eda063"
+    }
+  ],
+  "draftRaceScope": "real Chromium IndexedDB source-module acceptance; full interface acceptance pending"
+}

@@ -4,8 +4,8 @@
 //! hit-test on Line/Cubic segments, de Casteljau split, knife chord
 //! intersections, open multi-cut, and closed two-hit fillable slice.
 use crate::path::{BezierPath, PathSegment, segment_from};
-use crate::{Result, check};
-use math_core::{add2, norm2, scale2, sub2};
+use crate::{Result, check, dist, lerp};
+use math_core::{norm2, sub2};
 
 /// Where a scissors/knife hit lands in segment parameter space.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -213,15 +213,6 @@ const T_EPS: f64 = 1e-4;
 const DUP_T: f64 = 1e-3;
 const CUBIC_STEPS: usize = 48;
 
-#[inline(always)]
-fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
-    add2(a, scale2(sub2(b, a), t))
-}
-
-#[inline(always)]
-fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    norm2(sub2(a, b))
-}
 
 #[inline]
 fn dist_point_to_line(a: [f64; 2], b: [f64; 2], p: [f64; 2]) -> (f64, f64) {

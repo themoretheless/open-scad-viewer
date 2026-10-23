@@ -83,26 +83,58 @@ pub(crate) fn normalized(curve: Curve) -> Curve {
 
 fn tangent_angle(curve: &Curve, at_start: bool) -> Result<f64> {
     let n = curve.control_points.len();
-    let p = if at_start {
-        &curve.control_points[0]
+    let (p, q) = if at_start {
+        (&curve.control_points[0], &curve.control_points[1])
     } else {
-        &curve.control_points[n - 1]
+        (&curve.control_points[n - 1], &curve.control_points[n - 2])
     };
-    for step in 1..n {
-        let q = if at_start {
-            &curve.control_points[step]
+    // A clamped rational span can have repeated endpoint poles: its first
+    // derivative vanishes, while its geometric outgoing ray is given by the
+    // first nonzero endpoint jet. Positive weights preserve the direction of
+    // the first distinct pole in that span. This orders UV branches only;
+    // it does not certify parameter regularity or sample a replacement curve.
+    let domain = curve.domain();
+    let clamped = if at_start {
+        curve.knots[..=curve.degree].iter().all(|&k| k == domain[0])
+    } else {
+        curve.knots[curve.knots.len() - curve.degree - 1..]
+            .iter()
+            .all(|&k| k == domain[1])
+    };
+    let q = if p[0] == q[0]
+        && p[1] == q[1]
+        && clamped
+        && curve.weights.iter().all(|w| w.is_finite() && *w > 0.)
+    {
+        if at_start {
+            curve
+                .control_points
+                .iter()
+                .take(curve.degree + 1)
+                .skip(1)
+                .find(|q| q[0] != p[0] || q[1] != p[1])
+                .unwrap_or(q)
         } else {
-            &curve.control_points[n - 1 - step]
-        };
-        let d = [q[0] - p[0], q[1] - p[1]];
-        let len = d[0].hypot(d[1]);
-        if len.is_finite() && len > 1e-12 {
-            return Ok(d[1].atan2(d[0]));
+            curve
+                .control_points
+                .iter()
+                .rev()
+                .take(curve.degree + 1)
+                .skip(1)
+                .find(|q| q[0] != p[0] || q[1] != p[1])
+                .unwrap_or(q)
         }
+    } else {
+        q
+    };
+    let d = [q[0] - p[0], q[1] - p[1]];
+    let len = d[0].hypot(d[1]);
+    if !len.is_finite() || len <= 1e-12 {
+        return Err(unsupported(
+            "UV regions: degenerate pcurve tangent in the UV arrangement",
+        ));
     }
-    Err(unsupported(
-        "UV regions: degenerate pcurve tangent in the UV arrangement",
-    ))
+    Ok(d[1].atan2(d[0]))
 }
 
 fn signed_area(polygon: &[[f64; 2]]) -> f64 {
@@ -321,3 +353,7 @@ pub(crate) fn region_sample<K>(arrangement: &Arrangement<K>, region: &Region) ->
         Some((region.outer, &region.holes)),
     )
 }
+
+#[cfg(test)]
+#[path = "tests/uv_regions.rs"]
+mod tests;

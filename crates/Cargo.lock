@@ -218,9 +218,21 @@ dependencies = [
  "num-rational",
  "num-traits",
  "nurbs-core",
+ "nurbs-intersect",
  "planar-geometry",
  "rbench",
  "sha2",
+ "value-codec",
+]
+
+[[package]]
+name = "brep-intersect"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "nurbs-intersect",
  "value-codec",
 ]
 
@@ -233,6 +245,62 @@ dependencies = [
  "rustc-hash 2.1.1",
  "sha2",
  "value-codec",
+]
+
+[[package]]
+name = "bridge-analysis"
+version = "0.1.0"
+dependencies = [
+ "bridge-codec",
+ "mechanics-core",
+ "mesh-section",
+ "planar-geometry",
+ "polygon-core",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-cam"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bridge-codec",
+ "gcode-core",
+ "laser-core",
+ "mesh-section",
+ "planar-geometry",
+ "polygon-core",
+ "slicer-core",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-codec"
+version = "0.1.0"
+dependencies = [
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-svg"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bridge-codec",
+ "data-url",
+ "gif",
+ "image-webp",
+ "imagesize",
+ "mesh-section",
+ "planar-geometry",
+ "resvg",
+ "simplecss",
+ "svgtypes",
+ "ttf-parser",
+ "usvg",
+ "value-codec",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -287,6 +355,17 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 name = "cad-predicates"
 version = "0.1.0"
 dependencies = [
+ "value-codec",
+]
+
+[[package]]
+name = "cad-step"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "sha2",
  "value-codec",
 ]
 
@@ -731,17 +810,20 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "brep-core",
+ "brep-intersect",
  "brep-topology",
+ "bridge-analysis",
+ "bridge-cam",
+ "bridge-codec",
+ "bridge-svg",
  "cad-predicates",
+ "cad-step",
  "compute-core",
- "data-url",
  "flate2",
  "gcode-core",
  "geometry-ops",
- "gif",
  "gpu-compute",
- "image-webp",
- "imagesize",
+ "laser-core",
  "manifold-core",
  "manifold-ops",
  "mechanical-core",
@@ -751,21 +833,19 @@ dependencies = [
  "mesh-section",
  "mesh-topology",
  "nurbs-core",
+ "nurbs-intersect",
  "osv-math",
  "planar-geometry",
  "polygon-core",
  "resvg",
  "sdf-core",
  "sha2",
- "simplecss",
  "sketch-core",
  "slicer-core",
  "subdivision-core",
  "svgtypes",
- "ttf-parser",
  "usvg",
  "value-codec",
- "zune-jpeg",
 ]
 
 [[package]]
@@ -1132,6 +1212,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "laser-core"
+version = "0.1.0"
+dependencies = [
+ "osv-math",
+ "planar-geometry",
+]
+
+[[package]]
 name = "lazy-regex"
 version = "3.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1448,6 +1536,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nurbs-intersect"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "nurbs-core",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1572,10 +1670,18 @@ dependencies = [
 name = "osv-math"
 version = "0.1.0"
 dependencies = [
+ "rbench",
+]
+
+[[package]]
+name = "osv-math-compute"
+version = "0.1.0"
+dependencies = [
  "compute-core",
  "compute-cuda",
  "compute-mlx",
  "gpu-compute",
+ "osv-math",
  "rbench",
  "tensor-core",
 ]
@@ -1622,6 +1728,7 @@ dependencies = [
  "compute-core",
  "gpu-compute",
  "osv-math",
+ "osv-math-compute",
  "rbench",
 ]
 

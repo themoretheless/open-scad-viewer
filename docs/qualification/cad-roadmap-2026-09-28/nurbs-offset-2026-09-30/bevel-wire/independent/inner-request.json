@@ -1,0 +1,1 @@
+{"op": "curve_offset_bevel_wire", "curve": {"degree": 1, "knots": [0, 1, 2, 3, 4, 5, 6], "controlPoints": [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]], "weights": [1, 0.7, 1.2, 0.9, 1], "periodic": true}, "distance": 2, "toleranceMm": 0.001, "maxCells": 4096, "maxPairs": 1000000}

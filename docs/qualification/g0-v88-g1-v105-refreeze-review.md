@@ -1,0 +1,3 @@
+# G0 v88 / G1 v105 re-freeze review
+
+Append a successor to the preserved v87/v104 records because the profile Solid Rush regression is part of the bound harness. Tests now require the actual stronger continuous original RMF bounds and retain explicit strict-tolerance and exhausted-budget refusal checks. The ownRust70 native source bundle and exact runtime v6 WASM are unchanged; all 7343 native tests passed, and a full kernel rebuild preserved every packaged byte. No former results are imported into G1: all 4740 work units remain incomplete, qualificationClaim is none, and this is not G0/G1 approval or production cutover. Runtime v6 delivery evidence is recorded separately from the clean-environment matrix.

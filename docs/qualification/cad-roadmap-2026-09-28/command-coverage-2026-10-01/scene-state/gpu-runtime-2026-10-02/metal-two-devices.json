@@ -1,0 +1,22 @@
+{
+  "browser": "157.0.8081.0",
+  "supported": true,
+  "frames": 24,
+  "adapters": [
+    {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": ""
+    },
+    {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": ""
+    }
+  ],
+  "devices": 2,
+  "errors": [],
+  "lost": []
+}

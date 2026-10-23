@@ -17,8 +17,12 @@ it.each([
  const built=await buildOwnNurbsAsync(graph,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!built.nativeGeometry)throw Error('Missing corrected circular hollow body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.01})
- const model=readNativeGeometryData(built.nativeGeometry).geometry
- expect(model.faces.slice(-2).map((f:any)=>f.holes.length)).toEqual([1,1])
+ const data=readNativeGeometryData(built.nativeGeometry),model=data.geometry
+ const caps=data.sweepBodyBoundaryEvidence
+ if(caps.capRepresentation==='radial-annular') {
+  expect(caps.capFaceGroups.map((group:number[])=>group.length)).toEqual([4,4])
+  expect(caps.capFaces.map((face:number)=>model.faces[face].holes.length)).toEqual(Array(8).fill(0))
+ }else expect(model.faces.slice(-2).map((f:any)=>f.holes.length)).toEqual([1,1])
  const stored=JSON.stringify(model)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
   boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true,nextPair:null})
@@ -38,7 +42,7 @@ it('qualifies the valid 65-station oblique corrected native cancellation workloa
  if(!built.nativeGeometry)throw Error('Missing 65-station corrected oblique body')
  expect(readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true,withinBudget:true,budget:.01})
  const model=readNativeGeometryData(built.nativeGeometry).geometry
- expect(model.faces).toHaveLength(514)
+ expect(model.faces).toHaveLength(520)
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,model)).toMatchObject({solidGeometryCertified:true,
   allFacesInjective:true,allPairsClassified:true,nextPair:null})
 })

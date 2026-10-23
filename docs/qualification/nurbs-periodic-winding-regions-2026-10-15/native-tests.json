@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "completedOn": "2026-10-16",
+  "suiteTests": {
+    "profile_certificate_unit": 30,
+    "periodic_winding_regions": 4,
+    "winding_regularization": 5
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/profile_certificate.rs": "769e2b8e598e60b80c314086ca4461d8006197e91f740403e5ee71b1d031e713",
+    "crates/brep-core/src/profile_certificate/winding.rs": "c5ce88f853cfc5c9dcbf43c5b09928bb867e1cb5096470a9055b378a08180038",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "c9c154752400041d1b3237d6856dab781c4d6055eb49d2e4f34edc3d55458c80",
+    "crates/brep-core/tests/periodic_winding_regions.rs": "022c20cd6cdbe7c6fce5b1e1c1c21e7d6514f87a774ea8be443838daeb65be54",
+    "crates/brep-core/src/profile_certificate/producer.rs": "f4838dc13b7400d0ee5dea7b3a803feb7e9e24f2e5e3128aa66524ea83e4978e",
+    "crates/brep-core/src/profile_certificate/arithmetic.rs": "520dbb2feb76b55af885fd521a3e22a6cba6da5fe00674a21955807366e01422",
+    "crates/brep-core/src/profile_certificate/extraction.rs": "8ffd872fb271dde3f01ef0a71fe976f0c834ce8507e248959df03c0ed0b7e209",
+    "crates/brep-core/src/profile_certificate/orientation.rs": "d7833556bde07a0c1c618298f047c6c6f8d55dfeb03016e93c78d068476837d1",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "07581f680bd0df151cd23ccb8d7915e088b195e0c96b8287d7b159b1e68a2cf4"
+  },
+  "scope": "Fresh original periodic weighted-chart admission, complete integer provenance/cycle census and exact UV nonzero-fill regions; no supporting-surface faces or general inter-wire-contact regularization.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "originalSourceAndPartitionsOwned": true,
+  "completeIntegerFlowAndProvenance": true,
+  "sourceReverificationPerformsBoundedSearch": true,
+  "regionReplaySearchFree": true,
+  "ownedSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false
+}

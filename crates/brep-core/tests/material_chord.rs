@@ -4,7 +4,7 @@ const RAYS: [[f64; 3]; 2] = [[1., 0.07, 0.03], [-1., 0.09, 0.02]];
 fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     let model = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
     let saved = model.clone();
-    let r = material_chord::inspect(
+    let r = material_chord::inspect_finite_interval(
         &model,
         [1.; 3],
         [1., 0., 0.],
@@ -27,7 +27,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(r.interval.length_mm[0] <= 1.98 && r.interval.length_mm[1] >= 1.98);
     assert!(r.cells <= 10000 && r.domain_cells <= 100000);
     assert_eq!(model, saved);
-    let outside = material_chord::inspect(
+    let outside = material_chord::inspect_finite_interval(
         &model,
         [3.; 3],
         [1., 0., 0.],
@@ -41,7 +41,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     .unwrap();
     assert_eq!(outside.decision, material_chord::Decision::OutsideMaterial);
     assert!(!outside.material_interval_qualified);
-    let limited_uv = material_chord::inspect(
+    let limited_uv = material_chord::inspect_finite_interval(
         &model,
         [3.; 3],
         [1., 0., 0.],
@@ -55,7 +55,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     .unwrap();
     assert_eq!(limited_uv.decision, material_chord::Decision::Unresolved);
     assert!(limited_uv.domain_cells <= 49);
-    let scaled = material_chord::inspect(
+    let scaled = material_chord::inspect_finite_interval(
         &model,
         [1.; 3],
         [2., 0., 0.],
@@ -69,7 +69,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     .unwrap();
     assert!(scaled.material_interval_qualified);
     assert!(scaled.interval.length_mm[0] <= 1.96 && scaled.interval.length_mm[1] >= 1.96);
-    let boundary_anchor = material_chord::inspect(
+    let boundary_anchor = material_chord::inspect_finite_interval(
         &model,
         [0., 1., 1.],
         [1., 0., 0.],
@@ -116,7 +116,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
         .collect();
     s.control_points[2][2][0] += 100.;
     folded.validate().unwrap();
-    let denied = material_chord::inspect(
+    let denied = material_chord::inspect_finite_interval(
         &folded,
         [1.; 3],
         [1., 0., 0.],
@@ -129,7 +129,7 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     )
     .unwrap();
     assert!(!denied.material_interval_qualified);
-    let small = material_chord::inspect(
+    let small = material_chord::inspect_finite_interval(
         &model,
         [1.; 3],
         [1., 0., 0.],
@@ -166,7 +166,7 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
             .parity,
         Some(true)
     );
-    let across = material_chord::inspect(
+    let across = material_chord::inspect_finite_interval(
         &model,
         point,
         [1., 0., 0.],
@@ -183,7 +183,7 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
     assert_eq!(across.decision, material_chord::Decision::BoundaryCrossing);
     assert!(across.boundary.is_none() && across.volume_preconditions.is_none());
     assert!(across.cells < 1000);
-    let wall = material_chord::inspect(
+    let wall = material_chord::inspect_finite_interval(
         &model,
         point,
         [1., 0., 0.],
@@ -231,7 +231,7 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
         wall.decision,
         material_chord::Decision::InsideMaterialInterval
     );
-    let void = material_chord::inspect(
+    let void = material_chord::inspect_finite_interval(
         &model,
         [5., 4., 5.],
         [1., 0., 0.],
@@ -251,5 +251,9 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
         Some(false)
     );
     assert!(!void.material_interval_qualified);
-    assert_eq!(void.decision, material_chord::Decision::OutsideMaterial);
+    assert!(void.cells <= 10000 && void.domain_cells <= 100000);
+    assert_eq!(void.decision, material_chord::Decision::OutsideMaterial,
+        "cells={} domains={} volume={:?} trim={:?} parity={:?} boundary={:?}",void.cells,void.domain_cells,void.volume_preconditions,
+        void.trim_regions.as_ref().map(|r|r.all_valid),void.parity.as_ref().map(|r|r.parity),
+        void.boundary.as_ref().map(|b|(b.proven,b.agreement.all_equal,b.agreement.all_joins_exact,b.trim.all_valid,b.intersections.faces.all_faces_injective,b.intersections.pairs.all_pairs_classified,b.intersections.pairs.cells,b.intersections.pairs.next_pair)));
 }

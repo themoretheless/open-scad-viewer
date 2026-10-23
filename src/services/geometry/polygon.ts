@@ -14,12 +14,12 @@ export interface PolygonMesh {
  * instead of silently wrapping. */
 const MAX_MESH_VERTICES = 0xffffffff
 export function toPolygonPositions(values: ArrayLike<number>): Float64Array {
-  return values instanceof Float64Array ? values : new Float64Array(values)
+  return values instanceof Float64Array ? values : Float64Array.from(values)
 }
 export function toPolygonIndices(values: ArrayLike<number>): Uint32Array {
   if (values instanceof Uint32Array) return values
   if (values.length > MAX_MESH_VERTICES * 3) throw new Error('Mesh index buffer exceeds u32 range.')
-  return new Uint32Array(values)
+  return Uint32Array.from(values)
 }
 /** Normalize an arbitrary mesh-like payload (freshly JSON/binary-decoded plain
  * arrays, or already typed views) into the canonical typed PolygonMesh fields. */
@@ -150,7 +150,14 @@ export interface GcodeJobExportResult extends GcodeExportResult {
   flavor: GcodeFlavor
 }
 /** Result of opening an arbitrary G-code file: preview plus what was detected. */
+export interface GcodeFirmwareState {
+  activeTool?:number; bedTargetC?:number|null; chamberTargetC?:number|null;
+  tools?:{id:number;targetC:number|null;standbyC:number|null;retracted:boolean|null}[];
+  events?:{line:number;tool:number|null;targetC:number|null;wait:string;retractOffsetMm:number|null}[];
+  unverifiedLines?:number[]; error?:string;
+}
 export interface GcodeInspectResult {
+  firmware?:GcodeFirmwareState|null;
   preview: GcodePreviewResult
   /** Native dialect line, or `"<generator> G-code (tolerant preview)"` for foreign files. */
   dialect: string
@@ -162,6 +169,7 @@ export interface GcodeInspectResult {
   filamentDiameterMm: number | null
 }
 export interface JobSettingsInput extends ToolpathSettingsInput {
+  inches?:boolean; relativeXyz?:boolean; relativeE?:boolean; startTemplate?:string; zHopMm?:number; chamberTempC?:number;
   nozzleTempC?: number
   bedTempC?: number
   retractLengthMm?: number
@@ -190,6 +198,7 @@ function toolpathArguments(settings: ToolpathSettingsInput): ToolpathSettingsInp
 function jobArguments(settings: JobSettingsInput): JobSettingsInput {
   return {
     ...toolpathArguments(settings),
+    inches:settings.inches, relativeXyz:settings.relativeXyz,relativeE:settings.relativeE,startTemplate:settings.startTemplate,zHopMm:settings.zHopMm,chamberTempC:settings.chamberTempC,
     nozzleTempC: settings.nozzleTempC,
     bedTempC: settings.bedTempC,
     retractLengthMm: settings.retractLengthMm,

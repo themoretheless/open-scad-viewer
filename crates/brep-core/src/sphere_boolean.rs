@@ -215,9 +215,9 @@ impl Mate for SphereMate<'_> {
                 let raw = [cc[0] + ruv * angle.cos(), cc[1] + ruv * angle.sin()];
                 let piece = piece_of(raw)?;
                 let w = snap_to_piece(piece, raw);
-                let tau = piece_tau(piece, w);
                 let coedge =
                     &model.loops[model.faces[patch].outer].coedges[self.pieces[patch][piece]];
+                let tau = piece_tau(piece, w, &coedge.pcurve);
                 let t = if coedge.reversed { 1. - tau } else { tau };
                 if !(1e-9..=1. - 1e-9).contains(&t) {
                     return Err(unsupported(

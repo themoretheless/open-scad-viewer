@@ -14,7 +14,6 @@ export function retainedProfileDisplay(profile:BrepProfile):Point2[][] {
 export function sketchProfile(sketch:DirectSketch):BrepProfile {
  if(sketch.retainedProfile)return validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)
  if(!sketch.closed)throw Error('Exact profile requires closed contours.')
- if(sketch.editablePath)return authorBrepProfile({kind:'bezier',path:sketch.editablePath})
  if(sketch.analytic?.kind==='circle'){
   const {center,radius}=sketch.analytic
   return transformBrepProfile(authorBrepProfile({kind:'circle',radius}),[1,0,0,0,0,1,0,0,0,0,1,0,center[0],center[1],0,1])

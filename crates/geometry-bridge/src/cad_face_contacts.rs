@@ -85,7 +85,9 @@ fn diagnose_sweep_volume_impl(v:Value,proposals:&[Option<[[i8;3];2]>],capture_ch
         },
         proposals,
     )?;
-    volume_value(&r,&charts,capture_charts)
+    let mut output=volume_value(&r,&charts,capture_charts)?;
+    super::cad_boundary_regularity::attach(&mut output,super::cad_boundary_regularity::inspect(&model,&v)?);
+    Ok(output)
 }
 fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_retained_charts::Report,capture_charts:bool)->Result<Value> {
     let mut output=
@@ -93,6 +95,7 @@ fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_r
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
         "nextPair":r.boundary.intersections.pairs.next_pair,
+        "linearCells":r.boundary.intersections.faces.linear_cells,"totalPairs":r.boundary.intersections.pairs.total_pairs,
         "individualPairs":r.boundary.intersections.pairs.pairs.len(),
         "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
         "groupCells":r.boundary.intersections.pairs.group_cells,
@@ -106,13 +109,16 @@ fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_r
                 "separationLower":p.result.boundary.lower_bound_mm})).collect::<Vec<_>>() })),
         "orientationCells":r.orientation_cells,"orientationDomainCells":r.orientation_domain_cells,
         "orientations":r.orientations.iter().map(|s|json!({"shell":s.shell,"expectedOutward":s.expected_outward,
-            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() });
+            "outward":s.outward,"attempts":s.attempts.len(),
+            "normalMethods":s.attempts.iter().map(|a|a.normal_method).collect::<Vec<_>>(),
+            "unresolved":s.attempts.last().map(|a|a.ray.unresolved.iter().map(|u|json!({"face":u.face,"uv":u.uv,"reason":u.reason})).collect::<Vec<_>>()).unwrap_or_default()})).collect::<Vec<_>>() });
     if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(&charts);}
     Ok(output)
 }
 struct VolumeSession {
     work:brep_core::volume_validity::Inspector,
     request_key:Vec<u8>,
+    regularity:Value,
 }
 #[derive(Default)]
 struct VolumeRegistry {next:u64,live:std::collections::BTreeMap<String,VolumeSession>,completed:Option<(Vec<u8>,Value)>}
@@ -168,7 +174,8 @@ pub fn begin_sweep_volume(v:Value)->Result<Value> {
         let id=store.next.to_string();
         store.completed=None;
         let request_key=volume_request_key(&v)?;
-        store.live.insert(id.clone(),VolumeSession {work,request_key});
+        let regularity=super::cad_boundary_regularity::inspect(&model,&v)?;
+        store.live.insert(id.clone(),VolumeSession {work,request_key,regularity});
         Ok(json!({"session":id,"done":false,"completedSteps":0}))
     })
 }
@@ -187,7 +194,8 @@ pub fn step_sweep_volume(v:Value)->Result<Value> {
             return Ok(json!({"session":id,"done":false,"advancedUnits":advanced,"completedSteps":completed}));
         }
         let (report,charts)=session.work.finish_with_charts()?;
-        let value=volume_value(&report,&charts,true)?;
+        let mut value=volume_value(&report,&charts,true)?;
+        super::cad_boundary_regularity::attach(&mut value,session.regularity);
         if report.proven {store.completed=Some((session.request_key,value.clone()));}
         Ok(json!({"session":id,"done":true,"advancedUnits":advanced,"completedSteps":completed,"report":value}))
     })
@@ -244,7 +252,7 @@ fn boundary_value(r: &brep_core::boundary_embedding::Report) -> Value {
         "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"reason":p.reason,
             "allowedBoundary":p.boundary.is_some()})).collect::<Vec<_>>(),
         "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f|
-            !f.result.as_ref().is_some_and(|r|r.proven) && !f.linear.as_ref().is_some_and(|r|r.certified))
+            !f.absence_proven())
             .map(|f|f.face).collect::<Vec<_>>(),
         "caps":r.cap_contacts.iter().map(|(cap,r)|json!({"face":cap,"capCertified":r.cap_certified,
             "planarControlHullCertified":r.planar_control_hull_certified,
@@ -274,10 +282,37 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "Return at most 4096 unresolved boxes",
         ));
     }
+    let mut embedding_evidence = None;
     let (report, face_report) = if combined {
         let max_spans: usize = field(&v, "maxSpans")?;
-        let result =
-            brep_core::self_intersection::inspect(&model, tolerance_uv, max_spans, limits)?;
+        let result = if let Some(audit) = v.get("boundaryAudit") {
+            let exact_work: u64 = field(audit, "exactWork")?;
+            let trim_pairs: usize = field(audit, "trimPairs")?;
+            let trim_cells: usize = field(audit, "trimCells")?;
+            let trim_domain_cells: usize = field(audit, "trimDomainCells")?;
+            let audited = brep_core::boundary_embedding::inspect(
+                &model,
+                tolerance_uv,
+                brep_core::boundary_embedding::Limits {
+                    exact_work,
+                    trim_pairs,
+                    trim_cells,
+                    trim_domain_cells,
+                    spans: max_spans,
+                    contacts: limits,
+                },
+            )?;
+            embedding_evidence = Some(json!({"proven":audited.proven,
+                "exactAgreement":audited.agreement.all_equal,"exactJoins":audited.agreement.all_joins_exact,
+                "exactWork":audited.agreement.work,"trimValid":audited.trim.all_valid,
+                "positiveTrimWinding":audited.trim.faces.iter().all(|f|f.as_ref().is_some_and(|r|r.winding.first()==Some(&Some(1)))),
+                "trimPairs":audited.trim.pairs,"trimCells":audited.trim.cells,
+                "trimDomainCells":audited.trim.domain_cells,
+                "limits":audit,"sourceModel":model}));
+            audited.intersections
+        } else {
+            brep_core::self_intersection::inspect(&model, tolerance_uv, max_spans, limits)?
+        };
         (
             result.pairs,
             Some((result.faces, max_spans, result.absence_proven)),
@@ -302,17 +337,22 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells+p.hull_cells+p.boundary_cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells+p.boundary_cells,0,Vec::new(),0)};
+            (witness,r.cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
+            brep_core::face_contacts::SharedBoundary::OwnedVertex(c)=>json!({"kind":"owned-vertex","faces":c.faces,"vertex":c.vertex}),
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
-            brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"hullIntersection":c.hull_intersection}),
+            brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,
+                "joinedProof":c.joined_proof.as_ref().map(|j|json!({"blendFace":j.blend_face,"wallFace":j.wall_face,
+                    "collapsedEnd":j.collapsed_end,"projection":j.projection,"proven":j.report.proven,
+                    "reason":j.report.reason,"cells":j.report.cells,"weightedBounds":j.report.weighted_bounds,
+                    "dominanceMarginLower":j.report.dominance_margin_lower}))}),
+            brep_core::face_contacts::SharedBoundary::BilinearGraph(c)=>json!({"kind":"bilinear-graph","edge":c.edge,"graphFace":c.graph_face,"sidedFace":c.sided_face,"polynomialWork":c.polynomial_work}),
             brep_core::face_contacts::SharedBoundary::PlanarFace(c)=>json!({"kind":"planar-face","edge":c.edge,"planarFace":c.planar_face,"sidedFace":c.sided_face}),
             brep_core::face_contacts::SharedBoundary::OppositeSides(c)=>json!({"kind":"opposite-sides","edge":c.edge,"faces":c.faces}),
-            brep_core::face_contacts::SharedBoundary::OwnedVertex(c)=>json!({"kind":"owned-vertex","faces":c.faces,"vertex":c.vertex,
-                "trimmedFace":c.trimmed_face,"coordinates":c.coordinates,"distanceUpper":c.distance_upper,
-                "hullPenetrations":c.hull_penetrations,"exactVertexContact":c.exact_vertex_contact}),
-        }),"witness":witness,"cells":cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})
+            brep_core::face_contacts::SharedBoundary::SourceVolumeBoundary(c)=>json!({"kind":"source-volume-boundary","certified":true,"edge":c.shared_edge,"faces":c.faces,"sourceFaces":c.source_faces,"projection":c.projection,"cells":c.cells,"principalMinorLower":c.principal_minor_lower}),
+            brep_core::face_contacts::SharedBoundary::JoinedSourceCharts(c)=>json!({"kind":"joined-source-charts","certified":true,"edge":c.edge,"faces":c.faces,"contactEnclosure":c.contact_enclosure,"projection":c.projection,"rowWeights":c.row_weights,"profileParameterization":c.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower})),"cells":c.cells}),
+        }),"volumeSeparation":p.volume_separation.as_ref().map(|c|json!({"certified":true,"faces":c.faces,"sourceFaces":c.source_faces,"projection":c.projection,"cells":c.cells,"principalMinorLower":c.principal_minor_lower})),"witness":witness,"cells":cells,"hullCells":p.hull_cells,"sourceChartCells":p.source_chart_cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})
     }).collect::<Vec<_>>();
     let mut output = json!({"method":"interval-trimmed-face-contacts","scope":"distinct-face-pairs","solidGeometryStatus":"not-certified",
         "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len()-report.grouped_pairs,"nextPair":report.next_pair,
@@ -330,9 +370,19 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         output["maxSpans"] = json!(max_spans);
         output["faces"] = json!(faces.faces.iter().map(|face| json!({
             "face": face.face,
-            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,
+            "linearRowWeights":face.linear.as_ref().map(|linear|linear.row_weights),
+            "linearProfileParameterization":face.linear.as_ref().and_then(|linear|linear.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower}))),
+            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
+                "proven":q.proven(),"polar":q.polar.as_ref().map(|p|json!({"proven":p.proven,"cells":p.cells,"reason":p.reason,"derivativeBounds":p.derivative_bounds,"dominanceMarginLower":p.dominance_margin_lower})),"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
+                "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
+            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
+                "projectiveProjection":r.projective_projection,
+                "polarProjection":r.polar_projection,
                 "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
         })).collect::<Vec<_>>());
+    }
+    if let Some(evidence) = embedding_evidence {
+        output["boundaryEmbedding"] = evidence;
     }
     Ok(output)
 }
@@ -518,4 +568,24 @@ mod tests {
         q["maxCells"] = json!(0);
         assert!(crate::dispatch(q).is_err());
     }
+}
+
+pub fn sphere(v:Value)->Result<Value> {
+    let radius=field(&v,"radius")?;
+    let model=if v["op"]==json!("brep_nurbs_sphere_exact") {
+        brep_core::analytic::sphere_exact(radius)?
+    } else {brep_core::analytic::sphere(radius)?};
+    super::encode(model)
+}
+
+pub(super) fn compact_volume_report(mut report: Value) -> Value {
+    if let Some(fields) = report.as_object_mut() {
+        if let Some(groups) = fields.remove("disjointGroups") {
+            fields.insert(
+                "groupCertificateCount".into(),
+                json!(groups.as_array().map_or(0, |a| a.len())),
+            );
+        }
+    }
+    report
 }

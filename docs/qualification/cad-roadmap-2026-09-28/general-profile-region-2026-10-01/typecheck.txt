@@ -1,0 +1,2 @@
+Command: npx vue-tsc --noEmit
+Exit code: 0

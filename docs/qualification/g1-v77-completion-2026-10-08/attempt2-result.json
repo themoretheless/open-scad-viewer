@@ -1,0 +1,20 @@
+{
+  "schema": "open-scad-viewer/g1-github-actions-aggregate",
+  "schemaVersion": 1,
+  "planId": "semantic-manifold-g1-plan-v77",
+  "candidateRunId": "semantic-manifold-g1-candidate-run-v77",
+  "planSha256": "a6f252df7b1f18ac1fd3b0c66743048c562e41808a4a7ab859f2ab74bf603802",
+  "sourceSha": "cbb3241e315a45fd0debccfcf34c18d8855746fe",
+  "expectedFragments": 132,
+  "receivedFragments": 132,
+  "creditedFragments": 132,
+  "plannedWorkUnits": 4740,
+  "completedWorkUnits": 4740,
+  "status": "matrix-passed-awaiting-qualification-approval",
+  "matrixPassed": true,
+  "qualificationClaim": "none",
+  "qualificationApproval": "not-approved",
+  "productionCutoverAuthorized": false,
+  "errors": [],
+  "generatedAt": "2026-10-07T21:14:47.454Z"
+}

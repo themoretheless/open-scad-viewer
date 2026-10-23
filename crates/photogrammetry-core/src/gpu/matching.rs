@@ -10,6 +10,7 @@ use super::wgpu;
 
 use super::GpuContext;
 use compute_core::{Binding, Kernel};
+use gpu_compute::MemoryArchitecture;
 
 /// Apple-silicon workgroup size, measured on an M4 Max (see
 /// `math-core/examples/bench_workgroup_tuning.rs`): streaming reductions such
@@ -46,14 +47,17 @@ struct Buffers {
     descriptors_b: wgpu::Buffer,
     rows_out: wgpu::Buffer,
     cols_out: wgpu::Buffer,
-    read_rows: wgpu::Buffer,
-    read_cols: wgpu::Buffer,
+    /// Present only under `MemoryArchitecture::Duma`; `None` under `MemoryArchitecture::Uma`
+    /// where `rows_out` / `cols_out` carry `STORAGE | MAP_READ` in unified RAM.
+    read_rows: Option<wgpu::Buffer>,
+    read_cols: Option<wgpu::Buffer>,
     bind: wgpu::BindGroup,
 }
 
 pub struct GpuMatcher {
     device: wgpu::Device,
     queue: wgpu::Queue,
+    memory_architecture: MemoryArchitecture,
     rows_kernel: Kernel,
     cols_kernel: Kernel,
     /// The workgroup size baked into the compiled pipelines, chosen per
@@ -69,6 +73,10 @@ impl GpuMatcher {
         let workgroup_size =
             gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
         Self::with_workgroup_size(context, workgroup_size)
+    }
+
+    pub fn memory_architecture(&self) -> MemoryArchitecture {
+        self.memory_architecture
     }
 
     /// Builds the pipelines for an explicit workgroup size, bypassing backend
@@ -104,6 +112,7 @@ impl GpuMatcher {
         Self {
             device: context.device.clone(),
             queue: context.queue.clone(),
+            memory_architecture: context.memory_architecture(),
             rows_kernel,
             cols_kernel,
             workgroup_size,
@@ -196,27 +205,36 @@ impl GpuMatcher {
             self.cols_kernel
                 .record_dispatch(&mut encoder, &buffers.bind, cols);
         }
-        encoder.copy_buffer_to_buffer(
-            &buffers.rows_out,
-            0,
-            &buffers.read_rows,
-            0,
-            row_bytes.max(12),
-        );
-        encoder.copy_buffer_to_buffer(
-            &buffers.cols_out,
-            0,
-            &buffers.read_cols,
-            0,
-            col_bytes.max(8),
-        );
+        // Under dUMA, DMA-copy from device-local outputs into host-mappable staging buffers.
+        // Under UMA (Apple Silicon Metal StorageModeShared), `rows_out` and `cols_out` are
+        // mapped directly in unified memory with zero copy_buffer_to_buffer overhead.
+        if let Some(read_rows) = &buffers.read_rows {
+            encoder.copy_buffer_to_buffer(
+                &buffers.rows_out,
+                0,
+                read_rows,
+                0,
+                row_bytes.max(12),
+            );
+        }
+        if let Some(read_cols) = &buffers.read_cols {
+            encoder.copy_buffer_to_buffer(
+                &buffers.cols_out,
+                0,
+                read_cols,
+                0,
+                col_bytes.max(8),
+            );
+        }
         self.queue.submit([encoder.finish()]);
 
         // The shared transport releases each mapping before returning, so these
-        // staging allocations can be reused by the next call without unmapping.
+        // allocations can be reused by the next call without unmapping.
+        let rows_target = buffers.read_rows.as_ref().unwrap_or(&buffers.rows_out);
+        let cols_target = buffers.read_cols.as_ref().unwrap_or(&buffers.cols_out);
         let rows_out_vec = gpu_compute::try_read_buffer_with(
             &self.device,
-            &buffers.read_rows,
+            rows_target,
             row_bytes as usize,
             |bytes| {
                 bytes
@@ -234,7 +252,7 @@ impl GpuMatcher {
         )?;
         let cols_out_vec = gpu_compute::try_read_buffer_with(
             &self.device,
-            &buffers.read_cols,
+            cols_target,
             col_bytes as usize,
             |bytes| {
                 bytes
@@ -261,6 +279,7 @@ impl GpuMatcher {
             return;
         }
         let device = &self.device;
+        let uma = self.memory_architecture == MemoryArchitecture::Uma;
         let row_capacity = row_count.max(1);
         let col_capacity = col_count.max(1);
         let params = device.create_buffer(&wgpu::BufferDescriptor {
@@ -281,30 +300,41 @@ impl GpuMatcher {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        let out_usage = if uma {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::MAP_READ
+        } else {
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC
+        };
         let rows_out = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("match_rows_out"),
             size: (row_capacity * 12) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: out_usage,
             mapped_at_creation: false,
         });
         let cols_out = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("match_cols_out"),
             size: (col_capacity * 8) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: out_usage,
             mapped_at_creation: false,
         });
-        let read_rows = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("match_read_rows"),
-            size: (row_capacity * 12) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let read_cols = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("match_read_cols"),
-            size: (col_capacity * 8) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let (read_rows, read_cols) = if uma {
+            (None, None)
+        } else {
+            (
+                Some(device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("match_read_rows"),
+                    size: (row_capacity * 12) as u64,
+                    usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })),
+                Some(device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("match_read_cols"),
+                    size: (col_capacity * 8) as u64,
+                    usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })),
+            )
+        };
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("match_descriptors"),
             layout: self.rows_kernel.bind_group_layout(),
@@ -588,215 +618,5 @@ mod cuda {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn descriptors(seed: u64, n: usize) -> Vec<[f32; 128]> {
-        let mut state = seed;
-        (0..n)
-            .map(|_| {
-                let mut d = [0f32; 128];
-                for v in &mut d {
-                    state = state
-                        .wrapping_mul(6364136223846793005)
-                        .wrapping_add(1442695040888963407);
-                    *v = ((state >> 33) as f32 / 2147483648.0).fract();
-                }
-                d
-            })
-            .collect()
-    }
-
-    fn cpu_reference(
-        da: &[[f32; 128]],
-        db: &[[f32; 128]],
-    ) -> (Vec<(usize, f32, f32)>, Vec<(usize, f32)>) {
-        let mut best_a = vec![(usize::MAX, f32::INFINITY, f32::INFINITY); da.len()];
-        let mut best_b = vec![(usize::MAX, f32::INFINITY); db.len()];
-        for (i, x) in da.iter().enumerate() {
-            for (j, y) in db.iter().enumerate() {
-                let mut d = 0f32;
-                for k in 0..128 {
-                    let v = x[k] - y[k];
-                    d += v * v;
-                }
-                if d < best_a[i].1 {
-                    best_a[i].2 = best_a[i].1;
-                    best_a[i].1 = d;
-                    best_a[i].0 = j;
-                } else if d < best_a[i].2 {
-                    best_a[i].2 = d;
-                }
-                if d < best_b[j].1 {
-                    best_b[j] = (i, d);
-                }
-            }
-        }
-        (best_a, best_b)
-    }
-
-    #[test]
-    fn gpu_matching_reuses_staging_and_handles_empty_grids_after_nonempty_calls() {
-        let Some(context) = GpuContext::new() else {
-            assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
-            return;
-        };
-        let matcher = GpuMatcher::new(&context);
-        for count in [9, 3, 12, 1] {
-            let da = descriptors(17, count);
-            let db = descriptors(31, count + 2);
-            let (rows, cols) = matcher.try_match_descriptors(&da, &db).unwrap();
-            let (expected_rows, expected_cols) = cpu_reference(&da, &db);
-            assert_eq!(rows.len(), da.len());
-            assert_eq!(cols.len(), db.len());
-            for (actual, expected) in rows.iter().zip(expected_rows) {
-                assert_eq!(actual.j, expected.0);
-                assert!((actual.d1 - expected.1).abs() <= 1e-4 * expected.1.max(1.));
-            }
-            for (actual, expected) in cols.iter().zip(expected_cols) {
-                assert_eq!(actual.i, expected.0);
-                assert!((actual.d1 - expected.1).abs() <= 1e-4 * expected.1.max(1.));
-            }
-            let (rows, cols) = matcher.try_match_descriptors(&da, &[]).unwrap();
-            assert!(cols.is_empty());
-            assert_eq!(rows.len(), da.len());
-            assert!(
-                rows.iter()
-                    .all(|r| r.j == usize::MAX && r.d1 == f32::INFINITY && r.d2 == f32::INFINITY)
-            );
-            let (rows, cols) = matcher.try_match_descriptors(&[], &db).unwrap();
-            assert!(rows.is_empty());
-            assert_eq!(cols.len(), db.len());
-            assert!(
-                cols.iter()
-                    .all(|c| c.i == usize::MAX && c.d1 == f32::INFINITY)
-            );
-        }
-    }
-
-    #[test]
-    fn gpu_matching_agrees_with_cpu_on_synthetic_descriptors() {
-        let Some((da, db)) = match_pair(&descriptors(7, 300), &descriptors(11, 280))
-            .map(|_| (descriptors(7, 300), descriptors(11, 280)))
-        else {
-            eprintln!("no GPU adapter; skipping");
-            return;
-        };
-        let (rows, cols) = match_pair(&da, &db).expect("adapter was available");
-        let (ref_a, ref_b) = cpu_reference(&da, &db);
-        let mut row_exact = 0;
-        let mut row_close = 0;
-        for (gpu, cpu) in rows.iter().zip(&ref_a) {
-            if gpu.j == cpu.0
-                && gpu.d1.to_bits() == cpu.1.to_bits()
-                && gpu.d2.to_bits() == cpu.2.to_bits()
-            {
-                row_exact += 1;
-            }
-            // GPU float contraction may shift borderline distances; the selected
-            // indices must agree and distances must stay within f32 contraction noise.
-            if gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.) {
-                row_close += 1;
-            }
-        }
-        let col_exact = cols
-            .iter()
-            .zip(&ref_b)
-            .filter(|(gpu, cpu)| gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
-            .count();
-        assert_eq!(row_close, ref_a.len(), "row selections must agree with CPU");
-        assert_eq!(
-            col_exact,
-            ref_b.len(),
-            "column selections must agree with CPU"
-        );
-        eprintln!("bit-exact rows: {row_exact}/{}", ref_a.len());
-    }
-
-    #[test]
-    fn gpu_matcher_picks_the_backend_tuned_workgroup_size() {
-        let Some(context) = GpuContext::new() else {
-            eprintln!("no GPU adapter; skipping");
-            return;
-        };
-        let matcher = GpuMatcher::new(&context);
-        let expected = gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        assert_eq!(matcher.workgroup_size(), expected);
-        if context.backend == wgpu::Backend::Metal {
-            assert_eq!(matcher.workgroup_size(), WG_METAL);
-        } else {
-            assert_eq!(matcher.workgroup_size(), WG_DEFAULT);
-        }
-    }
-
-    /// Both the Metal-tuned (128) and default (256) workgroup variants must
-    /// produce results that agree with the CPU reference, regardless of
-    /// which one the test machine's actual backend happens to select — this
-    /// is what protects the templated shader from a size-specific bug.
-    #[test]
-    fn gpu_matching_agrees_with_cpu_for_both_workgroup_tunings() {
-        let Some(context) = GpuContext::new() else {
-            eprintln!("no GPU adapter; skipping");
-            return;
-        };
-        let da = descriptors(23, 300);
-        let db = descriptors(29, 280);
-        let (ref_a, ref_b) = cpu_reference(&da, &db);
-        for &wg in &[WG_METAL, WG_DEFAULT] {
-            let matcher = GpuMatcher::with_workgroup_size(&context, wg);
-            let (rows, cols) = matcher.match_descriptors(&da, &db);
-            let row_close = rows
-                .iter()
-                .zip(&ref_a)
-                .filter(|(gpu, cpu)| {
-                    gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.)
-                })
-                .count();
-            let col_close = cols
-                .iter()
-                .zip(&ref_b)
-                .filter(|(gpu, cpu)| {
-                    gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.)
-                })
-                .count();
-            assert_eq!(
-                row_close,
-                ref_a.len(),
-                "WG={wg}: row selections must agree with CPU"
-            );
-            assert_eq!(
-                col_close,
-                ref_b.len(),
-                "WG={wg}: column selections must agree with CPU"
-            );
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn cuda_matching_agrees_with_cpu_on_synthetic_descriptors() {
-        let da = descriptors(31, 300);
-        let db = descriptors(37, 280);
-        let Some((rows, cols)) = match_pair_accelerated(&da, &db, crate::Acceleration::Cuda) else {
-            eprintln!("no CUDA/wgpu adapter; skipping");
-            return;
-        };
-        let (ref_a, ref_b) = cpu_reference(&da, &db);
-        let row_close = rows
-            .iter()
-            .zip(&ref_a)
-            .filter(|(gpu, cpu)| gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
-            .count();
-        let col_close = cols
-            .iter()
-            .zip(&ref_b)
-            .filter(|(gpu, cpu)| gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
-            .count();
-        assert_eq!(row_close, ref_a.len(), "row selections must agree with CPU");
-        assert_eq!(
-            col_close,
-            ref_b.len(),
-            "column selections must agree with CPU"
-        );
-    }
-}
+#[path = "matching/tests/tests_integration.rs"]
+mod tests;

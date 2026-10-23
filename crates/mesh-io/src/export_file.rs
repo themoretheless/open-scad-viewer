@@ -90,19 +90,15 @@ impl Builder {
                 .try_reserve(extra)
                 .map_err(|_| error("Export artifact allocation failed"))?;
             for (triangle, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
-                let mut facet = [0u8; 50];
-                let mut offset = 0usize;
                 for &n in &mesh.normals[triangle * 3..triangle * 3 + 3] {
-                    facet[offset..offset + 4].copy_from_slice(&(n as f32).to_le_bytes());
-                    offset += 4;
+                    self.bytes.extend((n as f32).to_le_bytes())
                 }
                 for &index in t {
                     for &v in &mesh.positions[index as usize * 3..index as usize * 3 + 3] {
-                        facet[offset..offset + 4].copy_from_slice(&(v as f32).to_le_bytes());
-                        offset += 4;
+                        self.bytes.extend((v as f32).to_le_bytes())
                     }
                 }
-                self.bytes.extend_from_slice(&facet);
+                self.bytes.extend([0, 0]);
             }
         } else {
             let mut writer = Bounded {

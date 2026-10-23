@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer
+
+
+ Test Files  26 passed (26)
+      Tests  186 passed (186)
+   Start at  11:48:27
+   Duration  37.35s (transform 1.95s, setup 0ms, import 6.83s, tests 64.45s, environment 6ms)

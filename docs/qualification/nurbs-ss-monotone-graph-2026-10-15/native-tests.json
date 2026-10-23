@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "nurbs-ss-monotone-graph-2026-10-15",
+  "suiteTests": {
+    "ss_graph_coverage": 3,
+    "ss_coverage": 7,
+    "parallel_sections": 5
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/parallel_sections.rs": "be18c3644a23eb43288842eeab17c9ee9f6183dc4f4d21559eab8e35eb44578c",
+    "crates/nurbs-core/src/intersection/ss_intersection/rectilinear.rs": "2b12e9a2e025ff241dc192513e5eac5f48590398fa667dfe01a5d1b06359cbb7",
+    "crates/nurbs-core/src/intersection/ss_intersection/report.rs": "cbbf9ca3d5294d18859de412be73eb86894166f1786bb111743f2f5edc21d831",
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "b3d116487fd81eb68f5ae071d37c3693a5d894320aec3061619502edb3ceb1b7",
+    "crates/nurbs-core/tests/ss_graph_coverage.rs": "c34cf5d8aa3ab6188b083cd291495736eff2f26d8f911813d6d772d789229eb4"
+  },
+  "solidEmbeddingQualified": false,
+  "generalSSOwnedTopologyQualified": false,
+  "wasmEditorStepQualified": false,
+  "revalidation": "../nurbs-native-189-2026-10-15/core-tests.log"
+}

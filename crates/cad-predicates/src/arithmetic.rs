@@ -165,31 +165,6 @@ impl Algebra for Interval {
     #[inline]
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(8)?;
-        if self.lo >= 0. && other.lo >= 0. {
-            let lo = self.lo * other.lo;
-            let hi = self.hi * other.hi;
-            if !lo.is_nan() && !hi.is_nan() {
-                return Ok(Self::enclose(lo, hi));
-            }
-        } else if self.hi <= 0. && other.hi <= 0. {
-            let lo = self.hi * other.hi;
-            let hi = self.lo * other.lo;
-            if !lo.is_nan() && !hi.is_nan() {
-                return Ok(Self::enclose(lo, hi));
-            }
-        } else if self.lo >= 0. && other.hi <= 0. {
-            let lo = self.hi * other.lo;
-            let hi = self.lo * other.hi;
-            if !lo.is_nan() && !hi.is_nan() {
-                return Ok(Self::enclose(lo, hi));
-            }
-        } else if self.hi <= 0. && other.lo >= 0. {
-            let lo = self.lo * other.hi;
-            let hi = self.hi * other.lo;
-            if !lo.is_nan() && !hi.is_nan() {
-                return Ok(Self::enclose(lo, hi));
-            }
-        }
         let candidates = [
             self.lo * other.lo,
             self.lo * other.hi,
@@ -203,14 +178,8 @@ impl Algebra for Interval {
             });
         }
         Ok(Self::enclose(
-            candidates[0]
-                .min(candidates[1])
-                .min(candidates[2])
-                .min(candidates[3]),
-            candidates[0]
-                .max(candidates[1])
-                .max(candidates[2])
-                .max(candidates[3]),
+            candidates.iter().copied().fold(f64::INFINITY, f64::min),
+            candidates.iter().copied().fold(f64::NEG_INFINITY, f64::max),
         ))
     }
 }
@@ -338,12 +307,16 @@ fn split_sum(left: f64, right: f64, ctx: &mut PredicateContext<'_>) -> Result<(f
     let missing_right = right - accounted_right;
     let missing_left = left - accounted_left;
     let residual = missing_left + missing_right;
-    if !rounded.is_finite()
-        || !accounted_right.is_finite()
-        || !accounted_left.is_finite()
-        || !missing_right.is_finite()
-        || !missing_left.is_finite()
-        || !residual.is_finite()
+    if [
+        rounded,
+        accounted_right,
+        accounted_left,
+        missing_right,
+        missing_left,
+        residual,
+    ]
+    .iter()
+    .any(|v| !v.is_finite())
     {
         return Err(Reason::PrecisionExhausted);
     }
@@ -497,22 +470,19 @@ impl Expansion {
             return Ok(());
         }
         let mut carry = value;
-        let len = self.0.len();
-        let mut write = 0;
-        for read in 0..len {
-            let part = self.0[read];
+        let mut output = Vec::with_capacity(self.0.len().saturating_add(1));
+        for &part in &self.0 {
             let (rounded, residual) = split_sum(carry, part, ctx)?;
             if residual != 0. {
-                self.0[write] = residual;
-                write += 1;
+                output.push(residual);
             }
             carry = rounded;
         }
-        self.0.truncate(write);
         if carry != 0. {
-            self.0.push(carry);
+            output.push(carry);
         }
-        ctx.terms(self.0.len())?;
+        ctx.terms(output.len())?;
+        self.0 = output;
         Ok(())
     }
     #[inline]
@@ -564,8 +534,7 @@ impl Expansion {
 impl Algebra for Expansion {
     fn add(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(self.0.len() as u64)?;
-        let mut result = Self(Vec::with_capacity(self.0.len() + other.0.len()));
-        result.0.extend_from_slice(&self.0);
+        let mut result = self.clone();
         for &value in &other.0 {
             result.insert(value, ctx)?;
         }
@@ -579,14 +548,7 @@ impl Algebra for Expansion {
         if self.0 == other.0 {
             return Ok(Self::scalar(0.));
         }
-        ctx.charge(self.0.len() as u64)?;
-        let mut result = Self(Vec::with_capacity(self.0.len() + other.0.len()));
-        result.0.extend_from_slice(&self.0);
-        for &value in &other.0 {
-            result.insert(-value, ctx)?;
-        }
-        ctx.terms(result.0.len())?;
-        Ok(result)
+        self.add(&other.negated(), ctx)
     }
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(1)?;

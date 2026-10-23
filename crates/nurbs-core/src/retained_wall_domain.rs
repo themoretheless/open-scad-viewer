@@ -1,10 +1,43 @@
 //! Exact full rectangular trim and world-boundary identity premise.
-use super::{curve,surface,Result,input};
+use super::{curve,surface,curve_surface_agreement,Result,input};
+#[cfg(feature="codec")]
 use value_codec::{Value,json,Deserialize};
+#[cfg(feature="codec")]
 fn field<T:for<'a> Deserialize<'a>>(v:&Value,key:&str)->Result<T>{
     value_codec::from_value(v[key].clone()).map_err(|e|input(format!("Invalid {key}: {e}")))
 }
-pub(super) fn inspect(v:&Value)->Result<Value>{
+pub fn covers(s:&surface::Surface,holes:&[usize],uses:&[(&curve::Curve,&curve::Curve,bool)],limit:u64)->Result<(bool,u64)>{
+    if limit>1000000{return Err(input("Retained wall exact budget exceeds 1000000"));}
+    let mut work=0u64;
+    let refuse=|work|(false,work);
+    if !holes.is_empty()||uses.len()!=4{return Ok(refuse(work));}
+    let mut curves=Vec::with_capacity(4);
+    for &(_,c,_) in uses{
+        if c.periodic||c.degree!=1||c.knots!=[0.,0.,1.,1.]||c.control_points.len()!=2
+            ||c.control_points.iter().any(|p|p.len()!=2||p.iter().any(|x|!x.is_finite()))
+            ||c.weights.len()!=2||c.weights.iter().any(|w|!w.is_finite()||*w<=0.) {return Ok(refuse(work));}
+        curves.push(c);
+    }
+    let corners=[[0.,0.],[1.,0.],[1.,1.],[0.,1.]];
+    let rectangle=(0..4).any(|start|[1isize,-1].into_iter().any(|direction|{
+        curves.iter().enumerate().all(|(i,c)|{
+            let a=(start as isize+direction*i as isize).rem_euclid(4) as usize;
+            let b=(start as isize+direction*(i+1) as isize).rem_euclid(4) as usize;
+            c.control_points[0].as_slice()==corners[a]&&c.control_points[1].as_slice()==corners[b]
+        })
+    }));
+    if !rectangle{return Ok(refuse(work));}
+    for &(world,uv,reversed) in uses{
+        if work>=limit{return Ok(refuse(work));}
+        let Some(decision)=curve_surface_agreement::verify_exact(world,uv,s,reversed,limit-work)? else{return Ok(refuse(work));};
+        if decision.work_used>limit-work{return Ok(refuse(work));}
+        work+=decision.work_used;
+        if decision.outcome!=cad_predicates::BezierIdentity::Equal{return Ok(refuse(work));}
+    }
+    Ok((true,work))
+}
+#[cfg(feature="codec")]
+pub fn inspect(v:&Value)->Result<Value>{
     let surface:surface::Surface=field(v,"surface")?;
     let holes:Vec<usize>=field(v,"holes")?;
     let uses:Vec<Value>=field(v,"coedges")?;

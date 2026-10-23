@@ -31,6 +31,28 @@ pub struct Report {
     pub converged: bool,
     pub reason: &'static str,
 }
+/// An admitted pair on the original authored faces that supplies the reported
+/// separation upper bound. Containment/contact do not reuse boundary witnesses.
+pub struct SeparationWitness<'a> {
+    pub faces: [usize;2],
+    pub geometry: &'a nurbs_core::trimmed_surface_distance::TrimmedDistance,
+}
+impl Report {
+    pub fn separation_witness<'a>(&'a self, a:&Model, b:&Model)->Option<SeparationWitness<'a>> {
+        if self.material_overlap!=Some(false){return None;}
+        let upper=self.distance_interval_mm?[1];
+        let pair=self.pairs.iter().find(|p|p.relation.boundary.upper_bound_mm==Some(upper))?;
+        let local=pair.relation.boundary.faces?;
+        let mut faces=[0;2];
+        for (side,model) in [a,b].into_iter().enumerate(){
+            let shell=model.shells.get(pair.shells[side])?;
+            // isolated_outward_shell numbers faces by sorted original index.
+            let ids=shell.faces.iter().map(|f|f.face).collect::<std::collections::BTreeSet<_>>();
+            faces[side]=*ids.iter().nth(local[side])?;
+        }
+        Some(SeparationWitness{faces,geometry:pair.relation.boundary.witness.as_ref()?})
+    }
+}
 pub fn distance(a:&Model,b:&Model,tolerance_mm:f64,tolerance_uv:f64,limits:Limits)->Result<Report>{
     if !tolerance_mm.is_finite() || tolerance_mm<=0. || !(1..=100000).contains(&limits.pairs)
         || !(1..=100000).contains(&limits.contact_pairs) || !(2..=1000000).contains(&limits.cells) || !(2..=8000000).contains(&limits.domain_cells) {
@@ -115,6 +137,77 @@ mod tests{
             pairs:100,contact_pairs:1000,cells:100000,domain_cells:1000000}
     }
     #[test]
+    fn tiny_exact_sphere_keeps_certified_material_orientation() {
+        let mut model=crate::analytic::sphere(0.000011444091796875).unwrap();
+        let offset=2.+2.*0.000011444091796875;
+        for v in &mut model.vertices {v.point[0]+=offset;}
+        for e in &mut model.edges {for p in &mut e.curve.control_points {p[0]+=offset;}}
+        for f in &mut model.faces {for p in f.surface.control_points.iter_mut().flatten() {p[0]+=offset;}}
+        let r=volume_validity::inspect(&model,1e-8,limits().validity).unwrap();
+        for o in &r.orientations { for a in &o.attempts {
+            eprintln!("outward={:?} method={} normal={:?} parity={:?} unresolved={:?}",a.outward,a.normal_method,a.normal_dot_direction,a.ray.parity,a.ray.unresolved);
+        }}
+        assert!(r.proven,"boundary={} nesting={:?}",r.boundary.proven,r.nesting.map(|n|n.roles_consistent));
+    }
+    #[test]
+    fn separated_exact_spheres_keep_the_analytic_gap_and_original_surface_witnesses(){
+        let a=crate::analytic::sphere(3.).unwrap();let mut b=a.clone();
+        for v in &mut b.vertices{v.point[0]+=8.;}
+        for e in &mut b.edges{for p in &mut e.curve.control_points{p[0]+=8.;}}
+        for f in &mut b.faces{for row in &mut f.surface.control_points{for p in row{p[0]+=8.;}}}
+        let before=[format!("{a:?}"),format!("{b:?}")];
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        for (i,v) in r.validity.iter().enumerate(){if !v.proven{eprintln!("sphere {i}: exact={} trim={} faces={} spans={} pairs={} outward={:?}",v.boundary.agreement.all_equal,v.boundary.trim.all_valid,v.boundary.intersections.faces.all_faces_injective,v.boundary.intersections.faces.spans,v.boundary.intersections.pairs.all_pairs_classified,v.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());}}
+        assert!(r.converged,"{} {:?}",r.reason,r.distance_interval_mm);assert_eq!(r.material_overlap,Some(false));
+        let d=r.distance_interval_mm.unwrap();assert!(d[0]<=2.&&d[1]>=2.&&d[1]-d[0]<=1e-5);
+        let w=r.separation_witness(&a,&b).unwrap();let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){assert_eq!(m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);}
+        assert_eq!(before,[format!("{a:?}"),format!("{b:?}")]);
+    }
+    #[test]
+    fn separated_cylinders_keep_the_analytic_radial_gap(){
+        let a=crate::analytic::cylinder(2.,4.).unwrap();let mut b=a.clone();
+        for v in &mut b.vertices{v.point[0]+=7.;}
+        for e in &mut b.edges{for p in &mut e.curve.control_points{p[0]+=7.;}}
+        for f in &mut b.faces{for row in &mut f.surface.control_points{for p in row{p[0]+=7.;}}}
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        assert!(r.converged,"{} {:?}",r.reason,r.distance_interval_mm);assert_eq!(r.material_overlap,Some(false));
+        let d=r.distance_interval_mm.unwrap();assert!(d[0]<=3.&&d[1]>=3.&&d[1]-d[0]<=1e-5);
+        let w=r.separation_witness(&a,&b).unwrap();let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){assert_eq!(m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);}
+    }
+    #[test]
+    fn separated_cylinders_keep_the_analytic_axial_gap_and_authored_witnesses(){
+        let a=crate::analytic::cylinder(2.,4.).unwrap();let mut b=a.clone();
+        for v in &mut b.vertices{v.point[2]+=7.;}
+        for e in &mut b.edges{for p in &mut e.curve.control_points{p[2]+=7.;}}
+        for f in &mut b.faces{for row in &mut f.surface.control_points{for p in row{p[2]+=7.;}}}
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        assert!(r.converged,"{} {:?}",r.reason,r.distance_interval_mm);assert_eq!(r.material_overlap,Some(false));
+        let d=r.distance_interval_mm.unwrap();assert!(d[0]<=3.&&d[1]>=3.&&d[1]-d[0]<=1e-5);
+        let w=r.separation_witness(&a,&b).unwrap();let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){assert_eq!(m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);}
+    }
+    #[test]
+    fn separation_witness_evaluates_on_original_faces_and_matches_upper_bound(){
+        let a=crate::cuboid([0.;3],[2.;3]).unwrap();
+        let mut b=crate::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap();
+        b.shells[0].faces.reverse();
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        let w=r.separation_witness(&a,&b).unwrap();
+        let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){
+            let p=m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point;
+            assert_eq!(p,points[i]);
+        }
+        let gap=points[0].iter().zip(points[1]).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+        let bounds=r.distance_interval_mm.unwrap();
+        assert!((gap-3.).abs()<1e-5);assert!(gap<=bounds[1]);
+        let nested=crate::cuboid([0.5;3],[1.5;3]).unwrap();
+        let r=distance(&a,&nested,1e-5,1e-8,limits()).unwrap();
+        assert!(r.separation_witness(&a,&nested).is_none());
+    }
+    #[test]
     fn nested_material_has_zero_distance_but_cavity_keeps_its_gap(){
         let outer=crate::cuboid([0.;3],[10.;3]).unwrap();
         let hole=crate::cuboid([2.;3],[8.;3]).unwrap();
@@ -128,6 +221,16 @@ mod tests{
             assert_eq!(r.material_overlap,Some(false),"{}",r.reason);
             let d=r.distance_interval_mm.unwrap();assert!(d[0]>0. && d[0]<=1. && d[1]>=1.);
             assert!(r.cells<=100000 && r.domain_cells<=1000000);
+            let witness=r.separation_witness(a,b).unwrap();
+            let uv=witness.geometry.parameters.unwrap();let points=witness.geometry.points.unwrap();
+            for (i,model) in [a,b].into_iter().enumerate(){
+                assert_eq!(model.faces[witness.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);
+                if model.shells.len()>1{
+                    assert!(model.bodies[0].inner_shells.iter().any(|&shell|model.shells[shell].faces.iter().any(|f|f.face==witness.faces[i])));
+                }
+            }
+            let gap=points[0].iter().zip(points[1]).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+            assert!((gap-1.).abs()<1e-5);
         }
         assert_eq!(format!("{cavity:?}{island:?}"),before);
     }

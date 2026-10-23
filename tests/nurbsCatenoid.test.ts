@@ -33,7 +33,12 @@ it('preserves approximate profile report despite a surface foundation certificat
 })
 
 it('retains dense catenoid domains, radial accuracy and adjacent patch boundaries',()=>{
- expect(()=>approximateCatenoidNurbsSurface([3,4,5],1,-5,5,1e-4)).toThrow()
+ const dense=approximateCatenoidNurbsSurface([3,4,5],1,-5,5,1e-4)
+ for(let i=0;i<=100;i++)for(const v of [0,.3,1,2.7,4]){
+  const u=i/100,z=-5+10*u,p=evaluateNurbsSurface(dense.surface,u,v).point
+  expect(Math.abs(Math.hypot(p[0]!-3,p[1]!-4)-Math.cosh(z))).toBeLessThanOrEqual(dense.report.realArithmeticErrorEstimate+1e-10)
+  expect(p[2]).toBeCloseTo(5+z,10)
+ }
  const fit=approximateCatenoidNurbsPatches([3,4,5],1,-5,5,1e-4)
  expect(fit.patches).toHaveLength(fit.report.spans)
  expect(fit.patches.length).toBeGreaterThan(10)

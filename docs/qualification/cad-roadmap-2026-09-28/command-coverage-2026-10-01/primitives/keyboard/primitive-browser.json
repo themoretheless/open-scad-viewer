@@ -1,0 +1,15 @@
+{
+  "browser": "151.0.7922.34",
+  "interaction": "keyboard",
+  "workerRequests": 12,
+  "cancelledWorkerTerminated": true,
+  "lateSuccessfulReplyIgnored": true,
+  "paletteEscape": true,
+  "exactPrimitives": 8,
+  "facetedPrimitives": 3,
+  "eachCreationUndoRedo": true,
+  "uniqueBodyIds": true,
+  "priorBodiesPreserved": true,
+  "boxSizeMm": 20,
+  "undoRedoAndReload": true
+}

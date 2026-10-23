@@ -1,0 +1,12 @@
+{
+  "browser": "157.0.8081.0",
+  "keyboard": true,
+  "tabs": 556,
+  "gpuActive": true,
+  "requests": 2,
+  "expectedMm": 3,
+  "localizedFailure": true,
+  "retry": true,
+  "documentUnchanged": true,
+  "reloadExact": true
+}

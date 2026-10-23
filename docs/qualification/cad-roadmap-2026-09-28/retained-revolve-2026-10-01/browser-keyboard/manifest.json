@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Worker revolve","file":"browser-revolve.step","sha256":"51d6ac39348fb80db23b086f7bfbc66b385afa5d7616ef04d55fbf5308bffc5e","expected":{"volumeMm3":70.68583470577035,"boundsMm":[[0,0,-6],[6,4,0]]}}]}

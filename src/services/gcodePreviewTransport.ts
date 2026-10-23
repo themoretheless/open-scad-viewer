@@ -38,7 +38,7 @@ export function gcodePreviewMoveCount(preview:GcodePreviewResult):number {
 export function unpackGcodePreview({moveRows,...metadata}:Omit<PackedGcodePreview,'moveRows'> & {moveRows:number[]|Float64Array}):GcodePreviewResult {
   if((!Array.isArray(moveRows)&&!(moveRows instanceof Float64Array))||moveRows.length%GCODE_MOVE_ROW_WIDTH!==0||moveRows.length>GCODE_MAX_MOVE_ROWS)throw new Error('Invalid packed G-code moves')
   // Copy once, so the unpacked preview never retains or aliases the wire buffer.
-  const rows=moveRows instanceof Float64Array?moveRows.slice():new Float64Array(moveRows)
+  const rows=moveRows instanceof Float64Array?moveRows.slice():Float64Array.from(moveRows)
   for(let i=0;i<rows.length;i+=GCODE_MOVE_ROW_WIDTH){
     const x=rows[i],y=rows[i+1],z=rows[i+2],e=rows[i+3],feedrateMmS=rows[i+4],layerIndex=rows[i+5],flag=rows[i+6]
     if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z)||!Number.isFinite(e)||!Number.isFinite(feedrateMmS)

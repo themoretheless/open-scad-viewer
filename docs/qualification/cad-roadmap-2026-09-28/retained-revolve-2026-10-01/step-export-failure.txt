@@ -1,0 +1,16 @@
+(node:94869) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+/private/tmp/open-scad-viewer-cad-resume/src/services/geometry/kernel.ts:124
+ if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURBS_')?NurbsCurveError:GeometryKernelError;throw new ErrorType(envelope.error.code,envelope.error.message)}
+                                                                                                                     ^
+
+GeometryKernelError: Periodic patch grid control boundaries disagree
+    at decodeNurbsResult (/private/tmp/open-scad-viewer-cad-resume/src/services/geometry/kernel.ts:124:118)
+    at callGeometryRust (/private/tmp/open-scad-viewer-cad-resume/src/services/geometry/kernel.ts:131:10)
+    at exportDirectStepV9 (/private/tmp/open-scad-viewer-cad-resume/src/services/cadNurbsStep.ts:269:3)
+    at exportSolidStepCurrent (/private/tmp/open-scad-viewer-cad-resume/src/services/solidStepExchange.ts:37:10)
+    at async <anonymous> (/private/tmp/open-scad-viewer-cad-resume/scripts/export-cad-retained-revolve.mts:23:13) {
+  code: 'BREP_STEP_V3_REFUSED'
+}
+
+Node.js v26.10.0

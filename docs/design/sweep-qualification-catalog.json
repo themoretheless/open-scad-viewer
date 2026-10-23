@@ -1,0 +1,750 @@
+{
+  "schema": "sweep-qualification-catalog/1",
+  "scope": "Finite scenario selection only. Constructors and independent geometry oracles own their assertions. Test suites cover families, not every browser/STEP fixture.",
+  "browser": {
+    "solid": [
+      "miter-periodic-hollow.r",
+      "miter-unclamped-hollow.r",
+      "progressive-miter-reconstructed-conic-half.r",
+      "progressive-miter-reconstructed-conic-one.r",
+      "progressive-miter-reconstructed-conic-two.r",
+      "closed-miter-frame-guide-affine-hollow-corrected.r",
+      "closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r",
+      "progressive-miter-reconstructed-guide-frame-affine-hollow.r",
+      "progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r",
+      "miter-combined-frame-affine-hollow.r",
+      "miter-affine-hollow.r",
+      "miter-combined-frame-guide-affine-hollow.r",
+      "miter-combined-frame-guide-affine-hollow-corrected.r",
+      "miter-moving-frame-guide-affine-hollow-corrected.r",
+      "miter-authored-frame-hollow.r",
+      "miter-guide-hollow.r",
+      "miter-guide-affine-hollow.r",
+      "miter-combined-frame-affine-hollow-corrected.r",
+      "miter-authored-frame-hollow-corrected.r",
+      "miter-guide-hollow-corrected.r",
+      "miter-guide-affine-hollow-corrected.r",
+      "miter-unsegmented-plain-hollow.r",
+      "miter-unsegmented-affine-hollow.r",
+      "miter-unsegmented-frame-affine-hollow.r",
+      "miter-unsegmented-guide-affine-hollow.r",
+      "miter-hollow-body.r",
+      "miter-hollow-corrected.r",
+      "closed-miter-hollow-body.r",
+      "progressive-miter-certified-hollow.r",
+      "progressive-miter-circle-corrected-hollow.r",
+      "progressive-miter-spatial-circle-corrected-hollow.r",
+      "progressive-miter-affine-circle-corrected-hollow.r",
+      "progressive-miter-oblique-circle-corrected-hollow.r",
+      "miter-rational-curved-guide-frame-affine-hollow.r",
+      "progressive-miter-station-g2-hollow.r",
+      "progressive-miter-reconstructed-stations.r",
+      "progressive-miter-reconstructed-sharp.r",
+      "closed-miter-frame-guide-affine-hollow.r",
+      "miter-g1-profile-frame-guide-affine.r"
+    ],
+    "profileSolid": [
+      "closed-profile-planar-10.r",
+      "closed-profile-spatial-6.r"
+    ]
+  },
+  "step": {
+    "baseline": [
+      {
+        "file": "rush-sharp-profile-nonuniform-station-g2-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-contact-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-arc-length-contact-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-arc-length-rational-phase-contact-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "corrected-frenet-affine-zero-curvature-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "corrected-frenet-affine-inflection-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "corrected-frenet-rational-straight-affine-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rmf-rational-straight-affine-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "arc-length-rmf-rational-straight-affine-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "corrected-frenet-straight-affine-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "corrected-frenet-inflection-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "arc-length-corrected-frenet-inflection-hollow-body-boundary.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-authored-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-rational-authored-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "original-rational-multispan-authored-frame.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-plain-unsegmented-rational.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-affine-unsegmented-rational.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-authored-unsegmented-rational.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-guide-unsegmented-rational.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-plain-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-affine-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-authored-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-guide-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-rmf-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-fixed-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-guide-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-authored-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-authored-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-fixed-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-fixed-normal-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-frenet-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-guided-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-contact-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-planar-rmf-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-certified-arc-curved-nonaxial-planar-rmf-rectangular-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rmf-oblique-linear-scale-hollow.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "frenet-quadratic-hollow.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "rmf-planar-quadratic-hollow.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "rmf-planar-quadratic-rectangular.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rmf-closed-planar-full-turn-rectangular.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-rational-guided-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-guided-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-rmf-circle-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-rmf-conic-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-fixed-normal-circle-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-fixed-normal-conic-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-corrected-planar-circle-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-arc-length-corrected-planar-conic-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-nonaxial-arc-length-corrected-planar-circle-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-nonaxial-arc-length-corrected-planar-conic-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-affine-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-varying-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-periodic-affine-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-periodic-varying-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-parameter-varying-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-parameter-periodic-varying-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-periodic-varying-affine-three-holes-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-parameter-periodic-varying-affine-three-holes-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-rational-nonuniform-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-spatial-rmf-holonomy-antipodal-affine-hollow-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-rmf-affine-corrected-body-certified.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-rmf-varying-affine-hollow-corrected-body.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-plain.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-authored.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-affine-authored.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-affine-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-authored-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-open-affine-authored-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-plain.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-authored.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-affine-authored.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-affine-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-authored-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "miter-laws-closed-affine-authored-guide.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-nonaxial-arc-length-rmf-circle-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-original-nonaxial-arc-length-rmf-conic-tube.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "fixed-frame-linear-scale-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "fixed-normal-linear-scale-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rmf-straight-linear-scale-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-reconstructed-rational-profile.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-reconstructed-periodic-profile.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-closed-periodic-profile-root.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-closed-periodic-profile-placed.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-closed-periodic-profile-rational-placed.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-moving-axis-authored-caps.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-moving-axis-automatic-caps.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-moving-axis-automatic-affine-caps.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-moving-axis-authored-affine-caps.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-unclamped-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-frame-guide-affine-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-moving-frame-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-nonuniform-station-g2-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-plain-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-frame-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-guide-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-authored-frame-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-combined-frame-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-guide-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-authored-frame-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-scale-twist.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-spatial.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-oblique.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-rational-curved-guide-frame-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-station-g2-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-g1-profile-frame-guide-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-authored-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-straight-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-scale-twist-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-hollow-miter.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "open-spatial-bounded-correction.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-constructor-correction.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-planar-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "affine-oblique-hollow-miter.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "affine-oblique-dyadic-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-authored-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      }
+    ],
+    "smooth": [
+      {
+        "file": "quintic-straight-owned-solid.step"
+      },
+      {
+        "file": "quintic-curved-owned-solid.step"
+      },
+      {
+        "file": "quintic-rush-reconstructed-solid.step"
+      },
+      {
+        "file": "quintic-rush-sharp-solid.step"
+      },
+      {
+        "file": "quintic-rush-guide-frame-affine-hollow.step"
+      },
+      {
+        "file": "quintic-rush-moving-frame-guide-affine-hollow.step"
+      },
+      {
+        "file": "quintic-rush-closed-frame-guide-affine-hollow.step"
+      },
+      {
+        "file": "quintic-conic-0.5-owned-solid.step"
+      },
+      {
+        "file": "quintic-conic-1-owned-solid.step"
+      },
+      {
+        "file": "quintic-conic-2-owned-solid.step"
+      }
+    ],
+    "smoothModes": [
+      false,
+      true,
+      "rush",
+      "rush-sharp",
+      "rush-guide",
+      "rush-moving",
+      "rush-closed",
+      "weight-half",
+      "weight-one",
+      "weight-two"
+    ],
+    "scalar": [
+      {
+        "file": "scaled_sweep.step",
+        "operation": "surface_scaled_sweep",
+        "scope": "Different rational path/scale weights; capped square."
+      },
+      {
+        "file": "profile_sweep.step",
+        "operation": "surface_profile_sweep",
+        "scope": "Accepted RMF scaled square; native and OCCT round-trip."
+      }
+    ],
+    "profileSolid": [
+      {
+        "file": "closed-profile-planar-6.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 6,
+        "maxDeviation": 256,
+        "strictRefusalBudget": 1
+      },
+      {
+        "file": "closed-profile-planar-7.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 7,
+        "maxDeviation": 256,
+        "strictRefusalBudget": 1
+      },
+      {
+        "file": "closed-profile-planar-10.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 10,
+        "maxDeviation": 256,
+        "strictRefusalBudget": 1
+      },
+      {
+        "file": "closed-profile-planar-12.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 12,
+        "maxDeviation": 256,
+        "strictRefusalBudget": 1
+      },
+      {
+        "file": "closed-profile-spatial-6.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 6,
+        "maxDeviation": 256
+      },
+      {
+        "file": "closed-profile-spatial-7.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 7,
+        "maxDeviation": 256
+      },
+      {
+        "file": "closed-profile-spatial-10.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 10,
+        "maxDeviation": 256
+      },
+      {
+        "file": "closed-profile-spatial-12.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 12,
+        "maxDeviation": 256
+      }
+    ]
+  },
+  "suites": {
+    "native": {
+      "package": "nurbs-core",
+      "filters": [
+        "loft",
+        "progressive_miter",
+        "sweep_section_correction",
+        "sweep_seam_set",
+        "sweeps::scalar",
+        "profile_certificate"
+      ],
+      "bridgeTests": [
+        "sweep_pipeline",
+        "loft_generalization"
+      ]
+    },
+    "wasm": [
+      "tests/nurbsAdvancedLoft.test.ts",
+      "tests/nurbsGuidedLoft.test.ts",
+      "tests/sweepBoundaryCertificate.test.ts",
+      "tests/sweepRetainedDecomposition.test.ts",
+      "tests/sweepAffineLattice.test.ts",
+      "tests/miterSmoothStationWalls.test.ts",
+      "tests/sweepCurvedGuideMiter.test.ts",
+      "tests/nurbsProgressiveMiterWallAudit.test.ts",
+      "tests/sweepViewportEvidence.test.ts",
+      "tests/nurbsScalarSweep.test.ts",
+      "tests/profileSolidAdmission.test.ts",
+      "tests/profileFramePremises.test.ts"
+    ],
+    "rush": [
+      "tests/rushGraphLoft.test.ts",
+      "tests/miterStationGraph.test.ts",
+      "tests/solidRetainedLoft.test.ts",
+      "tests/profileSolidRush.test.ts"
+    ]
+  }
+}

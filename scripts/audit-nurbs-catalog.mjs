@@ -4,6 +4,15 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const catalog = JSON.parse(readFileSync(resolve(root, 'docs/design/nurbs-catalog.json'), 'utf8'))
+// Resolve compatibility module re-exports to their current implementation hubs.
+// An old duplicate .rs file may still exist without being compiled.
+const sourceRoot = 'crates/nurbs-core/src/'
+const library = readFileSync(resolve(root,sourceRoot,'lib.rs'),'utf8').replace(/pub use ([\w:]+)::\{([^{}]+)\};/g,
+  (_,prefix,entries)=>entries.split(',').map(x=>x.trim()).filter(Boolean).map(x=>`pub use ${prefix}::${x};`).join('\n'))
+const currentModules = new Map([...library.matchAll(/^pub use ((?:crate::)?[\w:]+)(?: as (\w+))?;/gm)].flatMap(([,path,alias])=>{
+  const parts=path.replace(/^crate::/,'').split('::'),file=sourceRoot+parts.join('/')+'.rs'
+  return existsSync(resolve(root,file))?[[alias??parts.at(-1),file]]:[]
+}))
 const errors = []
 const ids = new Set(), counts = {}
 const statuses = new Set(['planned', 'native', 'integrated', 'qualified'])
@@ -15,6 +24,12 @@ for (const figure of catalog.figures) {
   counts[figure.status] = (counts[figure.status] ?? 0) + 1
   for (const file of figure.evidence ?? []) {
     if (!existsSync(resolve(root, file))) errors.push(`${figure.id}: missing evidence ${file}`)
+  }
+  for (const file of figure.evidence ?? []) {
+    if (file.startsWith(sourceRoot) && !file.slice(sourceRoot.length).includes('/') && file.endsWith('.rs')) {
+      const current=currentModules.get(file.slice(sourceRoot.length,-3))
+      if(current && current!==file)errors.push(`${figure.id}: stale implementation evidence ${file}; current hub is ${current}`)
+    }
   }
   if (figure.status !== 'planned') {
     const symbol = figure.nativeApi?.split('::').at(-1)

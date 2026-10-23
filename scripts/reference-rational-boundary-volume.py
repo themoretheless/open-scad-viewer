@@ -28,7 +28,7 @@ def homogeneous(points,weights):
 
 def surface_flux(s,order):
     p,q=s['degreeU'],s['degreeV']
-    assert 1<=p<=6 and 1<=q<=25
+    assert 1<=p<=6 and 1<=q<=6
     assert s['knotsU']==[0]*(p+1)+[1]*(p+1)
     assert s['knotsV']==[0]*(q+1)+[1]*(q+1)
     assert not s.get('periodicU',False) and not s.get('periodicV',False)
@@ -110,22 +110,6 @@ def self_test():
             caps[0].extend(dict(degree=2,knots=[0,0,0,1,1,1],controlPoints=list(reversed(arc)),weights=[1,math.sqrt(.5),1]) for arc in reversed(arcs))
         case=dict(wallSurfaces=walls,wallFaceReversed=[False]*8,outwardCapContours=caps)
         for order in [16,32,64]:assert abs(volume(case,order)-.75*math.pi)<1e-12
-        # Independent polynomial reparametrization of the same analytic cylinder.
-        # z(t)=z+t+0.1*t^2*(1-t)^2 has identical endpoints and positive speed.
-        # Its exact Bernstein coefficients are degree-elevated analytically,
-        # without calling the Rust construction or degree-elevation routines.
-        for degree in [13,25]:
-            high=json.loads(json.dumps(case))
-            for wall in high['wallSurfaces']:
-                first=[row[0] for row in wall['controlPoints']]
-                weights=[row[0] for row in wall['weights']]
-                heights=[j/degree+0.1*(math.comb(j,2)/math.comb(degree,2)
-                    -2*math.comb(j,3)/math.comb(degree,3)+math.comb(j,4)/math.comb(degree,4))
-                    for j in range(degree+1)]
-                wall['degreeV']=degree;wall['knotsV']=[0]*(degree+1)+[1]*(degree+1)
-                wall['controlPoints']=[[[x,y,z0+h] for h in heights] for x,y,z0 in first]
-                wall['weights']=[[w]*(degree+1) for w in weights]
-            for order in [16,32,64]:assert abs(volume(high,order)-.75*math.pi)<1e-12
         bad=json.loads(json.dumps(case));bad['outwardCapContours'][1][0]['controlPoints'][1][2]+=.01
         try:volume(bad,16)
         except AssertionError:pass

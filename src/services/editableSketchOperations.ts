@@ -3,7 +3,7 @@ import type {DirectSketch} from './directModeling'
 import {withEditableSketchPath, SKETCH_PATH_TOLERANCE_MM} from './editableSketchPath'
 import {withRetainedProfile} from './retainedSketchProfile'
 import {authorBrepProfile} from './geometry/brepProfile'
-import {outlineStrokeStyled, pathFromPolygon, pathFromCircle, pathToRing, simplifyPath, normalizePathRings} from './geometry/path2d'
+import {outlineStrokeStyled, pathFromPolygon, pathFromCircle, pathToRing, simplifyPath,normalizePathRings} from './geometry/path2d'
 
 function sourcePath(sketch:DirectSketch) {
   if(sketch.retainedProfile) throw Error('Select a source path, not an already filled region.')
@@ -18,6 +18,7 @@ export function outlineSketchStroke(sketch:DirectSketch,width:number,id:string):
   if(!Number.isFinite(width)||width<0.01||width>10000) throw Error('Stroke width must be between 0.01 and 10000 mm.')
   const paths=outlineStrokeStyled(sourcePath(sketch),width,{cap:'round',join:'round',tolerance:SKETCH_PATH_TOLERANCE_MM})
   const rings=paths.map(p=>pathToRing(p,SKETCH_PATH_TOLERANCE_MM))
+  if(rings.reduce((n,r)=>n+r.length,0)>256) throw Error('Outline exceeds 256 retained profile segments. Simplify the source before outlining.')
   const profile=authorBrepProfile({kind:'polygon',rings})
   const source={...sketch,id,name:sketch.name+' · outline'}
   delete source.analytic;delete source.dimensions;delete source.editablePath
@@ -32,7 +33,6 @@ export function simplifySketchPath(sketch:DirectSketch,tolerance:number):DirectS
   return withEditableSketchPath(source,path)
 }
 
-/** Normalize all boundaries together so holes remain one filled region. */
 export function cleanSketchContours(sketch:DirectSketch,tolerance:number,id:string):DirectSketch {
  if(!Number.isFinite(tolerance)||tolerance<0.0001||tolerance>10)throw Error('Cleanup tolerance must be between 0.0001 and 10 mm.')
  if(!sketch.closed){const cleaned=simplifySketchPath(sketch,tolerance);return {...cleaned,id,name:sketch.name+' · clean'}}

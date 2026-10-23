@@ -1,0 +1,34 @@
+{
+  "artifact": {
+    "path": "docs/qualification/artifacts/geometry-cb3b1ad203ecbe71ba176d3954691406f7917fc1879b31390a3bb7c1d6400dea.wasm",
+    "publishedPath": "public/wasm/geometry-kernel.wasm",
+    "sha256": "cb3b1ad203ecbe71ba176d3954691406f7917fc1879b31390a3bb7c1d6400dea",
+    "byteLength": 12175137,
+    "variants": [
+      {
+        "sha256": "cb3b1ad203ecbe71ba176d3954691406f7917fc1879b31390a3bb7c1d6400dea",
+        "byteLength": 12175137,
+        "builder": "macos-aarch64",
+        "evidence": "Observed local rebuild. rustc 1.100.0-nightly (215a8af4b 2026-09-15); Node v26.10.0. No foreign-host artifact is inferred."
+      }
+    ]
+  },
+  "sourceRelease": "docs/qualification/own-rust-cad-v43.json",
+  "qualificationUnits": 0,
+  "filesSha256": {
+    "README.md": "8b28e69bb751cd966b25d5dc9f2f5b5e1a19c74b2a6875bd252c5024126263fa",
+    "audit.mts.txt": "55c503ab4b826e5e3a4855d31054921194d8e13febce887348ecdc7b81be63fd",
+    "export.mts.txt": "ed4676f2cb80a9aa5306bf54321ba321dc41d12451bbc623b8e16fbda73bdd23",
+    "native-embedding-audit.json": "31f909acafe74b77dfc7c4446e6726372256fcbf75c901fec52e9f031d1fecf7",
+    "native-volume-audit.json": "baad92d0b9ca070f8b7caec61d3d3d45a44bfd41dd6d93ae76e3408790303513",
+    "nonuniform-occt.step": "18b8c63ca77abf8605edb479a3d69fa9940a6a9d13829aa830675f06d70ba612",
+    "nonuniform.step": "6a7a122da5f5c65ac91862428e516c36bbc390bbbbf85c6702b039df49fd070d",
+    "occt-explore.json": "251378cdeb9b5400e74994da3f78b63936e858f6f62b2dd2b4450f512335a86a",
+    "samples.json": "973ee4168657abdedbddab38d7e0b6eba5eac2696c92274e101208acf79bab5f",
+    "verify-occt.py.txt": "2ece01b82b8eae4ec84a707723cd057daec7a0333c2c9dbb7a9ad5c06c35eead"
+  },
+  "independentChecker": {
+    "distribution": "cadquery-ocp",
+    "version": "8.0.1.0.0"
+  }
+}

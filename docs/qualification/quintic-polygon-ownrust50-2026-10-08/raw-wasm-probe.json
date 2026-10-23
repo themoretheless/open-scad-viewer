@@ -1,0 +1,36 @@
+{
+  "schema": "raw-wasm-polygon-body-probe/1",
+  "sha256": "b41f9e1f4b5b787a443a7eb6915db7040cdad25929aaccb6844ac1223df01986",
+  "byteLength": 13857143,
+  "scope": "Explicit raw WASM probe; packaged delivery is checked separately",
+  "checks": [
+    {
+      "spatial": false,
+      "weighted": false,
+      "faces": 20,
+      "freshAdmission": true
+    },
+    {
+      "spatial": false,
+      "weighted": true,
+      "faces": 20,
+      "freshAdmission": true
+    },
+    {
+      "spatial": true,
+      "weighted": false,
+      "faces": 20,
+      "freshAdmission": true
+    },
+    {
+      "spatial": true,
+      "weighted": true,
+      "faces": 20,
+      "freshAdmission": true
+    }
+  ],
+  "sourceBound": true,
+  "sourceBudgetRefusal": true,
+  "constructionBudgetRefusal": true,
+  "passed": true
+}

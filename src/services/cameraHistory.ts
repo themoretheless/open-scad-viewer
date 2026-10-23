@@ -11,12 +11,7 @@ export interface CameraState {
 export type CameraHistorySnapshot = readonly CameraState[]
 
 function finiteCameraState(state: CameraState) {
-  return Number.isFinite(state.yaw)
-    && Number.isFinite(state.pitch)
-    && Number.isFinite(state.distance)
-    && Number.isFinite(state.target[0])
-    && Number.isFinite(state.target[1])
-    && Number.isFinite(state.target[2])
+  return [state.yaw, state.pitch, state.distance, ...state.target].every(Number.isFinite)
     && state.distance > 0
     && (state.projection === 'perspective' || state.projection === 'orthographic')
 }

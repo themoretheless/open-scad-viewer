@@ -1,17 +1,19 @@
-"""Exact projective weight identity for independent STEP qualification."""
+"""Exact positive common-weight scaling preserves a rational spline map."""
 from fractions import Fraction
-import math
 
 
-def same_positive_projective_weights(a, b):
-    """A single positive common scale cancels from the rational denominator.
-
-    Compare exact binary64 values, never an epsilon or a rounded ratio.
-    This proves no knot, pole, parametrization or topological identity.
-    """
-    if len(a) != len(b) or not a:
+def positive_proportional_weights(actual, expected):
+    if not actual or len(actual) != len(expected):
         return False
-    if any(not math.isfinite(x) or x <= 0 for x in [*a, *b]):
-        return False
-    aa, bb = [Fraction(x) for x in a], [Fraction(x) for x in b]
-    return all(x * bb[0] == y * aa[0] for x, y in zip(aa, bb))
+    a = [Fraction(x) for x in actual]
+    b = [Fraction(x) for x in expected]
+    return all(x > 0 and y > 0 and x*b[0] == y*a[0] for x, y in zip(a, b))
+
+
+if __name__ == '__main__':
+    assert positive_proportional_weights([1]*6, [2]*6)
+    assert positive_proportional_weights([1, 2, 4], [2, 4, 8])
+    assert not positive_proportional_weights([1, 2, 4.000000000000001], [2, 4, 8])
+    assert not positive_proportional_weights([-1, -2], [1, 2])
+    assert not positive_proportional_weights([1], [1, 1])
+    print('Exact rational weight-scaling tests passed')

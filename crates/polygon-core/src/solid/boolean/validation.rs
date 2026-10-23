@@ -129,7 +129,7 @@ pub(super) fn geometry_failures(mesh: &Mesh, eps: f64, budget: &mut Budget, max_
         children: Option<(usize, usize)>,
         triangles: Vec<usize>,
     }
-    fn build(ids: &mut [usize], bounds: &[(Point, Point)], nodes: &mut Vec<Node>) -> usize {
+    pub(super) fn build(ids: &mut [usize], bounds: &[(Point, Point)], nodes: &mut Vec<Node>) -> usize {
         let lo = std::array::from_fn(|k| {
             ids.iter()
                 .map(|&i| bounds[i].0[k])

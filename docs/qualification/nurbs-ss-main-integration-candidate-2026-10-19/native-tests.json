@@ -1,0 +1,75 @@
+{
+  "recorded_at_utc": "2026-10-19T12:49:57.538729+00:00",
+  "status": "Seven-path automatic SS root/parameter-component extension applied to current main Rust and qualified",
+  "candidate": "/private/tmp/nurbs-native-200-ss-main-integration-20261019",
+  "shared_checkout": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+  "main_rust_modified": true,
+  "owned_source_paths": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "5104ec245eeceb8ca182869c59fccd3664aa42109f85146601a18695ebcda80a",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "f0e72125cd63ac65e22743d7f77c6990439c7f10c1503b1a01f6cde34e2d5dd7",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/discovery.rs": "5388185b9a6da0552d2e140691db3ddca0f225dd1ae74e97dc9b0308259db0db",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/discovered_components.rs": "d104bd9ed94f57b3bdc60794142b58290603c31214b74b81c28b484260dd6a47",
+    "crates/nurbs-core/tests/ss_discover_atlas.rs": "7e738d09e36b0b63ace1b54d49dca5313ce6dde10dfde27aba16af7f96282a8d",
+    "crates/nurbs-core/tests/ss_discovered_components.rs": "31971183a01ecb34575d0698f0ef5424817b3de2d1a1ffb8aa46a50eb2f0dae6",
+    "crates/nurbs-core/tests/support/ss_discovered_sources.rs": "0660edbf14ea3777b06b9d33e80595c584d6ee1bce49c090c6a56993b1827204"
+  },
+  "existing_facades_append_only": true,
+  "existing_facades_backup": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/nurbs-ss-main-integration-pending-2026-10-19/before",
+  "protected_kernel_dependency_source_paths": 836,
+  "protected_source_hashes_unchanged": true,
+  "frozen_native": {
+    "integration_passed": 54,
+    "unit_passed": 2,
+    "total_selected_passed": 56,
+    "sessions": [
+      23366,
+      42577
+    ],
+    "terminal_exits": [
+      0,
+      0
+    ]
+  },
+  "direct_main_native": {
+    "integration_passed": 8,
+    "proof_unit_passed": 2,
+    "total_selected_passed": 10,
+    "scope": "These10repeat the focused cases from the56-case frozen current-main phase;not66distincttests",
+    "sessions": [
+      91304,
+      41881
+    ],
+    "terminal_exits": [
+      0,
+      0
+    ]
+  },
+  "wasm": {
+    "scope": "Compile check on byte-identical owned and protected current-main kernel source;not installed runtime/UI",
+    "passed": true,
+    "session": 82023,
+    "terminal_exit": 0
+  },
+  "all_core_test_modules_typechecked": {
+    "passed": true,
+    "session": 93610,
+    "terminal_exit": 0,
+    "scope": "Frozen current-main source with all protected core/dependency hashes still equal;direct-main unit binary also compiles all unit bodies"
+  },
+  "direct_owned_format_passed": true,
+  "full_brep_extension_applied": false,
+  "installed_artifacts_replaced_by_this_continuation": false,
+  "catalog": 198,
+  "target": 200,
+  "unrelated_shared_source_drift_outside_qualification_scope": [
+    "crates/geometry-bridge/src/cad_minkowski3d.rs",
+    "crates/brep-core/src/profile_certificate/topology_prisms.rs",
+    "crates/brep-core/examples/verify_profile_certificate.rs",
+    "crates/brep-core/src/minkowski3d/curved.rs",
+    "crates/brep-core/src/minkowski3d/curved/topology.rs",
+    "crates/brep-core/src/minkowski3d/curved/prismatic.rs",
+    "crates/brep-core/src/minkowski3d/rounding.rs"
+  ],
+  "owned_running_jobs": [],
+  "scope": "Original PARAMETER root atlas and component census only. No physical world branch/trim topology, periodic quotient, general fan-aware patches or world-face publication/sewing. Concurrent Minkowski/prism/bridge changes outside the protected SS dependency scope are preserved and not certified by these SS gates."
+}

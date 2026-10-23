@@ -153,11 +153,11 @@
     },
     {
       "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-      "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d"
+      "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25"
     },
     {
       "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-      "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d"
+      "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9"
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v1.json",
@@ -197,7 +197,7 @@
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-      "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4"
+      "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9"
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v11.json",
@@ -311,7 +311,7 @@
       },
       {
         "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-        "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d",
+        "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25",
         "byteLength": 34523
       },
       {
@@ -321,7 +321,7 @@
       },
       {
         "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-        "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d",
+        "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9",
         "byteLength": 36650
       },
       {
@@ -341,7 +341,7 @@
       },
       {
         "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-        "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4",
+        "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9",
         "byteLength": 77107
       },
       {

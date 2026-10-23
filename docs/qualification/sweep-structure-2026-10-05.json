@@ -1,0 +1,35 @@
+{
+  "schema": "sweep-structure-verification/1",
+  "base": "88ed3e25",
+  "scope": "Structure and compatibility refactor; finite regression checks, not new geometric guarantees.",
+  "nativeTests": 115,
+  "typescriptTests": 147,
+  "publicBrepDeclarationsPreserved": 140,
+  "serviceImplementationsPreserved": 14,
+  "browserCases": 2,
+  "browserAssertions": 24,
+  "stepCases": 36,
+  "smoothStepCases": 10,
+  "occtVersion": "8.0.1.0.0",
+  "geometryWasm": {
+    "sha256": "7c105ccdd40bd216e1ad480d26bae206714a8ee0d3c6594c1f3bab4b197d4261",
+    "byteLength": 10917300
+  },
+  "catalogSha256": "b990d1b1327f8e16f551b7fe26c35fd33ccb635ff41503c1dba481e6ddec2e73",
+  "checks": [
+    "native family suites",
+    "WASM and Rush suites",
+    "general B-rep API regressions",
+    "artifact provenance/admission/viewport suites",
+    "vue-tsc and MCP tsc",
+    "production build and 141 dist artifacts",
+    "independent OCCT baseline and smooth matrices",
+    "browser success/refusal/cancellation/source-change/recovery scenario at 1440 and 600 pixels",
+    "git diff --check"
+  ],
+  "limitations": [
+    "Browser coverage is one selected scenario at two widths, not a rerun of all 78 scenarios.",
+    "Native and WASM suite selection covers families, not a one-to-one mapping of every STEP/browser case.",
+    "Existing historical qualification records are unchanged."
+  ]
+}

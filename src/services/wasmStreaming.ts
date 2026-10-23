@@ -31,8 +31,8 @@ async function compileBoundedResponse(response: Response, identity: WasmArtifact
   return compileWasmArtifact(bytes, identity)
 }
 
-export async function compileStreamingWasm(url: string, expected?: WasmArtifactIdentity): Promise<WebAssembly.Module | null> {
-  if (typeof window === 'undefined') return null
+export async function compileStreamingWasm(url: string, expected?: WasmArtifactIdentity, workerNetworkOptIn = false): Promise<WebAssembly.Module | null> {
+  if (typeof window === 'undefined' && !workerNetworkOptIn) return null
   if (typeof fetch !== 'function' || (!expected && typeof WebAssembly.compileStreaming !== 'function')) return null
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined

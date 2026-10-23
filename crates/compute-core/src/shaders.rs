@@ -176,9 +176,10 @@ pub const CATMULL_CLARK_WGSL: &str = include_str!("../shaders/catmull_clark.wgsl
 pub const GCODE_SEGMENTS_WGSL: &str = include_str!("../shaders/gcode_segments.wgsl");
 pub const IMAGE_CONTOUR_WGSL: &str = include_str!("../shaders/image_contour.wgsl");
 pub const TRUSS_PCG_WGSL: &str = include_str!("../shaders/truss_pcg.wgsl");
+pub const MARCHING_TETRAHEDRA_WGSL: &str = include_str!("../shaders/marching_tetrahedra.wgsl");
 
-/// Hardware-accelerated CAD geometry kernels (Marching Cubes, NURBS Tessellation, Semantic Edges, Slicer, BVH Raycast, Catmull-Clark, G-Code, Image Contour, Truss PCG).
-pub const CAD_KERNELS: [(&str, &str); 9] = [
+/// Hardware-accelerated CAD geometry kernels (Marching Cubes, NURBS Tessellation, Semantic Edges, Slicer, BVH Raycast, Catmull-Clark, G-Code, Image Contour, Truss PCG, Marching Tetrahedra).
+pub const CAD_KERNELS: [(&str, &str); 10] = [
     ("marching_cubes", MARCHING_CUBES_WGSL),
     ("nurbs_tessellate", NURBS_TESSELLATE_WGSL),
     ("semantic_edges", SEMANTIC_EDGES_WGSL),
@@ -188,5 +189,5 @@ pub const CAD_KERNELS: [(&str, &str); 9] = [
     ("gcode_segments", GCODE_SEGMENTS_WGSL),
     ("image_contour", IMAGE_CONTOUR_WGSL),
     ("truss_pcg", TRUSS_PCG_WGSL),
+    ("marching_tetrahedra", MARCHING_TETRAHEDRA_WGSL),
 ];
-

@@ -1,0 +1,136 @@
+{
+  "wasmSha256": "86ab0caa2618730830b58aa38b079471322e48df7f8f2a66efe9e33ca1c3f552",
+  "elapsedMs": 1541.543583999999,
+  "results": [
+    {
+      "clearance": {
+        "cells": 36,
+        "reason": "source-face-gap-qualified",
+        "spans": 72,
+        "uncertainFaces": null,
+        "uncertainUv": null
+      },
+      "converged": true,
+      "intervalMm": [
+        5.999999999999997,
+        6.0000000000000036
+      ],
+      "qualified": true,
+      "reason": "source-wall-searched-thickness-bounds-qualified",
+      "request": {
+        "grid": 3,
+        "groups": [
+          [
+            4,
+            9,
+            14,
+            18,
+            22,
+            26
+          ],
+          [
+            1,
+            6,
+            11,
+            15,
+            19,
+            23
+          ]
+        ],
+        "limits": {
+          "cells": 10000,
+          "domainCells": 10000,
+          "gapCells": 1000,
+          "gapSpans": 2000,
+          "maxSineSquared": 0.000001,
+          "normalSpans": 1000
+        },
+        "maxAttempts": 54,
+        "minimumMm": 5.99,
+        "toleranceMm": 0.02,
+        "toleranceUv": 1e-7
+      },
+      "search": {
+        "attempts": 54,
+        "candidatesExhausted": true,
+        "refused": 36
+      }
+    },
+    {
+      "clearance": {
+        "cells": 1,
+        "reason": "source-face-gap-work-limit",
+        "spans": 2,
+        "uncertainFaces": [
+          4,
+          6
+        ],
+        "uncertainUv": [
+          [
+            [
+              -20,
+              20
+            ],
+            [
+              -20,
+              20
+            ]
+          ],
+          [
+            [
+              -20,
+              20
+            ],
+            [
+              -20,
+              20
+            ]
+          ]
+        ]
+      },
+      "converged": false,
+      "intervalMm": null,
+      "qualified": false,
+      "reason": "source-wall-clearance-unproven",
+      "request": {
+        "grid": 3,
+        "groups": [
+          [
+            4,
+            9,
+            14,
+            18,
+            22,
+            26
+          ],
+          [
+            1,
+            6,
+            11,
+            15,
+            19,
+            23
+          ]
+        ],
+        "limits": {
+          "cells": 10000,
+          "domainCells": 10000,
+          "gapCells": 1,
+          "gapSpans": 2000,
+          "maxSineSquared": 0.000001,
+          "normalSpans": 1000
+        },
+        "maxAttempts": 54,
+        "minimumMm": 5.99,
+        "toleranceMm": 0.02,
+        "toleranceUv": 1e-7
+      },
+      "search": {
+        "attempts": 54,
+        "candidatesExhausted": true,
+        "refused": 36
+      }
+    }
+  ],
+  "scope": "Selected annular flat face groups only; no full body wall coverage or UI proof."
+}

@@ -1,0 +1,21 @@
+{
+  "keyboard": true,
+  "evenOdd": true,
+  "trimmed": true,
+  "bevel": true,
+  "crossing": true,
+  "sequenceCount": 20,
+  "sequenceExportEvidence": "JSON Blob from real export button; no repeated browser downloads",
+  "cancel": true,
+  "apply": true,
+  "undo": true,
+  "redo": true,
+  "reload": true,
+  "lateCancel": true,
+  "lateDocumentSwitch": true,
+  "delayed": {
+    "terminated": 2,
+    "released": 2
+  },
+  "errors": []
+}

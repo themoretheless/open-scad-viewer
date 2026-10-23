@@ -1,4 +1,5 @@
 import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from './kernel'
+import type {WebGpuMemoryArchitecture} from '../webgpuFeatures'
 
 export interface PhotoWorkerRequest {
   /** Kernel module compiled once on the main thread; the Worker only instantiates it. */
@@ -17,6 +18,8 @@ export interface PhotoTimings {
   sparseMs: number
   /** Which matcher produced the cameras: browser WebGPU round trip or host CPU. */
   sparsePath?: 'gpu' | 'cpu'
+  /** Active GPU memory architecture when a WebGPU stage executed ('uma' vs 'duma'). */
+  gpuMemoryArchitecture?: WebGpuMemoryArchitecture
   /** Browser GPU matching stage breakdown (present when sparsePath is 'gpu'). */
   sparsePrepareMs?: number
   sparseMatchMs?: number

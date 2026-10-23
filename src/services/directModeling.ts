@@ -1,5 +1,4 @@
-import {expandLiveBodyPatterns} from './liveBodyPattern'
-import type {LiveBodyPattern} from './liveBodyPattern'
+import {qualifySourceBodyRecord,type SourceBodyRecord} from './sourceBodyArchive'
 import {withEditableSketchPath} from './editableSketchPath'
 import type {BezierPathJson} from './geometry/path2d'
 import {validCurveOffsetRegion} from './curveOffsetRegion'
@@ -19,22 +18,22 @@ import { stringifyMeshJson } from './meshJson'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
-import { tessellateNurbsBrep, type NurbsBrep } from './geometry/brep'
+import type { NurbsBrep } from './geometry/brep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
-export interface DirectSketch { traceColor?:string; group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
+export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink; livePattern?: LiveBodyPattern }
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink; livePattern?: import('./liveBodyPattern').LiveBodyPattern }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
 export interface DirectInterchangeMetadata {
   step?:{route:string;retained:boolean;refusalBoundary:string[];identityLoss:string[];metadataLoss:string[];
     definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[]}
 }
-export interface DirectDocument { version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
+export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => structuredClone(value)
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
@@ -75,9 +74,10 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   const d = JSON.parse(text) as DirectDocument
   if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200+MAX_DIRECT_INSTANCES) throw new Error('Invalid direct modeling document.')
   if(d.blenderProjectId!==undefined&&(typeof d.blenderProjectId!=='string'||!d.blenderProjectId.trim()||d.blenderProjectId.length>100))throw Error('Invalid Blender project identity.')
-  let instanceCount = 0
-  for (let i = 0; i < d.bodies.length; i++) if (d.bodies[i]?.instance) instanceCount++
-  if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
+  if(d.sourceBodies!==undefined&&(!Array.isArray(d.sourceBodies)||d.sourceBodies.length>200))throw Error('Invalid source Body collection.')
+  const sourceCount=d.sourceBodies?.length??0
+  let instanceCount=0;for(const body of d.bodies)if(body?.instance)instanceCount++
+  if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount+sourceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
   d.curves ??= []
   d.surfaces ??= []
   if(d.interchange){
@@ -108,7 +108,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   }
   const ids = new Set<string>()
   const checkObjectIdentity = (item: { id: string; name: string; group?: string }) => {
-    if (typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
+    if (!item || typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
     if (item.group !== undefined && (typeof item.group !== 'string' || !item.group.length || item.group.length > 100)) throw new Error('Invalid object group.')
     ids.add(item.id)
   }
@@ -125,8 +125,8 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     }
     return true
   }
+  for(const source of d.sourceBodies??[]) {checkObjectIdentity(source);qualifySourceBodyRecord(source);yield}
   for (const s of d.sketches) {
-    if(s.traceColor!==undefined&&(typeof s.traceColor!=='string'||!/^#[0-9a-f]{6}$/i.test(s.traceColor)))throw Error('Invalid traced sketch color.')
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
     if(s.editablePath!==undefined) Object.assign(s,withEditableSketchPath(s,s.editablePath))
     if(s.retainedProfile){
@@ -187,8 +187,6 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     }
     yield
   }
-  // Expand identities before resource admission, without materializing derived geometry.
-  if(d.bodies.some(body=>body.livePattern!==undefined||body.instance?.pattern!==undefined))d.bodies=expandLiveBodyPatterns(d).bodies
   // Validate serialized caches first, then derive linked geometry from validated sources.
   if(d.bodies.some(body=>body.instance)) {
     // Bound expansion before allocating geometry: a small reference document must not
@@ -342,6 +340,7 @@ export class DirectHistory {
     for (let i = 0; i < d.sketches.length; i++) ids.push(d.sketches[i].id)
     if (d.curves) for (let i = 0; i < d.curves.length; i++) ids.push(d.curves[i].id)
     if (d.surfaces) for (let i = 0; i < d.surfaces.length; i++) ids.push(d.surfaces[i].id)
+    for(const source of d.sourceBodies??[])ids.push(source.id)
     this.current.ids = ids
     return [...ids]
   }
@@ -366,7 +365,7 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= this.currentDocument.blenderProjectId
+    next.blenderProjectId ??= (this.current.document??JSON.parse(this.current.text) as DirectDocument).blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     if (validateChange) validateChange(clone(next))
@@ -435,10 +434,6 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if(sketch.retainedProfile)throw Error('Use the exact profile extrusion for retained curves.')
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
-  if(sketch.editablePath){
-    const brep=extrudeSketchBrep(sketch,height)
-    return {id,name:sketch.name+' · 3D',brep,mesh:tessellateNurbsBrep(brep,16)}
-  }
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
   const count = built.positions.length / 3
   if (count > 300000) throw new Error('Sketch placement point budget exceeded.')

@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "baseCommit": "c7627ec76c4c17c02eaad39d21866a503be88568",
+  "source": "src/features/DirectModeler.vue",
+  "scope": "Complete command catalog, repeat and command dispatch source block unchanged across redesign; runtime interaction qualified separately",
+  "catalogSha256": "62893ce113204d58ea91aea990f4ca3d77063c2e80e2489f7587dddc72d91fe9"
+}

@@ -1,0 +1,43 @@
+{
+  "recorded_at_utc": "2026-10-19T13:58:24.809536+00:00",
+  "candidate": "/private/tmp/nurbs-native-200-chart-boundary-loops-20261019",
+  "status": "qualified and applied; catalog198/200",
+  "fresh_native_passed": 5,
+  "fresh_native_names": [
+    "profile_certificate::span_intersections::translated::periodic_chart_boundary_loops::source_tests::actual_touching_regions_keep_contact_and_distinct_source_walks",
+    "profile_certificate::span_intersections::translated::periodic_chart_boundary_loops::tests::nested_excursions_keep_source_walk_and_original_directions",
+    "profile_certificate::span_intersections::translated::periodic_chart_boundary_loops::tests::omissions_duplicates_open_walks_and_limits_never_publish_partial_loops",
+    "profile_certificate::span_intersections::translated::periodic_chart_boundary_loops::tests::repeated_vertex_retains_two_loops_all_edges_and_contact",
+    "profile_certificate::span_intersections::translated::periodic_chart_boundary_loops::source_tests::actual_tangent_hole_splits_weak_walk_without_claiming_patch_ownership"
+  ],
+  "fresh_native_terminal_exit": 0,
+  "fresh_native_seconds": 254.96,
+  "wasm_terminal_exit": 0,
+  "all_brep_test_module_typecheck_terminal_exit": 0,
+  "rustfmt_check_exit": 0,
+  "owned_paths": [
+    "crates/brep-core/src/profile_certificate.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_boundary_loops.rs"
+  ],
+  "new_modules": 1,
+  "existing_facades_append_only": 3,
+  "applied_source_paths_cumulative": 136,
+  "source_snapshot_paths": 3519,
+  "parent_qualification": "docs/qualification/nurbs-brep-main-integration-candidate-2026-10-19/native-tests.json",
+  "inherited_parent_brep_unique_passed": 321,
+  "inherited_parent_core_passed": 139,
+  "no_parent_runtime_repetition_claim": true,
+  "catalog_increment": 0,
+  "scope": "Original-edge exhaustive decomposition of weak chart walks into vertex-simple graph loops; complete contact census and edge ownership; no orientation/containment/fan ordering/world-face/sewing authority",
+  "committed": false,
+  "pushed": false,
+  "installed_artifacts_replaced": false,
+  "post_qualification_format_cleanup": {
+    "path": "crates/brep-core/src/profile_certificate.rs",
+    "change": "remove trailing whitespace on one export line",
+    "whitespace_token_sequence_unchanged": true,
+    "runtime_rerun_required": false
+  }
+}

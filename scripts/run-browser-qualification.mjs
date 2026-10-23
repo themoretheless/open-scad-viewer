@@ -36,7 +36,7 @@ const QUALIFICATION_ENTRY_PATH = 'tests/fixtures/browser-qualification.html'
 export const EXPECTED_BROWSER_QUALIFICATION_CHECK_NAMES = Object.freeze([
   'default Vite Worker exact 256 entity boundary',
   'default Vite Worker realm terminated after success',
-  'default Vite Worker rejects 257 identity before publication',
+  'default Vite Worker publishes Rust-hashed long identity within protocol budget',
   'default lane recovers in fresh realm',
   'non-cooperative Worker entered execution before deadline',
   'browser main thread remained responsive',

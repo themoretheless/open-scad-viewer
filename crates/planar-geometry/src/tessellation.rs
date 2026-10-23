@@ -117,13 +117,13 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
     let mut vertex_ids =
         FxHashMap::with_capacity_and_hasher(total_pts, Default::default());
     let mut starts: Vec<_> = (0..edges.len()).collect();
-    let mut ends: Vec<_> = (0..edges.len()).collect();
-    starts.sort_unstable_by(|&a, &b| {
+    let mut ends = starts.clone();
+    starts.sort_by(|&a, &b| {
         edges[a].0[1]
             .min(edges[a].1[1])
             .total_cmp(&edges[b].0[1].min(edges[b].1[1]))
     });
-    ends.sort_unstable_by(|&a, &b| {
+    ends.sort_by(|&a, &b| {
         edges[a].0[1]
             .max(edges[a].1[1])
             .total_cmp(&edges[b].0[1].max(edges[b].1[1]))

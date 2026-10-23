@@ -7,13 +7,10 @@ import { renderRushGraphPreviews } from './rushGraphPreview';
 const annotations = { readOnlyHint: true, openWorldHint: false };
 const text = (value: object, isError = false) => ({ isError, structuredContent: value as Record<string, unknown>, content: [{ type: 'text' as const, text: JSON.stringify(value) }] });
 const failure = (error: unknown) => text({ error: { code: 'NURBS_REQUEST_FAILED', message: error instanceof Error ? error.message : 'NURBS request failed.' } }, true);
-const RUSH_GRAPH_NURBS_JSON_SCHEMA = z.toJSONSchema(rushGraphNurbsSchema);
-const OWN_NURBS_LANGUAGE_DOC = { language: 'rush/nurbs-1', guide: RUSH_GRAPH_NURBS_GUIDE, schema: RUSH_GRAPH_NURBS_JSON_SCHEMA, example: RUSH_GRAPH_NURBS_EXAMPLE, surface_example: RUSH_GRAPH_NURBS_SURFACE_EXAMPLE };
-const OWN_NURBS_LANGUAGE_TEXT = JSON.stringify(OWN_NURBS_LANGUAGE_DOC);
-export const ownNurbsLanguage = () => OWN_NURBS_LANGUAGE_DOC;
+export const ownNurbsLanguage = () => ({ language: 'rush/nurbs-1', guide: RUSH_GRAPH_NURBS_GUIDE, schema: z.toJSONSchema(rushGraphNurbsSchema), example: RUSH_GRAPH_NURBS_EXAMPLE, surface_example: RUSH_GRAPH_NURBS_SURFACE_EXAMPLE });
 export function registerRushGraphNurbsTools(server: McpServer) {
-    server.registerResource('rush-nurbs-language', 'openscad://language/rush-nurbs-1', { description: 'Own rational NURBS language, mathematical operations, tessellation and limitations.', mimeType: 'application/json' }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: OWN_NURBS_LANGUAGE_TEXT }] }));
-    server.registerTool('rush_nurbs_language', { description: 'Read the own NURBS language schema and examples before modeling. No third-party NURBS kernel, B-rep or STEP provider.', inputSchema: z.object({}), annotations }, async () => text(OWN_NURBS_LANGUAGE_DOC));
+    server.registerResource('rush-nurbs-language', 'openscad://language/rush-nurbs-1', { description: 'Own rational NURBS language, mathematical operations, tessellation and limitations.', mimeType: 'application/json' }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(ownNurbsLanguage()) }] }));
+    server.registerTool('rush_nurbs_language', { description: 'Read the own NURBS language schema and examples before modeling. No third-party NURBS kernel, B-rep or STEP provider.', inputSchema: z.object({}), annotations }, async () => text(ownNurbsLanguage()));
     server.registerTool('rush_nurbs_compile', { description: 'Validate the NURBS document graph and resolve parameters. Numeric spline and mesh validation runs in build/evaluate.', inputSchema: z.object({ document: rushGraphNurbsSchema }), annotations }, async (input) => { try {
         return text(compileRushGraphNurbs(input.document));
     }
@@ -35,12 +32,9 @@ export function registerRushGraphNurbsTools(server: McpServer) {
             let images: ReturnType<typeof renderRushGraphPreviews> = [], imageError: string | null = null;
             if ('mesh' in result && result.mesh && result.mesh.indices.length > 0) {
                 try {
-                    const m = result.mesh, pos = m.positions, vertices = new Float32Array(pos.length * 2);
-                    for (let i = 0, j = 0; i < pos.length; i += 3, j += 6) {
-                        vertices[j] = pos[i];
-                        vertices[j + 1] = pos[i + 1];
-                        vertices[j + 2] = pos[i + 2];
-                    }
+                    const m = result.mesh, vertices = new Float32Array(m.positions.length * 2);
+                    for (let i = 0; i < m.positions.length / 3; i++)
+                        vertices.set(m.positions.slice(i * 3, i * 3 + 3), i * 6);
                     images = renderRushGraphPreviews([{ vertices, indices: new Uint32Array(m.indices), transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }]);
                 }
                 catch (error) {

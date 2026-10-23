@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "completedOn": "2026-10-16",
+  "suiteTests": {
+    "periodic_trim": 42,
+    "periodic_trim_contacts": 28,
+    "periodic_trim_support": 13,
+    "periodic_trim_weighted": 6,
+    "profile_certificate_unit": 36,
+    "periodic_winding_regions": 6,
+    "winding_regularization": 5
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/periodic_trim/approximate_chart.rs": "d636891b7df4d13126d408793f9a48468b543c8027d8f6216a29b1117002e20d",
+    "crates/nurbs-core/src/trim/periodic_trim/weighted.rs": "5d38a60642021ecb1789531946f529227b9e1bca56769a6da3d2ea74790c879c",
+    "crates/nurbs-core/src/trim/periodic_trim.rs": "74b2b16d1ff987982709a95098643b5aef3886950b0708caf25d77fb776242d7",
+    "crates/nurbs-core/tests/periodic_trim_support.rs": "b3e3f5cf0e6d434793f130a8a656781292fc8c7ce7ab7eaaf0e6db816447eb98",
+    "crates/brep-core/src/profile_certificate/winding/periodic/approximate.rs": "72ff93cc7d592b18568f3124b0106dd4f52a7bfe7386bca739224aa8924f57e6",
+    "crates/brep-core/src/profile_certificate/winding/periodic.rs": "89c4db59c29d38bd886d8a7d3c56766ae640739141a65baa9ddfc9794a2cf08a",
+    "crates/brep-core/src/profile_certificate/winding.rs": "6e4119830ac9619e305eee65723f9cc0560192434a364510f80f344dda7b8e83",
+    "crates/brep-core/src/profile_certificate.rs": "b9be7c940fc51d8c976731257b451b828f1b611e919a416d2fc0d6402f46390d",
+    "crates/brep-core/tests/periodic_winding_regions.rs": "8f373868bfc3f0e5c05c4c5ac0ccbe98d667d3b26e850c25bde5618aed524810"
+  },
+  "scope": "Original continuous periodic source/candidate isotopy and anchor transfer followed by weighted candidate graph and exact nonzero-filled candidate UV regions. No pointwise original boundary equality or owned supporting-surface faces.",
+  "wasmCompilationPassed": true,
+  "nativeCatalogCount": 195,
+  "periodicTrimCatalogStatus": "planned",
+  "originalUnweightedUniqueOwnershipPolicyUnchanged": true,
+  "originalTopologyAndImageSeparationRequired": true,
+  "freshOriginalAnchorIntegerRequired": true,
+  "pointwiseOriginalBoundaryEqualityClaimed": false,
+  "coincidentSourceCoherentIsotopyGenerallyQualified": false,
+  "ownedSurfaceFacesQualified": false,
+  "packagedBrowserEditorStepQualified": false
+}

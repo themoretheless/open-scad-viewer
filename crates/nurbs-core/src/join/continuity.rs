@@ -14,18 +14,25 @@ pub use serialization::{
 mod bounds;
 mod exact_strip;
 mod projective_collection;
-pub use projective_collection::{ProjectiveSeam,ProjectiveSeamCollectionReport,inspect_projective_seam_collection,inspect_exact_seam_collection};
-pub use exact_strip::{ExactStripJetReport,inspect_surface_exact_strip_jets,inspect_surface_projective_strip_jets};
+pub use exact_strip::{
+    ExactStripJetReport, inspect_surface_exact_strip_jets, inspect_surface_projective_strip_jets,
+};
+pub use projective_collection::{
+    ProjectiveSeam, ProjectiveSeamCollectionReport, inspect_exact_seam_collection,
+    inspect_projective_seam_collection,
+};
 pub mod curve_match;
 pub mod deviation;
 pub mod preparation;
 mod regularity;
 mod station_scale;
-pub use projective_collection::inspect_projective_seam_collection_with_rational_scale_proposals;
-pub use projective_collection::inspect_projective_seam_collection_until_refused;
-pub use station_scale::propose_boundary_normal_scale;
 pub(crate) use exact_strip::inspect_proposed_station_projective_strip_jets;
+pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+pub use projective_collection::inspect_projective_seam_collection_until_refused;
+pub use projective_collection::inspect_projective_seam_collection_with_rational_scale_proposals;
+pub use station_scale::propose_boundary_normal_scale;
 pub use station_scale::propose_station_normal_scale;
+pub(crate) use station_scale::propose_station_scale_scalar;
 type H = [f64; 4];
 #[derive(Clone, Copy)]
 struct Boundary {
@@ -317,29 +324,76 @@ pub fn match_surface_jets_oriented_report(
 /// Inspect represented boundary jets without editing either input surface.
 /// The seam basis must already agree; returned bounds concern these inputs.
 pub fn inspect_surface_jets_checked_report(
-    reference:&Surface, edited:&Surface, reference_boundary:&str,
-    edited_boundary:&str, order:usize, scale:f64, max_error:f64,
-)->Result<SurfaceJetReport>{
-    reference.validate()?;edited.validate()?;
-    check((order==1||order==2)&&scale.is_finite()&&scale>0.&&max_error.is_finite()&&max_error>=0.,"Invalid surface jet inspection options")?;
-    let r=Boundary::parse(reference_boundary)?;let e=Boundary::parse(edited_boundary)?;
-    let (rp,rn,rk,_)=r.along(reference);let (ep,en,ek,_)=e.along(edited);
-    check(rp==ep&&rn==en,"Surface jet inspection requires a common seam basis")?;
-    affine_knots(rk,[rk[rp],rk[rn]],ek,[ek[ep],ek[en]])?;
+    reference: &Surface,
+    edited: &Surface,
+    reference_boundary: &str,
+    edited_boundary: &str,
+    order: usize,
+    scale: f64,
+    max_error: f64,
+) -> Result<SurfaceJetReport> {
+    reference.validate()?;
+    edited.validate()?;
+    check(
+        (order == 1 || order == 2)
+            && scale.is_finite()
+            && scale > 0.
+            && max_error.is_finite()
+            && max_error >= 0.,
+        "Invalid surface jet inspection options",
+    )?;
+    let r = Boundary::parse(reference_boundary)?;
+    let e = Boundary::parse(edited_boundary)?;
+    let (rp, rn, rk, _) = r.along(reference);
+    let (ep, en, ek, _) = e.along(edited);
+    check(
+        rp == ep && rn == en,
+        "Surface jet inspection requires a common seam basis",
+    )?;
+    affine_knots(rk, [rk[rp], rk[rn]], ek, [ek[ep], ek[en]])?;
     // Inspection does not need an editable second control layer for a ruled
     // strip. Its second homogeneous jet is identically zero.
-    r.coefficients(reference,order.min(r.cross(reference).0))?;
-    e.coefficients(edited,order.min(e.cross(edited).0))?;
-    let reference_regularity=regularity::certify(reference,r)?;
-    let edited_regularity=regularity::certify(edited,e)?;
-    let error_bounds=bounds::certify(reference,edited,r,e,order,scale)?;
-    let smooth=[(reference,r),(edited,e)].iter().all(|(s,b)|{
-        let (p,n,k,periodic)=b.along(s);let a=k[p];let z=k[n];
-        k.iter().all(|&u|!((u>a||periodic&&u==a)&&u<z&&k.iter().filter(|&&x|x==u).count()>p.saturating_sub(order)))
+    r.coefficients(reference, order.min(r.cross(reference).0))?;
+    e.coefficients(edited, order.min(e.cross(edited).0))?;
+    let reference_regularity = regularity::certify(reference, r)?;
+    let edited_regularity = regularity::certify(edited, e)?;
+    let error_bounds = bounds::certify(reference, edited, r, e, order, scale)?;
+    let smooth = [(reference, r), (edited, e)].iter().all(|(s, b)| {
+        let (p, n, k, periodic) = b.along(s);
+        let a = k[p];
+        let z = k[n];
+        k.iter().all(|&u| {
+            !((u > a || periodic && u == a)
+                && u < z
+                && k.iter().filter(|&&x| x == u).count() > p.saturating_sub(order))
+        })
     });
-    let regular=reference_regularity.certified()&&edited_regularity.certified();let error=error_bounds.maximum();
-    let accepted=regular&&smooth&&error<=max_error;
-    Ok(SurfaceJetReport{continuity_order:order,normal_scale:scale,reference_regularity,edited_regularity,error_bounds,reversed:false,decision:Some(SurfaceJetDecision{accepted,max_error,error_upper:error,tangential_smoothness_certified:smooth,reason:if !regular{SurfaceJetDecisionReason::UnprovenRegularity}else if !smooth{SurfaceJetDecisionReason::UnprovenTangentialSmoothness}else if error>max_error{SurfaceJetDecisionReason::DeviationExceedsBudget}else{SurfaceJetDecisionReason::Accepted}})})
+    let regular = reference_regularity.certified() && edited_regularity.certified();
+    let error = error_bounds.maximum();
+    let accepted = regular && smooth && error <= max_error;
+    Ok(SurfaceJetReport {
+        continuity_order: order,
+        normal_scale: scale,
+        reference_regularity,
+        edited_regularity,
+        error_bounds,
+        reversed: false,
+        decision: Some(SurfaceJetDecision {
+            accepted,
+            max_error,
+            error_upper: error,
+            tangential_smoothness_certified: smooth,
+            reason: if !regular {
+                SurfaceJetDecisionReason::UnprovenRegularity
+            } else if !smooth {
+                SurfaceJetDecisionReason::UnprovenTangentialSmoothness
+            } else if error > max_error {
+                SurfaceJetDecisionReason::DeviationExceedsBudget
+            } else {
+                SurfaceJetDecisionReason::Accepted
+            },
+        }),
+    })
 }
 
 /// Application gate: require regularity, the requested tangential smoothness,

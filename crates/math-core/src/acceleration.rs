@@ -65,17 +65,17 @@ impl Acceleration {
     /// starting point tuned to that hardware, not a guarantee for every
     /// GPU/CUDA device — re-benchmark for workloads where the choice
     /// matters.
-    pub const fn recommended_for_nearest_neighbor(query_count: usize, target_count: usize) -> Self {
+    pub fn recommended_for_nearest_neighbor(query_count: usize, target_count: usize) -> Self {
         const CUDA_WORK_THRESHOLD: usize = 200_000;
         const GPU_WORK_THRESHOLD: usize = 700_000;
         let Some(work) = query_count.checked_mul(target_count) else {
-            return if cfg!(feature = "cuda") {
+            return if crate::device::cuda_available() {
                 Self::Cuda
             } else {
                 Self::Gpu
             };
         };
-        if cfg!(feature = "cuda") && work >= CUDA_WORK_THRESHOLD {
+        if crate::device::cuda_available() && work >= CUDA_WORK_THRESHOLD {
             Self::Cuda
         } else if work >= GPU_WORK_THRESHOLD {
             Self::Gpu
@@ -86,11 +86,7 @@ impl Acceleration {
 
     /// Resolves `Auto` for [`crate::nearest_neighbor_accelerated`]; explicit
     /// placements pass through unchanged.
-    pub const fn resolve_for_nearest_neighbor(
-        self,
-        query_count: usize,
-        target_count: usize,
-    ) -> Self {
+    pub fn resolve_for_nearest_neighbor(self, query_count: usize, target_count: usize) -> Self {
         match self {
             Self::Auto => Self::recommended_for_nearest_neighbor(query_count, target_count),
             explicit => explicit,
@@ -118,9 +114,9 @@ impl Acceleration {
     /// Suggests a placement for fused point-cloud summary reductions
     /// (bounds + moments). wgpu is upload-bound on the measured discrete GPU,
     /// but the fused CUDA path beats the CPU reference for large clouds.
-    pub const fn recommended_for_point_cloud_stats(point_count: usize) -> Self {
+    pub fn recommended_for_point_cloud_stats(point_count: usize) -> Self {
         const CUDA_POINT_THRESHOLD: usize = 500_000;
-        if cfg!(feature = "cuda") && point_count >= CUDA_POINT_THRESHOLD {
+        if crate::device::cuda_available() && point_count >= CUDA_POINT_THRESHOLD {
             Self::Cuda
         } else {
             Self::Cpu
@@ -128,7 +124,7 @@ impl Acceleration {
     }
 
     /// Resolves `Auto` for fused point-cloud summary reductions.
-    pub const fn resolve_for_point_cloud_stats(self, point_count: usize) -> Self {
+    pub fn resolve_for_point_cloud_stats(self, point_count: usize) -> Self {
         match self {
             Self::Auto => Self::recommended_for_point_cloud_stats(point_count),
             explicit => explicit,
@@ -236,7 +232,7 @@ mod tests {
             Acceleration::Cpu
         );
         let large = Acceleration::recommended_for_point_cloud_stats(1_000_000);
-        if cfg!(feature = "cuda") {
+        if crate::device::cuda_available() {
             assert_eq!(large, Acceleration::Cuda);
         } else {
             assert_eq!(large, Acceleration::Cpu);

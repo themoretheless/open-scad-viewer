@@ -38,7 +38,7 @@
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v9",
     "previousPlanSha256": "b580de0370763313e1566a155fc542923d85a632c864c90db13e8380d6a8f125",
-    "reason": "RushGraph Text now routes explicit NURBS and mesh operations to the own Rust libraries and publishes their meshes directly. Version 10 rebinds changed harness bytes and the measured host-code allowance; qualification scope and unresolved admission constraints remain preserved.",
+    "reason": "ModelGraph Text now routes explicit NURBS and mesh operations to the own Rust libraries and publishes their meshes directly. Version 10 rebinds changed harness bytes and the measured host-code allowance; qualification scope and unresolved admission constraints remain preserved.",
     "changes": [
       "Rebind changed harness bytes for explicit own NURBS compact text and direct viewer publication.",
       "Allow 30000 additional distribution bytes for the measured approximately 28000-byte host integration; all individual artifact limits remain unchanged.",

@@ -1,0 +1,171 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/cad-current-chain-wasm-target/.../wgsl_export
+  |                                                ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling alloc-no-stdlib v2.0.4
+   Compiling wasm-brotli v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/wasm-brotli)
+   Compiling alloc-stdlib v0.2.4
+   Compiling brotli-decompressor v5.0.3
+    Finished `release` profile [optimized] target(s) in 3.52s
+wasm-brotli: wasm unchanged, skipping packaging (stamp hit)
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/cad-current-chain-wasm-target/.../wgsl_export
+  |                                                ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling osv-math v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/math-core)
+   Compiling autocfg v1.5.1
+   Compiling cfg-if v1.0.4
+   Compiling crc32fast v1.5.2
+   Compiling value-codec v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/value-codec)
+   Compiling bytemuck v1.25.2
+   Compiling typenum v1.20.1
+   Compiling simd-adler32 v0.3.10
+   Compiling adler2 v2.0.1
+   Compiling libm v0.2.16
+   Compiling rustc-hash v2.1.1
+   Compiling arrayvec v0.7.8
+   Compiling log v0.4.34
+   Compiling version_check v0.9.5
+   Compiling bitflags v2.13.2
+   Compiling smallvec v1.16.0
+   Compiling const-oid v0.10.2
+   Compiling miniz_oxide v0.9.1
+   Compiling float-cmp v0.9.0
+   Compiling arrayref v0.3.9
+   Compiling strict-num v0.1.1
+   Compiling tinyvec_macros v0.1.1
+   Compiling wide v1.7.1
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling polycool v0.4.0
+   Compiling slotmap v1.1.1
+   Compiling siphasher v1.0.3
+   Compiling cad-predicates v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/cad-predicates)
+   Compiling num-traits v0.2.19
+   Compiling matrixmultiply v0.3.11
+   Compiling tiny-skia-path v0.12.0
+   Compiling planar-geometry v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/planar-geometry)
+   Compiling geometry-ops v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/geometry-ops)
+   Compiling flate2 v1.1.10
+   Compiling kurbo v0.13.1
+   Compiling printer-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/printer-core)
+   Compiling tinyvec v1.13.2
+   Compiling unicode-script v0.5.8
+   Compiling unicode-properties v0.1.4
+   Compiling unicode-ccc v0.4.0
+   Compiling unicode-bidi-mirroring v0.4.0
+   Compiling memchr v2.8.3
+   Compiling rawpointer v0.2.1
+   Compiling png v0.18.1
+   Compiling gcode-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/gcode-core)
+   Compiling hybrid-array v0.4.15
+   Compiling simplecss v0.2.2
+   Compiling unicode-vo v0.1.0
+   Compiling unicode-bidi v0.3.18
+   Compiling base64 v0.22.1
+   Compiling xmlwriter v0.1.0
+   Compiling pico-args v0.5.0
+   Compiling roxmltree v0.21.1
+   Compiling imagesize v0.14.0
+   Compiling quick-error v2.0.1
+   Compiling byteorder-lite v0.1.0
+   Compiling weezl v0.1.12
+   Compiling color_quant v1.1.0
+   Compiling num-integer v0.1.47
+   Compiling num-complex v0.4.6
+   Compiling approx v0.5.1
+   Compiling core_maths v0.1.1
+   Compiling data-url v0.3.2
+   Compiling ttf-parser v0.25.1
+   Compiling num-rational v0.4.2
+   Compiling zune-core v0.5.3
+   Compiling svgtypes v0.16.1
+   Compiling gif v0.14.2
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling zune-jpeg v0.5.15
+   Compiling gcode-optimize v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/gcode-optimize)
+   Compiling nurbs-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/nurbs-core)
+   Compiling image-webp v0.2.4
+   Compiling tiny-skia v0.12.0
+   Compiling rgb v0.8.53
+   Compiling digest v0.11.3
+   Compiling subdivision-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/subdivision-core)
+   Compiling sketch-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/sketch-core)
+   Compiling mechanical-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/mechanical-core)
+   Compiling sha2 v0.11.0
+   Compiling slicer-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/slicer-core)
+   Compiling sdf-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/sdf-core)
+   Compiling brep-topology v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/brep-topology)
+   Compiling rustybuzz v0.20.1
+   Compiling fontdb v0.23.0
+   Compiling polygon-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/polygon-core)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling usvg v0.47.0 (/private/tmp/open-scad-viewer-cad-ready/crates/vendor/usvg)
+   Compiling brep-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/brep-core)
+   Compiling simba v0.10.2
+   Compiling resvg v0.47.0 (/private/tmp/open-scad-viewer-cad-ready/crates/vendor/resvg)
+   Compiling nalgebra v0.35.0
+   Compiling mechanics-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/mechanics-core)
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling geometry-bridge v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `geometry-bridge` (lib) generated 1 warning
+   Compiling geometry-wasm v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/geometry-wasm)
+    Finished `release` profile [optimized] target(s) in 1m 40s
+wasm-opt: 10619158 -> 9428261 bytes (11.2% smaller)

@@ -1,4 +1,3 @@
-import {readNativeGeometryData} from './nativeGeometrySnapshot'
 /** Independent diagnostic transport. This is never a GeometryExecutionDescriptor. */
 import {MAX_GEOMETRY_SOURCE_CHARACTERS, parseGeometrySourceRoutingHeader} from '../core/geometryExecution'
 import {MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
@@ -191,7 +190,7 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
       } else if (run.source !== null) return false
       // Snapshot hashes are checked by the existing mesh validator; additionally
       // bind the advertised face list and triangle indices to that exact snapshot.
-      const snapshot = readNativeGeometryData(mesh.nativeGeometry) as {geometry?: {faces?: unknown[]; topologyIds?: {faces?: unknown[]}}}
+      const snapshot = JSON.parse(mesh.nativeGeometry.geometryJson) as {geometry?: {faces?: unknown[]; topologyIds?: {faces?: unknown[]}}}
       const faceList = snapshot.geometry?.topologyIds?.faces
       const reportedFaces = output.topologyFaceIds
       if (!Array.isArray(snapshot.geometry?.faces) || !Array.isArray(faceList)

@@ -288,121 +288,12 @@ impl Source {
         }
     }
 }
-fn norm(v: [I; 3]) -> Result<f64> {
-    let mut sum = I::point(0.);
-    for x in v {
-        let a = I::point(x.lo.abs().max(x.hi.abs()));
-        sum = sum.add(a.mul(a)?)?;
-    }
-    Ok(sum.hi.max(0.).sqrt().next_up())
-}
-fn sixth_power(x: I) -> Result<I> {
-    let xx = x.mul(x)?;
-    xx.mul(xx)?.mul(xx)
-}
-fn node(range: [f64; 2], i: usize) -> Result<[f64; 2]> {
-    if i == 0 {
-        return Ok([range[0]; 2]);
-    }
-    if i == 5 {
-        return Ok([range[1]; 2]);
-    }
-    let x = I::point(range[0]).add(
-        I::point(range[1])
-            .sub(I::point(range[0]))?
-            .mul(I::point(NODES[i]))?,
-    )?;
-    Ok([x.lo.max(range[0]), x.hi.min(range[1])])
-}
-fn ideal_net(source: &Source, domain: ChartDomain, op: &Operator) -> Result<[[[I; 3]; 6]; 6]> {
-    let mut samples = [[[I::point(0.); 3]; 6]; 6];
-    let u_nodes = [
-        node(domain.u, 0)?,
-        node(domain.u, 1)?,
-        node(domain.u, 2)?,
-        node(domain.u, 3)?,
-        node(domain.u, 4)?,
-        node(domain.u, 5)?,
-    ];
-    // The implicit stock root depends on beta, not on the transverse sample.
-    // Prove it once for each complete beta node box; immutable ownership keeps
-    // this local reuse bound to the same original source and radius.
-    for j in 0..6 {
-        let beta = node(domain.beta, j)?;
-        let row_source = source.at_beta(beta)?;
-        for i in 0..6 {
-            let p = row_source.point(ChartDomain {
-                u: u_nodes[i],
-                beta,
-            })?;
-            samples[i][j] = [iv(p[0])?, iv(p[1])?, iv(p[2])?];
-        }
-    }
-    for row in &mut samples {
-        *row = transform(row, op)?;
-    }
-    let mut net = samples;
-    for j in 0..6 {
-        let data = std::array::from_fn(|i| samples[i][j]);
-        let b = transform(&data, op)?;
-        for i in 0..6 {
-            net[i][j] = b[i];
-        }
-    }
-    Ok(net)
-}
-fn interpolation_error(sixth: [[I; 3]; 2], domain: ChartDomain, op: &Operator) -> Result<[f64; 2]> {
-    let mut out = [0.; 2];
-    for axis in 0..2 {
-        let range = if axis == 0 { domain.u } else { domain.beta };
-        let width = I::point(range[1]).sub(I::point(range[0]))?;
-        let coefficient = norm(sixth[axis])?;
-        out[axis] = I::point(coefficient)
-            .mul(sixth_power(width)?)?
-            .mul(I::point(op.weight))?
-            .hi;
-    }
-    Ok([out[0], I::point(out[1]).mul(I::point(op.lebesgue))?.hi])
-}
-fn saved_regular(s: &Surface, domain: ChartDomain) -> Result<bool> {
-    let mut du = [I::point(0.); 3];
-    let mut db = du;
-    let mut lo = [[f64::INFINITY; 3]; 2];
-    let mut hi = [[f64::NEG_INFINITY; 3]; 2];
-    for axis in 0..2 {
-        let range = if axis == 0 { domain.u } else { domain.beta };
-        let scale = I::point(5.).div(I::point(range[1]).sub(I::point(range[0]))?)?;
-        for i in 0..6 {
-            for j in 0..6 {
-                if (axis == 0 && i == 5) || (axis == 1 && j == 5) {
-                    continue;
-                }
-                let next = if axis == 0 {
-                    &s.control_points[i + 1][j]
-                } else {
-                    &s.control_points[i][j + 1]
-                };
-                for d in 0..3 {
-                    let value = I::point(next[d])
-                        .sub(I::point(s.control_points[i][j][d]))?
-                        .mul(scale)?;
-                    lo[axis][d] = lo[axis][d].min(value.lo);
-                    hi[axis][d] = hi[axis][d].max(value.hi);
-                }
-            }
-        }
-    }
-    for d in 0..3 {
-        du[d] = I::new(lo[0][d], hi[0][d])?;
-        db[d] = I::new(lo[1][d], hi[1][d])?;
-    }
-    let cross = [
-        du[1].mul(db[2])?.sub(du[2].mul(db[1])?)?,
-        du[2].mul(db[0])?.sub(du[0].mul(db[2])?)?,
-        du[0].mul(db[1])?.sub(du[1].mul(db[0])?)?,
-    ];
-    Ok(cross.iter().any(|x| x.lo > 0. || x.hi < 0.))
-}
+
+
+
+
+
+
 #[derive(Clone, Debug)]
 pub struct GridCertificate {
     pub error_upper: f64,
@@ -413,130 +304,8 @@ pub struct GridCertificate {
     pub saved_regular: bool,
     pub patches: usize,
 }
-fn validate_layout(
-    domain: ChartDomain,
-    u: &[f64],
-    b: &[f64],
-    surface_count: usize,
-    max_patches: usize,
-) -> Result<()> {
-    check(
-        u.len() >= 2
-            && b.len() >= 2
-            && u.len() <= 4097
-            && b.len() <= 4097
-            && u.first() == Some(&domain.u[0])
-            && u.last() == Some(&domain.u[1])
-            && b.first() == Some(&domain.beta[0])
-            && b.last() == Some(&domain.beta[1])
-            && u.iter().chain(b).all(|x| x.is_finite())
-            && u.windows(2).all(|x| x[0] < x[1])
-            && b.windows(2).all(|x| x[0] < x[1])
-            && (1..=4096).contains(&max_patches)
-            && (u.len() - 1) * (b.len() - 1) == surface_count
-            && surface_count <= max_patches,
-        "Wheel NURBS grid must cover the original rectangle with a complete bounded patch census",
-    )
-}
-fn verify(
-    source: &Source,
-    domain: ChartDomain,
-    u: &[f64],
-    b: &[f64],
-    surfaces: &[Surface],
-    max_patches: usize,
-    op: &Operator,
-) -> Result<GridCertificate> {
-    source.validate(domain)?;
-    source.replay()?;
-    validate_layout(domain, u, b, surfaces.len(), max_patches)?;
-    let nb = b.len() - 1;
-    let is_physical_y = source.physical_y();
-    let mut report = GridCertificate {
-        error_upper: 0.,
-        interpolation_error_upper: 0.,
-        control_difference_upper: 0.,
-        directional_error_upper: [0.; 2],
-        source_regular: true,
-        saved_regular: true,
-        patches: surfaces.len(),
-    };
-    for (i, s) in surfaces.iter().enumerate() {
-        let iu = i / nb;
-        let ib = i % nb;
-        let cell = ChartDomain {
-            u: [u[iu], u[iu + 1]],
-            beta: [b[ib], b[ib + 1]],
-        };
-        s.validate()?;
-        check(
-            s.degree_u == 5
-                && s.degree_v == 5
-                && s.knots_u.len() == 12
-                && s.knots_u[..6].iter().all(|&x| x == cell.u[0])
-                && s.knots_u[6..].iter().all(|&x| x == cell.u[1])
-                && s.knots_v.len() == 12
-                && s.knots_v[..6].iter().all(|&x| x == cell.beta[0])
-                && s.knots_v[6..].iter().all(|&x| x == cell.beta[1])
-                && !s.periodic_u
-                && !s.periodic_v
-                && s.control_points.len() == 6
-                && s.control_points
-                    .iter()
-                    .all(|r| r.len() == 6 && r.iter().all(|p| p.len() == 3))
-                && s.weights.iter().flatten().all(|w| *w == 1.),
-            "Wheel fit requires original quintic tensor Bernstein patches and exact source domains",
-        )?;
-        if is_physical_y {
-            let values = physical_y_controls(cell.beta)?;
-            check(
-                s.control_points.iter().all(|row| {
-                    row.iter()
-                        .zip(values)
-                        .all(|(p, y)| p[1].to_bits() == y.to_bits())
-                }),
-                "Axial grid lost its canonical physical-Y controls or end planes",
-            )?;
-        }
-        let (regular, sixth) = source.cell(cell)?;
-        report.source_regular &= regular;
-        report.saved_regular &= saved_regular(s, cell)?;
-        let ideal = ideal_net(source, cell, op)?;
-        let mut delta = 0_f64;
-        for j in 0..6 {
-            for k in 0..6 {
-                let p = &s.control_points[j][k];
-                let actual = [I::point(p[0]), I::point(p[1]), I::point(p[2])];
-                delta = delta.max(box_distance(&actual, &ideal[j][k])?.1);
-            }
-        }
-        let terms = interpolation_error(sixth, cell, op)?;
-        let remainder = I::point(terms[0]).add(I::point(terms[1]))?.hi;
-        report.control_difference_upper = report.control_difference_upper.max(delta);
-        report.interpolation_error_upper = report.interpolation_error_upper.max(remainder);
-        for d in 0..2 {
-            report.directional_error_upper[d] = report.directional_error_upper[d].max(terms[d]);
-        }
-        report.error_upper = report
-            .error_upper
-            .max(I::point(remainder).add(I::point(delta))?.hi);
-        if iu > 0 {
-            let previous = &surfaces[(iu - 1) * nb + ib];
-            check(
-                previous.control_points[5] == s.control_points[0],
-                "Wheel NURBS U seam differs in actual original controls",
-            )?;
-        }
-        if ib > 0 {
-            let previous = &surfaces[i - 1];
-            check(
-                (0..6).all(|j| previous.control_points[j][5] == s.control_points[j][0]),
-                "Wheel NURBS beta seam differs in actual original controls",
-            )?;
-        }
-    }
-    Ok(report)
-}
+
+
 /// Independent continuous original-envelope error and actual C0 grid replay.
 /// Source and saved-patch regularity are separate, independently recomputed flags.
 pub fn certify_envelope_grid(
@@ -591,103 +360,8 @@ fn physical_y_controls(y: [f64; 2]) -> Result<[f64; 6]> {
     )?;
     Ok(values)
 }
-fn build(source: &Source, u: &[f64], beta: &[f64], op: &Operator) -> Result<Vec<Surface>> {
-    let mut surfaces = Vec::with_capacity((u.len() - 1) * (beta.len() - 1));
-    let is_physical_y = source.physical_y();
-    for a in u.windows(2) {
-        let mut ku = vec![a[0]; 12];
-        ku[6..].fill(a[1]);
-        for b in beta.windows(2) {
-            let domain = ChartDomain {
-                u: [a[0], a[1]],
-                beta: [b[0], b[1]],
-            };
-            let net = ideal_net(source, domain, op)?;
-            let mut kb = vec![b[0]; 12];
-            kb[6..].fill(b[1]);
-            let mut s = Surface {
-                degree_u: 5,
-                degree_v: 5,
-                knots_u: ku.clone(),
-                knots_v: kb,
-                periodic_u: false,
-                periodic_v: false,
-                control_points: net
-                    .into_iter()
-                    .map(|row| row.into_iter().map(|p| p.map(mid).to_vec()).collect())
-                    .collect(),
-                weights: vec![vec![1.; 6]; 6],
-            };
-            if is_physical_y {
-                let values = physical_y_controls(domain.beta)?;
-                for row in &mut s.control_points {
-                    for (p, y) in row.iter_mut().zip(values) {
-                        p[1] = y;
-                    }
-                }
-            }
-            s.validate()?;
-            surfaces.push(s);
-        }
-    }
-    Ok(surfaces)
-}
-fn pack(surfaces: &[Surface], u: &[f64], beta: &[f64]) -> Result<Vec<Surface>> {
-    let nu = u.len() - 1;
-    let nb = beta.len() - 1;
-    let mut out = Vec::with_capacity(nu.div_ceil(6) * nb.div_ceil(6));
-    for first in (0..nu).step_by(6) {
-        for start in (0..nb).step_by(6) {
-            let last = (first + 6).min(nu);
-            let end = (start + 6).min(nb);
-            let mut ku = Vec::with_capacity(12 + 5 * (last - first - 1));
-            ku.extend(std::iter::repeat_n(u[first], 6));
-            for &x in &u[first + 1..last] {
-                ku.extend(std::iter::repeat_n(x, 5));
-            }
-            ku.extend(std::iter::repeat_n(u[last], 6));
-            let mut kb = Vec::with_capacity(12 + 5 * (end - start - 1));
-            kb.extend(std::iter::repeat_n(beta[start], 6));
-            for &x in &beta[start + 1..end] {
-                kb.extend(std::iter::repeat_n(x, 5));
-            }
-            kb.extend(std::iter::repeat_n(beta[end], 6));
-            let rows = 5 * (last - first) + 1;
-            let cols = 5 * (end - start) + 1;
-            let mut points = Vec::with_capacity(rows);
-            for r in 0..rows {
-                let (i, ri) = if r == rows - 1 {
-                    (last - 1, 5)
-                } else {
-                    (first + r / 5, r % 5)
-                };
-                let mut row = Vec::with_capacity(cols);
-                for c in 0..cols {
-                    let (j, cj) = if c == cols - 1 {
-                        (end - 1, 5)
-                    } else {
-                        (start + c / 5, c % 5)
-                    };
-                    row.push(surfaces[i * nb + j].control_points[ri][cj].clone());
-                }
-                points.push(row);
-            }
-            let s = Surface {
-                degree_u: 5,
-                degree_v: 5,
-                knots_u: ku,
-                knots_v: kb,
-                control_points: points,
-                weights: vec![vec![1.; cols]; rows],
-                periodic_u: false,
-                periodic_v: false,
-            };
-            s.validate()?;
-            out.push(s);
-        }
-    }
-    Ok(out)
-}
+
+
 
 struct QualifiedGrid {
     source: Source,
@@ -699,29 +373,9 @@ struct QualifiedGrid {
     certificate: GridCertificate,
     tolerance: f64,
 }
-fn same_scalar_bits(a: &[f64], b: &[f64]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits())
-}
-fn same_row_bits(a: &[Vec<f64>], b: &[Vec<f64>]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).all(|(x, y)| same_scalar_bits(x, y))
-}
-fn same_packed_definitions(a: &[Surface], b: &[Surface]) -> bool {
-    a.len() == b.len()
-        && a.iter().zip(b).all(|(x, y)| {
-            x.degree_u == y.degree_u
-                && x.degree_v == y.degree_v
-                && x.periodic_u == y.periodic_u
-                && x.periodic_v == y.periodic_v
-                && same_scalar_bits(&x.knots_u, &y.knots_u)
-                && same_scalar_bits(&x.knots_v, &y.knots_v)
-                && same_row_bits(&x.weights, &y.weights)
-                && x.control_points.len() == y.control_points.len()
-                && x.control_points
-                    .iter()
-                    .zip(&y.control_points)
-                    .all(|(p, q)| same_row_bits(p, q))
-        })
-}
+
+
+
 impl QualifiedGrid {
     fn reverify_against(&self, source: &Source) -> Result<()> {
         check(
@@ -811,101 +465,10 @@ impl QualifiedRootGrid {
         self.grid.reverify_against(&Source::Root(self.root.clone()))
     }
 }
-/// Uniform C0 grids refine anisotropically until the unchanged world tolerance,
-/// original chart regularity and actual saved-patch regularity are all proved.
-/// No singular/budget leaf is dropped; incomplete fits explicitly refuse.
-pub fn fit_chart(
-    spec: Spec,
-    flank: Flank,
-    domain: ChartDomain,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedEnvelopeGrid> {
-    let grid = fit(
-        Source::Original(spec, flank),
-        domain,
-        tolerance,
-        max_patches,
-    )?;
-    Ok(QualifiedEnvelopeGrid { grid, flank })
-}
-fn fit(
-    source: Source,
-    domain: ChartDomain,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedGrid> {
-    source.validate(domain)?;
-    source.replay()?;
-    check(
-        domain.u[0] < domain.u[1]
-            && domain.beta[0] < domain.beta[1]
-            && tolerance.is_finite()
-            && tolerance > 0.
-            && (1..=4096).contains(&max_patches),
-        "Wheel NURBS fit needs nonempty source rectangle, positive tolerance and bounded grid",
-    )?;
-    let op = operator()?;
-    let mut nu = 1;
-    let mut nb = 1;
-    loop {
-        let u = breaks(domain.u, nu);
-        let beta = breaks(domain.beta, nb);
-        let report = build(&source, &u, &beta, &op)
-            .and_then(|s| verify(&source, domain, &u, &beta, &s, max_patches, &op).map(|r| (s, r)));
-        let axis = match report {
-            Ok((surfaces, certificate)) => {
-                if certificate.error_upper <= tolerance
-                    && certificate.source_regular
-                    && certificate.saved_regular
-                {
-                    let packed = pack(&surfaces, &u, &beta)?;
-                    return Ok(QualifiedGrid {
-                        source,
-                        domain,
-                        u,
-                        beta,
-                        surfaces,
-                        packed,
-                        certificate,
-                        tolerance,
-                    });
-                }
-                if !certificate.source_regular || !certificate.saved_regular {
-                    usize::from(nu > nb)
-                } else {
-                    usize::from(
-                        certificate.directional_error_upper[1]
-                            > certificate.directional_error_upper[0],
-                    )
-                }
-            }
-            Err(_) => usize::from(nu > nb),
-        };
-        check(
-            nu * nb * 2 <= max_patches,
-            "Wheel NURBS original-source error/regularity remains unproved within the patch budget",
-        )?;
-        if axis == 0 {
-            nu *= 2;
-        } else {
-            nb *= 2;
-        }
-    }
-}
 
-/// Search-free original definition replay. Packing introduces no approximation:
-/// full degree-five internal multiplicity retains every original Bernstein cell.
-pub fn verify_packed_grid(source: &QualifiedEnvelopeGrid, packed: &[Surface]) -> Result<()> {
-    source.reverify()?;
-    check(
-        same_packed_definitions(
-            &pack(&source.grid.surfaces, &source.grid.u, &source.grid.beta)?,
-            packed,
-        ),
-        "Packed wheel surfaces do not retain the qualified original cell definitions",
-    )
-}
+
+
+
 
 /// Fits the true original implicit crest-to-stock chart, including root-isolation
 /// roundoff and sixth-order implicit derivative bounds. U is local t in [0,1].
@@ -996,28 +559,8 @@ pub fn verify_packed_root_grid(source: &QualifiedRootGrid, packed: &[Surface]) -
 }
 
 #[cfg(test)]
-mod root_ownership_tests {
-    use super::*;
-    #[test]
-    fn root_owner_replay_uses_its_original_source_not_the_inner_cached_source() {
-        let root = root_chart(Spec::default(), RootPart::CrestCylinder, [-0.15, 0.15]).unwrap();
-        let mut grid = fit_root_chart(&root, 1e-4, 128).unwrap();
-        grid.reverify().unwrap();
-        // The contact proof is phase invariant. The NURBS ownership proof is
-        // not: changed source phase must be tested against the actual poles.
-        grid.root = root_chart(
-            Spec {
-                axial_shift: 0.3,
-                ..Spec::default()
-            },
-            RootPart::CrestCylinder,
-            [-0.15, 0.15],
-        )
-        .unwrap();
-        grid.root.reverify().unwrap();
-        assert!(grid.reverify().is_err());
-    }
-}
+#[path = "fit/tests/root_ownership_tests_integration.rs"]
+mod root_ownership_tests;
 
 /// Root grid with physical-Y coordinates and actual planar end boundaries.
 pub struct QualifiedAxialRootGrid {
@@ -1054,51 +597,9 @@ impl QualifiedAxialRootGrid {
             .reverify_against(&Source::AxialRoot(self.root.clone()))
     }
 }
-pub fn fit_axial_root(
-    root: &AxialRootChart,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialRootGrid> {
-    let d = root.domain();
-    let grid = fit(
-        Source::AxialRoot(root.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        tolerance,
-        max_patches,
-    )?;
-    Ok(QualifiedAxialRootGrid {
-        grid,
-        root: root.clone(),
-    })
-}
-pub fn certify_axial_root_grid(
-    root: &AxialRootChart,
-    d: AxialDomain,
-    t: &[f64],
-    y: &[f64],
-    surfaces: &[Surface],
-    max_patches: usize,
-) -> Result<GridCertificate> {
-    verify(
-        &Source::AxialRoot(root.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        t,
-        y,
-        surfaces,
-        max_patches,
-        &operator()?,
-    )
-}
-pub fn verify_packed_axial_root(source: &QualifiedAxialRootGrid, packed: &[Surface]) -> Result<()> {
-    source.reverify()?;
-    check(
-        same_packed_definitions(
-            &pack(&source.grid.surfaces, &source.grid.u, &source.grid.beta)?,
-            packed,
-        ),
-        "Packed axial root does not preserve actual saved definitions",
-    )
-}
+
+
+
 
 /// Original crest-to-stock working flank between actual physical Y planes.
 pub struct QualifiedAxialStockGrid {
@@ -1135,54 +636,9 @@ impl QualifiedAxialStockGrid {
             .reverify_against(&Source::AxialStock(self.stock.clone()))
     }
 }
-pub fn fit_axial_stock(
-    stock: &AxialStockIntersection,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialStockGrid> {
-    let d = stock.domain();
-    let grid = fit(
-        Source::AxialStock(stock.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        tolerance,
-        max_patches,
-    )?;
-    Ok(QualifiedAxialStockGrid {
-        grid,
-        stock: stock.clone(),
-    })
-}
-pub fn certify_axial_stock_grid(
-    stock: &AxialStockIntersection,
-    d: AxialDomain,
-    t: &[f64],
-    y: &[f64],
-    surfaces: &[Surface],
-    max_patches: usize,
-) -> Result<GridCertificate> {
-    verify(
-        &Source::AxialStock(stock.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        t,
-        y,
-        surfaces,
-        max_patches,
-        &operator()?,
-    )
-}
-pub fn verify_packed_axial_stock(
-    source: &QualifiedAxialStockGrid,
-    packed: &[Surface],
-) -> Result<()> {
-    source.reverify()?;
-    check(
-        same_packed_definitions(
-            &pack(&source.grid.surfaces, &source.grid.u, &source.grid.beta)?,
-            packed,
-        ),
-        "Packed axial stock does not preserve actual saved definitions",
-    )
-}
+
+
+
 
 pub struct QualifiedAxialTipGrid {
     grid: QualifiedGrid,
@@ -1218,90 +674,15 @@ impl QualifiedAxialTipGrid {
             .reverify_against(&Source::AxialTip(self.tip.clone()))
     }
 }
-pub fn fit_axial_tip(
-    tip: &AxialTipChart,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialTipGrid> {
-    let d = tip.domain();
-    let grid = fit(
-        Source::AxialTip(tip.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        tolerance,
-        max_patches,
-    )?;
-    Ok(QualifiedAxialTipGrid {
-        grid,
-        tip: tip.clone(),
-    })
-}
-pub fn certify_axial_tip_grid(
-    tip: &AxialTipChart,
-    d: AxialDomain,
-    t: &[f64],
-    y: &[f64],
-    surfaces: &[Surface],
-    max_patches: usize,
-) -> Result<GridCertificate> {
-    verify(
-        &Source::AxialTip(tip.clone()),
-        ChartDomain { u: d.t, beta: d.y },
-        t,
-        y,
-        surfaces,
-        max_patches,
-        &operator()?,
-    )
-}
-pub fn verify_packed_axial_tip(source: &QualifiedAxialTipGrid, packed: &[Surface]) -> Result<()> {
-    source.reverify()?;
-    check(
-        same_packed_definitions(
-            &pack(&source.grid.surfaces, &source.grid.u, &source.grid.beta)?,
-            packed,
-        ),
-        "Packed axial tip does not preserve actual saved definitions",
-    )
-}
+
+
+
 
 #[cfg(test)]
-mod axial_source_ownership_tests {
-    use super::*;
-    #[test]
-    fn physical_y_owners_replay_exposed_sources_instead_of_inner_cached_sources() {
-        let s = Spec::default();
-        let shifted = Spec {
-            axial_shift: 0.3,
-            ..s
-        };
-        let root = axial_root_chart(s, RootPart::CrestCylinder, [-2., 2.]).unwrap();
-        let mut root_grid = fit_axial_root(&root, 1e-4, 256).unwrap();
-        root_grid.root = axial_root_chart(shifted, RootPart::CrestCylinder, [-2., 2.]).unwrap();
-        root_grid.root.reverify().unwrap();
-        assert!(root_grid.reverify().is_err());
-        let d = axial_stock_intersection(s, Flank::Descending, [-2., 2.], 21., 128).unwrap();
-        let a = axial_stock_intersection(s, Flank::Ascending, [-2., 2.], 21., 128).unwrap();
-        let sd = axial_stock_intersection(shifted, Flank::Descending, [-2., 2.], 21., 128).unwrap();
-        let sa = axial_stock_intersection(shifted, Flank::Ascending, [-2., 2.], 21., 128).unwrap();
-        let mut stock_grid = fit_axial_stock(&d, 1e-4, 256).unwrap();
-        stock_grid.stock = sd.clone();
-        stock_grid.stock.reverify().unwrap();
-        assert!(stock_grid.reverify().is_err());
-        let tip = axial_tip_chart(&d, &a, 32).unwrap();
-        let mut tip_grid = fit_axial_tip(&tip, 1e-4, 256).unwrap();
-        tip_grid.tip = axial_tip_chart(&sd, &sa, 32).unwrap();
-        tip_grid.tip.reverify().unwrap();
-        assert!(tip_grid.reverify().is_err());
-    }
-}
+#[path = "fit/tests/axial_source_ownership_tests_integration.rs"]
+mod axial_source_ownership_tests;
 
-fn axial_source(source: &AxialSource) -> Source {
-    match source {
-        AxialSource::Root(s) => Source::AxialRoot(s.clone()),
-        AxialSource::Working(s) => Source::AxialStock(s.clone()),
-        AxialSource::Tip(s) => Source::AxialTip(s.clone()),
-    }
-}
+
 /// Original-source owner for a compatible or subsequently edited axial grid.
 pub struct QualifiedAxialGrid {
     grid: QualifiedGrid,
@@ -1340,136 +721,50 @@ impl QualifiedAxialGrid {
 /// Admits ACTUAL saved poles after editing/stitching, including exact Y-plane
 /// controls, complete original-domain coverage and unchanged world tolerance.
 
-pub fn qualify_axial_grid(
-    source: &AxialSource,
-    t: Vec<f64>,
-    y: Vec<f64>,
-    surfaces: Vec<Surface>,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialGrid> {
-    qualify_axial_instance(
-        &axial_instance(source, 0)?,
-        t,
-        y,
-        surfaces,
-        tolerance,
-        max_patches,
-    )
-}
-pub fn regrid_axial_source(
-    source: &AxialSource,
-    t: Vec<f64>,
-    y: Vec<f64>,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialGrid> {
-    regrid_axial_instance(&axial_instance(source, 0)?, t, y, tolerance, max_patches)
-}
-fn instance_source(instance: &AxialInstance) -> Result<Source> {
-    Ok(Source::Placed(
-        Box::new(axial_source(instance.source())),
-        Yaw::new(instance.period(), instance.source().specification().teeth)?,
-    ))
-}
-pub fn qualify_axial_instance(
-    instance: &AxialInstance,
-    t: Vec<f64>,
-    y: Vec<f64>,
-    surfaces: Vec<Surface>,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialGrid> {
-    check(
-        tolerance.is_finite() && tolerance > 0.,
-        "Axial admission needs finite positive tolerance",
-    )?;
-    let d = instance.domain();
-    let domain = ChartDomain { u: d.t, beta: d.y };
-    let source = instance_source(instance)?;
-    let certificate = verify(
-        &source,
-        domain,
-        &t,
-        &y,
-        &surfaces,
-        max_patches,
-        &operator()?,
-    )?;
-    check(
-        certificate.error_upper <= tolerance
-            && certificate.source_regular
-            && certificate.saved_regular,
-        "Actual axial instance grid does not qualify original source error and source/saved rank",
-    )?;
-    let packed = pack(&surfaces, &t, &y)?;
-    Ok(QualifiedAxialGrid {
-        instance: instance.clone(),
-        grid: QualifiedGrid {
-            source,
-            domain,
-            u: t,
-            beta: y,
-            surfaces,
-            packed,
-            certificate,
-            tolerance,
-        },
-    })
-}
-pub fn regrid_axial_instance(
-    instance: &AxialInstance,
-    t: Vec<f64>,
-    y: Vec<f64>,
-    tolerance: f64,
-    max_patches: usize,
-) -> Result<QualifiedAxialGrid> {
-    let d = instance.domain();
-    let domain = ChartDomain { u: d.t, beta: d.y };
-    let count = t
-        .len()
-        .checked_sub(1)
-        .and_then(|n| y.len().checked_sub(1).and_then(|m| n.checked_mul(m)))
-        .ok_or_else(|| crate::input("Axial regrid has an invalid cell census"))?;
-    validate_layout(domain, &t, &y, count, max_patches)?;
-    check(
-        tolerance.is_finite() && tolerance > 0.,
-        "Axial regrid needs finite positive tolerance",
-    )?;
-    let s = instance_source(instance)?;
-    s.validate(domain)?;
-    s.replay()?;
-    let surfaces = build(&s, &t, &y, &operator()?)?;
-    qualify_axial_instance(instance, t, y, surfaces, tolerance, max_patches)
-}
-/// Candidate placement of saved template definitions. The returned poles are
-/// NOT admitted until qualify_axial_instance checks the exact nominal source.
-pub fn place_axial_surfaces(
-    instance: &AxialInstance,
-    surfaces: &[Surface],
-) -> Result<Vec<Surface>> {
-    let yaw = Yaw::new(instance.period(), instance.source().specification().teeth)?;
-    let c = mid(yaw.cos);
-    let sn = mid(yaw.sin);
-    let mut output = surfaces.to_vec();
-    for s in &mut output {
-        s.validate()?;
-        for row in &mut s.control_points {
-            for p in row {
-                check(
-                    p.len() == 3,
-                    "Axial placement requires three-dimensional poles",
-                )?;
-                let x = c * p[0] - sn * p[2];
-                let z = sn * p[0] + c * p[2];
-                check(
-                    x.is_finite() && z.is_finite(),
-                    "Axial placed poles exceeded numeric range",
-                )?;
-                p[0] = x;
-                p[2] = z;
-            }
-        }
-    }
-    Ok(output)
-}
+
+
+
+
+
+
+
+#[path = "fit/axial_fitting.rs"]
+mod axial_fitting;
+pub use axial_fitting::fit_axial_root;
+pub use axial_fitting::certify_axial_root_grid;
+pub use axial_fitting::verify_packed_axial_root;
+pub use axial_fitting::fit_axial_stock;
+pub use axial_fitting::certify_axial_stock_grid;
+pub use axial_fitting::verify_packed_axial_stock;
+pub use axial_fitting::fit_axial_tip;
+pub use axial_fitting::certify_axial_tip_grid;
+pub use axial_fitting::verify_packed_axial_tip;
+use axial_fitting::axial_source;
+pub use axial_fitting::qualify_axial_grid;
+pub use axial_fitting::regrid_axial_source;
+use axial_fitting::instance_source;
+pub use axial_fitting::qualify_axial_instance;
+pub use axial_fitting::regrid_axial_instance;
+pub use axial_fitting::place_axial_surfaces;
+
+#[path = "fit/grid_packing.rs"]
+mod grid_packing;
+use grid_packing::build;
+use grid_packing::pack;
+pub use grid_packing::verify_packed_grid;
+use grid_packing::same_scalar_bits;
+use grid_packing::same_row_bits;
+use grid_packing::same_packed_definitions;
+
+#[path = "fit/grid_verification.rs"]
+mod grid_verification;
+use grid_verification::verify;
+use grid_verification::validate_layout;
+use grid_verification::saved_regular;
+use grid_verification::interpolation_error;
+use grid_verification::node;
+use grid_verification::ideal_net;
+use grid_verification::norm;
+use grid_verification::sixth_power;
+pub use grid_verification::fit_chart;
+use grid_verification::fit;

@@ -1,0 +1,95 @@
+{
+  "status": "local-delivery-checks-passed",
+  "baseMain": "2d63a3bec114041daf4cec8a789a882585d18646",
+  "originalFailures": 18,
+  "allObservedNurbsFailuresRechecked": 38,
+  "checks": [
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/nurbs-qualified-regression.log",
+      "sha256": "9e74521d72bbd09b4bdb803df756ed4b8a30ebee828373927ef4c8cbf7382182",
+      "result": [
+        "test result: ok. 1579 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 263.65s"
+      ]
+    },
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/bridge-qualified-regression.log",
+      "sha256": "d8f3a0056520bf1d1484539722d728dc7b192ce418c6e48dc23b71d01a08056e",
+      "result": [
+        "test result: ok. 330 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 342.10s"
+      ]
+    },
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/delivery-final-tests.log",
+      "sha256": "dbedbcbcc460ba627430e22f2fc05a11cc7861a28686109eca5214938a0bae0b",
+      "result": [
+        " Test Files  32 passed (32)",
+        "      Tests  536 passed (536)"
+      ]
+    },
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/delivery-final-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": [
+        "passed with empty diagnostics"
+      ]
+    },
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/delivery-final-dist.log",
+      "sha256": "774f7236e83e92ce0b9f294b3cc991e74cc854b806dfe79f881f7ec4ce9a2cf3",
+      "result": [
+        "Verified 159 dist artifacts (8222176 asset bytes + 15018161 raw WASM bytes = 23240337 total bytes)"
+      ]
+    },
+    {
+      "log": "output/integration-20261013/three-cavity-diagnostic/wasm-packaging-tests.log",
+      "sha256": "e5abb8c09f5421a8b3b64060aa5247491246f426a288ad0ab6775fc6a731c26d",
+      "result": [
+        "\u2139 tests 15",
+        "\u2139 pass 14",
+        "\u2139 fail 0",
+        "\u2139 skipped 1"
+      ]
+    }
+  ],
+  "artifacts": {
+    "geometry": {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "bytes": 11776372,
+      "sha256": "d7247c370a0e956a62b534860c6d73badd15c9af3ec69e4bcca03cf3526c0248"
+    },
+    "language": {
+      "path": "public/wasm/language-kernel.wasm",
+      "bytes": 2521860,
+      "sha256": "fbf62332d774fc8928f8c9a3e72cb5ad4d8d59737aa17a9f15a6f4c236b25b33"
+    }
+  },
+  "sourceSha256": {
+    "crates/nurbs-core/src/curve.rs": "c16e2cf00285793b5fc63c2771e4574d2a15cce3ad7ea0be16e557d10f05e582",
+    "crates/nurbs-core/src/transport/dispatch.rs": "9db8bf3f7bd02c922860b4e6929824b7fea5791cf6421f8bea51dfb1660b99a0",
+    "crates/nurbs-core/src/sweeps/progressive_miter/level_certificate.rs": "bfa4946c15673fc75362daa9c73657a30f09ae69b79f3e38fcd92f1ae9e96de3",
+    "crates/nurbs-core/src/sweeps/audit/contour.rs": "06ec10e012926954764bdafb297124ac57dbb8a44aba2a3e533a3e301a7d911a",
+    "crates/nurbs-core/src/surface_linear_monotonicity/bernstein_minors.rs": "9caf0224864f54560c0ce1cdf13877b02414ed2217ce6e776e2b3f864c5a1ef3",
+    "crates/geometry-bridge/src/dispatch/general.rs": "4c141047e32f1dcd2b6e4fbfd3e18edf6c8ec97828682cd96f3f85e1acf92640",
+    "crates/geometry-bridge/src/dispatch/cad.rs": "1330b8b0b83fe69a7a9b863e917b55bb04639335145558a456603435f4c0b28b",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "dc7d961d80acece98f59999512733110e3bd03ba9c109f50ed9328066b5ecd0d",
+    "crates/geometry-bridge/src/tests/sweep_profile_admission.rs": "d1fa8c4b40716d450f59e62a806aefd1f89626b8a5f3314b7b1eb3aa7696c75f",
+    "scripts/build-language-kernel.mjs": "7011250e36adfb44cedb8e22360f8d7ad7e175aa18df49d2597202ec05d68dbe",
+    "vite.config.ts": "8484d0bdab2a3439287cad41cf82734a433f6cb27a357e5f2510d453d0889fbd"
+  },
+  "claims": [
+    "1579 NURBS tests passed",
+    "330 bridge tests passed; one existing ignored test",
+    "536 packaged command, UI, language and record checks passed",
+    "14 packaging tests passed; one optional native/bundled comparison skipped",
+    "159 distribution artifacts verified without increasing size budgets"
+  ],
+  "scope": [
+    "Exact active-domain closure replaces the periodic flag shortcut",
+    "Rational contour common units are exact positive bijections; source geometry is unchanged",
+    "Three-cavity body admission retains its original default budgets; short-work refusal uses measured proof work",
+    "G0/G1 clean qualification remains zero of 4740 work units; no production cutover is inferred"
+  ],
+  "evidenceRecord": "docs/qualification/own-rust-cad-v65.json",
+  "g0": "docs/qualification/g0-toolchain-fingerprints-v82.json",
+  "g1": "docs/qualification/semantic-manifold-g1-plan-v99.json"
+}

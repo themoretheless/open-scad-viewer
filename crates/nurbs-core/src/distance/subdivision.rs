@@ -149,6 +149,9 @@ pub(crate) trait Search {
         let _ = queue_empty;
         None
     }
+    fn early_stop_bound(&self, queue_empty: bool, _lower: f64) -> Option<DistanceStopReason> {
+        self.early_stop(queue_empty)
+    }
     /// Split a cell into two halves, sampling witnesses (and thereby raising
     /// the upper bound) while constructing them.
     fn split(&mut self, cell: Self::Cell) -> Result<Split<Self::Cell>>;
@@ -190,7 +193,7 @@ pub(crate) fn run<S: Search>(
             reason = DistanceStopReason::Tolerance;
             break;
         }
-        if let Some(stop) = search.early_stop(queue.is_empty()) {
+        if let Some(stop) = search.early_stop_bound(queue.is_empty(), lower) {
             reason = stop;
             break;
         }

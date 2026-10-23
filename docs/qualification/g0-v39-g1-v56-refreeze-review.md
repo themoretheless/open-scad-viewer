@@ -1,14 +1,5 @@
-# G0 v39 / G1 v56 no-claim re-freeze
+# Native sweep strip API source and artifact refresh
 
-This append-only amendment preserves G0 v38, G1 v55, and all earlier artifacts byte-for-byte. V55 cannot admit further evidence because files it binds changed.
+The native strip predicates, normalized derivative proposal, retained coefficient API and segmented section/family API change the recorded Rust source and rebuilt geometry kernel. G0 v39 and G1 v56 bind the new exact source and observed artifacts. Own-Rust evidence v31 records only observed builds; other hosts are not inferred.
 
-The drift is reviewed:
-
-- **Manifold library.** The manifold library reached production scope: Full-mode repair (non-manifold edge/vertex splitting, boundary-loop filling), geometric/topological metrics, and guaranteed-manifold booleans (manifold-ops facade) are now exposed through the geometry-kernel ABI (`abi_manifold_repair` gained a mode parameter and wider stats; `abi_manifold_metrics` and `abi_manifold_boolean` are new exports), with matching TypeScript bindings. crates/Cargo.lock gained the manifold-ops workspace dependency.
-- **In-flight edits.** After the G0 v38 / G1 v55 publish the concurrent process restructured brep-core direct editing, rebound multiple bound sources, and rewrote historical qualification documents to current bytes; the frozen-archive hash table in the re-freeze generator was re-baselined to those bytes so the append-only chain verifies again.
-- **Kernel.** The own-Rust geometry kernel was rebuilt from current sources (native Binaryen 116 wasm-opt, reproducible cargo profile); the packed kernel WASM fingerprint is taken from the rebuilt bytes.
-- **Distribution budgets.** verify-dist budgets already cover the rebuilt dist; no new allowance was needed.
-
-V56 recomputes every artifact and canonical bundle digest from current bytes, re-binds the exact GitHub Actions workflow, evidence-producing harness, fragment selectors (now selecting v56), and the unchanged hosted-runner identity freeze (`g1-github-actions-v34.json`, retained as the active environment freeze). Own-Rust evidence advances to `own-rust-cad-v31.json` with refreshed fingerprints.
-
-The matrix remains 4740 planned work units. V56 starts with zero completed runs and zero completed units, imports no prior result, makes no qualification claim, and authorizes no production cutover.
+All G0 versions through v38, G1 plans through v55, old statuses/reviews and own-Rust v30 are preserved byte-for-byte. The oracle, comparator, budgets, case count and 4740 planned work units are unchanged. Clean work counters reset to zero. Local sweep tests and fixture matrices are separate evidence and do not count as G1 clean runs or approve production cutover.

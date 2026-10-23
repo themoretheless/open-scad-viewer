@@ -1,0 +1,49 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "closed original four-parameter product root coverage by overlapping fibers with different free axes and intervals",
+    "shared original rectangle budget across all fiber replays and complete product exclusions",
+    "private immutable original-surface/fiber/tree owner with independent census replay",
+    "does not identify physical branches, chart transitions, world traces or trim graphs"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1442,
+      "failed": 0,
+      "ignored": 0
+    },
+    "ss-integrations": {
+      "suites": 5,
+      "passed": 26,
+      "failed": 0,
+      "ignored": 0,
+      "note": "26 includes earlier two mixed tests; final mixed four replace those two, giving28 unique current SS integration tests"
+    },
+    "mixed-final": {
+      "suites": 1,
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    "replay": {
+      "suites": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "note": "included in latest full1379 core library, do not add twice"
+    },
+    "wasm": "both crates pass"
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed.rs": "2a987048283ec52e8d8d367f6f9961e86d09b930b26bee51136c0b64ca2e8760",
+    "crates/nurbs-core/tests/ss_mixed_fiber_coverage.rs": "dfd5f616ab22509a59f5a86769cc75e7c0cd4c7ebf6048767a5736b3aafd11a6"
+  }
+}

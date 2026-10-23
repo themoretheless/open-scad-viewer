@@ -67,16 +67,15 @@ const EMPTY_F32 = new Float32Array(0)
 
 export async function runGpuMatching(blob: Uint8Array, wgsl: string): Promise<Uint8Array> {
   const payload = parseMatchingPayload(blob)
-  const pairParamsBlock = new Uint32Array(payload.pairs.length * 4)
-  const dispatches = payload.pairs.map(([a, b], index) => {
+  const dispatches = payload.pairs.map(([a, b]) => {
     const rows = payload.featureCounts[a]!
     const cols = payload.featureCounts[b]!
-    const base = index * 4
-    pairParamsBlock[base] = rows
-    pairParamsBlock[base + 1] = cols
-    pairParamsBlock[base + 2] = payload.featureOffset[a]!
-    pairParamsBlock[base + 3] = payload.featureOffset[b]!
-    const params = pairParamsBlock.subarray(base, base + 4)
+    const params = new ArrayBuffer(16)
+    const pu32 = new Uint32Array(params)
+    pu32[0] = rows
+    pu32[1] = cols
+    pu32[2] = payload.featureOffset[a]!
+    pu32[3] = payload.featureOffset[b]!
     return {
       buffers: [
         { binding: 0, data: params, uniform: true },

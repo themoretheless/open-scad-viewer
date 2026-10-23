@@ -134,8 +134,7 @@ mod tests {
             ),
         ] {
             let pieces = path.decompose().unwrap();
-            let walls: Vec<_> = if path.control_points.len() <= 32 {
-                let base = crate::surface::sweep(&profile, &path).unwrap();
+            let walls: Vec<_> = if let Ok(base) = crate::surface::sweep(&profile, &path) {
                 pieces
                     .iter()
                     .map(|piece| {

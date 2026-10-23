@@ -1,6 +1,6 @@
 //! Bounded native mesh decoders and import welding.
 use crate::{Error, Result};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 pub const MAX_TRIANGLES: usize = 250_000;
 pub const MAX_VERTICES: usize = 750_000;
 #[derive(Clone, Debug)]
@@ -82,37 +82,28 @@ pub fn obj(bytes: &[u8]) -> Result<RawMesh> {
         positions: Vec::new(),
         indices: Vec::new(),
     };
-    let mut face = Vec::with_capacity(8);
     for line in text(bytes)?.split(['\r', '\n']) {
         let line = line.split('#').next().unwrap();
-        let mut parts = line.split_whitespace();
-        match parts.next() {
+        let parts: Vec<_> = line.split_whitespace().collect();
+        match parts.first().copied() {
             Some("v") => {
                 limit(mesh.positions.len() / 3 + 1, MAX_VERTICES, "Vertex count")?;
-                let x = parts.next();
-                let y = parts.next();
-                let z = parts.next();
-                let p4 = parts.next();
-                let p5 = parts.next();
-                let p6 = parts.next();
-                let p7 = parts.next();
-                let w = if p4.is_some() && !(p6.is_some() && p7.is_none()) {
-                    let _ = p5;
-                    number(p4)?
+                let w = if parts.len() >= 5 && parts.len() != 7 {
+                    number(parts.get(4).copied())?
                 } else {
                     1.
                 };
                 if w == 0. {
                     return Err(bad("Vertex w must be non-zero."));
                 }
-                for tok in [x, y, z] {
-                    mesh.positions.push(number(tok)? / w);
+                for k in 1..4 {
+                    mesh.positions.push(number(parts.get(k).copied())? / w);
                 }
             }
             Some("f") => {
                 let count = mesh.positions.len() / 3;
-                face.clear();
-                for part in parts {
+                let mut face = Vec::new();
+                for part in &parts[1..] {
                     let index = integer(part.split('/').next())?;
                     let resolved = if index > 0 {
                         index - 1
@@ -148,18 +139,14 @@ pub fn finalize(mesh: RawMesh, weld: Weld) -> Result<ImportedMesh> {
             "Non-finite coordinate or triangle index out of bounds.",
         ));
     }
+    let mut positions = Vec::new();
+    let mut remap = Vec::new();
+    let mut seen = BTreeMap::new();
     if let Weld::Grid(distance) = weld
         && (!distance.is_finite() || distance <= 0.)
     {
         return Err(bad("Weld distance must be positive."));
     }
-    let mut positions = Vec::with_capacity(mesh.positions.len());
-    let mut remap = Vec::with_capacity(count);
-    let mut seen = if matches!(weld, Weld::None) {
-        HashMap::new()
-    } else {
-        HashMap::with_capacity(count)
-    };
     for p in mesh.positions.as_chunks::<3>().0 {
         let key = p.map(|x| {
             let v = match weld {
@@ -186,7 +173,7 @@ pub fn finalize(mesh: RawMesh, weld: Weld) -> Result<ImportedMesh> {
         };
         remap.push(id);
     }
-    let mut indices = Vec::with_capacity(mesh.indices.len());
+    let mut indices = Vec::new();
     let mut degenerate = 0;
     for t in mesh.indices.as_chunks::<3>().0 {
         let [a, b, c] = t.map(|i| remap[i]);
@@ -405,15 +392,13 @@ pub fn ply(bytes: &[u8]) -> Result<RawMesh> {
         little: format == "binary_little_endian",
     };
     let mut mesh = RawMesh {
-        positions: Vec::with_capacity(count * 3),
-        indices: Vec::with_capacity(elements[face].count * 3),
+        positions: Vec::new(),
+        indices: Vec::new(),
     };
-    let mut values = Vec::new();
-    let mut face_ids = Vec::new();
     for (eid, e) in elements.iter().enumerate() {
         for _ in 0..e.count {
-            values.clear();
-            face_ids.clear();
+            let mut values = Vec::new();
+            let mut face_ids = Vec::new();
             for (pid, p) in e.properties.iter().enumerate() {
                 if let Some(kind) = p.list {
                     let length = reader.read(kind)?;
@@ -540,60 +525,40 @@ pub fn stl(bytes: &[u8]) -> Result<RawMesh> {
         indices: Vec::new(),
     };
     let mut state = 0;
-    let mut facet = Vec::with_capacity(9);
+    let mut facet = Vec::new();
     for line in text(bytes)?.split(['\r', '\n']) {
-        let mut p = line.split_whitespace();
-        let Some(keyword) = p.next() else {
+        let p: Vec<_> = line.split_whitespace().collect();
+        let Some(keyword) = p.first() else {
             continue;
         };
-        if keyword.eq_ignore_ascii_case("solid") && state == 0 {
-            state = 1;
-        } else if keyword.eq_ignore_ascii_case("endsolid") && state == 1 {
-            state = 6;
-        } else if keyword.eq_ignore_ascii_case("facet")
-            && state == 1
-            && p.next()
-                .is_some_and(|w| w.eq_ignore_ascii_case("normal"))
-        {
-            for _ in 0..3 {
-                number(p.next())?;
+        match keyword.to_ascii_lowercase().as_str() {
+            "solid" if state == 0 => state = 1,
+            "endsolid" if state == 1 => state = 6,
+            "facet" if state == 1 && p.len() == 5 && p[1].eq_ignore_ascii_case("normal") => {
+                for n in &p[2..] {
+                    number(Some(n))?;
+                }
+                state = 2;
             }
-            if p.next().is_some() {
-                return Err(bad("Invalid or misplaced ASCII STL statement."));
+            "outer" if state == 2 && p.len() == 2 && p[1].eq_ignore_ascii_case("loop") => state = 3,
+            "vertex" if state == 3 && p.len() == 4 && facet.len() < 9 => {
+                for n in &p[1..] {
+                    facet.push(number(Some(n))?);
+                }
             }
-            state = 2;
-        } else if keyword.eq_ignore_ascii_case("outer")
-            && state == 2
-            && p.next().is_some_and(|w| w.eq_ignore_ascii_case("loop"))
-            && p.next().is_none()
-        {
-            state = 3;
-        } else if keyword.eq_ignore_ascii_case("vertex") && state == 3 && facet.len() < 9 {
-            let x = number(p.next())?;
-            let y = number(p.next())?;
-            let z = number(p.next())?;
-            if p.next().is_some() {
-                return Err(bad("Invalid or misplaced ASCII STL statement."));
+            "endloop" if state == 3 && facet.len() == 9 && p.len() == 1 => state = 4,
+            "endfacet" if state == 4 && p.len() == 1 => {
+                limit(
+                    mesh.indices.len() / 3 + 1,
+                    MAX_TRIANGLES,
+                    "STL triangle count",
+                )?;
+                let base = mesh.positions.len() / 3;
+                mesh.positions.append(&mut facet);
+                mesh.indices.extend([base, base + 1, base + 2]);
+                state = 1;
             }
-            facet.extend([x, y, z]);
-        } else if keyword.eq_ignore_ascii_case("endloop")
-            && state == 3
-            && facet.len() == 9
-            && p.next().is_none()
-        {
-            state = 4;
-        } else if keyword.eq_ignore_ascii_case("endfacet") && state == 4 && p.next().is_none() {
-            limit(
-                mesh.indices.len() / 3 + 1,
-                MAX_TRIANGLES,
-                "STL triangle count",
-            )?;
-            let base = mesh.positions.len() / 3;
-            mesh.positions.append(&mut facet);
-            mesh.indices.extend([base, base + 1, base + 2]);
-            state = 1;
-        } else {
-            return Err(bad("Invalid or misplaced ASCII STL statement."));
+            _ => return Err(bad("Invalid or misplaced ASCII STL statement.")),
         }
     }
     if state != 6 {

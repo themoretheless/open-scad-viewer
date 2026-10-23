@@ -24,9 +24,9 @@ function homogeneous(m: ArrayLike<number>, p: readonly number[]): number[] {
 
 function point(m: ArrayLike<number>, p: readonly number[]): Vec3 | null {
   const q = homogeneous(m, p)
-  if (q[3] === 0 || !Number.isFinite(q[0]) || !Number.isFinite(q[1]) || !Number.isFinite(q[2]) || !Number.isFinite(q[3])) return null
+  if (q[3] === 0 || !q.every(Number.isFinite)) return null
   const result: Vec3 = [q[0] / q[3], q[1] / q[3], q[2] / q[3]]
-  return Number.isFinite(result[0]) && Number.isFinite(result[1]) && Number.isFinite(result[2]) ? result : null
+  return result.every(Number.isFinite) ? result : null
 }
 
 /** The supplied matrix is the inverse of projection * view (WebGPU depth 0..1). */
@@ -54,7 +54,7 @@ export function clientRayInKernel(matrix: Mat4, rect: [number, number, number, n
 }
 
 export function unprojectRayInKernel(matrix: Mat4, x: number, y: number): Ray3 | null {
-  if (!finite(matrix) || !Number.isFinite(x) || !Number.isFinite(y)) return null
+  if (!finite(matrix) || !finite([x, y])) return null
   return unproject(matrix, x, y)
 }
 
@@ -62,12 +62,12 @@ export function projectPointInKernel(matrix: Mat4, point: readonly number[], siz
   if (!finite(matrix) || !finite(point) || !finite(size)) return null
   if (!(size[0] > 0 && size[1] > 0)) return null
   const q = homogeneous(matrix, point)
-  if (q[3] <= 1e-8 || !Number.isFinite(q[0]) || !Number.isFinite(q[1]) || !Number.isFinite(q[2]) || !Number.isFinite(q[3])) return null
+  if (q[3] <= 1e-8 || !q.every(Number.isFinite)) return null
   const result: [number, number] = [
     (q[0] / q[3] + 1) * size[0] / 2,
     (1 - q[1] / q[3]) * size[1] / 2,
   ]
-  return Number.isFinite(result[0]) && Number.isFinite(result[1]) ? result : null
+  return result.every(Number.isFinite) ? result : null
 }
 
 /** Snap to the maximum-barycentric corner; exact ties keep the first corner. */

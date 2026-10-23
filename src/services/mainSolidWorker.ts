@@ -9,23 +9,13 @@ import {resolveTrussScenario, type TrussScenario} from './trussScenario'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from './latticeGraphProtocol'
 import type {LighteningOptions} from './solidLightening'
 import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
-import {MainSolidWorkerPool,type MainSolidPoolRunOptions} from './mainSolidWorkerPool'
 
-const createWorker=()=>new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'})
-
-// Primary interactive modeling worker: a superseding modeling call terminates
-// the previous interactive modeling step so rapid UI edits don't pile up.
-const shared=new MainSolidWorkerClient(createWorker)
-
-// Multi-worker pool for concurrent analysis, inspection, truss FEA, lattice
-// generation, and structural sectioning so concurrent jobs run in parallel
-// across CPU cores without aborting each other or the modeling worker.
-export const sharedSolidPool=new MainSolidWorkerPool(createWorker)
-
-export function cancelMainSolid(){
- shared.cancel()
- sharedSolidPool.cancelAll()
-}
+// One warm worker serves all main-solid/CAD operations; the geometry kernel is
+// initialized once instead of every call paying the WASM inflate+compile.
+// A running computation cannot be interrupted in place, so cancellation (or a
+// superseding call) terminates the worker and the next operation recreates it.
+const shared=new MainSolidWorkerClient(()=>new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'}))
+export function cancelMainSolid(){shared.cancel()}
 
 export function computeMainSolid(meshes:MeshData[],selected:number,hit:PickHit|null,operation:MainOperation,parameters:MainParameters):Promise<DirectDocument>{
  return shared.run({kind:'main',meshes,selected,hit,operation,parameters})
@@ -35,34 +25,38 @@ export function computeCadOperation(document:DirectDocument,options:CadOptions):
  return shared.run({kind:'cad',document,options})
 }
 
-export function computeCadInspection(bodies:import('./directModeling').DirectBody[],options:MainSolidPoolRunOptions={}):Promise<import('./cadInspection').CadPairReport[]>{
- return sharedSolidPool.run({kind:'inspect',bodies},options)
+export function computeCadInspection(bodies:import('./directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
+ return shared.run({kind:'inspect',bodies})
 }
 
-export function computeTrussAnalysis(model:TrussInput,options:MainSolidPoolRunOptions={}){
- return sharedSolidPool.run({kind:'truss',model},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeTrussAnalysis(model:TrussInput,options:MainSolidRunOptions={}){
+ return shared.run({kind:'truss',model},{...options,timeoutMs:options.timeoutMs??30000})
 }
 
-export async function computeTrussScenario(scenario:TrussScenario,options:MainSolidPoolRunOptions={}){
+export async function computeTrussScenario(scenario:TrussScenario,options:MainSolidRunOptions={}){
  const resolved=resolveTrussScenario(scenario)
  const result=await computeTrussAnalysis(resolved.model,options)
  return {...resolved,result}
 }
 
-export async function computeNominalLatticeGraph(mesh:LatticeGraphMesh,options:LighteningOptions,runOptions:MainSolidPoolRunOptions={}){
+export async function computeNominalLatticeGraph(mesh:LatticeGraphMesh,options:LighteningOptions,runOptions:MainSolidRunOptions={}){
  checkLatticeGraphInput(mesh,options)
- return sharedSolidPool.run({kind:'latticeGraph',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},options:{...options}},
+ return shared.run({kind:'latticeGraph',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},options:{...options}},
   {...runOptions,timeoutMs:runOptions.timeoutMs??30000})
 }
 
-export function computeStructuralSections(mesh:LatticeGraphMesh,axis:'x'|'y'|'z',stations:number[],options:MainSolidPoolRunOptions={}){
+export function computeStructuralSections(mesh:LatticeGraphMesh,axis:'x'|'y'|'z',stations:number[],options:MainSolidRunOptions={}){
  checkLatticeGraphMeshInput(mesh)
  if(!Array.isArray(stations)||!stations.length||stations.length>64)throw new Error('Provide 1-64 section positions.')
- return sharedSolidPool.run({kind:'structuralSections',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},axis,stations:[...stations]},
+ return shared.run({kind:'structuralSections',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},axis,stations:[...stations]},
   {...options,timeoutMs:options.timeoutMs??30000})
 }
 
-export function computeBondedSolid(inputJson:string,options:MainSolidPoolRunOptions={}){
+export function computeBondedSolid(inputJson:string,options:MainSolidRunOptions={}){
  parseBondedSolidInput(inputJson)
- return sharedSolidPool.run({kind:'bondedSolid',inputJson},{...options,timeoutMs:options.timeoutMs??30000})
+ return shared.run({kind:'bondedSolid',inputJson},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeSourceBodyRestoration(options:import('./sourceBody').SourceBodyOptions,runOptions:MainSolidRunOptions={}) {
+ return shared.run({kind:'sourceBodyRestore',options},runOptions)
 }

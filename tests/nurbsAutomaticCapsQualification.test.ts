@@ -36,7 +36,7 @@ it.each(cases)('original %s hollow reaches native bound, viewport and fresh Soli
  expect(graph).toEqual(before)
  const broken=structuredClone(model)
  broken.faces[report.capFaces[0]].surface.controlPoints[0]![0]![0]!+=.0001
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,broken)).toThrow(/geometry|boundary|pcurve|embedding|topology/i)
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry,broken)).toThrow(/geometry|boundary|pcurve|embedding|topology|snapshot binding/i)
 })
 it.each(cases)('original %s strict source budget is refused without changing its data',async stem=>{
  const source=readFileSync(new URL(`../examples/rush/${stem}-circle-hollow-body-boundary.r`,import.meta.url),'utf8')

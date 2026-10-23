@@ -32,27 +32,23 @@ pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Ba
     let mut b = vec![0.; k.len() - 1];
     b[span] = 1.;
     let mut d1 = vec![0.; b.len()];
-    let mut d2 = vec![0.; b.len()];
+    let mut d2 = d1.clone();
     for order in 1..=p {
-        let len = k.len() - order - 1;
-        let mut next = vec![0.; len];
-        let mut first = vec![0.; len];
-        let mut second = vec![0.; len];
-        let order_f = order as f64;
-        for i in 0..len {
+        let mut next = vec![0.; k.len() - order - 1];
+        let mut first = next.clone();
+        let mut second = next.clone();
+        for i in 0..next.len() {
             let left = k[i + order] - k[i];
             let right = k[i + order + 1] - k[i + 1];
-            if left != 0. && (b[i] != 0. || d1[i] != 0.) {
-                let order_inv_left = order_f / left;
+            if left != 0. {
                 next[i] += (u - k[i]) / left * b[i];
-                first[i] += order_inv_left * b[i];
-                second[i] += order_inv_left * d1[i];
+                first[i] += order as f64 / left * b[i];
+                second[i] += order as f64 / left * d1[i];
             }
-            if right != 0. && (b[i + 1] != 0. || d1[i + 1] != 0.) {
-                let order_inv_right = order_f / right;
+            if right != 0. {
                 next[i] += (k[i + order + 1] - u) / right * b[i + 1];
-                first[i] -= order_inv_right * b[i + 1];
-                second[i] -= order_inv_right * d1[i + 1];
+                first[i] -= order as f64 / right * b[i + 1];
+                second[i] -= order as f64 / right * d1[i + 1];
             }
         }
         b = next;

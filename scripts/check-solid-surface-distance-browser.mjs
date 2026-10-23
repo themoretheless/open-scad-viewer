@@ -9,7 +9,8 @@ assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
-  const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
@@ -20,38 +21,54 @@ let browser,page
 const errors=[]
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true})
- page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))})
+ browser=await playwright.chromium.launch({headless:true,args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
+ page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))});page.on('console',m=>{if(m.type()==='error')errors.push(m.text())})
  await page.addInitScript(()=>{
   const NativeWorker=window.Worker;window.__surfaceDistanceRequests=0;window.__holdSurfaceDistance=true;window.__surfaceDistanceResults=[]
   window.Worker=class extends NativeWorker {
    constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='surfaceDistance'&&e.data.ok)window.__surfaceDistanceResults.push(e.data.result)})}
-   postMessage(message,...args){if(message?.job?.kind==='surfaceDistance'){window.__surfaceDistanceRequests++;if(window.__holdSurfaceDistance){this.__held=true;window.__surfaceDistanceHeld=true;return}}return super.postMessage(message,...args)}
+   postMessage(message,...args){if(message?.job?.kind==='surfaceDistance'){window.__surfaceDistanceRequests++;if(window.__failSurfaceDistance){window.__failSurfaceDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private surface distance failure'}}}));return}if(window.__holdSurfaceDistance){this.__held=true;window.__surfaceDistanceHeld=true;return}}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__surfaceDistanceTerminated=true;return super.terminate()}
   }
  })
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  await page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}).waitFor({timeout:10000})
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
- async function closeMenu(){if(await menu.evaluate(e=>e.parentElement.open))await menu.click()}
+ let tabs=0
+ async function focusByTab(locator){for(let i=0;i<300;i++){if(await locator.evaluate(e=>e===document.activeElement))return;await page.keyboard.press('Tab');tabs++}throw Error('Unreachable keyboard control')}
+ async function activate(locator,shift=false){await locator.waitFor({state:'visible'});await page.waitForFunction(e=>!e.disabled,await locator.elementHandle());if(keyboard){await focusByTab(locator);await page.keyboard.press(shift?'Shift+Enter':'Enter')}else await locator.click(shift?{modifiers:['Shift']}:undefined)}
+ async function input(locator,value){if(keyboard){await focusByTab(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
+ async function choose(locator,value){
+  if(!keyboard){await locator.selectOption(value);return}
+  const label=await locator.locator('option').evaluateAll((nodes,value)=>nodes.find(n=>n.value===value)?.textContent,value)
+  assert.ok(label);await focusByTab(locator)
+  await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');await focusByTab(locator)
+  // Headless macOS native select popups ignore arrow navigation. Real char
+  // events retain native type-ahead, including non-ASCII option labels.
+  const cdp=await page.context().newCDPSession(page)
+  try {for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
+  assert.equal(await locator.inputValue(),value)
+
+ }
+ async function closeMenu(){if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
  async function ready(){await page.waitForFunction(()=>!document.body.innerText.includes('Восстанавливаю геометрию'));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden'})}
- async function exportDoc(file){await ready();if(await menu.evaluate(e=>!e.parentElement.open))await menu.click();const pending=page.waitForEvent('download');await solid.getByRole('button',{name:'Скачать проект JSON',exact:true}).click();const download=await pending;await download.saveAs(path.join(directory,file));await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
+ async function exportDoc(file){await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu);const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));const download=await pending;await download.saveAs(path.join(directory,file));await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
  async function importSurfaces(fixture){
-  await ready();if(await menu.evaluate(e=>!e.parentElement.open))await menu.click()
+  await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu)
   await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'surfaces.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))})
-  await closeMenu();await ready();await solid.getByRole('tab',{name:'Сцена',exact:true}).click()
-  await solid.getByRole('button',{name:'Surface A',exact:true}).click();await solid.getByRole('button',{name:'Surface B',exact:true}).click({modifiers:['Shift']})
+  await closeMenu();await ready();await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
+  await activate(solid.getByRole('button',{name:'Surface A',exact:true}));await activate(solid.getByRole('button',{name:'Surface B',exact:true}),true)
  }
  const fixture=JSON.parse(await readFile('tests/fixtures/solid-surface-boundary.json','utf8'))
  await importSurfaces(fixture)
  const before=await exportDoc('before.json')
  const inspect=solid.getByRole('button',{name:'Расстояние между поверхностями',exact:true}),panel=solid.getByRole('region',{name:'surface-distance',exact:true})
- await inspect.click();await page.waitForFunction(()=>window.__surfaceDistanceHeld)
+ await activate(inspect);await page.waitForFunction(()=>window.__surfaceDistanceHeld)
  await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__surfaceDistanceTerminated)
  assert.equal(await solid.locator('[data-measurement="surface-distance"]').count(),0)
  assert.deepEqual(await exportDoc('cancelled.json'),before)
  await page.evaluate(()=>window.__holdSurfaceDistance=false)
- await inspect.focus();await page.keyboard.press('Enter')
+ await activate(inspect)
  await panel.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor()
  const planar=await page.evaluate(()=>window.__surfaceDistanceResults.at(-1))
  assert.ok(planar.distanceIntervalMm[0]<=.25&&planar.distanceIntervalMm[1]>=.25)
@@ -63,16 +80,19 @@ try {
  const curved={version:1,sketches:[],bodies:[],surfaces:[{id:'a',name:'Surface A',surface,segmentsU:8,segmentsV:8},{id:'b',name:'Surface B',surface:other,segmentsU:8,segmentsV:8}]}
  await importSurfaces(curved)
  const curvedBefore=await exportDoc('curved-before.json')
- if(await inspect.getAttribute('aria-pressed')!=='true')await inspect.click()
- await panel.getByRole('combobox',{name:'Объём расчёта поверхностей',exact:true}).selectOption('100000')
+ if(await inspect.getAttribute('aria-pressed')!=='true')await activate(inspect)
+ await choose(panel.getByRole('combobox',{name:'Объём расчёта поверхностей',exact:true}),'100000')
  await panel.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor()
  const curvedResult=await page.evaluate(()=>window.__surfaceDistanceResults.at(-1))
  assert.ok(curvedResult.distanceIntervalMm[0]<=2&&curvedResult.distanceIntervalMm[1]>=2&&curvedResult.distanceIntervalMm[1]-curvedResult.distanceIntervalMm[0]<=.001)
  assert.ok(curvedResult.parameters.flat().every(t=>t>0&&t<1))
+ await page.evaluate(()=>window.__failSurfaceDistance=true);await activate(inspect);await activate(inspect);await panel.getByRole('alert').waitFor();assert.equal((await panel.innerText()).includes('Private surface'),false);await activate(panel.getByRole('button',{name:'Повторить измерение поверхностей',exact:true}));await panel.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor()
  assert.deepEqual(await exportDoc('curved-after.json'),curvedBefore)
  await panel.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(directory,'surface-distance.png')})
  assert.deepEqual(errors,[])
- const report={browser:browser.version(),workerRequests:await page.evaluate(()=>window.__surfaceDistanceRequests),cancelledWorkerTerminated:true,keyboardRestart:true,planar,curved:curvedResult,documentUnchanged:true}
+ const requests=await page.evaluate(()=>window.__surfaceDistanceRequests),gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
+ await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await ready();assert.deepEqual(await exportDoc('reloaded.json'),curvedBefore);assert.deepEqual(errors,[])
+ const report={keyboard,tabs,gpuActive,reloadExact:true,workerFailureRetry:true,browser:browser.version(),workerRequests:requests,cancelledWorkerTerminated:true,keyboardRestart:true,planar,curved:curvedResult,documentUnchanged:true}
  await writeFile(path.join(directory,'surface-distance-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

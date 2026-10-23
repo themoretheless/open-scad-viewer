@@ -7,7 +7,9 @@ pub struct Approximation {
     pub real_arithmetic_error_estimate: f64,
 }
 #[cfg(feature = "codec")]
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for Approximation {
+    #[cfg(feature = "codec")]
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"surface":self.surface,"report":{"spans":self.spans,"budget":self.budget,
    "realArithmeticErrorEstimate":self.real_arithmetic_error_estimate,"continuousBound":false,
@@ -63,7 +65,9 @@ pub struct PatchesApproximation {
     pub real_arithmetic_error_estimate: f64,
 }
 #[cfg(feature = "codec")]
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for PatchesApproximation {
+    #[cfg(feature = "codec")]
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"patches":self.patches,"report":{"spans":self.spans,"budget":self.budget,
    "realArithmeticErrorEstimate":self.real_arithmetic_error_estimate,"continuousBound":false,
@@ -109,7 +113,7 @@ mod tests {
     use super::*;
     #[test]
     fn dense_catenoid_preserves_tight_profile_and_patch_domains() {
-        assert!(approximate([3., 4., 5.], 1., -5., 5., 1e-4).is_err());
+        let full = approximate([3., 4., 5.], 1., -5., 5., 1e-4).unwrap();
         let fit = approximate_patches([3., 4., 5.], 1., -5., 5., 1e-4).unwrap();
         assert_eq!(fit.patches.len(), fit.spans);
         assert!(fit.patches.len() > 10);
@@ -124,6 +128,8 @@ mod tests {
                 let r = z.cosh();
                 for v in [0., 0.3, 1., 2.7, 4.] {
                     let p = patch.evaluate(u, v).unwrap().point;
+                    let whole = full.surface.evaluate(u, v).unwrap().point;
+                    assert!(whole.iter().zip(&p).all(|(x, y)| (x - y).abs() < 1e-10));
                     assert!(
                         ((p[0] - 3.).hypot(p[1] - 4.) - r).abs()
                             <= fit.real_arithmetic_error_estimate + 1e-10

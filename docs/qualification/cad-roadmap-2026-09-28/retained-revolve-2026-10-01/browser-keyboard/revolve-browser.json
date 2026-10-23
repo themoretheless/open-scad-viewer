@@ -1,0 +1,17 @@
+{
+  "retainedFixture": "/private/tmp/cad-retained-revolve-occt-fixed/holed-quarter-project.json",
+  "gpu": false,
+  "deviceLoss": false,
+  "occlusion": false,
+  "bodyBehind": false,
+  "operation": "revolve",
+  "browser": "151.0.7922.34",
+  "workerRequests": 4,
+  "retryFailure": true,
+  "applyWithoutRecompute": true,
+  "invalidQuantityClearsPreview": true,
+  "undoRedo": true,
+  "keyboard": true,
+  "tabPresses": 606,
+  "downloads": 6
+}

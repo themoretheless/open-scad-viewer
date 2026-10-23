@@ -1,0 +1,11 @@
+{
+  "testsPassed": 319,
+  "mousePassed": true,
+  "keyboardPassed": true,
+  "wasmSha256": "6c65564f24078a69f30cebe05ba64152b19ee1343242e01a888ce7e98dfd74d7",
+  "fullP0Complete": false,
+  "lazyGuidance": true,
+  "finalDistBudgetPassed": true,
+  "finalMousePassed": true,
+  "finalKeyboardPassed": true
+}

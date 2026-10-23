@@ -1,0 +1,17 @@
+{
+  "qualificationClaim": "none",
+  "qualificationUnits": 0,
+  "nativeSourceCommit": "5f924fb10de08aadc65ae98354ab899f8627ffc2",
+  "sourcePaths": [
+    "crates/nurbs-core/src/curve_surface_agreement.rs",
+    "crates/brep-core/src/analytic/rational_loft.rs"
+  ],
+  "scope": "exact natural clamped normalized original-basis traces and one joint rational loft fixture",
+  "fileSha256": {
+    "nurbs-full.txt": "3ca5bb2bd9adc4bf2cd35b9a3ee834d63587278f3efda08214d664d32fa42c55",
+    "curve-surface-identity.txt": "70f190e5f20c48cb5d0f467e75187e21be14f638d6819f17ba6eb39cc55d0539",
+    "boundary-tests.txt": "7724e4a6a877e69ab1fe9c54b62846e4ea41f9f8487bdcc7144cc74e0ec671d9",
+    "volume-tests.txt": "079cd427ee7c81fff764ae29e1a5c8278b705677e94b1a950b44a7dc29e3c663",
+    "joint-rational-wall.txt": "7cc06e1dbe2824094331ee5bc4b8e136275d1ffd02128bfb35af8926d473cd21"
+  }
+}

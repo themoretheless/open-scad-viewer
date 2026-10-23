@@ -14,12 +14,6 @@ pub fn inspect(model: &Model, cap_faces: &[usize], max_cells: usize) -> Result<R
 pub fn inspect_with_projections(model: &Model, cap_faces: &[usize], max_cells: usize, proposals: &[Option<[[i8;3];2]>]) -> Result<Report> {
     inspect_impl(model,cap_faces,max_cells,proposals,None)
 }
-
-// Reuse only fresh same-invocation proofs computed on this immutable model.
-// Kept crate-private: supplied/serialized certificates cannot reach this path.
-pub(crate) fn inspect_with_face_proofs(model:&Model,cap_faces:&[usize],max_cells:usize,proposals:&[Option<[[i8;3];2]>],faces:&crate::face_injectivity::Report)->Result<Report> {
-    inspect_impl(model,cap_faces,max_cells,proposals,Some(faces))
-}
 fn inspect_impl(model:&Model,cap_faces:&[usize],max_cells:usize,proposals:&[Option<[[i8;3];2]>],faces:Option<&crate::face_injectivity::Report>)->Result<Report> {
     if max_cells > 100000 || model.faces.len() > MAX_FACES || cap_faces.len() > 16 {
         return Err(Error::new(
@@ -49,11 +43,9 @@ fn inspect_impl(model:&Model,cap_faces:&[usize],max_cells:usize,proposals:&[Opti
         }
         let remaining=max_cells-out.cells;
         let reused=faces.and_then(|r|r.faces.get(face)).filter(|f|f.face==face)
-            .and_then(|f|f.linear.as_ref()).filter(|p|p.certified && p.cells>0 && p.cells<=remaining);
-        let proof=match reused {
-            Some(p)=>p.clone(),
-            None=>surface_linear_monotonicity::inspect_candidate_with_hint(&value.surface, proposals.get(face).copied().flatten(),remaining)?,
-        };
+            .and_then(|f|f.linear.as_ref()).filter(|p|p.certified&&p.cells>0&&p.cells<=remaining);
+        let proof=match reused {Some(p)=>p.clone(),None=>
+            surface_linear_monotonicity::inspect_candidate_with_hint(&value.surface,proposals.get(face).copied().flatten(),remaining)?};
         if proof.cells > max_cells - out.cells {
             return Err(Error::new(
                 "BREP_RETAINED_CHARTS_WORK",
@@ -115,4 +107,8 @@ mod tests {
         let hinted=inspect_with_projections(&folded,&caps,10000,&proposals).unwrap();
         assert!(!hinted.certified && hinted.unresolved_faces.contains(&0));
     }
+}
+
+pub(crate) fn inspect_with_face_proofs(model:&Model,cap_faces:&[usize],max_cells:usize,proposals:&[Option<[[i8;3];2]>],faces:&crate::face_injectivity::Report)->Result<Report> {
+    inspect_impl(model,cap_faces,max_cells,proposals,Some(faces))
 }

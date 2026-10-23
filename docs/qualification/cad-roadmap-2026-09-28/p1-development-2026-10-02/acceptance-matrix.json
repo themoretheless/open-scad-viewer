@@ -1,0 +1,139 @@
+{
+  "schema": "cad-p1-development/1",
+  "priority": "P1 promoted by user ahead of remaining P0 qualification",
+  "completionStatus": "incomplete",
+  "firstImplementation": "Partial circular fillet with explicit endpoint transitions; keep general NURBS fillets and complex corners in final scope",
+  "sourceRoot": "crates/brep-core/src",
+  "gates": {
+    "lengthToleranceMm": 1e-06,
+    "angleToleranceRadians": 1e-06,
+    "continuousProofRequired": true,
+    "independentOracle": "OpenCascade",
+    "onUnproven": "Do not mutate source; identify the geometric limitation and problematic inputs"
+  },
+  "baselineParts": [
+    {
+      "id": "bracket",
+      "boundsMm": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          40,
+          30,
+          20
+        ]
+      ],
+      "legThicknessMm": 5,
+      "extrusionMm": 20,
+      "volumeMm3": 6500
+    },
+    {
+      "id": "flange",
+      "outerRadiusMm": 20,
+      "holeRadiusMm": 5,
+      "heightMm": 6,
+      "volumeFormula": "2250*pi"
+    },
+    {
+      "id": "enclosure",
+      "outerSizeMm": [
+        40,
+        30,
+        20
+      ],
+      "wallAndFloorMm": 2,
+      "volumeMm3": 7152
+    }
+  ],
+  "requirements": [
+    {
+      "id": "curved_fillet",
+      "name": "Скругления криволинейных рёбер",
+      "source": "analytic_features.rs",
+      "currentlyProvenScope": "Полные круговые кромки точного кольцевого цилиндра; продольные прямые рёбра проверенных призм",
+      "requiredExpansion": [
+        "Неполная круговая кромка с двумя конечными переходами",
+        "Plane/cylinder и cylinder/cylinder в произвольном положении",
+        "Общие NURBS/NURBS, выпуклые и вогнутые рёбра"
+      ],
+      "acceptance": [
+        "Построение линии центров с выбором стороны материала",
+        "Линии касания на исходных поверхностях",
+        "Обрезка исходных граней, концевые переходы, сшивка",
+        "Проверка радиуса и G1 на всём интервале; допуск аппроксимации явно сообщается"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "corner_blends",
+      "name": "Сложные углы",
+      "source": "analytic_features.rs",
+      "currentlyProvenScope": "Три конкурентных ребра только max-угла осевого кубоида",
+      "requiredExpansion": [
+        "Все положения трёхрёберного угла",
+        "Смешанные прямые и кривые рёбра",
+        "Вогнутые углы, 4+ рёбер, разные радиусы"
+      ],
+      "acceptance": [
+        "Согласованная сеть переходов без щелей и перекрытий",
+        "Проверка стенок и коллизий до публикации результата",
+        "Сохранение выбора и идентичностей после перестроения"
+      ],
+      "status": "open",
+      "implementationProgress": "Equal-radius cuboid blend implemented in recovered orthonormal frames. 40 Rust operation tests and 144 WASM-exported STEP cases pass independent OpenCascade checks. Browser interaction and general corner blends remain open."
+    },
+    {
+      "id": "solid_distance",
+      "name": "Расстояния между телами",
+      "source": "solid_distance.rs",
+      "currentlyProvenScope": "Заполненные объёмы проверяются отдельно от расстояния между оболочками",
+      "requiredExpansion": [
+        "Общие trimmed рациональные поверхности",
+        "Вложенные объёмы и полости",
+        "Касание, пересечение, почти касание"
+      ],
+      "acceptance": [
+        "Нижняя и верхняя граница расстояния, явный остаточный допуск",
+        "Точки результата принадлежат исходным обрезанным граням",
+        "Неопределённость не выдаётся за расстояние или отсутствие контакта"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "self_intersections",
+      "name": "Самопересечения B-rep",
+      "source": "self_intersection.rs",
+      "currentlyProvenScope": "Сочетание инъективности граней и классификации пар; это не полная проверка заполненного объёма",
+      "requiredExpansion": [
+        "Самопересечение внутри одной грани",
+        "Контакты разных граней возле trims/швов",
+        "Вырожденные поверхности и неоднозначные касания"
+      ],
+      "acceptance": [
+        "Различение общего топологического ребра и недопустимого контакта",
+        "Подсветка исходных граней и точек/кривых дефекта",
+        "Полный/частичный результат и непроверенные участки явно различаются"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "mechanical_acceptance",
+      "name": "Размерная приёмка деталей",
+      "source": "benchmarks/cad-roadmap-fixtures.ts",
+      "currentlyProvenScope": "Есть исходные контрольные кронштейн, фланец и корпус",
+      "requiredExpansion": [
+        "Boolean → правка граней → скругление → STEP",
+        "Последовательные операции с Undo/Redo и восстановлением"
+      ],
+      "acceptance": [
+        "Размеры исходного B-rep, отверстий и стенок; не только bbox/mesh",
+        "Независимые измерения OpenCascade после каждого этапа",
+        "Перемещения/повороты не меняют радиусы, толщины, объёмы"
+      ],
+      "status": "open"
+    }
+  ]
+}

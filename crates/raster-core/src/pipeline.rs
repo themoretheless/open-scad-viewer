@@ -14,7 +14,7 @@ use wgpu::{
     ShaderModule, TextureFormat, VertexAttribute, VertexBufferLayout, VertexState,
 };
 
-const fn alpha_blend() -> BlendComponent {
+fn alpha_blend() -> BlendComponent {
     BlendComponent {
         src_factor: wgpu::BlendFactor::SrcAlpha,
         dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
@@ -22,7 +22,7 @@ const fn alpha_blend() -> BlendComponent {
     }
 }
 
-const fn transparent_target(format: TextureFormat) -> ColorTargetState {
+fn transparent_target(format: TextureFormat) -> ColorTargetState {
     ColorTargetState {
         format,
         blend: Some(wgpu::BlendState {
@@ -37,7 +37,7 @@ const fn transparent_target(format: TextureFormat) -> ColorTargetState {
     }
 }
 
-const fn mesh_vbl() -> VertexBufferLayout<'static> {
+fn mesh_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: MESH_VERTEX_STRIDE,
         step_mode: wgpu::VertexStepMode::Vertex,
@@ -48,7 +48,7 @@ const fn mesh_vbl() -> VertexBufferLayout<'static> {
     }
 }
 
-const fn morph_vbl() -> VertexBufferLayout<'static> {
+fn morph_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: MORPH_VERTEX_STRIDE,
         step_mode: wgpu::VertexStepMode::Vertex,
@@ -60,7 +60,7 @@ const fn morph_vbl() -> VertexBufferLayout<'static> {
     }
 }
 
-const fn edge_slot0_vbl() -> VertexBufferLayout<'static> {
+fn edge_slot0_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: MESH_VERTEX_STRIDE,
         step_mode: wgpu::VertexStepMode::Vertex,
@@ -68,7 +68,7 @@ const fn edge_slot0_vbl() -> VertexBufferLayout<'static> {
     }
 }
 
-const fn edge_morph_vbl() -> VertexBufferLayout<'static> {
+fn edge_morph_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: MORPH_VERTEX_STRIDE,
         step_mode: wgpu::VertexStepMode::Vertex,
@@ -76,7 +76,7 @@ const fn edge_morph_vbl() -> VertexBufferLayout<'static> {
     }
 }
 
-const fn line_vbl() -> VertexBufferLayout<'static> {
+fn line_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: 28,
         step_mode: wgpu::VertexStepMode::Vertex,
@@ -87,7 +87,7 @@ const fn line_vbl() -> VertexBufferLayout<'static> {
     }
 }
 
-const fn grid_vbl() -> VertexBufferLayout<'static> {
+fn grid_vbl() -> VertexBufferLayout<'static> {
     VertexBufferLayout {
         array_stride: 8,
         step_mode: wgpu::VertexStepMode::Vertex,

@@ -1,0 +1,16 @@
+[package]
+name = "nurbs-intersect"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["codec"]
+codec = ["dep:value-codec", "nurbs-core/codec", "cad-predicates/codec"]
+
+[dependencies]
+math-core = { workspace = true }
+nurbs-core = { workspace = true }
+cad-predicates = { workspace = true }
+value-codec = { workspace = true, optional = true }

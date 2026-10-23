@@ -134,3 +134,17 @@ it('ignores baseline recovery after cancellation or an intervening edit',async()
  const edited=h.document;edited.sketches.push({...sketch(),name:'New edit'});h.commit(edited);complete(recovered)
  expect(await second).toBe(false);expect(h.document.sketches[0].name).toBe('New edit');expect(h.canUndo).toBe(true)
 })
+
+it('preserves project identity after async restore without materializing old geometry during commit',async()=>{
+ const base=emptyDirectDocument();base.blenderProjectId='project-identity';base.sketches.push(sketch())
+ const history=new DirectHistory(base),next=history.document;next.sketches[0].name='changed';history.commit(next)
+ expect(await history.restoreAsync('undo',async text=>parseDirectDocument(text))).toBe(true)
+ expect(history.storageStats.materializedStates).toBe(0)
+ const candidate=structuredClone(base);delete candidate.blenderProjectId;candidate.sketches[0].name='new edit'
+ expect(await history.commitAsync(async()=>candidate,resolved=>{
+  expect(history.storageStats.materializedStates).toBe(0)
+  expect(resolved.blenderProjectId).toBe('project-identity')
+ })).toBe(true)
+ expect(history.document.blenderProjectId).toBe('project-identity')
+ expect(history.undo().sketches[0].name).toBe('L')
+})

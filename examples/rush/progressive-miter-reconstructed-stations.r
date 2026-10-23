@@ -1,5 +1,5 @@
 // @rush/1
-// Explicit bounded reconstruction with a complete 2 mm budget; the certified bound is about0.9 mm.
+// Explicit bounded reconstruction; this fixture needs a complete 2 mm budget.
 outer = circle_curve(center: [0,0,0], normal: [0,0,1], radius: 1mm)
 show brep_progressive_miter_sweep([[outer]],
  points: [[0,0,0],[0,0,10mm]], normal: [1,0,0],

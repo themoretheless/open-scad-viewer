@@ -22,3 +22,5 @@ export const meshToNurbs=(mesh:PolygonMesh,mode:NurbsPatchSet['mode']='faceted',
 export const tessellateNurbsPatches=(patches:NurbsSurfaceSet,segments=2):PolygonBuild & {faceIds:number[]}=>normalizePolygonMesh(callGeometryRust('nurbs_patches_tessellate',{patches,segments}))
 
 export const meshToNurbsBrep=(mesh:PolygonMesh):NurbsBrep=>callGeometryRust('mesh_to_nurbs_brep',{mesh})
+
+export interface NurbsSurfaceSet {patches:NurbsSurface[];faceIds:number[]}

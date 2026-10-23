@@ -16,8 +16,8 @@ const renderer=createRenderer<Node,Node>({
 const flush=async()=>{await nextTick();await Promise.resolve();await nextTick()}
 function mount(){
  const props=shallowReactive({active:true,ru:true,a:cases[0].request.a,b:cases[0].request.b,same:false,names:['A','B'] as [string,string]})
- const states:Array<[boolean,[number,number,number]|null]>=[]
- const root=new Node('root'),app=renderer.createApp({render:()=>h(Panel,{...props,onState:(active:boolean,point:[number,number,number]|null)=>states.push([active,point])})});app.mount(root)
+ const states:Array<[boolean,Array<[number,number,number]>|null]>=[]
+ const root=new Node('root'),app=renderer.createApp({render:()=>h(Panel,{...props,onState:(active:boolean,point:Array<[number,number,number]>|null)=>states.push([active,point])})});app.mount(root)
  const all=(n:Node=root):Node[]=>[n,...n.children.flatMap(all)],text=(n:Node=root):string=>n.text+n.children.map(text).join('')
  const click=async(s:string)=>{all().find(n=>n.tag==='button'&&text(n).includes(s))!.props.onClick();await flush()}
  return {props,root,app,all,text,click,states}
@@ -52,9 +52,21 @@ it('publishes only current contact markers and clears them on source changes and
  const ui=mount()
  try{
   await ui.click('Расстояние между объёмами');await flush()
-  expect(ui.states.at(-1)).toEqual([true,cases[2].result.contact.pointIntervalMm.map(([lo,hi]:[number,number])=>lo/2+hi/2)])
+  expect(ui.states.at(-1)).toEqual([true,[cases[2].result.contact.pointIntervalMm.map(([lo,hi]:[number,number])=>lo/2+hi/2)]])
   ui.props.b=cases[2].request.b;await flush();expect(ui.states.at(-1)).toEqual([true,null])
   await ui.click('Закрыть');expect(ui.states.at(-1)).toEqual([false,null])
  }finally{ui.app.unmount()}
  expect(ui.states.at(-1)).toEqual([false,null])
+})
+
+it('publishes the separated authored-surface pair and clears it on close',async()=>{
+ mock.run.mockReset();mock.run.mockResolvedValueOnce(cases[3].result)
+ const ui=mount()
+ try{
+  await ui.click('Расстояние между объёмами');await flush()
+  expect(ui.states.at(-1)).toEqual([true,cases[3].result.separationWitness.points])
+  expect(ui.text()).toContain('Точки на гранях A / B:')
+  expect(ui.all().filter(n=>n.props['data-solid-witness']!==undefined)).toHaveLength(2)
+  await ui.click('Закрыть');expect(ui.states.at(-1)).toEqual([false,null])
+ }finally{ui.app.unmount()}
 })

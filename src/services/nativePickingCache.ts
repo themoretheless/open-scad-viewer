@@ -16,7 +16,7 @@ export class NativePickingCache {
   }
   clear():void {for(const key of this.handles.keys())this.release(key)}
   query(key:object,vertices:Float32Array,indices:Uint32Array,stride:number,leafSize:number,ray:BvhRay,options:Pick<RaycastMeshBvhOptions,'minT'|'excludedTriangles'|'localFromWorld'>={}):MeshBvhHit|null {
-    if(!(Number.isFinite(ray.origin[0])&&Number.isFinite(ray.origin[1])&&Number.isFinite(ray.origin[2])&&Number.isFinite(ray.direction[0])&&Number.isFinite(ray.direction[1])&&Number.isFinite(ray.direction[2])))return null
+    if(![...ray.origin,...ray.direction].every(Number.isFinite))return null
     if(options.minT!==undefined&&!Number.isFinite(options.minT))throw new RangeError('Picking continuation must be finite')
     let handle=this.handles.get(key)
     if(handle===undefined){

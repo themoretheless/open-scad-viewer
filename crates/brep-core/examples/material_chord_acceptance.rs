@@ -5,7 +5,7 @@ fn report(
     origin: [f64; 3],
     interval: [f64; 2],
 ) -> Result<value_codec::Value, Box<dyn std::error::Error>> {
-    let r = material_chord::inspect(
+    let r = material_chord::inspect_finite_interval(
         model,
         origin,
         [1., 0., 0.],

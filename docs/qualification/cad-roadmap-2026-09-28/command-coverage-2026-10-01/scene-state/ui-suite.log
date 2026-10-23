@@ -1,0 +1,26 @@
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+(node:15457) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |direct-ui| tests/directModelerUi.test.ts (283 tests | 2 failed) 51448ms
+   × localizes source deletion and group deletion dependencies without changing history: en 3ms
+   × localizes source deletion and group deletion dependencies without changing history: ru 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > localizes source deletion and group deletion dependencies without changing history: en
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > localizes source deletion and group deletion dependencies without changing history: ru
+Error: Missing button Source
+ ❯ Object.click tests/directModelerUi.test.ts:117:173
+
+ ❯ tests/directModelerUi.test.ts:3879:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 281 passed (283)
+   Start at  23:47:03
+   Duration  55.43s (transform 3.57s, setup 0ms, import 3.86s, tests 51.45s, environment 16ms)
+

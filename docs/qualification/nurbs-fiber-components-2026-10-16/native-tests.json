@@ -1,0 +1,42 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "complete connected-component census of the original parameter root set on the owned requested product",
+    "complete original coverage, fresh local bridges and ALL cross-component chart root separations",
+    "coverage and bridge proofs share one original rectangle allowance, including failed replay charge",
+    "not physical world branches, periodic quotient components, branch degree/cycle topology, world traces or trims"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1445,
+      "failed": 0,
+      "ignored": 0
+    },
+    "ss-integrations": {
+      "suites": 7,
+      "passed": 34,
+      "failed": 0,
+      "ignored": 0
+    },
+    "wasm": "both crates pass",
+    "format": "changed modules, mixed replay, transition matching and tests pass",
+    "api_map": "185 modules, 200 entries",
+    "catalog": "198 implemented, 2 planned, no errors",
+    "scope_note": "private new component receipt audit included in full core1382; another new integer-projection unit belongs to concurrent surface_distance work and is preserved"
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/components.rs": "7979f22f38793c3b7c8a9e8dddd8465040a4ca57059b9e19e704cd15a7647788",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed.rs": "1edef492a4945e582445be2795031f7f8b223e1295f4a05ad0b5d30557151e69",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/transition.rs": "57c99fe09c1929e48f49746238a989af287075a0658d0d187e4096ea914fd8d3",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "71c4b0bce37d6e26452e787b377ec30e5947e351eab95c445c80b672fcf2602d",
+    "crates/nurbs-core/tests/ss_fiber_components.rs": "bb5bd5cca44ca280c0473c85737c7fec30ee7d672852d960baea8f19c2bce0a6"
+  }
+}

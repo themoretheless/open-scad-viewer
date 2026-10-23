@@ -17,10 +17,6 @@ pub const KIND_MESH_UNSIGNED: u32 = 8;
 pub const KIND_MESH_SIGNED: u32 = 9;
 pub const KIND_CAPSULE: u32 = 10;
 pub const KIND_SMOOTH_DIFFERENCE: u32 = 11;
-pub const KIND_CYLINDER: u32 = 12;
-pub const KIND_GYROID: u32 = 13;
-pub const KIND_SCHWARZ_P: u32 = 14;
-pub const KIND_DIAMOND: u32 = 15;
 
 /// Postorder records: leaves first, value ops after their operands, so the
 /// shader evaluates with a plain value stack.
@@ -38,32 +34,11 @@ impl Field {
     /// Flattens the tree for the GPU interpreter; None marks node kinds the
     /// shader does not implement (the caller then uses the CPU sampler).
     pub fn to_flat(&self) -> Option<FlatField> {
-        fn count_nodes(field: &Field) -> (usize, usize) {
-            match field {
-                Field::Union { a, b }
-                | Field::Intersection { a, b }
-                | Field::Difference { a, b }
-                | Field::SmoothUnion { a, b, .. }
-                | Field::SmoothDifference { a, b, .. } => {
-                    let (na, ta) = count_nodes(a);
-                    let (nb, tb) = count_nodes(b);
-                    (na + nb + 1, ta + tb)
-                }
-                Field::Offset { input, .. } => {
-                    let (n, t) = count_nodes(input);
-                    (n + 1, t)
-                }
-                Field::Translate { input, .. } => count_nodes(input),
-                Field::MeshDistance { mesh, .. } => (1, mesh.indices.len() * 3),
-                _ => (1, 0),
-            }
-        }
-        let (node_cap, tri_cap) = count_nodes(self);
         let mut flat = FlatField {
-            kinds: Vec::with_capacity(node_cap),
-            params: Vec::with_capacity(node_cap * 8),
-            aux: Vec::with_capacity(node_cap * 2),
-            triangles: Vec::with_capacity(tri_cap),
+            kinds: Vec::new(),
+            params: Vec::new(),
+            aux: Vec::new(),
+            triangles: Vec::new(),
         };
         fn leaf(flat: &mut FlatField, kind: u32, params: [f32; 8]) {
             flat.kinds.push(kind);
@@ -104,50 +79,6 @@ impl Field {
                     *center,
                     offset,
                     &[*major_radius as f32, *minor_radius as f32],
-                ),
-                Field::Cylinder {
-                    center,
-                    radius,
-                    half_height,
-                } => centered(
-                    flat,
-                    KIND_CYLINDER,
-                    *center,
-                    offset,
-                    &[*radius as f32, *half_height as f32],
-                ),
-                Field::Gyroid {
-                    origin,
-                    period,
-                    thickness,
-                } => centered(
-                    flat,
-                    KIND_GYROID,
-                    *origin,
-                    offset,
-                    &[*period as f32, *thickness as f32],
-                ),
-                Field::SchwarzP {
-                    origin,
-                    period,
-                    thickness,
-                } => centered(
-                    flat,
-                    KIND_SCHWARZ_P,
-                    *origin,
-                    offset,
-                    &[*period as f32, *thickness as f32],
-                ),
-                Field::Diamond {
-                    origin,
-                    period,
-                    thickness,
-                } => centered(
-                    flat,
-                    KIND_DIAMOND,
-                    *origin,
-                    offset,
-                    &[*period as f32, *thickness as f32],
                 ),
                 Field::Capsule { a, b, radius } => {
                     let mut params = [0f32; 8];
@@ -193,24 +124,13 @@ impl Field {
                 Field::MeshDistance { mesh, signed } => {
                     // The translate fold shifts the triangles themselves.
                     let start = (flat.triangles.len() / 9) as u32;
-                    for &[a, b, c] in mesh.indices.as_chunks::<3>().0 {
-                        let [ax, ay, az] = [
-                            (mesh.positions[3 * a] + offset[0]) as f32,
-                            (mesh.positions[3 * a + 1] + offset[1]) as f32,
-                            (mesh.positions[3 * a + 2] + offset[2]) as f32,
-                        ];
-                        let [bx, by, bz] = [
-                            (mesh.positions[3 * b] + offset[0]) as f32,
-                            (mesh.positions[3 * b + 1] + offset[1]) as f32,
-                            (mesh.positions[3 * b + 2] + offset[2]) as f32,
-                        ];
-                        let [cx, cy, cz] = [
-                            (mesh.positions[3 * c] + offset[0]) as f32,
-                            (mesh.positions[3 * c + 1] + offset[1]) as f32,
-                            (mesh.positions[3 * c + 2] + offset[2]) as f32,
-                        ];
-                        flat.triangles
-                            .extend_from_slice(&[ax, ay, az, bx, by, bz, cx, cy, cz]);
+                    for t in mesh.indices.as_chunks::<3>().0 {
+                        for &i in t {
+                            for k in 0..3 {
+                                flat.triangles
+                                    .push((mesh.positions[3 * i + k] + offset[k]) as f32);
+                            }
+                        }
                     }
                     flat.kinds.push(if *signed {
                         KIND_MESH_SIGNED
@@ -221,7 +141,11 @@ impl Field {
                     flat.aux
                         .extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
                 }
-                Field::Extrude { .. }
+                Field::Cylinder { .. }
+                | Field::Gyroid { .. }
+                | Field::SchwarzP { .. }
+                | Field::Diamond { .. }
+                | Field::Extrude { .. }
                 | Field::Revolve { .. }
                 | Field::Deform { .. }
                 | Field::Neovius { .. }

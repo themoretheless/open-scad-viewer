@@ -1,0 +1,2294 @@
+{
+  "oracle": "OpenCascade/cadquery-ocp",
+  "manifestSha256": "123540c3ed08c439027cf6394d29722852a2f2948e067f2fed0f82f7be37983e",
+  "artifactProvenance": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "c94f6fcacb08e1620901e8986f3447bac90a90e7c1f4f79eeda76c2bc4127bb2",
+    "geometryWasmByteLength": 10519935,
+    "publicAndPackedVerified": true
+  },
+  "cases": [
+    {
+      "file": "rush-unclamped-hollow.step",
+      "stepSha256": "76b55e5480dc3a435c23e0524034504daab164bce77f54d6ca44e40a57d724af",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        15.625000000000002
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 15.625000000000002,
+      "expected_volume": 15.625,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.7053025658242405e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-periodic-hollow.step",
+      "stepSha256": "76b55e5480dc3a435c23e0524034504daab164bce77f54d6ca44e40a57d724af",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        15.625000000000002
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 15.625000000000002,
+      "expected_volume": 15.625,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.7053025658242405e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-moving-frame-guide-affine-hollow-corrected.step",
+      "stepSha256": "6bba6756b488f75b9f270506662c89716a3ad486ec8f022490f7c8f2c18a8ab3",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 64,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 65,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 66,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 136,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 256,
+      "pcurve_samples": 1904,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 256,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 9.575673587391975e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 136,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 64,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.316791286067655e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        11.62337507225749
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 11.62337507225749,
+      "expected_volume": 11.62337507041381,
+      "relative_volume_error": 1.5861836621846896e-10,
+      "integration_error": 1.2408722918085167e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-combined-frame-guide-affine-hollow-corrected.step",
+      "stepSha256": "7841d5e15cb1d732e2ca7628c44e7e7a89c81f04325b2f0498f206c14a46902d",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147142231
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147142231,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.565100810319886e-10,
+      "integration_error": 1.2378920760231498e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-combined-frame-guide-affine-hollow-miter.step",
+      "stepSha256": "1c0103fe99520baaf0442c1d1bf08d5317e52cbe0f628b53d61bba39e9a064fb",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.106226635438361e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.3628832905422907e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147137659
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147137659,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.2378920760235785e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "unsegmented-plain-hollow-miter.step",
+      "stepSha256": "f03222c7289ec9e1d5d68b933277191674843c6548d22aa1f58bc72828c00899",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.250000000000004
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 31.250000000000004,
+      "expected_volume": 31.25,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.598721155460225e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "unsegmented-affine-hollow-miter.step",
+      "stepSha256": "8eb19a137b72390f40c5248097b958c4098019cbb42c29a20147ca3540cc4894",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.50000000000001
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 62.50000000000001,
+      "expected_volume": 62.5,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.598721155460225e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "unsegmented-frame-affine-hollow-miter.step",
+      "stepSha256": "a18a9926f868df014237c39434bad6c4579f8775617e7deab672adb69b864408",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.50000000000001
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 62.50000000000001,
+      "expected_volume": 62.5,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.598721155460225e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "unsegmented-guide-affine-hollow-miter.step",
+      "stepSha256": "a18a9926f868df014237c39434bad6c4579f8775617e7deab672adb69b864408",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.50000000000001
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 62.50000000000001,
+      "expected_volume": 62.5,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.598721155460225e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "unsegmented-frame-guide-affine-hollow-miter.step",
+      "stepSha256": "a18a9926f868df014237c39434bad6c4579f8775617e7deab672adb69b864408",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.552713678800501e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.50000000000001
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 62.50000000000001,
+      "expected_volume": 62.5,
+      "relative_volume_error": 1.1368683772161603e-16,
+      "integration_error": 1.598721155460225e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-miter-guide-hollow-corrected.step",
+      "stepSha256": "b916eae168bea6aa9f03a8479cf822010cff5a8ebb4962f3ffc288e3bb917f38",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573571114
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573571114,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.5650981177868222e-10,
+      "integration_error": 1.2399114758209038e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-miter-guide-affine-hollow-corrected.step",
+      "stepSha256": "7841d5e15cb1d732e2ca7628c44e7e7a89c81f04325b2f0498f206c14a46902d",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147142231
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147142231,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.565100810319886e-10,
+      "integration_error": 1.2378920760231498e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-miter-authored-frame-hollow-corrected.step",
+      "stepSha256": "b916eae168bea6aa9f03a8479cf822010cff5a8ebb4962f3ffc288e3bb917f38",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573571114
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573571114,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.5650981177868222e-10,
+      "integration_error": 1.2399114758209038e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-miter-combined-frame-affine-hollow-corrected.step",
+      "stepSha256": "7841d5e15cb1d732e2ca7628c44e7e7a89c81f04325b2f0498f206c14a46902d",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147142231
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147142231,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.565100810319886e-10,
+      "integration_error": 1.2378920760231498e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-guide-hollow-miter.step",
+      "stepSha256": "6cdb09dbf0f6671df8a2a1cfa6f61b5d7ad5360757d23195fe94d5651b3c6aa8",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573568829
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573568829,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.238901775922456e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-guide-affine-hollow-miter.step",
+      "stepSha256": "1c0103fe99520baaf0442c1d1bf08d5317e52cbe0f628b53d61bba39e9a064fb",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.106226635438361e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.3628832905422907e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147137659
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147137659,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.2378920760235785e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-authored-frame-hollow-miter.step",
+      "stepSha256": "6cdb09dbf0f6671df8a2a1cfa6f61b5d7ad5360757d23195fe94d5651b3c6aa8",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573568829
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573568829,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.238901775922456e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-combined-frame-affine-hollow-miter.step",
+      "stepSha256": "1c0103fe99520baaf0442c1d1bf08d5317e52cbe0f628b53d61bba39e9a064fb",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.106226635438361e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.3628832905422907e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.194689147137659
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.194689147137659,
+      "expected_volume": 13.19468914507713,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.2378920760235785e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-circle-corrected-scale-twist.step",
+      "stepSha256": "f3e108e4d9daa795c2c0c8f2e2a98997b3cb40959768a68bfbc001db58fe80f3",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 32,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 33,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 34,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 72,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 128,
+      "pcurve_samples": 1008,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 128,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 72,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 32,
+      "sampled_surface_max_error_mm": 8.881784197001252e-16,
+      "sampled_derivative_max_error": 2.953300581774766e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        10.416105153254474
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 10.416105153254474,
+      "expected_volume": 10.416105151646148,
+      "relative_volume_error": 1.5440761143206056e-10,
+      "integration_error": 1.6372396049159144e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-circle-corrected-spatial.step",
+      "stepSha256": "c61875ad31f5091bd08ace07fbee4e1db430ec934f4422a6977337123e3dc054",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 24,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 25,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 26,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 56,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 96,
+      "pcurve_samples": 784,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 96,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 2.7200464103316335e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 56,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 24,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 5.329070518200751e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        20.570744616532743
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 20.570744616532743,
+      "expected_volume": 20.57074461266989,
+      "relative_volume_error": 1.8778374068801914e-10,
+      "integration_error": 1.520943966354868e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-circle-corrected-affine.step",
+      "stepSha256": "d2d47befa513e5e6bebb8147d12d449565f3fdc4536f000044d6dd350b086b22",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        9.896016860356674
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 9.896016860356674,
+      "expected_volume": 9.896016858807847,
+      "relative_volume_error": 1.5651012590753966e-10,
+      "integration_error": 1.2389017759220268e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-circle-corrected-oblique.step",
+      "stepSha256": "c08e764229ae947052f0f40ccf477e61da04df7342542d847bff5c76beb9549a",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 1.1102230246251565e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.885780586188048e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573571114
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573571114,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.5650981177868222e-10,
+      "integration_error": 1.2399114758209038e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-rational-curved-guide-frame-affine.step",
+      "stepSha256": "d030d239a02760f5cc34cf765375a3caa70c0020a605b84406575eec71aca8d9",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 16,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 17,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 18,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 40,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 64,
+      "pcurve_samples": 560,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 64,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.106226635438361e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 40,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 16,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 1.7607681704433354e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.190351641427675
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.190351641427675,
+      "expected_volume": 13.190351639372043,
+      "relative_volume_error": 1.5584361699965583e-10,
+      "integration_error": 1.2378920760231498e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-station-g2-hollow.step",
+      "stepSha256": "e0159bbca73c3588fd0a5eb0d5cce8bf313e202fae352ed04965d08bc052e54d",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 16,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 17,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 18,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 40,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 64,
+      "pcurve_samples": 560,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 64,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 40,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 16,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 2.3219858226962308e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        8.835729339601112
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 8.835729339601112,
+      "expected_volume": 8.835729338221292,
+      "relative_volume_error": 1.5616375845422878e-10,
+      "integration_error": 1.3875699890331506e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-g1-profile-frame-guide-affine.step",
+      "stepSha256": "8fd42075997382f63533e098f702d60edb5eb0d277f0cc6514b91cac6e93f5f6",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 4,
+          "controlPoles": 12,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 5,
+          "controlPoles": 12,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 6,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 12,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 16,
+      "pcurve_samples": 168,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 16,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 12,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 4,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 4.549485788096776e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        73.14285714285714
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 73.14285714285714,
+      "expected_volume": 73.14285714285714,
+      "relative_volume_error": 0.0,
+      "integration_error": 1.457167719820518e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "closed-frame-guide-affine-hollow-miter.step",
+      "stepSha256": "6c0122c65bededf608a58529fdc93e161e4b76b07eed9aea57aef9b491818cd7",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 128,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 256,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 512,
+      "pcurve_samples": 3584,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 512,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 1.6653345369377348e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 256,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 128,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 2.5292268279741847e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.728607387592813,
+        -2.1965771820148547
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 11.532030205577957,
+      "expected_volume": 11.532030202876616,
+      "relative_volume_error": 2.3424681736776156e-10,
+      "integration_error": 5.873917453647722e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 0
+    },
+    {
+      "file": "closed-authored-affine-hollow-miter.step",
+      "stepSha256": "c2487a07eed840d12a379b0486f3d66a6396a86ea5645e6bb3d0d28afa60e136",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 32,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 64,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 128,
+      "pcurve_samples": 896,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 128,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 1.5265566588595902e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 64,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 32,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.6914915568786455e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.83185308651389,
+        -10.053096493842215
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 52.77875659267167,
+      "expected_volume": 52.77875658030852,
+      "relative_volume_error": 2.3424485684675473e-10,
+      "integration_error": 1.4683025999563808e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 0
+    },
+    {
+      "file": "open-straight-hollow-miter.step",
+      "stepSha256": "27a551f455e8ae0ec0681144fca353025f394484b3d073804f3b525d0d74355f",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573568829
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573568829,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.2399114758213334e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "progressive-scale-twist-hollow-miter.step",
+      "stepSha256": "a4ab4726913ae93f48c664e8ebc40a68935a2fb0aca516137ac27079d116b7de",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 32,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 33,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 34,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 72,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 128,
+      "pcurve_samples": 1008,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 128,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 72,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 32,
+      "sampled_surface_max_error_mm": 8.881784197001252e-16,
+      "sampled_derivative_max_error": 2.953300581774766e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        10.416105153248985
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 10.416105153248985,
+      "expected_volume": 10.416105151646148,
+      "relative_volume_error": 1.5388064453283726e-10,
+      "integration_error": 1.6370601027130734e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "open-spatial-hollow-miter.step",
+      "stepSha256": "075806fd4b05d03f102031df2c7fcc6a9a7fbec2d92b6dd3e6f95184b8e967d3",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 24,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 25,
+          "controlPoles": 16,
+          "exactCoplanar": false,
+          "nonplanarityWitness": {
+            "pole": 3,
+            "exactDeterminant": "17715955711429502305922148015/89202980794122492566142873090593446023921664"
+          }
+        }
+      ],
+      "native_volume_certified": false,
+      "native_external_material_agreement": null,
+      "valid": true,
+      "faces": 26,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 56,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 96,
+      "pcurve_samples": 784,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 96,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 4.385380947269368e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 56,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 24,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 5.329070518200751e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        20.570744616526657
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 20.570744616526657,
+      "expected_volume": 20.57074461266989,
+      "relative_volume_error": 1.8748789342306223e-10,
+      "integration_error": 1.871229507801472e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "open-spatial-bounded-correction.step",
+      "stepSha256": "287cf55ff764e0f9a132f44f8d06cef13f0f993d2d63d2e11085f34eba53a0a1",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 24,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 25,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 26,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 56,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 96,
+      "pcurve_samples": 784,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 96,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 2.1094237467877974e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 56,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 24,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 5.329070518200751e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        20.570744616527882
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 20.570744616527882,
+      "expected_volume": 20.57074461266989,
+      "relative_volume_error": 1.8754747737309733e-10,
+      "integration_error": 1.519907618598104e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "open-spatial-constructor-correction.step",
+      "stepSha256": "c9da50d4aa3768a5e3ef4efc336f6aca300d188d9cc94a925664e89932e79a3f",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 24,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 25,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 26,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 56,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 96,
+      "pcurve_samples": 784,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 96,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 2.1094237467877974e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 56,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 24,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 5.329070518200751e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        20.570744616529023
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 20.570744616529023,
+      "expected_volume": 20.57074461266989,
+      "relative_volume_error": 1.8760291635269521e-10,
+      "integration_error": 1.519907618598104e-12,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "closed-planar-hollow-miter.step",
+      "stepSha256": "75ebce79adb401c21f59c1e9a991a8408d5d7af9d98085410db3c3c3ef413222",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 32,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 64,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 128,
+      "pcurve_samples": 896,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 128,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 1.5265566588595902e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 64,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 32,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.6914915568786455e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.415926543256955,
+        -5.026548246921109
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 26.38937829633585,
+      "expected_volume": 26.38937829015426,
+      "relative_volume_error": 2.342453953533674e-10,
+      "integration_error": 1.4683025999563808e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 0
+    },
+    {
+      "file": "affine-oblique-hollow-miter.step",
+      "stepSha256": "b276723c734e75c053b702372cab757cbf02b7a8e06e61cecb4cb234b2e2e38f",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": false,
+          "nonplanarityWitness": {
+            "pole": 3,
+            "exactDeterminant": "1536815574307770235794985541717801272732802112519/52656145834278593348959013841835216159447547700274555627155488768"
+          }
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": false,
+          "nonplanarityWitness": {
+            "pole": 3,
+            "exactDeterminant": "89491165105295300837658266936313/5846006549323611672814739330865132078623730171904"
+          }
+        }
+      ],
+      "native_volume_certified": false,
+      "native_external_material_agreement": null,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 2.55351295663786e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 4.884981308350689e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        6.597344573568829
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 6.597344573568829,
+      "expected_volume": 6.597344572538565,
+      "relative_volume_error": 1.561635520266939e-10,
+      "integration_error": 1.239911475821333e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "affine-oblique-dyadic-hollow.step",
+      "stepSha256": "4a855e1ff8a5695bd7108c63e5068efd80799e8c41babcea19b6aa810ed72e16",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 2.275957200481571e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 4.052314039881821e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        5.890486226400739
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 5.890486226400739,
+      "expected_volume": 5.890486225480862,
+      "relative_volume_error": 1.561632558480569e-10,
+      "integration_error": 1.3887008529198933e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "rush-authored-affine-hollow-miter.step",
+      "stepSha256": "104e1950cf1aae91ff4d5e498ba873818187407f52a89e65d7e2dae5ae3b3307",
+      "retained_cap_planarity_agreement": true,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 24,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 32,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 24,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 3.5322419191168466e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        9.896016860353246
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 9.896016860353246,
+      "expected_volume": 9.896016858807847,
+      "relative_volume_error": 1.5616368665334708e-10,
+      "integration_error": 1.239911475821333e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    }
+  ],
+  "passed": true,
+  "scope": "fixture import, topology and analytic volume; surface/seam/containment matrix remains separate"
+}

@@ -127,7 +127,7 @@ export const constructMiterOwnedBoundary=(source:MiterOwnedRequest):MiterOwnedBo
 
 /** Replays original construction in the receiving realm. No serialized model
  * or supplied numerical certificate participates in native boundary admission. */
-export const reconstructMiterOwnedBoundary=(source:MiterOwnedRequest,options:{quantum:number;tolerance:number;maxWork:number;budget:number;requireSolid?:boolean;wallCells?:number;volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets;expectedSourceModel?:NurbsBrep;expectedSourceCertificate?:SweepBoundaryCertificate;expectedSections?:NurbsCurve[][][];expectedSharp?:number[]}):{
+export const reconstructMiterOwnedBoundary=(source:MiterOwnedSourceRequest,options:{quantum:number;tolerance:number;maxWork:number;budget:number;requireSolid?:boolean;wallCells?:number;volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets;expectedSourceModel?:NurbsBrep;expectedSourceCertificate?:SweepBoundaryCertificate;expectedSections?:NurbsCurve[][][];expectedSharp?:number[]}):{
  model:NurbsBrep|null
  candidate:import('./geometry/brep').SmoothStationWallCandidate|null
  boundaryCertificate:SweepBoundaryCertificate|null

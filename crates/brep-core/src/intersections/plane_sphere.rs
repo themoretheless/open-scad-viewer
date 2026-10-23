@@ -40,19 +40,19 @@ const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 /// `P(u,v) = origin + u*U + v*V` over `(u,v) in [0,1]^2`, with U and V
 /// orthogonal within the recognition band.
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalPlane {
+pub struct CanonicalPlane {
     /// Surface control point [0][0]: the (0,0) corner.
-    pub(crate) origin: [f64; 3],
+    pub origin: [f64; 3],
     /// Edge vector to the (1,0) corner.
-    pub(crate) u: [f64; 3],
+    pub u: [f64; 3],
     /// Edge vector to the (0,1) corner.
-    pub(crate) v: [f64; 3],
+    pub v: [f64; 3],
     /// Unit normal u x v / |u x v|.
-    pub(crate) normal: [f64; 3],
-    pub(crate) u_len: f64,
-    pub(crate) v_len: f64,
+    pub normal: [f64; 3],
+    pub u_len: f64,
+    pub v_len: f64,
     /// Observed structural deviation bound; feeds the outward classification.
-    pub(crate) error: f64,
+    pub error: f64,
 }
 
 /// Recognizes a canonical planar patch model: one body, one open shell, one
@@ -61,7 +61,7 @@ pub(crate) struct CanonicalPlane {
 /// matching the surface corners, an exactly-affine fourth corner, and edge
 /// vectors orthogonal within the recognition band. Rigid affine placement is
 /// admitted; anything else returns `None`.
-pub(crate) fn recognize_plane(model: &Model) -> Result<Option<CanonicalPlane>> {
+pub fn recognize_plane(model: &Model) -> Result<Option<CanonicalPlane>> {
     model.validate()?;
     // Bodies require closed shells, so the freestanding patch is a single
     // open shell with no body at all.
@@ -187,15 +187,15 @@ pub struct PlanePatchCurve {
 /// A 2D half-plane constraint `normal . x <= offset` with its own outward
 /// classification band (in the 2D coordinate units of the clipped space).
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Halfplane2 {
-    pub(crate) normal: [f64; 2],
-    pub(crate) offset: f64,
-    pub(crate) band: f64,
+pub struct Halfplane2 {
+    pub normal: [f64; 2],
+    pub offset: f64,
+    pub band: f64,
 }
 
 /// Result of clipping an ellipse by a set of half-planes.
 #[derive(Clone, Debug)]
-pub(crate) enum EllipseClip {
+pub enum EllipseClip {
     /// Provably outside at least one half-plane beyond its band.
     Empty,
     /// No cuts: strictly inside every half-plane.
@@ -213,7 +213,7 @@ pub(crate) enum EllipseClip {
 /// a tangency and is reported through the flag, never clipped through.
 /// Surviving spans are decided by exact midpoint evaluation; nothing is
 /// merged across gaps.
-pub(crate) fn clip_ellipse(
+pub fn clip_ellipse(
     center: [f64; 2],
     w1: [f64; 2],
     w2: [f64; 2],
@@ -303,7 +303,7 @@ pub(crate) fn clip_ellipse(
 /// into arcs of at most 90 degrees with weights cos(half-angle). Knots are
 /// `0..=pieces` with doubled interior knots, matching `circle_curve` when
 /// w1/w2 are perpendicular equal-length vectors and the sweep is 0..TAU.
-pub(crate) fn conic_sweep(
+pub fn conic_sweep(
     center: [f64; 3],
     w1: [f64; 3],
     w2: [f64; 3],
@@ -353,7 +353,7 @@ pub(crate) fn conic_sweep(
 /// Exact rational quadratic arcs (single-span, knots [0,0,0,1,1,1]) covering
 /// the 2D conic sweep over `[start, end]`, matching `circle_arcs` for a
 /// circular w1/w2 pair.
-pub(crate) fn conic_arcs_2d(
+pub fn conic_arcs_2d(
     center: [f64; 2],
     w1: [f64; 2],
     w2: [f64; 2],
@@ -451,7 +451,7 @@ pub fn intersect_plane_sphere(
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
     let (Some(plane), Some(sphere)) = (
         recognize_plane(plane_model)?,
-        sphere_sphere::recognize(sphere_model)?,
+        sphere_sphere::recognize_any(sphere_model)?,
     ) else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
@@ -587,7 +587,7 @@ pub fn intersect_plane_sphere(
 /// exact bilinear affine surface over the unit square, unit-square boundary
 /// trims and four corner vertices (the cuboid face construction, freestanding).
 #[cfg(test)]
-pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
+pub fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
     use crate::{Coedge, Edge, Face, FaceUse, Loop, Shell, TopologyIds, Vertex};
     let add = |a: [f64; 3], b: [f64; 3]| [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
     let corners = [

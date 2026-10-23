@@ -22,8 +22,8 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
 `)
 const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
 writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v27.json'),JSON.stringify({
-  id:'own-rust-cad-v27',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-09-29',
-  purpose:'Append-only current-byte fingerprint re-issued for the G0 v35 / G1 v52 re-freeze. Drift since G0 v34 / G1 v51: two landed commits (b59c591c, 5f40d345, CAD modeling and diagnostics features) rebuilt the own-Rust geometry kernel and grew crates/brep-core/src/operations.rs to 110314 bytes, so both the packed kernel WASM and the source-bundle digest changed; verify-dist budgets already cover the rebuilt dist. Notices and lockfiles are byte-identical to own-rust-cad-v26, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.',qualificationClaim:'none',
+  id:'own-rust-cad-v27',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-02',
+  purpose:'Append-only current-byte fingerprint for the loft library and G0 v35 / G1 v52 refresh. Rebind the rebuilt geometry kernel, current lockfiles and source bytes without importing qualification results.',qualificationClaim:'none',
   wasm:{path:wasmPath,sha256:wasmSha256,byteLength:wasm.byteLength},
   sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
   dependencyFingerprints,

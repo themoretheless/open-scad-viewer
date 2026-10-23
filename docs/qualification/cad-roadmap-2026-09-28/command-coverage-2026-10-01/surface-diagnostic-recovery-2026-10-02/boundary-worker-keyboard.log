@@ -1,0 +1,14 @@
+{
+  keyboard: true,
+  tabs: 885,
+  gpuActive: true,
+  reloadExact: true,
+  workerFailureRetry: true,
+  invalidSamplePreventsDispatch: true,
+  browser: '157.0.8081.0',
+  workerRequests: 9,
+  cancelledWorkerTerminated: true,
+  maximumGapMm: 0.25,
+  boundaryChangeChecked: true,
+  documentUnchanged: true
+}

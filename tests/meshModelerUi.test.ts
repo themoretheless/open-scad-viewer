@@ -15,7 +15,10 @@ vi.mock('../src/components/ModelingFloorGrid.vue',()=>({default:{render:()=>null
 vi.mock('../src/services/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
 vi.mock('../src/services/meshModelerProjection',async importOriginal=>{
   const actual=await importOriginal<typeof import('../src/services/meshModelerProjection')>()
-  return {projectMeshModelerFaces:(...args:Parameters<typeof actual.projectMeshModelerFaces>)=>{
+  return {...actual,projectMeshModelerObject:(...args:Parameters<typeof actual.projectMeshModelerObject>)=>{
+    if(!gate.ready)throw new Error('Projection requested before browser WASM readiness')
+    return actual.projectMeshModelerObject(...args)
+  },projectMeshModelerFaces:(...args:Parameters<typeof actual.projectMeshModelerFaces>)=>{
     if(!gate.ready)throw new Error('Projection requested before browser WASM readiness')
     return actual.projectMeshModelerFaces(...args)
   }}

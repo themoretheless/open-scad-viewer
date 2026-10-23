@@ -1,0 +1,48 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "flange-ui20-0",
+      "file": "flange-ui20-0.step",
+      "sha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-ui20-1",
+      "file": "flange-ui20-1.step",
+      "sha256": "d35e76c1186650060cf68edbad85e64db75cacc8cdd6dbbb1efe18dbd17f67a5",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    }
+  ]
+}

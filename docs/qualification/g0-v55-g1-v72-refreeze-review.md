@@ -1,0 +1,3 @@
+# Bounded diagnostics and release-only test execution
+
+G0 v55 / G1 v72 preserve all prior evidence and unchanged own-Rust v41. Clean node tests bypass npm pretest after released kernels have been materialized, and verify tracked source cleanliness again after execution. The pretest previously rebuilt host-specific kernels after preflight. Browser supervisors retain at most 8 KiB from each failed child output, preserving existing overall output and timeout budgets. A two-fragment probe is explicitly discovery-only, completes zero semantic work units, cannot enter aggregation, and does not establish full qualification. All 4740 clean matrix units restart at zero.

@@ -1,0 +1,57 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Numeric rectangle",
+      "stepSha256": "f8ee7288b2240a152af0cc16f82c77a5f9d0ed6c1cb4c15fa9b8102a129f35ea",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -15.0000001,
+          -17.0000001,
+          -28.0000001
+        ],
+        [
+          -8.9999999,
+          -9.9999999,
+          -17.9999999
+        ]
+      ],
+      "volumeMm3": 420.0,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 12
+    },
+    {
+      "name": "Numeric slot",
+      "stepSha256": "a922fe61309be7d01741e923c41646489b6e27b585e2e23a8ae53690954c4cd4",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -12.000000100000001,
+          -17.0000001,
+          -10.000000100000001
+        ],
+        [
+          -7.9999999,
+          -9.9999999,
+          4.0000001
+        ]
+      ],
+      "volumeMm3": 367.9645942693985,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.111568958047428e-08,
+      "passed": true,
+      "previewTriangles": 292
+    }
+  ]
+}

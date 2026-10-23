@@ -1,0 +1,968 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "corner-0-r0.25-0",
+      "file": "corner-0-r0.25-0.step",
+      "sha256": "497257785bc40b4c5371d826d3d16ddf5c81b130aa037a6af4f5f2000b19a48b",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-0-r0.25-1",
+      "file": "corner-0-r0.25-1.step",
+      "sha256": "0d03725559c98f75c52515832f044b1c13a010c2f0749d4241d20a92e54b316a",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-0-r1-0",
+      "file": "corner-0-r1-0.step",
+      "sha256": "e94f74d9c5d3b4498c70ac6070f617aa782e4e9bad6e8f035e40698f0d0fe8b1",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-0-r1-1",
+      "file": "corner-0-r1-1.step",
+      "sha256": "318347c8818ca275dd593a761f94ac77cc281598c3c8f23eee220e818b0bc87f",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-0-r2.5-0",
+      "file": "corner-0-r2.5-0.step",
+      "sha256": "b3d7ba21ee1ffc5584fe3011574c966f6cee391bc67c307f388d997b982dd533",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-0-r2.5-1",
+      "file": "corner-0-r2.5-1.step",
+      "sha256": "f90dc62c9cf8a860d2af7680449050905b99da9810a1cd970b0f6d62671b12f0",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r0.25-0",
+      "file": "corner-1-r0.25-0.step",
+      "sha256": "be557349052df9a8f2be12543b9f65fde2f8eb8307ca1f81a1651f795a44f36d",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r0.25-1",
+      "file": "corner-1-r0.25-1.step",
+      "sha256": "d5e1d15f71944425befcfcd1b53b73b9adb1c9745aaeb730369062ba75fcd121",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r1-0",
+      "file": "corner-1-r1-0.step",
+      "sha256": "6be2e81af9d6094f20c24e8f273b9bb3f83454f42c0ec4ded0d6a610fd0e62ad",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r1-1",
+      "file": "corner-1-r1-1.step",
+      "sha256": "348d5fdfd579be2741462d96d1103011513aaf0855e2bb872c31eac59488f7cf",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r2.5-0",
+      "file": "corner-1-r2.5-0.step",
+      "sha256": "312f407b29c6157f1181edb4cbb1c4598e3e488bdb0e05036a8a3d0d382b9774",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-1-r2.5-1",
+      "file": "corner-1-r2.5-1.step",
+      "sha256": "6c6930a7cf393fd270343a5311fcf8712e0a54fee3e7a1da2852ece1fe3812d8",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r0.25-0",
+      "file": "corner-2-r0.25-0.step",
+      "sha256": "e13ef6aee73866382cf03476bc0ed85e9ce171b7324c050e098d8066849edb85",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r0.25-1",
+      "file": "corner-2-r0.25-1.step",
+      "sha256": "56b0b5439304ef59c7818c631ccb0cfb4be2ba6f85428bfeaa70da0779675c3a",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r1-0",
+      "file": "corner-2-r1-0.step",
+      "sha256": "894d10bf64559bef1562e19769617ef4a52d16152e170de66f15a5c4843ea6f5",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r1-1",
+      "file": "corner-2-r1-1.step",
+      "sha256": "b7b95847eb8507906d1b2628863d69478a22b31893893972abca888ed790ce3d",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r2.5-0",
+      "file": "corner-2-r2.5-0.step",
+      "sha256": "3abd1bc95c82525b5679d69e84d57ac590fdcaad2ea91e938f70f004b8d6a3d3",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-2-r2.5-1",
+      "file": "corner-2-r2.5-1.step",
+      "sha256": "366409be47daa71db7cd37936435ace6cac695e84857bc25b4ddc33e01ac7eb7",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r0.25-0",
+      "file": "corner-3-r0.25-0.step",
+      "sha256": "fbe2c852dcb8942bf7b5d03aef78f594e3c78dbeed98e34b8378b985ca9cf81c",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r0.25-1",
+      "file": "corner-3-r0.25-1.step",
+      "sha256": "3c81c62db35d2dd741da16bf61ad78f8be6354856875a04a6d8adc3855ebc620",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r1-0",
+      "file": "corner-3-r1-0.step",
+      "sha256": "760590345e278455eabd8d65dc41e517daa4a58eb7fe30f45a7e35b35236d44b",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r1-1",
+      "file": "corner-3-r1-1.step",
+      "sha256": "d2c5df03b796703424d1cd5bf5dc2169cf12022960e6dafdc07900b3324c07c9",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r2.5-0",
+      "file": "corner-3-r2.5-0.step",
+      "sha256": "c669b86485e818130499f92a1f835f65526ea25b12e5f9ce5108512889669280",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-3-r2.5-1",
+      "file": "corner-3-r2.5-1.step",
+      "sha256": "bd855c382b3da332283fab9928d2e3936fdc42db7b299542fb7c740a9167c6ec",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r0.25-0",
+      "file": "corner-4-r0.25-0.step",
+      "sha256": "19f39ba1413263f593918d438e207d17c5f7508879beed9f13500f12a3c05a81",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r0.25-1",
+      "file": "corner-4-r0.25-1.step",
+      "sha256": "63c88e9ac6c3d48e0f4b450f45f7cfd9b22fb6b752f78df31633ab6df71bf4bc",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r1-0",
+      "file": "corner-4-r1-0.step",
+      "sha256": "51c82dddda266a7aae8446a1cd5374b2e85597ecdb1c831621fece3959b85d4b",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r1-1",
+      "file": "corner-4-r1-1.step",
+      "sha256": "3c576ef9f865b495f3379a01e05e2ead56d86cda398aa052b48ed26bac019196",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r2.5-0",
+      "file": "corner-4-r2.5-0.step",
+      "sha256": "07352ab60b4dfdf81a4cf13fb5e3b6c59aa10d765104a08771b850c8bb54aafa",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-4-r2.5-1",
+      "file": "corner-4-r2.5-1.step",
+      "sha256": "f8ca0547528c4ccd639a3601a09181dc5bf3137c20bd19a1fbd649ae6896e351",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r0.25-0",
+      "file": "corner-5-r0.25-0.step",
+      "sha256": "ae4deb69239fcd5df217ab65b112dfbc4bd2fbcb1b48b5c6e3b5cdb2f3c352e4",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r0.25-1",
+      "file": "corner-5-r0.25-1.step",
+      "sha256": "2b2595f24068d75dc022cea0b69ccb272e8373226133765b0fc54b5c3c949df6",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r1-0",
+      "file": "corner-5-r1-0.step",
+      "sha256": "24c5129e3867afbf54c1743dc197cc61082ff1a0bba5d0e4c7f8002b9ef7690f",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r1-1",
+      "file": "corner-5-r1-1.step",
+      "sha256": "0b4ee01a51a7faf64374feacda79aea89ad7bac849fb6927c88824eb81a08473",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r2.5-0",
+      "file": "corner-5-r2.5-0.step",
+      "sha256": "3e88fb46c2b041d027c51f6e9f2dbebdea4c3e7c9ec413ca5a4d1f92013d9304",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-5-r2.5-1",
+      "file": "corner-5-r2.5-1.step",
+      "sha256": "a8322339f9152a4fc817777c567d35d0cd8f2b1891d0b30a4af0bbf420ddbe5e",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r0.25-0",
+      "file": "corner-6-r0.25-0.step",
+      "sha256": "b86a5ff4b6887dd9c8af3137fa4b8627a7d98399348f0f77235dbecd75a0b225",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r0.25-1",
+      "file": "corner-6-r0.25-1.step",
+      "sha256": "5b03af51a9f99b7cf7b42ffe0a0896bc3a5a5cb816468d8b5247ec0ad947c918",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r1-0",
+      "file": "corner-6-r1-0.step",
+      "sha256": "bdd862ed7834e574dbe34227976e9e6e0cf50adce7dd2c3122fba409187fed19",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r1-1",
+      "file": "corner-6-r1-1.step",
+      "sha256": "e8ea96dac2f43013e00bb31833c34fee59a4651b71d8c4b2c00b1e16deb60f06",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r2.5-0",
+      "file": "corner-6-r2.5-0.step",
+      "sha256": "aaac48aee948c7a9a1308f81264a77cf2bc2e58019607772ce68b7bbffae082e",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-6-r2.5-1",
+      "file": "corner-6-r2.5-1.step",
+      "sha256": "53e9416b34cb20de924ab0d8036d7e13760618560c97d54b6d7a7db3bc156f5e",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r0.25-0",
+      "file": "corner-7-r0.25-0.step",
+      "sha256": "53f342342b91d5c3f987ebe708b1c28818e37c6c4c697688e2df2bc4eb63414b",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r0.25-1",
+      "file": "corner-7-r0.25-1.step",
+      "sha256": "cd4e86bc1884a45dce64dd6845ff9ad3ebcd049ce330ce050bab96e245ad2416",
+      "expected": {
+        "volumeMm3": 479.68071293705566,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r1-0",
+      "file": "corner-7-r1-0.step",
+      "sha256": "08ee69e48f2a94c60bed364b7ec328c3de324b0b9a76b10bdc586b9c41d15f0c",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r1-1",
+      "file": "corner-7-r1-1.step",
+      "sha256": "58e22fc307c69df0f6c94c2b43d57d56a78bb4a162d016a75772981b66695250",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r2.5-0",
+      "file": "corner-7-r2.5-0.step",
+      "sha256": "638eb4370bd163e1600b33e080894d84ba1c99e869fcb32b8c8bd3ca4ccac74b",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "corner-7-r2.5-1",
+      "file": "corner-7-r2.5-1.step",
+      "sha256": "beb8c371d9475c80a7ea39aa8f08f2e604409cbf889ba61f7c3763ab5174c0e0",
+      "expected": {
+        "volumeMm3": 450.4254164690853,
+        "boundsMm": [
+          [
+            -7,
+            3,
+            -2
+          ],
+          [
+            3,
+            11,
+            4
+          ]
+        ]
+      }
+    }
+  ]
+}

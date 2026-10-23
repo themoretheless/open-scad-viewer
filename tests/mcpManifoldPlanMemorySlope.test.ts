@@ -28,6 +28,19 @@ const probePath = fileURLToPath(
   new URL('./fixtures/mcp-manifold-plan-memory-probe.ts', import.meta.url),
 )
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
+// 28 sequential worker jobs took about 51 s on a 4-core container, close to the old 60 s cap;
+// this bounds runaway probes, not memory, which the budgets below check.
+const probeTimeoutMs = 120_000
+
+// The probe starts one worker thread per job. Under glibc's default allocator each thread
+// gets its own malloc arena, and arenas freed on thread exit are not always returned to the
+// OS, so RSS can grow by tens of MiB with flat JS heap/external/ArrayBuffer usage. CI pins
+// these for the whole job (.github/workflows/ci.yml); pin them here so local runs measure the same.
+const probeAllocatorEnv = {
+  MALLOC_ARENA_MAX: '2',
+  MALLOC_TRIM_THRESHOLD_: '0',
+  MALLOC_MMAP_THRESHOLD_: '131072',
+}
 
 function slope(samples: readonly MemorySample[], field: keyof Omit<MemorySample, 'job'>): number {
   const count = samples.length
@@ -49,7 +62,7 @@ function runProbe(): Promise<{ stdout: string; stderr: string }> {
       '--expose-gc', '--import', 'tsx', probePath,
     ], {
       cwd: repositoryRoot,
-      env: process.env,
+      env: { ...process.env, ...probeAllocatorEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let stdout = ''
@@ -60,8 +73,8 @@ function runProbe(): Promise<{ stdout: string; stderr: string }> {
     child.stderr.on('data', chunk => { stderr += chunk })
     const timeout = setTimeout(() => {
       child.kill()
-      reject(new Error(`Memory probe exceeded 60 seconds\n${stderr}`))
-    }, 60_000)
+      reject(new Error(`Memory probe exceeded ${probeTimeoutMs / 1000} seconds\n${stderr}`))
+    }, probeTimeoutMs)
     child.once('error', error => {
       clearTimeout(timeout)
       reject(error)
@@ -107,5 +120,5 @@ describe('MCP Manifold qualification child memory slope', () => {
     expect(last.heapUsed - first.heapUsed).toBeLessThanOrEqual(4 * mebibyte)
     expect(last.external - first.external).toBeLessThanOrEqual(4 * mebibyte)
     expect(last.arrayBuffers - first.arrayBuffers).toBeLessThanOrEqual(2 * mebibyte)
-  }, 70_000)
+  }, probeTimeoutMs + 10_000)
 })

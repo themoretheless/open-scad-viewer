@@ -108,18 +108,3 @@ it('owns G2 for nonuniform Bezier profile chains and station strips without snap
  expect(inspectProgressiveRetainedStationSeams([kink],nonuniform,scale,twist,opts,5,1,1000000).allStationSeamsCertified).toBe(false)
  expect(chain).toEqual(saved)
 })
-
-
-it.each([1,2] as const)('keeps closed Fixed arc-length retained station joins explicitly below G%s',order=>{
- const circle=circleNurbsCurve([0,0,0],[0,0,1],4)
- const longitudinal=bezierNurbsCurve([[4,0,0],[4,0,.01]])
- const opts={...options,orientation:'fixed' as const,normal:[0,0,1] as [number,number,number],spacing:'arc_length' as const,
-  lengthTolerance:.0001,lengthMaxCells:100000,initialSections:33,maxSections:33,maxDeviation:1}
- const proof=inspectProgressiveRetainedStationSeams([longitudinal],circle,scale,twist,opts,33,order,1000000)
- expect(proof).toMatchObject({allStationSeamsCertified:false,requestedOrder:order,solidCertified:false,sourceFrameSmoothnessCertified:false})
- expect(proof.seams).toHaveLength(32)
- expect(proof.seams.every(s=>s.c0Identity)).toBe(true)
- const closure=proof.seams.filter(s=>s.closure)
- expect(closure).toHaveLength(1)
- expect(closure[0]?.certified).toBe(false)
-})

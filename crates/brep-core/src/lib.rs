@@ -12,14 +12,12 @@
 mod rational_identity;
 #[cfg(feature = "codec")]
 mod serialization;
-
 use nurbs_core::{
     Error, Result,
     curve::Curve,
     surface::{Surface, SurfaceSampler},
 };
 use std::collections::{BTreeMap, BTreeSet};
-
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
 
 pub mod analysis;
@@ -28,9 +26,12 @@ pub mod direct_edit;
 pub mod aag_fillets;
 pub mod aag_features;
 pub mod keypoints;
+#[doc(hidden)]
+pub mod face_senses;
 pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
+pub mod circular_blend;
 pub mod feature_family;
 pub mod analytic_ss;
 mod boolean_support;
@@ -82,6 +83,20 @@ pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
+pub mod profile_region;
+pub mod profile_intersections;
+pub mod shared_boundary;
+pub mod self_intersection;
+pub mod shell_distance;
+pub mod material_segment;
+pub mod material_chord;
+pub mod material_wall;
+pub mod material_wall_coverage;
+pub mod solid_distance;
+pub mod shell_relation;
+pub mod shell_nesting;
+pub mod shell_orientation;
+pub mod ray_parity;
 pub mod bezier_profile;
 pub mod profile_certificate;
 pub mod minkowski3d;
@@ -89,16 +104,11 @@ pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod profile_imprint;
-pub mod ray_parity;
-pub mod material_chord;
-pub mod self_intersection;
 pub mod boundary_contact_tube;
 pub mod trimmed_edge_contact;
 pub mod trimmed_vertex_contact;
-pub mod shared_boundary;
 pub mod sweep_cap_contacts;
 pub mod sweep_retained_caps;
-pub mod retained_annular_cap;
 pub mod sweep_retained_walls;
 pub mod sweep_retained_charts;
 pub mod sweep_retained_decomposition;
@@ -111,22 +121,19 @@ pub mod sweep_miter_layout;
 pub mod sweep_station_reconstruction;
 pub mod sweep_affine_boundary;
 pub mod sweep_miter_owned;
-pub mod shell_distance;
-pub mod shell_nesting;
-pub mod shell_orientation;
-pub mod shell_relation;
 pub mod sketch;
 pub mod solid_audit;
-pub mod solid_distance;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
+mod transform_plane_charts;
 pub mod affine_lattice;
 pub mod trim_sew;
 pub mod uv_arrangement;
+pub mod uv_coverage;
 mod uv_regions;
 pub mod volume_validity;
 pub use analytic::{
@@ -136,25 +143,22 @@ pub use analytic::{
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult, EXACT_ANALYTIC_SHELL_CAPABILITY,
-    EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_BENT_RMF_SWEEP_CAPABILITY,
-    EXACT_CONVEX_CHAMFER_CAPABILITY, EXACT_CONVEX_PRISM_FILLET_CAPABILITY,
-    EXACT_MULTI_SECTION_LOFT_CAPABILITY, EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY,
-    EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+    EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
+    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
+    EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
     EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_bent_rmf_sweep,
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
-    exact_analytic_shell, exact_annular_fillet, exact_convex_chamfer, exact_convex_prism_fillet,
-    exact_layered_prism_fillet, exact_simple_prism_fillet, exact_valence3_corner_blend,
-    exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep, import_iges,
+    exact_analytic_shell, exact_annular_fillet, exact_layered_prism_fillet, exact_convex_chamfer, exact_convex_prism_fillet, exact_simple_prism_fillet,
+    exact_valence3_corner_blend, exact_variable_radius_fillet, frame_law_ruled_sweep,
 };
 pub use close_topology::{
-    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, CLOSE_TOPOLOGY_IGES_CAPABILITY,
-    CLOSE_TOPOLOGY_STEP_CAPABILITY, ComplexHealCertificate, ComplexHealPlan,
-    ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind, EdgeRadialRing, EdgeUseRef,
-    ExactParameterPartition, FaceRef, LocalCorrespondence, MixedDimensionalBrep, SharedFace,
-    TOLERANT_COMPLEX_HEAL_CAPABILITY, TopologyComplexCertificate, VertexFan, VertexUseRef,
-    certify_complex_heal, complex_relation_id, export_complex_iges, export_complex_step,
-    import_complex_iges, import_complex_step,
+    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, ComplexHealCertificate,
+    ComplexHealPlan, ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind,
+    EdgeRadialRing, EdgeUseRef, ExactParameterPartition, FaceRef, LocalCorrespondence,
+    MixedDimensionalBrep, SharedFace, TOLERANT_COMPLEX_HEAL_CAPABILITY,
+    TopologyComplexCertificate, VertexFan, VertexUseRef, certify_complex_heal,
+    complex_relation_id,
 };
 pub use iges_interchange_v2::{
     IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
@@ -257,19 +261,8 @@ impl std::ops::DerefMut for Model {
         &mut self.0
     }
 }
-#[derive(Debug)]
-pub struct Report {
-    pub vertex_count: usize,
-    pub edge_count: usize,
-    pub loop_count: usize,
-    pub face_count: usize,
-    pub shell_count: usize,
-    pub body_count: usize,
-    pub boundary_edge_count: usize,
-    pub topology_valid: bool,
-    pub geometry_agreement: &'static str,
-    pub solid_geometry_status: &'static str,
-}
+mod model_report;
+pub use model_report::Report;
 
 fn invalid(message: impl Into<String>) -> Error {
     Error {
@@ -740,7 +733,19 @@ impl Model {
                         // loop by its face, which carries the surface.
                         loop_owners[wire].insert(faces[use_.face].clone());
                         for coedge in &self.loops[wire].coedges {
-                            edge_owners[coedge.edge].insert(key.clone());
+                            // A pole can own several collapsed UV boundaries in
+                            // one shell. They are distinct chart entities even
+                            // though their world curves and vertices coincide.
+                            let owner = if self.edges[coedge.edge].degenerate {
+                                Self::hash([
+                                    key.clone(),
+                                    faces[use_.face].clone(),
+                                    Self::directed_curve_key(&coedge.pcurve, false),
+                                ])
+                            } else {
+                                key.clone()
+                            };
+                            edge_owners[coedge.edge].insert(owner);
                             for &vertex in &self.edges[coedge.edge].vertices {
                                 vertex_owners[vertex].insert(key.clone());
                             }
@@ -1438,125 +1443,11 @@ fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
         periodic: false,
     }
 }
-/// Construct an exact six-face NURBS box with shared edges, not six loose patches.
-pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
-    require(
-        (0..3).all(|i| {
-            min[i].is_finite()
-                && max[i].is_finite()
-                && max[i] > min[i]
-                && min[i].abs() <= 1e6
-                && max[i].abs() <= 1e6
-        }),
-        "Invalid box bounds",
-    )?;
-    let vertices = [
-        [0, 0, 0],
-        [1, 0, 0],
-        [1, 1, 0],
-        [0, 1, 0],
-        [0, 0, 1],
-        [1, 0, 1],
-        [1, 1, 1],
-        [0, 1, 1],
-    ]
-    .map(|p| Vertex {
-        point: std::array::from_fn(|i| if p[i] == 0 { min[i] } else { max[i] }),
-    })
-    .to_vec();
-    let mut m = Model(
-        brep_topology::Model {
-            vertices,
-            edges: vec![],
-            loops: vec![],
-            faces: vec![],
-            shells: vec![],
-            bodies: vec![],
-            tolerance_mm: 1e-7,
-        },
-        TopologyIds::default(),
-    );
-    let mut edges = BTreeMap::new();
-    for corners in [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ] {
-        let mut coedges = vec![];
-        let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-        for i in 0..4 {
-            let a = corners[i];
-            let b = corners[(i + 1) % 4];
-            let key = (a.min(b), a.max(b));
-            let edge = *edges.entry(key).or_insert_with(|| {
-                let id = m.0.edges.len();
-                m.0.edges.push(Edge {
-                    degenerate: false,
-                    vertices: [key.0, key.1],
-                    curve: line(
-                        m.0.vertices[key.0].point.to_vec(),
-                        m.0.vertices[key.1].point.to_vec(),
-                    ),
-                });
-                id
-            });
-            coedges.push(Coedge {
-                edge,
-                reversed: a > b,
-                pcurve: line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
-            });
-        }
-        let outer = m.0.loops.len();
-        m.0.loops.push(Loop { coedges });
-        m.0.faces.push(Face {
-            surface: Surface {
-                degree_u: 1,
-                degree_v: 1,
-                knots_u: vec![0., 0., 1., 1.],
-                knots_v: vec![0., 0., 1., 1.],
-                control_points: vec![
-                    vec![
-                        m.0.vertices[corners[0]].point.to_vec(),
-                        m.0.vertices[corners[3]].point.to_vec(),
-                    ],
-                    vec![
-                        m.0.vertices[corners[1]].point.to_vec(),
-                        m.0.vertices[corners[2]].point.to_vec(),
-                    ],
-                ],
-                weights: vec![vec![1., 1.], vec![1., 1.]],
-                periodic_u: false,
-                periodic_v: false,
-            },
-            outer,
-            holes: vec![],
-        });
-    }
-    m.0.shells.push(Shell {
-        faces: (0..6)
-            .map(|face| FaceUse {
-                face,
-                reversed: false,
-            })
-            .collect(),
-        closed: true,
-    });
-    m.0.bodies.push(Body {
-        outer_shell: 0,
-        inner_shells: vec![],
-    });
-    m.rebuild_topology_ids();
-    m.validate()?;
-    Ok(m)
-}
+
 #[cfg(test)]
 mod tests;
 
 pub mod rack;
-
 pub mod planar_cap;
 pub mod thread;
 
@@ -1566,4 +1457,147 @@ mod face_contact_groups;
 #[cfg(test)]
 mod spatial_rmf_qualification;
 
+pub mod sweep_retained;
+
+pub mod miter_seams;
+
+pub mod offset_end_boundary;
+
+pub mod trimmed_face_recipe;
+
+pub mod source_contact_point;
+
+pub mod source_boundary_fragment;
+
+pub mod source_contour_proposal;
+
+pub mod source_region_restore;
+
+pub mod source_contour_winding;
+
+pub mod source_world_wire;
+
+mod source_line_chart_root;
+
+pub mod source_shared_edge;
+
+pub mod source_shared_edge_restore;
+
+pub mod source_edge_restriction;
+
+pub mod source_boundary_network;
+
+pub mod source_boundary_display;
+
+pub mod source_region_display;
+
+pub mod source_collapsed_boundary;
+
+pub mod source_shell_incidence;
+
+pub mod source_shell_restore;
+
+pub mod source_body_restore;
+
+pub mod source_face_contacts;
+
+pub mod source_allowed_contact;
+
+pub mod source_plane_fiber;
+
+pub mod source_pole_plane_image;
+
+pub mod source_pole_paired_contact;
+
+pub mod source_paired_fiber_contact;
+
+pub mod source_fiber_boundary;
+
+pub mod source_fiber_contact;
+
+pub mod source_affine_use;
+
+pub mod source_mapped_edge;
+
+pub mod trimmed_shell_recipe;
+
+pub mod offset_edge_supports;
+
+pub mod source_root_parameter;
+
+pub mod source_halfplane_side;
+
+pub mod source_interior_fiber;
+
+pub mod source_interior_boundary;
+
+pub mod source_interior_contact;
+
+pub mod source_vertex_links;
+
+pub mod source_vertex_contact;
+
+pub mod source_hull_separation;
+
+pub mod source_shell_geometry;
+
+pub mod source_volume;
+
+pub mod source_body_model;
+
+pub mod source_body_topology;
+
+pub mod source_seam_tangency;
+
+pub mod linear_canal;
+
+pub mod linear_canal_body;
+
+pub mod source_inverse_shear;
+
+pub mod source_root_refinement;
+
+pub mod source_exchange_endpoints;
+
+pub mod source_exchange_trims;
+
+pub mod source_exchange_step;
+
+pub mod source_support_shell;
+
+pub mod source_pole_planar_contact;
+
+pub mod source_ruled_projection_contact;
+
+pub mod source_planar_material_hull;
+
+pub mod source_corner_plane_image;
+
+pub mod source_face_gap;
+
+pub mod source_material_segment;
+
+pub mod source_material_chord;
+
+pub mod source_material_wall;
+pub mod source_wall_search;
+
+pub mod source_wall_scan;
+
+pub mod source_wall_coverage;
+
+pub mod source_wall_self_coverage;
+
+pub(crate) mod source_planar_flux;
+
+pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
+
+pub mod wall_search;
+
+pub mod retained_annular_cap;
+
 pub mod topology_reference;
+
+#[path = "cuboid_primitive.rs"]
+mod cuboid_primitive;
+pub use cuboid_primitive::cuboid;

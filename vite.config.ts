@@ -16,6 +16,7 @@ function runtimeChunkFileName(chunk: {name: string}) {
 // their dependencies, so lazy groups never drag the geometry kernel into the
 // entry preload list.
 export default defineConfig({
+  define: { __G1_SHARED_GEOMETRY_MODULE__: 'false' },
   plugins: [compactWgslPlugin(),vue(),compactRuntimeChunks()],
   worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { chunkFileNames: runtimeChunkFileName, manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
@@ -42,6 +43,9 @@ export default defineConfig({
         chunkFileNames: runtimeChunkFileName,
         codeSplitting: {
           groups: [
+            // Shared shell translations and helpers have their own cacheable module.
+            // Keep their dependencies in their existing groups.
+            { name: 'app-shell', test: /src[\\/](appHelpers\.ts|i18n[\\/]appStrings\.ts)$/, includeDependenciesRecursively: false },
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },
             { name: 'language-kernel-bytes', test: /src[\\/]generated[\\/]language-kernel[\\/]bytes/ },
             { name: 'harfbuzz-bytes', test: /src[\\/]generated[\\/]harfbuzz[\\/]bytes/ },
@@ -58,6 +62,7 @@ export default defineConfig({
             // WASM host plumbing is shared by every kernel. Grouped with the
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
+            { name: 'direct-commands', test: /src[\\/]features[\\/]directModeler[\\/]use(CommandPalette|Primitives)\.ts$/, includeDependenciesRecursively: false },
             { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
             { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
@@ -65,6 +70,7 @@ export default defineConfig({
             { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
+            { name: 'editor-controls', test: /src[\\/](composables[\\/]useEditor(Formatting|Resize)|services[\\/](codeFormat|editorBlocks))\.ts$/ },
             // Keep the Vue facade and its script/template submodules together.
             // Splitting only the facade creates a cyclic, uninitialized export.
             { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.vue(?:\?|$)/, includeDependenciesRecursively: false },
@@ -78,13 +84,12 @@ export default defineConfig({
             { name: 'solid-gpu-view', test: /src[\\/]services[\\/]solidGpuView/ },
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
-            // Keep the generated shader library separate from renderer control code.
-            { name: 'renderer-shaders', test: /src[\\/]services[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
+            // Live CSG preview lowering is loaded on first edit; keep it with its compiler, not in the renderer.
+            { name: 'csg-preview-parse', test: /src[\\/]services[\\/](gpuCsgParse|openscadCompiler)\.ts$/ },
             // Keep independent GPU preview and compute passes out of renderer control code.
-            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit|gpuPicker|gpuZeroCopyPipeline|gpuSlicer|gpuBvhRaycast|gpuSubdivision|gpuGcodePreview|gpuImageTrace|gpuTrussSolver|gpuSemanticEdges|gpuNurbsTessellate|gpuMarchingCubes)\.ts$/, includeDependenciesRecursively: false },
+            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpu[A-Z][A-Za-z]*|webgpuRenderer[\\/]gpuPasses)\.ts$|crates[\\/]compute-core[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
             { name: 'renderer-resources', test: /src[\\/]services[\\/](pipelineFactory|textureResources|uniformFill)\.ts$/, includeDependenciesRecursively: false },
-            { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/, includeDependenciesRecursively: false },
-
+            { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],
         },

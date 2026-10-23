@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original-spec axial trapezoidal ZA worm working surface, not finite worm body",
+  "focused_tests_passed": 15,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/worm.rs": "5c39e9f783b6dd0d40868b763d8fba1b56fef0b1a208d1e828f7f8fb3a397e3b",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "667b21586009043da679782dc320b27cccd61918d17779274a116f684d61e4aa",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "292b4ff8f4de0ee2190b05e6a9adb63a04ea4c5a02453210439ee22f7465865d",
+    "crates/nurbs-core/tests/worm.rs": "56aeb880e8444493359edcb5166a9f22850c14a88a315ccc1905d944cb6790ac",
+    "crates/nurbs-core/src/construct/curves.rs": "9b43835c24b6c48afae630f1ec62eb0228d2948fe7360210053a8980132ead4b",
+    "crates/nurbs-core/src/lib.rs": "aea9a9c0a3554cb2b47ce2398ab0f4b721c232c4f6ae816be69d2f65bbfdab80",
+    "crates/nurbs-core/src/domains.rs": "c7efc266316058784e70737c6a1ec49e412affba3125c407a6aeedbb16fb04c5"
+  },
+  "catalog_implemented": 196,
+  "catalog_planned": 4,
+  "cases": [
+    "Independent axial-module/rack/pitch/lead/lead-angle equations",
+    "Both hands, two starts and two turns against independent helicoid source",
+    "Changed actual controls, pressure angle and complete inventory refusals",
+    "8-start/16-turn full 2560-patch census and exact budget limit",
+    "Existing thread, helical sweep, planar gear and bevel parameter regressions"
+  ],
+  "unqualified": [
+    "Finite-end trim coverage",
+    "Shell sewing, cap profiles and owned finite worm body",
+    "Cutter envelope and conjugate worm-wheel contact"
+  ]
+}

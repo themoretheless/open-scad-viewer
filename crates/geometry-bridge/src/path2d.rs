@@ -10,6 +10,13 @@ mod paths;
 
 pub fn dispatch(v: Value) -> Result<Value> {
     let action = v["action"].as_str().unwrap_or("");
+    if action=="normalize_rings" {
+        let rings=crate::field::<planar_geometry::rings::Rings>(&v,"rings")?;
+        if rings.len()>1024 || rings.iter().map(Vec::len).sum::<usize>()>20000 {
+            return Err(input("Contour normalization exceeds its ring or point budget"));
+        }
+        return crate::encode(planar_geometry::rings::normalize(&rings,codec::fill_rule(&v)?)?);
+    }
     for handler in [
         paths::dispatch,
         effects::dispatch,
@@ -231,6 +238,15 @@ mod tests {
     }
 }
 
-pub(crate) fn authored_path(value: &Value) -> Result<planar_geometry::path::BezierPath> {
-    codec::decode_path(value)
+pub(crate) fn authored_path(value:&Value)->Result<planar_geometry::path::BezierPath> {codec::decode_path(value)}
+
+#[cfg(test)]
+#[test]
+fn normalized_evenodd_overlaps_preserve_symmetric_difference() {
+    let result=dispatch(value_codec::json!({"action":"normalize_rings","fillRule":"evenodd",
+        "rings":[[[0.,0.],[2.,0.],[2.,2.],[0.,2.]],[[1.,0.],[3.,0.],[3.,2.],[1.,2.]]]})).unwrap();
+    let rings:planar_geometry::rings::Rings=value_codec::from_value(result).unwrap();
+    let area:f64=rings.iter().map(|ring|planar_geometry::rings::area(ring)).sum();
+    assert!((area-4.).abs()<1e-10);
+    assert!(dispatch(value_codec::json!({"action":"normalize_rings","rings":[],"fillRule":"invalid"})).is_err());
 }

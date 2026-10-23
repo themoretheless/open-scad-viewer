@@ -1,0 +1,29 @@
+
+> open-scad-viewer@0.1.0 test:wasm-optimize
+> node --test tests/wasmOptimize.test.mjs tests/wasmOptCache.test.mjs
+
+wasm-opt cache hit: 31723628f5642d2192de1d55ed8cc43f91261e3f42b5d0639d6355d47544447b
+wasm-opt cache write skipped: EEXIST: file already exists, mkdir '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/wasm-cache-test-rTMgt0/file'
+wasm-opt cache hit: 31723628f5642d2192de1d55ed8cc43f91261e3f42b5d0639d6355d47544447b
+✔ reuses validated bytes and invalidates input, tool and flags independently (4.057958ms)
+✔ damaged or mismatched entries are replaced without trusting their bytes (2.359084ms)
+✔ does not cache optimizer failure or invalid output (0.621791ms)
+✔ unwritable cache location does not discard a valid optimization (0.711333ms)
+✔ oversized cache entry is a miss and is repaired (1.21125ms)
+wasm-opt cache hit: 31723628f5642d2192de1d55ed8cc43f91261e3f42b5d0639d6355d47544447b
+✔ concurrent misses publish one complete entry without scratch leftovers (12.330125ms)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt: 42 -> 39 bytes (7.1% smaller)
+wasm-opt cache hit: 7b560707a64e61a2991dce97f4c2ef91a3699e1c59a2ce0c59fe3afdae9b060d
+[parse exception: expected list (at 1:0)]
+Fatal: error parsing wasm (try --debug for more info)
+✔ repeated optimization preserves Cargo input and produces identical runnable bytes (329.682584ms)
+✔ optimizer failure is catchable and does not alter the input (125.621417ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 609.795542

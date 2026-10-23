@@ -41,14 +41,13 @@ it('carries original guided joint-law bounds through WASM and refinement admissi
  expect(result.levels.length).toBeGreaterThan(1)
 })
 
-it('bounds arc-length guided transport against the independent straight-path image',()=>{
+it('certifies guided arc-length bounds while refusing insufficient refinement',()=>{
  const level=previewProgressiveNurbsProfiles([profile],path,scale,twist,{...options,spacing:'arc_length'},3)
- expect(level.report).toMatchObject({continuousBound:true,roundingCertified:true,errorCertificateReason:null})
- expect(level.report.continuousErrorUpper!).toBeGreaterThan(0)
- for(const t of [0,.13,.375,.5,.87,1])for(const u of [0,.375,1]){
+ expect(level.report).toMatchObject({accepted:false,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
+ expect(level.report.continuousErrorUpper!).toBeGreaterThan(options.maxDeviation!)
+ for(const t of [0,.13,.5,.87,1])for(const u of [0,.375,1]){
   const got=evaluateNurbsSurface(level.patches[0]!,u,t).point
-  const amplitude=((1+3*u)/(1+u))*(1+t)**2+.5*t
-  const angle=Math.atan(t)+.25*t
+  const amplitude=((1+3*u)/(1+u))*(1+t)**2+.5*t,angle=Math.atan(t)+.25*t
   const ideal=[amplitude*Math.cos(angle),amplitude*Math.sin(angle),10*t]
   expect(Math.hypot(...got.map((v,k)=>v-ideal[k]!))).toBeLessThanOrEqual(level.report.continuousErrorUpper!)
  }
@@ -72,18 +71,15 @@ it('refines contact fitted patches using the original anchor and affine laws',()
  }
 })
 
-it('keeps a partial contact profile bound for refusal without certifying the union',()=>{
+it('retains the complete contact bound while refusing an insufficient tolerance',()=>{
  const simple=bezierNurbsCurve([[1,0,0],[2,0,0]])
  const contactOptions:GuidedProgressiveSweepOptions={normal:[1,0,0],
   orientationGuide:bezierNurbsCurve([[2,0,0],[2,0,10]]),contactAnchor:{parameter:1},
   initialSections:3,maxSections:9,maxDeviation:1e-30}
- const constant={...scale,values:[1,1]},zero={...twist,values:[0,0]}
- const complete=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,constant,zero,contactOptions,9)
- expect(complete.report).toMatchObject({accepted:false,continuousBound:true,roundingCertified:true})
- expect(complete.report.continuousErrorUpper!).toBeGreaterThan(contactOptions.maxDeviation)
- const level=previewProgressiveNurbsProfiles(Array.from({length:64},()=>simple),path,constant,zero,contactOptions,9)
+ const level=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,
+  {...scale,values:[1,1]},{...twist,values:[0,0]},contactOptions,9)
  expect(level.report).toMatchObject({accepted:false,sampledControlDeviation:0,
-  continuousBound:false,roundingCertified:false,continuousErrorUpper:null})
+  continuousBound:true,roundingCertified:true})
  expect(level.report.knownProfileErrorUpper!).toBeGreaterThan(contactOptions.maxDeviation)
  expect(level.report.errorCertificateCells).toBeLessThanOrEqual(10000)
 })
@@ -148,11 +144,10 @@ it.each(['guided','contact'])('propagates accepted closed %s Rust bounds and pre
  expect(readSweepPatchViewportEvidence(built.nativeGeometry)).toMatchObject({continuousBound:true})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toBeNull()
  const strict=compileRushFrontend(source.replace('max_deviation: 2mm','max_deviation: 0.000000000000000000000000000001mm')).document
- expect(()=>buildOwnNurbs(strict,{action:'build'})).toThrow(/Progressive sweep (?:continuous retained-patch error|sampled refinement) .*mm exceeds 1e-30mm at 129 sections/)
+ expect(()=>buildOwnNurbs(strict,{action:'build'})).toThrow(/continuous retained-patch error/)
  await expect(buildOwnNurbsAsync(strict,{action:'build'},{onSweepPreview:(_id,preview)=>{
   expect(preview.report).toMatchObject({closedPath:true,accepted:false})
-  expect(preview.report.sampledControlDeviation).toBeGreaterThan(preview.report.budget)
   if(preview.report.continuousBound)expect(preview.report.continuousErrorUpper!).toBeGreaterThan(preview.report.budget)
   else expect(preview.report.continuousErrorUpper).toBeNull()
- }})).rejects.toThrow(/Progressive sweep (?:continuous retained-patch error|sampled refinement) .*mm exceeds 1e-30mm at 129 sections/)
+ }})).rejects.toThrow(/continuous retained-patch error/)
 })

@@ -1,5 +1,14 @@
 import {createG2RunoutSurface} from './geometricG2'
 import {executeDirectTransaction} from './directTransactions'
+import {restoreSourceBody} from './sourceBody'
+import {qualifyNurbsOffsetContacts} from './nurbsOffsetContactQualification'
+import {fitNurbsOffsetEnvelope} from './nurbsOffsetEnvelopeFit'
+import {certifyNurbsOffsetEnvelope,certifyNurbsOffsetContactTangent,certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand} from './nurbsSurfaceOffset'
+import {inspectWholeWall} from './solidWholeWall'
+import {inspectMaterialWall} from './solidMaterialWall'
+import {inspectMaterialSegment,inspectMaterialChord} from './solidMaterialVolume'
+import {solidPartialAnnularPreview} from './solidPartialAnnularPreview'
+import {inspectProfileIntersections} from './geometry/profileIntersections'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
 import {inspectFaceContacts} from './solidFaceContacts'
@@ -18,7 +27,7 @@ import {measureSolidVertices,measureSolidEdgeCurvature,measureFaceDistance,measu
 import {addSolidPrimitive} from './solidPrimitive'
 import {prepareSolidDisplay} from './solidDisplayPreparation'
 import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
-import {parseDirectDocument} from './directModeling'
+import {parseDirectDocument,serializeDirectDocument} from './directModeling'
 import {applySolidBrepTool} from './solidBrepTool'
 import {applySolidPointEdit} from './solidPointEdit'
 import {applySolidSketchEdit} from './solidSketchEdit'
@@ -46,10 +55,19 @@ import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGrap
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from './workerHandlerRuntime'
-import type {MainSolidJob, MainSolidRequest, MainSolidResponse, MainSolidResults} from './mainSolidProtocol'
+import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
+case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
+case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
+case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
+case 'animationSample':return (await import('./assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
+case 'drawingPdf':return (await import('./drawingSheets')).vectorDrawingPdf(job.sheets)
+case 'drawingSheets':return (await import('./drawingSheets')).createDrawingSheets(job.bodies,job.options)
+case 'transaction':return executeDirectTransaction(job.document,job.script)
+
+    case 'sourceBodyRestore':return restoreSourceBody(job.options)
     case 'sketchSnaps':return sketchSnapGeometry([job.sketch])
     case 'bodySnaps':return bodySnapGeometry(job.body)
     case 'faceSketch':return prepareSolidFaceSketch(job.body,job.face)
@@ -58,14 +76,24 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'curveDisplay':return sampleSolidNurbsCurve(job.curve)
     case 'profileDisplay':return retainedProfileDisplay(job.profile)
     case 'surfaceMesh':return tessellateSolidNurbsSurface(job.item)
-    case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
     case 'surfaceBoundary':return measureSurfaceBoundaries(job.a,job.b,job.options)
-    case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans)
+    case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans,job.boundaryAudit)
     case 'faceContacts':return inspectFaceContacts(job.model,job.toleranceUv,job.limits)
     case 'boundaryAgreement':return inspectBoundaryAgreement(job.model,job.maxCells)
+    case 'wholeWall':return inspectWholeWall(job.options)
+    case 'materialWall':return inspectMaterialWall(job.options)
+    case 'materialSegment':return inspectMaterialSegment(job.options)
+    case 'materialChord':return inspectMaterialChord(job.options)
     case 'solidDistance':return measureSolidDistance(job.options)
     case 'shellDistance':return measureShellDistance(job.options)
     case 'faceDistance':return measureFaceDistance(job.options)
+    case 'offsetContactQualification':return qualifyNurbsOffsetContacts(job.options)
+    case 'offsetEnvelopeFit':return fitNurbsOffsetEnvelope(job.options)
+    case 'offsetEnvelope':return certifyNurbsOffsetEnvelope(job.options)
+    case 'offsetContactTangent':return certifyNurbsOffsetContactTangent(job.options)
+    case 'offsetSourceBoundary':return certifyNurbsOffsetSourceBoundary(job.options)
+    case 'trimmedOffsetContactBand':return certifyTrimmedNurbsOffsetContactBand(job.options)
+    case 'offsetContactBand':return certifyNurbsOffsetContactBand(job.options)
     case 'surfaceDistance':return measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells)
     case 'curveDistance':return measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells)
     case 'measureVertices':return measureSolidVertices(job.a,job.indexA,job.b,job.indexB)
@@ -81,21 +109,17 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
-    case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
     case 'boolean':return applySolidBoolean(job.document,job.options)
-    case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
-    case 'animationSample':return (await import('./assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
-    case 'drawingPdf':return (await import('./drawingSheets')).vectorDrawingPdf(job.sheets)
-    case 'drawingSheets':return (await import('./drawingSheets')).createDrawingSheets(job.bodies,job.options)
-    case 'transaction':return executeDirectTransaction(job.document,job.script)
-    case 'sceneEdit':return applySolidSceneEdit(job.document,job.options)
+    case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document,instanceCache):job.document,job.options,instanceCache)),instanceCache)
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
     case 'seamPrepare':return prepareSolidSurfaceSeams(...job.args)
     case 'surfaceBuild':return buildSolidSurface(job.document,job.options)
     case 'nurbsRefit':return refitSolidNurbs(job.document,job.options)
+    case 'profileIntersections':return inspectProfileIntersections(job.loops,job.options)
     case 'profilePrepare':return prepareSolidProfile(job.document,job.ids,job.tolerance)
     case 'profileEdit':return applySolidProfileEdit(job.document,job.options)
+    case 'partialAnnularPreview':return solidPartialAnnularPreview(job.body,job.edge,job.radius)
     case 'bodyEdit':return applySolidBodyEdit(job.document,job.options)
     case 'revolve':return applySolidRevolve(job.document,job.options)
     case 'extrusion':return applyDirectExtrusionProfile(job.document,job.options)
@@ -118,28 +142,33 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
   }
 }
 
-const VALID_MAIN_SOLID_JOB_KINDS = new Set<string>([
-  'g2RunoutSurface','solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','rushGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','minkowski3d','animationSample','animationFrames','drawingPdf','drawingSheets','transaction','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid',
-])
-
 export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {
-  let kernelWarm = false
+  let kernelWarm=false
+  const timing=new Map<number,{warmupMs:number;executeMs:number;prepareMs:number}>()
   return createWorkerHandler<MainSolidRequest,MainSolidResponse,MainSolidResults[keyof MainSolidResults]>(post,{
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
       if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-        || !request.job || !VALID_MAIN_SOLID_JOB_KINDS.has(request.job.kind))return null
+        || !request.job || !Object.prototype.hasOwnProperty.call(MAIN_SOLID_JOB_KINDS,request.job.kind))return null
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},
-    beforeExecute:()=>kernelWarm ? undefined : warmGeometryKernel().then(()=>{kernelWarm=true}),
-    execute:(request)=>execute(request.job),
+    beforeExecute:async request=>{
+      if(request.traceTiming!==true){if(!kernelWarm){await warmGeometryKernel();kernelWarm=true;}return}
+      const entry={warmupMs:0,executeMs:0,prepareMs:0};timing.set(request.id,entry);const start=performance.now();try{await warmGeometryKernel()}finally{entry.warmupMs=performance.now()-start}
+    },
+    execute:async request=>{
+      const entry=timing.get(request.id);if(!entry)return execute(request.job)
+      const start=performance.now();try{return await execute(request.job)}finally{entry.executeMs=performance.now()-start}
+    },
     success:(request,result)=>{
       // Transfer only the freshly created response buffers; never the request's scene-owned ones.
+      const entry=timing.get(request.id),start=entry?performance.now():0
       const prepared=prepareMainSolidTransfer({version:1,id:request.id,kind:request.job.kind,ok:true,result})
+      if(entry){entry.prepareMs=performance.now()-start;prepared.response.timing=entry;timing.delete(request.id)}
       return {message:prepared.response,transfer:prepared.transfer}
     },
-    failure:(request,error)=>({version:1,id:request.id,kind:request.job.kind,ok:false,error}),
+    failure:(request,error)=>{const entry=error.code==='CAD_BUSY'?undefined:timing.get(request.id);if(entry)timing.delete(request.id);return {version:1,id:request.id,kind:request.job.kind,ok:false,error,...(entry?{timing:entry}:{})}},
   })
 }
 

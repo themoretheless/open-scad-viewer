@@ -66,45 +66,7 @@ fn antipodal_closed_spatial_rmf_hollow_complete_boundary_and_material() {
     qualify_closed_spatial_rmf_source(1,false,false,false,false,true);
 }
 
-#[test]
-fn closed_spatial_rmf_explicit_profile_circle_repair_preserves_original_bound_and_global_admission() {
-    qualify_closed_spatial_rmf_source_with_correction(1,true,false,false,false,false,true);
-}
-
-#[test]
-fn closed_spatial_rmf_explicit_profile_circle_repair_remaining_mode_matrix() {
-    // The varying arc-length hollow case has a separate regression above.
-    for (holes,varying,periodic,parameter,rational,antipodal) in [
-        (0,false,false,false,false,false),
-        (1,false,false,false,false,false),
-        (0,false,true,false,false,false),
-        (1,true,true,false,false,false),
-        (1,true,false,true,false,false),
-        (1,true,true,true,false,false),
-        (3,true,true,false,false,false),
-        (3,true,true,true,false,false),
-        (1,false,false,false,true,false),
-        (1,false,false,false,false,true),
-    ] {
-        eprintln!("circle repair mode holes={holes} varying={varying} periodic={periodic} parameter={parameter} rational={rational} antipodal={antipodal}");
-        qualify_closed_spatial_rmf_source_with_correction(holes,varying,periodic,parameter,rational,antipodal,true);
-    }
-}
-
 fn qualify_closed_spatial_rmf_source(holes:usize,varying:bool,periodic:bool,parameter:bool,rational:bool,antipodal:bool) {
-    qualify_closed_spatial_rmf_source_with_correction(holes,varying,periodic,parameter,rational,antipodal,false);
-}
-
-fn qualify_closed_spatial_rmf_source_with_correction(holes:usize,varying:bool,periodic:bool,parameter:bool,rational:bool,antipodal:bool,repair:bool) {
-    qualify_closed_spatial_rmf_source_with_stations(holes,varying,periodic,parameter,rational,antipodal,repair,false);
-}
-
-#[test]
-fn closed_spatial_rmf_owned_station_reconstruction_has_actual_g2_and_global_admission(){
-    qualify_closed_spatial_rmf_source_with_stations(1,true,false,false,false,false,true,true);
-}
-
-fn qualify_closed_spatial_rmf_source_with_stations(holes:usize,varying:bool,periodic:bool,parameter:bool,rational:bool,antipodal:bool,repair:bool,reconstruct:bool) {
     let hollow=holes>0;
     use nurbs_core::{
         curve::Curve,
@@ -244,7 +206,7 @@ fn qualify_closed_spatial_rmf_source_with_stations(holes:usize,varying:bool,peri
         max_sections: stations,
         max_deviation: if antipodal {1.} else if rational {0.4}else{0.25},
     };
-    let body = crate::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
+    let body = crate::analytic::progressive_profile_body_with_rmf_policy(
         &loops,
         &path,
         &scale,
@@ -254,7 +216,6 @@ fn qualify_closed_spatial_rmf_source_with_stations(holes:usize,varying:bool,peri
         None,
         options,
         None,
-        repair.then_some(crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000}),
         Some((4096, 100000, 1000000)),
     )
     .unwrap_or_else(|error| {
@@ -288,7 +249,7 @@ fn qualify_closed_spatial_rmf_source_with_stations(holes:usize,varying:bool,peri
         .unwrap()
         .sections_at(stations)
         .unwrap();
-    let mut sections = (0..stations)
+    let sections = (0..stations)
         .map(|station| {
             transported
                 .iter()
@@ -296,73 +257,6 @@ fn qualify_closed_spatial_rmf_source_with_stations(holes:usize,varying:bool,peri
                 .collect()
         })
         .collect::<Vec<Vec<Vec<Curve>>>>();
-    if repair {
-        let displacement=body.profile_correction_error_upper.expect("Explicit repair needs a native error bound");
-        assert!(displacement>0. && displacement<=1e-9);
-        assert!(body.boundary_error_upper.unwrap()>=level.report.continuous_error_upper.unwrap()+displacement);
-        let flat=sections.iter().map(|station|station.iter().flatten().cloned().collect()).collect::<Vec<_>>();
-        let repaired=nurbs_core::circle_sweep_repair::repair(&flat,2_f64.powi(-40),1e-9,Some(1000000.)).unwrap().sections.unwrap();
-        sections=repaired.into_iter().map(|station|station.into_iter().map(|curve|vec![curve]).collect()).collect();
-        let smooth=crate::sweep_smoothness::inspect_profile(&body.model,&[],2000000).unwrap();
-        assert!(smooth.profile.g1_certified && smooth.profile.g2_certified,"Retained corrected profile seams must actually prove G2");
-        assert_eq!(smooth.station_continuity,"C0");
-    }else{assert!(body.profile_correction_error_upper.is_none());}
-    if reconstruct {
-        let rebuilt=body.reconstruct_stations(2_f64.powi(-40),0.01,1000000).unwrap();
-        assert_eq!(rebuilt.reason,"owned-progressive-station-complete-boundary");
-        let bound=rebuilt.boundary.unwrap();
-        assert!(bound.continuous_bound && bound.within_budget==Some(true));
-        assert!(bound.error_upper.unwrap()>=body.boundary_error_upper.unwrap());
-        let candidate=rebuilt.reconstruction.unwrap().model.unwrap();
-        #[cfg(feature="codec")]
-        if let Ok(path)=std::env::var("SWEEP_STATION_CANDIDATE_JSON") {
-            std::fs::write(path,value_codec::to_string(&candidate).unwrap()).unwrap();
-        }
-        let smooth=crate::sweep_smoothness::inspect_profile(&candidate,&[],2000000).unwrap();
-        eprintln!("Reconstructed exact-work profile={} station={} stationG2={} of {} profilePerSeam={:?} stationPerSeam={:?}",
-            smooth.profile.exact_work,smooth.station.exact_work,
-            smooth.station.g2.seams.iter().filter(|r|r.certified).count(),smooth.station.g2.seams.len(),
-            smooth.profile.g2.seams.first().map(|r|r.work),smooth.station.g2.seams.first().map(|r|r.work));
-        assert!(smooth.profile.g2_certified && smooth.station.g2_certified,
-            "Actual spatial station/profile G2 unproved: profile={} station={} work={} extraction={}/{} profileReasons={:?} stationReasons={:?}",
-            smooth.profile.g2_certified,smooth.station.g2_certified,smooth.total_exact_work,
-            smooth.profile.extraction_complete,smooth.station.extraction_complete,
-            smooth.profile.g2.seams.iter().filter(|r|!r.certified).take(3).map(|r|(r.reason,r.work)).collect::<Vec<_>>(),
-            smooth.station.g2.seams.iter().filter(|r|!r.certified).take(3).map(|r|(r.reason,r.work)).collect::<Vec<_>>());
-        let mut vertex_faces=std::collections::BTreeMap::<usize,std::collections::BTreeSet<usize>>::new();
-        for (face,record) in candidate.faces.iter().enumerate() {
-            for wire in std::iter::once(record.outer).chain(record.holes.iter().copied()) {
-                for coedge in &candidate.loops[wire].coedges {
-                    for vertex in candidate.edges[coedge.edge].vertices {
-                        vertex_faces.entry(vertex).or_default().insert(face);
-                    }
-                }
-            }
-        }
-        let mut joined=std::collections::BTreeSet::new();
-        for faces in vertex_faces.values() {for &a in faces {for &b in faces.range(a+1..) {joined.insert([a,b]);}}}
-        let mut unresolved=Vec::new();
-        for pair in &joined {
-            if crate::boundary_hull_contact::certify(&candidate,*pair).is_none()
-                && crate::shared_boundary::certify_opposite(&candidate,*pair).unwrap().is_none() {
-                unresolved.push(*pair);
-            }
-        }
-        eprintln!("Reconstructed joined-boundary diagnostics pairs={} unproved={} first={:?}",joined.len(),unresolved.len(),&unresolved[..unresolved.len().min(12)]);
-        let global=crate::volume_validity::inspect_sweep(&candidate,1e-8,spatial_volume_limits(),100000,&[],
-            crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:100000,
-                max_trim_pairs:10000,max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
-        let pairs=&global.boundary.intersections.pairs;
-        eprintln!("Reconstructed contact audit visited={} grouped={} cells={} domainCells={} firstUnresolved={:?}",
-            pairs.pairs.len(),pairs.grouped_pairs,pairs.cells,pairs.domain_cells,
-            pairs.pairs.iter().filter(|pair|pair.reason=="pair-unresolved").take(8)
-                .map(|pair|pair.faces).collect::<Vec<_>>());
-        assert!(global.proven && global.boundary.proven,
-            "Reconstructed spatial global boundary={} regular={} pairs={} next={:?} nesting={:?} orientation={:?}",
-            global.boundary.proven,global.boundary.intersections.faces.all_faces_injective,
-            global.boundary.intersections.pairs.all_pairs_classified,global.boundary.intersections.pairs.next_pair,
-            global.nesting.as_ref().map(|r|r.roles_consistent),global.orientations.iter().map(|r|r.outward).collect::<Vec<_>>());
-    }
     assert_eq!(body.boundary_error_within_budget, Some(true));
     assert!(body.boundary_error_upper.is_some_and(|e| e <= options.max_deviation));
     assert!(body.retained_walls.certified);

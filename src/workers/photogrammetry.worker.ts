@@ -2,6 +2,7 @@ import {runGpuMatching} from '../services/photogrammetry/gpuMatching'
 import {runGpuSweep} from '../services/photogrammetry/gpuSweep'
 import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoReconstruction, type PhotoSurface} from '../services/photogrammetry/kernel'
 import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
+import {activeGpuMemoryArchitecture} from '../services/webgpuCompute'
 
 const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void}
 const post = (event: PhotoWorkerEvent, transfer: Transferable[] = []) => scope.postMessage(event, transfer)
@@ -42,7 +43,7 @@ function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, pr
 
 /** Dense via the browser WebGPU sweep; any failure falls back to the CPU path. */
 async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: number, preset?: PhotoDensePreset): Promise<boolean> {
-  const prepared = kernel.densePrepare(resolution, preset ?? 'baseline')
+  const prepared = preset === undefined ? kernel.densePrepare(resolution) : kernel.densePrepare(resolution, preset)
   if (!prepared) return false
   const scores = await runGpuSweep(prepared.payload, prepared.wgsl, prepared.wgslVariants)
   publishSurface(kernel, kernel.denseFinish(scores))
@@ -89,6 +90,8 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
       })
       if (gpu) {
         timings.sparsePath = 'gpu'
+        const memArch = activeGpuMemoryArchitecture()
+        if (memArch) timings.gpuMemoryArchitecture = memArch
         sparse = gpu
       } else {
         timings.sparsePath = 'cpu'
@@ -111,6 +114,10 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
             return false
           })
         : false
+      if (gpu && !timings.gpuMemoryArchitecture) {
+        const memArch = activeGpuMemoryArchitecture()
+        if (memArch) timings.gpuMemoryArchitecture = memArch
+      }
       if (!gpu) reconstructSurface(kernel, data.resolution, data.densePreset)
       timings.denseMs = performance.now() - denseStart
     }

@@ -1,0 +1,418 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/open-scad-viewer-cad-resume/crates/target/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling brep-core v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/brep-core)
+   Compiling geometry-bridge v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `geometry-bridge` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 27.96s
+     Running unittests src/lib.rs (crates/target/debug/build/geometry-bridge/c81859b9ed0b6398/out/geometry_bridge-c81859b9ed0b6398)
+
+running 354 tests
+test brep_attestation::tests::refuses_envelope_key_and_literal_mutations ... ok
+test brep_attestation::tests::refuses_descriptor_mismatches_wrong_by_one ... ok
+test brep_attestation::tests::refuses_malformed_routing_headers ... ok
+test brep_attestation::tests::admits_a_real_source_text_matching_its_descriptor ... ok
+test brep_attestation::tests::refuses_routing_header_inconsistencies ... ok
+test brep_attestation::tests::admits_source_text_through_full_envelope_validation ... ok
+test brep_attestation::tests::admits_a_valid_unified_envelope_object ... ok
+test brep::registry_tests::empty_brep_returns_an_empty_mesh_without_claiming_a_closed_shell ... ok
+test brep_attestation::tests::refuses_span_endpoints_inside_a_surrogate_pair ... ok
+test brep_attestation::tests::refuses_envelope_component_mismatches ... ok
+test brep_envelope::tests::admits_a_complete_valid_brep1_envelope_component_set ... ok
+test brep_display::tests::refuses_float32_merges_collapse_and_overflow ... ok
+test brep_display::tests::prepares_flat_normals_and_area ... ok
+test brep_envelope::tests::admits_envelope_provenance_components_through_validate ... ok
+test brep_envelope::tests::derives_the_multi_node_closure_string_for_string ... ok
+test brep_envelope::tests::refuses_every_wrong_by_one_closure_variant ... ok
+test brep_envelope::tests::refuses_units_outside_the_fixed_sextet ... ok
+test brep_envelope::tests::refuses_source_descriptor_violations ... ok
+test brep_execution_plan::tests::admits_exact_authored_order_and_empty_program ... ok
+test brep_execution_plan::tests::refuses_plan_changes_that_skip_duplicate_reorder_or_add_legacy_work ... ok
+test brep_envelope::tests::refuses_unsorted_duplicate_oversized_and_malformed_capabilities ... ok
+test brep_envelope::tests::refuses_wrong_core_literals_and_schema_versions ... ok
+test brep::registry_tests::coincident_uv_samples_from_different_topology_are_rejected ... ok
+test brep_identity::tests::admits_a_valid_occurrence_identity_chain ... ok
+test brep_identity::tests::js_number_formatting_matches_json_stringify ... ok
+test brep_identity::tests::admits_a_valid_operation_forest ... ok
+test brep_identity::tests::refuses_duplicate_ordinal_disorder_across_rows ... ok
+test brep_identity::tests::matches_host_digests_for_hand_built_paths_and_chains ... ok
+test brep_graph::tests::graph_refuses_invalid_references_outputs_and_partial_success ... ok
+test brep_json_size::tests::browser_json_conventions ... ok
+test brep_identity::tests::refuses_wrong_by_one_occurrence_mutations ... ok
+test brep_identity::tests::refuses_wrong_by_one_operation_mutations ... ok
+test brep_production::tests::refuses_a_bad_boolean_operand_structure ... ok
+test brep_production::tests::refuses_a_broken_result_frontier_match ... ok
+test brep_production::tests::refuses_a_hull_reduction_mismatch ... ok
+test brep_json_size::tests::independent_browser_number_length_oracle ... ok
+test brep_production::tests::refuses_a_misplaced_output_ordinal ... ok
+test brep_production::tests::refuses_a_node_claimed_by_two_materializer_groups ... ok
+test brep_production::tests::refuses_a_broken_transform_map_chain ... ok
+test brep_production::tests::refuses_a_node_with_zero_materializer_groups ... ok
+test brep_graph::tests::graph_owns_empty_reuse_and_requested_output_order ... ok
+test brep_production::tests::refuses_interrupted_legacy_evaluation_artifacts ... ok
+test brep_production::tests::refuses_an_anchored_row_missing_its_continuation ... ok
+test brep_production::tests::refuses_an_expansion_row_without_an_anchor ... ok
+test brep_profile::tests::empty_and_boolean_profiles_have_no_solid_or_mesh_placeholder ... ok
+test brep_production::tests::refuses_structural_expansion_mutations ... ok
+test brep_production::tests::replays_through_the_full_envelope_admission ... ok
+test brep_graph_runner::tests::abort_and_failed_steps_release_owned_geometry ... ok
+test brep_production::tests::replays_real_lowered_programs_successfully ... ok
+test brep_profile::tests::even_odd_normalizes_unordered_original_rings_and_retains_holes ... ok
+test brep_profile::tests::retained_intersection_query_reports_original_segments_and_work_bounds ... ok
+test brep_provenance::tests::admits_a_complete_valid_component_set ... ok
+test brep_provenance::tests::refuses_diagnostic_template_violations ... ok
+test brep_profile::tests::even_odd_refuses_crossings_and_contacting_holes ... ok
+test brep_graph::tests::repeated_edges_at_arity_limit_preserve_liveness ... ok
+test brep_provenance::tests::refuses_provenance_violations ... ok
+test brep_provenance::tests::refuses_tessellation_intent_violations ... ok
+test brep_result::tests::output_slots_share_geometry_and_preserve_references ... ok
+test brep_result::tests::rejects_wrong_branch_lineage_order_and_color ... ok
+test brep_scene_plan::tests::derives_the_pinned_host_display_policy_hash ... ok
+test brep_scene_plan::tests::refuses_out_of_contract_display_policies ... ok
+test brep_profile::tests::offsets_retained_regions_and_reports_empty_material ... ok
+test brep_provenance::tests::refuses_diagnostics_violations ... ok
+test brep_semantic::admission_tests::native_admission_refuses_ignored_inputs_and_space_mismatches ... ok
+test brep_semantic::tests::native_geometry_nodes_compose_profile_transform_and_extrusion ... ok
+test brep_semantic::tests::typed_empty_algebra_precedes_feature_limits ... ok
+test brep_graph::tests::reports_failure_node_and_completed_prefix_without_outputs ... ok
+test brep::registry_tests::shared_edge_registry_gives_identical_indices_to_adjacent_faces ... ok
+test brep::registry_tests::nearby_disconnected_shells_keep_distinct_authored_vertices ... ok
+test brep_semantic::boolean_admission_tests::singleton_boolean_cannot_bypass_operation_admission ... ok
+test brep_session::tests::failed_evaluation_never_publishes_and_poisoned_session_cannot_commit ... ok
+test brep_session::tests::node_identity_admission_is_native_and_stable_after_release ... ok
+test brep_session::tests::ownership_release_and_commit_are_atomic ... ok
+test brep_session::tests::aggregate_budget_failure_preserves_existing_entries_until_close ... ok
+test brep_session::tests::references_and_duplicate_commit_are_checked ... ok
+test brep_session::tests::unsupported_carriers_and_evidence_never_publish ... ok
+test brep_session::tests::result_admission_checks_dimension_closed_shells_and_topology ... ok
+test brep_session_abi::tests::foreign_handles_fail_without_revoking_their_owner ... ok
+test brep_session::tests::evaluation_refuses_foreign_released_and_mismatched_references ... ok
+test brep_session_abi::tests::incomplete_graph_commit_revokes_handle_and_dispose_cancels ... ok
+test brep_session_abi::tests::graph_steps_commit_once_and_share_registry_budget ... ok
+test cad_body_affine::instance_tests::batch_placements_preserve_order_and_refuse_singular_matrix ... ok
+test cad_body_affine::instance_tests::instance_edit_composes_about_current_bounds_center ... ok
+test cad_body_affine::instance_tests::instance_edit_rejects_invalid_affine_and_zero_scale ... ok
+test brep_session_abi::tests::wire_handles_survive_commit_and_are_revoked_on_dispose ... ok
+test brep_session::tests::typed_empty_survives_reuse_and_commit ... ok
+test cad_bridge_curve::tests::rational_g2_endpoints ... ok
+test cad_clearance::tests::closest_segment_points_include_interior_and_endpoint_minima ... ok
+test cad_clearance::tests::nearly_parallel_crossing_has_zero_distance ... ok
+test cad_clearance::tests::segment_distance_covers_interior_parallel_and_collapsed_cases ... ok
+test brep_semantic::tests::exact_polygon_revolution_uses_native_closed_topology ... ok
+test cad_centered_lattice::tests::bounded_centered_topologies ... ok
+test cad_clearance::tests::segment_distance_is_scale_covariant ... ok
+test cad_diagnostics::intersection_tests::serializes_first_contact_and_rejects_invalid_budget ... ok
+test cad_diagnostics::tests::measures_distance_and_circle_curvature ... ok
+test cad_diagnostics::tests::rejects_invalid_planes ... ok
+test cad_diagnostics::all_intersection_tests::serializes_completion_and_output_limit_without_claiming_a_clean_mesh ... ok
+test cad_dimensions::tests::horizontal_and_vertical_dimensions_edit_one_axis ... ok
+test cad_display::tests::coarse_normals_preserve_degenerate_triangles_and_refuse_bad_indices ... ok
+test cad_dimensions::tests::length_and_signed_angle ... ok
+test cad_display::tests::fixed_keys_follow_binary_rational_decimal_rounding ... ok
+test cad_boundary_agreement::tests::dispatch_distinguishes_complete_mismatch_and_budget_exhaustion ... ok
+test cad_display::tests::planar_box_preserves_working_triangle_correspondence ... ok
+test cad_body_affine::instance_tests::batch_brep_matches_individual_geometry_and_preserves_input ... ok
+test cad_face_contacts::tests::combined_diagnostics_keep_face_limits_and_volume_scope_explicit ... ok
+test cad_face_contacts::tests::contact_witness_survives_without_exporting_unresolved_boxes ... ok
+test cad_display::tests::cylinder_caps_stay_flat_while_walls_smooth ... ok
+test cad_face_contacts::tests::cylinder_face_proofs_include_linear_basis_and_complete_work_counts ... ok
+test brep_session::tests::reduced_operands_preserve_authored_order_and_multiplicity ... ok
+test cad_face_contacts::tests::visited_is_not_complete_and_output_truncation_is_explicit ... ok
+test cad_lattice::cell_tests::honeycomb_does_not_apply_web_jitter ... ok
+test cad_lattice::cell_tests::oversized_inset_returns_empty_without_indexing_removed_vertices ... ok
+test cad_lattice::cell_tests::triangle_inset_offsets_each_original_edge_once ... ok
+test cad_lattice::print_tests::opening_fit_is_bounded_and_idempotent ... ok
+test cad_lattice::print_tests::opening_fit_refuses_impossible_and_malformed_constraints ... ok
+test cad_lattice::print_tests::opening_fit_respects_representable_bounds ... ok
+test brep_graph::tests::liveness_releases_unretained_geometry_under_aggregate_budget ... ok
+test brep::registry_tests::curved_trim_holes_preserve_registry_ownership_through_bridge_refinement ... ok
+test cad_material_chord::tests::explicit_normal_audit_binds_tolerance_endpoints_and_shared_work ... ok
+test brep_semantic::tests::native_semantic_boolean_keeps_authored_operand_order ... ok
+test cad_mesh_topology::tests::decimal_seam_ties_follow_legacy_rounding ... ok
+test cad_pattern::tests::footprint_matches_wire_and_counts_object_keys ... ok
+test brep_graph_runner::tests::bounded_steps_match_one_shot_output_and_cannot_commit_prefix ... ok
+test cad_display::tests::sphere_refinement_maps_to_working_triangles_and_honors_budget ... ok
+test brep_session::tests::native_empty_boolean_algebra_and_extrusion_need_no_host_reduction ... ok
+test cad_profile_prepare::retained_tests::gaps_branches_and_intersections_refuse ... ok
+test cad_profile_prepare::retained_tests::noncardinal_ends_retain_shape ... ok
+test cad_profile_prepare::retained_tests::provenance_tracks_output_orientation_and_explicit_connectors ... ok
+test cad_profile_prepare::retained_tests::semicircle_retains_quadratics_and_area ... ok
+test cad_profile_prepare::retained_tests::tolerance_adds_an_explicit_connector_without_moving_arc ... ok
+test cad_profile_prepare::retained_tests::unordered_arcs_make_full_circle ... ok
+test cad_profile_prepare::sample_tests::snapped_display_endpoints_join_without_connectors ... ok
+test cad_profile_prepare::tests::connector_preserves_points ... ok
+test cad_profile_prepare::tests::gap_and_branch_refuse ... ok
+test cad_profile_prepare::tests::rejects_collinear_triangle ... ok
+test cad_profile_prepare::tests::rejects_crossing_and_degenerate ... ok
+test cad_profile_prepare::tests::rejects_disconnected_cycles ... ok
+test cad_profile_prepare::tests::reports_exact_crossing_segments ... ok
+test cad_profile_prepare::tests::reports_overlapping_adjacent_segments ... ok
+test cad_profile_prepare::tests::unordered_reversed_cycle ... ok
+test cad_quantity::tests::editor_quantities ... ok
+test cad_profile_prepare::intersection_diagnostic_tests::refused_rational_contour_retains_assembled_sources_for_diagnostics ... ok
+test cad_selection::instance_tests::similarity_inverse_cancels_rotation_scale_and_translation ... ok
+test cad_material_wall::tests::native_dispatch_keeps_chord_proof_and_global_face_coverage_separate ... ok
+test cad_sketch::slot_tests::capsule_bounds_and_invalid_centers ... ok
+test brep::registry_tests::periodic_step_sphere_tessellates_with_shared_seam_and_poles ... ok
+test cad_solid_distance::tests::export_native_contract_fixtures_when_requested ... ok
+test cad_surface_diagnostics::tests::distinguishes_gap_from_fold ... ok
+test cad_surface_diagnostics::tests::rejects_invalid_sampling ... ok
+test cad_shell_distance::tests::shell_distance_dispatch_keeps_scope_and_nullable_witnesses ... ok
+test cad_sections::retained_tests::retained_scaled_sections_preserve_holes_and_refuse_noncorresponding_controls ... ok
+test intersections::tests::serialized_cone_cone_report_carries_exact_circles_and_stays_uncertified ... ok
+test intersections::tests::serialized_cone_torus_report_carries_exact_circles_and_stays_uncertified ... ok
+test intersections::tests::serialized_curve_curve_report_keeps_paired_parameters_and_uncertified ... ok
+test intersections::tests::serialized_curve_ruled_surface_report_keeps_uv_and_stays_uncertified ... ok
+test intersections::tests::serialized_cone_cone_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_cylinder_cylinder_report_carries_exact_lines_and_stays_uncertified ... ok
+test intersections::tests::serialized_cylinder_cylinder_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_cone_torus_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_intersection_report_is_explicitly_uncertified ... ok
+test intersections::tests::serialized_plane_cone_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_plane_cone_report_carries_exact_conics_and_stays_uncertified ... ok
+test intersections::tests::serialized_cylinder_torus_report_carries_exact_circles_and_stays_uncertified ... ok
+test intersections::tests::serialized_plane_cylinder_report_carries_exact_rulings_and_stays_uncertified ... ok
+test intersections::tests::serialized_plane_cylinder_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_plane_sphere_report_carries_exact_circle_and_stays_uncertified ... ok
+test intersections::tests::serialized_plane_sphere_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_plane_torus_report_carries_exact_circles_and_stays_uncertified ... ok
+test cad_face_contacts::tests::sphere_face_proofs_include_projective_basis_and_complete_work_counts ... ok
+test intersections::tests::serialized_sphere_cone_report_carries_exact_circles_and_stays_uncertified ... ok
+test cad_display::tests::mixed_shell_display_keeps_exact_triangle_ownership ... ok
+test intersections::tests::serialized_sphere_cylinder_report_carries_exact_circles_and_stays_uncertified ... ok
+test intersections::tests::serialized_plane_torus_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_sphere_sphere_report_carries_exact_circle_and_stays_uncertified ... ok
+test intersections::tests::serialized_sphere_sphere_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_sphere_cone_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_sphere_torus_report_carries_exact_circles_and_stays_uncertified ... ok
+test brep::registry_tests::curved_prism_xor_keeps_contacting_components_and_trim_samples_separate ... ok
+test intersections::tests::serialized_cylinder_torus_classification_regions_are_explicit ... ok
+test intersections::tests::serialized_torus_torus_report_carries_exact_circles_and_stays_uncertified ... ok
+test intersections::tests::serialized_sphere_cylinder_classification_regions_are_explicit ... ok
+test cad_solid_distance::tests::dispatch_separates_material_containment_from_unproven_geometry ... ok
+test mesh_export_file::tests::failed_session_cannot_finish_and_handles_do_not_recur ... ok
+test mesh_picking::tests::bounded_registry_and_failed_admission_do_not_publish ... ok
+test mesh_picking::tests::protocol_validates_bounds_and_preserves_snapshot_after_refusal ... ok
+test mesh_picking::tests::snapshot_queries_reuse_owned_buffers_and_reject_disposed_handles ... ok
+test brep::registry_tests::torus_periodic_seams_preserve_genus_and_obey_triangle_budget ... ok
+test mesh_render::tests::native_render_benchmark ... ignored, explicit native benchmark; run with --ignored --nocapture
+test mesh_render::tests::preserves_high_valence_crease_groups_and_triangle_order ... ok
+test mesh_render::tests::preserves_repeated_incidence_degeneracy_and_unused_vertices ... ok
+test intersections::tests::serialized_sphere_torus_classification_regions_are_explicit ... ok
+test mesh_shell::tests::bvh_distance_and_sign_agree_with_reference ... ok
+test mesh_shell::tests::lattice_auto_recommendation_tracks_work_size ... ok
+test mesh_surface_groups::surface_group_tests::degenerate_triangles_are_barriers_and_empty_mesh_is_supported ... ok
+test mesh_surface_groups::surface_group_tests::exact_welds_preserve_winding_and_signed_zero ... ok
+test mesh_surface_groups::surface_group_tests::groups_connected_smooth_strip ... ok
+test mesh_surface_groups::surface_group_tests::keeps_disconnected_and_non_manifold_triangles_separate ... ok
+test mesh_surface_groups::surface_group_tests::refuses_invalid_layout_angles_and_triangle_budget ... ok
+test mesh_surface_groups::surface_group_tests::stride_three_and_stride_six_have_identical_groups ... ok
+test mesh_surface_groups::surface_group_tests::validates_unused_positions_and_sparse_indices ... ok
+test path2d::tests::compound_knife_and_scissors_transport_preserves_ring_grouping ... ok
+test path2d::tests::dispatches_fill_rule_and_holes_for_mesh_offset_and_gradient ... ok
+test path2d::tests::dispatches_miter_limit_without_requiring_region_flag_and_preserves_concentric_nesting ... ok
+test path2d::tests::dispatches_ridge_smoothing_and_keeps_legacy_repeat_defaults ... ok
+test path2d::tests::dispatches_single_ring_stipple_jitter_and_seed_without_dropping_options ... ok
+test path2d::tests::node_editing_and_missing_mesh_tools_are_reachable ... ok
+test path2d::tests::rejects_invalid_holes_and_dash_values_instead_of_discarding_them ... ok
+test path2d::tests::semantic_editor_options_survive_transport ... ok
+test print_geometry::tests::cone_uses_actual_normals_and_plane_tolerance_is_explicit ... ok
+test print_geometry::tests::direction_scale_and_plane_translation_are_explicit ... ok
+test print_geometry::tests::distinguishes_contact_from_floating_downward_faces ... ok
+test print_geometry::tests::refuses_invalid_settings_open_or_reversed_meshes ... ok
+test print_strength::tests::screening_dispatch_is_strict_and_bounded ... ok
+test print_strength::tests::thermal_dispatch_preserves_properties_and_refuses_schema_drift ... ok
+test reconstruction::tests::exact_nurbs_round_trip ... ok
+test reconstruction::tests::mesh_sdf_sign_and_hollow_orientation ... ok
+test reconstruction::tests::smooth_nurbs_is_bounded_and_continuous_at_seams ... ok
+test mesh_shell::tests::lattice_auto_matches_cpu_on_small_grid ... ok
+test scene_picking::tests::lifecycle_and_failed_admission ... ok
+test reconstruction::tests::subdivision_fit_reduces_interpolation_residual ... ok
+test sdf_gpu::tests::batch_prepare_caps_job_count ... ok
+test sdf_gpu::tests::batch_prepare_enforces_the_total_sample_ceiling ... ok
+test sdf_gpu::tests::batch_prepare_rejects_malformed_slots ... ok
+test sdf_gpu::tests::batch_prepare_registers_eligible_jobs_and_keeps_input_order ... ok
+test structural_sections::tests::cavities_are_not_reported_as_disconnected_material ... ok
+test structural_sections::tests::edge_components_do_not_merge_at_a_shared_point ... ok
+test structural_sections::tests::refuses_open_mesh_and_invalid_station_requests ... ok
+test structural_sections::tests::same_bounds_do_not_hide_material_removed_by_a_hole ... ok
+test structural_sections::tests::through_hole_is_one_boundary_and_separate_blocks_are_two ... ok
+test structural_sections::tests::transverse_sections_preserve_disconnected_material_and_empty_stations ... ok
+test structural_sections::tests::unresolved_contact_preserves_geometric_report_without_connectivity_claim ... ok
+test svg::non_scaling_tests::non_scaling_affine_transform_preserves_physical_width ... ok
+test mesh_analysis::cooperative_tests::admission_is_bounded_and_failure_does_not_poison_registry ... ok
+test svg::non_scaling_tests::non_scaling_clips_use_the_declared_space_and_unstroked_object_bbox ... ok
+test svg::non_scaling_tests::non_scaling_closed_stroke_preserves_hole_and_join_geometry ... ok
+test svg::non_scaling_tests::non_scaling_dash_lengths_and_offsets_are_measured_in_host_space ... ok
+test svg::non_scaling_tests::non_scaling_css_cascade_and_explicit_inheritance_match_attributes ... ok
+test svg::non_scaling_tests::non_scaling_gradient_stroke_retains_original_paint_coordinates ... ok
+test svg::non_scaling_tests::non_scaling_host_is_outermost_viewport_even_with_nested_svg ... ok
+test sdf_gpu::tests::prepare_finish_roundtrip_matches_reference_extraction ... ok
+test svg::non_scaling_tests::non_scaling_marker_units_distinguish_stroke_width_from_user_space ... ok
+test svg::non_scaling_tests::non_scaling_paint_order_and_element_opacity_survive_outline_rendering ... ok
+test svg::non_scaling_tests::non_scaling_normalized_svg_roundtrip_preserves_physical_geometry_and_paint ... ok
+test svg::non_scaling_tests::non_scaling_resource_budget_is_checked_before_any_clone_or_mutation ... ok
+test svg::non_scaling_tests::non_scaling_silhouette_matches_vector_contours_and_preserves_hole ... ok
+test svg::non_scaling_tests::non_scaling_square_and_round_caps_are_built_after_transform ... ok
+test svg::non_scaling_tests::non_scaling_text_matches_equivalent_glyphs_at_double_font_size ... ok
+test svg::non_scaling_tests::non_scaling_use_resolves_inherit_per_instance_without_leaking_from_defs ... ok
+test svg::non_scaling_tests::non_scaling_width_resolves_physical_pixel_and_percentage_units ... ok
+test svg::tests::all_gap_dashes_are_valid_empty_geometry_and_preserve_other_paints ... ok
+test svg::tests::animated_gif_first_frame_preserves_canvas_and_matches_static_preview ... ok
+test svg::tests::audit_css_root_size_and_close_continuation ... ok
+test svg::tests::clipping_unions_children_and_intersects_nested_clips ... ok
+test svg::tests::compatibility_px_preserves_css_identifiers_strings_and_xml_quotes ... ok
+test svg::tests::css_geometry_properties_and_non_applicable_declarations_are_admitted ... ok
+test svg::tests::css_use_symbol_nested_viewports_and_transform ... ok
+test svg::tests::custom_fonts_admit_outlines_and_reject_nested_images_in_every_collection_face ... ok
+test svg::tests::dashed_strokes_have_caps_and_nonuniform_transforms ... ok
+test svg::tests::duplicate_ids_and_dual_href_cannot_bypass_reference_admission ... ok
+test svg::tests::effects_preserved_in_preview_require_explicit_silhouette ... ok
+test svg::tests::embedded_images_and_partial_geometry_fail_before_any_silent_omission ... ok
+test svg::tests::latin_cyrillic_text_outlines_preview_and_reimport ... ok
+test svg::tests::malformed_geometry_security_and_reference_budgets_fail_explicitly ... ok
+test svg::tests::marker_admission_counts_tref_copies_links_and_primitive_arcs ... ok
+test svg::tests::marker_replication_is_rejected_before_normalization ... ok
+test svg::tests::markers_and_gradient_paints_are_real_geometry ... ok
+test svg::tests::nested_markers_count_expansion_and_source_inheritance ... ok
+test svg::tests::non_scaling_dash_budget_uses_host_space_before_preview_expansion ... ok
+test svg::tests::object_bounding_box_clip_and_evenodd_hole ... ok
+test svg::tests::opacity_and_visibility_remove_invisible_geometry ... ok
+test svg::tests::open_scad_dimensions_and_viewbox_are_binary64 ... ok
+test svg::non_scaling_tests::non_scaling_pattern_content_uses_each_painted_instances_host_transform ... ok
+test svg::tests::quadratic_cubic_smooth_and_arc_paths_preserve_endpoints ... ok
+test svg::tests::raster_decode_errors_are_explicit_before_preview_or_silhouette ... ok
+test svg::tests::ordinary_css_markers_and_recursive_marker_suppression_remain_valid ... ok
+test svg::tests::vector_effect_rejection_checks_every_css_declaration_and_rule ... ok
+test svg::tests::webp_normalization_preserves_transparency_and_static_pixels ... ok
+test svg_css::tests::admission_does_not_change_rendered_attribute_selectors ... ok
+test svg_css::tests::admission_preserves_marker_and_font_dependencies_of_original_selectors ... ok
+test svg_css::tests::case_insensitive_important_keeps_quoted_data_unchanged ... ok
+test svg_css::tests::css_geometry_respects_symbol_viewport_percentages_and_units ... ok
+test svg_css::tests::effective_root_size_and_admission_retain_cascade_and_path_cost ... ok
+test svg_css::tests::geometry_cascade_applies_specificity_source_order_and_inline_important ... ok
+test svg_css::tests::geometry_d_path_and_none_preserve_path_semantics ... ok
+test svg_css::tests::geometry_defaults_are_not_implicitly_inherited ... ok
+test svg_css::tests::geometry_inherit_is_resolved_for_each_use_instance ... ok
+test svg_css::tests::inherit_uses_computed_parent_font_units ... ok
+test svg::tests::reference_expansion_counts_path_weight_and_text_before_normalization ... ok
+test intersections::tests::serialized_torus_torus_classification_regions_are_explicit ... ok
+test svg_css::tests::supported_css_selector_combinators_preserve_geometry ... ok
+test mesh_analysis::cooperative_tests::completion_matches_sync_and_owns_snapshot_after_source_deletion ... ok
+test svg_silhouette::tests::alpha_threshold_and_luminance_mask_change_the_silhouette ... ok
+test svg_silhouette::tests::compound_fill_preserves_hole_and_island_winding ... ok
+test svg_silhouette::tests::dense_dashes_and_accumulated_paint_work_fail_before_rendering ... ok
+test svg_silhouette::tests::diagonal_pixels_remain_separate_closed_islands ... ok
+test svg_silhouette::tests::embedded_png_alpha_controls_image_silhouette ... ok
+test svg_silhouette::tests::enlarged_nested_svg_cannot_bypass_pattern_tile_budget ... ok
+test svg_silhouette::tests::every_three_by_three_grid_preserves_area_and_pixel_membership ... ok
+test svg_silhouette::tests::filter_output_is_rendered_before_thresholding ... ok
+test svg_silhouette::tests::invalid_options_and_excessive_effect_work_fail_closed ... ok
+test svg_silhouette::tests::pattern_opacity_produces_disjoint_geometry ... ok
+test svg_silhouette::tests::rectangle_has_exact_mm_bounds_and_only_four_corners ... ok
+test svg_silhouette::tests::svg_admission_review_regressions ... ok
+test tests::analytic_step_export_import_roundtrip ... ok
+test svg_css::tests::unsupported_valid_css_is_explicit_and_css_expansion_is_bounded ... ok
+test svg_css::tests::large_shared_css_path_is_limited_while_values_are_accumulated ... ok
+test svg::non_scaling_tests::non_scaling_mask_content_resolves_user_space_and_object_bbox_instances ... ok
+test tests::authorized_heal_v2_bridge_derives_evidence_and_preserves_source ... ok
+test tests::brep_tessellation_preserves_faces_and_interchanges_both_kernels ... ok
+test tests::brep_transport_carries_authoritative_canonical_change_set ... ok
+test tests::annular_fillet_bridge_requires_complete_rim ... ok
+test tests::certified_freeform_tessellation_crosses_bridge ... ok
+test tests::certified_freeform_mass_crosses_bridge ... ok
+test tests::curved_graph_boolean_v3_bridge_serializes_audited_authority ... ok
+test tests::direct_iges_v2_bridge_preserves_exact_graph ... ok
+test tests::audited_feature_successors_cross_the_bridge_with_certificates ... ok
+test cad_material_chord::tests::dispatch_qualifies_original_boundary_endpoints_and_refuses_extra_crossings ... ok
+test tests::direct_step_v3_bridge_preserves_exact_graph ... ok
+test tests::direct_step_v5_bridge_exposes_ap242_report ... ok
+test svg_css::tests::selector_list_cross_product_is_rejected_before_css_parser_allocation ... ok
+test tests::direct_step_v9_bridge_retains_open_shell ... ok
+test mesh_analysis::cooperative_tests::cancellation_after_bvh_drops_edge_scratch_and_releases_admission ... ok
+test tests::curved_graph_boolean_v4_v5_bridge_serializes_cell_specific_authority ... ok
+test tests::freeform_nurbs_step_export_import_roundtrip ... ok
+test tests::exact_loft_and_bent_rmf_successors_cross_bridge_atomically ... ok
+test tests::direct_step_v6_bridge_roundtrips_poles_and_reports_identities ... ok
+test tests::invalid_surface_is_rejected_before_polygons_are_created ... ok
+test tests::brep_operations_dispatch_to_closed_tessellated_solids ... ok
+test tests::mesh_boundary_can_construct_a_new_nurbs_surface ... ok
+test tests::mesh_section_and_toolpath_ops_cut_a_box ... ok
+test tests::nurbs_to_polygons_and_back_to_exact_boundary_curves ... ok
+test tests::direct_step_v7_bridge_composes_occurrence_topology ... ok
+test cad_material_segment::tests::dispatch_preserves_source_and_refuses_cavity_endpoint_and_exhausted_work ... ok
+test tests::step_successor_bridge_reports_identity_preservation_and_loss ... ok
+test tests::simple_prism_fillet_bridge_reports_distinct_capability ... ok
+test truss::tests::dispatches_signed_response_and_rejects_unknown_fields ... ok
+test truss::tests::explicit_wrench_matches_the_nodal_bar_and_superposes_signed_loads ... ok
+test truss::tests::preserves_singular_error_and_rejects_transport_shape ... ok
+test truss::tests::bounds_load_count_and_requires_unique_explicit_selected_nodes ... ok
+test truss::tests::refuses_unrealizable_wrenches_and_ambiguous_load_schemas ... ok
+test tests::direct_step_v8_bridge_exposes_whole_domain_certificate ... ok
+test tests::exact_analytic_shell_crosses_bridge_with_audited_certificate ... ok
+test cad_planar_edit::tests::cap_selection_is_scoped_and_preserves_input_on_success_and_failure ... ok
+test mesh_render::tests::matches_reference_for_primitives_and_dense_smooth_meshes ... ok
+test mesh_analysis::cooperative_tests::cancelled_jobs_drop_scratch_and_never_alias_new_jobs ... ok
+test tests::partial_annular_bridge_is_explicitly_preview_only ... ok
+test tests::freeform_nurbs_step_trimmed_and_solid_bridge ... ok
+test cad_face_contacts::tests::partial_annular_diagnostics_include_owned_quotient_proofs_without_certifying_pairs ... ok
+test tests::general_multispan_boolean_bridge_is_strict_and_audited ... ok
+test brep::registry_tests::poles_round_holes_and_partial_turns_share_edge_indices_at_each_detail ... ok
+test cad_profile_prepare::general_profile_tests::prepares_original_nurbs_and_reports_sources_after_orientation ... ok
+test tests::layered_fillet_bridge_checks_chain_and_cavity ... ok
+test brep_profile::tests::general_profile_validation_roundtrip_transform_and_area_enclosure ... ok
+test cad_face_contacts::tests::explicit_embedding_audit_closes_canonical_pairs_and_refuses_exhausted_exact_work has been running for over 60 seconds
+test cad_face_contacts::tests::explicit_embedding_audit_closes_canonical_pairs_and_refuses_exhausted_exact_work ... ok
+
+test result: ok. 353 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 93.03s

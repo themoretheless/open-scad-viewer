@@ -1,0 +1,22 @@
+{
+  "schema": "cad-original-annular-flux-quadrature/1",
+  "sourceSha256": "e13c4c91722002392f04b0404cdbdae160c1664dee863e4f7bde13532307ef4c",
+  "faces": 27,
+  "orders": [
+    16,
+    32,
+    64
+  ],
+  "signedVolumeMm3": [
+    7061.457370838773,
+    7061.457370838772,
+    7061.4573708387725
+  ],
+  "convergenceDifferenceMm3": 9.094947017729282e-13,
+  "nativeVolumeBoundsMm3": [
+    7061.341216618879,
+    7061.591214207668
+  ],
+  "scope": "Independent floating quadrature of original single-Bezier coefficients and affine planar literal-endpoint boundaries; no STEP reader or rigorous quadrature error certificate.",
+  "passed": true
+}

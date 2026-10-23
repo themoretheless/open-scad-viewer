@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,ref,shallowRef,toRaw,watch} from 'vue'
+import {toRaw,computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
 import type {CurveOffsetDiagnostics} from '../services/curveOffsetDiagnostics'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
@@ -25,8 +25,7 @@ function cancel(){generation++;client.cancel();pending.value=false;result.value=
 watch(()=>[props.ids,selected.value.map(c=>c?.curve)],cancel,{deep:true,flush:'sync'})
 async function inspect(){
  cancel();const current=generation;pending.value=true
- const validCurves=selected.value.filter((c):c is SolidNurbsCurve=>!!c)
- try{const value=await client.run({kind:'curveChainInspection',document:{version:1,bodies:[],sketches:[],curves:clonePlain(validCurves)},ids:[...props.ids],maxPairs:1000000});if(current===generation){result.value=value;emit('result',{curves:validCurves,diagnostics:value})}}
+ try{const value=await client.run({kind:'curveChainInspection',document:{version:1,bodies:[],sketches:[],curves:JSON.parse(JSON.stringify(selected.value.filter((c):c is SolidNurbsCurve=>!!c)))},ids:[...props.ids],maxPairs:1000000});if(current===generation){result.value=value;emit('result',{curves:selected.value.filter((c):c is SolidNurbsCurve=>!!c),diagnostics:value})}}
  catch(e){if(current===generation)error.value=text('Проверка не выполнена. Выберите соединённые отрезки по порядку в плоскости XY с постоянной Z.','Inspection failed. Select connected segments in order in XY with constant Z.')}
  finally{if(current===generation)pending.value=false}
 }

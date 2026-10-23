@@ -1,0 +1,643 @@
+{
+  "oracle": "OpenCascade/cadquery-ocp",
+  "manifestSha256": "b9948b1c77b14b3bfcac77aae12bb6652124930bb0648d6ed3689c575f68cf9e",
+  "artifactProvenance": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "d18ff8c6a310a587bda1268d92a8b708fd101346ef2497ed95d516a666f67892",
+    "geometryWasmByteLength": 10584966,
+    "publicAndPackedVerified": true
+  },
+  "cases": [
+    {
+      "file": "quintic-straight-owned-solid.step",
+      "stepSha256": "0dd0bd91a7dbc60ec2da0b589ada9370926ab2f03b97283762c8eefb9ace9450",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.48979935823537e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 2.6645352591003757e-15,
+      "sampled_derivative_max_error": 7.993605777301127e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.41592653589794
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 31.41592653589794,
+      "expected_volume": 31.41592653589793,
+      "relative_volume_error": 2.2617277734851674e-16,
+      "integration_error": 1.0415256396899197e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-curved-owned-solid.step",
+      "stepSha256": "c228e3fde076a42c34a5f01855b16056cee21ee313292a8e6d277af661406ac4",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 2.220446049250313e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 2.6645352591003757e-15,
+      "sampled_derivative_max_error": 7.993605777301127e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.41592653589794
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 31.41592653589794,
+      "expected_volume": 31.41592653589793,
+      "relative_volume_error": 2.2617277734851674e-16,
+      "integration_error": 1.0415256396899197e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-rush-reconstructed-solid.step",
+      "stepSha256": "c228e3fde076a42c34a5f01855b16056cee21ee313292a8e6d277af661406ac4",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 2.220446049250313e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 2.6645352591003757e-15,
+      "sampled_derivative_max_error": 7.993605777301127e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.41592653589794
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 31.41592653589794,
+      "expected_volume": 31.41592653589793,
+      "relative_volume_error": 2.2617277734851674e-16,
+      "integration_error": 1.0415256396899197e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-rush-sharp-solid.step",
+      "stepSha256": "a93d5fe914f42d381bbdde86f19bc58fbd000796196eefc2220d912cfcf3c333",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 1.5543122344752192e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 1.5987211554602254e-14,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        62.83185307179587
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 62.83185307179587,
+      "expected_volume": 62.83185307179586,
+      "relative_volume_error": 1.1308638867425837e-16,
+      "integration_error": 1.0432219355200333e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-rush-guide-frame-affine-hollow.step",
+      "stepSha256": "9d5a4c40e0694a3622e60422d99a315e2d64e7941823e6a8f76bca5d38deb3ae",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 16,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 17,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 18,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 40,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 64,
+      "pcurve_samples": 560,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.106226635438361e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 40,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 16,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 1.1546319456101628e-14,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.191361846319268
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 13.191361846319268,
+      "expected_volume": 13.191361846319264,
+      "relative_volume_error": 2.6932122097702906e-16,
+      "integration_error": 1.2378920760231498e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "quintic-rush-moving-frame-guide-affine-hollow.step",
+      "stepSha256": "4060ff029be3884afd01620029c3e86211b3dc6a6cad1e02fca664bae6d33c13",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 64,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 65,
+          "controlPoles": 16,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 66,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 136,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 256,
+      "pcurve_samples": 1904,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 1.3322676295501878e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 136,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 64,
+      "sampled_surface_max_error_mm": 2.6645352591003757e-15,
+      "sampled_derivative_max_error": 1.199040866595169e-14,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        11.62960094989438
+      ],
+      "cap_hole_faces": 2,
+      "shell_orientation": true,
+      "volume": 11.62960094989438,
+      "expected_volume": 11.629600949894378,
+      "relative_volume_error": 1.5274443612068939e-16,
+      "integration_error": 1.2399114758209035e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 16
+    },
+    {
+      "file": "quintic-rush-closed-frame-guide-affine-hollow.step",
+      "stepSha256": "5b5aa667c901a87fc16452b3b62ae05df63a3a0146b43b7ec432fd8a9104bb03",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 128,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 256,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 512,
+      "pcurve_samples": 3584,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_pcurve_derivative_max_error": 1.5543122344752192e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 256,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 128,
+      "sampled_surface_max_error_mm": 5.329070518200751e-15,
+      "sampled_derivative_max_error": 1.3322676295501878e-14,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        13.875728490208928,
+        -2.2201165584268443
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 11.655611931782062,
+      "expected_volume": 11.655611931782076,
+      "relative_volume_error": 1.219228539726206e-15,
+      "integration_error": 7.776621200209324e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 0
+    },
+    {
+      "file": "quintic-conic-0.5-owned-solid.step",
+      "stepSha256": "a00c34d20710638578283d2abe1f31ce59613f637dda847d5b55cd76230dc059",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 8.881784197001252e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        29.455994348749165
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 29.455994348749165,
+      "expected_volume": 29.455994348748597,
+      "relative_volume_error": 1.929774231614861e-14,
+      "integration_error": 2.7753402406456953e-11,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-conic-1-owned-solid.step",
+      "stepSha256": "de2fd2fed57a95c9f5be54108b7858930a54e5db6d543c416dcf7ff431c2ece4",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 2.6645352591003757e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        33.333333333333336
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 33.333333333333336,
+      "expected_volume": 33.333333333333336,
+      "relative_volume_error": 0.0,
+      "integration_error": 3.2626962356331143e-16,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    },
+    {
+      "file": "quintic-conic-2-owned-solid.step",
+      "stepSha256": "5c18ff055f2fcc893acf008fdc23199701d331e3cafd50ccf09c8ad4dfe595a2",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [
+        {
+          "face": 8,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        },
+        {
+          "face": 9,
+          "controlPoles": 8,
+          "exactCoplanar": true,
+          "nonplanarityWitness": null
+        }
+      ],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 10,
+      "solids": 1,
+      "shells": 1,
+      "shell_closed": [
+        true
+      ],
+      "edges": 20,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 32,
+      "pcurve_samples": 280,
+      "full_domain_wall_pcurve_uv_preserved": null,
+      "full_domain_wall_pcurve_uses": 0,
+      "sampled_pcurve_surface_max_error_mm": 0.0,
+      "sampled_pcurve_derivative_max_error": 0.0,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 20,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 8,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 5.329070518200751e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        36.52872004918959
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 36.52872004918959,
+      "expected_volume": 36.52872004932072,
+      "relative_volume_error": 3.5897962399852817e-12,
+      "integration_error": 3.4334538542964075e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 8
+    }
+  ],
+  "passed": true,
+  "scope": "fixture import, topology and analytic volume; surface/seam/containment matrix remains separate"
+}

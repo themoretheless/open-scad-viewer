@@ -117,3 +117,156 @@ mod periodic_surface_rebuild_tests;
 #[cfg(test)]
 #[path = "foundation/tests/normal_regularity_regressions.rs"]
 mod normal_regularity_regressions;
+
+#[cfg(feature="codec")]
+use value_codec::Value;
+
+#[cfg(feature="codec")]
+fn map_pieces(mapping: &Value) -> Result<Vec<MapPiece>> {
+    let values = mapping["pieces"]
+        .as_array()
+        .ok_or_else(|| crate::input("Reparameterization requires pieces"))?;
+    check(
+        !values.is_empty() && values.len() <= 64,
+        "Piecewise reparameterization needs 1..64 pieces",
+    )?;
+    values
+        .iter()
+        .map(|piece| {
+            let domain: [f64; 2] = value_codec::from_value(piece["domain"].clone())
+                .map_err(|e| crate::input(e.to_string()))?;
+            let range: [f64; 2] = value_codec::from_value(piece["range"].clone())
+                .map_err(|e| crate::input(e.to_string()))?;
+            let controls: Vec<f64> = value_codec::from_value(piece["controlValues"].clone())
+                .map_err(|e| crate::input(e.to_string()))?;
+            let weights: Vec<f64> = value_codec::from_value(piece["weights"].clone())
+                .map_err(|e| crate::input(e.to_string()))?;
+            check(
+                (2..=26).contains(&controls.len()) && controls.len() == weights.len(),
+                "Map piece needs 2..26 matched controls and weights",
+            )?;
+            check(
+                domain[0] < domain[1]
+                    && range[0] < range[1]
+                    && domain.iter().chain(range.iter()).all(|x| x.is_finite()),
+                "Map domains and ranges must increase finitely",
+            )?;
+            check(
+                weights
+                    .iter()
+                    .all(|w| w.is_finite() && *w >= 1e-12 && *w <= 1e12),
+                "Map weights must be positive and bounded",
+            )?;
+            check(
+                controls.first() == Some(&range[0]) && controls.last() == Some(&range[1]),
+                "Map endpoint controls must equal the declared range",
+            )?;
+            Ok(MapPiece {
+                domain,
+                range,
+                values: controls,
+                weights,
+            })
+        })
+        .collect()
+}
+
+#[cfg(feature="codec")]
+fn compose_bezier_with_piece(span: &Curve, piece: &MapPiece) -> Result<Curve> {
+    let dimension = span.control_points[0].len();
+    let n = span.degree;
+    let source_domain = span.domain();
+    // Map values are normalized into the source span's domain. A bounded
+    // knot preimage may put a tiny part outside that span; the whole-composition
+    // retention gate must cover this polynomial continuation as well.
+
+    let map_p: Vec<f64> = piece
+        .values
+        .iter()
+        .zip(&piece.weights)
+        .map(|(value, weight)| {
+            ((value - source_domain[0]) / (source_domain[1] - source_domain[0])) * weight
+        })
+        .collect();
+    let map_q = piece.weights.clone();
+    // Cleared form uses P^i (Q-P)^{n-i}; for polynomial maps Q≡1 this is φ^i (1-φ)^{n-i}.
+    let map_one_minus: Vec<f64> = map_q.iter().zip(&map_p).map(|(q, p)| q - p).collect();
+    let mut p_powers = vec![vec![1.]];
+    let mut one_powers = vec![vec![1.]];
+    for _ in 1..=n {
+        p_powers.push(bernstein_product(p_powers.last().unwrap(), &map_p));
+        one_powers.push(bernstein_product(
+            one_powers.last().unwrap(),
+            &map_one_minus,
+        ));
+    }
+    let mut homogeneous = vec![Vec::new(); dimension + 1];
+    for axis in 0..=dimension {
+        let coeffs: Vec<f64> = if axis == dimension {
+            span.weights.clone()
+        } else {
+            span.control_points
+                .iter()
+                .zip(&span.weights)
+                .map(|(p, w)| p[axis] * w)
+                .collect()
+        };
+        let mut composed = vec![0.; n * (piece.values.len() - 1) + 1];
+        for (i, coefficient) in coeffs.iter().enumerate() {
+            let term = bernstein_product(&p_powers[i], &one_powers[n - i]);
+            for (target, value) in composed.iter_mut().zip(term) {
+                *target += value * binomial(n, i) * coefficient;
+            }
+        }
+        homogeneous[axis] = composed;
+    }
+    let degree = homogeneous[0].len() - 1;
+    check(degree <= 25, "Composed degree exceeds 25")?;
+    budget_controls(degree + 1)?;
+    let weights = homogeneous[dimension].clone();
+    numeric(
+        weights.iter().all(|w| *w >= 1e-12 && *w <= 1e12),
+        "Composed weights left the positive window",
+    )?;
+    let control_points = (0..=degree)
+        .map(|i| {
+            (0..dimension)
+                .map(|axis| homogeneous[axis][i] / weights[i])
+                .collect()
+        })
+        .collect();
+    let domain = piece.domain;
+    let curve = Curve {
+        degree,
+        knots: std::iter::repeat_n(domain[0], degree + 1)
+            .chain(std::iter::repeat_n(domain[1], degree + 1))
+            .collect(),
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate()?;
+    Ok(curve)
+}
+
+#[cfg(feature="codec")]
+#[path="reparameterization_preimages.rs"]
+mod preimages;
+#[cfg(feature="codec")]
+pub use preimages::{bound_reparameterization_preimages};
+
+#[cfg(feature="codec")]
+#[path="reparameterization_residual.rs"]
+mod reparameterization_residual;
+
+#[cfg(feature="codec")]
+#[path="reparameterization_retention.rs"]
+mod reparameterization_retention;
+#[cfg(feature="codec")]
+pub use reparameterization_retention::{certify_reparameterized_curve_retention,certify_reparameterized_surface_section_retention};
+
+#[cfg(feature="codec")]
+#[path="reparameterization_materialization.rs"]
+mod reparameterization_materialization;
+#[cfg(feature="codec")]
+pub use reparameterization_materialization::{materialize_reparameterized_curve_bounded};

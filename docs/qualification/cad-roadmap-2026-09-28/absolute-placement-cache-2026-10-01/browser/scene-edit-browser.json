@@ -1,0 +1,12 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 6,
+  "applyWithoutNewWorkerRequest": true,
+  "cancelledLateSuccess": true,
+  "invalidInput": false,
+  "fieldErrors": false,
+  "undoRedo": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 9
+}

@@ -1,7 +1,8 @@
-// Path-independent wasm builds. rustc embeds source paths in panic locations,
+// Normalize source paths in wasm builds. rustc embeds them in panic locations,
 // and registry crates live under $CARGO_HOME, so without remapping every
 // machine (developer checkout, CI runner) packs different kernel bytes and the
-// frozen byte fingerprints only match the machine that recorded them.
+// frozen byte fingerprints retain those paths. Compiler hosts can still emit
+// distinct artifacts; each accepted build must have an explicitly recorded digest.
 import {homedir} from 'node:os'
 import {join} from 'node:path'
 
@@ -19,8 +20,8 @@ export function remapPathPrefixFlags(root, env = process.env) {
  * instead of silently losing the remap. The encoded (0x1F-separated) form
  * takes precedence over RUSTFLAGS and keeps paths with spaces intact.
  */
-export function reproducibleCargo(root, env = process.env, extraRustflags = []) {
-  const flags = [...remapPathPrefixFlags(root, env), ...extraRustflags]
+export function reproducibleCargo(root, env = process.env) {
+  const flags = remapPathPrefixFlags(root, env)
   const inherited = env.CARGO_ENCODED_RUSTFLAGS
     ? env.CARGO_ENCODED_RUSTFLAGS.split('\x1f')
     : env.RUSTFLAGS ? env.RUSTFLAGS.split(/\s+/u).filter(Boolean) : null

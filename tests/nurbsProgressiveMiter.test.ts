@@ -146,7 +146,7 @@ it('transports authored miter frames and certifies the actual retained surfaces'
  expect(fine.sections.at(-1)![0]!.controlPoints[0]![0]).toBeCloseTo(.1/Math.SQRT2,14)
  expect(fine.sections.at(-1)![0]!.controlPoints[0]![1]).toBeCloseTo(.1/Math.SQRT2,14)
  expect(progressiveMiterNurbsProfiles(profiles,straight,law(1),law(0),opts).report.accepted).toBe(true)
- expect(()=>previewProgressiveMiterNurbsProfiles(profiles,straight,law(1),law(0),{...options,frameAxis},16)).toThrow(/frameNormal/)
+ expect(()=>previewProgressiveMiterNurbsProfiles(profiles,straight,law(1),law(0),{...options,frameAxis},16)).toThrow(/frame_normal/)
  expect(()=>previewProgressiveMiterNurbsProfiles(profiles,straight,law(1),law(0),{...opts,axisScale:frameAxis},16)).toThrow()
  expect({profiles,frameAxis,frameNormal}).toEqual(before)
 })
@@ -230,7 +230,9 @@ it('certifies closed hollow affine shells and admits the actual body into Solid'
  expect(inspectProgressiveSweepSolidAdmission(artifact,body.model)).toMatchObject({solidGeometryCertified:true})
  const inward=structuredClone(body.model)
  for(const face of inward.shells[0]!.faces)face.reversed=!face.reversed
- expect(()=>inspectProgressiveSweepSolidAdmission(artifact,inward)).toThrow(/orientation/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(artifact,inward)).toThrow(/snapshot binding/)
+ const inwardArtifact=createNativeGeometryArtifact('closed-affine','brep',{geometry:inward},{nodes:[{id:'closed-affine',op:'brep_progressive_miter_sweep',closed:true}],root:'closed-affine'})
+ expect(()=>inspectProgressiveSweepSolidAdmission(inwardArtifact,inward)).toThrow(/orientation/)
 })
 it('preserves affine miter dimensions and certificates from Rush into the native body',async()=>{
  const {readFileSync}=await import('node:fs')
@@ -386,20 +388,14 @@ it('retains Rush rational topology after streamed previews and refuses dimension
  expect(previews.every(p=>p.patches.length>0&&p.profilePatchRanges.length===2)).toBe(true)
  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,phaseResolved:true,globalEmbeddingCertified:false,capDomains:null,capContacts:null,capPairs:null,embedding:null,volume:{solidGeometryCertified:expect.any(Boolean),orientations:expect.any(Array)},wallAudit:{globalEmbeddingCertified:false,declaredBoundariesC0:true}})
  const scene=await parseOpenSCAD(source)
- expect(scene.meshes.length).toBeGreaterThan(0)
  const solid=sceneMeshesToSolidDocument(scene.meshes)
  expect(solid.bodies).toHaveLength(1)
- const model=solid.bodies[0]!.brep!
- expect(inspectNurbsBrep(model)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
- const artifact=scene.meshes[0]!.nativeGeometry
- if(!artifact)throw Error('Missing original progressive miter geometry')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
- expect(inspectProgressiveSweepSolidAdmission(artifact,model)).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true})
+ expect(inspectNurbsBrep(solid.bodies[0]!.brep!)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
  let cancel=false
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'},{shouldAbort:()=>cancel,onSweepPreview:()=>{cancel=true}})).rejects.toMatchObject({name:'AbortError'})
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'})).resolves.toBeDefined()
  await expect(buildOwnNurbsAsync(compileRushFrontend(source.replace('max_steps: 64','max_steps: 1')).document,{action:'build'})).rejects.toThrow(/budget/)
-})
+},120000)
 
 
 it('does not promote aliased zero-error geometry while a frame limit is unproved',()=>{

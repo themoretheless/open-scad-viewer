@@ -632,7 +632,7 @@
     },
     {
       "SPDXID": "SPDXRef-cargo-44",
-      "name": "rush-runtime",
+      "name": "modelgraph-runtime",
       "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
@@ -641,7 +641,7 @@
     },
     {
       "SPDXID": "SPDXRef-cargo-45",
-      "name": "rush-frontend",
+      "name": "modelgraph-text",
       "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,

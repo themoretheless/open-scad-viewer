@@ -15,17 +15,8 @@ function exportUnchecked(mesh: ExportMesh, format: MeshExportFormat, compressed 
     const data = export3mfInKernel(mesh, compressed);
     return { data, mimeType: 'model/3mf', extension: '3mf' };
 }
-export function meshExportBase64(data: Uint8Array) {
-    const nodeBuffer = (globalThis as { Buffer?: { from(buf: ArrayBufferLike, byteOffset: number, byteLength: number): { toString(enc: 'base64'): string } } }).Buffer;
-    if (nodeBuffer) {
-        return nodeBuffer.from(data.buffer, data.byteOffset, data.byteLength).toString('base64');
-    }
-    const chunks: string[] = [];
-    for (let i = 0; i < data.length; i += 8192) {
-        chunks.push(String.fromCharCode.apply(null, data.subarray(i, i + 8192) as unknown as number[]));
-    }
-    return btoa(chunks.join(''));
-}
+export function meshExportBase64(data: Uint8Array) { let binary = ''; for (let i = 0; i < data.length; i += 8192)
+    binary += String.fromCharCode(...data.subarray(i, i + 8192)); return btoa(binary); }
 
 function checkArtifact<T extends { data: Uint8Array }>(artifact: T): T {
     if (artifact.data.length > 4 * 1024 * 1024) throw new Error('Export exceeds 4 MiB.');

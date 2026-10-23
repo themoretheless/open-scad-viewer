@@ -1,0 +1,4436 @@
+{
+  "schema": "cad-opposing-clearance-occt/1",
+  "passed": true,
+  "scope": "Enumerated selected opposing faces; not global thickness or G1.",
+  "faceAssociation": "Unique interior point classified inside face and within 1e-7 mm of its surface.",
+  "cases": [
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767817
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          9.123310383548956,
+          -3.7789988946052615,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767835
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          9.123310383548956,
+          -3.7789988946052615,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767772
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.778998894605262,
+          -9.123310383548956,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          -2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.875002293040553
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          2.875
+        ],
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.8750002847664096
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          2.875
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-0",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "287195643db0bcd5dd519a6bd0acd349a32e4aacc911d6d50e881bd7baf7e82c",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.8750022930405517
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          2.875
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767817
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          9.123310383548956,
+          3.7789988946052615,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767835
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          9.123310383548956,
+          3.7789988946052615,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 7.375,
+      "intervalMm": [
+        7.374999999999958,
+        7.375000001767772
+      ],
+      "independentDistanceMm": 7.374999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.778998894605262,
+          9.123310383548956,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.875002293040553
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          2.875
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.8750002847664096
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          2.875
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-1",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.125
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "81eb8023a5bf10ce5513d8d369ab7fe7b33f13266300744e480a1f5b2a9c9a1d",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 2.875,
+      "intervalMm": [
+        2.8749999999999987,
+        2.8750022930405517
+      ],
+      "independentDistanceMm": 2.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          2.875
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838892
+      ],
+      "independentDistanceMm": 6.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          8.661370617293313,
+          -3.5876571784227167,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838904
+      ],
+      "independentDistanceMm": 6.874999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.661370617293313,
+          -3.5876571784227167,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838841
+      ],
+      "independentDistanceMm": 6.874999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.587657178422717,
+          -8.661370617293313,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          -2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.3750027875084996
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          2.375
+        ],
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.375000356440313
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          2.375
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-2",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "9bb86b42dfd3938b6f5c7936bb5d14767c4076f45d8bb4a3ec746f2791e73772",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.3750027875084925
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          2.375
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838892
+      ],
+      "independentDistanceMm": 6.875,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          8.661370617293313,
+          3.5876571784227167,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838904
+      ],
+      "independentDistanceMm": 6.874999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.661370617293313,
+          3.5876571784227167,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 6.875,
+      "intervalMm": [
+        6.874999999999958,
+        6.875000008838841
+      ],
+      "independentDistanceMm": 6.874999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.587657178422717,
+          8.661370617293313,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.3750027875084996
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          2.375
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.375000356440313
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          2.375
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-3",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        0.625
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "7adf2b59ece8878f9610bed94abecc6f94eeba0272ed74d04c0681b60efaf430",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 2.375,
+      "intervalMm": [
+        2.3749999999999987,
+        2.3750027875084925
+      ],
+      "independentDistanceMm": 2.375,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          2.375
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677733
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.083945909473758,
+          -3.3484800331945355,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677731
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.083945909473758,
+          -3.3484800331945355,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          -0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677674
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.348480033194536,
+          -8.083945909473758,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          -2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.750003792989056
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          1.75
+        ],
+        [
+          9.238795325112868,
+          -3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.7500004936840827
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          1.75
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-4",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "a7a5a9d67fa33412252ceb7608d7fb3916e55e946dfa113f47c1c31ffe956adc",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.750003792989042
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          1.75
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677733
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.083945909473758,
+          3.3484800331945355,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677731
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          8.083945909473758,
+          3.3484800331945355,
+          3.0
+        ],
+        [
+          2.309698831278217,
+          0.9567085809127246,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 6.25,
+      "intervalMm": [
+        6.24999999999996,
+        6.250000017677674
+      ],
+      "independentDistanceMm": 6.249999999999999,
+      "errorMm": 8.881784197001252e-16,
+      "pointsMm": [
+        [
+          3.348480033194536,
+          8.083945909473758,
+          3.0
+        ],
+        [
+          0.9567085809127246,
+          2.309698831278217,
+          3.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.750003792989056
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          1.75
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.7500004936840827
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          9.238795325112868,
+          3.826834323650898,
+          1.75
+        ],
+        [
+          9.238795325112868,
+          3.826834323650898,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-5",
+      "importedShapeValid": true,
+      "parameters": [
+        10.0,
+        2.5,
+        3.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "029c6d2cea84d8bf03a2382a0dba9e4143a0fdffbe3510474ce4fe090750bd52",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 1.75,
+      "intervalMm": [
+        1.7499999999999993,
+        1.750003792989042
+      ],
+      "independentDistanceMm": 1.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          1.75
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.750000003535634
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          18.246620767097912,
+          -7.557997789210523,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.75000000353567
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          18.246620767097912,
+          -7.557997789210523,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.750000003535543
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          7.557997789210524,
+          -18.246620767097912,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          -4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750004586096541
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          5.75
+        ],
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750000569532819
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          5.75
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-6",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "533cb29f62f6898f302526cb43644ac627693d1c8a60be0affa32fcbcf69e6d5",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750004586096538
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          5.75
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.750000003535634
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          18.246620767097912,
+          7.557997789210523,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.75000000353567
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          18.246620767097912,
+          7.557997789210523,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 14.75,
+      "intervalMm": [
+        14.749999999999917,
+        14.750000003535543
+      ],
+      "independentDistanceMm": 14.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          7.557997789210524,
+          18.246620767097912,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750004586096541
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          5.75
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750000569532819
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          5.75
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-7",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        0.25
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "e27b8e5c6dd027202fff4ef40d1b636af518e9d171b6d097d3c5abb2cdef0910",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 5.75,
+      "intervalMm": [
+        5.749999999999997,
+        5.750004586096538
+      ],
+      "independentDistanceMm": 5.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          18.477590650225736,
+          5.75
+        ],
+        [
+          7.653668647301797,
+          18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677785
+      ],
+      "independentDistanceMm": 13.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          17.322741234586626,
+          -7.175314356845433,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677808
+      ],
+      "independentDistanceMm": 13.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          17.322741234586626,
+          -7.175314356845433,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677682
+      ],
+      "independentDistanceMm": 13.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          7.175314356845434,
+          -17.322741234586626,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          -4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.750005575035684
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          4.75
+        ],
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.750000712880626
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          4.75
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-8",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "4485d750c3fcfc6bc8e81e87514e06b75c20a05b78bcbee09f5704475deb1bea",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.75000557503567
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          4.75
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677785
+      ],
+      "independentDistanceMm": 13.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          17.322741234586626,
+          7.175314356845433,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677808
+      ],
+      "independentDistanceMm": 13.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          17.322741234586626,
+          7.175314356845433,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 13.75,
+      "intervalMm": [
+        13.749999999999917,
+        13.750000017677682
+      ],
+      "independentDistanceMm": 13.749999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          7.175314356845434,
+          17.322741234586626,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.750005575035684
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          4.75
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.750000712880626
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          4.75
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-9",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "81e3b6fce52b91edabbc8ffefdcfba2229d89aee55c84b4d2620f80aeea2f816",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 4.75,
+      "intervalMm": [
+        4.749999999999997,
+        4.75000557503567
+      ],
+      "independentDistanceMm": 4.75,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          18.477590650225736,
+          4.75
+        ],
+        [
+          7.653668647301797,
+          18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355466
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          16.167891818947517,
+          -6.696960066389071,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355463
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          16.167891818947517,
+          -6.696960066389071,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          -1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355349
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          6.696960066389072,
+          -16.167891818947517,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          -4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.5000075860034685
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          3.5
+        ],
+        [
+          18.477590650225736,
+          -7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.5000009873681655
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          3.5
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-10",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "01c1d2f03d10eda8c55282510b4453ca8c43ad404a8a86156c4ba09d722a326d",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.5000075860034405
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          3.5
+        ],
+        [
+          7.653668647301797,
+          -18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355466
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          16.167891818947517,
+          6.696960066389071,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355463
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          16.167891818947517,
+          6.696960066389071,
+          6.0
+        ],
+        [
+          4.619397662556434,
+          1.9134171618254492,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 12.5,
+      "intervalMm": [
+        12.49999999999992,
+        12.500000035355349
+      ],
+      "independentDistanceMm": 12.499999999999998,
+      "errorMm": 1.7763568394002505e-15,
+      "pointsMm": [
+        [
+          6.696960066389072,
+          16.167891818947517,
+          6.0
+        ],
+        [
+          1.9134171618254492,
+          4.619397662556434,
+          6.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.5000075860034685
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          3.5
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.5000009873681655
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          18.477590650225736,
+          7.653668647301796,
+          3.5
+        ],
+        [
+          18.477590650225736,
+          7.653668647301796,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-11",
+      "importedShapeValid": true,
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "e4cad6d54c912d23d789a03a3fe8e1ffd90fffa1f2db2ee87837b8621835baf1",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 3.5,
+      "intervalMm": [
+        3.4999999999999987,
+        3.500007586003441
+      ],
+      "independentDistanceMm": 3.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          7.653668647301797,
+          18.477590650225736,
+          3.5
+        ],
+        [
+          7.653668647301797,
+          18.477590650225736,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.500000007071268
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          36.493241534195825,
+          -15.115995578421046,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.50000000707134
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          36.493241534195825,
+          -15.115995578421046,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.500000007071087
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          15.115995578421048,
+          -36.493241534195825,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500009172208516
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          11.5
+        ],
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500001139065638
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          11.5
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-12",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "7f4ad635b27dfba4d7d3e71cdf646dee86feb888ccac9992e0b25621c6a920ae",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500009172208511
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          11.5
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.500000007071268
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          36.493241534195825,
+          15.115995578421046,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.50000000707134
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          36.493241534195825,
+          15.115995578421046,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 29.5,
+      "intervalMm": [
+        29.499999999999833,
+        29.500000007071087
+      ],
+      "independentDistanceMm": 29.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          15.115995578421048,
+          36.493241534195825,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500009172208516
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          11.5
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500001139065638
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          11.5
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-13",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        0.5
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "efa77de176cf61e5ae110ba097e07b2a378dd9b398d6e5f9972fa75b9db66a83",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 11.5,
+      "intervalMm": [
+        11.499999999999995,
+        11.500009172208511
+      ],
+      "independentDistanceMm": 11.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          36.95518130045147,
+          11.5
+        ],
+        [
+          15.307337294603593,
+          36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.50000003535557
+      ],
+      "independentDistanceMm": 27.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          34.64548246917325,
+          -14.350628713690867,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.500000035355615
+      ],
+      "independentDistanceMm": 27.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          34.64548246917325,
+          -14.350628713690867,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.500000035355363
+      ],
+      "independentDistanceMm": 27.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          14.350628713690869,
+          -34.64548246917325,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.50000118464332
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          9.5
+        ],
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.500001425761251
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          9.5
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-14",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "c10dd15f7b46505f1bf2d013494c48a0492c9071077f61c2ec4a9a102d7fceba",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.500001184643292
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          9.5
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.50000003535557
+      ],
+      "independentDistanceMm": 27.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          34.64548246917325,
+          14.350628713690867,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.500000035355615
+      ],
+      "independentDistanceMm": 27.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          34.64548246917325,
+          14.350628713690867,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 27.5,
+      "intervalMm": [
+        27.499999999999833,
+        27.500000035355363
+      ],
+      "independentDistanceMm": 27.499999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          14.350628713690869,
+          34.64548246917325,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.50000118464332
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          9.5
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.500001425761251
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          9.5
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-15",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        2.5
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "5595771addfbd825b1fec1308020bfdb12906f1e0aa5f9b510f48267dc78fdf8",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 9.5,
+      "intervalMm": [
+        9.499999999999995,
+        9.500001184643292
+      ],
+      "independentDistanceMm": 9.5,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          36.95518130045147,
+          9.5
+        ],
+        [
+          15.307337294603593,
+          36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "entry-inner",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710932
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          32.335783637895034,
+          -13.393920132778142,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "constant-inner",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710925
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          32.335783637895034,
+          -13.393920132778142,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          -3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "exit-inner",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710698
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          13.393920132778144,
+          -32.335783637895034,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          -9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "entry-bottom",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001647504912
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          7.0
+        ],
+        [
+          36.95518130045147,
+          -15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "constant-bottom",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001974736331
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          7.0
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-16",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": -1.0,
+      "name": "exit-bottom",
+      "stepSha256": "325221406ba02a7326d1cf9bd5eed910437cfb45a003a69c732628a2170ee675",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001647504856
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          7.0
+        ],
+        [
+          15.307337294603593,
+          -36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "entry-inner",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        0,
+        3
+      ],
+      "importedFaces": [
+        0,
+        3
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710932
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          32.335783637895034,
+          13.393920132778142,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "constant-inner",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        5,
+        8
+      ],
+      "importedFaces": [
+        5,
+        8
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710925
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          32.335783637895034,
+          13.393920132778142,
+          12.0
+        ],
+        [
+          9.238795325112868,
+          3.8268343236508984,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "exit-inner",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        10,
+        13
+      ],
+      "importedFaces": [
+        10,
+        13
+      ],
+      "expectedMm": 25.0,
+      "intervalMm": [
+        24.99999999999984,
+        25.000000070710698
+      ],
+      "independentDistanceMm": 24.999999999999996,
+      "errorMm": 3.552713678800501e-15,
+      "pointsMm": [
+        [
+          13.393920132778144,
+          32.335783637895034,
+          12.0
+        ],
+        [
+          3.8268343236508984,
+          9.238795325112868,
+          12.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "entry-bottom",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        0,
+        4
+      ],
+      "importedFaces": [
+        0,
+        4
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001647504912
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          7.0
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "constant-bottom",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        5,
+        9
+      ],
+      "importedFaces": [
+        5,
+        9
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001974736331
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          36.95518130045147,
+          15.307337294603592,
+          7.0
+        ],
+        [
+          36.95518130045147,
+          15.307337294603592,
+          0.0
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "specimen": "case-17",
+      "importedShapeValid": true,
+      "parameters": [
+        40.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "direction": 1.0,
+      "name": "exit-bottom",
+      "stepSha256": "c321b6e1590da4e0d1c536544efa37d8bbfa25542f23896b133a7bb8537f3ef4",
+      "originalFaces": [
+        10,
+        14
+      ],
+      "importedFaces": [
+        10,
+        14
+      ],
+      "expectedMm": 7.0,
+      "intervalMm": [
+        6.999999999999997,
+        7.000001647504856
+      ],
+      "independentDistanceMm": 7.0,
+      "errorMm": 0.0,
+      "pointsMm": [
+        [
+          15.307337294603593,
+          36.95518130045147,
+          7.0
+        ],
+        [
+          15.307337294603593,
+          36.95518130045147,
+          0.0
+        ]
+      ],
+      "passed": true
+    }
+  ]
+}

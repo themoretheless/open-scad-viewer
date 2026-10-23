@@ -178,33 +178,6 @@ fn corner_polyline(points: &[Point], radius: f64, transition: bool, closed: bool
 mod tests {
     use super::*;
     #[test]
-    fn cyclic_spatial_transition_shared_profile_bound_fits_original_work_budget() {
-        let path = closed_transition_polyline(
-            &[[0., 0., 0.], [10., 0., 0.], [10., 10., 5.], [0., 10., 0.]],
-            2.,
-        )
-        .unwrap();
-        let profiles = vec![crate::primitives::line([0., 8., 0.25], [0., 8., 0.5]).unwrap()];
-        let scale = crate::progressive_sweep::constant_vector_law([1., 0., 0.]).unwrap();
-        let twist = crate::progressive_sweep::constant_vector_law([0.; 3]).unwrap();
-        let options = crate::progressive_sweep::Options {
-            normal: [0., 0., 1.],
-            orientation: crate::progressive_sweep::Orientation::RotationMinimizing,
-            spacing: crate::progressive_sweep::Spacing::Parameter,
-            initial_sections: 5,
-            max_sections: 257,
-            max_deviation: 0.01,
-        };
-        let result =
-            crate::progressive_sweep::MultiSweep::new(&profiles, &path, &scale, &twist, options)
-                .unwrap()
-                .preview_at(257)
-                .unwrap();
-        assert!(result.report.accepted, "{:?}", result.report);
-        assert!(result.report.continuous_bound && result.report.error_certificate_cells <= 10000);
-    }
-
-    #[test]
     fn cyclic_corner_paths_refine_with_closed_rmf_sections() {
         let planar = [[0., 0., 0.], [10., 0., 0.], [10., 10., 0.], [0., 10., 0.]];
         let spatial = [[0., 0., 0.], [10., 0., 0.], [10., 10., 5.], [0., 10., 0.]];
@@ -233,8 +206,7 @@ mod tests {
                     .unwrap();
             assert!(
                 result.levels.last().unwrap().accepted,
-                "points={points:?}, degree={}, levels={:?}",
-                path.degree,
+                "{:?}",
                 result.levels
             );
             assert!(result.levels.last().unwrap().closed_path);

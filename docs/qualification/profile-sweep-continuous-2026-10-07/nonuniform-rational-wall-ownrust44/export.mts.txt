@@ -1,0 +1,18 @@
+import {writeFileSync} from 'node:fs'
+import {bezierNurbsCurve} from '../../src/services/nurbsConstructors'
+import {evaluateNurbsSurface} from '../../src/services/nurbsSurface'
+import {createBrepSectionLoftSurfaces} from '../../src/services/geometry/brep'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../../src/services/sweep/certificates/nurbsSweepEmbedding'
+import {exportDirectStepV5,importDirectStepV5} from '../../src/services/cadNurbsStep'
+const points=[[-1,-1],[1,-1],[1,1],[-1,1]]
+const sections=[0,5].map(z=>[points.map((p,i)=>bezierNurbsCurve([[...p,z],[...points[(i+1)%4],z]]))])
+const sides=[points.map((p,i)=>({degreeU:1,degreeV:2,knotsU:[0,0,1,1],knotsV:[0,0,0,.25,1,1,1],controlPoints:[p,points[(i+1)%4]].map(p=>[0,1,3,5].map(z=>[...p,z])),weights:[[1,.75,1.5,1],[1,.75,1.5,1]],periodicU:false,periodicV:false}))]
+const model=createBrepSectionLoftSurfaces(sections,sides,false)
+const audit=inspectSweepVolume(model,[4,5],DEFAULT_SWEEP_VOLUME_BUDGETS)
+writeFileSync('tmp/profile-nonuniform-step/native-volume-audit.json',JSON.stringify(audit,null,2))
+const text=exportDirectStepV5(model).text
+writeFileSync('tmp/profile-nonuniform-step/nonuniform.step',text)
+writeFileSync('tmp/profile-nonuniform-step/samples.json',JSON.stringify(model.faces.map((f,i)=>(i<4?[.17,.5,.83]:[-.66,0,.66]).flatMap(u=>(i<4?[0,.13,.37,.5,.87,1]:[-1,-.74,-.26,0,.74,1]).map(v=>({u,v,...evaluateNurbsSurface(f.surface,u,v)}))))))
+const imported=importDirectStepV5(text).model
+if(model.faces.length!==6||imported.faces.length!==6)throw Error('Unexpected native face count')
+console.log(JSON.stringify({nativeFaces:model.faces.length,roundTripFaces:imported.faces.length,expectedVolume:20}))

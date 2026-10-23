@@ -1,0 +1,34 @@
+Matplotlib is building the font cache; this may take a moment.
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Worker source transform",
+      "stepSha256": "59d4c152ce850fa9a6ab2427c72d22bbd77c4aab1bdb1f6bbc8a9ad034ddbb98",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -5.0000001,
+          -10.0000001,
+          -1e-07
+        ],
+        [
+          15.0000001,
+          10.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 7999.999999999999,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.094947017729282e-13,
+      "passed": true,
+      "previewTriangles": 12
+    }
+  ]
+}

@@ -223,19 +223,14 @@ describe('OpenSCAD MCP server', () => {
       mimeType: 'text/x-openscad',
     })])
 
-    // Discovery uses a short readiness probe; a cold module may truthfully be
-    // unavailable. Exercise the existing initialization admission before
-    // asserting an available provider; keep both product deadlines unchanged.
-    const warm = await request('tools/call', {
-      name: 'openscad_check', arguments: { source: 'cube(1);', quality: 'full' },
-    }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
-    expect(warm.isError).not.toBe(true)
-    expect(warm.structuredContent.analysis.volume).toBeCloseTo(1, 8)
-    const capabilities = await request('resources/read', {
-      uri: 'openscad://capabilities',
-    }) as { contents: Array<{ text: string }> }
-    const capabilitiesJson = JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
-    expect(capabilitiesJson).toMatchObject({
+    // The product keeps its 250 ms cold-start admission budget. Poll the
+    // resource until the asynchronous provider is ready before asserting it.
+    await expect.poll(async () => {
+      const capabilities = await request('resources/read', {
+        uri: 'openscad://capabilities',
+      }) as { contents: Array<{ text: string }> }
+      return JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
+    }, { timeout: 10_000 }).toMatchObject({
       protocol_versions: expect.arrayContaining(['2026-07-28', '2025-11-25']),
       geometry_engines: {
         source_directed_routing: true,

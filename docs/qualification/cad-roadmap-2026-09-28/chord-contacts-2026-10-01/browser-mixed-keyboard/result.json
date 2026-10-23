@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "keyboard": true,
+  "tabs": 67043,
+  "edits": 20,
+  "cases": [
+    "bracket",
+    "enclosure",
+    "flange"
+  ],
+  "errors": []
+}

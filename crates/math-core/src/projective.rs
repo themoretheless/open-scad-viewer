@@ -57,41 +57,6 @@ pub fn triangle_domain(vertices: [ProjectedPoint; 3]) -> Result<(), ProjectiveEr
     }
     Ok(())
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn retains_projective_row_and_checks_triangle_interior() {
-        let mut matrix = crate::affine::IDENTITY;
-        matrix[3][0] = 0.5;
-        assert_eq!(point(matrix, [2., 4., 6.]).unwrap().position, [1., 2., 3.]);
-        let vertices =
-            [[0., 0., 0.], [2., 0., 0.], [0., 2., 0.]].map(|p| point(matrix, p).unwrap());
-        assert!(triangle_domain(vertices).is_ok());
-        let vertices =
-            [[-3., 0., 0.], [2., 0., 0.], [0., 2., 0.]].map(|p| point(matrix, p).unwrap());
-        assert_eq!(triangle_domain(vertices), Err(ProjectiveError::Horizon));
-        assert_eq!(point(matrix, [-2., 0., 0.]), Err(ProjectiveError::Horizon));
-    }
-    #[test]
-    fn negative_chart_is_valid_and_overflow_is_explicit() {
-        let mut matrix = crate::affine::IDENTITY;
-        matrix[3][3] = -1.;
-        let vertices =
-            [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]].map(|p| point(matrix, p).unwrap());
-        assert!(triangle_domain(vertices).is_ok());
-        matrix[0][0] = f64::MAX;
-        assert_eq!(
-            point(matrix, [2., 0., 0.]),
-            Err(ProjectiveError::NonFiniteOutput)
-        );
-        assert_eq!(
-            point(matrix, [f64::NAN, 0., 0.]),
-            Err(ProjectiveError::NonFiniteInput)
-        );
-    }
-}
-
 /// Sign of the full homogeneous determinant. Positive row scaling avoids
 /// overflow; zero or non-finite elimination refuses an unresolved orientation.
 pub fn orientation(mut matrix: AffineMatrix) -> Option<bool> {
@@ -128,4 +93,39 @@ pub fn orientation(mut matrix: AffineMatrix) -> Option<bool> {
         }
     }
     Some(negative)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn retains_projective_row_and_checks_triangle_interior() {
+        let mut matrix = crate::affine::IDENTITY;
+        matrix[3][0] = 0.5;
+        assert_eq!(point(matrix, [2., 4., 6.]).unwrap().position, [1., 2., 3.]);
+        let vertices =
+            [[0., 0., 0.], [2., 0., 0.], [0., 2., 0.]].map(|p| point(matrix, p).unwrap());
+        assert!(triangle_domain(vertices).is_ok());
+        let vertices =
+            [[-3., 0., 0.], [2., 0., 0.], [0., 2., 0.]].map(|p| point(matrix, p).unwrap());
+        assert_eq!(triangle_domain(vertices), Err(ProjectiveError::Horizon));
+        assert_eq!(point(matrix, [-2., 0., 0.]), Err(ProjectiveError::Horizon));
+    }
+    #[test]
+    fn negative_chart_is_valid_and_overflow_is_explicit() {
+        let mut matrix = crate::affine::IDENTITY;
+        matrix[3][3] = -1.;
+        let vertices =
+            [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]].map(|p| point(matrix, p).unwrap());
+        assert!(triangle_domain(vertices).is_ok());
+        matrix[0][0] = f64::MAX;
+        assert_eq!(
+            point(matrix, [2., 0., 0.]),
+            Err(ProjectiveError::NonFiniteOutput)
+        );
+        assert_eq!(
+            point(matrix, [f64::NAN, 0., 0.]),
+            Err(ProjectiveError::NonFiniteInput)
+        );
+    }
 }

@@ -4,11 +4,15 @@
  * module only owns device/buffer/dispatch plumbing — no algorithm lives here.
  */
 import {
+  detectAdapterMemoryArchitecture,
+  memoryArchitectureProfile,
   requiredWebGpuFeaturesForWgsl,
   requiredWgslLanguageFeatures,
   selectSupportedWgslVariant,
   unsupportedWebGpuFeatures,
   unsupportedWgslLanguageFeatures,
+  type WebGpuMemoryArchitecture,
+  type WebGpuMemoryArchitectureProfile,
   type WgslVariant,
 } from './webgpuFeatures'
 
@@ -45,6 +49,8 @@ interface CachedComputePipeline {
 interface CachedComputeContext {
   adapter: GPUAdapter
   device: GPUDevice
+  memoryArchitecture: WebGpuMemoryArchitecture
+  memoryProfile: WebGpuMemoryArchitectureProfile
   featuresKey: string
   pipelines: Map<string, CachedComputePipeline>
 }
@@ -83,6 +89,14 @@ function acquireGpuAdapter(gpu: GPU | undefined): Promise<GPUAdapter | null> {
     adapterCache.set(gpu, promise)
   }
   return promise
+}
+
+export function activeGpuMemoryArchitecture(): WebGpuMemoryArchitecture | null {
+  return activeComputeContext?.memoryArchitecture ?? null
+}
+
+export function activeGpuMemoryProfile(): WebGpuMemoryArchitectureProfile | null {
+  return activeComputeContext?.memoryProfile ?? null
 }
 
 export function resetGpuComputeContext(): void {
@@ -129,9 +143,12 @@ async function acquireComputeContext(
     }
     const prevDevice = activeComputeContext?.device
     const device = await adapter.requestDevice({ requiredFeatures: requiredFeatures as GPUFeatureName[] })
+    const memoryArchitecture = detectAdapterMemoryArchitecture(adapter)
     const context: CachedComputeContext = {
       adapter,
       device,
+      memoryArchitecture,
+      memoryProfile: memoryArchitectureProfile(memoryArchitecture),
       featuresKey,
       pipelines: new Map(),
     }
@@ -246,13 +263,43 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
         let storage = sharedUploads.get(bytes)
         if (!storage) {
           const alignedInBytes = (bytes.byteLength + 3) & ~3
-          storage = device.createBuffer({
-            size: Math.max(16, alignedInBytes),
-            usage:
-              (buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE) |
-              GPUBufferUsage.COPY_DST,
-          })
-          device.queue.writeBuffer(storage, 0, bytes)
+          const size = Math.max(16, alignedInBytes)
+          const usage = buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE
+          if (context.memoryProfile.mappedAtCreationPrimaryUpload) {
+            // UMA (Unified Memory Architecture, e.g. Apple Silicon Metal):
+            // initialize the primary buffer via mappedAtCreation so the host
+            // writes directly into unified shared memory without an extra queue
+            // staging copy when supported by the runtime.
+            storage = device.createBuffer({
+              size,
+              usage: usage | GPUBufferUsage.COPY_DST,
+              mappedAtCreation: true,
+            })
+            if (typeof storage.getMappedRange === 'function' && typeof storage.unmap === 'function') {
+              const mapped = storage.getMappedRange(0, size)
+              if (mapped && mapped.byteLength >= bytes.byteLength) {
+                const src = ArrayBuffer.isView(bytes)
+                  ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+                  : new Uint8Array(bytes)
+                new Uint8Array(mapped, 0, src.byteLength).set(src)
+                storage.unmap()
+              } else {
+                storage.unmap()
+                device.queue.writeBuffer(storage, 0, bytes)
+              }
+            } else {
+              storage.unmap?.()
+              device.queue.writeBuffer(storage, 0, bytes)
+            }
+          } else {
+            // dUMA (Discrete Memory Architecture): allocate device-local VRAM
+            // and transfer via the queue staging ring.
+            storage = device.createBuffer({
+              size,
+              usage: usage | GPUBufferUsage.COPY_DST,
+            })
+            device.queue.writeBuffer(storage, 0, bytes)
+          }
           sharedUploads.set(bytes, storage)
           scratch.push(storage)
         }

@@ -398,8 +398,8 @@ pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result
 pub mod force_markers;
 
 pub mod point_transform;
-pub mod live_pattern;
 
 pub mod path_sampling;
 
+pub mod live_pattern;
 pub mod keyframes;

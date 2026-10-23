@@ -2,9 +2,7 @@
 //! Full envelope, provenance and capability admission is separate.
 use super::{Result, Value, field};
 
-fn invalid(message: &str) -> super::Error {
-    super::Error::new("BREP_SEMANTIC_CONTRACT", message)
-}
+use crate::semantic_contract_error as invalid;
 
 pub fn validate(plan: &Value, node_count: usize) -> Result<()> {
     let object = plan

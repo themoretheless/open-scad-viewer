@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-16",
+  "scope": "All six original finite physical-Y side-face families, true stock intersections, cylindrical tip, source-owned NURBS fits and actual end-plane controls; not a closed wheel",
+  "tests": {
+    "native-regressions": {
+      "passed": 36,
+      "failed_summaries": 0
+    },
+    "math-ownership-tests": {
+      "passed": 8,
+      "failed_summaries": 0
+    },
+    "boolean-tests": {
+      "passed": 3,
+      "failed_summaries": 0
+    }
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs": "1bf64fc6a52fba7b920e609c33b4c1b9a8bcad8de0ead4eafdc8abed660c69ed",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial.rs": "ce12aba5233b0e735ae2d352cf4effc0ba87572b86fdecf4d9d9ea0a294d802e",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_stock.rs": "773ba92c4c9f09008c136bd2e18d2c92e099fbf5b5d9a16db2c8de29ceae1542",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/axial_tip.rs": "8e5403cd40fa3940d2c777067e6d84dbadec2e2f9a31ea043d477d24f584ff51",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/chart.rs": "415105ec2cd7cd1cfb4b85309c7ef02728849c64cb2d2fcaf99d31477e21edbf",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/expression.rs": "2127057f8d257d8ea47746131b17be1e7cf0ee8e0a67022c27bb1ef3cb70d82d",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/fit.rs": "5fd1aebcd531bc4aabac5df484fd56d962e786ba37176b36afe68e115a9deab3",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/interpolation.rs": "5123939e326c0ea95ecdc8137ddda98b0fd694d3011a5dc13c81544a3f4bf063",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/root.rs": "9e1be49b15c333a24c47eb5fd9cc5a3cebd30151f6198b2863c79e346360c127",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/stock.rs": "8ed2f0e35c928a33d945ca01131c30385a95711df2d7397ec237f67419346e7a",
+    "crates/nurbs-core/src/construct/surfaces/worm_wheel/taylor.rs": "5e09b9fbf2a63357e55aaa7bb37ed9b00f7f961fa558f5f0811044ddac140630",
+    "crates/nurbs-core/tests/worm_wheel_axial.rs": "7c4b583ad6db5034af6773f96792ff63d5f77af56f93f99ca0a0e27a533b9461",
+    "crates/nurbs-core/tests/worm_wheel_axial_stock.rs": "2a2ee19e11261889e918f1841a0be25ec3932ddddc7e055298b3f2b102aae311",
+    "crates/nurbs-core/tests/worm_wheel_axial_tip.rs": "52c2800f3299d9255c1b202398b0ec530d8a5f66d4c35bfbf8b6ca0df3d56fa4"
+  },
+  "catalog_implemented": 197,
+  "catalog_planned": 3,
+  "wasm_check": "passed both crates",
+  "rustfmt": "passed explicit changed files",
+  "api_map_public_modules": 182,
+  "qualified_properties": [
+    "complete original-U/physical-Y crossing census and unique root for every Y",
+    "original source radial/axial injectivity and derivative rank",
+    "continuous sixth-order interpolation error including root/parameter/control rounding",
+    "actual canonical Y controls and exact represented end planes",
+    "original source ownership replay for root, working flank and tip",
+    "bit-preserving C0 packing"
+  ],
+  "unqualified": [
+    "cross-family stitched interfaces",
+    "complete tooth-period placement",
+    "planar cap profiles and owned closed B-rep",
+    "global candidate/solid embedding and cutter visibility",
+    "viewer/JSON/Rush/STEP delivery"
+  ],
+  "unique_focused_passed": 47,
+  "example": {
+    "spec": "default module 1, teeth 40, Y [-2,2], stock radius 21",
+    "tolerance": 0.0001,
+    "families": [
+      {
+        "name": "descending root",
+        "cells": 4,
+        "packed": 1,
+        "error_upper": 8.869327476089024e-06
+      },
+      {
+        "name": "ascending root",
+        "cells": 4,
+        "packed": 1,
+        "error_upper": 9.771844750531934e-06
+      },
+      {
+        "name": "root cylinder",
+        "cells": 2,
+        "packed": 1,
+        "error_upper": 5.4652389029748185e-06
+      },
+      {
+        "name": "descending working flank",
+        "cells": 32,
+        "packed": 3,
+        "error_upper": 5.617040773915694e-05
+      },
+      {
+        "name": "ascending working flank",
+        "cells": 32,
+        "packed": 3,
+        "error_upper": 5.502907909696017e-05
+      },
+      {
+        "name": "stock tip",
+        "cells": 16,
+        "packed": 3,
+        "error_upper": 5.49158357658283e-05
+      }
+    ]
+  },
+  "previous_full_suite": "../nurbs-worm-wheel-stock-2026-10-16/native-tests.json: 3246 native +2 doctests, 3 ignored diagnostics, compiled snapshots. Not rerun for these localized additions."
+}

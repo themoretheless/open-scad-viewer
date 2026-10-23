@@ -19,7 +19,7 @@ function tree(lengths:number[]):Tree{
 const fixedLiteral=tree(Array.from({length:288},(_,n)=>n<144?8:n<256?9:n<280?7:8)),fixedDistance=tree(Array(32).fill(5))
 /** Decodes legacy base64 or compact ASCII (4-byte size + raw DEFLATE). */
 export function unpackWasmBase64(wasmBase64:string):Uint8Array<ArrayBuffer>{
- return unpackWasm(wasmBase64.startsWith('bKx:')?decodeBase91(wasmBase64):Uint8Array.from(atob(wasmBase64),character=>character.charCodeAt(0)))
+ return unpackWasm((wasmBase64.startsWith('bBx:')||wasmBase64.startsWith('bKx:')) ? decodeBase91(wasmBase64) : Uint8Array.from(atob(wasmBase64),character=>character.charCodeAt(0)))
 }
 export function unpackWasm(input:Uint8Array):Uint8Array<ArrayBuffer>{
  if(input.length<4)throw new Error('Truncated WASM package')

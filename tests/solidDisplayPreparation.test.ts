@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {parseDirectDocument} from '../src/services/directModeling'
 import {expect,it} from 'vitest'
-import {createBrepBox,createBrepSphere,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import type {PolygonMesh} from '../src/services/geometry/polygon'
 import {prepareSolidDisplay} from '../src/services/solidDisplayPreparation'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
@@ -39,7 +39,9 @@ function reference(mesh:PolygonMesh,dense:PolygonMesh){
 }
 it.each(['box','sphere'])('preserves display geometry and picking with crease-aware shading for %s',kind=>{
  const brep=kind==='box'?createBrepBox([0,0,0],[2,3,4]):createBrepSphere(5)
- const mesh=tessellateNurbsBrep(brep,3),dense=tessellateNurbsBrep(brep,12),expected=reference(mesh,dense),actual=prepareSolidDisplay(mesh,brep)
+ const segments=kind==='sphere'?8:12
+ const mesh=tessellateNurbsBrep(brep,3),dense=tessellateNurbsBrep(brep,segments),expected=reference(mesh,dense),actual=prepareSolidDisplay(mesh,brep,segments)
+ expect(dense.indices.length/3).toBeLessThanOrEqual(4000)
  expect(Array.from(actual.mesh.positions)).toEqual(Array.from(dense.positions))
  expect(Array.from(actual.mesh.indices)).toEqual(Array.from(dense.indices))
  expect(actual.map).toEqual(expected.map)
@@ -92,4 +94,28 @@ it('preserves exact closed-shell membership for dense and working mixed meshes',
  expect(JSON.stringify(doc)).toBe(before)
  const changed=structuredClone(body.mesh);changed.positions[0]+=.123
  expect(prepareSolidDisplay(changed,body.brep).workClosed).toBeNull()
+})
+
+it('refines the exact rational sphere at default detail without losing working-mesh picking',()=>{
+ const brep=createBrepSphere(5),mesh=tessellateNurbsBrep(brep,3),before=structuredClone(mesh)
+ const display=prepareSolidDisplay(mesh,brep,12)
+ expect(display.mesh.indices.length).toBeGreaterThan(mesh.indices.length)
+ expect(display.mesh.indices.length/3).toBeLessThanOrEqual(4000)
+ expect(display.map).toHaveLength(display.mesh.indices.length/3)
+ expect(display.map!.every(i=>Number.isInteger(i)&&i>=0&&i<mesh.indices.length/3)).toBe(true)
+ expect(display.closed?.every(Boolean)).toBe(true)
+ expect(mesh).toEqual(before)
+})
+
+it('keeps the torus working mesh and picking when requested refinement exceeds its budget',()=>{
+ const brep=createBrepTorus(10,2),mesh=tessellateNurbsBrep(brep,3),before=structuredClone(mesh)
+ const dense=tessellateNurbsBrep(brep,12)
+ expect(dense.indices.length/3).toBeGreaterThan(4000)
+ const actual=prepareSolidDisplay(mesh,brep,12)
+ expect(Array.from(actual.mesh.positions)).toEqual(Array.from(mesh.positions))
+ expect(Array.from(actual.mesh.indices)).toEqual(Array.from(mesh.indices))
+ expect(actual.map).toBeNull()
+ const expected=stats(mesh).normals
+ actual.normals.forEach((normal,i)=>normal.forEach((x,k)=>expect(x).toBeCloseTo(expected[i][k],12)))
+ expect(mesh).toEqual(before)
 })

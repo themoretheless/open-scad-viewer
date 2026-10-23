@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "scope": "Closed original-spec outer spherical bevel profile; not profile embedding or solid qualification",
+  "focused_tests_passed": 21,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/spherical/outline.rs": "a417fe3713e397d662216b0a78a69c6fc2835b6f07a58c7a27d4fdd0acfbc0d9",
+    "crates/nurbs-core/src/construct/curves/involute/spherical.rs": "2017489c83bb3c131deb4f08509f7b82281a8c26ddfac250dc77ca3ce19fda5a",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "4e63675e42a077117925544817a710ae0584a50ffe622baa2deede085c826193",
+    "crates/nurbs-core/tests/bevel_outline.rs": "45bb3334c2ebf1d93a73eed00a67ce21ce5c264dc26240bcdd7e1098e0460c30"
+  },
+  "catalog_implemented": 195,
+  "catalog_planned": 5,
+  "claims": [
+    "Closed complete original-role inventory",
+    "Exact clamped endpoint ownership including final closure",
+    "Original working-flank curves unchanged",
+    "Continuous nominal rational circle transition error including saved poles/weights and canonical joins",
+    "Opaque whole-source replay and caller tolerance enforced"
+  ],
+  "unqualified": [
+    "Actual complete-profile embedding",
+    "Cap/bore supporting surfaces and sewn B-rep topology",
+    "Owned closed gear solid and cutter envelopes"
+  ]
+}

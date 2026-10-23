@@ -1,0 +1,20 @@
+{
+  "scope": "Rigidly rotated and translated partial annular specimen, six-by-six wall groups",
+  "distanceBoundsQualified": true,
+  "materialThicknessQualified": false,
+  "fullBudgetNativeTrial": {
+    "converged": false,
+    "reason": "material-chord-unproven",
+    "candidateReason": "volume-unproven",
+    "clearanceReason": "tolerance",
+    "intervalMm": null,
+    "elapsedSeconds": 71.14
+  },
+  "originalWasmSearchTrial": {
+    "candidatesAttempted": 8,
+    "converged": false,
+    "elapsedSeconds": 63.15
+  },
+  "regression": "Bounded volume refusal retains complete face-union distance bounds and emits no material interval; original canonical annular specimen remains qualified",
+  "remaining": "Rigid placement support in original curved volume/boundary qualification; whole-body wall coverage"
+}

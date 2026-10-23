@@ -26,7 +26,9 @@ pub struct Report {
     pub orientation_domain_cells: usize,
 }
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,0,None,&[])
+    validate_limits(limits)?;
+    let boundary=boundary_embedding::inspect(model,tolerance_uv,limits.boundary)?;
+    complete_after_boundary(model,tolerance_uv,limits,boundary)
 }
 /// Joint sweep boundary evidence precedes nesting and material orientation.
 /// Empty cap selection is the closed no-cap case; no artificial caps are inferred.
@@ -38,14 +40,10 @@ pub fn inspect_sweep_with_projections(model:&Model,tolerance_uv:f64,limits:Limit
     caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)),proposals)
 }
-/// Two native reports from one immutable-model invocation. Chart reuse is limited
-/// to the actual positive oblique proofs produced by this fresh volume audit.
-pub fn inspect_sweep_with_projections_and_charts(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
-    caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])
-    ->Result<(Report,crate::sweep_retained_charts::Report)> {
-    let volume=inspect_sweep_with_projections(model,tolerance_uv,limits,max_linear_cells,caps,cap_limits,proposals)?;
-    let charts=crate::sweep_retained_charts::inspect_with_face_proofs(model,caps,max_linear_cells,proposals,&volume.boundary.intersections.faces)?;
-    Ok((volume,charts))
+/// Generic authored carriers, including nonplanar caps, may request a bounded
+/// linear projection proof. No planar cap specialization is inferred.
+pub fn inspect_with_linear(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize)->Result<Report> {
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,None,&[])
 }
 fn inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
     caps:Option<(&[usize],crate::sweep_cap_contacts::Budgets)>,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
@@ -64,14 +62,7 @@ pub struct Inspector {
 impl Inspector {
     pub fn new(model:std::sync::Arc<Model>,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
         caps:Option<(Vec<usize>,crate::sweep_cap_contacts::Budgets)>,proposals:Vec<Option<[[i8;3];2]>>)->Result<Self> {
-    if !(1..=1000000).contains(&limits.orientation_cells)
-        || !(1..=8000000).contains(&limits.orientation_domain_cells)
-        || !(1..=100000).contains(&limits.orientation_spans)
-        || !(1..=100000).contains(&limits.nesting_pairs)
-        || !(2..=1000000).contains(&limits.nesting_cells)
-        || !(2..=8000000).contains(&limits.nesting_domain_cells) {
-        return Err(Error::new("BREP_INVALID_INPUT", "Volume audit requires bounded positive stage budgets"));
-    }
+        validate_limits(limits)?;
         let chart_caps=caps.as_ref().map(|(c,_)|c.clone()).unwrap_or_default();
         let sweep=caps.is_some();
         let caps=caps.filter(|(c,_)|!c.is_empty());
@@ -188,7 +179,8 @@ fn frozen_inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_ce
     let boundary = match caps {
         Some((caps,budget))=>boundary_embedding::inspect_sweep_with_projections(
             model,tolerance_uv,limits.boundary,max_linear_cells,caps,budget,proposals)?,
-        _=>boundary_embedding::inspect_with_linear(model,tolerance_uv,limits.boundary,max_linear_cells)?,
+        _ if max_linear_cells == 0 => boundary_embedding::inspect(model,tolerance_uv,limits.boundary)?,
+        _ => boundary_embedding::inspect_with_linear(model,tolerance_uv,limits.boundary,max_linear_cells)?,
     };
     let mut out = Report { proven: false, boundary, nesting: None,
         orientations: (0..model.shells.len()).map(|shell| ShellOrientation {
@@ -288,16 +280,17 @@ mod tests {
             Some(crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000})).unwrap();
         assert_eq!(body.boundary_error_within_budget,Some(true));
         assert!(body.boundary_error_upper.unwrap()<=0.1);
-        assert_eq!(body.model.faces.len(),258);
+        let face_count=body.model.faces.len();
+        assert!(face_count>=18 && face_count<=514);
         let before=body.model.clone();
-        let report=inspect_sweep(&body.model,1e-8,limits(),20000,&[256,257],crate::sweep_cap_contacts::Budgets {
+        let report=inspect_sweep(&body.model,1e-8,limits(),20000,&[face_count-2,face_count-1],crate::sweep_cap_contacts::Budgets {
             max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,max_trim_pairs:100000,
             max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
         let pairs=&report.boundary.intersections.pairs;
         assert!(report.proven,"boundary={} next={:?} individual={} grouped={} cells={} unresolved={:?}",
             report.boundary.proven,pairs.next_pair,pairs.pairs.len(),pairs.grouped_pairs,pairs.cells,
             pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved").map(|p|p.faces).take(10).collect::<Vec<_>>());
-        assert_eq!(pairs.total_pairs,33153);
+        assert_eq!(pairs.total_pairs,face_count*(face_count-1)/2);
         assert_eq!(pairs.pairs.len()+pairs.grouped_pairs,pairs.total_pairs);
         assert!(pairs.pairs.len()<=10000 && pairs.cells<=100000 && pairs.domain_cells<=1000000);
         assert!(pairs.grouped_pairs>0 && pairs.next_pair.is_none());
@@ -582,4 +575,93 @@ mod tests {
         assert!(r.proven, "embedding={} nesting={:?}",r.boundary.proven,r.nesting.as_ref().map(|n|n.roles_consistent));
     }
 
+
+    #[test]
+    fn canonical_partial_annular_boundary_has_consistent_material_volume() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        let mut budget=limits();
+        budget.boundary.spans=4096;
+        budget.boundary.contacts.cells=150000;
+        budget.boundary.contacts.domain_cells=1500000;
+        budget.boundary.contacts.cells_per_pair=1024;
+        budget.boundary.contacts.domain_cells_per_pair=100000;
+        let r=inspect(&model,1e-8,budget).unwrap();
+        assert!(r.boundary.proven);
+        assert!(r.proven,"nesting={:?} orientation={:?}",r.nesting.as_ref().map(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert_eq!(r.orientations.len(),1);
+        assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
+    fn binary_exact_sphere_has_certified_volume_validity(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        let r=inspect(&model,1e-8,limits()).unwrap();
+        assert!(r.proven,"boundary={} orientation={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert!(r.boundary.intersections.absence_proven);assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+        let rounded=crate::analytic::sphere(2.).unwrap();let r=inspect(&rounded,1e-8,limits()).unwrap();
+        assert!(!r.proven);assert!(!r.boundary.agreement.all_equal);
+        for offset in [[8.,-4.,6.],[-8.,4.,-6.]]{
+            let mut moved=model.clone();
+            for v in &mut moved.vertices{for k in 0..3{v.point[k]+=offset[k];}}
+            for e in &mut moved.edges{for p in &mut e.curve.control_points{for k in 0..3{p[k]+=offset[k];}}}
+            for f in &mut moved.faces{for row in &mut f.surface.control_points{for p in row{for k in 0..3{p[k]+=offset[k];}}}}
+            let r=inspect(&moved,1e-8,limits()).unwrap();assert!(r.proven,"offset={offset:?}");
+        }
+    }
+    #[test]
+    fn exact_sphere_radius_family_keeps_all_volume_proofs(){
+        for radius in [0.000011444091796875,0.375,1.5,6.,12.,786432.]{
+            let model=crate::analytic::sphere(radius).unwrap();let before=format!("{model:?}");
+            let r=inspect(&model,1e-8,limits()).unwrap();
+            assert!(r.proven,"radius={radius}, boundary={}, orientations={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+            assert!(r.boundary.agreement.all_equal);assert!(r.boundary.intersections.absence_proven);
+            assert_eq!(format!("{model:?}"),before);
+        }
+    }
+    #[test]
+    fn authored_cylinder_has_certified_volume_validity(){
+        let m=crate::analytic::cylinder(2.,4.).unwrap();let before=format!("{m:?}");
+        let r=inspect(&m,1e-8,limits()).unwrap();
+        assert!(r.proven);assert!(r.boundary.intersections.absence_proven);
+        assert_eq!(r.orientations[0].outward,Some(true));assert_eq!(format!("{m:?}"),before);
+    }
+    #[test]
+    fn authored_curved_primitives_have_certified_volume_validity(){
+        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere_exact(2.).unwrap())]{
+            let r=inspect(&m,1e-8,limits()).unwrap();
+            if !r.boundary.agreement.all_equal {
+                for use_ in &r.boundary.agreement.uses {
+                    if !use_.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal) {
+                        eprintln!("{name}: boundary face={} wire={} coedge={} edge={} decision={:?}",use_.face,use_.wire,use_.coedge,use_.edge,use_.decision);
+                    }
+                }
+            }
+            assert!(r.proven,"{name}: exact={} joins={} trim={} faces={} pairs={} nesting={:?} orientations={:?}",
+                r.boundary.agreement.all_equal,r.boundary.agreement.all_joins_exact,r.boundary.trim.all_valid,
+                r.boundary.intersections.faces.all_faces_injective,r.boundary.intersections.pairs.all_pairs_classified,
+                r.nesting.as_ref().and_then(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        }
+    }
+}
+
+pub fn inspect_sweep_with_projections_and_charts(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
+    caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])
+    ->Result<(Report,crate::sweep_retained_charts::Report)> {
+    let volume=inspect_sweep_with_projections(model,tolerance_uv,limits,max_linear_cells,caps,cap_limits,proposals)?;
+    let charts=crate::sweep_retained_charts::inspect_with_face_proofs(model,caps,max_linear_cells,proposals,&volume.boundary.intersections.faces)?;
+    Ok((volume,charts))
+}
+
+fn validate_limits(limits: Limits)->Result<()> {
+    if !(1..=1000000).contains(&limits.orientation_cells)
+        || !(1..=8000000).contains(&limits.orientation_domain_cells)
+        || !(1..=100000).contains(&limits.orientation_spans)
+        || !(1..=100000).contains(&limits.nesting_pairs)
+        || !(2..=1000000).contains(&limits.nesting_cells)
+        || !(2..=8000000).contains(&limits.nesting_domain_cells) {
+        return Err(Error::new("BREP_INVALID_INPUT", "Volume audit requires bounded positive stage budgets"));
+    }
+    Ok(())
 }

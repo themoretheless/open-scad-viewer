@@ -112,7 +112,7 @@ fn periodic_sections_clamp_without_changing_active_period() {
     }
 }
 #[test]
-fn compatible_curves_can_exceed_surface_capacity() {
+fn compatible_curves_use_expanded_surface_capacity() {
     let points = (0..64)
         .map(|i| [i as f64, (i % 2) as f64, 0.])
         .collect::<Vec<_>>();
@@ -120,5 +120,7 @@ fn compatible_curves_can_exceed_surface_capacity() {
     let pair = [c.clone(), c];
     let out = sections::compatible(&pair).unwrap();
     assert_eq!(out[0].control_points.len(), 64);
-    assert!(nurbs_core::surface::loft_aligned(&pair).is_err());
+    let loft = nurbs_core::surface::loft_aligned(&pair).unwrap();
+    assert_eq!(loft.control_points.len(), 64);
+    loft.validate().unwrap();
 }

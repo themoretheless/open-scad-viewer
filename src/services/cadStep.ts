@@ -25,7 +25,7 @@ export function importFacetedStep(text:string):DirectBody[]{
  const units=[...text.matchAll(/SI_UNIT\(\s*(\$|\.\w+\.)\s*,\s*\.METRE\.\s*\)/gi)].map(m=>m[1].toUpperCase());if(!units.length||new Set(units).size!==1||!['.MILLI.','$'].includes(units[0]))throw Error('STEP must use uniform metres or millimetres.');const scale=units[0]==='$'?1000:1
  const entities=new Map<string,{type:string;args:string}>();for(const m of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\(((?:[^']|'(?:[^']|'')*')*?)\)\s*;/gi)){if(entities.has(m[1]))throw Error('Duplicate STEP entity.');entities.set(m[1],{type:m[2].toUpperCase(),args:m[3]})}
  const entity=(id:string,type?:string)=>{const e=entities.get(id);if(!e||type&&e.type!==type)throw Error('Unsupported or missing STEP '+(type??'entity')+' #'+id);return e},refs=(args:string)=>[...args.replace(/'(?:[^']|'')*'/g,"''").matchAll(/#(\d+)/g)].map(m=>m[1])
- const point=(id:string)=>{const args=entity(id,'CARTESIAN_POINT').args,tuple=args.match(/\(([^()]*)\)\s*$/)?.[1];const values=tuple?.split(',').map(v=>Number(v.replace(/D/i,'E'))*scale);if(!values||values.length!==3||!Number.isFinite(values[0])||!Number.isFinite(values[1])||!Number.isFinite(values[2]))throw Error('Invalid STEP point.');return values}
+ const point=(id:string)=>{const args=entity(id,'CARTESIAN_POINT').args,tuple=args.match(/\(([^()]*)\)\s*$/)?.[1];const values=tuple?.split(',').map(v=>Number(v.replace(/D/i,'E'))*scale);if(!values||values.length!==3||!values.every(Number.isFinite))throw Error('Invalid STEP point.');return values}
  const solids=[...entities.values()].filter(e=>e.type==='FACETED_BREP');if(!solids.length)throw Error('No FACETED_BREP solids found.')
  return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=`${p[0]},${p[1]},${p[2]}`;let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(p[0],p[1],p[2])}return i};const shell=entity(refs(solid.args)[0],'CLOSED_SHELL')
   for(const faceId of refs(shell.args)){const face=entity(faceId);if(face.type!=='FACE_SURFACE'&&face.type!=='FACE')throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1],'PLANE');const bound=entity(fr[0]);if(bound.type!=='FACE_OUTER_BOUND'&&bound.type!=='FACE_BOUND')throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0],'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const p0=p[0],p1=p[1],p2=p[2],normal=unit3(cross3([p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]],[p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]]));for(let i=0;i<p.length;i++){const pi=p[i];if(Math.abs((pi[0]-p0[0])*normal[0]+(pi[1]-p0[1])*normal[1]+(pi[2]-p0[2])*normal[2])>1e-6)throw Error('Nonplanar STEP polygon.');const a=pi,b=p[(i+1)%p.length],c=p[(i+2)%p.length];if(dot3(cross3([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[c[0]-b[0],c[1]-b[1],c[2]-b[2]]),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0],ids[i],ids[i+1])}
@@ -52,8 +52,8 @@ const splitStepArgs=(value:string)=>{
 }
 const stepIdentity=(value:string)=>{let hash=2166136261;for(const byte of UTF8_ENCODER.encode(value.replace(/#\d+/g,'#'))){hash^=byte;hash=Math.imul(hash,16777619)}return `step10:${(hash>>>0).toString(16).padStart(8,'0')}`}
 const indexRows=(value:string)=>[...value.matchAll(/\(([\d,\s]+)\)/g)].map(match=>match[1].split(',').map(Number)).filter(row=>row.length>=3&&row.every(Number.isInteger))
-const stripTriangles=(row:number[])=>{const count=row.length-2,out=new Array<number[]>(count);for(let i=0;i<count;i++)out[i]=i%2?[row[i+1],row[i],row[i+2]]:[row[i],row[i+1],row[i+2]];return out}
-const fanTriangles=(row:number[])=>{const count=row.length-2,out=new Array<number[]>(count);for(let i=0;i<count;i++)out[i]=[row[0],row[i+1],row[i+2]];return out}
+const stripTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>i%2?[row[i+1],row[i],row[i+2]]:[row[i],row[i+1],row[i+2]])
+const fanTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>[row[0],row[i+1],row[i+2]])
 
 /** AP242 tessellated decoder. Presentation remains explicitly tessellated and is never promoted to B-rep. */
 export function importTessellatedStepV10(text:string):TessellatedStepImport{
@@ -111,12 +111,8 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
     .flatMap(candidate=>(candidate.args.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?/g)??[]).map(number).filter(Number.isFinite))
   presentations.push({representationIdentity,itemIdentity:stepIdentity(entity.type+'('+entity.args+')'),primitive,
     normals,colors,layers,textureCoordinates,source:`#${id}=${entity.type}(${entity.args});`})
-  const flatPositions=new Float64Array(points.length*3)
-  for(let i=0;i<points.length;i++){const pt=points[i],b=i*3;flatPositions[b]=pt[0];flatPositions[b+1]=pt[1];flatPositions[b+2]=pt[2]}
-  const flatIndices=new Uint32Array(triples.length*3)
-  for(let i=0;i<triples.length;i++){const tri=triples[i],b=i*3;flatIndices[b]=tri[0]-1;flatIndices[b+1]=tri[1]-1;flatIndices[b+2]=tri[2]-1}
   return {id:crypto.randomUUID(),name:`STEP tessellated ${ordinal+1}`,
-    mesh:{positions:flatPositions,indices:flatIndices}}
+    mesh:{positions:Float64Array.from(points.flat()),indices:Uint32Array.from(triples.flatMap(triangle=>triangle.map(index=>index-1)))}}
  })
  return {bodies,presentation:presentations,metadataLoss:[]}
 }

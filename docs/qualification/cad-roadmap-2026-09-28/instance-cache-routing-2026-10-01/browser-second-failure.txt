@@ -1,0 +1,191 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  {
+    bodies: [
+      {
+        brep: {
+          bodies: [
+...
+              0,
++             17
+-             10
+            ],
+            [
+              0,
+              1,
+              0,
+
+    at file:///private/tmp/open-scad-viewer-cad-resume/scripts/check-solid-scene-edit-worker-browser.mjs:103:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    version: 1,
+    sketches: [],
+    bodies: [
+      {
+        id: '786869c4-a638-4b51-91ff-16a1bc871b94',
+        name: 'Куб · 3D',
+        mesh: {
+          positions: [
+            -10, -10,   0, 10, -10,   0,  10,
+             10,   0, -10, 10,   0, -10, -10,
+             20,  10, -10, 20,  10,  10,  20,
+            -10,  10,  20
+          ],
+          indices: [
+            1, 0, 3, 3, 2, 1, 7, 4, 5,
+            5, 6, 7, 4, 0, 1, 1, 5, 4,
+            5, 1, 2, 2, 6, 5, 6, 2, 3,
+            3, 7, 6, 7, 3, 0, 0, 4, 7
+          ]
+        },
+        brep: {
+          bodies: [ [Object] ],
+          edges: [
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object]
+          ],
+          faces: [
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object]
+          ],
+          loops: [
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object]
+          ],
+          shells: [ [Object] ],
+          toleranceContext: { identity: [Object], spec: [Object] },
+          toleranceMm: 1e-7,
+          topologyIds: {
+            bodies: [Array],
+            changeSet: [Object],
+            edges: [Array],
+            faces: [Array],
+            lineage: [],
+            loops: [Array],
+            shells: [Array],
+            vertices: [Array]
+          },
+          vertices: [
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object]
+          ]
+        }
+      },
+      {
+        id: '20751683-3108-4990-bd30-0dbdf981bf8a',
+        name: 'Куб · 3D · instance',
+        instance: {
+          sourceId: '786869c4-a638-4b51-91ff-16a1bc871b94',
+          matrix: [ [Array], [Array], [Array], [Array] ]
+        }
+      }
+    ],
+    curves: [],
+    surfaces: []
+  },
+  expected: {
+    version: 1,
+    sketches: [],
+    bodies: [
+      {
+        id: '786869c4-a638-4b51-91ff-16a1bc871b94',
+        name: 'Куб · 3D',
+        mesh: {
+          positions: [
+            -10, -10,   0, 10, -10,   0,  10,
+             10,   0, -10, 10,   0, -10, -10,
+             20,  10, -10, 20,  10,  10,  20,
+            -10,  10,  20
+          ],
+          indices: [
+            1, 0, 3, 3, 2, 1, 7, 4, 5,
+            5, 6, 7, 4, 0, 1, 1, 5, 4,
+            5, 1, 2, 2, 6, 5, 6, 2, 3,
+            3, 7, 6, 7, 3, 0, 0, 4, 7
+          ]
+        },
+        brep: {
+          bodies: [ [Object] ],
+          edges: [
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object]
+          ],
+          faces: [
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object]
+          ],
+          loops: [
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object],
+            [Object]
+          ],
+          shells: [ [Object] ],
+          toleranceContext: { identity: [Object], spec: [Object] },
+          toleranceMm: 1e-7,
+          topologyIds: {
+            bodies: [Array],
+            changeSet: [Object],
+            edges: [Array],
+            faces: [Array],
+            lineage: [],
+            loops: [Array],
+            shells: [Array],
+            vertices: [Array]
+          },
+          vertices: [
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object],
+            [Object], [Object]
+          ]
+        }
+      },
+      {
+        id: '20751683-3108-4990-bd30-0dbdf981bf8a',
+        name: 'Куб · 3D · instance',
+        instance: {
+          sourceId: '786869c4-a638-4b51-91ff-16a1bc871b94',
+          matrix: [ [Array], [Array], [Array], [Array] ]
+        }
+      }
+    ],
+    curves: [],
+    surfaces: []
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.10.0

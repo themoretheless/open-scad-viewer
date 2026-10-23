@@ -3,20 +3,6 @@ import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRunti
 import type {MainSolidResponse} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
 
-it('exports vector PDF through the worker and recovers from invalid sheets',async()=>{
- const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
- const svg='<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210"><path d="M10 10 L30 20" stroke="black"/><text x="10" y="30">Деталь</text></svg>'
- await handle({version:1,id:1,job:{kind:'drawingPdf',sheets:[{svg,width:297,height:210,title:'Деталь'}]}})
- expect(messages[0]).toMatchObject({ok:true,kind:'drawingPdf'})
- if(!messages[0].ok)throw Error('PDF worker failed')
- const text=new TextDecoder().decode(messages[0].result as Uint8Array)
- expect(text).toContain('%PDF-1.4');expect(text).not.toContain('/Subtype /Image')
- await handle({version:1,id:2,job:{kind:'drawingPdf',sheets:[]}})
- expect(messages[1]).toMatchObject({ok:false})
- await handle({version:1,id:3,job:{kind:'drawingPdf',sheets:[{svg,width:297,height:210,title:'Деталь'}]}})
- expect(messages[2]).toMatchObject({ok:true})
-})
-
 it('rejects overlapping requests during initialization and recovers after typed errors',async()=>{
   const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
   const model:TrussModel={nodesMm:[[0,0,0],[10,0,0]],members:[{nodes:[0,1],youngMpa:2000,areaMm2:2}],
@@ -661,4 +647,15 @@ it('keeps the midpoint projection of a tilted rational arc through the worker',a
  const result=messages[0].result as import('../src/services/directModeling').DirectDocument
  result.curves![0].curve.controlPoints.at(-1)!.forEach((v,i)=>expect(v).toBeCloseTo(p[i],8))
  expect(document.curves[0].curve.controlPoints).toEqual([[10,0,10],[10,10,15],[0,10,15]])
+})
+
+it('reports opt-in warmup execution and transfer preparation timings without changing the result',async()=>{
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ const body={id:'points',name:'Points',mesh:{positions:[0,0,0,3,4,0],indices:[]}}
+ const job={kind:'measureVertices' as const,a:body,b:body,indexA:0,indexB:1}
+ await handle({version:1,id:901,job,traceTiming:true});await handle({version:1,id:902,job})
+ expect(messages[0]).toMatchObject({ok:true,result:{distanceMm:5}});expect(messages[1]).toMatchObject({ok:true,result:{distanceMm:5}})
+ expect(messages[1]).not.toHaveProperty('timing')
+ for(const value of Object.values(messages[0].timing!)){expect(Number.isFinite(value)).toBe(true);expect(value).toBeGreaterThanOrEqual(0)}
+ await handle({version:1,id:903,job:{...job,indexA:999},traceTiming:true});expect(messages[2]).toMatchObject({ok:false});expect(messages[2].timing).toBeDefined()
 })

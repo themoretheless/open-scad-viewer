@@ -18,19 +18,12 @@ export interface GeometryComputeBackend {
 
 function checkAbort(signal: AbortSignal) { signal.throwIfAborted() }
 
-function allFinite(values: ArrayLike<number>): boolean {
-  for (let i = 0; i < values.length; i++) {
-    if (!Number.isFinite(values[i])) return false
-  }
-  return true
-}
-
 /** Affine world-space area; translation cancels before arithmetic, on both backends. */
 export async function cpuSurfaceArea(input: SurfaceInput, signal: AbortSignal): Promise<number> {
   const { vertices: v, indices: indices, transform: m } = input
   if (!v.length || v.length % 6 || !indices.length || indices.length % 3
     || indices.length > 3_000_000 || v.byteLength > 64 * 1024 * 1024
-    || m.length !== 16 || !allFinite(m)
+    || m.length !== 16 || !Array.from(m).every(Number.isFinite)
     || m[12] !== 0 || m[13] !== 0 || m[14] !== 0 || m[15] !== 1) throw new Error('invalid-compute-input')
   let state: [number, number] = [0, 0]
   const matrix = Array.from({length: 4}, (_, i) => Array.from(m.slice(i * 4, i * 4 + 4)))

@@ -13,22 +13,6 @@ pub fn rational_projective_strip_jet_identity(
     scale: LeafRef,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
-    strip_jet_identity(ctx,a,b,scale,order,false)
-}
-
-/// Only the sufficient quadratic [1,w,1] coefficient equations are admitted.
-/// Unlike the general predicate, failure cannot fall through to another family.
-pub fn rational_canonical_conic_strip_jet_identity(
-    ctx:&mut PredicateContext<'_>,a:&[Vec<[LeafRef;4]>],b:&[Vec<[LeafRef;4]>],
-    scale:LeafRef,order:usize,
-)->Result<BezierIdentityDecision,InputError>{
-    strip_jet_identity(ctx,a,b,scale,order,true)
-}
-
-fn strip_jet_identity(
-    ctx:&mut PredicateContext<'_>,a:&[Vec<[LeafRef;4]>],b:&[Vec<[LeafRef;4]>],
-    scale:LeafRef,order:usize,conic_only:bool,
-)->Result<BezierIdentityDecision,InputError>{
     if !(1..=2).contains(&order)
         || !(2..=33).contains(&a.len())
         || a.len() != b.len()
@@ -56,25 +40,6 @@ fn strip_jet_identity(
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
     let result = (|| -> Result<BezierIdentity, Reason> {
         ctx.charge(values.len() as u64)?;
-        if conic_only && a[0].len()==3 && b[0].len()==3
-            && let Some(integers)=values.iter().map(crate::bezier_strip_jets::small_integer).collect::<Option<Vec<_>>>() {
-            ctx.charge(values.len() as u64)?;
-            if integers[integers.len()-2]==1. && integers[..integers.len()-2].chunks_exact(4).all(|p|p[3]==1.) {
-                let start_b=a.len()*12;
-                for row in 0..a.len(){for axis in 0..3 {
-                    ctx.charge(12)?;
-                    let aa=row*12;let bb=start_b+row*12;
-                    let endpoint=integers[aa+axis];
-                    if endpoint!=integers[bb+axis]
-                        || integers[aa+4+axis]+integers[bb+4+axis]!=2.*endpoint
-                        || order==2 && integers[aa+8+axis]-integers[bb+8+axis]
-                            !=integers[aa+4+axis]-integers[bb+4+axis] {
-                        return Ok(BezierIdentity::Different);
-                    }
-                }}
-                return Ok(BezierIdentity::Equal);
-            }
-        }
         let x = exact_inputs(&values, ctx)?;
         let s = &x[x.len() - 2];
         let unit = x.last().unwrap();
@@ -125,7 +90,6 @@ fn strip_jet_identity(
                 if canonical {return Ok(BezierIdentity::Equal);}
             }
         }
-        if conic_only {return Ok(BezierIdentity::Different);}
         let zero = || std::array::from_fn(|_| Expansion::scalar(0.));
         let build = |side: usize,
                      row: usize,
@@ -332,27 +296,6 @@ pub fn rational_linear_strip_along_identity(
 mod conic_tests {
     use super::*;
     use crate::{SourceArena, ToleranceContext, Limits};
-    #[test]
-    fn restricted_conic_proof_never_falls_through_to_a_general_identity(){
-        let mut values=Vec::new();
-        for side in 0..2 {for row in 0..2 {for layer in 0..3 {
-            values.extend([if side==0 {-(layer as f64)}else{layer as f64},row as f64,0.,1.]);
-        }}}
-        values.push(1.);
-        let source=SourceArena::authored("nonconic-regular-strip",1,
-            values.into_iter().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect()).unwrap();
-        let refs=|start:usize|(0..2).map(|row|(0..3).map(|layer|
-            std::array::from_fn(|k|source.leaf(start+row*12+layer*4+k).unwrap())).collect()).collect::<Vec<_>>();
-        let tolerance=ToleranceContext::default_valid();
-        let audit=|restricted:bool|max_work_audit(&source,&tolerance,&refs(0),&refs(24),restricted,1000000);
-        assert_eq!(audit(false).outcome,BezierIdentity::Equal);
-        assert_eq!(audit(true).outcome,BezierIdentity::Different);
-    }
-    fn max_work_audit(source:&SourceArena,tolerance:&ToleranceContext,a:&[Vec<[LeafRef;4]>],b:&[Vec<[LeafRef;4]>],restricted:bool,max_work:u64)->BezierIdentityDecision {
-        let mut ctx=PredicateContext::new(source,tolerance,Limits {max_work,..Limits::default()},None);
-        let predicate=if restricted {rational_canonical_conic_strip_jet_identity}else{rational_projective_strip_jet_identity};
-        predicate(&mut ctx,a,b,source.leaf(48).unwrap(),2).unwrap()
-    }
     fn audit(weight_scale:f64, damage:bool, varying:bool, order:usize, max_work:u64)->BezierIdentityDecision {
         let mut values=Vec::new();
         for side in 0..2 {

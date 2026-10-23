@@ -6,7 +6,7 @@ import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-edge-errors')
 const inputMode=process.env.SOLID_EDGE_INPUT??'keyboard';assert.ok(['mouse','keyboard'].includes(inputMode))
-const mode=process.argv[3]??'constant';assert.ok(['constant','variable','corner'].includes(mode))
+const mode=process.argv[3]??'constant';assert.ok(['constant','variable','corner','partial-preview'].includes(mode))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
@@ -20,14 +20,14 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page
 const errors=[]
 try{
- const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true})
+ const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}: {})})
  page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(String(e)))
  await page.addInitScript(()=>{
   window.__holdEdge=false;window.__lateEdge=null;window.__edgeTerminated=false;window.__edgeRequests=0
   const NativeWorker=window.Worker
   window.Worker=class extends NativeWorker{
    postMessage(message,...args){
-    if(message?.job?.kind==='bodyEdit'&&message.job.options?.operation==='edge-fillet'){
+    if((message?.job?.kind==='bodyEdit'&&message.job.options?.operation==='edge-fillet'||message?.job?.kind==='partialAnnularPreview')){
      window.__edgeRequests++
      if(window.__holdEdge){
       this.held=true;const callback=this.onmessage
@@ -42,6 +42,13 @@ try{
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
  async function activate(locator){if(inputMode==='keyboard')await locator.press('Enter');else await locator.click()}
+ async function enterText(locator,text){
+  if(inputMode==='keyboard'){
+   await locator.press('ControlOrMeta+A');await locator.press('Backspace')
+   await page.keyboard.insertText(text)
+   if(await locator.getAttribute('role')!=='combobox')await locator.press('Tab')
+  }else await locator.fill(text)
+ }
  async function selectEdge(id,add=false){
   const edge=solid.locator(`[data-topology-edge="${id}"]`)
   if(inputMode==='keyboard'){await edge.press(add?'Shift+Enter':'Enter');return}
@@ -68,23 +75,25 @@ try{
 
  const fixtureRoot=path.resolve(process.env.SOLID_EDGE_FIXTURE_ROOT??'docs/qualification/cad-roadmap-2026-09-28/edge-errors-2026-09-30')
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(fixtureRoot,'fixture.json'));await closeMenu();await ready()
+ await solid.getByRole('button',{name:JSON.parse(await readFile(path.join(fixtureRoot,'fixture.json'),'utf8')).bodies[0].name,exact:true}).waitFor();await ready()
  const before=await doc('before'),id=(await readFile(path.join(fixtureRoot,'edge-id.txt'),'utf8')).trim()
  await activate(solid.getByRole('tab',{name:'Сцена',exact:true}));await activate(solid.getByRole('button',{name:before.bodies[0].name,exact:true}));await activate(solid.getByRole('button',{name:'Рёбра',exact:true}));await ready()
+ await activate(solid.getByRole('button',{name:'Вписать',exact:true}).last());await ready()
  const brep=before.bodies[0].brep,max=[0,1,2].map(axis=>Math.max(...brep.vertices.map(v=>v.point[axis])))
  const vertex=brep.vertices.findIndex(v=>v.point.every((x,i)=>x===max[i]))
  const fixtureEdges=await readFile(path.join(fixtureRoot,'edge-ids.json'),'utf8').then(JSON.parse).catch(error=>{if(error.code==='ENOENT')return [id];throw error})
- const ids=mode==='corner'?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[brep.topologyIds.edges[i]]:[]):fixtureEdges
+ const ids=mode==='corner'&&!process.env.SOLID_EDGE_CORNER_EDGES?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[brep.topologyIds.edges[i]]:[]):fixtureEdges
  if(inputMode==='mouse'){
   const bounds=await solid.locator(`[data-topology-edge="${ids[0]}"]`).evaluate(e=>{
    const r=e.ownerSVGElement.getBoundingClientRect();return {x:r.x+r.width*.7,y:r.y+r.height*.2}
   })
   await page.mouse.move(bounds.x,bounds.y);await page.mouse.down({button:'right'})
-  await page.mouse.move(bounds.x+80,bounds.y+35,{steps:12});await page.mouse.up({button:'right'});await ready()
+  await page.mouse.move(bounds.x+80,bounds.y+35,{steps:12});await page.mouse.up({button:'right'});await ready();await activate(solid.getByRole('button',{name:'Вписать',exact:true}).last());await ready()
  }
  if(ids.length>1&&mode==='constant'){
   await selectEdge(ids[0])
   await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
-  const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await partialSearch.fill('Скруглить 3D');await partialSearch.press('Enter')
+  const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(partialSearch,'Скруглить 3D');await partialSearch.press('Enter')
   const curved=brep.edges[brep.topologyIds.edges.indexOf(ids[0])].curve.degree>1
   await solid.getByText(curved?'Выберите полное кольцо:':'Выберите всю цепочку рёбер',{exact:false}).waitFor()
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
@@ -93,11 +102,35 @@ try{
  }
  for(const [i,edge] of ids.entries())await selectEdge(edge,i>0)
  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
- const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Скруглить 3D');await search.press('Enter')
- await solid.getByRole('combobox',{name:'Тип скругления',exact:true}).selectOption(mode)
+ const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,'Скруглить 3D');await search.press('Enter')
+ const filletType=solid.getByRole('combobox',{name:'Тип скругления',exact:true})
+ if(inputMode==='keyboard'){
+  const label=await filletType.locator('option').evaluateAll((nodes,value)=>nodes.find(n=>n.value===value)?.textContent,mode)
+  await filletType.press('Tab');await page.keyboard.press('Shift+Tab')
+  const cdp=await page.context().newCDPSession(page)
+  try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
+ }else await filletType.selectOption(mode)
+ assert.equal(await filletType.inputValue(),mode)
+ if(mode==='partial-preview'){
+  await enterText(solid.getByRole('textbox',{name:'\u0420\u0430\u0434\u0438\u0443\u0441 / \u0440\u0430\u0437\u043c\u0435\u0440, \u043c\u043c',exact:true}),'1.25 mm')
+  await solid.locator('[data-preview-body]').first().waitFor()
+  assert.equal(await solid.getByRole('button',{name:'\u0413\u043e\u0442\u043e\u0432\u043e \u00b7 Enter',exact:true}).isDisabled(),true)
+  await solid.focus();await page.keyboard.press('Enter');assert.deepEqual(await doc('preview-no-commit'),before)
+  await page.screenshot({path:path.join(directory,'preview.png')})
+  await page.evaluate(()=>window.__holdEdge=true)
+  await enterText(solid.getByRole('textbox',{name:'\u0420\u0430\u0434\u0438\u0443\u0441 / \u0440\u0430\u0437\u043c\u0435\u0440, \u043c\u043c',exact:true}),'2 mm')
+  await page.waitForFunction(()=>typeof window.__lateEdge==='function')
+  await page.keyboard.press('Escape');await ready()
+  assert.equal(await page.evaluate(()=>window.__edgeTerminated),true)
+  await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
+  assert.deepEqual(await doc('cancelled'),before)
+  assert.equal(await solid.locator('[data-preview-body]').count(),0)
+  assert.deepEqual(errors,[])
+  await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,actualPreview:true,commitBlocked:true,lateResponseIgnored:true,documentUnchanged:true,errors},null,2))
+ }else{
  if(process.env.SOLID_EDGE_FIXTURE_ROOT){
   await page.evaluate(()=>window.__holdEdge=true)
-  await solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}).fill('1 mm')
+  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'1.25 mm')
   await page.waitForFunction(()=>typeof window.__lateEdge==='function')
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
   if(process.env.SOLID_EDGE_CONTEXT_SWITCH){
@@ -112,8 +145,8 @@ try{
   await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
   assert.deepEqual(await doc('late-cancelled'),before)
   assert.equal(await solid.locator('[data-preview-body]').count(),0)
-  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));await search.fill('Скруглить 3D');await search.press('Enter')
-  await solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}).fill('2 mm')
+  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));await enterText(search,'Скруглить 3D');await search.press('Enter')
+  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'2 mm')
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent?.trim()==='Готово · Enter'&&!b.disabled))
   const currentPreview=await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML))
   assert.ok(currentPreview.length>0)
@@ -122,7 +155,7 @@ try{
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),false)
   assert.deepEqual(await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML)),currentPreview)
  }
- const amount=solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true});await amount.fill('30 mm')
+ const amount=solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true});await enterText(amount,'30 mm')
  await solid.getByText('Размер сопряжения не помещается.',{exact:false}).waitFor()
  assert.ok((await solid.innerText()).includes(before.bodies[0].name+' · рёбра '))
  assert.ok((await solid.innerText()).includes('Уменьшите радиус или размер фаски.'))
@@ -135,13 +168,15 @@ try{
  assert.ok(unselected.every(color=>color==='#89baff'))
  for(const edge of ids)assert.equal(await solid.locator(`[data-topology-edge="${edge}"]`).getAttribute('stroke'),'#f87171')
  await page.screenshot({path:path.join(directory,'error.png')})
- await amount.fill('1 mm');await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
+ await enterText(amount,'1 mm');await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
  const requestsBeforeApply=await page.evaluate(()=>window.__edgeRequests)
  await activate(solid.getByRole('button',{name:'Готово · Enter',exact:true}));await ready()
  assert.equal(await page.evaluate(()=>window.__edgeRequests),requestsBeforeApply)
  const after=await doc('after');assert.notDeepEqual(after.bodies[0].brep,before.bodies[0].brep)
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await doc('undo'),before)
  await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await doc('redo'),after)
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ await page.reload();await solid.getByRole('button',{name:after.bodies[0].name,exact:true}).waitFor();await ready();assert.deepEqual(await doc('reloaded'),after)
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,keyboardNumericInput:inputMode==='keyboard',contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

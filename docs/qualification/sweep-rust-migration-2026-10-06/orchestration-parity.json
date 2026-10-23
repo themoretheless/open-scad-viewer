@@ -1,0 +1,22 @@
+{
+  "baseline": "a7027f3a",
+  "scope": "Same native geometric primitives; independent old TS construction orchestration versus new Rust construction orchestration.",
+  "cases": [
+    {
+      "name": "corrected-hollow",
+      "identical": true
+    },
+    {
+      "name": "affine",
+      "identical": true
+    },
+    {
+      "name": "frame-guide-affine",
+      "identical": true
+    },
+    {
+      "name": "cap-budget-refusal",
+      "identical": true
+    }
+  ]
+}

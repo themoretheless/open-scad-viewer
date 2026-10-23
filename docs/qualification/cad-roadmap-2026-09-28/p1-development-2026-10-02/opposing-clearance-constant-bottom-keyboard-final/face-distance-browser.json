@@ -1,0 +1,109 @@
+{
+  "timings": [
+    {
+      "workerRoundTripMs": 71.79999999701977,
+      "cells": 119,
+      "domainCells": 2404,
+      "converged": true
+    },
+    {
+      "workerRoundTripMs": 63.599999994039536,
+      "cells": 119,
+      "domainCells": 2404,
+      "converged": true
+    },
+    {
+      "workerRoundTripMs": 20.200000002980232,
+      "cells": 119,
+      "domainCells": 2404,
+      "converged": true
+    }
+  ],
+  "timingScope": "Post request through receipt of worker response; includes startup and messaging, excludes subsequent rendering.",
+  "workerFailureRetry": true,
+  "keyboard": true,
+  "tabs": 746,
+  "gpuActive": true,
+  "reloadExact": true,
+  "browser": "157.0.8083.0",
+  "fixturePath": "docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/opposing-clearance-wasm/constant-bottom-browser-fixture.json",
+  "faceA": 5,
+  "faceB": 9,
+  "expectedMm": 4.75,
+  "displayedIntervalMm": [
+    4.75,
+    4.75017018301
+  ],
+  "nativeResult": {
+    "cells": 119,
+    "converged": true,
+    "distanceIntervalMm": [
+      4.749999999999997,
+      4.750170183010754
+    ],
+    "domainCells": 2404,
+    "maxCells": 100000,
+    "maxDomainCells": 8000000,
+    "method": "interval-trimmed-surface-subdivision",
+    "parameters": [
+      [
+        0.999999825,
+        0.999999825
+      ],
+      [
+        7.65625,
+        18.4375
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          7.653671122175374,
+          7.653671122175587
+        ],
+        [
+          18.47758962509912,
+          18.477589625099384
+        ],
+        [
+          4.750000309359218,
+          4.7500003093592476
+        ]
+      ],
+      [
+        [
+          7.6562499999999565,
+          7.656250000000047
+        ],
+        [
+          18.437499999999925,
+          18.437500000000068
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    ],
+    "points": [
+      [
+        7.653671122175481,
+        18.477589625099256,
+        4.750000309359233
+      ],
+      [
+        7.65625,
+        18.4375,
+        0
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "trimmed-surfaces-bounded-joins",
+    "toleranceMm": 0.001,
+    "toleranceUv": 1e-7
+  },
+  "requests": 8,
+  "cancelledWorkerTerminated": true,
+  "invalidFaceLocalized": true,
+  "documentUnchanged": true
+}

@@ -74,7 +74,9 @@ it('builds text quarter-arc loops and a full-circle hole through the actual view
   expect(compiled.execution_target).toBe('own-nurbs')
   const result = buildOwnNurbs(compiled.document,{action:'build'})
   const node = compiled.document.nodes.find(node => node.op === 'brep_extrude_curves')!
-  expect(node).toMatchObject({loops:[['n1','n2','n3','n4'],['n5']],z_min:-2,z_max:3})
+  const profiles = compiled.document.nodes.filter(node => node.op === 'curve')
+  expect(profiles).toHaveLength(5)
+  expect(node).toMatchObject({loops:[profiles.slice(0,4).map(curve => curve.id),[profiles[4].id]],z_min:-2,z_max:3})
   checkRing(definition(result,node.id))
   const scene = await parseOpenSCAD(curveText)
   expect(scene.meshes).toHaveLength(1)
@@ -116,7 +118,26 @@ it('checks nested references, scalar dimensions, runtime curve kinds and active-
   expect(() => buildOwnNurbs(document([outer,body([Array(64).fill('outer')])]),{action:'build'})).toThrow(/254.*active|active.*254/)
   expect(() => buildOwnNurbs(document([{id:'wrong',op:'brep_box',min:[0,0,0],max:[1,1,1]},body([['wrong']])]),{action:'build'})).toThrow(/Expected curve/)
   expect(() => buildOwnNurbs(document([{...outer,control_points:outer.control_points.map(point=>[...point,0])},body([['outer']])]),{action:'build'})).toThrow(/2D/)
-  expect(() => buildOwnNurbs(document([{...outer,weights:Array(9).fill(1)},body([['outer']])]),{action:'build'})).toThrow(/circular|circle|quadratic/i)
+  expect(() => buildOwnNurbs(document([{...outer,weights:[0,...outer.weights.slice(1)]},body([['outer']])]),{action:'build'})).toThrow(/weight|positive/i)
+  const polynomial = buildOwnNurbs(document([{...outer,weights:Array(9).fill(1)},body([['outer']])]),{action:'build'})
+  expect(analyzeNurbsBrep(definition(polynomial,'body')).signedVolumeMm3).toBeCloseTo(150,6)
   expect(() => compileRushFrontend(curveText.replace('z_max:3mm','z_max:3deg'))).toThrow(/Expected/)
   expect(() => compileRushFrontend('// @rush/1\nshow brep_extrude_curves([[]],0mm,2mm)')).toThrow(/nonempty/)
+})
+
+it.each([
+  {knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1]},
+  {knots:[2,2,2,2.1,2.1,4,4,9,9,10,10,10]},
+])('retains and extrudes a general polynomial rounded loop with independently known volume (%j)', ({knots}) => {
+  // Equal weights make this a polynomial rounded profile, not an invalid
+  // circular arc. General profiles are admitted only after topology proof.
+  const outer = {...circle('outer',3),knots,weights:Array(9).fill(2)}
+  const input = document([outer,body([['outer']])])
+  const before = JSON.stringify(input)
+  const built = buildOwnNurbs(input,{action:'build'})
+  const model = definition(built,'body')
+  expect(inspectNurbsBrep(model).topologyValid).toBe(true)
+  // Four quadratic quadrants have Green area 30 mm², extruded over 5 mm.
+  expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(150,6)
+  expect(JSON.stringify(input)).toBe(before)
 })

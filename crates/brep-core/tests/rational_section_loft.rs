@@ -81,7 +81,18 @@ fn invalid_holes_joins_correspondence_and_nonplanar_caps_refuse() {
     assert!(rational_section_loft(&[nonplanar, end.clone()]).is_err());
     let mut weight = end.clone();
     weight[0][0].weights[1] *= 2.;
-    assert!(rational_section_loft(&[start.clone(), weight]).is_err());
+    let weighted=rational_section_loft(&[start.clone(),weight.clone()]).unwrap();
+    // Homogeneous lofting supports independently weighted section bases.
+    let retained=weighted.faces[0].surface.iso(Axis::V,1.).unwrap();
+    let [a,b]=retained.domain();
+    for fraction in [0.,0.25,0.5,0.75,1.] {
+        let actual=retained.evaluate(a+(b-a)*fraction).unwrap().point;
+        let expected=weight[0][0].evaluate(0.25*fraction).unwrap().point;
+        assert!(actual.iter().zip(expected).all(|(x,y)|(x-y).abs()<1e-12));
+    }
+    assert!(weighted.validate().unwrap().topology_valid);
+    weight[0][0].weights[1]=0.;
+    assert!(rational_section_loft(&[start.clone(),weight]).is_err());
     assert!(rational_section_loft(&[start]).is_err());
 }
 fn law(a: f64, b: f64) -> Curve {

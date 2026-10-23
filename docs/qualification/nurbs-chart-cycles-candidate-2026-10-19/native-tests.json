@@ -1,0 +1,59 @@
+{
+  "recorded_at_utc": "2026-10-18T23:00:42.362984+00:00",
+  "status": "Scoped isolated Rust qualification passed; catalog remains198/200",
+  "candidate": "/private/tmp/nurbs-native-200-chart-cycles-20261019",
+  "parent": "/private/tmp/nurbs-native-200-shore-batch-20261019",
+  "source_files": 131,
+  "full_source_files": 3486,
+  "source_hashes_verified": true,
+  "original_baseline_hashes_verified": true,
+  "original_baseline_scope": "All original files touched by the cumulative patch; unchanged baseline files retained by the source snapshot",
+  "changed_from_parent": [
+    "crates/brep-core/src/profile_certificate.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_shore_material_samples.rs",
+    "crates/brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_cycles.rs"
+  ],
+  "native": {
+    "passed": 14,
+    "failed": 0,
+    "seconds": 702.61,
+    "session": 88660,
+    "terminal_exit": 0,
+    "names": [
+      "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+      "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::tests::exact_clockwise_successors_keep_two_touching_material_fans_separate",
+      "profile_certificate::span_intersections::translated::periodic_chart_cycles::tests::incomplete_or_duplicated_ports_and_walk_exhaustion_never_publish_partial_cycles",
+      "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::boolean_dag_has_operand_semantics_and_rejects_malformed_references",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::dual_periods_distinguish_cylinder_separation_torus_obstruction_and_parity",
+      "profile_certificate::span_intersections::translated::periodic_material::tests::actual_cylinder_difference_does_not_fill_b_only_space_and_grouped_band_keeps_essential_wires",
+      "profile_certificate::span_intersections::translated::periodic_relative_winding::tests::essential_opposite_wires_retain_separate_relative_values_and_replay_original_sources",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_cylinder_bands_label_both_periodic_sides_and_keep_natural_exterior_empty_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_one_sided_coincident_rectangle_has_different_chart_inside_labels_across_seam_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_plane_point_labels_replay_and_refuse_cache_and_work_changes_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_irrational_quadratic_contacts_have_strict_inside_point_labels_without_rounded_cuts_and_complete_interval_germs",
+      "profile_certificate::span_intersections::translated::periodic_shore_material_samples::tests::actual_zero_source_torus_point_labels_use_no_invented_sources_and_complete_interval_germs"
+    ]
+  },
+  "wasm": {
+    "passed": true,
+    "terminal_exit": 0
+  },
+  "format": {
+    "passed": true,
+    "terminal_exit": 0
+  },
+  "shared_catalog_api": {
+    "passed": true
+  },
+  "implementation": "Exact chart-local source/frame boundary cycles: original source-use vertex ownership,certified axis/quadrant/higher-germ source order,clockwise material-fan successors and complete cycle coverage",
+  "scope_limit": "Local oriented boundary cycles only;no outer/hole nesting,local patch ownership,world seam sewing,physical face publication or manifold/body claim. Earlier broad293-test base remains separate. Shared Rust not modified.",
+  "catalog": 198,
+  "target": 200,
+  "shared_rust_modified": false,
+  "owned_running_jobs": [],
+  "qualified_base": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/nurbs-auto-regions-candidate-2026-10-19/native-tests.json"
+}

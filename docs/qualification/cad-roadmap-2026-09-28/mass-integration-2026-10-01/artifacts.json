@@ -1,0 +1,13 @@
+{
+  "sourceBaseline": "6e14c2e3",
+  "wasmBytes": 9613605,
+  "wasmSha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe",
+  "cadTests": 872,
+  "cadFiles": 74,
+  "assetBytes": 7196033,
+  "rawWasmBytes": 11669725,
+  "combinedBytes": 18865758,
+  "totalAssetBudget": 7197000,
+  "assetGrowthFromBaseline": 2359,
+  "scope": "numerical mass estimates and palette/error recovery; complete P0-P3 remains unverified"
+}

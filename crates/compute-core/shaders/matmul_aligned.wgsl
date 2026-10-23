@@ -4,9 +4,8 @@ struct Params { rows: u32, inner: u32, columns: u32, groups: u32 };
 @group(0) @binding(1) var<storage, read> a: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read> b: array<vec4<f32>>;
 @group(0) @binding(3) var<storage, read_write> output: array<vec4<f32>>;
-const TILE_STRIDE4: u32 = 9;
-var<workgroup> tile_a: array<vec4<f32>, 288>;
-var<workgroup> tile_b: array<vec4<f32>, 288>;
+var<workgroup> tile_a: array<vec4<f32>, 256>;
+var<workgroup> tile_b: array<vec4<f32>, 256>;
 @compute @workgroup_size(64)
 fn main(@builtin(local_invocation_id) lid: vec3<u32>, @builtin(workgroup_id) wid: vec3<u32>) {
     let lane_row = (lid.x / 8u) * 4u;
@@ -23,21 +22,18 @@ fn main(@builtin(local_invocation_id) lid: vec3<u32>, @builtin(workgroup_id) wid
             for (var slot = lid.x; slot < 256u; slot += 64u) {
                 let local_row = slot / 8u;
                 let local_col4 = slot % 8u;
-                let padded_slot = local_row * TILE_STRIDE4 + local_col4;
-                tile_a[padded_slot] = a[(tile_row + local_row) * (params.inner / 4u) + kt * 8u + local_col4];
-                tile_b[padded_slot] = b[(kt * 32u + local_row) * (params.columns / 4u) + tile_col4 + local_col4];
+                tile_a[slot] = a[(tile_row + local_row) * (params.inner / 4u) + kt * 8u + local_col4];
+                tile_b[slot] = b[(kt * 32u + local_row) * (params.columns / 4u) + tile_col4 + local_col4];
             }
             workgroupBarrier();
             for (var k = 0u; k < 32u; k++) {
-                let k_vec = k / 4u;
-                let k_comp = k % 4u;
                 let av = vec4<f32>(
-                    tile_a[lane_row * TILE_STRIDE4 + k_vec][k_comp],
-                    tile_a[(lane_row + 1u) * TILE_STRIDE4 + k_vec][k_comp],
-                    tile_a[(lane_row + 2u) * TILE_STRIDE4 + k_vec][k_comp],
-                    tile_a[(lane_row + 3u) * TILE_STRIDE4 + k_vec][k_comp]
+                    tile_a[lane_row * 8u + k / 4u][k % 4u],
+                    tile_a[(lane_row + 1u) * 8u + k / 4u][k % 4u],
+                    tile_a[(lane_row + 2u) * 8u + k / 4u][k % 4u],
+                    tile_a[(lane_row + 3u) * 8u + k / 4u][k % 4u]
                 );
-                let bv = tile_b[k * TILE_STRIDE4 + lane_col4];
+                let bv = tile_b[k * 8u + lane_col4];
                 sums[0] = fma(av.xxxx, bv, sums[0]);
                 sums[1] = fma(av.yyyy, bv, sums[1]);
                 sums[2] = fma(av.zzzz, bv, sums[2]);

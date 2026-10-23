@@ -1,6 +1,12 @@
 //! Outward binary64 interval arithmetic shared by curve and surface distance.
 use crate::{Result, check, numeric};
 
+/// Overflow-safe interval midpoint `a/2 + b/2`.
+#[inline(always)]
+pub(crate) fn midpoint(a: f64, b: f64) -> f64 {
+    a * 0.5 + b * 0.5
+}
+
 /// Outward-rounded binary64 interval `[lo, hi]`, shared by curve and surface
 /// distance machinery and promoted for public certified-enclosure APIs
 /// (`crate::interval_eval`). Every arithmetic operation rounds `lo` down and
@@ -122,6 +128,7 @@ pub(crate) fn box_distance(a: &[Interval], b: &[Interval]) -> Result<(f64, f64)>
 mod serialization;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DistanceStopReason {
+    Separated,
     Tolerance,
     WorkLimit,
     PrecisionLimit,

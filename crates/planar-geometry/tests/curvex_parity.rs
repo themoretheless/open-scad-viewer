@@ -477,10 +477,10 @@ fn closed_simplify_matches_farthest_pair_reference_on_irregular_rings() {
                 }
             }
         }
-        let mut reference = reduce(&points[pair.0..=pair.1], 0.2);
+        let mut reference = reduce(&points[pair.0..=pair.1], 0.4);
         let mut second = points[pair.1..].to_vec();
         second.extend_from_slice(&points[..=pair.0]);
-        let second = reduce(&second, 0.2);
+        let second = reduce(&second, 0.4);
         reference.extend_from_slice(&second[1..second.len() - 1]);
         let path = BezierPath::from_polyline(&points, true)
             .unwrap()

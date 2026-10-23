@@ -11,6 +11,7 @@
 
 #[cfg(feature = "cuda")]
 pub use gpu_compute::cuda::CudaDeviceReport;
+pub use gpu_compute::{MemoryArchitecture, MemoryArchitectureProfile};
 pub(crate) use gpu_compute::{BackendReport, GpuContext, wgpu};
 
 pub mod matching;
@@ -23,6 +24,14 @@ pub fn backend_label() -> Option<&'static str> {
 
 pub fn backend_report() -> Option<BackendReport> {
     GpuContext::new().map(|context| context.backend_report())
+}
+
+pub fn memory_architecture() -> Option<MemoryArchitecture> {
+    GpuContext::new().map(|context| context.memory_architecture())
+}
+
+pub fn memory_profile() -> Option<MemoryArchitectureProfile> {
+    GpuContext::new().map(|context| context.memory_profile())
 }
 
 pub fn subgroup_report() -> Option<gpu_compute::SubgroupReport> {

@@ -90,7 +90,9 @@ fn qualify(spacing: Spacing) {
             .all(|v| v <= options.max_deviation)
     );
     assert!(body.evidence().cap_correction_error_upper.unwrap() <= correction.tolerance);
-    assert_eq!(body.planar_cap_faces().len(), 2);
+    let groups=body.cap_face_groups();
+    assert!(groups.iter().all(|g|!g.is_empty()));
+    assert_eq!(groups.iter().map(Vec::len).sum::<usize>(),body.cap_faces().len());
 
     // The former independent pole rounding left four genuinely non-G1 seams.
     // Audit every saved profile strip, including the closing quadrants.
@@ -150,7 +152,7 @@ fn qualify(spacing: Spacing) {
         max_trim_cells: 100_000,
         max_trim_domain_cells: 1_000_000,
     };
-    let caps = body.planar_cap_faces();
+    let caps = body.cap_faces();
     let volume = volume_validity::inspect_sweep(
         body.model(),
         1e-8,

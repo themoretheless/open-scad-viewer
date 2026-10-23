@@ -137,10 +137,8 @@ function nativeImportCall<T>(op: string, payload: Record<string, unknown>, forma
  }
 }
 function finalize(format: MeshImportFormat, positions: ArrayLike<number>, indices: ArrayLike<number>, weld: number | false): ImportedMesh {
- const result = nativeImportCall<{positions: number[] | Float64Array; indices: number[] | Uint32Array; sourceVertexCount: number; degenerateTriangles: number}>(
+ const result = nativeImportCall<{positions: number[]; indices: number[]; sourceVertexCount: number; degenerateTriangles: number}>(
   'mesh_import_finalize', {positions, indices, weld}, format)
- const pos = result.positions instanceof Float64Array ? result.positions : new Float64Array(result.positions)
- const ind = result.indices instanceof Uint32Array ? result.indices : new Uint32Array(result.indices)
- return Object.freeze({...result, format, positions: pos, indices: ind,
-  triangleCount: ind.length / 3, vertexCount: pos.length / 3})
+ return Object.freeze({...result, format, positions: Float64Array.from(result.positions), indices: Uint32Array.from(result.indices),
+  triangleCount: result.indices.length / 3, vertexCount: result.positions.length / 3})
 }

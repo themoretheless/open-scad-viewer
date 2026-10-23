@@ -1,7 +1,7 @@
 //! Distance over UV-trimmed surface images. Only proven outside cells are
 //! removed, and only proven inside points may supply an upper distance bound.
 use crate::distance::subdivision::{HeapQueue, Queue, Search, Split};
-use crate::distance_bounds::{Interval, box_distance};
+use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::surface_distance::{Patch, Witness, at, patch_lower, patches};
 use crate::{
     Result, check, resource,
@@ -85,9 +85,6 @@ impl Part {
 struct Cell {
     parts: [Part; 2],
 }
-fn midpoint([lo, hi]: [f64; 2]) -> f64 {
-    lo * 0.5 + hi * 0.5
-}
 struct Sample {
     raw: [f64; 2],
     parameters: [f64; 2],
@@ -107,7 +104,7 @@ fn sample_pair(
         let values = |lo: f64, hi: f64| {
             [
                 lo * 0.875 + hi * 0.125,
-                midpoint([lo, hi]),
+                midpoint(lo, hi),
                 lo * 0.125 + hi * 0.875,
             ]
         };
@@ -155,11 +152,76 @@ fn sample_pair(
     }
     Ok(())
 }
+// Improve only the upper witness. Every proposed point is evaluated with an
+// interval enclosure and independently admitted by its authored trim domain.
+// This bounded search does not remove cells or establish a lower bound.
+fn refine_witness(
+    a: &Surface,
+    b: &Surface,
+    domains: &mut Domains,
+    best: &mut Option<Witness>,
+    cells: &mut usize,
+    max_cells: usize,
+) -> Result<()> {
+    if best.is_none() {
+        return Ok(());
+    }
+    let surfaces = [a, b];
+    let ranges = surfaces.map(|s| {
+        [
+            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+        ]
+    });
+    let mut steps = ranges.map(|r| r.map(|[lo, hi]| (hi - lo) * 0.125));
+    for _ in 0..64 {
+        if domains.cells == domains.max {
+            break;
+        }
+        let mut improved = false;
+        for side in 0..2 {
+            for axis in 0..2 {
+                for direction in [-1., 1.] {
+                    let current = best.as_ref().unwrap();
+                    let mut uv = current.parameters[side];
+                    uv[axis] = (uv[axis] + direction * steps[side][axis])
+                        .clamp(ranges[side][axis][0], ranges[side][axis][1]);
+                    if uv == current.parameters[side] {
+                        continue;
+                    }
+                    if *cells == max_cells {
+                        return Ok(());
+                    }
+                    *cells += 1;
+                    let (parameters, point, bounds) = at(surfaces[side], uv)?;
+                    let upper = box_distance(&bounds, &current.bounds[1 - side])?.1;
+                    if upper >= current.upper {
+                        continue;
+                    }
+                    if domains.point(side, parameters)? != Location::Inside {
+                        continue;
+                    }
+                    let current = best.as_mut().unwrap();
+                    current.parameters[side] = parameters;
+                    current.points[side] = point;
+                    current.bounds[side] = bounds;
+                    current.upper = upper;
+                    improved = true;
+                }
+            }
+        }
+        if !improved {
+            steps = steps.map(|s| s.map(|v| v * 0.5));
+        }
+    }
+    Ok(())
+}
 struct TrimmedSearch<'a> {
     a: &'a Surface,
     b: &'a Surface,
     domains: Domains<'a>,
     best: Option<Witness>,
+    axis_lower: f64,
 }
 impl Search for TrimmedSearch<'_> {
     type Cell = Cell;
@@ -189,9 +251,9 @@ impl Search for TrimmedSearch<'_> {
         let mid = if selected.location == Location::Unresolved {
             self.domains.regions[side]
                 .split_hint(selected.patch.domain, axis)
-                .unwrap_or_else(|| midpoint([lo, hi]))
+                .unwrap_or_else(|| midpoint(lo, hi))
         } else {
-            midpoint([lo, hi])
+            midpoint(lo, hi)
         };
         let mut children = [None, None];
         for (i, range) in [[lo, mid], [mid, hi]].into_iter().enumerate() {
@@ -215,7 +277,7 @@ impl Search for TrimmedSearch<'_> {
                 &mut self.domains,
                 &mut self.best,
             )?;
-            let lower = patch_lower(&parts[0].patch, &parts[1].patch)?;
+            let lower = patch_lower(&parts[0].patch, &parts[1].patch)?.max(self.axis_lower);
             if self.best.as_ref().is_none_or(|w| lower <= w.upper) {
                 children[i] = Some((Cell { parts }, lower));
             }
@@ -250,6 +312,7 @@ pub fn distance(
         (1..=8000000).contains(&max_domain_cells),
         "Trimmed surface distance needs 1..8000000 domain cells",
     )?;
+    let axis_lower = crate::radial_bounds::axis_separation_lower(a, b);
     let aa = patches(a)?;
     let bb = patches(b)?;
     if aa.len().saturating_mul(bb.len()) > max_cells {
@@ -287,14 +350,16 @@ pub fn distance(
             if domains.cells < domains.max {
                 sample_pair(a, b, &parts, &mut domains, &mut best)?;
             }
-            queue.push(Cell { parts }, patch_lower(&pa.patch, &pb.patch)?);
+            queue.push(Cell { parts }, patch_lower(&pa.patch, &pb.patch)?.max(axis_lower));
         }
     }
+    refine_witness(a, b, &mut domains, &mut best, &mut cells, max_cells)?;
     let mut search = TrimmedSearch {
         a,
         b,
         domains,
         best,
+        axis_lower,
     };
     let outcome =
         crate::distance::subdivision::run(&mut search, &mut queue, cells, max_cells, tolerance_mm)?;

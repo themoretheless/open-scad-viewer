@@ -1,30 +1,29 @@
-use crate::{Acceleration, V3, dot, nearest_neighbor_accelerated, par_map, sub};
+use crate::{Acceleration, V3, dot, nearest_neighbor_accelerated, sub};
 
 pub type Neighbor = (u32, f64);
 pub type TwoNearest = [Neighbor; 2];
 
 /// Brute-force exact top-2 nearest-neighbor search for every query point.
 pub fn nearest_two(queries: &[V3], targets: &[V3]) -> Vec<TwoNearest> {
-    let min_chunk = (16_384usize).checked_div(targets.len().max(1)).unwrap_or(16_384).max(32);
-    par_map(queries, min_chunk, |&q| {
-        let mut best = (u32::MAX, f64::INFINITY);
-        let mut second = (u32::MAX, f64::INFINITY);
-        for (i, &t) in targets.iter().enumerate() {
-            let d = sub(q, t);
-            let dist = dot(d, d);
-            if dist < best.1 {
-                second = best;
-                best = (i as u32, dist);
-            } else if dist < second.1 {
-                second = (i as u32, dist);
+    queries
+        .iter()
+        .map(|&q| {
+            let mut best = (u32::MAX, f64::INFINITY);
+            let mut second = (u32::MAX, f64::INFINITY);
+            for (i, &t) in targets.iter().enumerate() {
+                let d = sub(q, t);
+                let dist = dot(d, d);
+                if dist < best.1 {
+                    second = best;
+                    best = (i as u32, dist);
+                } else if dist < second.1 {
+                    second = (i as u32, dist);
+                }
             }
-        }
-        [best, second]
-    })
+            [best, second]
+        })
+        .collect()
 }
-
-/// WGSL source for the exact top-2 nearest-neighbor compute shader.
-pub const NEAREST_TWO_WGSL: &str = include_str!("nearest_two.wgsl");
 
 /// [`nearest_two`] with optional GPU/CUDA batch kernels.
 pub fn nearest_two_accelerated(
@@ -37,17 +36,11 @@ pub fn nearest_two_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(values) = crate::cuda::nearest_two_cuda(queries, targets)
-        {
-            return values;
-        }
-        if let Some(values) = crate::gpu::nearest_two_gpu(queries, targets) {
-            return values;
-        }
+    if acceleration.is_gpu()
+        && let Some(values) = crate::device::kernels()
+            .and_then(|kernels| kernels.nearest_two(acceleration, queries, targets))
+    {
+        return values;
     }
     nearest_two(queries, targets)
 }
@@ -122,55 +115,5 @@ mod tests {
             .map(|pair| pair[0])
             .collect();
         assert_eq!(got, want);
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn nearest_two_gpu_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_two_accelerated(&queries, &targets, Acceleration::Gpu);
-        let want = nearest_two(&queries, &targets);
-        for ([g0, g1], [w0, w1]) in got.iter().zip(&want) {
-            assert_eq!(g0.0, w0.0);
-            assert_eq!(g1.0, w1.0);
-            assert!((g0.1 - w0.1).abs() < 5e-3 * w0.1.max(1.0));
-            assert!((g1.1 - w1.1).abs() < 5e-3 * w1.1.max(1.0));
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn nearest_two_cuda_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_two_accelerated(&queries, &targets, Acceleration::Cuda);
-        let want = nearest_two(&queries, &targets);
-        for ([g0, g1], [w0, w1]) in got.iter().zip(&want) {
-            assert_eq!(g0.0, w0.0);
-            assert_eq!(g1.0, w1.0);
-            assert!((g0.1 - w0.1).abs() < 5e-3 * w0.1.max(1.0));
-            assert!((g1.1 - w1.1).abs() < 5e-3 * w1.1.max(1.0));
-        }
     }
 }

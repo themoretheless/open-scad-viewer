@@ -1,8 +1,4 @@
-import LiveBodyPatternControls from '../src/components/LiveBodyPatternControls.vue'
-import DirectActionsControls from '../src/components/DirectActionsControls.vue'
-import {executeDirectTransaction} from '../src/services/directTransactions'
-import {emptyDirectDocument} from '../src/services/directModeling'
-import {createRenderer,nextTick,reactive} from 'vue'
+import {createRenderer,nextTick} from 'vue'
 import {it,expect,vi,afterEach} from 'vitest'
 import MainModelingOverlay from '../src/features/MainModelingOverlay.vue'
 import MainSketchTools from '../src/features/MainSketchTools.vue'
@@ -11,9 +7,6 @@ import {previewMeshes} from '../src/services/mainModeling'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-const actionClient=vi.hoisted(()=>({run:undefined as undefined|((job:any)=>Promise<any>)}))
-vi.mock('../src/services/solidPreviewWorker',async()=>{const actual=await vi.importActual<any>('../src/services/solidPreviewWorker');return {...actual,createSolidPreviewWorker:()=>actionClient.run?{run:(job:any)=>actionClient.run!(job),cancel:()=>{},dispose:()=>{}}:actual.createSolidPreviewWorker()}})
-afterEach(()=>{actionClient.run=undefined})
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}
@@ -128,36 +121,4 @@ it('outlines a closed sketch as a region with a hole before viewport extrusion',
  expect(bodies).toHaveLength(1)
  const volume=inspectPolygonMesh(bodies[0].mesh).signedVolumeMm3
  expect(volume).toBeGreaterThan(750);expect(volume).toBeLessThan(850)
-})
-
-it('applies a live grid from UI parameters and rejects an oversized array atomically',async()=>{
- const applied:DirectDocument[]=[],ui=await mount(LiveBodyPatternControls,{document:{version:1,sketches:[],bodies:[body]},sourceId:body.id,locale:'en',onApply:(d:DirectDocument)=>applied.push(d)})
- await ui.click('Apply pattern');expect(applied).toHaveLength(1);expect(applied[0].bodies).toHaveLength(6)
- const rows=ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Rows'))!.children.find(n=>n.tag==='input')!
- rows.props['onUpdate:modelValue'](256);await nextTick();await ui.click('Apply pattern')
- expect(applied).toHaveLength(1);expect(ui.all().some(n=>n.props.role==='alert')).toBe(true)
- const current=applied[0],second=await mount(LiveBodyPatternControls,{document:current,sourceId:body.id,locale:'en',onApply:(d:DirectDocument)=>applied.push(d)})
- await second.click('Detach all copies');expect(applied[1].bodies).toHaveLength(6);expect(applied[1].bodies.every(b=>!b.instance)).toBe(true)
-})
-
-it('records model changes and rejects a replay result after the live document changes',async()=>{
- const pending:any[]=[]
- actionClient.run=job=>new Promise(resolve=>pending.push({job,resolve}))
- const document=reactive(emptyDirectDocument()),applied:DirectDocument[]=[]
- const ui=await mount(DirectActionsControls,{document,locale:'en',onApply:(d:DirectDocument)=>applied.push(d)})
- await ui.click('Actions and recording');await ui.click('Record changes')
- document.sketches.push({id:'recorded',name:'Recorded',points:[[0,0],[1,0],[0,1]],closed:true})
- await nextTick();await ui.click('Stop recording')
- const input=ui.all().find(n=>n.tag==='textarea')!
- expect(JSON.parse(input.value).actions.map((a:{kind:string})=>a.kind)).toEqual(['checkpoint','documentEdit'])
- document.sketches=[];await nextTick();await ui.click('Replay')
- expect(ui.all().filter(n=>n.props.role==='alert').map(ui.text)).toEqual([])
- const first=pending.shift(),result=executeDirectTransaction(first.job.document,first.job.script)
- first.resolve(result)
- await nextTick();await nextTick();expect(applied).toHaveLength(1);expect(applied[0].sketches[0].id).toBe('recorded')
- await ui.click('Replay');const second=pending.shift()
- document.sketches.push({id:'new',name:'New',points:[[0,0],[2,0],[0,2]],closed:true});await nextTick()
- second.resolve(result)
- await nextTick();await nextTick();expect(applied).toHaveLength(1)
- expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('Model changed'))).toBe(true)
 })

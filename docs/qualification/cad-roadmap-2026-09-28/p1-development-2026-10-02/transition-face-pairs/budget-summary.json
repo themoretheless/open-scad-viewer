@@ -1,0 +1,24 @@
+[
+  {
+    "cellsPerPair": 64,
+    "elapsedMs": 1201.067166,
+    "visited": 351,
+    "disjoint": 209,
+    "shared": 12,
+    "unresolved": 130,
+    "unvisited": 0,
+    "cells": 10599,
+    "domainCells": 39798
+  },
+  {
+    "cellsPerPair": 256,
+    "elapsedMs": 2513.001125,
+    "visited": 351,
+    "disjoint": 234,
+    "shared": 12,
+    "unresolved": 105,
+    "unvisited": 0,
+    "cells": 32706,
+    "domainCells": 191106
+  }
+]

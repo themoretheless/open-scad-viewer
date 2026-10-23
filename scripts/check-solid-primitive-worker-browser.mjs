@@ -52,22 +52,38 @@ try {
  await page.evaluate(()=>window.__latePrimitive())
  assert.deepEqual(await exportDoc('cancelled.json'),before)
  await page.evaluate(()=>window.__holdPrimitive=false)
+ let creationIndex=0
+ async function createPrimitive(name){
+  const index=creationIndex++,previous=await exportDoc('before-create-'+index+'.json')
+  if(keyboard){await page.keyboard.press('Control+k');const input=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await input.waitFor();await input.fill(name);await input.press('Enter')}
+  else await solid.getByRole('button',{name,exact:true}).click()
+  await ready()
+  const created=await exportDoc('created-'+index+'.json')
+  assert.equal(created.bodies.length,previous.bodies.length+1)
+  assert.deepEqual(created.bodies.slice(0,-1),previous.bodies)
+  assert.ok(!previous.bodies.some(body=>body.id===created.bodies.at(-1).id))
+  if(keyboard)await page.keyboard.press('Control+z');else await solid.getByRole('button',{name:'↶',exact:true}).click()
+  assert.deepEqual(await exportDoc('undo-create-'+index+'.json'),previous)
+  if(keyboard)await page.keyboard.press('Control+Shift+z');else await solid.getByRole('button',{name:'↷',exact:true}).click()
+  assert.deepEqual(await exportDoc('redo-create-'+index+'.json'),created)
+ }
  const names=['Куб','Клин','Цилиндр','Усечённый конус','Труба','Конус','Сфера','Тор']
- for(const name of names){await solid.getByRole('button',{name,exact:true}).click();await ready()}
+ for(const name of names)await createPrimitive(name)
  const exact=await exportDoc('exact.json');assert.equal(exact.bodies.length,before.bodies.length+8)
  for(const body of exact.bodies.slice(-8)){assert.ok(body.brep);assert.ok(body.mesh.indices.length>0)}
  const box=exact.bodies.at(-8),coordinates=box.mesh.positions
  for(let axis=0;axis<3;axis++){const values=coordinates.filter((_,i)=>i%3===axis);assert.equal(Math.max(...values)-Math.min(...values),20)}
  await solid.locator('.primitive-bar select').selectOption('faceted')
- for(const name of ['Цилиндр','Конус','Сфера']){await solid.getByRole('button',{name,exact:true}).click();await ready()}
+ for(const name of ['Цилиндр','Конус','Сфера'])await createPrimitive(name)
  const completed=await exportDoc('all.json');assert.equal(completed.bodies.length,exact.bodies.length+3)
  const [cylinder,cone,sphere]=completed.bodies.slice(-3);assert.ok(cylinder.brep.faces.length>6);assert.equal(cone.brep,undefined);assert.ok(sphere.brep.faces.length>6)
- await solid.getByRole('button',{name:'↶',exact:true}).click();const undone=await exportDoc('undone.json');assert.deepEqual(undone.bodies,completed.bodies.slice(0,-1))
- await solid.getByRole('button',{name:'↷',exact:true}).click();assert.deepEqual(await exportDoc('redone.json'),completed)
+ if(keyboard)await page.keyboard.press('Control+z');else await solid.getByRole('button',{name:'↶',exact:true}).click();const undone=await exportDoc('undone.json');assert.deepEqual(undone.bodies,completed.bodies.slice(0,-1))
+ if(keyboard)await page.keyboard.press('Control+Shift+z');else await solid.getByRole('button',{name:'↷',exact:true}).click();assert.deepEqual(await exportDoc('redone.json'),completed)
  const requests=await page.evaluate(()=>window.__primitiveRequests);assert.equal(requests,12)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();assert.deepEqual(await exportDoc('reloaded.json'),completed)
+ await ready();await solid.getByRole('status',{name:'snap-preparation',exact:true}).waitFor({state:'hidden'});await ready()
  await page.screenshot({path:path.join(directory,'primitives.png')});assert.deepEqual(errors,[])
- const report={browser:browser.version(),workerRequests:requests,cancelledWorkerTerminated:true,lateSuccessfulReplyIgnored:true,paletteEscape:true,exactPrimitives:8,facetedPrimitives:3,boxSizeMm:20,undoRedoAndReload:true}
+ const report={browser:browser.version(),interaction:keyboard?'keyboard':'mouse',workerRequests:requests,cancelledWorkerTerminated:true,lateSuccessfulReplyIgnored:true,paletteEscape:true,exactPrimitives:8,facetedPrimitives:3,eachCreationUndoRedo:true,uniqueBodyIds:true,priorBodiesPreserved:true,boxSizeMm:20,undoRedoAndReload:true}
  await writeFile(path.join(directory,'primitive-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

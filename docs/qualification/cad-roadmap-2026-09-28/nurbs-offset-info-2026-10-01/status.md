@@ -6,4 +6,6 @@ Type checking passed. Eighteen focused document/offset tests passed. The Chromiu
 
 Dist verification passed with 131 artifacts and 7,091,288 asset bytes, without increasing budgets.
 
-Open: current-geometry reinspection and trimming inner offset intersections, general join assembly, full P0–P3 qualification.
+Current geometry reinspection is qualified in the adjacent current-curve-chain evidence.
+
+Open: trimming inner offset intersections, general join assembly, full P0–P3 qualification.

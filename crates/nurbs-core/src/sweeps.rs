@@ -21,3 +21,20 @@ pub mod audit;
 
 /// Conditional filled-cap and full-boundary error composition.
 pub mod filled_cap_error;
+pub mod profile_certificate;
+#[cfg(feature = "codec")]
+mod profile_seam;
+#[cfg(feature = "codec")]
+mod profile_geometry;
+
+/// Boundary-wide composition shared by sweep constructors.
+pub mod certificates {
+    pub use super::filled_cap_error;
+    pub use crate::{sweep_section_correction, sweep_seam_set, retained_wall_domain};
+    pub use super::progressive_miter::{law_certificates, boundary_certificates};
+}
+
+mod scalar;
+pub use scalar::scaled_sweep;
+#[cfg(feature = "codec")]
+pub use scalar::{checked_profile_sweep, checked_profile_sweep_with_cells};

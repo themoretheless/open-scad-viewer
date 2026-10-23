@@ -34,8 +34,8 @@ export function prepareMainSolidTransfer(response: MainSolidResponse): { respons
     pushTransferView(transfer, mesh.uv)
     return {response,transfer}
   }
-  if(response.ok && (response.kind==='restoreDocument'||response.kind==='rushGraphImport'||response.kind==='primitive')) {
-    // These jobs parse the complete replacement, so parsed mesh buffers belong
+  if(response.ok && (response.kind==='restoreDocument'||response.kind==='rushGraphImport'||response.kind==='primitive'||response.kind==='sceneEdit')) {
+    // These jobs validate a complete replacement, so parsed mesh buffers belong
     // exclusively to the response. Deduplicate buffers in case views share backing storage.
     const bodies = (response.result as DirectDocument).bodies
     if (bodies.length <= 8) {

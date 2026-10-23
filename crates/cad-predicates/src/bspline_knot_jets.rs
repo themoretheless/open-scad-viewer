@@ -39,8 +39,7 @@ pub fn rational_piecewise_bezier_knot_jet_identity(
         {
             return Ok(BezierIdentity::Indeterminate(crate::Reason::MissingProof));
         }
-        let mut groups = Vec::with_capacity(u.len());
-        groups.push((0usize, 1usize));
+        let mut groups = vec![(0usize, 1usize)];
         for i in 1..u.len() {
             match u[i].sub(&u[i - 1], ctx)?.sign() {
                 Sign::Negative => {

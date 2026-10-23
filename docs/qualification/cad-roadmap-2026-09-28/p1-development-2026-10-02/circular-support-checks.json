@@ -1,0 +1,27 @@
+{
+  "schema": "cad-p1-circular-support/1",
+  "implementation": "crates/brep-core/src/circular_blend.rs",
+  "state": "support geometry only; partial solid fillet remains incomplete",
+  "exactRepresentation": "degree 2 x 2 rational tensor-product torus patches with positive weights and matching degree-2 contact rails",
+  "testsPassed": 2,
+  "sweepsRadians": [
+    0.31,
+    2.2,
+    -2.2,
+    "2*pi"
+  ],
+  "startRadians": 5.9,
+  "radiusMm": 1.25,
+  "outerRadiusMm": 20,
+  "topPlaneMm": 6,
+  "sampledSurfaceRadiusPoints": 3969,
+  "sampledBoundaryNormals": 378,
+  "sampleTolerance": 1e-11,
+  "continuousProofVerified": false,
+  "endpointTransitionsImplemented": false,
+  "solidTrimmingAndSewImplemented": false,
+  "bridgeAndUiExposed": false,
+  "independentOracleVerified": false,
+  "wasmRebuilt": false,
+  "generalP1Complete": false
+}

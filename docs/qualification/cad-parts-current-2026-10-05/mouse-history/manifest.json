@@ -1,0 +1,21 @@
+{
+  "scope": "Current UI: 20 edits per part, 7 cancelled previews, 20 Undo, 20 Redo, reload; actual viewport face picking",
+  "wasmSha256": "ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84",
+  "files": {
+    "bracket.png": "2afeafc27dad856979ece62db1da5f03a0363ea95e23505d84a74c7b58d59d05",
+    "result.json": "126cab48774a62c7e1e288e6b21c7f681875ea4f7f110c2e38a5d3423c7272ab",
+    "bracket-20.json": "05227451bc4c0c126d35621ed16f4b267db449e6741f4381db8ddfc239663bae",
+    "flange.png": "7150f97917abd655718aca47e4e4a568a13b364ed050378bf0c5424edbece5f5",
+    "bracket-reload.json": "fb7577271ee00f98e05cc729faf57b8717d661abb5ee72c9973ebc8ec43cda60",
+    "flange-20.json": "bb45c9aad7ea814e7b49574746645b3f69cd8849d71d5a3e35343eae6f35b74b",
+    "enclosure-0.json": "feee48318a6e75c1154a3bc8575771e8488e9ca45436d32c01c3f26b7d6f8005",
+    "enclosure-20.json": "fde229f54ef7cd3d37950d3497418c6f23b1ccdbc848c429480f38afae4e6924",
+    "enclosure-reload.json": "e66700c9555b7058b0954fd0084f49e30e5971419a0d75b3a5cdcc017b6c0280",
+    "flange-reload.json": "ee8fc0c598be940a8a556effd10c43ffb789cb1ede37d260afe262fa5f5b8f16",
+    "bracket-0.json": "3f9967549f5174b2fa472eee8e4beb0ddcefa2635d6a03b8f98911c02384522c",
+    "flange-0.json": "644053ec23f450e9699b766826570811a4047bee2210fc859345442d43958caa",
+    "enclosure.png": "8905f567c1fccfd1633a02e0f7bd302161c6dfad23d165ee73f406eb161f852a"
+  },
+  "fullP0MatrixComplete": false,
+  "generalFilletsQualified": false
+}

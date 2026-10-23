@@ -177,15 +177,13 @@ pub struct HostMatchingPlan {
 /// Eligibility for the browser host-GPU matching path. Every seed-candidate
 /// pair is matched there only when the candidate list covers the full pair
 /// grid (up to 24 photos), so seeding and incremental registration both hit
-/// the precomputed cache; larger sets keep the lazy host-side matcher. The
-/// `second_chance` pass needs exact reverse seconds the GPU pair pass does
-/// not produce, so it declines as well.
+/// the precomputed cache; larger sets keep the lazy host-side matcher.
 pub fn prepare_host_matching(
     images: &[Image],
     feature_limit: usize,
     options: &FeatureOptions,
 ) -> Result<Option<HostMatchingPlan>> {
-    if images.len() < 2 || images.len() > 24 || options.second_chance {
+    if images.len() < 2 || images.len() > 24 {
         return Ok(None);
     }
     let mut features = Vec::with_capacity(images.len());
@@ -452,18 +450,17 @@ mod tests {
                 .is_none()
         );
         let images: Vec<Image> = (0..2).map(|_| image.clone()).collect();
-        assert!(
-            prepare_host_matching(
-                &images,
-                100,
-                &FeatureOptions {
-                    second_chance: true,
-                    ..FeatureOptions::ROOT
-                },
-            )
-            .unwrap()
-            .is_none()
-        );
+        let plan_second = prepare_host_matching(
+            &images,
+            100,
+            &FeatureOptions {
+                second_chance: true,
+                ..FeatureOptions::ROOT
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(plan_second.pairs, vec![(0, 1)]);
         let plan = prepare_host_matching(&images, 100, &FeatureOptions::BASELINE)
             .unwrap()
             .unwrap();

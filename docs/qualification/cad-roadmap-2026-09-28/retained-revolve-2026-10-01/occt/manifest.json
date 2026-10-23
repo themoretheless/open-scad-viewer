@@ -1,0 +1,92 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "rational-torus",
+      "file": "rational-torus.step",
+      "sha256": "6a2de7a66d4b6b691efd9ca8ae0436ec697052ebc5053234b3515ccd680e1c6f",
+      "expected": {
+        "volumeMm3": 98.69604401089359,
+        "boundsMm": [
+          [
+            -6,
+            -1,
+            -6
+          ],
+          [
+            6,
+            1,
+            6
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "holed-full",
+      "file": "holed-full.step",
+      "sha256": "4d49baaef2c5c71253ed5ef51a9b2516d062ed6371c074a72b3544edb1a7e983",
+      "expected": {
+        "volumeMm3": 282.7433388230814,
+        "boundsMm": [
+          [
+            -6,
+            0,
+            -6
+          ],
+          [
+            6,
+            4,
+            6
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "disconnected-full",
+      "file": "disconnected-full.step",
+      "sha256": "4124934baa6423d7ec0603688a324162c0a12b9dea9236685a8135bffd06c160",
+      "expected": {
+        "volumeMm3": 56.548667764616276,
+        "boundsMm": [
+          [
+            -6,
+            0,
+            -6
+          ],
+          [
+            6,
+            3,
+            6
+          ]
+        ],
+        "solids": 2
+      }
+    },
+    {
+      "name": "holed-quarter",
+      "file": "holed-quarter.step",
+      "sha256": "51d6ac39348fb80db23b086f7bfbc66b385afa5d7616ef04d55fbf5308bffc5e",
+      "expected": {
+        "volumeMm3": 70.68583470577035,
+        "boundsMm": [
+          [
+            0,
+            0,
+            -6
+          ],
+          [
+            6,
+            4,
+            0
+          ]
+        ],
+        "solids": 1
+      }
+    }
+  ]
+}

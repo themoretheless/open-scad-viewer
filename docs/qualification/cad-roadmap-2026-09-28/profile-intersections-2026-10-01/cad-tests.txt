@@ -1,0 +1,20 @@
+
+> open-scad-viewer@0.1.0 test:cad-roadmap
+> vitest run tests/profileIntersections.test.ts tests/profileIntersectionsProtocol.test.ts tests/profileIntersectionDiagnostics.test.ts tests/brepProfile.test.ts tests/brepProfileExtrusionAudit.test.ts tests/brepNativeProgramSemantics.test.ts tests/solidGeneralProfilePreparation.test.ts tests/wasmBrotliPacking.test.ts tests/cpuOrbitPaint.test.ts tests/directProjectionBasis.test.ts tests/sceneListWindow.test.ts tests/transparentBsp.test.ts tests/transparentTriangleSplit.test.ts tests/directModelerUi.test.ts tests/directModeling.test.ts tests/directHistory.test.ts tests/directDocumentAsync.test.ts tests/directDocumentNormalization.test.ts tests/directDimensions.test.ts tests/directAdvancedTools.test.ts tests/directProfileTools.test.ts tests/directExtrusion.test.ts tests/cadRoadmapAcceptance.test.ts tests/solidStepExchange.test.ts tests/solidNurbs.test.ts tests/solidRetainedRevolve.test.ts tests/solidRetainedLoft.test.ts tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsSurfaceDistance.test.ts tests/faceDistance.test.ts tests/shellDistance.test.ts tests/solidBoundaryAgreement.test.ts tests/solidFaceContacts.test.ts tests/solidSelfIntersection.test.ts tests/solidDistance.test.ts tests/solidVolumeDistanceUi.test.ts tests/wasmBase91.test.ts tests/brepRuledLoft.test.ts tests/brepSteppedEnclosureExample.test.ts tests/meshInstances.test.ts tests/modelGraphAssembly.test.ts tests/svgDocumentAsync.test.ts tests/svgGeometry.test.ts tests/svgWorker.test.ts tests/commandSearch.test.ts tests/cadRoadmapHistory.test.ts tests/solidStepAssembly.test.ts tests/solidMaterial.test.ts tests/solidExactEdgeFeature.test.ts tests/solidBodyEdges.test.ts tests/solidPlaneSection.test.ts tests/solidMeasurements.test.ts tests/nativeCadClearance.test.ts tests/solidInstances.test.ts tests/solidDraftStore.test.ts tests/solidDraftHeadStore.test.ts tests/solidBlenderExchange.test.ts tests/solidGpuFallback.test.ts tests/solidDisplayCache.test.ts tests/solidPrimitive.test.ts tests/solidSurfaceDisplayQueue.test.ts tests/solidGeometryDisplayQueue.test.ts tests/solidSceneEditCache.test.ts tests/mainSolidWorkerRealBoundary.test.ts tests/solidSnapPreparation.test.ts tests/solidSketchSnapPreparation.test.ts tests/solidSnapGeometry.test.ts tests/modelingSnaps.test.ts tests/solidDisplayQueue.test.ts tests/solidDisplayPreparation.test.ts tests/mainSolidWorkerRuntime.test.ts tests/mainSolidWorkerTransport.test.ts
+
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+(node:17309) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17320) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17311) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17671) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  74 passed (74)
+      Tests  863 passed (863)
+   Start at  21:55:24
+   Duration  56.69s (transform 5.04s, setup 0ms, import 11.60s, tests 110.20s, environment 45ms)

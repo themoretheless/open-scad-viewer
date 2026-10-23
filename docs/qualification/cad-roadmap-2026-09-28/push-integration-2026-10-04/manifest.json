@@ -1,0 +1,32 @@
+{
+  "geometryWasm": {
+    "sha256": "f123869b759f54384cbd55a95b5be859ab9487b2c1211ed737130362accc6858",
+    "byteLength": 10917300
+  },
+  "sourceSha256": {
+    "src/App.vue": "a665bb4ef601ee04fd29aa868532d536b1ad3e452be6f985b5844bcf9c9ca65a",
+    "src/features/DirectModeler.vue": "4d989fb5793cf0aac1c069d73421f9981362bac5f83588f4f384a60987ff787d",
+    "src/features/MeshModeler.vue": "395ba06845d884bfb3e0234230f2d5d7e063268cd603eb13b46378f5b4191a04",
+    "scripts/check-cad-whole-wall-browser.mjs": "85e2b2c49e9f8936594c0b4202684bf8e72184d0ee8362eae762386a601b1c52",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "138390c8ca308a03b3cd48d551f42b9648442c4065205ee2f1f7840d439dd344"
+  },
+  "files": {
+    "mouse-curved-self-unresolved.png": "d6097edb40cd440049f7eabfd44db121079591857ac7a9e135c027d53fad75b8",
+    "selected-wall-wasm.json": "c286f5268c568720767482a8d26ab8c3716362d78b384007576cc4a255272bcf",
+    "mouse-box-minimum.png": "3c3f1735d17d073c97d05856a8e476b2586aa153bc4f5168dfc3315596f1a9aa",
+    "material-protocol-tests.log.gz": "4f3665ec9f2a9808565c6ca24f97b125d86fb42d995e0a2f9231d1e2f6a048fb",
+    "whole-wall-wasm.json": "e58da44f1b0afb9986eba9a17104ee6be2bb930b582d7670925c01c2081c685b",
+    "cad-roadmap-tests.log.gz": "785d91712b720bf778213bdcbf115f5f4f0f3b54bb0e490b584d21e4d007e868",
+    "keyboard-box-minimum.png": "dcc15488ffa5c38c5a30f0cb550edf3118df653c8f80793682ab8b01dada4614",
+    "status.md": "7125badc088184377965e7047ddb6d289d5cafb7d76748aa7eb226d7ef67ccfd",
+    "dist-verification.log.gz": "c736092a8dc5004fde78e9998452f4cb1db913e0dc6a92f1fda05cf6ed06839e",
+    "build-contract-tests.log.gz": "a9f0d6c5634456da739950209852017197aab96a667e50bb64de905176a6ce34",
+    "keyboard-enclosure-minimum.png": "83cb5dfcacc2cf04756c58d18502e8ffd9c3a109c0494a30ed9049631aa284eb",
+    "keyboard-curved-self-unresolved.png": "cd7948c471f5aa7b8611e37435605f2cc155eb3be89a951160a26d0ff32de070",
+    "browser-keyboard.json": "03fc20bb58df135425d6476b9a216873ca5ff318337fb61ad0b00e1c52e3c87a",
+    "source-preview.json": "abf00835b0a6ceed3ff51f43151536c673cc53ab946cddef8c95c96986b53c3b",
+    "native-tests.log.gz": "a88543f4ba27f4079aaa0003b298dad26c1c68e909d89aaa1be6c0b8a91cfc3b",
+    "browser-mouse.json": "79c65cd7f7beff30171de96cf47b65943e56e4fc946c7f2547e1ae2afed5a832",
+    "mouse-enclosure-minimum.png": "b10f5aace42d11f7e2e9694d9b99217f77cd6192fbb29479250c1f8c1ddbf66f"
+  }
+}

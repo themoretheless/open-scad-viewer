@@ -36,6 +36,8 @@ import {
 } from '../src/mcp/directGeometrySupervisor'
 import { GeometryBusyError, GeometryDeadlineExceededError } from '../src/mcp/geometryService'
 
+const REAL_WORKER_STARTUP_MS = 30_000
+
 interface Deferred<T> {
   promise: Promise<T>
   resolve(value: T): void
@@ -225,9 +227,11 @@ describe('DirectGeometrySupervisor', () => {
   })
 
   it('runs the real direct evaluator and capability probe in disposable production workers', async () => {
+    // A real cold kernel compiles inside each worker; under a loaded parallel suite that alone can
+    // take several seconds, so these real-worker tests give startup the margin the defaults give jobs.
     const supervisor = new DirectGeometrySupervisor({
-      jobDeadlineMs: 10_000,
-      startupTimeoutMs: 5_000,
+      jobDeadlineMs: 20_000,
+      startupTimeoutMs: REAL_WORKER_STARTUP_MS,
     })
     supervisors.add(supervisor)
 
@@ -249,24 +253,24 @@ describe('DirectGeometrySupervisor', () => {
       ],
     })
     expect(supervisor.snapshot()).toMatchObject({ workersStarted: 2, workersJoined: 2 })
-  }, 30_000)
+  }, 90_000)
 
   it('joins a real failed build before admitting a fresh successful worker', async () => {
-    const supervisor = new DirectGeometrySupervisor({ jobDeadlineMs: 10_000, startupTimeoutMs: 5_000 })
+    const supervisor = new DirectGeometrySupervisor({ jobDeadlineMs: 20_000, startupTimeoutMs: REAL_WORKER_STARTUP_MS })
     supervisors.add(supervisor)
     await expect(supervisor.build('assert(false, "join failure path");', 'full', 'analysis')).rejects.toThrow('join failure path')
     await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({ result: { volume: 8 } })
     expect(supervisor.snapshot()).toMatchObject({
       workersStarted: 2, workersJoined: 2, quarantined: false, admittedJobs: 0,
     })
-  }, 30_000)
+  }, 90_000)
 
   it('admits a delayed cold kernel under the worker startup deadline', async () => {
     const supervisor = new DirectGeometrySupervisor({
       workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
         workerData: {delayMs: 350}, env: {}, stdout: true, stderr: true,
       }),
-      startupTimeoutMs: 5_000, jobDeadlineMs: 10_000,
+      startupTimeoutMs: REAL_WORKER_STARTUP_MS, jobDeadlineMs: 20_000,
     })
     supervisors.add(supervisor)
     await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({
@@ -276,7 +280,7 @@ describe('DirectGeometrySupervisor', () => {
       engines: [{engineClass: 'mesh', availability: 'available'}, {engineClass: 'brep', availability: 'available'}],
     })
     expect(supervisor.snapshot()).toMatchObject({workersStarted: 2, workersJoined: 2, admittedJobs: 0})
-  }, 15_000)
+  }, 90_000)
 
   it('terminates and joins a real worker whose cold kernel exceeds startup deadline', async () => {
     const supervisor = new DirectGeometrySupervisor({

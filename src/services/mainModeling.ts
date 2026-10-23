@@ -18,7 +18,7 @@ export { sceneBody }
 export function sceneFace(mesh:MeshData,hit:PickHit|null){const body=sceneBody(mesh,0),topology=solidTopology(body.mesh);return {body,topology,face:hit?topology.faces.findIndex(f=>f.triangles.includes(hit.triangleIndex)):-1}}
 export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null,op:MainOperation,p:MainParameters){
  if(!meshes[selected])throw Error('Select a body in the main scene.')
- if(!(Number.isFinite(p.amount)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z)&&Number.isFinite(p.width)&&Number.isFinite(p.height)))throw Error('Enter finite dimensions.')
+ if(![p.amount,p.x,p.y,p.z,p.width,p.height].every(Number.isFinite))throw Error('Enter finite dimensions.')
  const d:DirectDocument={version:1,sketches:[],bodies:meshes.map(sceneBody)},body=d.bodies[selected],topology=solidTopology(body.mesh)
  const face=hit?.meshIndex===selected?topology.faces.findIndex(f=>f.triangles.includes(hit.triangleIndex)):-1
  if(['push','shell','profile'].includes(op)&&face<0)throw Error('Click a face in the main viewport.')
@@ -35,9 +35,7 @@ export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null
   if(p.width<=0||p.height<=0||p.amount===0)throw Error('Profile dimensions must be positive and depth nonzero.')
   const plane=facePlane(body,topology.faces[face]);plane.origin=[...hit!.point]
   if(p.cut)plane.v=plane.v.map(v=>-v) as [number,number,number]
-  let points:[number,number][]
-  if(p.shape==='circle'){points=new Array<[number,number]>(48);for(let i=0;i<48;i++)points[i]=[p.x+p.width/2*Math.cos(i*Math.PI/24),p.y+p.width/2*Math.sin(i*Math.PI/24)]}
-  else points=[[p.x,p.y],[p.x+p.width,p.y],[p.x+p.width,p.y+p.height],[p.x,p.y+p.height]]
+  const points:[number,number][]=p.shape==='circle'?Array.from({length:48},(_,i)=>[p.x+p.width/2*Math.cos(i*Math.PI/24),p.y+p.width/2*Math.sin(i*Math.PI/24)]):[[p.x,p.y],[p.x+p.width,p.y],[p.x+p.width,p.y+p.height],[p.x,p.y+p.height]]
   const profile=extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points,plane},Math.abs(p.amount),'profile-body')
   d.bodies[selected]={...body,mesh:booleanPolygonMeshes(body.mesh,profile.mesh,p.cut?'difference':'union')};break
  }

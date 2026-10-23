@@ -1,0 +1,182 @@
+{
+  "schema": "cad-polar-injectivity-wasm/1",
+  "passed": true,
+  "wasmSha256": "d09aaae3b44f8aa46a34075922269bf7ec9520dc72845891e2766585b0d81ef4",
+  "wasmBytes": 9704339,
+  "cases": [
+    {
+      "placement": 0,
+      "maxSpans": 4096,
+      "spans": 601,
+      "proven": 25,
+      "torus": {
+        "contractionUpper": 0.3237207671906416,
+        "linearProjection": null,
+        "polarProjection": [
+          [
+            0.7071067811865474,
+            0.7071067811865475,
+            0,
+            -1.3816813636417219e-14
+          ],
+          [
+            -0.7071067811865475,
+            0.7071067811865474,
+            0,
+            1.2560739669470207e-15
+          ],
+          [
+            0,
+            0,
+            1,
+            -6
+          ]
+        ],
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": true,
+        "reason": "global-polar-projection-contraction",
+        "spans": 449
+      }
+    },
+    {
+      "placement": 0,
+      "maxSpans": 600,
+      "spans": 600,
+      "proven": 24,
+      "torus": {
+        "contractionUpper": 0.3237207671906416,
+        "linearProjection": null,
+        "polarProjection": [
+          [
+            0.7071067811865474,
+            0.7071067811865475,
+            0,
+            -1.3816813636417219e-14
+          ],
+          [
+            -0.7071067811865475,
+            0.7071067811865474,
+            0,
+            1.2560739669470207e-15
+          ],
+          [
+            0,
+            0,
+            1,
+            -6
+          ]
+        ],
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": true,
+        "reason": "global-polar-projection-contraction",
+        "spans": 449
+      }
+    },
+    {
+      "placement": 0,
+      "maxSpans": 448,
+      "spans": 345,
+      "proven": 24,
+      "torus": {
+        "contractionUpper": null,
+        "linearProjection": null,
+        "polarProjection": null,
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": false,
+        "reason": "projection-not-proven",
+        "spans": 193
+      }
+    },
+    {
+      "placement": 1,
+      "maxSpans": 4096,
+      "spans": 3257,
+      "proven": 25,
+      "torus": {
+        "contractionUpper": 0.32372076721517296,
+        "linearProjection": null,
+        "polarProjection": [
+          [
+            0.2846563203429092,
+            0.8688395800536757,
+            0.4050784657581635,
+            -6.336405937784116
+          ],
+          [
+            -0.7960577685911628,
+            0.44967039667368636,
+            -0.40507846575816414,
+            26.896820348550715
+          ],
+          [
+            -0.5340999984595521,
+            -0.20715771404290517,
+            0.8196480178454799,
+            -17.636623863019814
+          ]
+        ],
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": true,
+        "reason": "global-polar-projection-contraction",
+        "spans": 449
+      }
+    },
+    {
+      "placement": 1,
+      "maxSpans": 600,
+      "spans": 600,
+      "proven": 14,
+      "torus": {
+        "contractionUpper": 0.32372076721517296,
+        "linearProjection": null,
+        "polarProjection": [
+          [
+            0.2846563203429092,
+            0.8688395800536757,
+            0.4050784657581635,
+            -6.336405937784116
+          ],
+          [
+            -0.7960577685911628,
+            0.44967039667368636,
+            -0.40507846575816414,
+            26.896820348550715
+          ],
+          [
+            -0.5340999984595521,
+            -0.20715771404290517,
+            0.8196480178454799,
+            -17.636623863019814
+          ]
+        ],
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": true,
+        "reason": "global-polar-projection-contraction",
+        "spans": 449
+      }
+    },
+    {
+      "placement": 1,
+      "maxSpans": 448,
+      "spans": 448,
+      "proven": 13,
+      "torus": {
+        "contractionUpper": null,
+        "linearProjection": null,
+        "polarProjection": null,
+        "projection": null,
+        "projectiveProjection": null,
+        "proven": false,
+        "reason": "projection-not-proven",
+        "spans": 193
+      }
+    }
+  ],
+  "workerHandlerCases": 2,
+  "scope": "Actual WASM and worker handler; collapsed tips and distinct-face contacts remain unqualified."
+}

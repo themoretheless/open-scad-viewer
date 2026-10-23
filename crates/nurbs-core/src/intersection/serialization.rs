@@ -55,11 +55,10 @@ impl value_codec::Serialize for CurveSurfaceIntersection {
     fn to_value(&self) -> Value {
         json!({"version":VERSION,"kind":"curve_surface",
             "coverage":{"method":"Bernstein-hull-exclusion-with-Krawczyk-or-plane-Bernstein",
-                "complete":self.certified && self.unresolved.is_empty(),
-                "searchComplete":self.unresolved.is_empty(),"certified":self.certified,"boxesVisited":self.boxes_visited,
+                "complete":self.unresolved.is_empty(),"boxesVisited":self.boxes_visited,
                 "bernsteinExcluded":self.bernstein_excluded,"krawczykIsolated":self.krawczyk_isolated,
                 "resourceLimit":MAX_BOXES},"components":self.components,"unresolved":self.unresolved,
-            "rounding":"uncertified-binary64","evidence":tolerance_evidence(&self.tolerance)})
+            "rounding":"binary64-nextafter-outward","evidence":tolerance_evidence(&self.tolerance)})
     }
 }
 pub fn intersect_curve_surface(
@@ -180,4 +179,12 @@ pub fn resource_boundary_probe(degree: usize, controls: usize) -> Result<Value> 
     Ok(
         json!({"version":VERSION,"admitted":true,"maxDegree":MAX_DEGREE,"maxControls":MAX_CONTROLS,"maxBoxes":MAX_BOXES,"maxSpans":MAX_SPANS}),
     )
+}
+
+pub fn intersect_curve_curve_bounded(first:&Curve,second:&Curve,tolerance:Option<ToleranceContext>,max_boxes:usize)->Result<Value> {
+    let native=intersect_curve_curve_bounded_report(first,second,tolerance,max_boxes)?;
+    let complete=native.report.unresolved.is_empty();
+    let mut encoded=encode_cc_report(native.report,&native.tolerance,complete);
+    encoded["coverage"]["resourceLimit"]=json!(max_boxes);
+    Ok(encoded)
 }

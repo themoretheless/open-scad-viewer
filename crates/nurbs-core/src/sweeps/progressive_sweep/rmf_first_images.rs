@@ -166,7 +166,47 @@ impl Owner {
             }),
         ))
     }
-    pub(super) fn query(
+    /// A single interval may lose a nonzero speed premise through dependency.
+    /// Cover it by bounded original subqueries, retaining a pointwise hull.
+    /// No derivative-continuity premise is inferred across the subdivision.
+    pub(super) fn query(&self, transport:&rmf_transport::OriginalRmfTransportReport,
+        qs:&[[[f64;2];3]], interval:[f64;2], budget:usize)->Result<Report>{
+        self.query_partition(transport,qs,interval,budget,0)
+    }
+    fn query_partition(&self,transport:&rmf_transport::OriginalRmfTransportReport,
+        qs:&[[[f64;2];3]],interval:[f64;2],budget:usize,depth:usize)->Result<Report>{
+        let mut out=self.query_once(transport,qs,interval,budget)?;
+        if out.images.is_some() || out.cells>=budget || depth==24
+            || transport.status!=Status::Certified {return Ok(out);}
+        let mid=interval[0]+(interval[1]-interval[0])*0.5;
+        if !(interval[0]<mid&&mid<interval[1]) {return Ok(out);}
+        // Charge the new partition itself, including unsuccessful covers.
+        out.cells+=1;
+        let left=self.query_partition(transport,qs,[interval[0],mid],budget-out.cells,depth+1)?;
+        out.cells+=left.cells;
+        let Some(left_images)=left.images else{return Ok(out);};
+        let right=self.query_partition(transport,qs,[mid,interval[1]],budget-out.cells,depth+1)?;
+        out.cells+=right.cells;
+        let Some(right_images)=right.images else{return Ok(out);};
+        let (Some((lp,ls)),Some((rp,rs)))=(left.pose,right.pose) else{return Ok(out);};
+        let hull=|a:Image,b:Image|->Result<Image>{
+            let vector=|a:Vec3,b:Vec3|->Result<Vec3>{Ok([
+                I::new(a[0].lo.min(b[0].lo),a[0].hi.max(b[0].hi))?,
+                I::new(a[1].lo.min(b[1].lo),a[1].hi.max(b[1].hi))?,
+                I::new(a[2].lo.min(b[2].lo),a[2].hi.max(b[2].hi))?])};
+            Ok(Image{value:vector(a.value,b.value)?,first:vector(a.first,b.first)?})
+        };
+        out.images=Some(left_images.into_iter().zip(right_images).map(|(a,b)|hull(a,b)).collect::<Result<Vec<_>>>()?);
+        out.pose=Some(([hull(lp[0],rp[0])?,hull(lp[1],rp[1])?,hull(lp[2],rp[2])?,hull(lp[3],rp[3])?],hull(ls,rs)?));
+        // The source transport already proves continuous position/unit tangent.
+        // Constant original laws cannot jump at any subdivision boundary, so
+        // the hulled first images are valid a.e. for the defect integral too.
+        // Varying multi-span laws retain the conservative pointwise-only cover.
+        out.continuous_laws=self.scale.constant.is_some()&&self.twist.constant.is_some()
+            &&self.affine.as_ref().is_none_or(|(a,b)|a.constant.is_some()&&b.constant.is_some());
+        Ok(out)
+    }
+    fn query_once(
         &self,
         transport: &rmf_transport::OriginalRmfTransportReport,
         qs: &[[[f64; 2]; 3]],
@@ -314,6 +354,42 @@ impl Owner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_six_station_spatial_profile_keeps_its_one_mm_budget() {
+        use crate::sweeps::progressive_sweep::{MultiSweep,Options,Orientation,Spacing};
+        let path=Curve{degree:3,knots:vec![0.,0.,0.,0.,0.25,0.25,0.25,0.5,0.5,0.5,0.75,0.75,0.75,1.,1.,1.,1.],
+            control_points:vec![vec![3.,0.,0.],vec![3.,1.,0.125],vec![1.,3.,0.125],vec![0.,3.,0.],vec![-1.,3.,-0.125],vec![-3.,1.,-0.125],vec![-3.,0.,0.],vec![-3.,-1.,0.125],vec![-1.,-3.,0.125],vec![0.,-3.,0.],vec![1.,-3.,-0.125],vec![3.,-1.,-0.125],vec![3.,0.,0.]],weights:vec![1.;13],periodic:false};
+        let points=vec![vec![2.875,0.015625,-0.125],vec![2.875,-0.015625,0.125],vec![3.125,-0.015625,0.125],vec![3.125,0.015625,-0.125]];
+        let profiles=(0..4).map(|i|crate::paths::bezier(vec![points[i].clone(),points[(i+1)%4].clone()],None).unwrap()).collect::<Vec<_>>();
+        let scale=crate::paths::bezier(vec![vec![1.,0.,0.];2],None).unwrap();
+        let twist=crate::paths::bezier(vec![vec![0.;3];2],None).unwrap();
+        let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,
+            spacing:Spacing::Parameter,initial_sections:6,max_sections:6,max_deviation:1.}).unwrap();
+        let level=sweep.preview_at(6).unwrap();
+        assert!(level.report.accepted&&level.report.continuous_bound,"{:?}",level.report);
+        assert!(level.report.continuous_error_upper.is_some_and(|v|v<=1.));
+        assert!(level.report.error_certificate_cells<=10000);
+    }
+    #[test]
+    fn biased_closed_circle_cross_span_images_preserve_original_ten_station_body() {
+        use crate::sweeps::progressive_sweep::{Options,Orientation,Spacing};
+        let path=Curve{degree:2,knots:vec![0.,0.,0.,0.25,0.25,0.5,0.5,0.75,0.75,1.,1.,1.],
+            control_points:vec![vec![3.,0.,0.],vec![3.,3.,0.],vec![0.,3.,0.],vec![-3.,3.,0.],vec![-3.,0.,0.],vec![-3.,-3.,0.],vec![0.,-3.,0.],vec![3.,-3.,0.],vec![3.,0.,0.]],
+            weights:vec![1.,1.,2.,2.,4.,4.,8.,8.,16.],periodic:false};
+        let profile=crate::paths::bezier(vec![vec![2.875,0.,-0.125],vec![2.875,0.,0.125]],None).unwrap();
+        let scale=crate::paths::bezier(vec![vec![1.,0.,0.],vec![1.,0.,0.]],None).unwrap();
+        let twist=crate::paths::bezier(vec![vec![0.;3],vec![0.;3]],None).unwrap();
+        let saved=path.clone();
+        let sweep=Sweep::new(&profile,&path,&scale,&twist,Options{normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,
+            spacing:Spacing::Parameter,initial_sections:10,max_sections:10,max_deviation:256.}).unwrap();
+        let level=sweep.preview_at(10).unwrap();
+        assert!(level.report.accepted&&level.report.continuous_bound,"{:?}",level.report);
+        assert!(level.report.continuous_error_upper.is_some_and(|v|v<=256.));
+        assert!(level.report.error_certificate_cells<=10000);assert_eq!(path,saved);
+        let short=sweep.level_with_error_budget(10,1,1000000).unwrap();
+        assert!(!short.report.accepted&&!short.report.continuous_bound);
+        assert!(short.report.error_certificate_cells<=1);
+    }
     #[test]
     fn joint_first_images_enclose_independent_pose_laws_and_refuse_partial_work() {
         let path = Curve {

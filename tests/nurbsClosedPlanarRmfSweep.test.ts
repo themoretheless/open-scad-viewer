@@ -58,8 +58,8 @@ it('composes a closed periodic body boundary from owned walls without cap premis
  expect(volume.individualPairs+volume.groupedPairs).toBe(body.model.faces.length*(body.model.faces.length-1)/2)
  expect(volume.individualPairs).toBeLessThanOrEqual(DEFAULT_SWEEP_VOLUME_BUDGETS.maxPairs)
  expect(volume.nesting?.rolesConsistent).toBe(true)
- expect(volume.orientations).toEqual([{shell:0,expectedOutward:true,outward:true,
-  attempts:expect.any(Number)}])
+ expect(volume.orientations).toMatchObject([{shell:0,expectedOutward:true,outward:true,
+  attempts:expect.any(Number),normalMethods:expect.any(Array),unresolved:[]}])
 },60000)
 
 it('bounds closed planar arc-length RMF including conic source and joint affine/full-turn laws',()=>{

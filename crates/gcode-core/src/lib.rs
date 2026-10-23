@@ -14,6 +14,10 @@ const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
 mod fixed7;
+mod configured_job;
+pub use configured_job::{JobOutputOptions, emit_configured_job, configure_job_gcode};
+mod firmware;
+pub use firmware::{analyze_firmware, FirmwareState, FirmwareEvent, ToolState, WaitPolicy};
 mod flavor;
 mod foreign;
 mod foreign_extrusion;

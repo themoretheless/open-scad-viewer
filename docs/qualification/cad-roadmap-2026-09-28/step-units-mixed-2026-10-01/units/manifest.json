@@ -1,0 +1,368 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.00001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "bracket-centimetre-input",
+      "file": "bracket-centimetre-input.step",
+      "sha256": "dead574a0af2c3ecf52680df101a02cebda4e60c0e23285b4df900a1297d0ae9",
+      "expected": {
+        "volumeMm3": 6825000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            400,
+            300,
+            210
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-centimetre-edited",
+      "file": "bracket-centimetre-edited.step",
+      "sha256": "90fb424dde0a3d9b7797cdbc039e86114a535a2f505ecd04bf806c95a9613df7",
+      "expected": {
+        "volumeMm3": 6857500,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            400,
+            300,
+            211
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-centimetre-input",
+      "file": "enclosure-centimetre-input.step",
+      "sha256": "ac4c6d1bd107e27a3101916769ac5bf3af15df3ebe1581fc79b44afa9c2b48fa",
+      "expected": {
+        "volumeMm3": 7416000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            400,
+            300,
+            210
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-centimetre-edited",
+      "file": "enclosure-centimetre-edited.step",
+      "sha256": "829c0a4da41b1e656f8ee53bb46418227e6f7378cbefadbae92bd40e73adcb66",
+      "expected": {
+        "volumeMm3": 7442400,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            400,
+            300,
+            211
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-centimetre-input",
+      "file": "flange-centimetre-input.step",
+      "sha256": "2cc877b5cac2100d7c3e855206a0dd58b9d53c488d6b7b77ee9f305cfb2b00b7",
+      "expected": {
+        "volumeMm3": 8246680.715673206,
+        "boundsMm": [
+          [
+            -200,
+            -200,
+            0
+          ],
+          [
+            200,
+            200,
+            70
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-centimetre-edited",
+      "file": "flange-centimetre-edited.step",
+      "sha256": "17727b97c61cc11dbd61f1afcc425bdf5c54bee531aef2bbeb3d4542a7e38333",
+      "expected": {
+        "volumeMm3": 8364490.440182824,
+        "boundsMm": [
+          [
+            -200,
+            -200,
+            0
+          ],
+          [
+            200,
+            200,
+            71
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-metre-input",
+      "file": "bracket-metre-input.step",
+      "sha256": "74f2c0b6dcf60227f11f740da3083206c8e5c50d0c097dedf4da9f2d1f4f1b4a",
+      "expected": {
+        "volumeMm3": 6825000000000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40000,
+            30000,
+            21000
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-metre-edited",
+      "file": "bracket-metre-edited.step",
+      "sha256": "0b085b7b1eb81cd8f1c5b42b93e683791937ada568a9e2977772e6d66f350ab3",
+      "expected": {
+        "volumeMm3": 6825325000000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40000,
+            30000,
+            21001
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-metre-input",
+      "file": "enclosure-metre-input.step",
+      "sha256": "2b00d0928c23a701bd2e54b9b7b4c0209a6d5f3e41c5029e33c10e3e0d5315fb",
+      "expected": {
+        "volumeMm3": 7416000000000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40000,
+            30000,
+            21000
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-metre-edited",
+      "file": "enclosure-metre-edited.step",
+      "sha256": "1406080490a3cdf08ea22f387f869a09b81fb031b56377805c0f919084f7e261",
+      "expected": {
+        "volumeMm3": 7416264000000,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40000,
+            30000,
+            21001
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-metre-input",
+      "file": "flange-metre-input.step",
+      "sha256": "117a382328a4d055d9bc0fd018f51a206b65dc273ae58f5be96e2f64cb377173",
+      "expected": {
+        "volumeMm3": 8246680715673.207,
+        "boundsMm": [
+          [
+            -20000,
+            -20000,
+            0
+          ],
+          [
+            20000,
+            20000,
+            7000
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-metre-edited",
+      "file": "flange-metre-edited.step",
+      "sha256": "ee70a8de7669c4fc1c11c2bb873481f77711a5ea9109a25df5a740a3cbda0ad7",
+      "expected": {
+        "volumeMm3": 8247858812918.303,
+        "boundsMm": [
+          [
+            -20000,
+            -20000,
+            0
+          ],
+          [
+            20000,
+            20000,
+            7001
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-inch-input",
+      "file": "bracket-inch-input.step",
+      "sha256": "95e3af01299e678b35cff01109a3e638c34738eb80e6c95b5ffba767522b7c92",
+      "expected": {
+        "volumeMm3": 111841711.8,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1016,
+            762,
+            533.4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-inch-edited",
+      "file": "bracket-inch-edited.step",
+      "sha256": "8a7f2530e0d35e30964d5b9d9b2c756c9a5e1e802a435386fe211899b55d5a7c",
+      "expected": {
+        "volumeMm3": 112051388.8,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1016,
+            762,
+            534.4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-inch-input",
+      "file": "enclosure-inch-input.step",
+      "sha256": "d6f5efb282692d2f932cf0951f5e829799effc804f3164034b314116cd999651",
+      "expected": {
+        "volumeMm3": 121526466.62399998,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1016,
+            762,
+            533.4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-inch-edited",
+      "file": "enclosure-inch-edited.step",
+      "sha256": "a1cb16ad544a50ba66a1a7107c2c712417271e8a3715bb80613e3318c2ee7dc6",
+      "expected": {
+        "volumeMm3": 121696788.86399998,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1016,
+            762,
+            534.4
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-inch-input",
+      "file": "flange-inch-input.step",
+      "sha256": "151eccdb62e75aea3e8099c81fa64bc101dba7989cb4dacd8d23da830ad2fd47",
+      "expected": {
+        "volumeMm3": 135138884.67530262,
+        "boundsMm": [
+          [
+            -508,
+            -508,
+            0
+          ],
+          [
+            508,
+            508,
+            177.79999999999998
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-inch-edited",
+      "file": "flange-inch-edited.step",
+      "sha256": "3ca137ea27b1bea699e29a6922b319416b63065116051e4feb269af4e45b0323",
+      "expected": {
+        "volumeMm3": 135898945.89394888,
+        "boundsMm": [
+          [
+            -508,
+            -508,
+            0
+          ],
+          [
+            508,
+            508,
+            178.79999999999998
+          ]
+        ]
+      }
+    }
+  ]
+}

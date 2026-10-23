@@ -82,6 +82,37 @@ pub fn radius_bounds(s: &Surface, origin: [f64; 3]) -> Result<Option<[f64; 2]>> 
         upper.sqrt().next_up(),
     ]))
 }
+/// Distance to a Cartesian coordinate axis through `origin`. Orthogonal
+/// projection is exact here: replacing one authored coordinate by the axis
+/// origin performs no rounded rotation or basis conversion.
+pub fn axis_radius_bounds(s: &Surface, axis: usize, origin: [f64; 3]) -> Result<Option<[f64; 2]>> {
+    s.validate()?;
+    check(axis < 3, "Radius axis must be 0, 1 or 2")?;
+    let mut projected = s.clone();
+    for row in &mut projected.control_points {
+        for point in row {
+            point[axis] = origin[axis];
+        }
+    }
+    radius_bounds(&projected, origin)
+}
+/// Each axis-radius map is 1-Lipschitz, so separation of its image intervals
+/// is a lower bound on every Euclidean point-pair distance. Unsupported charts
+/// and numeric range failures keep the ordinary Cartesian bound.
+pub fn axis_separation_lower(a: &Surface, b: &Surface) -> f64 {
+    let mut lower = 0_f64;
+    for axis in 0..3 {
+        if let (Some(ra), Some(rb)) = (
+            axis_radius_bounds(a, axis, [0.; 3]).ok().flatten(),
+            axis_radius_bounds(b, axis, [0.; 3]).ok().flatten(),
+        ) {
+            let gap = (ra[0] - rb[1]).max(rb[0] - ra[1]).next_down().max(0.);
+            lower = lower.max(gap);
+        }
+    }
+    lower
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,7 +152,52 @@ mod tests {
         assert!(r[1] - r[0] < 1e-10, "{r:?}");
         let shifted = radius_bounds(&s, [1., 2., 3.]).unwrap().unwrap();
         assert!(shifted[0] < shifted[1]);
+        let before = format!("{s:?}");
+        for axis in 0..3 {
+            let origin = [1., 2., 3.];
+            let range = axis_radius_bounds(&s, axis, origin).unwrap().unwrap();
+            for u in [0., 0.25, 0.5, 0.75, 1.] {
+                for v in [0., 0.25, 0.5, 0.75, 1.] {
+                    let point = s.evaluate(u, v).unwrap().point;
+                    let radius = (0..3)
+                        .filter(|k| *k != axis)
+                        .map(|k| (point[k] - origin[k]).powi(2))
+                        .sum::<f64>()
+                        .sqrt();
+                    assert!(range[0] <= radius + 1e-12 && range[1] >= radius - 1e-12);
+                }
+            }
+        }
+        assert_eq!(format!("{s:?}"), before);
+        assert!(axis_radius_bounds(&s, 3, [0.; 3]).is_err());
+        assert!(axis_radius_bounds(&s, 0, [f64::NAN, 0., 0.]).is_err());
+        let mut invalid = s.clone();
+        invalid.control_points.clear();
+        assert!(axis_radius_bounds(&invalid, 2, [0.; 3]).is_err());
     }
+    #[test]
+    fn axis_gap_recomputes_original_rational_weights_and_controls() {
+        let cylinder=|radius:f64|Surface{degree_u:2,degree_v:1,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![[radius,0.],[radius,radius],[0.,radius]].into_iter()
+                .map(|xy|vec![vec![xy[0],xy[1],0.],vec![xy[0],xy[1],6.]]).collect(),
+            weights:vec![vec![1.,1.],vec![std::f64::consts::FRAC_1_SQRT_2;2],vec![1.,1.]],
+            periodic_u:false,periodic_v:false};
+        let outer=cylinder(20.);let inner=cylinder(5.);
+        let lower=axis_separation_lower(&outer,&inner);
+        assert!(lower>14.999999 && lower<=15.);
+        for weights in [false,true] {
+            let mut changed=outer.clone();
+            if weights {changed.weights[1]=vec![0.1;2];}
+            else {for p in &mut changed.control_points[1] {p[0]=1.;p[1]=1.;}}
+            let a=changed.evaluate(0.5,0.5).unwrap().point;
+            let b=inner.evaluate(0.5,0.5).unwrap().point;
+            let witness=a.iter().zip(b).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+            let bound=axis_separation_lower(&changed,&inner);
+            assert!(bound<=witness && bound<14.9,"changed original data must not retain old radial gap");
+        }
+    }
+
 }
 
 #[derive(Clone, Debug)]

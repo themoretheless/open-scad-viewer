@@ -4,13 +4,15 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 
 | Crate | Owns |
 | --- | --- |
-| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, affine matrices (composition, rigid poses/inverses, Euler rotation, reflection, translation, scaling), spatial morton/hash helpers (`spatial`), shared `Error` / `ensure` |
+| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, affine matrices (composition, rigid poses/inverses, Euler rotation, reflection, translation, scaling), spatial morton/hash helpers (`spatial`), CPU point kernels, `DeviceKernels` port, shared `Error` / `ensure` |
+| `math-compute` (`osv-math-compute`) | wgpu/CUDA/tensor implementation of the `osv-math` `DeviceKernels` port |
 | `value-codec` | JSON/binary value transport |
 | `gpu-compute` | Optional WGSL compute host, UMA vs dUMA memory architecture profiles (`MemoryArchitecture::Uma` / `MemoryArchitecture::Duma`), 5-level hardware execution topology (`HardwareExecutionTopology`), matmul occupancy estimation |
 | `geometry-ops` | Deformations, `Triangles`, sweep frames |
 | `planar-geometry` | 2D paths, primitive contours, rings, Pathfinder (**crates.io**) |
 | `brep-topology` | Indexed B-rep incidence only |
 | `nurbs-core` | Rational curves/surfaces |
+| `nurbs-intersect` | Curve/surface intersection queries, evidence and coverage certificates |
 | `brep-core` | CAD B-rep over NURBS |
 | `mesh-topology` | Borrowed mesh view, indexed incidence, inspection, incremental affine area, boundary loops, display edges |
 | `mesh-query` | Triangle/scene BVHs, picking, closest points and sampled distances |

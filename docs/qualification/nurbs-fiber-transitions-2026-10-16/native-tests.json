@@ -1,0 +1,44 @@
+{
+  "catalog": {
+    "implemented": 198,
+    "target": 200,
+    "remaining": [
+      "NURBS-0030",
+      "NURBS-0173"
+    ]
+  },
+  "scope": [
+    "actual original-source uniform local chart overlap with different free axes",
+    "continuous injective parameter change onto actual bridge image, with certified orientation",
+    "source replays, uniform bridge and endpoint queries share actual rectangle budget",
+    "closed original natural endpoint spans required before fiber admission",
+    "not a complete overlap census, component graph, physical world trace or trim graph"
+  ],
+  "gates": {
+    "libraries": {
+      "suites": 2,
+      "passed": 1443,
+      "failed": 0,
+      "ignored": 0
+    },
+    "ss-integrations": {
+      "suites": 6,
+      "passed": 31,
+      "failed": 0,
+      "ignored": 0
+    },
+    "wasm": "both crates pass",
+    "format": "changed source/fixtures/tests pass",
+    "api_map": "185 modules, 200 entries, check passes",
+    "catalog": "198 implemented, 2 planned, no errors",
+    "scope_note": "earlier broad3523 pass/3 skips andBoolean3 are historical; latest full core1380+cad63/SS31/WASM cover this phase; noBrep source/test imports of FiberSources or QualifiedFiber found"
+  },
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "5ca4bbe67feea21769cc2f75438f3f154bd18ad9f32859031554de7c8ca08446",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/transition.rs": "73b0af8c6bb270022fffc10245d735e410e0643d491c64a9d9d557c8678dab90",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "f10bf1306482944456d021d7a91ee5e38e3ccc9919d10811e980f77c33b359b2",
+    "crates/nurbs-core/tests/ss_fiber_transition.rs": "356a85ecb6570298a5b0d65080088b963486b380dfd89d58d6baba3c24143b45",
+    "crates/nurbs-core/tests/ss_mixed_fiber_coverage.rs": "968881d5708d11c06a1c1a0ce21897f85fe8a8ec27721a94fa4ea37615277c24",
+    "crates/nurbs-core/tests/support/ss_mixed_fiber.rs": "044cdbe2e3382f1edad78de49996117897309e566ad1b650632296a7997bc21e"
+  }
+}

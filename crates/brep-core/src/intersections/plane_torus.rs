@@ -73,19 +73,19 @@ const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 /// A recognized canonical ring torus: the exact sixteen-patch solid of
 /// `analytic::torus`, optionally rigidly placed.
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalTorus {
+pub struct CanonicalTorus {
     /// Torus center (the center of the symmetry-plane circle of radius R).
-    pub(crate) center: [f64; 3],
+    pub center: [f64; 3],
     /// Unit symmetry axis; the profile circle rises toward +axis.
-    pub(crate) axis: [f64; 3],
-    pub(crate) major: f64,
-    pub(crate) minor: f64,
+    pub axis: [f64; 3],
+    pub major: f64,
+    pub minor: f64,
     /// Observed structural deviation bound; feeds the outward classification.
-    pub(crate) error: f64,
+    pub error: f64,
     /// In-plane orthonormal ring frame: x = quadrant-0 direction, y = axis x x.
-    pub(crate) frame: [[f64; 3]; 2],
+    pub frame: [[f64; 3]; 2],
     /// Face index by [profile quadrant][revolution quadrant].
-    pub(crate) patches: [[usize; 4]; 4],
+    pub patches: [[usize; 4]; 4],
 }
 
 type TorusLift<'a> = dyn Fn(&CanonicalTorus, &[(f64, f64)]) -> Vec<TorusPatchCurve> + 'a;
@@ -111,7 +111,7 @@ fn profile_controls(major: f64, minor: f64) -> [[[f64; 2]; 3]; 4] {
 /// affine placement is admitted; anything else returns `None`. Only strict
 /// ring tori exist canonically (the constructor refuses horn and spindle
 /// tori), and the recovered radii must keep R - r clearly positive.
-pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
+pub fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1
@@ -388,7 +388,7 @@ fn snap_unit(x: f64) -> f64 {
 /// Length-scaled torus implicit residual at a point:
 /// |(p^2 + R^2 - r^2)^2 - 4 R^2 rho^2| / (4 (R + r)^3), computed in the
 /// torus frame so placements do not change the value.
-pub(crate) fn torus_residual(torus: &CanonicalTorus, point: [f64; 3]) -> f64 {
+pub fn torus_residual(torus: &CanonicalTorus, point: [f64; 3]) -> f64 {
     let d = sub(point, torus.center);
     let axial = dot(d, torus.axis);
     let perp = sub(d, torus.axis.map(|x| x * axial));
@@ -502,7 +502,7 @@ fn quadrant_local(angle: f64) -> (usize, f64) {
 /// line on the profile-quadrant patch row, clipped per revolution quadrant
 /// to the swept eccentric intervals (the circle parameter is the revolution
 /// angle).
-pub(crate) fn lift_parallel(
+pub fn lift_parallel(
     torus: &CanonicalTorus,
     profile: f64,
     arcs: &[(f64, f64)],

@@ -25,27 +25,6 @@ pub fn plan(
     initial: usize,
     maximum: usize,
 ) -> Result<Plan> {
-    plan_impl(loops, sites, closed, initial, maximum, false)
-}
-/// Reserve both complete radial end-cap groups from original source spans.
-/// This changes resource planning, never the global1024-face ceiling.
-pub fn plan_annular(
-    loops: &[Vec<Curve>],
-    sites: usize,
-    closed: bool,
-    initial: usize,
-    maximum: usize,
-) -> Result<Plan> {
-    plan_impl(loops, sites, closed, initial, maximum, true)
-}
-fn plan_impl(
-    loops: &[Vec<Curve>],
-    sites: usize,
-    closed: bool,
-    initial: usize,
-    maximum: usize,
-    annular: bool,
-) -> Result<Plan> {
     require(
         (1..=16).contains(&loops.len()) && loops.iter().all(|r| !r.is_empty()),
         "Miter body needs 1..16 nonempty loops",
@@ -76,13 +55,7 @@ fn plan_impl(
         spans > 0,
         "Progressive miter body exceeds its site/span budget",
     )?;
-    let cap_faces = if closed {
-        0
-    } else if annular && loops.len() == 2 {
-        spans
-    } else {
-        2
-    };
+    let cap_faces = if closed { 0 } else { 2 };
     let max_steps = maximum
         .min(1024 / edges)
         .min((MAX_FACES - cap_faces) / (edges * spans));
@@ -274,23 +247,6 @@ mod tests {
         assert!(plan(&bad, 2, false, 1, 64).is_err());
     }
     #[test]
-    fn radial_caps_reserve_every_physical_face_before_refinement() {
-        // Two six-span rings need twelve terminal faces, not two. Geometry
-        // validity is audited later; planning counts every decomposed span.
-        let edge =
-            nurbs_core::paths::bezier(vec![vec![0., 0., 0.], vec![1., 0., 0.]], None).unwrap();
-        let loops = vec![vec![edge.clone(); 6], vec![edge; 6]];
-        assert_eq!(plan(&loops, 2, false, 1, 128).unwrap().max_steps, 85);
-        let radial = plan_annular(&loops, 2, false, 1, 128).unwrap();
-        assert_eq!((radial.spans, radial.max_steps), (12, 84));
-        assert!(radial.spans * radial.max_steps + 12 <= MAX_FACES);
-        assert!(plan_annular(&loops, 2, false, 85, 128).is_err());
-        assert_eq!(
-            plan_annular(&loops, 3, true, 1, 128).unwrap().max_steps,
-            plan(&loops, 3, true, 1, 128).unwrap().max_steps
-        );
-    }
-    #[test]
     fn native_partition_and_sharp_vertices_require_whole_uniform_coverage() {
         let flat = (0..7)
             .map(|z| vec![circle(z as f64, 1.), circle(z as f64, 0.25)])
@@ -335,4 +291,77 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(preview(&over).is_err());
     }
+}
+
+pub fn plan_annular(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+) -> Result<Plan> {
+    plan_impl(loops, sites, closed, initial, maximum, true)
+}
+
+fn plan_impl(
+    loops: &[Vec<Curve>],
+    sites: usize,
+    closed: bool,
+    initial: usize,
+    maximum: usize,
+    annular: bool,
+) -> Result<Plan> {
+    require(
+        (1..=16).contains(&loops.len()) && loops.iter().all(|r| !r.is_empty()),
+        "Miter body needs 1..16 nonempty loops",
+    )?;
+    let profiles: usize = loops.iter().map(Vec::len).sum();
+    require(
+        profiles <= 64,
+        "Progressive miter body exceeds its site/span budget",
+    )?;
+    require(
+        if closed {
+            (3..=16).contains(&sites)
+        } else {
+            (2..=17).contains(&sites)
+        },
+        "Miter needs 2..17 open or 3..16 cyclic sites",
+    )?;
+    let edges = sites - usize::from(!closed);
+    let mut spans = 0;
+    for curve in loops.iter().flatten() {
+        spans += curve.decompose()?.len();
+        require(
+            spans <= 64,
+            "Progressive miter body exceeds its site/span budget",
+        )?;
+    }
+    require(
+        spans > 0,
+        "Progressive miter body exceeds its site/span budget",
+    )?;
+    let cap_faces = if closed {
+        0
+    } else if annular && loops.len() == 2 {
+        spans
+    } else {
+        2
+    };
+    let max_steps = maximum
+        .min(1024 / edges)
+        .min((MAX_FACES - cap_faces) / (edges * spans));
+    require(
+        max_steps >= initial,
+        "Progressive miter initial steps exceed face budget",
+    )?;
+    require(
+        initial >= 1 && initial <= max_steps,
+        "Miter refinement steps must be ordered within the body face budget",
+    )?;
+    Ok(Plan {
+        edges,
+        spans,
+        max_steps,
+    })
 }

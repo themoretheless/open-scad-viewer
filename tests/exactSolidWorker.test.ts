@@ -131,6 +131,20 @@ describe('exact-solid worker boundary', () => {
 })
 
 
+it('retains a Rush authored nonplanar loft in the exact Solid worker without mesh reconstruction',async()=>{
+ const source=readFileSync('examples/rush/authored-nonplanar-cap-loft.r','utf8')
+ const worker=new FakeWorker(),pending=buildExactSolidsInWorker(source,undefined,()=>worker)
+ worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0][0]))
+ const bodies=await pending
+ expect(bodies).toHaveLength(1)
+ expect(bodies[0]!.brep!.faces).toHaveLength(6)
+ expect(bodies[0]!.brep!.bodies).toHaveLength(1)
+ expect(bodies[0]!.brep!.faces[4]!.surface.degreeU).toBe(2)
+ const refused=await runExactSolidRequest({kind:'exact-solid',version:1,source:readFileSync('examples/rush/cartesian-mapped-loft.r','utf8')})
+ expect(refused).toMatchObject({ok:false,error:{message:expect.stringContaining('native B-rep bodies')}})
+ const exhausted=await runExactSolidRequest({kind:'exact-solid',version:1,source:source.replace('loft_embedding_limits()','loft_embedding_limits(facePairs: 1)')})
+ expect(exhausted.ok).toBe(false)
+},60000)
 it('retains Rush swept B-rep and cap holes through the exact-solid worker client',async()=>{
  const {readFileSync}=await import('node:fs')
  const source=readFileSync('examples/rush/contact-progressive-hollow-body.r','utf8')

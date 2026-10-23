@@ -1,0 +1,73 @@
+{
+  "schema": "scalar-sweep-browser/1",
+  "scope": "Finite browser build, refusal and recovery scenarios; no Solid or global geometry guarantee.",
+  "recordedAt": "2026-10-06T07:48:26.903Z",
+  "geometryWasmSha256": "68496f918533741137f6ad63703fe5883fbc7a5e5f3f6b9056a48036a3035a5b",
+  "distIndexSha256": "1e16e05a07bece10fffb93e6941d8063329f8fb31f28eb8e0f64d86fe2848afc",
+  "cases": [
+    {
+      "width": 1440,
+      "label": "scaled-rational",
+      "sourceSha256": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "profile-rmf",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "sampled-budget-refusal",
+      "sourceSha256": "8b579e085b0fc886618ffa5676801b35b9df065787c0d625a67eb4e2359a1541",
+      "message": "Node n4: Node n3: Profile sweep sampled refinement 0.29363309791170444mm exceeds 1e-10mm; refine sections or split the path",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "positive-scale-refusal",
+      "message": "Node n4: Node n3: Sweep scale must be a positive scalar [value,0,0] law",
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "label": "recovery",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "scaled-rational",
+      "sourceSha256": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "profile-rmf",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "sampled-budget-refusal",
+      "sourceSha256": "8b579e085b0fc886618ffa5676801b35b9df065787c0d625a67eb4e2359a1541",
+      "message": "Node n4: Node n3: Profile sweep sampled refinement 0.29363309791170444mm exceeds 1e-10mm; refine sections or split the path",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "positive-scale-refusal",
+      "message": "Node n4: Node n3: Sweep scale must be a positive scalar [value,0,0] law",
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "label": "recovery",
+      "sourceSha256": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3",
+      "status": "passed"
+    }
+  ],
+  "browser": "151.0.7922.34",
+  "passed": true
+}

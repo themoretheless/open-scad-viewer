@@ -1,0 +1,21 @@
+{
+  "schema": "cad-p1-baseline/1",
+  "revision": "18981c57",
+  "selfIntersectionTests": {
+    "passed": 4,
+    "durationSeconds": 0.04,
+    "scope": "existing sufficient-proof, collapsed and crossing charts; not general geometry certification"
+  },
+  "solidDistanceTests": {
+    "passed": 8,
+    "durationSeconds": 8.14,
+    "scope": "existing authored spheres/cylinders/containment/cavity/contact/witness/refusal checks"
+  },
+  "wasmRebuilt": false,
+  "generalP1Complete": false,
+  "cornerBlendTests": {
+    "passed": 1,
+    "durationSeconds": 0.04,
+    "scope": "existing axis-aligned cuboid max-corner sphere and three cylinders"
+  }
+}

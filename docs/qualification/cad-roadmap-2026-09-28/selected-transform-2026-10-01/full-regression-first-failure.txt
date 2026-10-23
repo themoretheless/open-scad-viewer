@@ -1,0 +1,137 @@
+
+> open-scad-viewer@0.1.0 test:cad-roadmap
+> vitest run tests/wasmBrotliPacking.test.ts tests/cpuOrbitPaint.test.ts tests/directProjectionBasis.test.ts tests/sceneListWindow.test.ts tests/transparentBsp.test.ts tests/transparentTriangleSplit.test.ts tests/directModelerUi.test.ts tests/directModeling.test.ts tests/directHistory.test.ts tests/directDocumentAsync.test.ts tests/directDocumentNormalization.test.ts tests/directDimensions.test.ts tests/directAdvancedTools.test.ts tests/directProfileTools.test.ts tests/directExtrusion.test.ts tests/cadRoadmapAcceptance.test.ts tests/solidStepExchange.test.ts tests/solidNurbs.test.ts tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsSurfaceDistance.test.ts tests/faceDistance.test.ts tests/shellDistance.test.ts tests/solidBoundaryAgreement.test.ts tests/solidFaceContacts.test.ts tests/solidSelfIntersection.test.ts tests/solidDistance.test.ts tests/solidVolumeDistanceUi.test.ts tests/wasmBase91.test.ts tests/brepRuledLoft.test.ts tests/brepSteppedEnclosureExample.test.ts tests/meshInstances.test.ts tests/modelGraphAssembly.test.ts tests/svgDocumentAsync.test.ts tests/svgGeometry.test.ts tests/svgWorker.test.ts tests/commandSearch.test.ts tests/cadRoadmapHistory.test.ts tests/solidStepAssembly.test.ts tests/solidMaterial.test.ts tests/solidExactEdgeFeature.test.ts tests/solidBodyEdges.test.ts tests/solidPlaneSection.test.ts tests/solidMeasurements.test.ts tests/nativeCadClearance.test.ts tests/solidInstances.test.ts tests/solidDraftStore.test.ts tests/solidDraftHeadStore.test.ts tests/solidBlenderExchange.test.ts tests/solidGpuFallback.test.ts tests/solidDisplayCache.test.ts tests/solidPrimitive.test.ts tests/solidSurfaceDisplayQueue.test.ts tests/solidGeometryDisplayQueue.test.ts tests/solidSceneEditCache.test.ts tests/mainSolidWorkerRealBoundary.test.ts tests/solidSnapPreparation.test.ts tests/solidSketchSnapPreparation.test.ts tests/solidSnapGeometry.test.ts tests/modelingSnaps.test.ts tests/solidDisplayQueue.test.ts tests/solidDisplayPreparation.test.ts tests/mainSolidWorkerRuntime.test.ts tests/mainSolidWorkerTransport.test.ts
+
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+(node:36907) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37812) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:36909) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39618) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |direct-ui| tests/directModelerUi.test.ts (272 tests | 3 failed) 69411ms
+   × creates, places, updates and detaches a linked instance with undo 98ms
+   × persists compact linked instances and restores their displayed geometry on reload 38ms
+   × keeps source linkage when the instance gizmo performs move 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > creates, places, updates and detaches a linked instance with undo
+AssertionError: expected { sourceId: 'b', matrix: [ …(4) ] } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "matrix": [
+    [
+      1,
+      0,
+      0,
+      20,
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+    ],
+  ],
+  "sourceId": "b",
+}
+
+ ❯ tests/directModelerUi.test.ts:1245:64
+    1243|  expect(Math.max(...Array.from(linked.mesh.positions).filter((_,i)=>i%…
+    1244|  await ui.click(instance.name);await ui.click('Make independent')
+    1245|  expect(ui.doc().bodies.find(b=>b.id===instance.id)!.instance).toBeUnd…
+       |                                                                ^
+    1246|  await ui.click('↶');expect(ui.doc().bodies.find(b=>b.id===instance.id…
+    1247| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > persists compact linked instances and restores their displayed geometry on reload
+AssertionError: expected { sourceId: 'b', matrix: [ …(4) ] } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "matrix": [
+    [
+      1,
+      0,
+      0,
+      10,
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+    ],
+  ],
+  "sourceId": "b",
+}
+
+ ❯ tests/directModelerUi.test.ts:1290:31
+    1288|  await restored.click(linked.name);await restored.click('Make independ…
+    1289|  const independent=JSON.parse(restored.serialized()).bodies.find((body…
+    1290|  expect(independent.instance).toBeUndefined();expect(independent.mesh.…
+       |                               ^
+    1291| })
+    1292|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > keeps source linkage when the instance gizmo performs move
+AssertionError: expected [ [ 1, +0, +0, 10 ], …(3) ] to not deeply equal [ [ 1, +0, +0, 10 ], …(3) ]
+
+Compared values have no visual difference.
+
+ ❯ tests/directModelerUi.test.ts:1304:82
+    1302|  await ui.pointer(handle(),0,0);svg.props.onPointermove({...ui.event(s…
+    1303|  const edited=ui.doc().bodies.find(b=>b.id===instance.id)!
+    1304|  expect(edited.instance!.sourceId).toBe('b');expect(edited.instance!.m…
+       |                                                                                  ^
+    1305|  expect(ui.doc().bodies.find(b=>b.id==='b')).toEqual(before.bodies.fin…
+    1306|  await ui.click('↶');expect(ui.doc()).toEqual(before)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 64 passed (65)
+      Tests  3 failed | 781 passed (784)
+   Start at  15:45:38
+   Duration  77.26s (transform 14.63s, setup 0ms, import 25.61s, tests 181.61s, environment 66ms)
+

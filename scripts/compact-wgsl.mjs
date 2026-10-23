@@ -33,4 +33,3 @@ export function compactWgslPlugin() {
     return {code:compactWgslLiterals(source),map:null}
   }}
 }
-

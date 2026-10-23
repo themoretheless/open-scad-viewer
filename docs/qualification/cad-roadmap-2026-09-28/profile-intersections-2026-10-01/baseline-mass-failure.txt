@@ -1,0 +1,91 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/cad-profile-baseline-9kmxl2s7/crates/target/.../wgsl_export
+  |                                                              ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling typenum v1.20.1
+   Compiling proc-macro2 v1.0.107
+   Compiling libc v0.2.189
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.229
+   Compiling osv-math v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/math-core)
+   Compiling value-codec v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/value-codec)
+   Compiling const-oid v0.10.2
+   Compiling cfg-if v1.0.4
+   Compiling zmij v1.0.23
+   Compiling rustc-hash v2.1.1
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling cad-predicates v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/cad-predicates)
+   Compiling geometry-ops v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/geometry-ops)
+   Compiling planar-geometry v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/planar-geometry)
+   Compiling hybrid-array v0.4.15
+   Compiling nurbs-core v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/nurbs-core)
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling digest v0.11.3
+   Compiling syn v3.0.5
+   Compiling cpufeatures v0.3.1
+   Compiling sha2 v0.11.0
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling brep-topology v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/brep-topology)
+   Compiling serde_derive v1.0.229
+   Compiling brep-core v0.1.0 (/private/tmp/cad-profile-baseline-9kmxl2s7/crates/brep-core)
+   Compiling rbench v0.1.0 (https://github.com/themoretheless/rbench?branch=release#5574db15)
+warning: `nurbs-core` (lib) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.46s
+     Running tests/tolerant_ssi.rs (crates/target/debug/build/brep-core/a640332eb89112cb/out/tolerant_ssi-a640332eb89112cb)
+
+running 1 test
+test off_axis_sphere_in_a_cylinder_wall ... FAILED
+
+failures:
+
+---- off_axis_sphere_in_a_cylinder_wall stdout ----
+
+thread 'off_axis_sphere_in_a_cylinder_wall' (10685400) panicked at brep-core/tests/tolerant_ssi.rs:44:10:
+called `Result::unwrap()` on an `Err` value: Error { code: "BREP_RESOURCE_LIMIT", message: "Mass-property integration exhausted its evaluation budget" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    off_axis_sphere_in_a_cylinder_wall
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 32.65s
+
+error: test failed, to rerun pass `-p brep-core --test tolerant_ssi`

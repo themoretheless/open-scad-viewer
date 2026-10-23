@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-Dl2AGhr5.js",
+      "sha256": "3285e0221198e647264fd8baf82f7e85248f554bf48bd91472ad7344dc50459c"
+    },
+    "wasm": {
+      "sha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe"
+    },
+    "sourceSha256": "909c2d0f0cb66992466f08952aa1dea086336b5ab9de1d38743fe36f5865f889"
+  },
+  "browser": "157.0.8081.0",
+  "keyboard": true,
+  "tabs": 1156,
+  "gpuActive": true,
+  "rotated": false,
+  "facePlane": false,
+  "plane": {
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "u": [
+      1,
+      0,
+      0
+    ],
+    "v": [
+      0,
+      1,
+      0
+    ]
+  },
+  "exactCoordinates": true,
+  "invalidInput": true,
+  "invalidRadiusValues": [
+    "bad",
+    0,
+    -1,
+    1000001
+  ],
+  "cancelledDraftUnchanged": true,
+  "undoRedo": true,
+  "reloadExact": true
+}

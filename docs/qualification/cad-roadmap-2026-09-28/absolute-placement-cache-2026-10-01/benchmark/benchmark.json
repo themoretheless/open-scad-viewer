@@ -1,0 +1,50 @@
+{
+  "scope": "synchronous absolute placement only; excludes worker transfer, history, rendering and UI",
+  "fixture": "box with linked translated instances; repeated identical target placement",
+  "rows": [
+    {
+      "instances": 100,
+      "iterations": 5,
+      "cachedMs": [
+        20.964958000000024,
+        17.682915999999977,
+        18.4453749999999,
+        19.881040999999982,
+        17.054375000000164
+      ],
+      "uncachedMs": [
+        88.8359999999999,
+        98.81208300000003,
+        88.306375,
+        88.306375,
+        85.47416699999997
+      ],
+      "cachedMedianMs": 18.4453749999999,
+      "uncachedMedianMs": 88.306375,
+      "cacheBytes": 2045588,
+      "cacheEntries": 4
+    },
+    {
+      "instances": 1000,
+      "iterations": 5,
+      "cachedMs": [
+        266.14787499999966,
+        302.48604200000045,
+        275.050792,
+        284.1849999999995,
+        263.139083
+      ],
+      "uncachedMs": [
+        945.3230000000003,
+        921.0375829999994,
+        920.118375,
+        961.7950409999994,
+        902.581791999999
+      ],
+      "cachedMedianMs": 275.050792,
+      "uncachedMedianMs": 921.0375829999994,
+      "cacheBytes": 20208620,
+      "cacheEntries": 32
+    }
+  ]
+}

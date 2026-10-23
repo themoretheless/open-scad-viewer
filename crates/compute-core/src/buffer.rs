@@ -1,13 +1,25 @@
 use wgpu::{Buffer, Device, Queue};
 
+fn storage_usage(device: &Device) -> wgpu::BufferUsages {
+    let base =
+        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC;
+    if gpu_compute::device_memory_architecture(device) == gpu_compute::MemoryArchitecture::Uma {
+        base | wgpu::BufferUsages::MAP_READ
+    } else {
+        base
+    }
+}
+
 /// Uploads f32 values into fresh storage, directly mapped on Apple Silicon.
 pub fn storage_f32(device: &Device, _queue: &Queue, data: &[f32]) -> Buffer {
     let bytes = gpu_compute::f32_le_bytes(data);
-    initialized(device, "compute storage f32", &bytes, 4, storage_usage())
-}
-
-fn storage_usage() -> wgpu::BufferUsages {
-    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC
+    initialized(
+        device,
+        "compute storage f32",
+        &bytes,
+        4,
+        storage_usage(device),
+    )
 }
 
 fn initialized(
@@ -35,9 +47,7 @@ pub fn storage_f32_zeroed(device: &Device, _queue: &Queue, len: usize) -> Buffer
     device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("compute zeroed storage f32"),
         size: (len * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
+        usage: storage_usage(device),
         mapped_at_creation: false,
     })
 }
@@ -45,7 +55,13 @@ pub fn storage_f32_zeroed(device: &Device, _queue: &Queue, len: usize) -> Buffer
 /// Same packing for u32 payloads (indices, counters).
 pub fn storage_u32(device: &Device, _queue: &Queue, data: &[u32]) -> Buffer {
     let bytes = gpu_compute::u32_le_bytes(data);
-    initialized(device, "compute storage u32", &bytes, 4, storage_usage())
+    initialized(
+        device,
+        "compute storage u32",
+        &bytes,
+        4,
+        storage_usage(device),
+    )
 }
 
 /// Uniform buffer from raw float payloads (callers pack structs with

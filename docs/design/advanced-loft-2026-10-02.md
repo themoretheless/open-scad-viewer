@@ -8,7 +8,7 @@
 
 Направляющие разворачиваются по порядку сечений, сортируются по U и обрезаются между крайними сечениями. Piecewise affine remapping согласует пересечения с authored V-станциями, сохраняя геометрическое место в вещественной арифметике; он может вводить C0-узлы. Whole-curve outward bounds учитывают округление remapping, масштабирования весов и конечного сохранения направляющей. Ошибка сечений также проверяется на полной кривой, а не только в пересечениях. Условия весов остаются совместимыми; произвольные несовместимые рациональные масштабы по разным пересечениям не исправляются.
 
-2..11 sections, 1..9 guides, до 32 контролей по каждой оси итоговой поверхности. Интерпретация budget: модельные длины для сохранения geometry; предварительный U station gate также использует это число, а окончательное принятие требует geometry bounds. Нет поиска произвольной U-перепараметризации сечений. Reports относятся к нормализованным определениям и retained guide portions.
+2..11 sections, 1..9 guides, до 32 контролей по каждой оси итоговой поверхности. Интерпретация budget: модельные длины в mm для сохранения geometry. U station gate использует отдельный безразмерный parameter_tolerance (по умолчанию 1e-8); увеличение пространственного budget не ослабляет соответствие U-станций. Окончательное принятие требует whole-curve geometry bounds. Нет поиска произвольной U-перепараметризации сечений. Reports относятся к нормализованным определениям и retained guide portions.
 
 Rust: `loft_alignment::interpolate`; JSON: `surface_auto_guided_loft`; TS: `autoGuidedLoftNurbsCurves`; Rush: `auto_guided_loft_surface`. Пример `examples/rush/auto-guided-loft.r`.
 
@@ -38,3 +38,11 @@ JSON bridge: `brep_nurbs_natural_section_loft`, `brep_nurbs_capped_loft_surfaces
 - Просмотрены screenshots трёх реальных Rush-сборок в редакторе через CPU Mesh fallback; browser pageerror отсутствуют. Native BRep display vertices теперь точно объединяются при переносе в editable Mesh: solid-пример показывает 1116 vertices / 2228 triangles и «замкнут». Авторитетный BRep сохраняется при переносе в Solid, это подтверждено отдельным integration test. GPU qualification не заявлена.
 
 Артефакты: `docs/qualification/advanced-loft-2026-10-02/`; независимая проверка: `scripts/verify-advanced-loft-solid.py`; browser workflow: `scripts/check-advanced-loft-browser.mjs`.
+
+## Независимая публикация от origin/main
+
+Ветка `codex/loft-library` переносит только loft и необходимые базовые конструкторы на API опубликованного main; исходное рабочее дерево с параллельными CAD-изменениями сохранено. Предыдущая квалификация выше относится к исходному рабочему дереву. Проверки этой ветки: полный набор nurbs-core 273 теста, BRep/STEP 11 тестов, modelgraph-text 6 и modelgraph-runtime 54 теста.
+
+Автосогласование теперь разделяет пространственный `budget` (мм) и безразмерный `parameter_tolerance` для станций U (по умолчанию 1e-8, допустимо (0,1]). Rust API: `interpolate_with_parameter_tolerance`; прежний `interpolate` сохраняет сигнатуру и применяет значение по умолчанию. TS использует необязательный пятый аргумент; Rush — именованное поле. Регрессионная проверка подтверждает отказ при разных U-станциях даже с budget=10 мм и отказ от размерного значения parameter_tolerance.
+
+TypeScript/WASM: 42 теста в пяти файлах прошли на release-сборке этой ветки. Rush routing добавлен в language bridge и распознавание исходников редактора.

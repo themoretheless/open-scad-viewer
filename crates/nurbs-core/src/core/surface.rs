@@ -96,13 +96,13 @@ impl Surface {
     }
     pub fn validate(&self) -> Result<()> {
         check(
-            (2..=32).contains(&self.control_points.len()),
-            "NURBS surface requires 2..32 U rows of control points.",
+            (2..=256).contains(&self.control_points.len()),
+            "NURBS surface requires 2..256 U rows of control points.",
         )?;
         let nv = self.control_points[0].len();
         check(
-            (2..=32).contains(&nv) && self.control_points.iter().all(|r| r.len() == nv),
-            "NURBS surface control net must be rectangular with 2..32 V points per U row.",
+            (2..=256).contains(&nv) && self.control_points.iter().all(|r| r.len() == nv),
+            "NURBS surface control net must be rectangular with 2..256 V points per U row.",
         )?;
         check(
             self.control_points.iter().flatten().all(|p| p.len() == 3),
@@ -171,24 +171,15 @@ impl Surface {
         let derivatives = [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)];
         let mut homogeneous = [[0.; 4]; 6];
         for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
-            for (i, &basis_u) in uj[ou].iter().enumerate() {
-                if basis_u == 0. {
-                    continue;
-                }
-                let w_row = &self.weights[i];
-                let cp_row = &self.control_points[i];
-                for (j, &basis_v) in vj[ov].iter().enumerate() {
-                    if basis_v == 0. {
-                        continue;
-                    }
-                    let coefficient = basis_u * basis_v * (w_row[j] / scale);
+            for (i, basis_u) in uj[ou].iter().enumerate() {
+                for (j, basis_v) in vj[ov].iter().enumerate() {
+                    let coefficient = basis_u * basis_v * (self.weights[i][j] / scale);
                     if coefficient == 0. {
                         continue;
                     }
                     out[3] += coefficient;
-                    let cp = &cp_row[j];
                     for d in 0..3 {
-                        out[d] += coefficient * (cp[d] - origin[d]);
+                        out[d] += coefficient * (self.control_points[i][j][d] - origin[d]);
                     }
                 }
             }
@@ -420,8 +411,8 @@ impl Surface {
 }
 pub fn loft(curves: &[Curve]) -> Result<Surface> {
     check(
-        (2..=32).contains(&curves.len()),
-        "Loft requires 2..32 compatible curves.",
+        (2..=256).contains(&curves.len()),
+        "Loft requires 2..256 compatible curves.",
     )?;
     for c in curves {
         c.validate()?;
@@ -621,12 +612,66 @@ pub fn sweep(profile: &Curve, path: &Curve) -> Result<Surface> {
 /// Compatible section construction: normalize domains, elevate degrees and unify
 /// knot multiplicities without changing section geometry. V remains piecewise linear.
 pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
-    loft(&crate::sections::compatible(curves)?)
+    check(
+        (2..=256).contains(&curves.len()),
+        "Loft requires 2..256 sections",
+    )?;
+    for c in curves {
+        c.validate()?;
+        check(c.control_points[0].len() == 3, "Loft requires 3D sections")?;
+    }
+    let degree = curves.iter().map(|c| c.degree).max().unwrap();
+    let mut sections = Vec::new();
+    for c in curves {
+        let [a, b] = c.domain();
+        let mut c = c.trim(a, b)?;
+        c.knots.iter_mut().for_each(|k| *k = (*k - a) / (b - a));
+        if c.degree < degree {
+            c = c.elevate(degree)?;
+        }
+        sections.push(c);
+    }
+    let mut unique: Vec<f64> = sections
+        .iter()
+        .flat_map(|c| c.knots.iter().copied())
+        .filter(|k| *k > 0. && *k < 1.)
+        .collect();
+    unique.sort_by(f64::total_cmp);
+    unique.dedup();
+    for k in unique {
+        let count = sections
+            .iter()
+            .map(|c| c.knots.iter().filter(|&&v| v == k).count())
+            .max()
+            .unwrap();
+        for c in &mut sections {
+            let existing = c.knots.iter().filter(|&&v| v == k).count();
+            if existing < count {
+                *c = c.insert(k, count - existing)?;
+            }
+            check(
+                c.control_points.len() <= 256,
+                "Aligned loft exceeds 256 section controls",
+            )?;
+        }
+    }
+    loft(&sections)
 }
 
 #[cfg(test)]
 mod construction_tests {
     use super::*;
+    #[test]
+    fn clamped_iso_preserves_authored_coordinates_and_nonuniform_weights() {
+        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.1,0.2,0.3],vec![0.7,-0.2,0.8],vec![1.1,0.4,-0.3]],weights:vec![0.7,1.3,0.9],periodic:false};
+        let mut other=c.clone();
+        for p in &mut other.control_points {p[2]+=2.;}
+        let surface=loft(&[c.clone(),other.clone()]).unwrap();
+        let before=surface.clone();
+        assert_eq!(surface.iso(Axis::V,0.).unwrap(),c);
+        assert_eq!(surface.iso(Axis::V,1.).unwrap(),other);
+        assert_eq!(surface,before);
+    }
     #[test]
     fn translational_sweep_retains_small_profile_at_distant_path_origin() {
         let profile = Curve::from_polyline(vec![vec![1e-9, 0., 0.], vec![2e-9, 0., 0.]]).unwrap();

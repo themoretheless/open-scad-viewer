@@ -1,0 +1,139 @@
+{
+  "unchanged": true,
+  "manifests": {
+    "own-rust-node-v3": {
+      "engineClass": "mesh",
+      "displayName": "Own Rust CAD",
+      "permanent": true,
+      "maturity": "production",
+      "engineKey": "own-rust-cad-v3",
+      "kernelFingerprint": "sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1",
+      "semanticProgramVersion": "legacy-direct-evaluator-v1",
+      "capabilityManifestVersion": "own-rust-node-v3",
+      "languageContracts": [
+        "legacy/current"
+      ],
+      "inputContract": "legacy-source-direct",
+      "capabilities": [
+        "analysis.metrics",
+        "csg.boolean",
+        "export.obj",
+        "export.stl",
+        "geometry.mesh"
+      ],
+      "plannedCapabilities": [
+        "provenance.source-ranges"
+      ],
+      "qualities": [
+        "preview",
+        "full"
+      ],
+      "representations": [
+        "mesh"
+      ],
+      "plannedRepresentations": [],
+      "exportFormats": [
+        "stl",
+        "obj"
+      ],
+      "plannedExportFormats": [],
+      "limits": {
+        "sourceCharacters": 250000,
+        "triangles": 750000
+      },
+      "isolation": "in-process-serialized",
+      "deployment": "node-mcp",
+      "qualification": {
+        "status": "qualified",
+        "recordId": "docs/qualification/runtime-provider-68dd0ed6d368-2026-10-18.json",
+        "corpusVersion": "runtime-provider-68dd0ed6d368-2026-10-18",
+        "target": "browser-worker/node-mcp"
+      },
+      "dependency": {
+        "packageName": "workspace:geometry-bridge",
+        "version": "0.1.0",
+        "licenseExpression": "MIT",
+        "sbomRef": "THIRD_PARTY_NOTICES.md",
+        "sbomSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+        "lockfileSha256": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b"
+      },
+      "rollbackCompatibility": {
+        "disableEngineCapability": true,
+        "sourceContractPreserved": true,
+        "crossEngineFallback": false,
+        "minimumCatalogSchema": 3
+      },
+      "manifestDigest": "d198c2772e88236ec19eaa84bf603c08b9a607c683e6b1cb88962b5f426e403f",
+      "automaticFallback": false
+    },
+    "brep-closed-v3": {
+      "engineClass": "brep",
+      "displayName": "Rust B-rep/NURBS kernel (closed analytic peer)",
+      "permanent": true,
+      "maturity": "production",
+      "engineKey": "rust-brep-closed-v3",
+      "kernelFingerprint": "sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1",
+      "semanticProgramVersion": "semantic-program-contract-v1",
+      "capabilityManifestVersion": "brep-closed-v3",
+      "languageContracts": [
+        "openscad-viewer/brep-1"
+      ],
+      "inputContract": "semantic-program-required",
+      "capabilities": [
+        "analysis.metrics",
+        "csg.boolean",
+        "export.obj",
+        "export.stl",
+        "export.step",
+        "geometry.brep",
+        "nurbs.curves",
+        "nurbs.surfaces",
+        "topology.stable-ids"
+      ],
+      "plannedCapabilities": [],
+      "qualities": [
+        "preview",
+        "full"
+      ],
+      "representations": [
+        "brep",
+        "mesh"
+      ],
+      "plannedRepresentations": [],
+      "exportFormats": [
+        "stl",
+        "obj",
+        "step"
+      ],
+      "plannedExportFormats": [],
+      "limits": {
+        "sourceCharacters": 250000,
+        "triangles": 750000
+      },
+      "isolation": "in-process-serialized",
+      "deployment": "node-mcp",
+      "qualification": {
+        "status": "qualified",
+        "recordId": "docs/qualification/runtime-provider-68dd0ed6d368-2026-10-18.json",
+        "corpusVersion": "runtime-provider-68dd0ed6d368-2026-10-18",
+        "target": "browser-worker/node-mcp"
+      },
+      "dependency": {
+        "packageName": "workspace:geometry-bridge",
+        "version": "0.1.0",
+        "licenseExpression": "MIT",
+        "sbomRef": "THIRD_PARTY_NOTICES.md",
+        "sbomSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+        "lockfileSha256": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b"
+      },
+      "rollbackCompatibility": {
+        "disableEngineCapability": true,
+        "sourceContractPreserved": true,
+        "crossEngineFallback": false,
+        "minimumCatalogSchema": 3
+      },
+      "manifestDigest": "632b754032dc93c6254a2df3879abcf332d63d264d548b84a1d4a3ac78a17256",
+      "automaticFallback": false
+    }
+  }
+}

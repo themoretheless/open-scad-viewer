@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /private/tmp/osv-push-integration-20261021
+
+
+ Test Files  2 passed (2)
+      Tests  24 passed (24)
+   Start at  19:11:34
+   Duration  2.52s (transform 1.75s, setup 0ms, import 2.08s, tests 2.67s, environment 0ms)
+

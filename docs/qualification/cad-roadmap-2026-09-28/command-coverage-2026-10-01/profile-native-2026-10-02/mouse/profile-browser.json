@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-Cr_RIuw_.js",
+      "sha256": "18b763c0adbb3665388a48c45b30a5f82da51bde82abb48eb1e57201e756f530"
+    },
+    "wasmSha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe",
+    "sourceSha256": "e253a275da9732b0f5f96f69f0a72f33aa60474f40d884eba9372833abf3e18f"
+  },
+  "nativePlaneRefusal": true,
+  "retry": true,
+  "browser": "157.0.8081.0",
+  "proof": "Контур замкнут. Добавлено отрезков: 1",
+  "area": 100,
+  "refusal": true,
+  "cancel": true,
+  "undo": true,
+  "redo": true,
+  "reloadExact": true,
+  "completeDocumentPreserved": true,
+  "identityAndCoordinatesPreserved": true,
+  "downloads": 8,
+  "keyboard": false,
+  "tabPresses": 0
+}

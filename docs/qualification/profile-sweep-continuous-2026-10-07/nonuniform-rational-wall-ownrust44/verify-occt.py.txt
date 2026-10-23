@@ -1,0 +1,56 @@
+import json,math,sys
+from pathlib import Path
+from OCP.STEPControl import STEPControl_Reader,STEPControl_Writer,STEPControl_AsIs
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.BRepCheck import BRepCheck_Analyzer
+from OCP.BRepGProp import BRepGProp
+from OCP.GProp import GProp_GProps
+from OCP.TopAbs import TopAbs_FACE,TopAbs_SOLID
+from OCP.TopExp import TopExp_Explorer
+from OCP.TopoDS import TopoDS
+from OCP.BRepAdaptor import BRepAdaptor_Surface
+from OCP.gp import gp_Pnt,gp_Vec
+root=Path(sys.argv[1])
+def read(p):
+ r=STEPControl_Reader();assert r.ReadFile(str(p))==IFSelect_RetDone;assert r.TransferRoots()>0;return r.OneShape()
+def count(s,t):
+ e=TopExp_Explorer(s,t);n=0
+ while e.More():n+=1;e.Next()
+ return n
+shape=read(root/'nonuniform.step'); w=STEPControl_Writer();assert w.Transfer(shape,STEPControl_AsIs)==IFSelect_RetDone;assert w.Write(str(root/'nonuniform-occt.step'))==IFSelect_RetDone
+samples=json.loads((root/'samples.json').read_text())
+reports=[]
+for s in [shape,read(root/'nonuniform-occt.step')]:
+ p=GProp_GProps();integration_error=BRepGProp.VolumeProperties_s(s,p,1e-10,True,False)
+ e=TopExp_Explorer(s,TopAbs_FACE);surfaces=[]
+ while e.More():surfaces.append(BRepAdaptor_Surface(TopoDS.Face(e.Current())));e.Next()
+ worst=0.;jet_worst=0.;matched=[];selected=[]
+ def coords(p):return [p.X(),p.Y(),p.Z()]
+ def error(a,b):return math.dist(coords(a),b)
+ for rows in samples:
+  def mapping(a,swap,ru,rv,t):
+   source=[t['domainU'],t['domainV']];target=[[a.FirstUParameter(),a.LastUParameter()],[a.FirstVParameter(),a.LastVParameter()]]
+   values=[t['u'],t['v']];permutation=[1,0] if swap else [0,1];uv=[];jac=[[0.,0.],[0.,0.]]
+   for axis,(index,reverse) in enumerate(zip(permutation,[ru,rv])):
+    lo,hi=source[index];x=(values[index]-lo)/(hi-lo);ta,tb=target[axis]
+    uv.append(ta+(tb-ta)*(1-x if reverse else x));jac[axis][index]=(tb-ta)/(hi-lo)*(-1 if reverse else 1)
+   return uv,jac
+  candidates=[(a,swap,ru,rv) for a in surfaces for swap in [False,True] for ru in [False,True] for rv in [False,True]]
+  errors=[max(error(a.Value(*mapping(a,swap,ru,rv,t)[0]),t['point']) for t in rows) for a,swap,ru,rv in candidates]
+  i=min(range(len(errors)),key=errors.__getitem__);worst=max(worst,errors[i]);a,swap,ru,rv=candidates[i];selected.append(i//8)
+  for t in rows:
+   p0=gp_Pnt();du=gp_Vec();dv=gp_Vec();duu=gp_Vec();dvv=gp_Vec();duv=gp_Vec()
+   uv,j=mapping(a,swap,ru,rv,t);a.D2(*uv,p0,du,dv,duu,dvv,duv)
+   first=[coords(du),coords(dv)];second=[[coords(duu),coords(duv)],[coords(duv),coords(dvv)]]
+   transformed={}
+   for k,index in [('du',0),('dv',1)]:transformed[k]=[sum(first[a][c]*j[a][index] for a in range(2)) for c in range(3)]
+   for k,left,right in [('duu',0,0),('dvv',1,1),('duv',0,1)]:transformed[k]=[sum(second[a][b][c]*j[a][left]*j[b][right] for a in range(2) for b in range(2)) for c in range(3)]
+   for k,z in transformed.items():jet_worst=max(jet_worst,math.dist(z,t[k]))
+ assert len(set(selected))==len(samples)
+ assert worst<1e-8,worst
+ assert jet_worst<1e-7,jet_worst
+ reports.append({'maxPointError':worst,'maxJetError':jet_worst,'valid' :BRepCheck_Analyzer(s).IsValid(),'faces':count(s,TopAbs_FACE),'solids':count(s,TopAbs_SOLID),'volume':p.Mass(),'expectedVolume':20,'adaptiveIntegrationRelativeError':integration_error})
+assert all(r['valid'] and r['faces']==len(samples) and r['solids']==1 for r in reports)
+assert abs(reports[0]['volume']-reports[1]['volume'])<1e-8
+assert all(abs(r['volume']-20)<1e-8 for r in reports)
+print(json.dumps(reports));(root/'occt-explore.json').write_text(json.dumps(reports,indent=2)+'\n')

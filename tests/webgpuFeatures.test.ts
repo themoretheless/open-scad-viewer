@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  detectAdapterMemoryArchitecture,
   inspectWebGpuCapabilities,
+  memoryArchitectureProfile,
   requiredWebGpuFeaturesForWgsl,
   requiredWgslLanguageFeatures,
   selectSupportedWgslVariant,
@@ -94,5 +96,29 @@ describe('WebGPU feature detection from WGSL', () => {
       subgroupMinSize: 8,
       subgroupMaxSize: 32,
     })
+  })
+
+  it('classifies UMA vs dUMA adapters and returns their memory transfer profiles', () => {
+    const appleAdapter = {
+      features: new Set(),
+      info: { vendor: 'apple', architecture: 'metal-3', description: 'Apple M4 Max' },
+    } as unknown as GPUAdapter
+    const nvidiaAdapter = {
+      features: new Set(),
+      info: { vendor: 'nvidia', architecture: 'blackwell', description: 'NVIDIA RTX 5090' },
+    } as unknown as GPUAdapter
+
+    expect(detectAdapterMemoryArchitecture(appleAdapter)).toBe('uma')
+    expect(detectAdapterMemoryArchitecture(nvidiaAdapter)).toBe('duma')
+
+    const umaProfile = memoryArchitectureProfile('uma')
+    expect(umaProfile.unifiedPhysicalRam).toBe(true)
+    expect(umaProfile.mappedAtCreationPrimaryUpload).toBe(true)
+    expect(umaProfile.preferredUploadStrategy).toBe('mapped_at_creation_shared_primary')
+
+    const dumaProfile = memoryArchitectureProfile('duma')
+    expect(dumaProfile.unifiedPhysicalRam).toBe(false)
+    expect(dumaProfile.mappedAtCreationPrimaryUpload).toBe(false)
+    expect(dumaProfile.preferredUploadStrategy).toBe('staging_ring_to_device_local_vram')
   })
 })

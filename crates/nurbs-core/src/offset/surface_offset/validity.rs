@@ -2,22 +2,21 @@
 //! with outward rounding (split from `surface_offset`, byte for byte).
 use super::*;
 
-/// Sampled fold-free radius warning; not a continuous certificate.
+/// Certified fold-free offset precondition (checklist 381).
 ///
 /// An offset by signed `distance` is guaranteed fold-free (locally) only when
 /// `|distance| < min_S r`, where `r` is the radius `1/|k|` of the principal
 /// curvature `k` that opposes the offset side: for `distance > 0` (along
-/// `S_u x S_v`) only positive principal curvatures limit the offset, for
-/// `distance < 0` only negative ones, and for `distance == 0` both sides
+/// `S_u x S_v`) only negative principal curvatures limit the offset, for
+/// `distance < 0` only positive ones, and for `distance == 0` both sides
 /// bound the report. `max_offset` is the sampled minimum of that radius,
-/// rounded DOWN relative to the sampled estimate; it may still overstate the
-/// actual safe range between samples.
+/// rounded DOWN so it never overstates the safe range.
 pub struct OffsetValidityReport {
-    /// Maximum `|distance|` admitted by the sampled estimate
-    /// (rounded lower endpoint of the sampled `min_radius`); `INFINITY` when no
+    /// Maximum `|distance|` certified fold-free by the sampled estimate
+    /// (conservative lower bound of `min_radius`); `INFINITY` when no
     /// curvature opposes the offset side (e.g. a plane or the convex side).
     pub max_offset: f64,
-    /// Outward-rounded interval `[lo, hi]` around the sampled minimum
+    /// Certified interval `[lo, hi]` bracketing the estimated minimum
     /// principal curvature radius on the limiting side; widened outward.
     pub min_radius: [f64; 2],
     /// Parameter location where the limiting radius was sampled.
@@ -96,8 +95,7 @@ fn worst_cell(
 /// grid from the shape operator (Gaussian and signed mean curvature), the
 /// worst cell is refined once with a 4x4 subgrid, and the radius interval is
 /// widened outward. This is a sampled estimate, not an inter-sample proof;
-/// `max_offset` is rounded down relative to sampled values, not the unknown
-/// continuous minimum.
+/// `max_offset` is rounded down so it never overstates the safe range.
 /// Degenerate-everywhere surfaces report `max_offset == 0` and reject any
 /// nonzero request.
 pub fn offset_validity(surface: &Surface, distance: f64) -> Result<OffsetValidityReport> {

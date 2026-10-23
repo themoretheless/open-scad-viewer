@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { MeshData } from '../core/mesh'
 import type { PickHit } from '../services/rendererContracts'
 import { SVG_MAX_BYTES, SVG_MAX_FONTS, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES } from '../services/svgLimits'
@@ -22,16 +22,16 @@ const tolerance = ref<number | string>(0.05)
 const geometryMode = ref<'vector' | 'silhouette'>('vector')
 const rasterSize = ref<number | string>(512)
 const alphaThreshold = ref<number | string>(0.5)
-const fonts = shallowRef<{ name: string; bytes: Uint8Array }[]>([])
+const fonts = ref<{ name: string; bytes: Uint8Array }[]>([])
 const error = ref('')
 const busy = ref(false)
 const preview = ref('')
 const dimensions = ref('')
-const warnings = shallowRef<string[]>([])
+const warnings = ref<string[]>([])
 const status = ref('')
 const persistenceError = ref('')
 const opened = ref(false)
-const lastExport = shallowRef<{ result: SvgGeometryResult; name: string } | null>(null)
+const lastExport = ref<{ result: SvgGeometryResult; name: string } | null>(null)
 const worker = createSvgWorkerClient()
 const drafts = svgDraftStore()
 let controller: AbortController | null = null

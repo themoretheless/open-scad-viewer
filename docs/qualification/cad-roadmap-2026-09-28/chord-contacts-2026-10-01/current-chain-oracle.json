@@ -1,0 +1,10 @@
+{
+  "oracle": "Python exact Fraction from represented binary64 points",
+  "segments": 121,
+  "properCrossings": [
+    [
+      2,
+      118
+    ]
+  ]
+}

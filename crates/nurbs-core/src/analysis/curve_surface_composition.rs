@@ -199,7 +199,10 @@ pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Inte
         ],
     )
 }
-fn surface_homogeneous_controls(s: &Surface, span: [usize;2]) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
+fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Interval;4]>>,[f64;2])> {
+    surface_homogeneous_controls_with_origin(s,span,None)
+}
+fn surface_homogeneous_controls_with_origin(s: &Surface, span: [usize;2], origin:Option<[f64;3]>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
     let [iu, iv] = span; let (p,q) = (s.degree_u,s.degree_v);
     let mut controls = Vec::new();
     let mut weights = [f64::INFINITY, 0_f64];
@@ -210,10 +213,12 @@ fn surface_homogeneous_controls(s: &Surface, span: [usize;2]) -> Result<(Vec<Vec
             weights[0] = weights[0].min(w.lo);
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];
+            let mut centered=[Interval::point(cp[0]),Interval::point(cp[1]),Interval::point(cp[2])];
+            if let Some(origin)=origin {for k in 0..3 {centered[k]=centered[k].sub(Interval::point(origin[k]))?;}}
             row.push([
-                Interval::point(cp[0]).mul(w)?,
-                Interval::point(cp[1]).mul(w)?,
-                Interval::point(cp[2]).mul(w)?,
+                centered[0].mul(w)?,
+                centered[1].mul(w)?,
+                centered[2].mul(w)?,
                 w,
             ]);
         }
@@ -225,13 +230,16 @@ fn surface_homogeneous_controls(s: &Surface, span: [usize;2]) -> Result<(Vec<Vec
 /// Only complete original Bernstein spans qualify; general B-splines keep
 /// the original blossom routine. No surface poles or knots are modified.
 pub(crate) fn surface_net_on_bernstein(s: &Surface, span: [usize;2], domain: [[f64;2];2]) -> Result<Option<Vec<Vec<[Interval;4]>>>> {
+    surface_net_on_bernstein_with_origin(s,span,domain,None)
+}
+fn surface_net_on_bernstein_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Option<Vec<Vec<[Interval;4]>>>> {
     let [iu,iv]=span; let (p,q)=(s.degree_u,s.degree_v);
     if !crate::surface_distance::complete_bernstein_span(p,&s.knots_u,iu)
         || !crate::surface_distance::complete_bernstein_span(q,&s.knots_v,iv) { return Ok(None); }
     let spans=[[s.knots_u[iu],s.knots_u[iu+1]],[s.knots_v[iv],s.knots_v[iv+1]]];
     if (0..2).any(|axis| domain[axis].iter().any(|x|!x.is_finite())
         ||domain[axis][0]<spans[axis][0]||domain[axis][1]>spans[axis][1]||domain[axis][0]>domain[axis][1]) { return Ok(None); }
-    let (controls,weights)=surface_homogeneous_controls(s,span)?;
+    let (controls,weights)=surface_homogeneous_controls_with_origin(s,span,origin)?;
     let mut rows=Vec::with_capacity(p+1);
     for row in controls {
         let mut restricted=crate::surface_distance::restrict_bernstein_controls(&row,spans[1],domain[1],weights)?;
@@ -252,9 +260,19 @@ pub(crate) fn surface_net_on(
     span: [usize; 2],
     domain: [[f64; 2]; 2],
 ) -> Result<Vec<Vec<[Interval; 4]>>> {
+    surface_net_on_with_origin(s,span,domain,None)
+}
+/// Translate the original homogeneous poles before interval restriction.
+/// Subtraction and multiplication are outward; original surfaces stay intact.
+pub(crate) fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:[f64;3])->Result<Vec<Vec<[Interval;4]>>> {
+    match surface_net_on_bernstein_with_origin(s,span,domain,Some(origin))? {
+        Some(net)=>Ok(net),None=>surface_net_on_with_origin(s,span,domain,Some(origin)),
+    }
+}
+fn surface_net_on_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Vec<Vec<[Interval;4]>>> {
     let [iu, iv] = span;
     let (p, q) = (s.degree_u, s.degree_v);
-    let (controls, weights) = surface_homogeneous_controls(s, span)?;
+    let (controls, weights) = surface_homogeneous_controls_with_origin(s, span, origin)?;
     let mut out = vec![vec![[Interval::point(0.); 4]; q + 1]; p + 1];
     let u_plans = (0..=p).map(|u| {
         let us = (0..p).map(|k| domain[0][usize::from(k >= p - u)]).collect::<Vec<_>>();
@@ -652,3 +670,10 @@ mod bernstein_section_tests {
 #[path = "curve_surface_composition/multi_trace.rs"]
 mod multi_trace;
 mod cell_trace;
+
+pub(crate) fn upper_cell_on(c:&Curve,p:&Curve,s:&Surface,reversed:bool,t:[f64;2],source_interval:[f64;2])->Result<Option<f64>> {
+    use crate::curve_surface_agreement::{mapped,mapped_range};
+    upper_mapped_cell(c,p,s,
+        [mapped(c,Interval::point(t[0]),reversed)?,mapped(c,Interval::point(t[1]),reversed)?],
+        [mapped_range(source_interval,Interval::point(t[0]),false)?,mapped_range(source_interval,Interval::point(t[1]),false)?])
+}

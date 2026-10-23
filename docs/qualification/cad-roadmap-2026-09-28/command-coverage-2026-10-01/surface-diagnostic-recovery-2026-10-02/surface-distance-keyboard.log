@@ -1,0 +1,38 @@
+{
+  keyboard: true,
+  tabs: 1163,
+  gpuActive: true,
+  reloadExact: true,
+  workerFailureRetry: true,
+  browser: '157.0.8081.0',
+  workerRequests: 6,
+  cancelledWorkerTerminated: true,
+  keyboardRestart: true,
+  planar: {
+    cells: 1,
+    converged: true,
+    distanceIntervalMm: [ 0.2499999999999999, 0.25000000000001976 ],
+    maxCells: 10000,
+    method: 'interval-tensor-de-boor-pair-subdivision',
+    parameters: [ [Array], [Array] ],
+    pointEnclosures: [ [Array], [Array] ],
+    points: [ [Array], [Array] ],
+    reason: 'tolerance',
+    scope: 'untrimmed-surfaces',
+    toleranceMm: 0.001
+  },
+  curved: {
+    cells: 343,
+    converged: true,
+    distanceIntervalMm: [ 1.9991624999999933, 2.0001000000000073 ],
+    maxCells: 100000,
+    method: 'interval-tensor-de-boor-pair-subdivision',
+    parameters: [ [Array], [Array] ],
+    pointEnclosures: [ [Array], [Array] ],
+    points: [ [Array], [Array] ],
+    reason: 'tolerance',
+    scope: 'untrimmed-surfaces',
+    toleranceMm: 0.001
+  },
+  documentUnchanged: true
+}

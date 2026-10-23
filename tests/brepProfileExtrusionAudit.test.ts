@@ -79,7 +79,7 @@ it('admits affine 3D solids and elliptical 2D profiles with analytic mass checks
 
 it('refuses implicit 3D projection and retains elevated multi-span curve bases', async () => {
   const planar3d = { ...circle(), controlPoints: circle().controlPoints.map(p => [...p, 0]) }
-  expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D/)
+  expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D|XY/)
   expect(() => extrudeBrepCurves([[planar3d]], 0, 2)).toThrow(/2D/)
   const elevated=elevateNurbsCurve(circle(),3),profile=validateBrepProfile([[elevated]])
   expect(profile.loops[0][0]).toEqual(elevated)

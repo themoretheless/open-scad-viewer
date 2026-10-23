@@ -1,0 +1,33 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Worker revolve",
+      "stepSha256": "51d6ac39348fb80db23b086f7bfbc66b385afa5d7616ef04d55fbf5308bffc5e",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -9.999999981630298e-08,
+          -1e-07,
+          -6.0000001
+        ],
+        [
+          6.000000100000001,
+          4.0000001,
+          1e-07
+        ]
+      ],
+      "volumeMm3": 70.68583470754747,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.7771242255548714e-09,
+      "passed": true,
+      "previewTriangles": 396
+    }
+  ]
+}

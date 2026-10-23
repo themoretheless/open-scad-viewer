@@ -83,7 +83,7 @@ export const tessellateSdfGpuAware=(field:SdfField,grid:SdfGrid):PolygonBuild=>{
  return tessellateSdf(field,grid)
 }
 
-import { runGpuMarchingIsosurface, type MarchingOutput } from '../gpuMarchingCubes'
+import type { MarchingOutput } from '../gpuMarchingCubes'
 
 /**
  * Extracts an isosurface mesh directly on the GPU from a sampled SDF scalar
@@ -95,6 +95,8 @@ export async function tessellateSdfMarchingCubesGpu(
   isoValue = 0,
 ): Promise<MarchingOutput | null> {
   if (grid.cells.length < 3 || grid.min.length < 3 || grid.max.length < 3) return null
+  // Lazy: GPU passes import WGSL via ?raw, which only the Vite pipeline resolves.
+  const { runGpuMarchingIsosurface } = await import('../gpuMarchingCubes')
   return runGpuMarchingIsosurface(
     {
       cells: [grid.cells[0], grid.cells[1], grid.cells[2]],

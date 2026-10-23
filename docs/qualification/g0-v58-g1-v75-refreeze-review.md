@@ -1,0 +1,3 @@
+# Cross-platform runtime identity and direct Node invocation
+
+G0 v58 / G1 v75 preserve all prior qualification records and unchanged own-Rust v41. The v74 full attempt refused Windows before tests because Node win32 was not mapped to the frozen windows OS name. Runtime host identity now explicitly matches supported OS and architecture pairs. Frozen Vitest commands execute the same installed runner directly through Node on every host, avoiding lifecycle hooks and Windows command wrappers. Windows npm version is verified through its installed CLI using the frozen Node executable. Diagnostic probes now cover every host environment (four Node hosts and both browser engines), still completing zero qualification units. All 4740 full-matrix units restart at zero.

@@ -141,8 +141,8 @@ export class SolidGpuLayer {
   private transparentPipeline: GPURenderPipeline | null = null
   private transparentBindGroup: GPUBindGroup | null = null
   private transparentVertices: GPUBuffer | null = null
+  private transparencyLimited=false
   private transparentTree: TransparentBsp | null = null
-  private transparencyLimited = false
   private transparentData: Float32Array | null = null
   private transparentDirection: number[] | null = null
   private opaqueCount = 0
@@ -176,7 +176,7 @@ export class SolidGpuLayer {
   private frame = 0
   private disposed = false
 
-  constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void, private readonly onTransparencyLimit?:(limited:boolean)=>void) {}
+  constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void,private readonly onTransparencyLimit?:(limited:boolean)=>void) {}
 
   private fail(reason:unknown='WebGPU unavailable'):void {
     if(this.disposed)return
@@ -337,7 +337,7 @@ export class SolidGpuLayer {
       }
       device.queue.writeBuffer(buffer, range.start * 13 * 4, slice)
     }
-    if(!this.transparencyLimited)try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
+    try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
     this.requestFrame()
   }
 

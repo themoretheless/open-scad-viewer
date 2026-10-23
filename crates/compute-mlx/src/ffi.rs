@@ -1,4 +1,8 @@
-//! Small, audited subset of the MLX-C 0.6 ABI. No Python or link-time dependency.
+//! Small, audited subset of MLX-C 0.6/0.7. No Python or link-time dependency.
+mod attention;
+use attention::Attention;
+mod cumsum;
+use cumsum::Cumsum;
 use libloading::Library;
 use std::{
     ffi::{CStr, c_char, c_int, c_void},
@@ -126,6 +130,8 @@ macro_rules! api {
             pub array_data_bfloat16: Option<HalfData>,
             pub metal: Option<MetalApi>,
             pub compile: Option<CompileApi>,
+            pub attention: Attention,
+            pub cumsum: Cumsum,
             _library:Library,
         }
         impl Api {
@@ -140,7 +146,9 @@ macro_rules! api {
                 let array_data_bfloat16 = unsafe { library.get::<HalfData>(b"mlx_array_data_bfloat16\0") }.ok().map(|p| *p);
                 let metal = unsafe { MetalApi::load(&library) };
                 let compile = unsafe { CompileApi::load(&library) };
-                Ok(Self { $($name,)* array_data_float16, array_data_bfloat16, metal, compile, _library:library })
+                let attention = unsafe { Attention::load(&library) }?;
+                let cumsum = unsafe { Cumsum::load(&library) }?;
+                Ok(Self { $($name,)* array_data_float16, array_data_bfloat16, metal, compile, attention, cumsum, _library:library })
             }
         }
     }
@@ -181,8 +189,6 @@ api! {
     bitwise_and:Binary, right_shift:Binary,
     sum_axes:Reduce, prod_axes:Reduce, min_axes:Reduce, max_axes:Reduce, mean_axes:Reduce,
     softmax_axes:Reduce, logsumexp_axes:Reduce,
-    fast_scaled_dot_product_attention:unsafe extern "C" fn(*mut Handle,Handle,Handle,Handle,f32,*const c_char,Handle,Handle,Handle)->c_int,
-    cumsum:unsafe extern "C" fn(*mut Handle,Handle,c_int,bool,bool,Handle)->c_int,
     take_axis:unsafe extern "C" fn(*mut Handle,Handle,Handle,c_int,Handle)->c_int,
     r#where:unsafe extern "C" fn(*mut Handle,Handle,Handle,Handle,Handle)->c_int,
     zeros:unsafe extern "C" fn(*mut Handle,*const c_int,usize,c_int,Handle)->c_int,

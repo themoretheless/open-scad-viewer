@@ -1,0 +1,35 @@
+{
+  "id": "loft-ci-artifact-registration-v4",
+  "recordedAt": "2026-10-03",
+  "scope": "Observed host artifact registration and measured bundle budget; no geometric source change or qualification approval.",
+  "priorCiSource": "d92e5e889a1979f7b1248931fa8b1d76c14ce946",
+  "priorCiFailures": [
+    {
+      "job": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37057997898/job/111007334166",
+      "reason": "Five fingerprint generator assertions refused the unrecorded Linux artifact; 4332 remaining tests passed."
+    },
+    {
+      "job": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37057997837/job/111007333538",
+      "reason": "Linux dist 7288439 bytes exceeded the 7287000 budget."
+    }
+  ],
+  "changes": [
+    "Own Rust v30 registers only the observed exact Linux SHA and retains the unchanged source bundle and macOS artifact.",
+    "G0 v38 / G1 v55 reset candidate counters and preserve all previous archives; no qualification work is imported.",
+    "Total budget 7291000 accounts for measured Linux dist and 190 local bytes of identity registration."
+  ],
+  "localChecks": {
+    "relatedTestsPassed": 25,
+    "typescript": "passed",
+    "sourceDrift": "matches",
+    "productionAssetsBytes": 7285431
+  },
+  "sourceHashes": {
+    "src/core/ownRustCadEvidence.ts": "25403963b3421d09a9562c002d68888ad5479caeeda88c0a94519db655140a66",
+    "scripts/verify-dist.mjs": "8bd18e355abccc06cb8082684867be14ca8980dd55eb32462feed84c9ef8e5af",
+    "docs/qualification/own-rust-cad-v30.json": "2ad3734f556c01825ba1da90fff0dd2790ffd89249e19ed49a3424e4e4aec353",
+    "docs/qualification/g0-toolchain-fingerprints-v38.json": "b6f1367765d4e8a85d0ba454816fbdd54aa9281aa3144e1ba813af35d4871c64",
+    "docs/qualification/semantic-manifold-g1-plan-v55.json": "0cb7ce594bff47923c479e2b163cf7c98a1e88c315f52c3a980d845a6621ff09"
+  },
+  "newCi": "pending"
+}

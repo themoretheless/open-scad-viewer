@@ -1,0 +1,39 @@
+import {readFileSync} from 'node:fs'
+import {expect,it} from 'vitest'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {readSweepViewportEvidence,readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+const request={action:'build' as const,display:{segments:4,subdivisionLevels:0}}
+it.each(['closed-profile-planar-10.r','closed-profile-spatial-6.r'])('forwards native retained-body proof through Rush, async build, viewport and Solid: %s',async file=>{
+ const source=readFileSync(`examples/rush/${file}`,'utf8')
+ const graph=compileRushFrontend(source).document
+ if(file==='closed-profile-planar-10.r'){
+  const tight=compileRushFrontend(source.replace('max_deviation:256mm','max_deviation:1mm')).document
+  const tighter=readSweepBodyBoundaryViewportEvidence(buildOwnNurbs(tight,request).nativeGeometry)
+  expect(tighter).toMatchObject({continuousBound:true,withinBudget:true})
+  expect(tighter!.errorUpper).toBeLessThanOrEqual(1)
+  const strict=compileRushFrontend(source.replace('max_deviation:256mm','max_deviation:0.000000000001mm')).document
+  expect(()=>buildOwnNurbs(strict,request)).toThrow(/budget/)
+ }
+ const node=graph.nodes.find(n=>n.op==='brep_progressive_sweep')!
+ for(const built of [buildOwnNurbs(graph,request),await buildOwnNurbsAsync(graph,request)]){
+  expect(readSweepViewportEvidence(built.nativeGeometry)).toBeNull()
+  const boundary=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
+  if(file==='closed-profile-planar-10.r'){
+   expect(boundary).toMatchObject({nodeId:node.id,continuousBound:true,withinBudget:true})
+   expect(boundary!.errorUpper).toBeGreaterThan(0)
+   expect(boundary!.errorUpper).toBeLessThanOrEqual(256)
+  }else{
+   expect(boundary).toMatchObject({nodeId:node.id,continuousBound:true,withinBudget:true})
+   expect(boundary!.errorUpper).toBeGreaterThan(0)
+   expect(boundary!.errorUpper).toBeLessThanOrEqual(1)
+  }
+  const report=built.report.construction![node.id] as any
+  expect(report.seamContinuity).toBe('C0')
+  expect(report.volume.solidGeometryCertified).toBe(true)
+  const artifact=built.nativeGeometry!
+  const model=JSON.parse(artifact.geometryJson).geometry
+  expect(inspectProgressiveSweepSolidAdmission(artifact,model)).toMatchObject({solidGeometryCertified:true})
+ }
+})

@@ -1,0 +1,16 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+locator.getAttribute: Timeout 120000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('region', { name: 'Solid — CAD-лепка', exact: true }).getByRole('button', { name: 'Instance 0', exact: true })[22m
+
+    at /private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:333:76 {
+  log: [
+    "  - waiting for getByRole('region', { name: 'Solid — CAD-лепка', exact: true }).getByRole('button', { name: 'Instance 0', exact: true })"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v26.10.0

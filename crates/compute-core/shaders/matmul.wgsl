@@ -7,9 +7,8 @@ struct Params { rows: u32, inner: u32, columns: u32, groups: u32 };
 @group(0) @binding(2) var<storage, read> b: array<f32>;
 @group(0) @binding(3) var<storage, read_write> output: array<f32>;
 const TILE: u32 = 32;
-const TILE_STRIDE: u32 = 33;
-var<workgroup> tile_a: array<f32, 1056>;
-var<workgroup> tile_b: array<f32, 1056>;
+var<workgroup> tile_a: array<f32, 1024>;
+var<workgroup> tile_b: array<f32, 1024>;
 
 @compute @workgroup_size(64)
 fn main(@builtin(local_invocation_id) lid: vec3<u32>, @builtin(workgroup_id) wid: vec3<u32>) {
@@ -28,23 +27,28 @@ fn main(@builtin(local_invocation_id) lid: vec3<u32>, @builtin(workgroup_id) wid
             for (var slot = lid.x; slot < 1024u; slot += 64u) {
                 let local_row = slot / TILE;
                 let local_col = slot % TILE;
-                let padded_slot = local_row * TILE_STRIDE + local_col;
                 let a_row = tile_row + local_row;
                 let a_col = kt * TILE + local_col;
                 let b_row = kt * TILE + local_row;
                 let b_col = tile_col + local_col;
-                tile_a[padded_slot] = select(0.0, a[a_row * params.inner + a_col], a_row < params.rows && a_col < params.inner);
-                tile_b[padded_slot] = select(0.0, b[b_row * params.columns + b_col], b_row < params.inner && b_col < params.columns);
+                tile_a[slot] = 0.0;
+                tile_b[slot] = 0.0;
+                if (a_row < params.rows && a_col < params.inner) {
+                    tile_a[slot] = a[a_row * params.inner + a_col];
+                }
+                if (b_row < params.inner && b_col < params.columns) {
+                    tile_b[slot] = b[b_row * params.columns + b_col];
+                }
             }
             workgroupBarrier();
             for (var k = 0u; k < TILE; k++) {
                 let av = vec4<f32>(
-                    tile_a[lane_row * TILE_STRIDE + k], tile_a[(lane_row + 1u) * TILE_STRIDE + k],
-                    tile_a[(lane_row + 2u) * TILE_STRIDE + k], tile_a[(lane_row + 3u) * TILE_STRIDE + k]
+                    tile_a[lane_row * TILE + k], tile_a[(lane_row + 1u) * TILE + k],
+                    tile_a[(lane_row + 2u) * TILE + k], tile_a[(lane_row + 3u) * TILE + k]
                 );
                 let bv = vec4<f32>(
-                    tile_b[k * TILE_STRIDE + lane_col], tile_b[k * TILE_STRIDE + lane_col + 1u],
-                    tile_b[k * TILE_STRIDE + lane_col + 2u], tile_b[k * TILE_STRIDE + lane_col + 3u]
+                    tile_b[k * TILE + lane_col], tile_b[k * TILE + lane_col + 1u],
+                    tile_b[k * TILE + lane_col + 2u], tile_b[k * TILE + lane_col + 3u]
                 );
                 sums[0] = fma(av.xxxx, bv, sums[0]);
                 sums[1] = fma(av.yyyy, bv, sums[1]);

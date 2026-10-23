@@ -63,6 +63,18 @@ fn closure_and_backtracking_segment_proofs_have_distinct_outcomes() {
             .outcome(),
         Outcome::InjectivityUnproven
     );
+    // A genuinely folded edge cannot receive the new multispan monotonicity proof.
+    c[0] = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![6., 0.], vec![-2., 0.], vec![4., 0.]],
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        trim_simplicity::inspect(&c, 1e-6, 6, 4096)
+            .unwrap()
+            .outcome(),
+        Outcome::InjectivityUnproven
+    );
     assert!(trim_simplicity::inspect(&c, 0., 6, 4096).is_err());
     assert!(trim_simplicity::inspect(&c, 1e-6, 0, 4096).is_err());
 }

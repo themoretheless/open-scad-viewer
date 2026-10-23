@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-16",
+  "scope": "Original ZA source-complete affine slab clipping, stored UV isotopy and axial error band",
+  "focused_tests_passed": 26,
+  "failed_summaries": 0,
+  "wasm_check": "passed",
+  "source_sha256": {
+    "crates/nurbs-core/src/construct/curves/thread.rs": "7190add945fe35d3531e6a767a4ccb36345ded9f0af09ea0c8851f3fab7c06b2",
+    "crates/nurbs-core/src/construct/curves/thread/coverage.rs": "549865f951c43694e5af73c4aba4f55c4ebaf851e2e44ff2861960b0e9d7ec6c",
+    "crates/nurbs-core/src/construct/curves/worm.rs": "b019e21319cdf50296fa8ff4c9fac620f124f14ec3462b03df8b272616672f0f",
+    "crates/nurbs-core/tests/worm_trim.rs": "8dcd4627a24aa1af4f4e5ecc6113b64fad0dfbc2f93faaf5ed594dffda007000"
+  },
+  "unqualified": [
+    "Exact actual surface/plane intersection",
+    "Combined ideal finite-body Hausdorff bound"
+  ]
+}

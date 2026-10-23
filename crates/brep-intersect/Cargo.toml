@@ -1,0 +1,19 @@
+[package]
+name = "brep-intersect"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["codec"]
+codec = []
+
+[dependencies]
+brep-core = { workspace = true, features = ["codec"] }
+nurbs-intersect = { workspace = true, features = ["codec"] }
+nurbs-core = { workspace = true, features = ["transport"] }
+value-codec = { workspace = true }
+
+[dev-dependencies]
+brep-topology = { workspace = true, features = ["codec"] }

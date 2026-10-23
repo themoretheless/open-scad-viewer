@@ -105,8 +105,10 @@ pub use crate::construct::surfaces::extrusion_patches;
 pub use crate::construct::curves::hermite;
 pub use crate::construct::surfaces::hermite_patch;
 pub use crate::construct::surfaces::loft::natural_loft;
+#[cfg(feature = "codec")]
 pub use crate::construct::surfaces::loft::guided_loft;
 pub use crate::construct::surfaces::loft::continuity as loft_continuity;
+#[cfg(feature = "codec")]
 pub use crate::construct::surfaces::loft::alignment as loft_alignment;
 pub use crate::construct::curves::natural_spline;
 pub use crate::construct::surfaces::patches;
@@ -225,22 +227,82 @@ pub use numerics::obb_tree;
 pub use numerics::normal_cone;
 pub use numerics::bezier_extraction;
 
-pub use crate::analysis::surface_occlusion;
+pub mod uv_curve_crossings;
 
-pub use crate::construct::surfaces::wave_surface;
+pub mod surface_quotient_injectivity;
 
-pub use crate::trim::periodic_trim;
+pub mod normal_alignment;
 
-pub use crate::construct::surfaces::superellipsoid;
+pub mod curve_surface_plane;
 
-pub use crate::construct::surfaces::optical_shapes;
+pub mod curve_surface_affine;
 
-pub use crate::construct::surfaces::wing_loft;
+pub mod planar_area;
 
-pub use crate::construct::surfaces::profile_spring;
+#[cfg(feature = "codec")]
+pub mod loft_reparameterization;
 
-pub use crate::construct::curves::radial_cam;
+mod sweep_support;
 
+pub mod retained_wall_domain;
+
+pub mod sweep_seam_set;
+
+pub mod sweep_section_correction;
+
+pub mod trimmed_offset_contact;
+
+pub mod offset_source_boundary;
+
+pub mod offset_contact_tangent;
+
+pub mod offset_envelope;
+
+pub mod offset_envelope_fit;
+
+pub mod offset_contact_pcurve;
+
+pub mod offset_contact_trims;
+
+pub mod offset_face_loops;
+
+pub mod offset_patch_boundary;
+
+pub mod curve_partition_agreement;
+
+pub mod boundary_partition;
+
+pub mod contact_normal_agreement;
+
+pub mod offset_contact_predictor;
+
+pub mod offset_contact_path;
+
+pub mod curve_axis_driver;
+
+pub mod offset_path_trims;
+
+pub mod offset_path_pcurves;
+
+pub mod curve_surface_lift;
+
+pub mod curve_point_identity;
+
+pub mod surface_flux;
+
+pub mod moving_radius;
+
+pub mod moving_envelope;
+
+pub mod surface_projection_jacobian;
+
+pub mod curve_quadratic_separator;
+
+pub mod surface_projected_jordan;
+
+pub mod surface_self_chord;
+
+pub mod surface_self_chord_coverage;
 pub use crate::join::surface_blend;
 pub use crate::join::radius_transition;
 #[path = "join/corner_blend.rs"]
@@ -263,3 +325,12 @@ pub mod surface_g1_pcurves;
 pub mod surface_coordinate_flow;
 
 pub use crate::construct::surfaces::worm_wheel;
+
+pub use crate::analysis::surface_occlusion;
+pub use crate::construct::surfaces::wave_surface;
+pub use crate::trim::periodic_trim;
+pub use crate::construct::surfaces::superellipsoid;
+pub use crate::construct::surfaces::optical_shapes;
+pub use crate::construct::surfaces::wing_loft;
+pub use crate::construct::surfaces::profile_spring;
+pub use crate::construct::curves::radial_cam;

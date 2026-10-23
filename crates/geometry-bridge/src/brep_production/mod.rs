@@ -20,9 +20,7 @@
 use super::{Result, Value};
 use std::collections::{HashMap, HashSet};
 
-fn invalid(message: &str) -> super::Error {
-    super::Error::new("BREP_SEMANTIC_CONTRACT", message)
-}
+use crate::semantic_contract_error as invalid;
 
 /// SEMANTIC_PROGRAM_LIMITS.snapshotValues bounds the expanded frontier proof.
 const SNAPSHOT_VALUES_LIMIT: usize = 1_000_000;

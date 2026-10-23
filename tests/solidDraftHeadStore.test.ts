@@ -2,6 +2,25 @@ import {it,expect,vi,afterEach} from 'vitest'
 import {IDBFactory} from 'fake-indexeddb'
 import {readSolidDraftHead,writeSolidDraftHead} from '../src/services/solidDraftHeadStore'
 afterEach(()=>vi.unstubAllGlobals())
+it('aborts a draft superseded while its put request is pending',async()=>{
+ vi.stubGlobal('indexedDB',new IDBFactory())
+ const initial=await writeSolidDraftHead('model',null,'retained')
+ const request=indexedDB.open('scad-solid-draft-heads-v1')
+ const db=await new Promise<IDBDatabase>((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
+ const prototype=Object.getPrototypeOf(db.transaction('heads','readonly').objectStore('heads'))
+ const original=prototype.put
+ let current=true
+ const spy=vi.spyOn(prototype,'put').mockImplementation(function(this:IDBObjectStore,...args:any[]){
+  const result=original.apply(this,args)
+  queueMicrotask(()=>{current=false})
+  return result
+ })
+ try{
+  await expect(writeSolidDraftHead('model',initial.revision,'obsolete',()=>current)).rejects.toThrow('DRAFT_SUPERSEDED')
+  expect(await readSolidDraftHead('model')).toEqual(initial)
+ }finally{spy.mockRestore();db.close()}
+ expect((await writeSolidDraftHead('model',initial.revision,'latest')).text).toBe('latest')
+})
 it('atomically publishes one revision and rejects a competing writer without replacing geometry',async()=>{
  vi.stubGlobal('indexedDB',new IDBFactory())
  expect(await readSolidDraftHead('model')).toBeNull()

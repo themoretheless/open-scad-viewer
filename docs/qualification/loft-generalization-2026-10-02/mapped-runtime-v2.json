@@ -1,0 +1,93 @@
+{
+  "id": "loft-mapped-original-tensor-runtime-v2",
+  "recordedAt": "2026-10-02",
+  "scope": "Finite mapped/tangent/nonplanar-cap loft scenarios. No global sweep E/R/I/J, G0 or G1 qualification claim.",
+  "sourceQualification": "docs/qualification/own-rust-cad-v29.json",
+  "artifactsAndEvidence": [
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "sha256": "3e1ce8e993ff2a5c62d6728bc570c16f28833390e1dedfef42df4e79f2f73280",
+      "byteLength": 9846250
+    },
+    {
+      "path": "public/wasm/language-kernel.wasm",
+      "sha256": "12d36944fc05e4943ebe3adf334ea2821ec54df640d6d1f3a045a6952a7a4878",
+      "byteLength": 1884206
+    },
+    {
+      "path": "src/App.vue",
+      "sha256": "5264e7b343dfeeb6dd80d2f9c04f11bcdadb19c47d5211a5fca3589789bd2159",
+      "byteLength": 197540
+    },
+    {
+      "path": "src/services/solid/exactSolidRuntime.ts",
+      "sha256": "75d8ec488c9c9ad8f8fdb1f8dae9b5ad5859947a98a7c613c2c623dc185fe807",
+      "byteLength": 1884
+    },
+    {
+      "path": "scripts/check-loft-generalization-browser.mjs",
+      "sha256": "86b5ea7fe31c8f39be5d5d29c9a8f56e18c8bb3ee2c5b5988329a45335aef87e",
+      "byteLength": 8935
+    },
+    {
+      "path": "scripts/export-loft-generalization-step.mts",
+      "sha256": "fd9ebf16e0e86ddd62209ddf23d1346bec6bf7cedb2770ae0f50816620443058",
+      "byteLength": 4940
+    },
+    {
+      "path": "scripts/verify-loft-generalization-step.py",
+      "sha256": "6ad66c2a2dc8bbfbf4b231cabc587d09020c1a127ffee291458b8c6f8c568414",
+      "byteLength": 3179
+    },
+    {
+      "path": "docs/qualification/loft-generalization-2026-10-02/browser/matrix.json",
+      "sha256": "0eaa26798ade850a4f5c2aff3f92338b68410792f7f5bb635c71f4464682ae02",
+      "byteLength": 12948
+    },
+    {
+      "path": "docs/qualification/loft-generalization-2026-10-02/step/wasm-rush-round-trip.json",
+      "sha256": "309ea18f54038dfdc2802334e91d477c424d32d028d4ba20a9f743e5dc34438d",
+      "byteLength": 244423
+    },
+    {
+      "path": "docs/qualification/loft-generalization-2026-10-02/step/opencascade-matrix.json",
+      "sha256": "d9ecbc4a483dc7ae1babe2b40df0baa06e7c7f2ee4e2e54a1754fab17af1cbb3",
+      "byteLength": 1929
+    }
+  ],
+  "browser": {
+    "viewports": [
+      1440,
+      600
+    ],
+    "passed": true,
+    "cancellation": "Explicitly held dispatch; no mid-kernel cancellation latency claim",
+    "renderer": "Headless CPU fallback"
+  },
+  "step": {
+    "cases": 6,
+    "independentParser": "OpenCascade/cadquery-ocp",
+    "nonplanarCapVolume": 1.0
+  },
+  "checks": {
+    "rustWorkspace": {
+      "passed": 2946,
+      "ignored": 5,
+      "suites": 207
+    },
+    "typescriptAndMcp": "passed",
+    "fullFrontend": {
+      "node": "22.23.3",
+      "filesPassed": 438,
+      "filesSkipped": 4,
+      "testsPassed": 4324,
+      "testsSkipped": 9,
+      "earlierNode26Attempt": "One MCP burst timeout; separate MCP repeat and full Node22 repeat passed"
+    },
+    "clippy": "CI targets passed"
+  },
+  "publication": {
+    "pushed": false,
+    "newCi": "not started"
+  }
+}

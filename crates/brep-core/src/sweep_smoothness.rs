@@ -85,20 +85,11 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
         .filter(|&v| v)
         .map(|_| label)
 }
-fn inspect_owned_seams(patches:&[Surface],seams:&[ProjectiveSeam],max_work:u64)->Result<ProjectiveSeamCollectionReport> {
-    // Sharp joins invalidate the whole-axis claim, but cannot hide later
-    // applicable profile or station joins. Preserve the shared work ceiling.
-    continuity::inspect_projective_seam_collection_with_rational_scale_proposals(patches,seams,max_work)
-}
-pub fn inspect_axis(model:&Model,cap_faces:&[usize],axis:Axis,max_work:u64)->Result<AxisReport> {
-    inspect_axis_impl(model,cap_faces,axis,max_work,false)
-}
-fn inspect_axis_impl(
+pub fn inspect_axis(
     model: &Model,
     cap_faces: &[usize],
     axis: Axis,
     max_work: u64,
-    defer_profile: bool,
 ) -> Result<AxisReport> {
     require(
         max_work <= 2000000
@@ -200,12 +191,9 @@ fn inspect_axis_impl(
         .map(|f| f.surface.clone())
         .collect::<Vec<_>>();
     let extraction_complete = unclassified_faces.is_empty() && unpaired_edges.is_empty();
-    let inspect=|seams:&[ProjectiveSeam],budget| {
-        if defer_profile && axis==Axis::Profile {
-            continuity::inspect_projective_seam_collection_until_refused(&patches,seams,budget)
-        } else {inspect_owned_seams(&patches,seams,budget)}
-    };
-    let mut g2 = inspect(&seams,max_work)?;
+    let mut g2 = continuity::inspect_projective_seam_collection_until_refused(
+        &patches, &seams, max_work,
+    )?;
     if !extraction_complete {
         g2.certified = false;
         g2.certified_order = None;
@@ -218,7 +206,11 @@ fn inspect_axis_impl(
             seam.order = 1;
         }
         let mut proof =
-            inspect(&seams,max_work-exact_work)?;
+            continuity::inspect_projective_seam_collection_until_refused(
+                &patches,
+                &seams,
+                max_work - exact_work,
+            )?;
         if !extraction_complete {
             proof.certified = false;
             proof.certified_order = None;
@@ -243,87 +235,14 @@ fn inspect_axis_impl(
         g2_certified,
     })
 }
-/// Continue only skipped owned profile seams using unspent shared work.
-/// Previously proved prefix/station results are never replayed or discarded.
-fn finish_deferred_profile(model:&Model,caps:&[usize],profile:&mut AxisReport,max_work:u64)->Result<()> {
-    let deferred=|r:&ProjectiveSeamCollectionReport|r.seams.iter().any(|s|s.reason=="seam-audit-skipped-after-refusal");
-    if !deferred(&profile.g2) && !profile.g1.as_ref().is_some_and(deferred) {return Ok(());}
-    let patches=model.faces.iter().map(|f|f.surface.clone()).collect::<Vec<_>>();
-    let mut owned=vec![Vec::new();model.edges.len()];
-    for (face,f) in model.faces.iter().enumerate() {
-        if caps.contains(&face) {continue;}
-        for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
-            for c in &model.loops[wire].coedges {
-                require(c.edge<owned.len(),"Invalid deferred profile owner edge")?;
-                if let Some(label)=boundary(&f.surface,&c.pcurve,Axis::Profile) {owned[c.edge].push((face,label));}
-            }
-        }
-    }
-    let declarations=|indices:&[usize],order|->Result<Vec<ProjectiveSeam>> {
-        indices.iter().map(|&i| {
-            let uses=&owned[profile.edge_ids[i]];
-            require(uses.len()==2,"Deferred profile seam lost native ownership")?;
-            Ok(ProjectiveSeam {patches:[uses[0].0,uses[1].0],
-                boundaries:[uses[0].1.into(),uses[1].1.into()],order,normal_scale:1.})
-        }).collect()
-    };
-    let skipped=|r:&ProjectiveSeamCollectionReport|r.seams.iter().enumerate()
-        .filter(|(_,s)|s.reason=="seam-audit-skipped-after-refusal").map(|(i,_)|i).collect::<Vec<_>>();
-    let mut spent=0;
-    let indices=skipped(&profile.g2);
-    if !indices.is_empty() {
-        let seams=declarations(&indices,2)?;
-        let proof=inspect_owned_seams(&patches,&seams,max_work)?;
-        spent+=proof.exact_work;profile.g2.exact_work+=proof.exact_work;
-        for (i,proof) in indices.into_iter().zip(proof.seams) {profile.g2.seams[i]=proof;}
-    }
-    if let Some(g1)=&mut profile.g1 {
-        let mut indices=skipped(g1);
-        // An already owned G2 proof implies G1 without spending proof work twice.
-        indices.retain(|&i| {
-            let g2=&profile.g2.seams[i];
-            if g2.certified {
-                g1.seams[i]=continuity::ExactStripJetReport {certified:true,exact_identity:g2.exact_identity,
-                    regularity_certified:g2.regularity_certified,work:0,reason:"g1-implied-by-owned-g2"};
-                false
-            } else {true}
-        });
-        if !indices.is_empty() {
-            let seams=declarations(&indices,1)?;
-            let proof=inspect_owned_seams(&patches,&seams,max_work-spent)?;
-            spent+=proof.exact_work;g1.exact_work+=proof.exact_work;
-            for (i,proof) in indices.into_iter().zip(proof.seams) {g1.seams[i]=proof;}
-        }
-    }
-    require(spent<=max_work,"Deferred profile exceeded native shared work")?;
-    profile.exact_work+=spent;
-    let refresh=|r:&mut ProjectiveSeamCollectionReport,order| {
-        r.unresolved_seams=r.seams.iter().enumerate().filter(|(_,s)|!s.certified).map(|(i,_)|i).collect();
-        r.certified=profile.extraction_complete && !r.seams.is_empty() && r.unresolved_seams.is_empty();
-        r.certified_order=r.certified.then_some(order);
-    };
-    refresh(&mut profile.g2,2);
-    if let Some(g1)=&mut profile.g1 {refresh(g1,1);}
-    profile.g2_certified=profile.g2.certified;
-    profile.g1_certified=profile.extraction_complete && (profile.g2_certified||profile.g1.as_ref().is_some_and(|r|r.certified));
-    Ok(())
-}
-
 pub fn inspect_profile(model: &Model, cap_faces: &[usize], max_work: u64) -> Result<ProfileReport> {
-    // Preserve the existing successful profile prefix and station proof first.
-    // Only unused caller work is then spent on deferred profile seams.
-    let mut profile = inspect_axis_impl(model, cap_faces, Axis::Profile, max_work, true)?;
-    let mut station = inspect_axis(
+    let profile = inspect_axis(model, cap_faces, Axis::Profile, max_work)?;
+    let station = inspect_axis(
         model,
         cap_faces,
         Axis::Station,
         max_work - profile.exact_work,
     )?;
-    let remaining=max_work-profile.exact_work-station.exact_work;
-    finish_deferred_profile(model,cap_faces,&mut profile,remaining)?;
-    // Publish disjoint budgets after deferred profile work consumes its share.
-    // The station proof remains valid within this final envelope.
-    station.max_work = max_work - profile.exact_work;
     let total_exact_work = profile.exact_work + station.exact_work;
     let station_continuity = if station.g2_certified {
         "G2"
@@ -343,74 +262,7 @@ pub fn inspect_profile(model: &Model, cap_faces: &[usize], max_work: u64) -> Res
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn a_sharp_first_station_does_not_hide_later_smooth_station_joins() {
-        let shifts=[[0.,0.,0.],[1.,0.,1.],[1.,0.,2.],[1.,0.,4.]];
-        let corners=[[0.,0.],[1.,0.],[1.,1.],[0.,1.],[0.,0.]];
-        let sections=shifts.iter().map(|p|vec![corners.windows(2).map(|v|
-            nurbs_core::primitives::line([v[0][0]+p[0],v[0][1],p[2]],[v[1][0]+p[0],v[1][1],p[2]]).unwrap()
-        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();let before=model.clone();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let report=inspect_axis(&model,&caps,Axis::Station,2000000).unwrap();
-        assert!(report.extraction_complete);assert!(!report.g2_certified);
-        assert_eq!(report.g2.seams.len(),8);
-        assert_eq!(report.g2.seams.iter().filter(|s|s.certified).count(),4);
-        assert!(report.exact_work<=2000000);assert_eq!(model,before);
-        let denied=inspect_axis(&model,&caps,Axis::Station,0).unwrap();
-        assert!(!denied.g2_certified);assert_eq!(denied.exact_work,0);
-        assert!(denied.g2.seams.iter().all(|s|!s.certified));
-    }
-
     use super::*;
-    #[test]
-    fn a_sharp_first_profile_does_not_hide_later_smooth_profile_joins() {
-        let corners=[[0.,0.],[1.,0.],[1.,1.],[1.,2.],[0.,2.],[0.,0.]];
-        let sections=[0.,1.].into_iter().map(|z|vec![corners.windows(2).map(|p|
-            nurbs_core::primitives::line([p[0][0],p[0][1],z],[p[1][0],p[1][1],z]).unwrap()
-        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();let before=model.clone();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let report=inspect_axis(&model,&caps,Axis::Profile,2_000_000).unwrap();
-        assert!(report.extraction_complete);assert!(!report.g2_certified);assert!(!report.g1_certified);
-        assert_eq!(report.g2.seams.len(),5);assert!(!report.g2.seams[0].certified);
-        assert_eq!(report.g2.seams.iter().filter(|s|s.certified).count(),1);
-        assert!(report.g2.seams.iter().all(|s|s.reason!="seam-audit-skipped-after-refusal"));
-        assert!(report.g1.as_ref().unwrap().seams.iter().any(|s|s.certified));
-        assert!(report.exact_work<=2_000_000);assert_eq!(model,before);
-        let combined=inspect_profile(&model,&caps,2_000_000).unwrap();
-        assert_eq!(combined.profile.g2.seams.iter().filter(|s|s.certified).count(),1);
-        assert!(combined.profile.g2.seams.iter().all(|s|s.reason!="seam-audit-skipped-after-refusal"));
-        assert!(combined.total_exact_work<=2_000_000);assert_eq!(model,before);
-        let denied=inspect_axis(&model,&caps,Axis::Profile,0).unwrap();
-        assert!(!denied.g2_certified);assert_eq!(denied.exact_work,0);
-        assert!(denied.g2.seams.iter().all(|s|!s.certified));
-    }
-
-    #[test]
-    fn deferred_profile_completion_preserves_positive_prefix_and_station_proofs() {
-        let corners=[[0.,0.],[1.,0.],[2.,0.],[2.,1.],[2.,2.],[0.,2.],[0.,0.]];
-        let sections=[0.,1.,3.].into_iter().map(|z|vec![corners.windows(2).map(|p|
-            nurbs_core::primitives::line([p[0][0],p[0][1],z],[p[1][0],p[1][1],z]).unwrap()
-        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();let before=model.clone();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let prefix=inspect_axis_impl(&model,&caps,Axis::Profile,2_000_000,true).unwrap();
-        assert!(prefix.g2.seams.iter().any(|s|s.certified));
-        assert!(prefix.g2.seams.iter().any(|s|s.reason=="seam-audit-skipped-after-refusal"));
-        let report=inspect_profile(&model,&caps,2_000_000).unwrap();
-        assert!(!report.profile.g2_certified && report.station.g2_certified);
-        assert_eq!(report.profile.g2.seams.iter().filter(|s|s.certified).count(),4);
-        assert!(report.profile.g2.seams.iter().all(|s|s.reason!="seam-audit-skipped-after-refusal"));
-        for (old,new) in prefix.g2.seams.iter().zip(&report.profile.g2.seams) {
-            if old.certified {assert!(new.certified);assert_eq!(new.work,old.work);assert_eq!(new.reason,old.reason);}
-        }
-        assert_eq!(report.profile.exact_work,report.profile.g2.exact_work+report.profile.g1.as_ref().map_or(0,|r|r.exact_work));
-        assert_eq!(report.total_exact_work,report.profile.exact_work+report.station.exact_work);
-        assert_eq!(report.station.max_work,2_000_000-report.profile.exact_work);
-        assert!(report.station.exact_work<=report.station.max_work);
-        assert!(report.total_exact_work<=2_000_000);assert_eq!(model,before);
-    }
     #[test]
     fn unequal_profile_strip_speeds_prove_only_the_actual_smooth_seam() {
         let corners=[[0.,0.],[1.,0.],[3.,0.],[3.,1.],[0.,1.],[0.,0.]];
@@ -487,20 +339,11 @@ mod tests {
         assert!(!combined.profile.g1_certified&&!combined.profile.g2_certified);
         assert!(combined.station.g2_certified,"combined work={}",combined.total_exact_work);
         assert_eq!(combined.station_continuity,"G2");
-        assert_eq!(combined.station.max_work,2_000_000-combined.profile.exact_work);
-        assert!(combined.station.exact_work<=combined.station.max_work);
         assert!(combined.total_exact_work<=2000000);
         assert_eq!(combined.profile.g2.seams.len(),combined.profile.edge_ids.len());
         assert_eq!(combined.profile.g2.unresolved_seams.len(),combined.profile.edge_ids.len());
-        assert!(combined.profile.g2.seams.iter().skip(1).all(|s| !s.certified && !s.exact_identity));
-        assert!(combined.profile.g2.seams.iter().all(|s|s.reason!="seam-audit-skipped-after-refusal"));
-        // Deferred negative profile checks are optional extra work. The
-        // minimum station control is the original prefix plus station proof,
-        // not the total after spending spare work on the deferred profile.
-        let prefix=inspect_axis_impl(&model,&caps,Axis::Profile,2_000_000,true).unwrap();
-        let required=prefix.exact_work+isolated.exact_work;
-        assert!(required<=combined.total_exact_work);
-        let short=inspect_profile(&model,&caps,required-1).unwrap();
+        assert!(combined.profile.g2.seams.iter().skip(1).all(|s| !s.certified && !s.exact_identity && s.work==0));
+        let short=inspect_profile(&model,&caps,combined.total_exact_work-1).unwrap();
         assert!(!short.station.g2_certified);
         assert!(short.total_exact_work<=combined.total_exact_work-1);
         eprintln!("sharp-profile independent station G2 work={} combined profile={} total={}",isolated.exact_work,combined.profile.exact_work,combined.total_exact_work);

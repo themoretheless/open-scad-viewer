@@ -1,0 +1,18 @@
+{
+  "allFacesInjective": true,
+  "allPairsClassified": false,
+  "boundaryEmbeddingCertified": false,
+  "nesting": null,
+  "nextPair": null,
+  "orientationCells": 0,
+  "orientationDomainCells": 0,
+  "orientations": [
+    {
+      "attempts": 0,
+      "expectedOutward": true,
+      "outward": null,
+      "shell": 0
+    }
+  ],
+  "solidGeometryCertified": false
+}

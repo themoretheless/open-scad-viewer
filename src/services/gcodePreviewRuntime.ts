@@ -31,6 +31,7 @@ function executeJob(id: number, job: GcodePreviewJob): GcodePreviewResponse {
         native: inspected.native,
         generator: inspected.generator,
         flavor: inspected.flavor,
+        firmware: inspected.firmware,
       },
     }
   }

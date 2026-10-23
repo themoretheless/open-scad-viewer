@@ -48,8 +48,7 @@ pub fn inspect(model:&Model,endpoints:&[Vec<Vec<Curve>>;2],budgets:Budgets,max_e
         }
         let audit=sweep_cap_contacts::inspect(model,faces[endpoint],&faces,Budgets {max_exact_work:budgets.max_exact_work-out.exact_work,..budgets})?;
         out.exact_work+=audit.exact_work;
-        if !audit.cap_certified {out.reason=audit.reason.unwrap_or("cap-region-unproved");return Ok(out);}
-        if !audit.planar_control_hull_certified {out.reason="cap-plane-unproved";return Ok(out);}
+        if !audit.cap_certified || !audit.planar_control_hull_certified {out.reason="cap-region-unproved";return Ok(out);}
     }
     out.exact=true;out.reason="exact-planar-regions";Ok(out)
 }

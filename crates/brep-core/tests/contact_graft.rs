@@ -4,7 +4,7 @@ mod fixture;
 mod curved_fixture;
 use brep_core::contact_graft;
 #[test]
-fn variable_curved_body_fits_only_end_boundaries_then_admits_the_actual_closed_model() {
+fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership() {
     let f=curved_fixture::build().unwrap();let before=(f.source.clone(),f.patch.clone());
     let fitted=contact_graft::fit_boundaries_with_charts(&f.source,&f.patch,&f.mapping,&f.keeps,&f.source_pcurves,1e-8,100000,1000000).unwrap();
     assert_eq!(fitted.adjustments.iter().map(|a|a.edge).collect::<Vec<_>>(),vec![0,2]);
@@ -16,47 +16,14 @@ fn variable_curved_body_fits_only_end_boundaries_then_admits_the_actual_closed_m
         assert_eq!(*e.curve.control_points.last().unwrap(),fitted.model.vertices[e.vertices[1]].point);
     }
     let targets=contact_graft::plan_targets(&f.source,&fitted.model,&f.mapping,&f.keeps).unwrap();
-    let out=contact_graft::attach_with_charts(&f.source,&fitted.model,&f.mapping,&targets,&fitted.source_pcurves,1e-8,100000-fitted.cells,1000000-fitted.exact_work).unwrap();
-    assert_eq!(out.closure.closure.status,brep_core::watertight::Closure::WithinTolerance);
-    assert!(out.trims.all_valid);
-    assert_eq!((out.model.faces.len(),out.model.edges.len(),out.model.vertices.len()),(9,21,14));
-    assert!(out.model.shells.iter().all(|s|s.closed));
-    assert!(out.cells+fitted.cells<=100000&&out.exact_work+fitted.exact_work<=1000000);
-    let saved=curved_fixture::inspect_saved(&f,&out,out.cells+fitted.cells,out.exact_work+fitted.exact_work).unwrap();
-    for proof in &saved.seams {
-        assert!(proof.positions.proven);
-        assert_eq!(proof.geometric.decision,nurbs_core::surface_join::Decision::WithinTolerance,"{:?}",proof.geometric);
-    }
-    assert_eq!(saved.radius.decision,brep_core::fillet_radius::Decision::WithinTolerance,"{}",saved.radius.reason);
-    assert!(saved.cells<=100000&&saved.exact_work<=1000000);
-    // Closure and longitudinal G2 must not hide the actual sharp end seams.
-    let ends=brep_core::sweep_smoothness::geometric::inspect_edges(
-        &out.model,&[out.patch_edges[0],out.patch_edges[2]],
-        brep_core::sweep_smoothness::geometric::Tolerances {
-            position:f.source.tolerance_mm,normal:1e-5,curvature:1e-4,
-        },100000-saved.cells,
-    ).unwrap();
-    assert!(ends.complete && !ends.within_tolerance);
-    assert_eq!(ends.seams.len(),2);
-    for seam in &ends.seams {
-        assert!(seam.positions.as_ref().unwrap().proven);
-        let proof=seam.inspection.as_ref().unwrap();
-        assert_eq!(proof.decision,nurbs_core::surface_join::Decision::CorrespondenceExceedsTolerance);
-        assert!(proof.branches.iter().all(|b|b.normal_lower>1e-5));
-    }
-    assert!(saved.cells+ends.cells<=100000);
-    for (original,saved) in f.source.faces.iter().zip(&out.model.faces) {assert_eq!(original.surface,saved.surface);}
-    let mut wrong=fitted.source_pcurves.clone();wrong[0].as_mut().unwrap().control_points[2][1]+=0.1;
-    assert!(contact_graft::attach_with_charts(&f.source,&fitted.model,&f.mapping,&targets,&wrong,1e-8,100000,1000000).is_err());
-    assert!(contact_graft::fit_boundaries_with_charts(&f.source,&f.patch,&f.mapping,&f.keeps,&f.source_pcurves,1e-8,0,0).is_err());
-    assert_eq!((f.source.clone(),f.patch.clone()),before);
-    #[cfg(feature="codec")]
-    {
-        let reloaded:brep_core::Model=value_codec::from_str(&value_codec::to_string(&out.model).unwrap()).unwrap();
-        assert_eq!(reloaded,out.model);
-        let proof=brep_core::watertight::inspect_with_exact(&reloaded,100000,1000000).unwrap();
-        assert_eq!(proof.closure.status,brep_core::watertight::Closure::WithinTolerance);
-    }
+    // This binding/end fixture is not a solid-graft authorization. Its
+    // original cap crossing has an independent exact conic regression in
+    // cad-predicates::tiny_finite_cap_crossing_is_not_admitted_and_bounded_inward_proposal_is_separated.
+    let error=contact_graft::attach_with_charts(&f.source,&fitted.model,&f.mapping,&targets,&fitted.source_pcurves,
+        1e-8,100000-fitted.cells,1000000-fitted.exact_work).err().expect("Incomplete original cap membership must refuse");
+    assert_eq!(error.code,"BREP_CONTACT_GRAFT_UNPROVEN");
+    assert!(error.message.contains("membership")||error.message.contains("census"));
+    assert_eq!((f.source,f.patch),before);
 }
 #[test]
 fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body() {

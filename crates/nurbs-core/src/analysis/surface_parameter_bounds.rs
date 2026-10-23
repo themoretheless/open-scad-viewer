@@ -47,15 +47,8 @@ pub fn inspect(surface: &Surface, max_rectangles: usize) -> Result<Bounds> {
                 [surface.knots_v[j], surface.knots_v[j + 1]],
             ];
             let jet = jets::calculate_partial_stable(surface, [i, j], domain, [None; 2])?;
-            // Stable jets differentiate the original span's unit coordinates.
-            // Convert back to authored u/v before publishing Lipschitz bounds.
-            for (axis, derivative) in [jet[1][0], jet[0][1]].iter().enumerate() {
-                let width =
-                    Interval::point(domain[axis][1]).sub(Interval::point(domain[axis][0]))?;
-                let local = box_distance(derivative, &[Interval::point(0.); 3])?.1;
-                let authored = Interval::point(local).div(width)?.hi;
-                upper[axis] = upper[axis].max(authored);
-            }
+            upper[0] = upper[0].max(box_distance(&jet[1][0], &[Interval::point(0.); 3])?.1);
+            upper[1] = upper[1].max(box_distance(&jet[0][1], &[Interval::point(0.); 3])?.1);
         }
     }
     Ok(Bounds {

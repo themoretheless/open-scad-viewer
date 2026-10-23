@@ -13,7 +13,7 @@ export function optimizeWasm(file, {nativePath = process.env.OSV_WASM_OPT_NATIVE
   const driver = optimizerDriver(nativePath)
   const input = readFileSync(file)
   const flags = ['-Oz', '--enable-bulk-memory', '--enable-sign-ext', '--enable-nontrapping-float-to-int',
-    '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue', '--enable-simd']
+    '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue']
   return cachedWasmOptimization({ input, tool: readFileSync(driver.path), flags,
     cacheDir: join(dirname(file), '.osv-wasm-opt-cache'), optimize: () => optimizeSnapshot(input, flags, driver) })
 }

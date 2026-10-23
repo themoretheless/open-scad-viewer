@@ -6,6 +6,7 @@ use crate::{
     foundation::guards::Budget,
     surface::Surface,
     surface_contact::{self, Witness},
+    surface_distance::rectangle_bounds,
 };
 use std::collections::VecDeque;
 
@@ -18,6 +19,53 @@ pub struct Report {
     /// Empty only after all parameter pairs have been excluded.
     pub unresolved: Vec<Cell>,
     pub absence_proven: bool,
+}
+/// Conservative complete-rectangle classification. Implementations must return
+/// Outside only when the entire rectangle misses their original material domain,
+/// and Inside only when it lies wholly inside. Search authority is conditional
+/// on this contract; source B-rep adapters use freshly qualified original loops.
+pub trait DomainClassifier {
+    fn classify_domain(
+        &self,
+        rectangle: [[f64; 2]; 2],
+        max_cells: usize,
+    ) -> Result<DomainClassification>;
+}
+pub struct DomainClassification {
+    pub location: crate::trim_domain::Location,
+    pub cells: usize,
+}
+impl DomainClassifier for crate::trim_domain::TrimDomain {
+    fn classify_domain(
+        &self,
+        rectangle: [[f64; 2]; 2],
+        max_cells: usize,
+    ) -> Result<DomainClassification> {
+        let r = self.classify(rectangle, max_cells)?;
+        Ok(DomainClassification {
+            location: r.location,
+            cells: r.cells,
+        })
+    }
+}
+/// Original-source classifiers can retain root-valued boundaries without
+/// manufacturing trimmed curves. Only complete classifications prune or admit.
+pub fn search_domains(
+    a: &Surface,
+    b: &Surface,
+    domains: [&dyn DomainClassifier; 2],
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<Report> {
+    check(
+        !(a.periodic_u || a.periodic_v || b.periodic_u || b.periodic_v),
+        "Periodic source domains require branch-aware classification",
+    )?;
+    check(
+        (1..=1_000_000).contains(&max_domain_cells),
+        "Bound original domain classification work",
+    )?;
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
 }
 fn natural(s: &Surface) -> [[f64; 2]; 2] {
     [
@@ -48,7 +96,7 @@ pub fn search_trimmed(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(a, b, max_cells, Some(domains), max_domain_cells, false)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
 }
 /// Sweep admission additionally prunes whole cells using outward oblique
 /// rational control hulls. Existing plain contact accounting stays unchanged.
@@ -67,13 +115,13 @@ pub fn search_trimmed_with_control_hulls(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(a, b, max_cells, Some(domains), max_domain_cells, true)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, true)
 }
 fn search_impl(
     a: &Surface,
     b: &Surface,
     max_cells: usize,
-    domains: Option<[&crate::trim_domain::TrimDomain; 2]>,
+    domains: Option<[&dyn DomainClassifier; 2]>,
     max_domain_cells: usize,
     control_hulls: bool,
 ) -> Result<Report> {
@@ -99,7 +147,12 @@ fn search_impl(
             if *used == max_domain_cells {
                 return Ok(Location::Unresolved);
             }
-            let r = domains[i].classify(boxes[i], (max_domain_cells - *used).min(100_000))?;
+            let allowance = (max_domain_cells - *used).min(100_000);
+            let r = domains[i].classify_domain(boxes[i], allowance)?;
+            check(
+                r.cells <= allowance,
+                "Domain classifier exceeded its shared work allowance",
+            )?;
             *used += r.cells;
             if r.location == Location::Outside {
                 return Ok(Location::Outside);
@@ -115,29 +168,25 @@ fn search_impl(
     // Unified guard backing the max_cells work limit (item 1065); it fires
     // only if the cell bookkeeping above is ever broken.
     let mut guard = Budget::with_iterations(max_cells)?.guard("surface_contact_search");
-    let mut prepared_a = surface_contact::PreparedSurface::new(a)?;
-    let mut prepared_b = surface_contact::PreparedSurface::new(b)?;
+    let mut prepared_a=surface_contact::PreparedSurface::new(a)?;
+    let mut prepared_b=surface_contact::PreparedSurface::new(b)?;
     while cells < max_cells {
         guard.tick()?;
         guard.check()?;
         let Some(cell) = queue.pop_front() else { break };
         cells += 1;
-        // Reuse the exact outward routine result within this immutable search.
-        // Logical geometry/domain work charges remain unchanged.
         let aa = prepared_a.bounds(cell[0])?;
         let bb = prepared_b.bounds(cell[1])?;
         if (0..3).any(|k| aa[k].hi < bb[k].lo || bb[k].hi < aa[k].lo) {
             continue;
         }
-        let mut split_proposal = None;
-        if control_hulls {
-            if let Some((gap, scores)) = crate::surface_distance::rectangle_control_query_prepared(&mut prepared_a.controls, &mut prepared_b.controls, cell)? {
-                if gap > 0. { continue; }
-                if scores.iter().any(|x| *x > 0.) { split_proposal = Some(scores); }
-            }
+        if control_hulls
+            && crate::surface_distance::rectangle_control_gap(a, b, cell)?
+                .is_some_and(|gap| gap > 0.)
+        {
+            continue;
         }
-        let location = classify(cell, &mut domain_cells)?;
-        if location == crate::trim_domain::Location::Outside {
+        if classify(cell, &mut domain_cells)? == crate::trim_domain::Location::Outside {
             continue;
         }
         if domains.is_some() && domain_cells == max_domain_cells {
@@ -147,11 +196,6 @@ fn search_impl(
         // Overlap search neighborhoods so a root on an artificial subdivision
         // plane can still be strictly enclosed. These probes prove existence
         // only; they never remove cells from the coverage queue.
-        // Sweep absence is established only by the full coverage queue.
-        // Keep the initial contact probe, then defer repeated probes in trim-straddling boxes until an
-        // inside subcell is reached. Neither a skipped probe nor a section
-        // exclusion removes coverage. Plain diagnostic accounting is unchanged.
-        if !control_hulls || cells == 1 || location == crate::trim_domain::Location::Inside {
         let mut probe = cell;
         for s in 0..2 {
             for k in 0..2 {
@@ -165,7 +209,7 @@ fn search_impl(
         for axis in 0..2 {
             let fixed = cell[0][axis][0] * 0.5 + cell[0][axis][1] * 0.5;
             if let surface_contact::Verdict::Witness(w) =
-                surface_contact::certify_prepared(&mut prepared_a, &mut prepared_b, axis, fixed, probe[0][1 - axis], probe[1])?
+                surface_contact::certify_prepared(&mut prepared_a, &mut prepared_b, axis, fixed, probe[0][1-axis], probe[1])?
             {
                 if classify([w.first_uv, w.second_uv], &mut domain_cells)?
                     == crate::trim_domain::Location::Inside
@@ -176,14 +220,12 @@ fn search_impl(
             }
             // Exclusion of one section cannot exclude the surrounding cell.
         }
-        }
         if contact.is_some() || (domains.is_some() && domain_cells == max_domain_cells) {
             queue.push_front(cell);
             break;
         }
-        // Sweep control hulls propose the axis most relevant to their current
-        // separating direction. Other searches retain normalized chart widths.
-        // The proposal is not an exclusion. Split both closed halves: their shared boundary is
+        // Normalize by original parameter widths so rescaled charts do not
+        // starve one axis. Split both closed halves: their shared boundary is
         // deliberately retained, including possible tangent contacts.
         let axis = (0..4)
             .filter(|&k| {
@@ -195,8 +237,7 @@ fn search_impl(
                 let width = |k: usize| {
                     let d = cell[k / 2][k % 2];
                     let n = initial[k / 2][k % 2];
-                    split_proposal.map(|scores| scores[k])
-                        .unwrap_or((d[1] - d[0]) / (n[1] - n[0]))
+                    (d[1] - d[0]) / (n[1] - n[0])
                 };
                 width(x).total_cmp(&width(y))
             });
@@ -283,43 +324,6 @@ mod tests {
         }
     }
     #[test]
-    fn projected_split_never_removes_a_tangent_contact_or_its_parameter_diagonal() {
-        let a=plane();let mut b=a.clone();
-        b.degree_u=2;b.knots_u=vec![0.,0.,0.,1.,1.,1.];
-        b.weights=vec![vec![1.;2];3];
-        b.control_points=(0..3).map(|i|(0..2).map(|j|
-            vec![i as f64*0.5,j as f64,[0.25,-0.25,0.25][i]]).collect()).collect();
-        let curve=crate::curve::Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],
-            vec![1.,1.],vec![0.,1.],vec![0.,0.]]).unwrap();
-        let domain=crate::trim_domain::TrimDomain::new(&[vec![curve]],1e-10).unwrap();
-        let before=[a.clone(),b.clone()];
-        for limit in [1,127] {
-            let r=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],limit,100000).unwrap();
-            assert!(!r.absence_proven);assert!(r.contact.is_none());
-            assert!(r.cells<=limit&&r.domain_cells<=100000);
-            for i in 0..=16 {
-                let point=[0.5,i as f64/16.];
-                assert!(r.unresolved.iter().any(|cell|(0..2).all(|side|
-                    (0..2).all(|k|cell[side][k][0]<=point[k]&&point[k]<=cell[side][k][1]))),
-                    "Proposal lost an actual tangent contact at {point:?}");
-            }
-        }
-        assert_eq!([a,b],before);
-    }
-    #[test]
-    fn trim_aware_probes_keep_interior_contact_and_low_budget_refusal() {
-        let a=plane();let mut b=plane();
-        for row in &mut b.control_points {for p in row {p[2]=p[1]-0.5;p[1]=0.5;}}
-        let curve=crate::curve::Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],
-            vec![1.,1.],vec![0.,1.],vec![0.,0.]]).unwrap();
-        let domain=crate::trim_domain::TrimDomain::new(&[vec![curve]],1e-10).unwrap();
-        let short=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],1,100000).unwrap();
-        assert!(!short.absence_proven && !short.unresolved.is_empty());
-        let complete=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],10000,100000).unwrap();
-        assert!(complete.contact.is_some());assert!(!complete.absence_proven);
-        assert!(complete.cells<=10000 && complete.domain_cells<=100000);
-    }
-    #[test]
     fn overlapping_initial_bounds_need_subdivision_to_prove_separation() {
         let mut a = plane();
         for row in &mut a.control_points {
@@ -360,11 +364,10 @@ mod tests {
         let r = search(&a, &b, 127).unwrap();
         assert!(!r.absence_proven);
         assert!(r.contact.is_none());
-        assert!(
-            r.unresolved
-                .iter()
-                .any(|c| c.iter().flatten().all(|d| d[0] <= 0.5 && d[1] >= 0.5))
-        );
+        assert!(r
+            .unresolved
+            .iter()
+            .any(|c| c.iter().flatten().all(|d| d[0] <= 0.5 && d[1] >= 0.5)));
     }
 
     #[test]

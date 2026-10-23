@@ -9,10 +9,7 @@ pub fn affine(model: &Model, matrix: [[f64; 4]; 4]) -> Result<Model> {
 /// Validate an immutable source once; every output still receives full validation.
 pub fn affine_batch(model: &Model, matrices: &[[[f64; 4]; 4]]) -> Result<Vec<Model>> {
     model.validate()?;
-    matrices
-        .iter()
-        .map(|matrix| affine_validated(model, *matrix))
-        .collect()
+    matrices.iter().map(|matrix| affine_validated(model, *matrix)).collect()
 }
 
 fn affine_validated(model: &Model, matrix: [[f64; 4]; 4]) -> Result<Model> {
@@ -58,6 +55,7 @@ fn affine_validated(model: &Model, matrix: [[f64; 4]; 4]) -> Result<Model> {
             }
         }
     }
+    crate::transform_plane_charts::reexpress(model, &mut result)?;
     if determinant < 0. {
         for shell in &mut result.shells {
             for face in &mut shell.faces {
@@ -102,71 +100,31 @@ mod tests {
     #[cfg(feature = "codec")]
     fn batch_affine_preserves_rational_cylinder_and_torus_results() {
         let matrices = [
-            [
-                [1., 0., 0., 7.],
-                [0., 1., 0., -2.],
-                [0., 0., 1., 3.],
-                [0., 0., 0., 1.],
-            ],
-            [
-                [-2., 0., 0., 0.],
-                [0., 3., 0., 0.],
-                [0., 0., 4., 0.],
-                [0., 0., 0., 1.],
-            ],
-            [
-                [1., 0.2, 0., 0.],
-                [0., 1., 0.3, 0.],
-                [0., 0., 1., 0.],
-                [0., 0., 0., 1.],
-            ],
+            [[1.,0.,0.,7.],[0.,1.,0.,-2.],[0.,0.,1.,3.],[0.,0.,0.,1.]],
+            [[-2.,0.,0.,0.],[0.,3.,0.,0.],[0.,0.,4.,0.],[0.,0.,0.,1.]],
+            [[1.,0.2,0.,0.],[0.,1.,0.3,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
         ];
-        for source in [
-            crate::cylinder(3., 5.).unwrap(),
-            crate::torus(8., 2.).unwrap(),
-        ] {
-            let original = value_codec::to_string(&source).unwrap();
-            let result = affine_batch(&source, &matrices).unwrap();
-            for (item, matrix) in result.iter().zip(matrices) {
-                assert_eq!(
-                    value_codec::to_string(item).unwrap(),
-                    value_codec::to_string(&affine(&source, matrix).unwrap()).unwrap()
-                );
+        for source in [crate::cylinder(3.,5.).unwrap(),crate::torus(8.,2.).unwrap()] {
+            let original=value_codec::to_string(&source).unwrap();
+            let result=affine_batch(&source,&matrices).unwrap();
+            for (item,matrix) in result.iter().zip(matrices) {
+                assert_eq!(value_codec::to_string(item).unwrap(),value_codec::to_string(&affine(&source,matrix).unwrap()).unwrap());
             }
-            assert_eq!(value_codec::to_string(&source).unwrap(), original);
+            assert_eq!(value_codec::to_string(&source).unwrap(),original);
         }
     }
     #[test]
     #[ignore = "manual affine batching measurement"]
     fn measure_affine_batch() {
-        let source = crate::cuboid([0., 0., 0.], [10., 20., 30.]).unwrap();
-        let matrices: Vec<_> = (0..32)
-            .map(|i| {
-                [
-                    [1., 0., 0., i as f64],
-                    [0., 1., 0., 0.],
-                    [0., 0., 1., 0.],
-                    [0., 0., 0., 1.],
-                ]
-            })
-            .collect();
+        let source = crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
+        let matrices: Vec<_> = (0..32).map(|i| [[1.,0.,0.,i as f64],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]).collect();
         for iteration in 0..5 {
             let start = std::time::Instant::now();
-            for _ in 0..32 {
-                for matrix in &matrices {
-                    std::hint::black_box(affine(&source, *matrix).unwrap());
-                }
-            }
+            for _ in 0..32 { for matrix in &matrices { std::hint::black_box(affine(&source, *matrix).unwrap()); } }
             let individual = start.elapsed();
             let start = std::time::Instant::now();
-            for _ in 0..32 {
-                std::hint::black_box(affine_batch(&source, &matrices).unwrap());
-            }
-            eprintln!(
-                "iteration={iteration} individual_ms={} batch_ms={}",
-                individual.as_secs_f64() * 1000.,
-                start.elapsed().as_secs_f64() * 1000.
-            );
+            for _ in 0..32 { std::hint::black_box(affine_batch(&source, &matrices).unwrap()); }
+            eprintln!("iteration={iteration} individual_ms={} batch_ms={}", individual.as_secs_f64()*1000., start.elapsed().as_secs_f64()*1000.);
         }
     }
     #[test]
@@ -174,43 +132,21 @@ mod tests {
     fn batch_affine_matches_individual_placements_and_refuses_invalid_inputs() {
         let source = crate::cuboid([0., 0., 0.], [1., 2., 3.]).unwrap();
         let matrices = [
-            [
-                [1., 0., 0., 7.],
-                [0., 1., 0., -2.],
-                [0., 0., 1., 3.],
-                [0., 0., 0., 1.],
-            ],
-            [
-                [-2., 0., 0., 0.],
-                [0., 3., 0., 0.],
-                [0., 0., 4., 0.],
-                [0., 0., 0., 1.],
-            ],
-            [
-                [1., 0.2, 0., 0.],
-                [0., 1., 0.3, 0.],
-                [0., 0., 1., 0.],
-                [0., 0., 0., 1.],
-            ],
+            [[1.,0.,0.,7.],[0.,1.,0.,-2.],[0.,0.,1.,3.],[0.,0.,0.,1.]],
+            [[-2.,0.,0.,0.],[0.,3.,0.,0.],[0.,0.,4.,0.],[0.,0.,0.,1.]],
+            [[1.,0.2,0.,0.],[0.,1.,0.3,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
         ];
         let before = value_codec::to_string(&source).unwrap();
         let batch = affine_batch(&source, &matrices).unwrap();
         for (model, matrix) in batch.iter().zip(matrices) {
-            assert_eq!(
-                value_codec::to_string(model).unwrap(),
-                value_codec::to_string(&affine(&source, matrix).unwrap()).unwrap()
-            );
+            assert_eq!(value_codec::to_string(model).unwrap(), value_codec::to_string(&affine(&source, matrix).unwrap()).unwrap());
         }
         assert_eq!(value_codec::to_string(&source).unwrap(), before);
-        let mut singular = matrices;
-        singular[1][0] = [0.; 4];
+        let mut singular = matrices; singular[1][0] = [0.;4];
         assert!(affine_batch(&source, &singular).is_err());
-        let mut invalid = source.clone();
-        invalid.vertices[0].point[0] = f64::NAN;
+        let mut invalid = source.clone(); invalid.vertices[0].point[0] = f64::NAN;
         assert!(affine_batch(&invalid, &matrices).is_err());
-        let mut overflow = matrices;
-        overflow[0][0][0] = f64::MAX;
-        overflow[0][0][3] = f64::MAX;
+        let mut overflow = matrices; overflow[0][0][0] = f64::MAX; overflow[0][0][3] = f64::MAX;
         assert!(affine_batch(&source, &overflow).is_err());
     }
     #[test]

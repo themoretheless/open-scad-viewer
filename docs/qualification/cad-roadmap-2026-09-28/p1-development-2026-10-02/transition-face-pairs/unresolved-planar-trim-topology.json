@@ -1,0 +1,142 @@
+{
+  "counts": {
+    "shared-edge": 8,
+    "shared-vertex": 2
+  },
+  "pairs": [
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        0
+      ],
+      "vertices": [
+        0,
+        1
+      ]
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        2
+      ],
+      "vertices": [
+        0,
+        2
+      ]
+    },
+    {
+      "faces": [
+        1,
+        2
+      ],
+      "kind": "shared-vertex",
+      "edges": [],
+      "vertices": [
+        0
+      ]
+    },
+    {
+      "faces": [
+        1,
+        6
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        4
+      ],
+      "vertices": [
+        1,
+        3
+      ]
+    },
+    {
+      "faces": [
+        4,
+        9
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        13
+      ],
+      "vertices": [
+        6,
+        8
+      ]
+    },
+    {
+      "faces": [
+        6,
+        11
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        18
+      ],
+      "vertices": [
+        9,
+        11
+      ]
+    },
+    {
+      "faces": [
+        9,
+        14
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        24
+      ],
+      "vertices": [
+        12,
+        13
+      ]
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        25
+      ],
+      "vertices": [
+        9,
+        14
+      ]
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        27
+      ],
+      "vertices": [
+        10,
+        14
+      ]
+    },
+    {
+      "faces": [
+        11,
+        12
+      ],
+      "kind": "shared-vertex",
+      "edges": [],
+      "vertices": [
+        14
+      ]
+    }
+  ]
+}

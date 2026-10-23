@@ -17,7 +17,8 @@ Production dependencies, with arrows meaning “depends on”:
 ```mermaid
 flowchart TD
     App[Application: creates a GPU context]
-    Math[math-core / osv-math]
+    Math[math-core / osv-math: CPU-only, DeviceKernels port]
+    MathCompute[math-compute / osv-math-compute]
     Compute[compute-core]
     Raster[raster-core]
     GPU[gpu-compute: GPU platform]
@@ -25,14 +26,16 @@ flowchart TD
     CUDA[compute-cuda]
     MLX[compute-mlx]
     App --> Math
+    App --> MathCompute
     App --> Compute
     App --> Raster
     App --> GPU
-    Math -->|optional gpu feature| Compute
-    Math -->|optional platform / CUDA access| GPU
-    Math -->|optional tensor contract| Tensor
-    Math -->|optional tensor-cuda feature| CUDA
-    Math -->|optional tensor-mlx feature| MLX
+    MathCompute --> Math
+    MathCompute -->|optional gpu feature| Compute
+    MathCompute -->|optional platform / CUDA access| GPU
+    MathCompute -->|optional tensor contract| Tensor
+    MathCompute -->|optional tensor-cuda feature| CUDA
+    MathCompute -->|optional tensor-mlx feature| MLX
     Compute --> GPU
     Compute --> Tensor
     CUDA --> GPU
@@ -56,7 +59,8 @@ photogrammetry. Renaming it alone would not improve responsibility boundaries.
 | --- | --- | --- |
 | `gpu-compute` | Device/queue creation, backend capabilities, byte packing and transport, optional CUDA driver access | Mathematical placement thresholds, geometry, materials, generic array operations |
 | `compute-core` | WGSL kernel compilation, binding contracts, recording/batching, typed arrays, array operations, reduction scheduling | Point-cloud semantics, CPU reference geometry, rendering policy |
-| `math-core` | CPU f64 reference math, validation, numerical tolerances, domain WGSL/PTX, acceleration policy, domain GPU adapters and shared resident tensor recipes | General pipeline plumbing, application device selection, material/shader variants |
+| `math-core` | CPU f64 reference math, validation, numerical tolerances, acceleration policy, the `DeviceKernels` port | Any GPU/CUDA/tensor dependency, shaders, device sessions |
+| `math-compute` | Domain WGSL/PTX, `DeviceKernels` implementation, domain GPU/CUDA adapters and shared resident tensor recipes | CPU reference algorithms, general pipeline plumbing, application device selection |
 | `raster-core` | Render WGSL, uniform ABI, variants and browser code generation, render pipelines, frame recording, texture row layout | Generic numerical operations, point-cloud algorithms, independent device selection inside render calls |
 | `tensor-core` | Checked shapes and layouts, canonical operations, native tensor backend contract, shared conformance fixtures | GPU dependencies, allocations, shader code, domain placement |
 | `compute-cuda` | Resident CUDA tensors, CUDA kernels, cuBLAS execution and explicit Tensor Core precision policies | WGSL, MLX loading, CPU fallback, point-cloud semantics |
@@ -122,6 +126,11 @@ compute-core/src/
 math-core/src/
   <algorithm>.rs CPU reference, mathematical contracts and dispatch policy
   acceleration.rs placement policy
+  device.rs      DeviceKernels port (installed by math-compute)
+
+math-compute/src/
+  kernels.rs     DeviceKernels implementation (CUDA, then wgpu)
+  shaders.rs     domain WGSL sources; *.wgsl / *.cu / *.ptx alongside
   tensor/        shared resident geometry over explicit WGSL/CUDA/MLX backends
   gpu/
     session.rs   explicit context, fallible execution and lazy caches
@@ -289,8 +298,8 @@ hardware evidence, and remaining work.
 python3 scripts/check-gpu-architecture.py
 cargo test --offline --manifest-path crates/Cargo.toml -p osv-math --no-default-features
 COMPUTE_REQUIRE_GPU=1 cargo test --offline --manifest-path crates/Cargo.toml \
-  -p gpu-compute -p compute-core -p raster-core -p osv-math --features osv-math/gpu
-cargo check --offline --manifest-path crates/Cargo.toml -p osv-math --features cuda
+  -p gpu-compute -p compute-core -p raster-core -p osv-math-compute --features osv-math-compute/gpu
+cargo check --offline --manifest-path crates/Cargo.toml -p osv-math-compute --features cuda
 ```
 
 The dependency check rejects production edges that invert the diagram and
@@ -346,7 +355,7 @@ ordinary array. The fixed 32×32 tile stages A/B in workgroup memory; each of 64
 lanes accumulates a 4×4 output region in registers. This tile geometry is an
 algorithm contract, so it is independent of the generic workgroup tuning anchor.
 
-Nearest-neighbor optimization stays in `math-core`. Both synchronous and recorded
+Nearest-neighbor optimization stays in `math-compute`. Both synchronous and recorded
 APIs use one dispatcher owning the scalar reference and a 64-lane cooperative
 target scan. The domain owns shape/backend selection and first-index tie rules.
 The synchronous adapter records both output copies with the kernel in one

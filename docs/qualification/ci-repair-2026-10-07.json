@@ -1,0 +1,53 @@
+{
+  "schema": "ci-repair-verification/1",
+  "recordedAt": "2026-10-07",
+  "failingCiRun": 37472512857,
+  "baseHead": "af5bb94e88becbc2dbdbcdbef356831973c0032c",
+  "geometryWasm": {
+    "sha256": "9f478cfba28dec1d8ec8f437073baa4c96c3816689872555003e3a974bb1e782",
+    "byteLength": 12102693
+  },
+  "fixes": [
+    "Direct full-chart flux integration retains the bounded six-cell cuboid contract; trimmed faces retain their boundary integral path.",
+    "Fiber proof tests exercise the native fiber routine independently of earlier dispatcher proofs.",
+    "Initial-work exhaustion refuses geometry with a one-cell budget.",
+    "The detail-32 sphere verifies accepted topology and triangle budget.",
+    "The thousand-instance UI lifecycle case has a dedicated 180-second CI timeout.",
+    "MLX-C v0.6/v0.7 attention and scan ABI variants preserve stream, axes, dtype and default fusion.",
+    "Own-Rust v40 / G0 v49 / G1 v66 pin an immutable archived release while mutable host products are independently verified."
+  ],
+  "checks": {
+    "brepCoreUnitTests": 929,
+    "geometryBridgeUnitTests": 359,
+    "geometryBridgeIntegrationTests": 35,
+    "mlxTests": 148,
+    "remainingWorkspacePassedTests": 1717,
+    "allVitestPassedTests": 4634,
+    "allVitestSkippedTests": 9,
+    "g0G1AndScalarFocusedTests": 30,
+    "browserScenarios": 10,
+    "vueAndMcpTypes": "passed",
+    "distributionArtifacts": 151,
+    "packedGeometryBytes": 4021056,
+    "scalarStep": "Native and OCCT import/re-export/import, six faces, one solid, sampled walls and independent volume; both passed."
+  },
+  "rustValidation": "Workspace targets were completed in partitions after discovered failures. The prefix log contains a subsequently fixed MLX crash; only completed brep-core, compute-core and compute-cuda targets from that log count as success. The remaining log excludes those packages plus MLX and geometry-bridge, which have separate final logs. No single successful whole-workspace invocation is claimed.",
+  "evidenceHashes": {
+    "docs/qualification/ci-repair-2026-10-07/brep-compute-prefix.txt.gz": "d292a2992d19c5c4a3ec001db606461734972db79ae1eb937cde29c8edc9be11",
+    "docs/qualification/ci-repair-2026-10-07/geometry-bridge-unit.txt.gz": "f6fd05f7f3f4b22ed72cdfffbcf3f8aa8bc7889578eb2b3f534ce98fa48fd6f0",
+    "docs/qualification/ci-repair-2026-10-07/geometry-bridge-integration.txt.gz": "2e888b5a92213761cc103bd9b686584846cf6f7a9e66acadf77d9799b88bfc0a",
+    "docs/qualification/ci-repair-2026-10-07/mlx.txt.gz": "47200b91ac59149681c5e4b34b7ed9124b50eec35edd0339cabbfcb94953437a",
+    "docs/qualification/ci-repair-2026-10-07/mlx-unit-final.txt.gz": "b5f1583f6cc30c91332fd1730dfba404f4959704fc7731499d73005b391a0e9a",
+    "docs/qualification/ci-repair-2026-10-07/remaining-workspace.txt.gz": "415cf6c4229199f81443e7ef578d38f916e9308caedacb0cd1b54e1fe866d39e",
+    "docs/qualification/ci-repair-2026-10-07/rust-docs.txt.gz": "293943eb34a9ecd21fc36a00e0bb044a1b254a6fe1c27a6d00591a438d163689",
+    "docs/qualification/ci-repair-2026-10-07/all-vitest.txt.gz": "60bfd78416d63cef7515be5ed2a83e93af0e9555f294be51fbc322eb79c62eee",
+    "docs/qualification/ci-repair-2026-10-07/g0-g1-final.txt.gz": "79bf3d145651f240d28068123cdd73a2e96068d1ace1c6dfdc032f91a4454f8f",
+    "docs/qualification/ci-repair-2026-10-07/browser.json": "fd8c14dfea7c8cd34540525aba3009ed3e059d3c76043636d0721daa6cf67fb6"
+  },
+  "stepRecord": "docs/qualification/scalar-sweep-step-2026-10-07/occt.json",
+  "limitations": [
+    "Hosted Linux/macOS/Windows CI must independently verify the pushed commit.",
+    "G0/G1 clean qualification counters remain zero; no semantic gate closure is claimed.",
+    "STEP qualification covers two finite capped-square scalar sweep fixtures."
+  ]
+}

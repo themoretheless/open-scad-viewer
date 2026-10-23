@@ -54,8 +54,8 @@ pub fn clamped_control_tangents(
 /// aligned homogeneous controls. Output uses clamped knots, not periodic wrapping.
 pub fn closed(sections: &[Curve], parameters: &[f64]) -> Result<Surface> {
     check(
-        (4..=11).contains(&sections.len()),
-        "Closed loft needs 4..11 sections including the repeated endpoint",
+        (4..=86).contains(&sections.len()),
+        "Closed loft needs 4..86 sections including the repeated endpoint",
     )?;
     construct(sections, parameters, Boundary::Closed)
 }
@@ -70,8 +70,8 @@ enum Boundary {
 
 fn construct(sections: &[Curve], parameters: &[f64], boundary: Boundary) -> Result<Surface> {
     check(
-        (2..=11).contains(&sections.len()) && parameters.len() == sections.len(),
-        "Natural loft needs 2..11 sections and matching parameters",
+        (2..=86).contains(&sections.len()) && parameters.len() == sections.len(),
+        "Natural loft needs 2..86 sections and matching parameters",
     )?;
     let aligned = crate::surface::loft_aligned(sections)?;
     if let Boundary::ControlTangents(t) = &boundary {

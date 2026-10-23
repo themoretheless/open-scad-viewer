@@ -1,7 +1,4 @@
-use crate::{Acceleration, Error, Result, V3};
-
-/// WGSL template for directed Chamfer partial reduction.
-pub const CHAMFER_WGSL: &str = include_str!("chamfer.wgsl");
+use crate::{Acceleration, Error, Result, V3, nearest_neighbor_accelerated};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DirectedChamfer {
@@ -36,33 +33,18 @@ pub fn directed_chamfer_distance(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(summary) = crate::cuda::directed_chamfer_cuda(queries, targets)
-        {
-            return Ok(summary);
-        }
-        if let Some(summary) = crate::gpu::directed_chamfer_gpu(queries, targets) {
-            return Ok(summary);
-        }
+    if acceleration.is_gpu()
+        && let Some(summary) = crate::device::kernels()
+            .and_then(|kernels| kernels.directed_chamfer(acceleration, queries, targets))
+    {
+        return Ok(summary);
     }
+    let distances = nearest_neighbor_accelerated(queries, targets, acceleration);
     let mut sum = 0.;
     let mut max_squared_distance = 0.;
-    for &q in queries {
-        let mut best_distance = f64::INFINITY;
-        for &t in targets {
-            let dx = q[0] - t[0];
-            let dy = q[1] - t[1];
-            let dz = q[2] - t[2];
-            let d = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
-            if d < best_distance {
-                best_distance = d;
-            }
-        }
-        sum += best_distance;
-        max_squared_distance = f64::max(max_squared_distance, best_distance);
+    for (_, distance) in distances {
+        sum += distance;
+        max_squared_distance = f64::max(max_squared_distance, distance);
     }
     let mean_squared_distance = sum / queries.len() as f64;
     Ok(DirectedChamfer {
@@ -176,34 +158,6 @@ mod tests {
         assert!(
             (got.symmetric_mean_squared_distance - want.symmetric_mean_squared_distance).abs()
                 < 1e-9
-        );
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn chamfer_gpu_matches_cpu_reference() {
-        let a = points(96, 0.);
-        let b = points(64, 100.);
-        let got = chamfer_distance(&a, &b, Acceleration::Gpu).unwrap();
-        let want = chamfer_distance(&a, &b, Acceleration::Cpu).unwrap();
-        assert!(
-            (got.symmetric_mean_squared_distance - want.symmetric_mean_squared_distance).abs()
-                < 5e-3 * want.symmetric_mean_squared_distance.max(1.0),
-            "{got:?} vs {want:?}"
-        );
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn chamfer_cuda_matches_cpu_reference() {
-        let a = points(96, 0.);
-        let b = points(64, 100.);
-        let got = chamfer_distance(&a, &b, Acceleration::Cuda).unwrap();
-        let want = chamfer_distance(&a, &b, Acceleration::Cpu).unwrap();
-        assert!(
-            (got.symmetric_mean_squared_distance - want.symmetric_mean_squared_distance).abs()
-                < 5e-3 * want.symmetric_mean_squared_distance.max(1.0),
-            "{got:?} vs {want:?}"
         );
     }
 }

@@ -1,0 +1,646 @@
+{
+  "schema": "cad-opposing-face-clearance-wasm/1",
+  "passed": true,
+  "wasmSha256": "fb4171cb184302b37ce61543b9fee885a4f66b37b2420fc7ecc0ec91ce66afc3",
+  "wasmBytes": 9783043,
+  "cases": [
+    {
+      "name": "entry-inner",
+      "faces": [
+        0,
+        3
+      ],
+      "expectedMm": 13.75,
+      "elapsedMs": 1058.18225,
+      "result": {
+        "cells": 29,
+        "converged": true,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          13.750000017677785
+        ],
+        "domainCells": 580,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.9999999824999999,
+            1.0000000000000002e-8
+          ],
+          [
+            2.9999999825,
+            0.9999999824999999
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              17.322741299912817,
+              17.322741299912916
+            ],
+            [
+              7.1753142453278,
+              7.17531424532803
+            ],
+            [
+              5.999999999999999,
+              6
+            ]
+          ],
+          [
+            [
+              4.619397666911468,
+              4.619397666911481
+            ],
+            [
+              1.9134171513114242,
+              1.9134171513114797
+            ],
+            [
+              5.999999894999902,
+              5.999999895000098
+            ]
+          ]
+        ],
+        "points": [
+          [
+            17.32274129991287,
+            7.175314245327913,
+            6
+          ],
+          [
+            4.619397666911475,
+            1.9134171513114517,
+            5.999999894999999
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "name": "constant-inner",
+      "faces": [
+        5,
+        8
+      ],
+      "expectedMm": 13.75,
+      "elapsedMs": 40.73679200000015,
+      "result": {
+        "cells": 39,
+        "converged": true,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          13.750000017677808
+        ],
+        "domainCells": 608,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.9999999824999999,
+            1.0000000000000002e-8
+          ],
+          [
+            2.9999999825,
+            0.9999999824999999
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              7.175314595629724,
+              7.175314595629877
+            ],
+            [
+              17.32274115481299,
+              17.32274115481316
+            ],
+            [
+              5.999999999999999,
+              6
+            ]
+          ],
+          [
+            [
+              1.9134171824493815,
+              1.9134171824494126
+            ],
+            [
+              4.619397654013698,
+              4.619397654013733
+            ],
+            [
+              5.999999894999955,
+              5.999999895000044
+            ]
+          ]
+        ],
+        "points": [
+          [
+            7.175314595629798,
+            17.322741154813073,
+            6
+          ],
+          [
+            1.9134171824493964,
+            4.619397654013715,
+            5.999999894999999
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "name": "exit-inner",
+      "faces": [
+        10,
+        13
+      ],
+      "expectedMm": 13.75,
+      "elapsedMs": 39.30008399999997,
+      "result": {
+        "cells": 35,
+        "converged": true,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          13.750000017677682
+        ],
+        "domainCells": 440,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            1.0000000000000002e-8,
+            1.0000000000000002e-8
+          ],
+          [
+            1.0000000000000002e-8,
+            0.9999999824999999
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              7.175314296020401,
+              7.175314296020403
+            ],
+            [
+              17.32274127891535,
+              17.322741278915355
+            ],
+            [
+              5.999999999999999,
+              6
+            ]
+          ],
+          [
+            [
+              1.9134171558174504,
+              1.9134171558174509
+            ],
+            [
+              4.619397665045027,
+              4.619397665045029
+            ],
+            [
+              5.999999894999968,
+              5.999999895000036
+            ]
+          ]
+        ],
+        "points": [
+          [
+            7.175314296020402,
+            17.322741278915352,
+            6
+          ],
+          [
+            1.9134171558174506,
+            4.619397665045028,
+            5.999999894999998
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "name": "entry-bottom",
+      "faces": [
+        0,
+        4
+      ],
+      "expectedMm": 4.75,
+      "elapsedMs": 82.39391599999999,
+      "result": {
+        "cells": 119,
+        "converged": true,
+        "distanceIntervalMm": [
+          4.749999999999997,
+          4.750005575035684
+        ],
+        "domainCells": 2364,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.9999999824999999,
+            0.9999999824999999
+          ],
+          [
+            18.4765625,
+            7.646484387353517
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              18.477590702486186,
+              18.477590702486253
+            ],
+            [
+              7.653668521133674,
+              7.653668521133974
+            ],
+            [
+              4.750000030935897,
+              4.75000003093595
+            ]
+          ],
+          [
+            [
+              18.476562499999925,
+              18.476562500000068
+            ],
+            [
+              7.646484387353474,
+              7.646484387353564
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "points": [
+          [
+            18.477590702486218,
+            7.653668521133825,
+            4.750000030935923
+          ],
+          [
+            18.4765625,
+            7.646484387353521,
+            0
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "name": "constant-bottom",
+      "faces": [
+        5,
+        9
+      ],
+      "expectedMm": 4.75,
+      "elapsedMs": 121.0888339999999,
+      "result": {
+        "cells": 351,
+        "converged": true,
+        "distanceIntervalMm": [
+          4.749999999999997,
+          4.750000712880626
+        ],
+        "domainCells": 5916,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.40625000375,
+            0.9999999824999999
+          ],
+          [
+            15.15625,
+            13.046875
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              15.156273721264325,
+              15.15627372126438
+            ],
+            [
+              13.049420174326139,
+              13.049420174326256
+            ],
+            [
+              4.75000003093591,
+              4.750000030935934
+            ]
+          ],
+          [
+            [
+              15.156249999999934,
+              15.156250000000066
+            ],
+            [
+              13.046874999999934,
+              13.046875000000066
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "points": [
+          [
+            15.156273721264352,
+            13.049420174326197,
+            4.750000030935922
+          ],
+          [
+            15.15625,
+            13.046875,
+            0
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "name": "exit-bottom",
+      "faces": [
+        10,
+        14
+      ],
+      "expectedMm": 4.75,
+      "elapsedMs": 79.80383299999971,
+      "result": {
+        "cells": 119,
+        "converged": true,
+        "distanceIntervalMm": [
+          4.749999999999997,
+          4.75000557503567
+        ],
+        "domainCells": 2790,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            1.7500000000000005e-8,
+            0.9999999824999999
+          ],
+          [
+            7.646484387353517,
+            18.4765625
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              7.653668521133822,
+              7.653668521133833
+            ],
+            [
+              18.477590702486204,
+              18.477590702486232
+            ],
+            [
+              4.750000030935911,
+              4.750000030935936
+            ]
+          ],
+          [
+            [
+              7.646484387353474,
+              7.646484387353564
+            ],
+            [
+              18.476562499999925,
+              18.476562500000068
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "points": [
+          [
+            7.653668521133827,
+            18.477590702486218,
+            4.750000030935923
+          ],
+          [
+            7.646484387353521,
+            18.4765625,
+            0
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    }
+  ],
+  "workerHandlerCases": [
+    {
+      "version": 1,
+      "id": 1,
+      "kind": "faceDistance",
+      "ok": true,
+      "result": {
+        "cells": 29,
+        "converged": true,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          13.750000017677785
+        ],
+        "domainCells": 580,
+        "maxCells": 4096,
+        "maxDomainCells": 100000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.9999999824999999,
+            1.0000000000000002e-8
+          ],
+          [
+            2.9999999825,
+            0.9999999824999999
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              17.322741299912817,
+              17.322741299912916
+            ],
+            [
+              7.1753142453278,
+              7.17531424532803
+            ],
+            [
+              5.999999999999999,
+              6
+            ]
+          ],
+          [
+            [
+              4.619397666911468,
+              4.619397666911481
+            ],
+            [
+              1.9134171513114242,
+              1.9134171513114797
+            ],
+            [
+              5.999999894999902,
+              5.999999895000098
+            ]
+          ]
+        ],
+        "points": [
+          [
+            17.32274129991287,
+            7.175314245327913,
+            6
+          ],
+          [
+            4.619397666911475,
+            1.9134171513114517,
+            5.999999894999999
+          ]
+        ],
+        "reason": "tolerance",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "version": 1,
+      "id": 2,
+      "kind": "faceDistance",
+      "ok": true,
+      "result": {
+        "cells": 1,
+        "converged": false,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          14.040383070259228
+        ],
+        "domainCells": 66,
+        "maxCells": 1,
+        "maxDomainCells": 10000,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": [
+          [
+            0.875,
+            0.125
+          ],
+          [
+            2.625,
+            0.875
+          ]
+        ],
+        "pointEnclosures": [
+          [
+            [
+              17.908150543485426,
+              17.908150543485508
+            ],
+            [
+              6.41182289860006,
+              6.411822898600288
+            ],
+            [
+              5.98002839483428,
+              5.9800283948342825
+            ]
+          ],
+          [
+            [
+              4.707371352838253,
+              4.707371352838263
+            ],
+            [
+              1.6854242630499967,
+              1.6854242630500447
+            ],
+            [
+              5.249999999999915,
+              5.2500000000000835
+            ]
+          ]
+        ],
+        "points": [
+          [
+            17.908150543485466,
+            6.411822898600172,
+            5.980028394834281
+          ],
+          [
+            4.707371352838258,
+            1.6854242630500214,
+            5.25
+          ]
+        ],
+        "reason": "work-limit",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    },
+    {
+      "version": 1,
+      "id": 3,
+      "kind": "faceDistance",
+      "ok": true,
+      "result": {
+        "cells": 1,
+        "converged": false,
+        "distanceIntervalMm": [
+          13.749999999999917,
+          null
+        ],
+        "domainCells": 1,
+        "maxCells": 4096,
+        "maxDomainCells": 1,
+        "method": "interval-trimmed-surface-subdivision",
+        "parameters": null,
+        "pointEnclosures": null,
+        "points": null,
+        "reason": "domain-work-limit",
+        "scope": "trimmed-surfaces-bounded-joins",
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8
+      }
+    }
+  ],
+  "scope": "Selected opposing face clearances; not global wall thickness."
+}

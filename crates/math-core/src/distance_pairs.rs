@@ -22,11 +22,6 @@ pub fn squared_distance_pair_sum(a: &[V3], b: &[V3]) -> Result<f64> {
     Ok(squared_distance_pairs(a, b)?.into_iter().sum())
 }
 
-/// WGSL source for the one-to-one squared-distance compute shader.
-pub const DISTANCE_PAIRS_WGSL: &str = include_str!("distance_pairs.wgsl");
-/// WGSL source for the one-to-one squared-distance reduction shader.
-pub const DISTANCE_PAIR_SUM_WGSL: &str = include_str!("distance_pair_sum.wgsl");
-
 /// [`squared_distance_pairs`] with optional GPU/CUDA batch kernels.
 pub fn squared_distance_pairs_accelerated(
     a: &[V3],
@@ -44,17 +39,11 @@ pub fn squared_distance_pairs_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_distance_pairs(a.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(values) = crate::cuda::squared_distance_pairs_cuda(a, b)
-        {
-            return Ok(values);
-        }
-        if let Some(values) = crate::gpu::squared_distance_pairs_gpu(a, b) {
-            return Ok(values);
-        }
+    if acceleration.is_gpu()
+        && let Some(values) = crate::device::kernels()
+            .and_then(|kernels| kernels.squared_distance_pairs(acceleration, a, b))
+    {
+        return Ok(values);
     }
     squared_distance_pairs(a, b)
 }
@@ -76,17 +65,11 @@ pub fn squared_distance_pair_sum_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_distance_pairs(a.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(value) = crate::cuda::squared_distance_pair_sum_cuda(a, b)
-        {
-            return Ok(value);
-        }
-        if let Some(value) = crate::gpu::squared_distance_pair_sum_gpu(a, b) {
-            return Ok(value);
-        }
+    if acceleration.is_gpu()
+        && let Some(value) = crate::device::kernels()
+            .and_then(|kernels| kernels.squared_distance_pair_sum(acceleration, a, b))
+    {
+        return Ok(value);
     }
     squared_distance_pair_sum(a, b)
 }
@@ -137,49 +120,5 @@ mod tests {
             squared_distance_pair_sum_accelerated(&a, &b, Acceleration::Cpu).unwrap(),
             vector_sum
         );
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn squared_distance_pairs_accelerated_gpu_matches_reference() {
-        let a = points(256, 0.);
-        let b = points(256, 1.);
-        let got = squared_distance_pairs_accelerated(&a, &b, Acceleration::Gpu).unwrap();
-        let want = squared_distance_pairs(&a, &b).unwrap();
-        for (got, want) in got.iter().zip(&want) {
-            assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
-        }
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn squared_distance_pair_sum_accelerated_gpu_matches_reference() {
-        let a = points(1024, 0.);
-        let b = points(1024, 1.);
-        let got = squared_distance_pair_sum_accelerated(&a, &b, Acceleration::Gpu).unwrap();
-        let want = squared_distance_pair_sum(&a, &b).unwrap();
-        assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn squared_distance_pairs_accelerated_cuda_matches_reference() {
-        let a = points(256, 0.);
-        let b = points(256, 1.);
-        let got = squared_distance_pairs_accelerated(&a, &b, Acceleration::Cuda).unwrap();
-        let want = squared_distance_pairs(&a, &b).unwrap();
-        for (got, want) in got.iter().zip(&want) {
-            assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn squared_distance_pair_sum_accelerated_cuda_matches_reference() {
-        let a = points(1024, 0.);
-        let b = points(1024, 1.);
-        let got = squared_distance_pair_sum_accelerated(&a, &b, Acceleration::Cuda).unwrap();
-        let want = squared_distance_pair_sum(&a, &b).unwrap();
-        assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
     }
 }

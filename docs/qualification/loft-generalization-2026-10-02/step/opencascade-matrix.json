@@ -1,0 +1,72 @@
+{
+  "parser": "OpenCascade/cadquery-ocp",
+  "scope": "six finite source/STEP geometry, topology and nonplanar-cap volume cases; not global qualification",
+  "cases": [
+    {
+      "case": "cartesian-control-tangent",
+      "valid": true,
+      "faces": 1,
+      "solids": 0,
+      "samples": 25,
+      "maxPositionError": 2.1316282072803006e-14,
+      "maxVDerivativeError": 3.552713678800501e-14,
+      "volume": null,
+      "relativeVolumeError": null
+    },
+    {
+      "case": "cartesian-auto-control-tangent",
+      "valid": true,
+      "faces": 1,
+      "solids": 0,
+      "samples": 25,
+      "maxPositionError": 1.4210854715202004e-14,
+      "maxVDerivativeError": 5.684341886080802e-14,
+      "volume": null,
+      "relativeVolumeError": null
+    },
+    {
+      "case": "cartesian-nested-mapped",
+      "valid": true,
+      "faces": 1,
+      "solids": 0,
+      "samples": 25,
+      "maxPositionError": 4.973799150320701e-14,
+      "maxVDerivativeError": 8.526512829121202e-14,
+      "volume": null,
+      "relativeVolumeError": null
+    },
+    {
+      "case": "cartesian-auto-nested-mapped",
+      "valid": true,
+      "faces": 1,
+      "solids": 0,
+      "samples": 25,
+      "maxPositionError": 2.664535259099164e-14,
+      "maxVDerivativeError": 8.526512829121202e-14,
+      "volume": null,
+      "relativeVolumeError": null
+    },
+    {
+      "case": "piecewise-mapped-natural",
+      "valid": true,
+      "faces": 1,
+      "solids": 0,
+      "samples": 25,
+      "maxPositionError": 7.105427357601002e-15,
+      "maxVDerivativeError": 3.552713678800501e-14,
+      "volume": null,
+      "relativeVolumeError": null
+    },
+    {
+      "case": "authored-nonplanar-caps",
+      "valid": true,
+      "faces": 6,
+      "solids": 1,
+      "samples": 150,
+      "maxPositionError": 2.220446049250313e-16,
+      "maxVDerivativeError": 2.220446049250313e-16,
+      "volume": 1.0,
+      "relativeVolumeError": 0.0
+    }
+  ]
+}

@@ -37,7 +37,7 @@ mod tests {
         let a = crate::toroidal_spiral::approximate_knot([3., 4., 5.], 3., 1., 2, 3, 0., 0., 1e-4)
             .unwrap();
         assert!(a.curve.control_points.len() > 32);
-        assert!(crate::surface::extrude(&a.curve, [0., 0., 1.]).is_err());
+        let full = crate::surface::extrude(&a.curve, [0., 0., 1.]).unwrap();
         let patches = extrude(&a.curve, [0., 0., 1.]).unwrap();
         assert_eq!(patches.len(), a.spans);
         for (i, patch) in patches.iter().enumerate() {
@@ -50,6 +50,8 @@ mod tests {
                 let p = a.curve.evaluate(u).unwrap().point;
                 for v in [0., 0.3, 1.] {
                     let q = patch.evaluate(u, v).unwrap().point;
+                    let whole = full.evaluate(u, v).unwrap().point;
+                    assert!(whole.iter().zip(&q).all(|(x, y)| (x - y).abs() < 1e-11));
                     for d in 0..3 {
                         assert!((q[d] - p[d] - if d == 2 { v } else { 0. }).abs() < 1e-11);
                     }

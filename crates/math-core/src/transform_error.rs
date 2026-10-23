@@ -40,10 +40,6 @@ pub fn transformed_squared_distance_pair_rmse(
     Ok((transformed_squared_distance_pair_sum(source, target, m, t)? / source.len() as f64).sqrt())
 }
 
-/// WGSL source for the fused transform-and-distance reduction shader.
-pub const TRANSFORMED_DISTANCE_PAIR_SUM_WGSL: &str =
-    include_str!("transformed_distance_pair_sum.wgsl");
-
 /// [`transformed_squared_distance_pair_sum`] with optional fused GPU/CUDA reduction.
 pub fn transformed_squared_distance_pair_sum_accelerated(
     source: &[V3],
@@ -63,20 +59,12 @@ pub fn transformed_squared_distance_pair_sum_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_distance_pairs(source.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(value) =
-                crate::cuda::transformed_squared_distance_pair_sum_cuda(source, target, m, t)
-        {
-            return Ok(value);
-        }
-        if let Some(value) =
-            crate::gpu::transformed_squared_distance_pair_sum_gpu(source, target, m, t)
-        {
-            return Ok(value);
-        }
+    if acceleration.is_gpu()
+        && let Some(value) = crate::device::kernels().and_then(|kernels| {
+            kernels.transformed_squared_distance_pair_sum(acceleration, source, target, m, t)
+        })
+    {
+        return Ok(value);
     }
     transformed_squared_distance_pair_sum(source, target, m, t)
 }
@@ -154,43 +142,5 @@ mod tests {
             .unwrap(),
             transformed_squared_distance_pair_sum(&source, &target, m, t).unwrap()
         );
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn transformed_sum_gpu_matches_cpu_reference() {
-        let source = points(2_048, 0.);
-        let target = points(2_048, 1.);
-        let m = rotation([0.2, -0.1, 0.3]);
-        let t = [1., -0.5, 0.25];
-        let cpu = transformed_squared_distance_pair_sum(&source, &target, m, t).unwrap();
-        let gpu = transformed_squared_distance_pair_sum_accelerated(
-            &source,
-            &target,
-            m,
-            t,
-            Acceleration::Gpu,
-        )
-        .unwrap();
-        assert!((gpu - cpu).abs() / cpu.max(1.) < 1e-5);
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn transformed_sum_cuda_matches_cpu_reference() {
-        let source = points(2_048, 0.);
-        let target = points(2_048, 1.);
-        let m = rotation([0.2, -0.1, 0.3]);
-        let t = [1., -0.5, 0.25];
-        let cpu = transformed_squared_distance_pair_sum(&source, &target, m, t).unwrap();
-        let cuda = transformed_squared_distance_pair_sum_accelerated(
-            &source,
-            &target,
-            m,
-            t,
-            Acceleration::Cuda,
-        )
-        .unwrap();
-        assert!((cuda - cpu).abs() / cpu.max(1.) < 1e-5);
     }
 }

@@ -1,0 +1,182 @@
+[
+  {
+    "function": "(root)",
+    "artifact": "",
+    "column": -1,
+    "inclusiveMs": 8617.464
+  },
+  {
+    "function": "(idle)",
+    "artifact": "",
+    "column": -1,
+    "inclusiveMs": 5848.432
+  },
+  {
+    "function": "rn",
+    "artifact": "vue-Bwdd4767.js",
+    "column": 19280,
+    "inclusiveMs": 1252.985
+  },
+  {
+    "function": "B",
+    "artifact": "vue-Bwdd4767.js",
+    "column": 19345,
+    "inclusiveMs": 1048.543
+  },
+  {
+    "function": "bS",
+    "artifact": "DirectModeler-DvhDv24C.js",
+    "column": 68906,
+    "inclusiveMs": 926.267
+  },
+  {
+    "function": "n",
+    "artifact": "vue-Bwdd4767.js",
+    "column": 71297,
+    "inclusiveMs": 926.267
+  },
+  {
+    "function": "get document",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "column": 9069,
+    "inclusiveMs": 839.542
+  },
+  {
+    "function": "F",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "column": 1783,
+    "inclusiveMs": 717.578
+  },
+  {
+    "function": "I",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "column": 7380,
+    "inclusiveMs": 717.578
+  },
+  {
+    "function": "get currentDocument",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "column": 8580,
+    "inclusiveMs": 717.578
+  },
+  {
+    "function": "S",
+    "artifact": "brepInspectionCache-BbLWq9ST.js",
+    "column": 3051,
+    "inclusiveMs": 692.374
+  },
+  {
+    "function": "S",
+    "artifact": "surface-selection-BcnWcgIk.js",
+    "column": 1152,
+    "inclusiveMs": 688.622
+  },
+  {
+    "function": "w",
+    "artifact": "surface-selection-BcnWcgIk.js",
+    "column": 1461,
+    "inclusiveMs": 688.622
+  },
+  {
+    "function": "js-to-wasm:iiiiid:l",
+    "artifact": "02475bc6",
+    "column": 1349211,
+    "inclusiveMs": 435.397
+  },
+  {
+    "function": "wasm-function[56]",
+    "artifact": "02475bc6",
+    "column": 54070,
+    "inclusiveMs": 432.836
+  },
+  {
+    "function": "(program)",
+    "artifact": "",
+    "column": -1,
+    "inclusiveMs": 395.055
+  },
+  {
+    "function": "t",
+    "artifact": "meshJson-CVKQT5bI.js",
+    "column": 130,
+    "inclusiveMs": 390.272
+  },
+  {
+    "function": "bn",
+    "artifact": "vue-Bwdd4767.js",
+    "column": 20955,
+    "inclusiveMs": 339.273
+  },
+  {
+    "function": "O",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "column": 1237,
+    "inclusiveMs": 318.323
+  },
+  {
+    "function": "prepare",
+    "artifact": "DirectModeler-DvhDv24C.js",
+    "column": 38484,
+    "inclusiveMs": 301.991
+  },
+  {
+    "function": "prepare",
+    "artifact": "DirectModeler-DvhDv24C.js",
+    "column": 45124,
+    "inclusiveMs": 297.196
+  },
+  {
+    "function": "wasm-function[352]",
+    "artifact": "02475bc6",
+    "column": 1716288,
+    "inclusiveMs": 265.936
+  },
+  {
+    "function": "wasm-function[1016]",
+    "artifact": "02475bc6",
+    "column": 2935993,
+    "inclusiveMs": 260.225
+  },
+  {
+    "function": "run",
+    "artifact": "mainSolidWorkerClient-BHbjQQFu.js",
+    "column": 45577,
+    "inclusiveMs": 253.275
+  },
+  {
+    "function": "",
+    "artifact": "mainSolidWorkerClient-BHbjQQFu.js",
+    "column": 46136,
+    "inclusiveMs": 249.483
+  },
+  {
+    "function": "u",
+    "artifact": "binary-codec-CQNXvYco.js",
+    "column": 2234,
+    "inclusiveMs": 242.592
+  },
+  {
+    "function": "s",
+    "artifact": "wasm-host-mgOLzYtD.js",
+    "column": 293,
+    "inclusiveMs": 242.591
+  },
+  {
+    "function": "x",
+    "artifact": "surface-selection-BcnWcgIk.js",
+    "column": 1101,
+    "inclusiveMs": 242.591
+  },
+  {
+    "function": "a",
+    "artifact": "binary-codec-CQNXvYco.js",
+    "column": 1402,
+    "inclusiveMs": 241.335
+  },
+  {
+    "function": "postMessage",
+    "artifact": "",
+    "column": 14,
+    "inclusiveMs": 239.399
+  }
+]

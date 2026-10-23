@@ -1,3 +1,4 @@
+import { isWellFormedUnicode } from './unicode'
 export const GEOMETRY_LANGUAGE_CONTRACTS = Object.freeze([
   'legacy/current',
   'openscad-viewer/brep-1',
@@ -23,17 +24,6 @@ export class GeometryLanguageContractError extends RangeError {
 export interface GeometrySourceRoutingHeader {
   languageContract: GeometryLanguageContract
   requiredCapabilities: string[]
-}
-
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xD800 && unit <= 0xDBFF) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xDC00 && next <= 0xDFFF)) return false
-    } else if (unit >= 0xDC00 && unit <= 0xDFFF) return false
-  }
-  return true
 }
 
 function sourceOutsideBlockComments(

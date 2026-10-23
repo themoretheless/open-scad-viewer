@@ -165,14 +165,17 @@ fn split(a: &[I]) -> (Vec<I>, Vec<I>) {
     (left, right)
 }
 pub(super) fn certify(surface: &Surface, b: Boundary) -> Result<SeamRegularity> {
-    certify_impl(surface,b,false)
+    certify_impl(surface, b, false)
 }
 /// Only after an independent exact proof establishes smoothness at every
 /// internal along knot. Span normals are still independently enclosed.
-pub(super) fn certify_after_exact_along_jets(surface:&Surface,b:Boundary)->Result<SeamRegularity>{
-    certify_impl(surface,b,true)
+pub(super) fn certify_after_exact_along_jets(
+    surface: &Surface,
+    b: Boundary,
+) -> Result<SeamRegularity> {
+    certify_impl(surface, b, true)
 }
-fn certify_impl(surface:&Surface,b:Boundary,exact_along_jets:bool)->Result<SeamRegularity>{
+fn certify_impl(surface: &Surface, b: Boundary, exact_along_jets: bool) -> Result<SeamRegularity> {
     let (p, n, k, _) = b.along(surface);
     let a = k[p];
     let z = k[n];

@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Worker source transform","file":"browser-transform.step","sha256":"59d4c152ce850fa9a6ab2427c72d22bbd77c4aab1bdb1f6bbc8a9ad034ddbb98","expected":{"volumeMm3":8000,"boundsMm":[[-5,-10,0],[15,10,20]]}}]}

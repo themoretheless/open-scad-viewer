@@ -1,0 +1,215 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unused import: `Expansion`
+ --> cad-predicates/src/line_chart_identity.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, ParameterDecision, ParameterIdentity,
+  |                              ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Expansion`
+ --> cad-predicates/src/quadratic_curve_separator.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, PredicateContext, Reason, Sign,
+  |                              ^^^^^^^^^
+
+warning: `cad-predicates` (lib) generated 2 warnings (run `cargo fix --lib -p cad-predicates` to apply 2 suggestions)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3251:4
+     |
+3251 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3252:4
+     |
+3252 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3256:4
+     |
+3256 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3260:4
+     |
+3260 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `DistanceStopReason` is never used
+   --> nurbs-core/src/distance_bounds.rs:106:10
+    |
+106 | pub enum DistanceStopReason {
+    |          ^^^^^^^^^^^^^^^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/gordon_tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: `nurbs-core` (lib) generated 7 warnings
+warning: function `progressive_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:562:8
+    |
+562 | pub fn progressive_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `progressive_affine_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:572:8
+    |
+572 | pub fn progressive_affine_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_authored_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:596:8
+    |
+596 | pub fn progressive_authored_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_guided_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:622:8
+    |
+622 | pub fn progressive_guided_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_body_laws` is never used
+   --> brep-core/src/analytic/rational_loft.rs:645:4
+    |
+645 | fn progressive_body_laws(
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:176:8
+    |
+176 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:182:8
+    |
+182 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:193:8
+    |
+193 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:232:8
+    |
+232 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `brep-core` (lib test) generated 9 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/4214d529fd646c3b/out/brep_core-4214d529fd646c3b)
+
+running 79 tests
+test boundary_agreement::tests::exhaustion_preserves_all_boundary_uses_without_mutation ... ok
+test boundary_agreement::tests::sampled_mismatch_gets_a_local_diagnostic_and_bad_indices_still_refuse ... ok
+test boundary_agreement::tests::every_cube_boundary_use_can_be_proven ... ok
+test boundary_agreement::tests::exact_closure_survives_a_nonplanar_bilinear_warp_and_weight_scaling ... ok
+test analytic::tests::collapsed_boundary_cannot_join_disconnected_face_fans ... ok
+test boundary_agreement::tests::exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use ... ok
+test boundary_hull_contact::tests::adjacent_hemisphere_quadrants_meet_only_at_a_shared_equator_vertex ... ok
+test boundary_agreement::tests::cylinder_and_sphere_boundary_charts_at_model_tolerance ... ok
+test boundary_agreement::tests::sphere_equator_uses_exact_rational_circle_traversal ... ok
+test boundary_agreement::tests::lifted_periodic_uv_is_diagnosable_without_admitting_regular_operations ... ok
+test boundary_embedding::tests::tolerance_accepted_gap_is_not_an_exact_embedded_boundary ... ok
+test boundary_embedding::tests::cube_requires_every_stage_and_preserves_input ... ok
+test boundary_embedding::tests::oblique_chart_proof_does_not_bypass_exact_boundary_prerequisites ... ok
+test boundary_hull_contact::tests::a_plane_cutting_a_control_hull_cannot_discard_its_interior_controls ... ok
+test boundary_agreement::tests::moving_hollow_tensor_sides_fit_shared_exact_work_budget ... ok
+test boundary_hull_contact::tests::opposite_sphere_quadrants_meet_only_at_the_authored_pole ... ok
+test circular_blend::tests::constant_rim_contact_rails_equal_surface_boundary_controls ... ok
+test boundary_hull_contact::tests::oblique_support_is_exact_and_requires_the_owned_vertex ... ok
+test boundary_hull_contact::tests::oblique_straight_edge_support_requires_exact_segment_ownership ... ok
+test boundary_hull_contact::tests::skewed_station_hulls_meet_only_at_owned_vertex ... ok
+test face_contact::tests::trim_boundary_never_becomes_an_interior_defect ... ok
+test intersections::tests::dyadic_boundary_curve_curve_root_is_reported_once ... ok
+test intersections::tests::dyadic_boundary_root_is_reported_once_at_the_exact_parameter ... ok
+test intersections::tests::dyadic_boundary_ruled_surface_root_is_reported_once ... ok
+test face_domain::tests::cap_hole_is_excluded_and_boundary_cells_stay_unresolved ... ok
+test intersections::plane_cylinder::tests::parallel_boundary_line_is_a_tangency_region ... ok
+test intersections::plane_sphere::tests::boundary_clipping_has_exact_trims_and_clipped_lifts ... ok
+test intersections::tests::ruled_range_subdivision_admits_interior_and_boundary_but_refuses_uncertainty ... ok
+test intersections::tests::shared_endpoint_is_one_boundary_event_with_exact_parameters ... ok
+test intersections::tests::frustum_sections_and_incomplete_boundary_bands_are_distinguished ... ok
+test intersections::tests::nonproportional_boundary_weights_do_not_become_generator_lines ... ok
+test nurbs_ss_g6::tests::iso_certifier_refuses_rational_periodic_multispan_boundary_corner_and_nonunique ... ok
+test nurbs_ss_g6::tests::v4_containment_boundary_and_reversed_difference_refuse ... ok
+test boundary_hull_contact::tests::overlapping_face_interiors_and_microscopic_gaps_are_not_shared_boundaries ... ok
+test boundary_agreement::tests::partial_annular_ruled_support_closes_every_authored_boundary_exactly ... ok
+test ray_parity::tests::point_retry_budget_and_boundary_origins_remain_unresolved ... ok
+test shared_boundary::tests::tangent_boundary_control_rows_remain_strictly_separated ... ok
+test ray_parity::tests::point_retries_a_boundary_hit_without_treating_it_as_outside ... ok
+test source_boundary_display::tests::display_anchor_stays_inside_extreme_and_subnormal_bounds ... ok
+test source_boundary_fragment::tests::nonlinear_endpoint_chart_membership_uses_the_actual_last_control ... ok
+test source_boundary_fragment::tests::original_world_mapping_keeps_root_caps_and_accounts_for_work ... ok
+test source_boundary_fragment::tests::restored_fragment_rechecks_source_binding_and_root_order ... ok
+test boundary_hull_contact::tests::strict_bezier_basis_excludes_intermediate_support_controls_from_vertex_contact ... ok
+test source_boundary_fragment::tests::root_valued_split_preserves_sources_and_joins_across_original_curves ... ok
+test source_boundary_network::tests::coincident_enclosures_do_not_weld_distinct_identities ... ok
+test source_boundary_network::tests::incompatible_or_nonfinite_enclosures_are_refused ... ok
+test source_contour_winding::tests::rational_contour_winding_uses_original_arcs_and_refuses_boundary_band ... ok
+test source_corner_plane_image::tests::a_zero_boundary_must_map_to_the_owned_point ... ok
+test source_interior_fiber::tests::extra_roots_degenerate_planes_and_boundary_levels_refuse_proof ... ok
+test source_plane_fiber::tests::curved_rational_boundary_and_both_axis_ends ... ok
+test source_pole_plane_image::tests::extra_collapsed_boundary_is_an_owned_image_not_a_single_preimage ... ok
+test boundary_agreement::tests::sphere_charts_have_global_perspective_injectivity ... ok
+test source_shell_incidence::tests::chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes ... ok
+test sphere_mate::parameter_tests::sphere_boundary_parameter_preserves_legacy_and_rational_traversals ... ok
+test intersections::tests::multispan_conversion_handles_varying_boundary_weights_and_oblique_cuts ... ok
+test trim_sew::tests::heal_budget_exact_boundary_accepts_and_boundary_ulp_refuses ... ok
+test trim_sew::tests::sample_on_event_without_boundary_label_refuses ... ok
+test shared_boundary::tests::collapsed_secondary_boundary_must_be_an_owned_curve_endpoint ... ok
+test source_boundary_fragment::tests::source_chart_containment_is_not_inferred_from_two_inside_endpoints ... ok
+test boundary_hull_contact::tests::retained_hollow_sweep_vertex_contacts_require_authored_vertex_ownership ... ok
+test trimmed_shell_recipe::tests::assembled_boundary_gains_volume_authority_only_after_fresh_geometric_audit ... ok
+test solid_distance::tests::unresolved_pairs_and_invalid_volume_never_publish_boundary_gap_as_solid_distance ... ok
+test trimmed_shell_recipe::tests::rational_curved_closed_boundary_receives_full_volume_qualification ... ok
+test boundary_hull_contact::tests::coincident_geometry_without_shared_topology_is_not_authorized ... ok
+test material_segment::tests::interior_segment_requires_volume_seed_and_complete_boundary_exclusion ... ok
+test source_pole_plane_image::tests::original_spherical_meridians_have_boundary_plus_pole_images ... ok
+test boundary_embedding::tests::exact_quadrant_sweep_admits_contacts_only_after_joint_prerequisites ... ok
+test boundary_embedding::tests::exact_sphere_boundary_embedding_covers_poles_equator_edges_and_vertices ... ok
+test volume_validity::tests::partitioned_boolean_cavity_uses_exact_hull_boundary_contacts ... ok
+test volume_validity::tests::sweep_boundary_proof_precedes_nesting_and_material_orientation ... ok
+test material_chord::tests::original_boundary_roots_admit_chords_without_rounded_endpoint_assumptions ... ok
+test step_interchange_v3::tests::v7_requires_whole_domain_boundary_identities_for_periodic_carriers ... ok
+test boundary_agreement::tests::partial_annular_exact_boundaries_cover_scale_radius_and_direction_matrix ... ok
+test boundary_hull_contact::tests::joined_projection_requires_source_seam_budget_order_and_dominance ... ok
+test volume_validity::tests::periodic_hollow_miter_keeps_unproved_boundary_and_shell_roles_distinct ... ok
+test trimmed_face_recipe::tests::split_rational_boundary_can_be_reassembled_without_changing_surface ... ok
+test boundary_hull_contact::tests::joined_projection_is_covariant_for_coordinate_rotation_and_translation ... ok
+test volume_validity::tests::canonical_partial_annular_boundary_has_consistent_material_volume ... ok
+test boundary_embedding::tests::trimmed_plane_hulls_require_complete_exact_boundary_prerequisites ... ok
+
+test result: ok. 79 passed; 0 failed; 0 ignored; 0 measured; 855 filtered out; finished in 8.94s
+
