@@ -1,0 +1,71 @@
+{
+  "schema": "affine-profile-global-volume-frontier-v1",
+  "qualifiedAsSolid": false,
+  "fullGoalComplete": false,
+  "candidateFaces": 128,
+  "candidateEdges": 256,
+  "completeBoundaryG2QualifiedSeparately": true,
+  "probeSource": "probes/affine-stations-with-volume-probe.rs",
+  "diagnosticLog": "logs/global-volume-diagnostic.log",
+  "elapsedSeconds": 458.24,
+  "contactCellsAllowance": 100000,
+  "contactDomainCellsAllowance": 1000000,
+  "contactCellsPerPair": 1000,
+  "volumeProven": false,
+  "boundaryProven": false,
+  "firstUnvisitedPair": [
+    94,
+    96
+  ],
+  "unresolvedPrefix": [
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      8,
+      11
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ]
+  ],
+  "interpretation": "Global contact evidence remains unproved, not a claimed collision. Adjacent curved profile charts need a common filled-carrier volume atlas. The optimistic positive-Solid hypothesis is retained as a diagnostic probe, not a passing feature test or Solid admission."
+}

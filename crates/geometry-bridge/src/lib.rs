@@ -56,6 +56,8 @@ mod cad_display;
 mod cad_draft;
 mod cad_edge_edit;
 mod cad_face_contacts;
+mod cad_implicit_body;
+mod cad_fibered_body;
 mod cad_face_distance;
 mod cad_source_body;
 mod cad_expression_shell;

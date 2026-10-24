@@ -1,9 +1,9 @@
-//! Exact Cartesian one-sided C1..C4 jets at original B-spline knots.
+//! Exact Cartesian one-sided C0..C4 jets at original B-spline knots.
 //! Formal de Boor series use rational expansions of original source leaves.
 //! No floating-point knot insertion, derivative evaluation or sampling.
 use crate::{
-    exact_inputs, Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
-    InputError, LeafRef, PredicateContext, Reason, Sign,
+    Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion, InputError,
+    LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
 #[path = "bspline_plane_roots.rs"]
 mod plane_roots;
@@ -17,6 +17,23 @@ struct Rational {
     d: Expansion,
 }
 impl Rational {
+    fn reduced(n: Expansion, d: Expansion, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+        if d.sign() != Sign::Positive {
+            return Err(Reason::MissingProof);
+        }
+        if n.sign() == Sign::Zero {
+            ctx.charge(1)?;
+            return Ok(Self::zero());
+        }
+        // The numerator and denominator are homogeneous scalar data. Exact
+        // common integer reduction and a common binary power preserve n/d;
+        // they prevent artificial overflow/underflow from unreduced fractions.
+        let mut pair = [n, d];
+        Expansion::reduce_projective(&mut pair, ctx)?;
+        Expansion::normalize_common(&mut pair, ctx)?;
+        let [n, d] = pair;
+        Ok(Self { n, d })
+    }
     fn scalar(n: Expansion) -> Self {
         Self {
             n,
@@ -28,15 +45,13 @@ impl Rational {
     }
     fn add(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if self.d.sub(&b.d, ctx)?.sign() == Sign::Zero {
-            return Ok(Self {
-                n: self.n.add(&b.n, ctx)?,
-                d: self.d.clone(),
-            });
+            return Self::reduced(self.n.add(&b.n, ctx)?, self.d.clone(), ctx);
         }
-        Ok(Self {
-            n: self.n.mul(&b.d, ctx)?.add(&b.n.mul(&self.d, ctx)?, ctx)?,
-            d: self.d.mul(&b.d, ctx)?,
-        })
+        Self::reduced(
+            self.n.mul(&b.d, ctx)?.add(&b.n.mul(&self.d, ctx)?, ctx)?,
+            self.d.mul(&b.d, ctx)?,
+            ctx,
+        )
     }
     fn sub(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         self.add(
@@ -52,10 +67,7 @@ impl Rational {
             ctx.charge(1)?;
             return Ok(Self::zero());
         }
-        Ok(Self {
-            n: self.n.mul(&b.n, ctx)?,
-            d: self.d.mul(&b.d, ctx)?,
-        })
+        Self::reduced(self.n.mul(&b.n, ctx)?, self.d.mul(&b.d, ctx)?, ctx)
     }
     fn div_positive(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if b.n.sign() != Sign::Positive || b.d.sign() != Sign::Positive {
@@ -66,15 +78,9 @@ impl Rational {
             return Ok(Self::zero());
         }
         if self.d.sub(&b.d, ctx)?.sign() == Sign::Zero {
-            return Ok(Self {
-                n: self.n.clone(),
-                d: b.n.clone(),
-            });
+            return Self::reduced(self.n.clone(), b.n.clone(), ctx);
         }
-        Ok(Self {
-            n: self.n.mul(&b.d, ctx)?,
-            d: self.d.mul(&b.n, ctx)?,
-        })
+        Self::reduced(self.n.mul(&b.d, ctx)?, self.d.mul(&b.n, ctx)?, ctx)
     }
     fn equal(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
         Ok(self
@@ -95,6 +101,60 @@ fn series(
     order: usize,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Series, Reason> {
+    let at_start = t.sub(&u[span], ctx)?.sign() == Sign::Zero;
+    let at_end = t.sub(&u[span + 1], ctx)?.sign() == Sign::Zero;
+    let mut bezier = true;
+    // Literal original C0 Bezier spans have at least p copies of BOTH
+    // endpoint knots. Their p+1 original poles are exactly the local Bernstein
+    // net, even inside a multispan/nonclamped curve. No knot insertion occurs.
+    for k in span - p + 1..=span {
+        bezier &= u[k].sub(&u[span], ctx)?.sign() == Sign::Zero;
+    }
+    for k in span + 1..=span + p {
+        bezier &= u[k].sub(&u[span + 1], ctx)?.sign() == Sign::Zero;
+    }
+    if bezier && (at_start || at_end) {
+        let width = Rational::scalar(u[span + 1].sub(&u[span], ctx)?);
+        let first = if at_start {
+            span - p
+        } else {
+            span - order.min(p)
+        };
+        let end = if at_start { first + order.min(p) } else { span };
+        let mut rows = (first..=end)
+            .map(|i| -> Result<[Rational; 4], Reason> {
+                Ok([
+                    Rational::scalar(x[4 * i].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 1].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 2].mul(&x[4 * i + 3], ctx)?),
+                    Rational::scalar(x[4 * i + 3].clone()),
+                ])
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut output = (0..=order)
+            .map(|_| std::array::from_fn(|_| Rational::zero()))
+            .collect::<Series>();
+        let mut factor = Rational::scalar(Expansion::scalar(1.));
+        for q in 0..=order.min(p) {
+            let index = if at_start { 0 } else { rows.len() - 1 };
+            for k in 0..4 {
+                output[q][k] = rows[index][k].mul(&factor, ctx)?;
+            }
+            if q < order.min(p) {
+                for i in 0..rows.len() - 1 {
+                    for k in 0..4 {
+                        rows[i][k] = rows[i + 1][k].sub(&rows[i][k], ctx)?;
+                    }
+                }
+                rows.pop();
+                factor = factor
+                    .mul(&Rational::scalar(Expansion::scalar((p - q) as f64)), ctx)?
+                    .div_positive(&Rational::scalar(Expansion::scalar((q + 1) as f64)), ctx)?
+                    .div_positive(&width, ctx)?;
+            }
+        }
+        return Ok(output);
+    }
     let mut rows = Vec::with_capacity(p + 1);
     for j in 0..=p {
         let i = span - p + j;
@@ -166,7 +226,7 @@ fn bspline_jet_identity(
     endpoints: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(1..=4).contains(&order)
+        || order > 4
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {
@@ -242,7 +302,7 @@ fn bspline_jet_identity(
             // the Cartesian quotient inherits those jets for every authored
             // control net; no endpoint expansion or rounded proxy is needed.
             // Knot comparisons and source validation remain charged to ctx.
-            if degree.saturating_sub(right - span) >= order {
+            if right - span <= degree && degree - (right - span) >= order {
                 span = right;
                 continue;
             }
@@ -267,7 +327,7 @@ fn bspline_jet_identity(
     })
 }
 
-/// Exact Cartesian C1..C4 at every original internal knot.
+/// Exact Cartesian C0..C4 at every original internal knot.
 pub fn rational_bspline_internal_jet_identity(
     ctx: &mut PredicateContext<'_>,
     controls: &[[LeafRef; 4]],
@@ -322,6 +382,22 @@ fn direction_equal(
         Sign::Negative => -1.,
         _ => return Err(Reason::MissingProof),
     };
+    if order == 0 {
+        // Positive common velocity ratio proves the SAME unit tangent value.
+        // Position continuity and speed on entire spans remain owner duties.
+        let c = Rational::scalar(Expansion::scalar(sign));
+        let lv = l[1][axis].mul(&c, ctx)?;
+        let rv = r[1][axis].mul(&c, ctx)?;
+        if rv.n.sign() != Sign::Positive || rv.d.sign() != Sign::Positive {
+            return Err(Reason::MissingProof);
+        }
+        for k in 0..3 {
+            if !l[1][k].mul(&rv, ctx)?.equal(&r[1][k].mul(&lv, ctx)?, ctx)? {
+                return Ok(false);
+            }
+        }
+        return Ok(true);
+    }
     let chart = |x: &[[Rational; 3]],
                  ctx: &mut PredicateContext<'_>|
      -> Result<(Vec<(Rational, Rational, Rational)>, Rational), Reason> {

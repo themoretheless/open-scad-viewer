@@ -1,0 +1,12 @@
+{
+  "schema": "arc-bishop-private-release-build/1",
+  "sourceRevision": "995fb51cd468244c4100a27d91d09a5f32874e53",
+  "inputsSha256": "99ee8a1f33701671695008fa8d1c6e9821b1af30c4bd95581381c41a9e73d7d8",
+  "wasmBytes": 18249477,
+  "wasmSha256": "fecce874feae3399518449ab1d84bb4f859ca19a009bad3f3d9be59ac99fd626",
+  "artifact": "/private/tmp/osv-arc-bishop-private-artifact-20261016/geometry_wasm.wasm",
+  "buildLog": "/private/tmp/osv-arc-bishop-private-wasm-995fb51cd-20261016.log",
+  "buildExitCode": 0,
+  "runtimeQualified": true,
+  "publicPackageQualified": false
+}

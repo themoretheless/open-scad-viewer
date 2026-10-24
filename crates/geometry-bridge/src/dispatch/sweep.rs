@@ -32,7 +32,13 @@ const OPS: &[&str] = &[
 
 const OPS: &[&str] = &[
     "brep_sweep_viewport_evidence",
+    "brep_rational_closed_material_construct",
+    "brep_rational_closed_material_audit",
     "brep_sweep_boundary_construct",
+    "brep_sweep_closed_material_construct",
+    "brep_sweep_smooth_closed_material_construct",
+    "brep_sweep_smooth_closed_material_audit",
+    "brep_complete_boundary_smoothness_audit",
     "brep_progressive_profile_body",
     "brep_sweep_law_payload",
     "brep_sweep_constructor",
@@ -98,7 +104,15 @@ fn handle(v: Value) -> Result<Value> {
         "brep_miter_owned_reconstruct" => cad_miter_owned::reconstruct(v),
         "brep_miter_owned_construct" => cad_miter_owned::construct(v),
         "brep_sweep_retained_charts_audit" => cad_sweep_smoothness::diagnose_charts(v),
+        "brep_complete_boundary_smoothness_audit" => cad_sweep_smoothness::diagnose_complete(v),
+        "brep_rational_closed_material_construct" => cad_sweep_boundary::rational_closed(v, false),
+        "brep_rational_closed_material_audit" => cad_sweep_boundary::rational_closed(v, true),
         "brep_sweep_boundary_construct" => cad_sweep_boundary::construct(v),
+        "brep_sweep_closed_material_construct" => cad_sweep_boundary::construct_closed(v),
+        "brep_sweep_smooth_closed_material_construct" => {
+            cad_sweep_boundary::construct_smooth_closed(v)
+        }
+        "brep_sweep_smooth_closed_material_audit" => cad_sweep_boundary::verify_smooth_closed(v),
         "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
         "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),
         "brep_sweep_law_payload" => sweep_pipeline::law_payload(v),

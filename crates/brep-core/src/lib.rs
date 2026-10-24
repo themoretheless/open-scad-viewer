@@ -10,6 +10,7 @@
 )]
 #![allow(unused_features)]
 mod rational_identity;
+mod exact_affine_source;
 #[cfg(feature = "codec")]
 mod serialization;
 use nurbs_core::{
@@ -123,6 +124,7 @@ pub mod rounded_patch_network;
 pub mod shell_thickness;
 pub mod wall_clearance;
 pub mod wall_opposition;
+pub mod source_implicit_body;
 pub mod sweep_miter_layout;
 pub mod sweep_station_reconstruction;
 pub mod sweep_affine_boundary;
@@ -143,7 +145,9 @@ pub mod uv_coverage;
 mod uv_regions;
 pub mod volume_validity;
 pub use analytic::{
+    LoftCap, capped_loft_with_caps, capped_loft_with_caps_checked, FiberedBodyLimits, FiberedBodyReport, FiberedBody, FiberedBodyAttempt, construct_fibered_body, verify_fibered_body,
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
+    AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls,
     revolve_wire_angle, ruled_loft, periodic_section_loft, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, smooth_station_walls, SmoothStationWalls, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, progressive_profile_body, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};

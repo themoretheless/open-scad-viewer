@@ -109,3 +109,30 @@
             );
         }
     }
+
+#[test]
+fn zero_direction_order_checks_positive_orientation_but_supplies_no_position_credit() {
+    let u = [0., 0., 0., 0.5, 0.5, 0.5, 1., 1., 1.];
+    let mut p = [
+        [0., 0., 0., 1.],
+        [0.5, 0., 0., 2.],
+        [1., 0., 0., 4.],
+        [1_f64.next_up(), 0., 0., 0.3],
+        [1.5, 0., 0., 0.7],
+        [2., 0., 0., 1.],
+    ];
+    let full = audit(&p, &u, 2, 0, false, true, 1000000);
+    assert_eq!(full.outcome, BezierIdentity::Equal);
+    for budget in [0, full.work_used - 1] {
+        assert_ne!(
+            audit(&p, &u, 2, 0, false, true, budget).outcome,
+            BezierIdentity::Equal
+        );
+    }
+    p[4][0] = 0.5;
+    p[5][0] = 0.;
+    assert_ne!(
+        audit(&p, &u, 2, 0, false, true, 1000000).outcome,
+        BezierIdentity::Equal
+    );
+}

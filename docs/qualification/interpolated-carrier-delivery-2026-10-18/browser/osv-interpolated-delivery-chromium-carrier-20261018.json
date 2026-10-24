@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "faces": 6,
+  "idealBody": {
+    "boxes": 0,
+    "cells": 999,
+    "embeddingCertified": true,
+    "exactWork": 7355,
+    "monotonicityLower": null,
+    "parameterTopologyPreserved": true,
+    "projection": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "proofMethod": "atlas",
+    "reason": null,
+    "volumeRegularityCertified": true
+  },
+  "seamContinuity": "C0",
+  "smoothnessCertified": false,
+  "sourcePreserved": true,
+  "stepRoundTripPassed": true,
+  "exactBudgetPassed": true,
+  "zeroAndOneShortRefusalsPassed": true,
+  "forgedFlagsRefused": true,
+  "schema": "original-interpolated-carrier-chromium/1",
+  "browser": "151.0.7922.34",
+  "inputSha256": "bc8b209e396ffda04bcd4ff9f3ef571962a415c75257de033f8e66faedccdb77",
+  "artifact": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "a3a170bc43df9fcd307be2147d52ed2652cfa66ab95122b1bac5a2215a5d4596",
+    "geometryWasmByteLength": 12833089,
+    "publicAndPackedVerified": true
+  },
+  "scope": "One specified original carrier case through the current browser Rust/WASM bridge. No Rush editor, UI lifecycle or full semantic G1 qualification is inferred.",
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

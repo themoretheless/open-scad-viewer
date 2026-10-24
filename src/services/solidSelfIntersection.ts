@@ -22,7 +22,7 @@ export interface QuotientProof {
 export function faceAbsenceProven(f:SelfIntersection['faces'][number]):boolean{return !!(f.result?.proven||f.quotientProof?.proven)}
 export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number,boundaryAudit?:BoundaryAuditLimits){
  const spans=(knots:number[],degree:number,count:number)=>knots.slice(degree,count).filter((k,i)=>k<knots[degree+i+1]).length
- const projectiveCandidates=callGeometryRust<number[][][][]>('cad_client_geometry',{operation:'projectiveCandidates',surfaces:model.faces.map(f=>f.surface)})
+ const projectiveCandidates=callGeometryRust<number[][][][]>('cad_client_geometry',{operation:'projectiveCandidates',surfaces:model.faces.map(f=>structuredClone(f.surface))})
  const collapsed=model.faces.map(({surface:s})=>{
   const p=s.controlPoints,eq=(a:number[],b:number[])=>a.every((n,k)=>n===b[k])
   return [0,p.length-1].some(i=>{
@@ -33,7 +33,7 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {pMatrixSupported:model.faces.map(f=>f.surface.degreeU<=8&&f.surface.degreeV<=8),faceEvidence:model.faces.map(f=>surfaceEvidence(f.surface)),boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {surfaces:model.faces.map(f=>structuredClone(f.surface)),pMatrixSupported:model.faces.map(f=>f.surface.degreeU<=8&&f.surface.degreeV<=8),faceEvidence:model.faces.map(f=>surfaceEvidence(f.surface)),boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 function quotientExpectation(model:NurbsBrep,face:number){
  const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
@@ -102,6 +102,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
   const periodic=e.domains[i].periodic,pole=e.collapsed[i],remaining=e.maxSpans-used,base=periodic||pole?0:Math.min(e.faceSpans[i],remaining)
   if(x.spans<base||x.spans>remaining)return false
   used+=x.spans
+  const nativeWitness=()=>{try{return callGeometryRust<boolean>('cad_client_geometry',{operation:'faceInjectivityWitness',surface:e.surfaces[i],maxSpans:remaining,report:x})}catch{return false}}
   if(x.proven){
    if(x.reason==='global-polar-p-matrix'){
     const p=x.polarPMatrix
@@ -122,17 +123,17 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
     const basis=x.linearProjection
     if(x.projection!==null||!Array.isArray(basis)||basis.length!==2||!basis.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite)))return false
     const candidate=linearProjections.findIndex(p=>p.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
-    if(candidate<0||x.spans!==e.faceSpans[i]*(1+16*(candidate+1)))return false
+    if((candidate<0||x.spans!==e.faceSpans[i]*(1+16*(candidate+1)))&&!nativeWitness())return false
    }else if(x.reason==='global-projective-projection-contraction'){
     const basis=x.projectiveProjection
     if(x.projection!==null||x.linearProjection!==null||!Array.isArray(basis)||basis.length!==3||!basis.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)))return false
     const candidate=e.projectiveCandidates[i].findIndex(c=>c.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
-    if(candidate<0||x.spans!==e.faceSpans[i]*(97+16*(candidate+1)))return false
+    if((candidate<0||x.spans!==e.faceSpans[i]*(97+16*(candidate+1)))&&!nativeWitness())return false
    }else if(x.reason==='global-polar-projection-contraction'){
     const basis=x.polarProjection
     if(x.projection!==null||x.linearProjection!==null||x.projectiveProjection!==null||!Array.isArray(basis)||basis.length!==3||!basis.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)))return false
     const candidate=e.polarCandidates[i].findIndex(c=>c.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
-    if(candidate<0||x.spans!==e.faceSpans[i]*(193+256*(candidate+1)))return false
+    if((candidate<0||x.spans!==e.faceSpans[i]*(193+256*(candidate+1)))&&!nativeWitness())return false
    }else return false
    }
   }else{
@@ -147,7 +148,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
     const afterPolar=previous+polar*e.faceSpans[i]*256
     const pMatrix=x.polarPMatrix===undefined||!e.pMatrixSupported[i]?0:Math.min(12,Math.max(0,Math.floor((remaining-afterPolar)/(e.faceSpans[i]*256))))
     const expected=afterPolar+pMatrix*e.faceSpans[i]*256
-    if(x.spans!==expected)return false
+    if(x.spans!==expected&&!nativeWitness())return false
    }else return false
   }
   if(f.quotientProof!=null){

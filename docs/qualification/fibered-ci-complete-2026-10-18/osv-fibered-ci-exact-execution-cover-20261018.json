@@ -1,0 +1,42 @@
+{
+  "schema": "exact-native-execution-cover/1",
+  "complete": true,
+  "checks": [
+    {
+      "part": "serial",
+      "catalogCases": 44,
+      "executed": 44,
+      "passed": 44,
+      "ignored": 0,
+      "failed": 0,
+      "catalogLogSha256": "563296e9d9e25fce141f3ab9aa6579643005211f141d8b898385cae11aeebd0c",
+      "executionLogSha256": "12feb585cbc287ee34d3558000a233006ec5e0426a35c70340776352fa7bdac4",
+      "casesSha256": "15c2cdd3985afe10c1bec059e05b9c6fbe510bff12fe92a30df22afc9bf097f8",
+      "missing": 0,
+      "extra": 0,
+      "duplicates": 0
+    },
+    {
+      "part": "parallel",
+      "catalogCases": 5935,
+      "executed": 5935,
+      "passed": 5930,
+      "ignored": 5,
+      "failed": 0,
+      "catalogLogSha256": "150bcf8e9f1a981a7baa14e6412f28343d7061a127ff8410cba5f72b8a52cbb8",
+      "executionLogSha256": "a6da91a94bc68b0729d32e74385f954ba69323202da76fa07304abb87d845b92",
+      "casesSha256": "46cf717a0f793a97efd94a7ba586d11344865d7b2aac69c379cd8100b45c33ca",
+      "missing": 0,
+      "extra": 0,
+      "duplicates": 0
+    }
+  ],
+  "totals": {
+    "passed": 5974,
+    "ignored": 5,
+    "failed": 0
+  },
+  "semanticG1MatrixQualified": false,
+  "qualificationClaim": "none",
+  "fullGoalComplete": false
+}

@@ -1,0 +1,47 @@
+{
+  "schema": "original-carrier-public-binding-checkpoint/1",
+  "recordedAt": "2026-10-18",
+  "ownRust": 76,
+  "g0": 90,
+  "g1": 107,
+  "environment": 40,
+  "actualDriftAudit": {
+    "matches": true,
+    "records": 5798,
+    "finiteEvidenceRecords": 166,
+    "rawReportSha256": "168968018c0d8336a3bac0d5982e2dee462e57cd62f437fc87b5f7388ddc3a51"
+  },
+  "metadataAndArtifactContractTestsPassed": 44,
+  "nodeToolTestsPassed": 9,
+  "nodeToolTestsSkipped": 1,
+  "failed": 0,
+  "architecturePinnedOversized": 57,
+  "architectureLayerViolations": 0,
+  "sourceOwnership": {
+    "files": 637,
+    "callables": 8904,
+    "unreviewed": 0,
+    "stale": 0
+  },
+  "nurbsApi": {
+    "publicModules": 191,
+    "catalogEntries": 200
+  },
+  "semanticG1CompletedWorkUnits": 0,
+  "semanticG1PlannedWorkUnits": 4740,
+  "qualificationClaim": "none",
+  "newHostedCiQualified": false,
+  "fullGoalComplete": false,
+  "logs": [
+    {
+      "path": "docs/qualification/interpolated-carrier-refreeze-2026-10-18/osv-interpolated-delivery-frozen-contract-tests-20261018.log",
+      "sha256": "19153562f2769d805f314d97287ee6de7c42989718c163506a50f92d99fedd42",
+      "byteLength": 244
+    },
+    {
+      "path": "docs/qualification/interpolated-carrier-refreeze-2026-10-18/osv-interpolated-delivery-frozen-node-tools-tests-20261018.log",
+      "sha256": "58ab63231f8e754a7dfd5911891b3d6cb3b78c735b50d5526f1cc93c09d02b01",
+      "byteLength": 1175
+    }
+  ]
+}

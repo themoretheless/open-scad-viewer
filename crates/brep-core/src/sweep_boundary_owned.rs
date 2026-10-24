@@ -32,6 +32,7 @@ pub struct Report {
     pub regularity: Option<regularity::Report>,
     pub volume: Option<volume_validity::Report>,
     pub reason: Option<&'static str>,
+    pub ideal_volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
 }
 pub struct CertifiedBody {
     model: Model,
@@ -122,6 +123,7 @@ pub fn construct(
         regularity: None,
         volume: None,
         reason: Some("source-wall-bound-unproved"),
+        ideal_volume: None,
     };
     if !out.wall.continuous_bound || out.wall.continuous_error_upper.is_none() {
         return Ok(Attempt::Refused(Box::new(out)));
@@ -291,4 +293,162 @@ pub fn construct(
     } else {
         Attempt::Refused(Box::new(out))
     })
+}
+
+#[derive(Clone, Copy)]
+pub struct IdealLimits {
+    /// One fixed projection, used for the complete original source volume.
+    pub projection: [[f64; 3]; 3],
+    pub cells: usize,
+    pub exact_work: u64,
+}
+/// Stronger constructor: no output model unless BOTH the retained solid and
+/// the original filled-source embedding are proved. The UV topology comes from
+/// the same native cap/contour/trim and retained-volume proof as `construct`;
+/// a caller cannot attach an unrelated source proof to an existing model.
+pub fn construct_with_ideal(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+) -> Result<Attempt> {
+    construct_with_ideal_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        ideal,
+        false,
+    )
+}
+/// Same constructor-owned admission, using the exhaustive ORIGINAL parameter
+/// pair cover instead of the sufficient global strong-monotonicity metric.
+pub fn construct_with_ideal_atlas(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+) -> Result<Attempt> {
+    construct_with_ideal_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        ideal,
+        true,
+    )
+}
+fn construct_with_ideal_impl(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&LoftCap; 2],
+    retained_caps: [&LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    ideal: IdealLimits,
+    atlas: bool,
+) -> Result<Attempt> {
+    // Validate stronger limits even when an earlier geometric stage refuses.
+    if ideal.cells > if atlas { 1000000 } else { 100000 }
+        || ideal.exact_work > 1000000
+        || ideal.projection.iter().flatten().any(|x| !x.is_finite())
+    {
+        return Err(fail("Invalid original ideal-body proof limits"));
+    }
+    let attempt = construct(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+    )?;
+    let Attempt::Certified(mut body) = attempt else {
+        return Ok(attempt);
+    };
+    let mut trim_work = 0;
+    if !common_trim_region::certify(source_caps, &mut trim_work, ideal.exact_work)? {
+        return Ok(ideal_refused(body, ideal, 0, trim_work, "ideal-body-common-trim-region-unproved"));
+    }
+    let mut profile_cells = 0;
+    for profile in sweep.source_profiles() {
+        if profile_cells == ideal.cells {
+            return Ok(ideal_refused(body, ideal, profile_cells, trim_work, "ideal-volume-work-limit"));
+        }
+        let regular = nurbs_core::curve_regularity::inspect(profile, (ideal.cells - profile_cells).min(100000))?;
+        profile_cells += regular.cells;
+        if !regular.spanwise_regular {
+            return Ok(ideal_refused(body, ideal, profile_cells, trim_work, "ideal-body-original-profile-regularity-unproved"));
+        }
+    }
+    let certify = if atlas {
+        MultiSweep::certify_ideal_volume_atlas
+    } else {
+        MultiSweep::certify_ideal_volume
+    };
+    let proof = certify(
+        sweep,
+        [&source_caps[0].surface, &source_caps[1].surface],
+        ideal.projection,
+        ideal.cells - profile_cells,
+        ideal.exact_work - trim_work,
+    )?;
+    let mut proof = proof;
+    proof.exact_work += trim_work;
+    proof.cells += profile_cells;
+    let proven = proof.embedding_certified
+        && proof.regularity_certified
+        && proof.parameter_topology_preserved;
+    body.report.reason = if proven { None } else { proof.reason };
+    body.report.ideal_volume = Some(proof);
+    body.report.certified = proven;
+    Ok(if proven {
+        Attempt::Certified(body)
+    } else {
+        Attempt::Refused(Box::new(body.report))
+    })
+}
+
+mod closed;
+pub use closed::{ClosedAttempt, ClosedBody, ClosedLimits, ClosedReport, MaterialLimits, MaterialReport, construct_closed_with_ideal_atlas};
+pub use closed::{SmoothClosedAttempt,SmoothClosedBody,SmoothClosedLimits,SmoothClosedReport,construct_smooth_closed_with_ideal_atlas};
+pub use closed::OriginalClosedLimits;
+pub use closed::{OriginalClosedReport,AffineWallBindingReport};
+pub use closed::verify_smooth_closed_with_ideal_atlas;
+pub use closed::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
+    construct_rational_closed_material,verify_rational_closed_material};
+
+mod common_trim_region;
+
+fn ideal_refused(mut body: Box<CertifiedBody>, ideal: IdealLimits, cells: usize, exact_work: u64, reason: &'static str) -> Attempt {
+    body.report.certified = false;
+    body.report.reason = Some(reason);
+    body.report.ideal_volume = Some(nurbs_core::progressive_sweep::IdealVolumeReport {
+        embedding_certified: false, regularity_certified: false,
+        parameter_topology_preserved: false, cells, exact_work,
+        boxes: 0, monotonicity_lower: None, projection: ideal.projection, reason: Some(reason),
+    });
+    Attempt::Refused(Box::new(body.report))
 }

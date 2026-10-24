@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "scope": "Authored production src TS/Vue/MJS; generated packages are bound by artifact fingerprints. File ownership and callable census, not a proof of algorithm completeness or migration parity.",
   "sourceFiles": 637,
-  "callables": 8904,
+  "callables": 8906,
   "unreviewedNumericalFiles": [],
   "staleDecisions": [],
   "rows": [
@@ -3128,18 +3128,18 @@
     },
     {
       "file": "src/core/ownRustCadEvidence.ts",
-      "sha256": "f6df640ce790837ff6d90bc5f6f01fbb7f80ead6f894d7c9fe77f141a47e42bf",
+      "sha256": "9e2b967677d95d8840f323b868a5fd2720ebfdf644d57ab5b97beb88ab9d0d26",
       "generated": false,
       "owner": "rush-runtime + application-runtime",
       "decision": "runtime",
       "functions": [
         {
           "name": "recordedOwnRustCadFingerprint",
-          "line": 9
+          "line": 13
         },
         {
           "name": "<callback>",
-          "line": 11
+          "line": 15
         }
       ],
       "loops": 0,
@@ -38432,7 +38432,7 @@
     },
     {
       "file": "src/services/solidSelfIntersection.ts",
-      "sha256": "a0e1e4ce219e3234645906392607c82ebe4e19dca4676869efd3b833aa6e2cc1",
+      "sha256": "81286ae3cacc458476633d736635caadc2c05c323da15cd4c15b5f9fa791f50e",
       "generated": false,
       "owner": "osv-math + planar-geometry + nurbs-core + brep-core",
       "decision": "native-client-geometry-boundaries",
@@ -38504,6 +38504,10 @@
         {
           "name": "<callback>",
           "line": 32
+        },
+        {
+          "name": "<callback>",
+          "line": 35
         },
         {
           "name": "<callback>",
@@ -38614,16 +38618,12 @@
           "line": 90
         },
         {
-          "name": "<callback>",
-          "line": 109
+          "name": "nativeWitness",
+          "line": 104
         },
         {
           "name": "<callback>",
-          "line": 113
-        },
-        {
-          "name": "<callback>",
-          "line": 114
+          "line": 110
         },
         {
           "name": "<callback>",
@@ -38631,19 +38631,15 @@
         },
         {
           "name": "<callback>",
-          "line": 114
+          "line": 115
         },
         {
           "name": "<callback>",
-          "line": 118
+          "line": 115
         },
         {
           "name": "<callback>",
-          "line": 119
-        },
-        {
-          "name": "<callback>",
-          "line": 119
+          "line": 115
         },
         {
           "name": "<callback>",
@@ -38651,7 +38647,15 @@
         },
         {
           "name": "<callback>",
-          "line": 123
+          "line": 120
+        },
+        {
+          "name": "<callback>",
+          "line": 120
+        },
+        {
+          "name": "<callback>",
+          "line": 120
         },
         {
           "name": "<callback>",
@@ -38659,15 +38663,19 @@
         },
         {
           "name": "<callback>",
-          "line": 124
+          "line": 125
         },
         {
           "name": "<callback>",
-          "line": 124
+          "line": 125
+        },
+        {
+          "name": "<callback>",
+          "line": 125
         },
         {
           "name": "inspectSelfIntersection",
-          "line": 155
+          "line": 156
         }
       ],
       "loops": 4,

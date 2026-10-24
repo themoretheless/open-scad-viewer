@@ -380,7 +380,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "face": face.face,
             "linearRowWeights":face.linear.as_ref().map(|linear|linear.row_weights),
             "linearProfileParameterization":face.linear.as_ref().and_then(|linear|linear.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower}))),
-            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
+            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedAxis":q.collapsed_axis,"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
                 "proven":q.proven(),"polar":q.polar.as_ref().map(|p|json!({"proven":p.proven,"cells":p.cells,"reason":p.reason,"derivativeBounds":p.derivative_bounds,"dominanceMarginLower":p.dominance_margin_lower})),"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
                 "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
@@ -477,6 +477,71 @@ mod tests {
         for id in ids {
             assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
             assert!(step_sweep_volume(json!({"session":id,"maxUnits":1})).is_err());
+
+    fn sphere_face_proofs_include_projective_basis_and_complete_work_counts() {
+        let model = brep_core::analytic::sphere(3.).unwrap();
+        let before = value_codec::to_value(&model).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(1000);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["allFacesInjective"], json!(true));
+        let required = field::<usize>(&report, "spans").unwrap();
+        assert!(required > 0 && required <= 1000);
+        let accounted = report["faces"].as_array().unwrap().iter()
+            .map(|f| field::<usize>(&f["result"], "spans").unwrap()).sum::<usize>();
+        assert_eq!(required, accounted);
+        q["maxSpans"] = json!(required - 1);
+        let short = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(short["allFacesInjective"], json!(false));
+        assert_eq!(field::<usize>(&short, "spans").unwrap(), required - 1);
+        assert_eq!(report["absenceProven"], json!(false));
+        for f in report["faces"].as_array().unwrap() {
+            assert_eq!(
+                f["result"]["reason"],
+                json!("global-projective-projection-contraction")
+            );
+            assert!(f["result"]["projectiveProjection"].is_array());
+        }
+        assert_eq!(value_codec::to_value(&model).unwrap(), before);
+        if let Ok(path) = std::env::var("CAD_PROJECTIVE_INJECTIVITY_FIXTURE") {
+            let display_mesh =
+                crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":model,"segments":16}))
+                    .unwrap();
+            std::fs::write(
+                path,
+                value_codec::to_string(
+                    &json!({"request":q,"result":report,"displayMesh":display_mesh}),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        }
+    }
+    #[test]
+    fn cylinder_face_proofs_include_linear_basis_and_complete_work_counts() {
+        let model = brep_core::analytic::cylinder(2., 4.).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(1000);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["allFacesInjective"], json!(true));
+        assert_eq!(report["solidGeometryStatus"], json!("not-certified"));
+        let faces: Vec<Value> = field(&report, "faces").unwrap();
+        for face in &faces[..4] {
+            assert_eq!(
+                face["result"]["reason"],
+                json!("global-linear-projection-contraction")
+            );
+            assert_eq!(face["result"]["projection"], Value::Null);
+            assert!(field::<usize>(&face["result"], "spans").unwrap() >= 17);
+        }
+        if let Ok(path) = std::env::var("CAD_LINEAR_INJECTIVITY_FIXTURE") {
+            std::fs::write(
+                path,
+                value_codec::to_string(&json!({"request":q,"result":report})).unwrap(),
+            )
+            .unwrap();
         }
         let id=field::<String>(&begin_sweep_volume(request).unwrap(),"session").unwrap();
         assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));

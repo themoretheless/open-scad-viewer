@@ -1,0 +1,36 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-fibered-ci-architecture-20261016/crates/target/.../wgsl_export
+  |                                                                     ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling syn v2.0.119
+   Compiling zerocopy-derive v0.8.57
+   Compiling zerocopy v0.8.57
+   Compiling half v2.7.1
+   Compiling compute-mlx v0.1.0 (/private/tmp/osv-fibered-ci-architecture-20261016/crates/compute-mlx)
+    Finished `test` profile [optimized + debuginfo] target(s) in 5.68s
+     Running unittests src/lib.rs (crates/target/debug/build/compute-mlx/f71fa398d01f5a14/out/compute_mlx-f71fa398d01f5a14)
+
+running 12 tests
+test ffi::attention::tests::both_attention_abis_preserve_stream_and_default_fusion ... ok
+test ffi::cumsum::tests::both_scan_abis_preserve_axis_options_dtype_and_stream ... ok
+test ffi::tests::missing_library_is_an_error_without_native_initialization ... ok
+test native::compiled::callback::tests::callback_contains_panics_releases_locals_and_recovers ... ok
+test ffi::tests::native_shape_error_returns_message_and_keeps_c_api_usable ... ok
+test native::compiled::callback::tests::native_callback_failure_releases_arrays_and_allows_next_trace ... ok
+test native::compiled::compaction::tests::compact_values_and_count_roll_back_together_after_late_failure ... ok
+test native::compiled::indexing::tests::gather_values_and_count_roll_back_together_after_late_failure ... ok
+test native::compiled::statistics::tests::statistics_pair_and_final_casts_roll_back_together_on_late_failure ... ok
+test native::convolution::tests::metadata_preserves_large_unsigned_options_and_group_geometry ... ok
+test native::lowering::scatter::low::tests::list_allocation_pads_safely_and_preserves_u32_token_capacity ... ok
+test native::compiled::tests::compound_lowering_rolls_back_appended_nodes_after_late_failure ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

@@ -1,0 +1,15 @@
+{
+  "schema": "original-affine-frame-private-wasm-runtime/1",
+  "wasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "wasmBytes": 18272161,
+  "requestSha256": "168ffb84213a5501fb4d839b2fbc7b2c21c33a40afec630fbf86ba501a63802d",
+  "passed": true,
+  "scope": "One exact positive rational affine tilted authored-frame Mobius-clock body: construct/audit/STEP re-audit and budget/parameter refusal.",
+  "negativeLongitudinalPassed": true,
+  "faces": 256,
+  "boundaryErrorUpper": 0.01823251050460172,
+  "publicPackageQualified": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "fullGoalComplete": false
+}

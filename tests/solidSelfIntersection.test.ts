@@ -191,7 +191,9 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
  const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
  const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
  const before=JSON.stringify(model)
- for(const budget of [maxSpans,967,1]){
+ const complete=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
+ expect(complete.spans).toBe(136)
+ for(const budget of [maxSpans,complete.spans-1,1]){
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
   expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
   expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)

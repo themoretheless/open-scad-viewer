@@ -2,6 +2,7 @@
 //! Caps, trim/world-edge identity and global shell validity remain separate.
 pub mod geometric;
 pub mod tangent;
+pub mod complete;
 use crate::{Error, MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Result};
 use nurbs_core::{
     continuity::{self, ProjectiveSeam, ProjectiveSeamCollectionReport},

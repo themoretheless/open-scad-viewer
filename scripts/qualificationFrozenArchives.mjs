@@ -1,3 +1,5 @@
+import {PR58_ARCHIVES} from './qualificationPr58Archives.mjs'
+import {FIBERED_SOURCE_ARCHIVES} from './qualificationFiberedSourceArchives.mjs'
 import {FRAME_CAP_ARCHIVES} from './qualificationFrameCapArchives.mjs'
 import {GENERAL_CERTIFICATE_MAIN_ARCHIVES} from './qualificationGeneralCertificateMainArchives.mjs'
 import {INCOMING_MAIN_ARCHIVES} from './qualificationIncomingMainArchives.mjs'
@@ -38,6 +40,8 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  ...PR58_ARCHIVES,
+  ...FIBERED_SOURCE_ARCHIVES,
   ...FRAME_CAP_ARCHIVES,
   ...GENERAL_CERTIFICATE_MAIN_ARCHIVES,
 'docs/qualification/environment-freeze/g1-github-actions-v37.json': '2aa46a750fae63d8f9c78bffa5e78473afeb2af4297f8a211744c368ba07b724',

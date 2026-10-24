@@ -381,6 +381,7 @@ pub(super) fn rectangular_face(
         .collect();
     let mut boundary = BTreeMap::<(usize, usize), usize>::new();
     let mut pole_rows = BTreeMap::<usize, usize>::new();
+    let mut pole_columns = BTreeMap::<usize, usize>::new();
     for coedge in coedges {
         let divisions = registry.divisions(coedge);
         let domain = coedge.pcurve.domain();
@@ -397,7 +398,13 @@ pub(super) fn rectangular_face(
             let position = registry.position(coedge, sample)?;
             boundary.insert(key, position);
             if model.edges[coedge.edge].degenerate {
-                pole_rows.insert(key.1, position);
+                // Quotient charts may collapse either parameter direction.
+                // Only the grid line owned by this edge maps to its pole.
+                if coedge.pcurve.control_points[0][0] == coedge.pcurve.control_points[1][0] {
+                    pole_columns.insert(key.0, position);
+                } else {
+                    pole_rows.insert(key.1, position);
+                }
             }
         }
     }
@@ -411,7 +418,8 @@ pub(super) fn rectangular_face(
             let shared = boundary
                 .get(&(x, y))
                 .copied()
-                .or_else(|| pole_rows.get(&y).copied());
+                .or_else(|| pole_rows.get(&y).copied())
+                .or_else(|| pole_columns.get(&x).copied());
             out.uv.push([
                 min_u + (max_u - min_u) * x as f64 / segments_u as f64,
                 min_v + (max_v - min_v) * y as f64 / segments_v as f64,

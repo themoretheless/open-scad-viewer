@@ -1,0 +1,500 @@
+{
+  "schema": "original-fibered-source-native-qualification/1",
+  "qualifiedCodeRevision": "a24cc8934793256d4d6f028fadc7b2ab45a9f3ad",
+  "sourceGuardVerified": true,
+  "nativeCheckpointPassed": true,
+  "inputsSha256": "ac7fac07d2b0d1f227f50fb96f59e312498cd7b1491305af03f899ed6c9a29ea",
+  "reusedLowerChecks": 0,
+  "checks": [
+    {
+      "name": "nurbs-domain-map",
+      "command": [
+        "node",
+        "scripts/map-nurbs-api.mjs",
+        "--check"
+      ],
+      "log": "logs/nurbs-domain-map.log",
+      "logSha256": "1d7a6a89aa0ca791d638f45cd25a03b7103a25c538eb037adde6ddbfa96ba6b6",
+      "exitCode": 0,
+      "elapsedSeconds": 0.381,
+      "testResults": []
+    },
+    {
+      "name": "algorithm-owner-audit",
+      "command": [
+        "node",
+        "scripts/audit-algorithm-owners.mjs",
+        "--check"
+      ],
+      "log": "logs/algorithm-owner-audit.log",
+      "logSha256": "547ee5d44b210ae82386358e2567a4e1f9f2cb80c43d36f7d9ed5182d3959b5b",
+      "exitCode": 0,
+      "elapsedSeconds": 2.387,
+      "testResults": []
+    },
+    {
+      "name": "exact-predicates",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib"
+      ],
+      "log": "logs/exact-predicates.log",
+      "logSha256": "608c761a3d10c1bc1ffbdc14b410ce076850ebd2f5759301387615329edc9f79",
+      "exitCode": 0,
+      "elapsedSeconds": 17.309,
+      "testResults": [
+        {
+          "passed": 64,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "logs/nurbs-full.log",
+      "logSha256": "3a718e57a36be157a5e7cb15a37c58130933a161682c69e4fae33783001d7357",
+      "exitCode": 0,
+      "elapsedSeconds": 244.259,
+      "testResults": [
+        {
+          "passed": 1608,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/source-volume-matrices.log",
+      "logSha256": "966decd91159a00fa3bc7d9e11e8bdc830a42675ecdc0b02ab11dee5357022ef",
+      "exitCode": 0,
+      "elapsedSeconds": 345.12,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "regularity-and-g2",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_regularity",
+        "--test",
+        "surface_g2",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/regularity-and-g2.log",
+      "logSha256": "b096b637e2fe721fbd54144d33d31fc76dab5cbd41dba7e2936c6267e3c4d5df",
+      "exitCode": 0,
+      "elapsedSeconds": 3.492,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "logs/brep-aag-serial.log",
+      "logSha256": "d8285caa815e70e97e1e7896bef11780046a19d0f919a0f10925ba87ad0d6ed2",
+      "exitCode": 0,
+      "elapsedSeconds": 47.654,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "cad-step-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-step"
+      ],
+      "log": "logs/cad-step-full.log",
+      "logSha256": "3f7b6d7a7ae84022c35f5de310b4b75d6d24e16be551e3f937eef80e9d621c73",
+      "exitCode": 0,
+      "elapsedSeconds": 91.064,
+      "testResults": [
+        {
+          "passed": 71,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full.log",
+      "logSha256": "c303f4942aebc4072556aa02bceed92c3e89e69f529b3878dcc767e377e17978",
+      "exitCode": 0,
+      "elapsedSeconds": 206.269,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--test",
+        "smooth_closed_material_certificate",
+        "--test",
+        "smooth_closed_step_matrix",
+        "--test",
+        "rational_closed_material_certificate",
+        "--test",
+        "rational_closed_step_matrix",
+        "--test",
+        "implicit_sphere_source_certificate",
+        "--test",
+        "implicit_sphere_step_matrix",
+        "--test",
+        "fibered_source_certificate",
+        "--test",
+        "fibered_step_matrix",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step.log",
+      "logSha256": "9d01d99153c228564270ac3dda437d810348806003e9aa9e2b5d3be598e0496c",
+      "exitCode": 0,
+      "elapsedSeconds": 250.203,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "independent-fibered-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-fibered-source-step.py",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/fibered-step",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/fibered-occt-report.json"
+      ],
+      "log": "logs/independent-fibered-step.log",
+      "logSha256": "06a80d4df3e27c39acf223b94ec327bee4e863015d2480f235609ad9bc3c61c8",
+      "exitCode": 0,
+      "elapsedSeconds": 3.237,
+      "testResults": []
+    },
+    {
+      "name": "independent-rational-cap-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-rational-filled-cap-step.py",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/rational-cap-step",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/rational-cap-occt-report.json"
+      ],
+      "log": "logs/independent-rational-cap-step.log",
+      "logSha256": "d3ecd7a9f71aa17865723ceb4aef39a7cc1afad531070f05a96d159c528b9818",
+      "exitCode": 0,
+      "elapsedSeconds": 6.9,
+      "testResults": []
+    },
+    {
+      "name": "independent-implicit-sphere-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-implicit-sphere-step.py",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/sphere-step",
+        "/private/tmp/osv-source-fibered-caps-20261016/docs/qualification/fibered-source-caps-2026-10-16/sphere-occt-report.json"
+      ],
+      "log": "logs/independent-implicit-sphere-step.log",
+      "logSha256": "f35e4a3f384153d05154ce184ba37b1a86cd2ca4f005821d5ea2010ec57061a1",
+      "exitCode": 0,
+      "elapsedSeconds": 3.205,
+      "testResults": []
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries.log",
+      "logSha256": "4684093fbbc2d9c3700a7d3b169561f4bd70a61b2ae147a0760597c8d6a43b61",
+      "exitCode": 0,
+      "elapsedSeconds": 12.181,
+      "testResults": []
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "+nightly-2026-09-16",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "logs/brep-full.log",
+      "logSha256": "c4a3be8fd731f8bd35ba244adc85761841e96cc104ae907331df561096d641cc",
+      "exitCode": 0,
+      "elapsedSeconds": 1395.017,
+      "testResults": [
+        {
+          "passed": 1120,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    }
+  ],
+  "originalFiberedPlanarCapG2Qualified": true,
+  "previousSphereAndRationalCapMatricesQualified": true,
+  "independentStepQualified": true,
+  "privateReleaseWasmRuntimeQualified": true,
+  "publicWasmRebuilt": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "freshCiQualified": false,
+  "fullGoalComplete": false,
+  "totals": {
+    "passed": 3361,
+    "failed": 0,
+    "ignored": 4
+  },
+  "privateWasmSha256": "614ae302e233bdb23004c7b0bfc2efde43db0ff5dc40b451b017dd4e4f74c0bb",
+  "privateWasmBytes": 18190172,
+  "privateWasmRuntimeInputCorrespondenceVerified": true,
+  "privateWasmRuntimeCases": 14,
+  "previousSourceClassesWasmRequalified": true
+}

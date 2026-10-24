@@ -1,0 +1,272 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-ideal-body-g2-20261015/crates/target/.../wgsl_export
+  |                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ideal-body-g2-20261015/crates/nurbs-core)
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:30:16
+   |
+30 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:35:16
+   |
+35 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 30 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.48s
+     Running tests/ideal_closed_spatial_volume.rs (crates/target/debug/build/nurbs-core/e88f44154e38ab2d/out/ideal_closed_spatial_volume-e88f44154e38ab2d)
+
+running 1 test
+metric root pieces=[[[0.0, 1.0], [0.0, 1.0], [0.140625, 0.15625]]], scale=[53.87433959374501, 59.53661836516822, 0.08679917266829984], inverse=[[-0.7863479105877962, 0.6466271666016646, -0.04595102254731318], [-0.41853213309965154, -0.13404577592622838, 0.9195246595809993], [0.5731585825543255, 0.7275640238965074, 0.37712685685279956]], root=[[Interval { lo: -0.021722698911195912, hi: -0.004488135287041605 }, Interval { lo: 0.005052708104879242, hi: 0.019894431804598774 }, Interval { lo: -0.010057612871370298, hi: 0.0017641782782421066 }], [Interval { lo: -0.01212271560576079, hi: 0.002982699148569275 }, Interval { lo: -0.0108880446696366, hi: 0.0019813004515982285 }, Interval { lo: 0.008959034028999393, hi: 0.02211513989225538 }], [Interval { lo: 6.26858236527426, hi: 7.035099770200218 }, Interval { lo: 8.065227476644504, hi: 8.71722560704121 }, Interval { lo: 3.9514691874549546, hi: 4.550353277371933 }]]
+metric node [[0.0, 1.0], [0.0, 1.0], [0.140625, 0.15625]] margin=Ok(-0.5795789698809419), columns=[[Interval { lo: -0.021722698911195902, hi: -0.004488135287041607 }, Interval { lo: 0.0050527081048792446, hi: 0.019894431804598763 }, Interval { lo: -0.010057612871370294, hi: 0.0017641782782421061 }], [Interval { lo: -0.012122715605760784, hi: 0.0029826991485692738 }, Interval { lo: -0.010888044669636594, hi: 0.001981300451598227 }, Interval { lo: 0.008959034028999396, hi: 0.022115139892255373 }], [Interval { lo: 6.268582365274263, hi: 7.035099770200215 }, Interval { lo: 8.065227476644509, hi: 8.717225607041204 }, Interval { lo: 3.9514691874549555, hi: 4.550353277371931 }]]
+metric node [[0.0, 1.0], [0.5, 1.0], [0.140625, 0.15625]] margin=Ok(-0.5050266823733136), columns=[[Interval { lo: -0.021386485948262896, hi: -0.007875306362982391 }, Interval { lo: 0.0072226484548368495, hi: 0.0190527568537204 }, Interval { lo: -0.006911907862252238, hi: 0.0007180421819506276 }], [Interval { lo: -0.012122715605760784, hi: 0.0029826991485692738 }, Interval { lo: -0.010888044669636594, hi: 0.001981300451598227 }, Interval { lo: 0.008959034028999396, hi: 0.022115139892255373 }], [Interval { lo: 6.268582365274263, hi: 7.035099770200215 }, Interval { lo: 8.065227476644509, hi: 8.717225607041204 }, Interval { lo: 3.9514691874549555, hi: 4.550353277371931 }]]
+metric node [[0.5, 1.0], [0.5, 1.0], [0.140625, 0.15625]] margin=Ok(-0.15519265165807683), columns=[[Interval { lo: -0.021386485948262896, hi: -0.007875306362982391 }, Interval { lo: 0.0072226484548368495, hi: 0.0190527568537204 }, Interval { lo: -0.006911907862252238, hi: 0.0007180421819506276 }], [Interval { lo: -0.010254322859366775, hi: -8.433296399139591e-5 }, Interval { lo: -0.008691577162813727, hi: -1.4352099087961132e-5 }, Interval { lo: 0.011072421238285113, hi: 0.02163471647207418 }], [Interval { lo: 6.268582365274263, hi: 7.013093338760444 }, Interval { lo: 8.065230847477437, hi: 8.691861597785715 }, Interval { lo: 3.9514737883444453, hi: 4.536326473722764 }]]
+metric node [[0.5, 1.0], [0.5, 1.0], [0.1484375, 0.15625]] margin=Ok(-0.0551368492296939), columns=[[Interval { lo: -0.020687813454245255, hi: -0.008423173421851827 }, Interval { lo: 0.007490477221843179, hi: 0.017828588707001738 }, Interval { lo: -0.00643336142324638, hi: 0.000318127403805663 }], [Interval { lo: -0.010157835570288258, hi: -0.0003806096497334766 }, Interval { lo: -0.00848296947313875, hi: -0.00041307235091065715 }, Interval { lo: 0.011145315217349605, hi: 0.02136928552367439 }], [Interval { lo: 6.28359166978114, hi: 6.701923905271792 }, Interval { lo: 8.339218335404444, hi: 8.685923173159937 }, Interval { lo: 4.227654840546938, hi: 4.532024700972145 }]]
+metric node [[0.5, 1.0], [0.75, 1.0], [0.1484375, 0.15625]] margin=Ok(-0.01993939483921914), columns=[[Interval { lo: -0.02052022712295689, hi: -0.009744398589145224 }, Interval { lo: 0.008357826842249288, hi: 0.01751072294221763 }, Interval { lo: -0.005255547139365716, hi: -0.0002231297442329051 }], [Interval { lo: -0.010157799302966517, hi: -0.0004942744160426331 }, Interval { lo: -0.00840719725339104, hi: -0.00042972456801984436 }, Interval { lo: 0.011217048424086417, hi: 0.021353501755905516 }], [Interval { lo: 6.28359166978114, hi: 6.692965529455795 }, Interval { lo: 8.339220500463327, hi: 8.675022799028 }, Interval { lo: 4.2276575362003, hi: 4.526306504746546 }]]
+metric node [[0.75, 1.0], [0.75, 1.0], [0.1484375, 0.15625]] margin=Ok(0.12847148323204405), columns=[[Interval { lo: -0.020520199922465582, hi: -0.009817397953878147 }, Interval { lo: 0.00839751754014103, hi: 0.017492024956053863 }, Interval { lo: -0.005186319542215935, hi: -0.0002274080542114356 }], [Interval { lo: -0.009254891371082727, hi: -0.0014320087380931905 }, Interval { lo: -0.007780152865003898, hi: -0.0013243466627806289 }, Interval { lo: 0.011967660677827917, hi: 0.021223285671812305 }], [Interval { lo: 6.28359166978114, hi: 6.679527965731799 }, Interval { lo: 8.339223748051651, hi: 8.658672237830093 }, Interval { lo: 4.227661579680342, hi: 4.517729210408147 }]]
+metric node [[0.5, 0.75], [0.75, 1.0], [0.1484375, 0.15625]] margin=Ok(0.2047320618815273), columns=[[Interval { lo: -0.020041486917601693, hi: -0.009772611642360995 }, Interval { lo: 0.008357826842249288, hi: 0.01708708169249189 }, Interval { lo: -0.005093835405794445, hi: -0.00022329752095008137 }], [Interval { lo: -0.00731040257901606, hi: -0.0014382098820498491 }, Interval { lo: -0.007229251261096215, hi: -0.002384447448010318 }, Interval { lo: 0.01173881677997261, hi: 0.019636399467448627 }], [Interval { lo: 6.298196703326965, hi: 6.687124784540843 }, Interval { lo: 8.356240921206242, hi: 8.66743299203867 }, Interval { lo: 4.237483708900927, hi: 4.522889799448615 }]]
+metric node [[0.5, 1.0], [0.5, 0.75], [0.1484375, 0.15625]] margin=Ok(0.019467503142665734), columns=[[Interval { lo: -0.018480728349477515, hi: -0.008591682497989039 }, Interval { lo: 0.007875083997892166, hi: 0.016280490328218423 }, Interval { lo: -0.005675959439527706, hi: -0.0011509745596784532 }], [Interval { lo: -0.010157835570288258, hi: -0.0004937504949424314 }, Interval { lo: -0.008388314310187503, hi: -0.00041371549640804037 }, Interval { lo: 0.011145315217349605, hi: 0.021349220260528944 }], [Interval { lo: 6.283607405685608, hi: 6.695058353440565 }, Interval { lo: 8.339218335404444, hi: 8.677905164579029 }, Interval { lo: 4.227654840546938, hi: 4.527390860818336 }]]
+metric node [[0.5, 1.0], [0.5, 1.0], [0.140625, 0.1484375]] margin=Ok(-0.04675781565059215), columns=[[Interval { lo: -0.020186361178423096, hi: -0.008200681735902358 }, Interval { lo: 0.007814331474315482, hi: 0.018357468003269112 }, Interval { lo: -0.006178181401541129, hi: 0.00047336723220234474 }], [Interval { lo: -0.009792925053038443, hi: -0.0002866287989391999 }, Interval { lo: -0.008167370011228562, hi: -0.00010062215640512609 }, Interval { lo: 0.011288560560844093, hi: 0.021487661079932406 }], [Interval { lo: 6.6065608430525185, hi: 7.007900720286768 }, Interval { lo: 8.078393657669693, hi: 8.449493207728375 }, Interval { lo: 3.9622081224306425, hi: 4.285840036169257 }]]
+metric node [[0.5, 1.0], [0.75, 1.0], [0.140625, 0.1484375]] margin=Ok(-0.007203930167162837), columns=[[Interval { lo: -0.02002533551537264, hi: -0.00947987146100046 }, Interval { lo: 0.008700961504385922, hi: 0.018063106855483613 }, Interval { lo: -0.004991048878724347, hi: -5.768405499476663e-5 }], [Interval { lo: -0.009792886675715642, hi: -0.00039705757509109966 }, Interval { lo: -0.008088991357119768, hi: -0.00011582699956150239 }, Interval { lo: 0.01136094827354646, hi: 0.021473114152454936 }], [Interval { lo: 6.6065608430525185, hi: 6.998378188262363 }, Interval { lo: 8.07839598386575, hi: 8.438596766773262 }, Interval { lo: 3.962211047458613, hi: 4.2802579209562035 }]]
+metric node [[0.75, 1.0], [0.75, 1.0], [0.140625, 0.1484375]] margin=Ok(0.1357057880084795), columns=[[Interval { lo: -0.02002530673238054, hi: -0.009550529605616326 }, Interval { lo: 0.008742181276363363, hi: 0.018045791493849175 }, Interval { lo: -0.004921270010885025, hi: -6.121837117191198e-5 }], [Interval { lo: -0.008911416102614826, hi: -0.0013080949783442891 }, Interval { lo: -0.007440491682309569, hi: -0.0010245845520863938 }, Interval { lo: 0.012104536714423467, hi: 0.021353102000765792 }], [Interval { lo: 6.6065608430525185, hi: 6.984094390225755 }, Interval { lo: 8.078399473159838, hi: 8.422252105340595 }, Interval { lo: 3.9622154350005694, hi: 4.271884748136624 }]]
+metric node [[0.5, 0.75], [0.75, 1.0], [0.140625, 0.1484375]] margin=Ok(0.21047774641620562), columns=[[Interval { lo: -0.019558037992132425, hi: -0.009506972408523138 }, Interval { lo: 0.008700961504385922, hi: 0.017627174359375494 }, Interval { lo: -0.00483528651774378, hi: -5.784394251277392e-5 }], [Interval { lo: -0.0070226882411473695, hi: -0.001317791343367837 }, Interval { lo: -0.0069160781238600715, hi: -0.0021342392111388113 }, Interval { lo: 0.011852419284088912, hi: 0.01975605008045453 }], [Interval { lo: 6.621945217320526, hi: 6.992080484041884 }, Interval { lo: 8.095216000797357, hi: 8.430885730216916 }, Interval { lo: 3.971743716784482, hi: 4.276883727284616 }]]
+metric node [[0.5, 1.0], [0.5, 0.75], [0.140625, 0.1484375]] margin=Ok(0.03200790116776114), columns=[[Interval { lo: -0.018041064140427096, hi: -0.0083626716021222 }, Interval { lo: 0.008169559259849439, hi: 0.016769765302841105 }, Interval { lo: -0.005440291592595567, hi: -0.0010077205248487796 }], [Interval { lo: -0.009792925053038443, hi: -0.00039710393695641046 }, Interval { lo: -0.008069455311667967, hi: -0.00010125263867880342 }, Interval { lo: 0.011288560560844093, hi: 0.021469157645549554 }], [Interval { lo: 6.606576400577773, hi: 7.000668335937236 }, Interval { lo: 8.078393657669693, hi: 8.441568955382943 }, Interval { lo: 3.9622081224306425, hi: 4.281343651135796 }]]
+metric node [[0.0, 0.5], [0.5, 1.0], [0.140625, 0.15625]] margin=Ok(-0.013970516031442533), columns=[[Interval { lo: -0.020570632249004985, hi: -0.008140447264061941 }, Interval { lo: 0.007446259950465508, hi: 0.018341925531524524 }, Interval { lo: -0.006756102522392016, hi: 0.0007042869475963866 }], [Interval { lo: -0.007099497432770194, hi: 0.000296501918213456 }, Interval { lo: -0.007712289686644201, hi: -0.0014249666682697526 }, Interval { lo: 0.009704479519904606, hi: 0.01845686616673396 }], [Interval { lo: 6.297905154704686, hi: 7.025413432250598 }, Interval { lo: 8.09779768059229, hi: 8.705420698811993 }, Interval { lo: 3.971843935451181, hi: 4.54502769661182 }]]
+metric node [[0.0, 0.5], [0.5, 1.0], [0.1484375, 0.15625]] margin=Ok(0.03455726028907332), columns=[[Interval { lo: -0.019899118838227987, hi: -0.008704495396776972 }, Interval { lo: 0.007722036348745055, hi: 0.01716535942084561 }, Interval { lo: -0.0062951315027094746, hi: 0.00029283504216321283 }], [Interval { lo: -0.00707142207468111, hi: 3.2932240026321385e-5 }, Interval { lo: -0.0075136293428451975, hi: -0.0016689545566023535 }, Interval { lo: 0.009731383564375981, hi: 0.018223386373618325 }], [Interval { lo: 6.30765257299937, hi: 6.712052997017184 }, Interval { lo: 8.367247639451481, hi: 8.697598579558349 }, Interval { lo: 4.243833733688307, hi: 4.5388989804374855 }]]
+metric node [[0.0, 0.5], [0.5, 1.0], [0.140625, 0.1484375]] margin=Ok(0.04764176135725184), columns=[[Interval { lo: -0.019416502782942855, hi: -0.008474208948708917 }, Interval { lo: 0.008054809453221614, hi: 0.017671434624071246 }, Interval { lo: -0.006050780719074778, hi: 0.0004524306127996465 }], [Interval { lo: -0.006798846192198077, hi: 0.00010386472469458694 }, Interval { lo: -0.00725557398631352, hi: -0.001448861287531665 }, Interval { lo: 0.009831632592227352, hi: 0.018319254193672474 }], [Interval { lo: 6.631905303326387, hi: 7.018548845374942 }, Interval { lo: 8.106092562576693, hi: 8.46099874072349 }, Interval { lo: 3.9779031394996616, hi: 4.292498393034742 }]]
+metric node [[0.0, 1.0], [0.0, 0.5], [0.140625, 0.15625]] margin=Ok(-0.4778384340749847), columns=[[Interval { lo: -0.018645068767964935, hi: -0.004907939000852614 }, Interval { lo: 0.005615144762011522, hi: 0.01754703933784597 }, Interval { lo: -0.008448105557768882, hi: -0.0003344330459333486 }], [Interval { lo: -0.012039287179160094, hi: 0.002953568620621313 }, Interval { lo: -0.010825038365372259, hi: 0.001960980232427313 }, Interval { lo: 0.009048918343356157, hi: 0.02188165476456995 }], [Interval { lo: 6.271309043043641, hi: 7.035099770200215 }, Interval { lo: 8.068500843258594, hi: 8.717204818622703 }, Interval { lo: 3.952941885310145, hi: 4.5503294088905015 }]]
+metric node [[0.5, 1.0], [0.0, 0.5], [0.140625, 0.15625]] margin=Ok(-0.24482364788979236), columns=[[Interval { lo: -0.018412018716269418, hi: -0.005280971497828979 }, Interval { lo: 0.005615144762011522, hi: 0.017063574932146743 }, Interval { lo: -0.007356038011285336, hi: -0.0003344330459333486 }], [Interval { lo: -0.009798465659280662, hi: -8.71021736535922e-5 }, Interval { lo: -0.00830818308484427, hi: 1.4728191230761065e-5 }, Interval { lo: 0.010929112274392395, hi: 0.020344750717918633 }], [Interval { lo: 6.283416965480662, hi: 7.018364478147933 }, Interval { lo: 8.083230993021981, hi: 8.698593273509685 }, Interval { lo: 3.959569025658498, hi: 4.538686695749801 }]]
+metric node [[0.5, 1.0], [0.0, 0.5], [0.1484375, 0.15625]] margin=Ok(-0.16356939898893016), columns=[[Interval { lo: -0.017798863345808925, hi: -0.005689618198485526 }, Interval { lo: 0.00581472623392257, hi: 0.015989050149284017 }, Interval { lo: -0.006924476975845964, hi: -0.0006248010360430134 }], [Interval { lo: -0.009702182053330316, hi: -0.0003795618075330732 }, Interval { lo: -0.008102407173729221, hi: -0.0003810542076870496 }, Interval { lo: 0.011001848803875981, hi: 0.020091885288046424 }], [Interval { lo: 6.295520955305718, hi: 6.706109553241332 }, Interval { lo: 8.354657614521443, hi: 8.691687904261997 }, Interval { lo: 4.23458952527078, hi: 4.534193413115725 }]]
+metric node [[0.5, 1.0], [0.25, 0.5], [0.1484375, 0.15625]] margin=Ok(0.0011729370024992911), columns=[[Interval { lo: -0.017565464231395506, hi: -0.007281610194977013 }, Interval { lo: 0.006908614056999793, hi: 0.015621105670564362 }, Interval { lo: -0.005825955982977782, hi: -0.0011620452381994981 }], [Interval { lo: -0.009702145786008575, hi: -0.0004932265738422306 }, Interval { lo: -0.008026634953981511, hi: -0.00039770642479623725 }, Interval { lo: 0.011073582010612794, hi: 0.020076101520277546 }], [Interval { lo: 6.295520955305718, hi: 6.697151177425335 }, Interval { lo: 8.354659779580325, hi: 8.68078753013006 }, Interval { lo: 4.234592220924142, hi: 4.5284752168901266 }]]
+metric node [[0.5, 1.0], [0.0, 0.25], [0.1484375, 0.15625]] margin=Ok(-0.08377243144893473), columns=[[Interval { lo: -0.017178821106694466, hi: -0.0063751916399186195 }, Interval { lo: 0.005815369379419953, hi: 0.014951679551558916 }, Interval { lo: -0.00491237215168833, hi: -0.0006261432497804238 }], [Interval { lo: -0.00918431154014687, hi: -0.0004927026527420284 }, Interval { lo: -0.007618210632366083, hi: -0.00038169735318443283 }, Interval { lo: 0.011001848803875981, hi: 0.018629959519361385 }], [Interval { lo: 6.307197532542159, hi: 6.699244001410106 }, Interval { lo: 8.370571532801733, hi: 8.683669895681088 }, Interval { lo: 4.241620282275446, hi: 4.529559572961916 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.1484375, 0.15625]] margin=Ok(-0.026842393919124578), columns=[[Interval { lo: -0.016756403278439885, hi: -0.00646840833229164 }, Interval { lo: 0.005815369379419953, hi: 0.014526605242377595 }, Interval { lo: -0.004578850849274606, hi: -0.0006261432497804238 }], [Interval { lo: -0.008188486121294422, hi: -0.0014220218749021068 }, Interval { lo: -0.006765264514435627, hi: -0.0011389386567944228 }, Interval { lo: 0.011160662102038768, hi: 0.018207654523247747 }], [Interval { lo: 6.308435846703836, hi: 6.6902804064751145 }, Interval { lo: 8.372678971514285, hi: 8.67295414744048 }, Interval { lo: 4.242489754905225, hi: 4.523971711617594 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.15234375, 0.15625]] margin=Ok(0.011310442006252806), columns=[[Interval { lo: -0.01648947934189513, hi: -0.006673324130500424 }, Interval { lo: 0.005917342316357713, hi: 0.014038215905757727 }, Interval { lo: -0.004388772042334624, hi: -0.000769098497623285 }], [Interval { lo: -0.008158229458294473, hi: -0.0015408367015232588 }, Interval { lo: -0.006696286261598552, hi: -0.0013064778219625504 }, Interval { lo: 0.01118668349065734, hi: 0.018100485156602054 }], [Interval { lo: 6.3133365600851565, hi: 6.526992867269393 }, Interval { lo: 8.49820558111375, hi: 8.670636705132633 }, Interval { lo: 4.371995013340381, hi: 4.522655565416969 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.1484375, 0.15234375]] margin=Ok(0.016188254256579212), columns=[[Interval { lo: -0.016289420268791828, hi: -0.006591247819316722 }, Interval { lo: 0.006031663326021178, hi: 0.014263566734759653 }, Interval { lo: -0.0042757269592600235, hi: -0.0007138862392707505 }], [Interval { lo: -0.008011188828959015, hi: -0.0014883501738771855 }, Interval { lo: -0.006553316166439362, hi: -0.0011661197252328557 }, Interval { lo: 0.011251966406567438, hi: 0.018155402069767443 }], [Interval { lo: 6.4788481062227685, hi: 6.688241237646763 }, Interval { lo: 8.377346601406439, hi: 8.55572752440792 }, Interval { lo: 4.2467637601252, hi: 4.402567455580717 }]]
+metric node [[0.5, 0.75], [0.0, 0.25], [0.1484375, 0.15625]] margin=Ok(0.036627694600905474), columns=[[Interval { lo: -0.017178697083942533, hi: -0.0067789947893621355 }, Interval { lo: 0.006079894371472355, hi: 0.014889352931013013 }, Interval { lo: -0.004681590582443405, hi: -0.0006546653163039628 }], [Interval { lo: -0.006967039847863333, hi: -0.0013961085987306114 }, Interval { lo: -0.0066759371740104465, hi: -0.0020410769578663086 }, Interval { lo: 0.011347118723820104, hi: 0.017785717625041927 }], [Interval { lo: 6.3151677420487715, hi: 6.699244001410106 }, Interval { lo: 8.380454421418705, hi: 8.683667795976204 }, Interval { lo: 4.247017228106134, hi: 4.529557133241185 }]]
+metric node [[0.5, 1.0], [0.0, 0.5], [0.140625, 0.1484375]] margin=Ok(-0.15574843660865414), columns=[[Interval { lo: -0.017373518187910823, hi: -0.005547773071280558 }, Interval { lo: 0.00603914720150967, hi: 0.016427911278658374 }, Interval { lo: -0.006710546154968708, hi: -0.0005158081723598831 }], [Interval { lo: -0.009355616422636883, hi: -0.0002867215226698219 }, Interval { lo: -0.007810849623693545, hi: -7.147343463972684e-5 }, Interval { lo: 0.01114378513543936, hi: 0.020200785256756386 }], [Interval { lo: 6.619420614848447, hi: 7.012481015636517 }, Interval { lo: 8.09407844032575, hi: 8.455437584947735 }, Interval { lo: 3.969054397821388, hi: 4.288011496528441 }]]
+metric node [[0.5, 1.0], [0.25, 0.5], [0.140625, 0.1484375]] margin=Ok(0.007028263598220812), columns=[[Interval { lo: -0.017148654029044738, hi: -0.0070906159836481315 }, Interval { lo: 0.007162541850959157, hi: 0.01607896394524439 }, Interval { lo: -0.005604701687089493, hi: -0.001038386250060175 }], [Interval { lo: -0.009355578045314084, hi: -0.00039715029882172255 }, Interval { lo: -0.007732470969584751, hi: -8.667827779610445e-5 }, Interval { lo: 0.011216172848141729, hi: 0.02018623832927891 }], [Interval { lo: 6.619420614848447, hi: 7.002958483612111 }, Interval { lo: 8.09408076652181, hi: 8.444541143992621 }, Interval { lo: 3.9690573228493595, hi: 4.282429381315387 }]]
+metric node [[0.5, 1.0], [0.0, 0.25], [0.140625, 0.1484375]] margin=Ok(-0.07876104420717749), columns=[[Interval { lo: -0.016768257437051026, hi: -0.006205942267282317 }, Interval { lo: 0.006039777683783347, hi: 0.015410686057033248 }, Interval { lo: -0.004691772039477147, hi: -0.0005170872725039415 }], [Interval { lo: -0.008858587575992375, hi: -0.0003971966606870329 }, Interval { lo: -0.007352198223415428, hi: -7.210391691340418e-5 }, Interval { lo: 0.01114378513543936, hi: 0.018728914993549346 }], [Interval { lo: 6.632155608716222, hi: 7.005248631286986 }, Interval { lo: 8.110258499314913, hi: 8.447513332602302 }, Interval { lo: 3.976002986004779, hi: 4.283515111494979 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.140625, 0.1484375]] margin=Ok(-0.022213382627631593), columns=[[Interval { lo: -0.016355936093015548, hi: -0.006295407459678329 }, Interval { lo: 0.006039777683783347, hi: 0.014978573327551857 }, Interval { lo: -0.004361977287738144, hi: -0.0005170872725039415 }], [Interval { lo: -0.007887968423408652, hi: -0.0013043036175650886 }, Interval { lo: -0.006477593567498701, hi: -0.000855421513398186 }, Interval { lo: 0.01129017494652183, hi: 0.018317293774749565 }], [Interval { lo: 6.633584848985902, hi: 6.995784966850193 }, Interval { lo: 8.1124077304904, hi: 8.436954535194548 }, Interval { lo: 3.976865895543571, hi: 4.278157330885151 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.14453125, 0.1484375]] margin=Ok(0.01917358928712015), columns=[[Interval { lo: -0.016083035439900428, hi: -0.006507499691796251 }, Interval { lo: 0.006145267576146408, hi: 0.014485766572278881 }, Interval { lo: -0.004164957495550826, hi: -0.0006603763827364863 }], [Interval { lo: -0.007857141784402276, hi: -0.0014324649561856292 }, Interval { lo: -0.006408044350589629, hi: -0.0010251276499187397 }, Interval { lo: 0.0113168558283004, hi: 0.018210270569564067 }], [Interval { lo: 6.638722467090188, hi: 6.843829296222026 }, Interval { lo: 8.250311539518178, hi: 8.434639806589697 }, Interval { lo: 4.116360918493123, hi: 4.2768800456716125 }]]
+metric node [[0.75, 1.0], [0.0, 0.25], [0.140625, 0.14453125]] margin=Ok(0.02003578210603024), columns=[[Interval { lo: -0.01587003948106155, hi: -0.0064219287792478905 }, Interval { lo: 0.006258310915528725, hi: 0.014705114309608951 }, Interval { lo: -0.004056347199311152, hi: -0.0006085474569754436 }], [Interval { lo: -0.007696046487667945, hi: -0.0013732249527847768 }, Interval { lo: -0.006260798029086734, hi: -0.0008836713124786998 }, Interval { lo: 0.011381201793790435, hi: 0.01826483305807654 }], [Interval { lo: 6.792900369269943, hi: 6.99370853262356 }, Interval { lo: 8.117125940178944, hi: 8.307389226069098 }, Interval { lo: 3.981208379584211, hi: 4.1459959444165815 }]]
+metric node [[0.5, 0.75], [0.0, 0.25], [0.140625, 0.1484375]] margin=Ok(0.041097834978444124), columns=[[Interval { lo: -0.016768126742149086, hi: -0.006597471949258346 }, Interval { lo: 0.00631449931189981, hi: 0.015352968184918443 }, Interval { lo: -0.004459153403106273, hi: -0.0005406493803515789 }], [Interval { lo: -0.006698332601670641, hi: -0.0012791843730603559 }, Interval { lo: -0.006397530694089827, hi: -0.00178846803202647 }, Interval { lo: 0.011461999174009066, hi: 0.017891647494451202 }], [Interval { lo: 6.640662318242337, hi: 7.005248631286986 }, Interval { lo: 8.120084229111919, hi: 8.44751109503731 }, Interval { lo: 3.9812559787416304, hi: 4.283512505745539 }]]
+metric node [[0.0, 0.5], [0.0, 0.5], [0.140625, 0.15625]] margin=Ok(-0.1375410668706559), columns=[[Interval { lo: -0.01864453645180343, hi: -0.00614675287661407 }, Interval { lo: 0.006381686335239777, hi: 0.017297654167215338 }, Interval { lo: -0.007516575518896448, hi: -0.000380413210150656 }], [Interval { lo: -0.0070538736495643324, hi: 0.00027256438689609355 }, Interval { lo: -0.007735479859388673, hi: -0.0014694061287742431 }, Interval { lo: 0.010141230590125382, hi: 0.018188026376664976 }], [Interval { lo: 6.307192593013326, hi: 7.035099770200215 }, Interval { lo: 8.109511627384466, hi: 8.717194424413453 }, Interval { lo: 3.9762967464419536, hi: 4.550317474649788 }]]
+metric node [[0.0, 0.5], [0.0, 0.5], [0.1484375, 0.15625]] margin=Ok(-0.045537037393018905), columns=[[Interval { lo: -0.01802365676320363, hi: -0.006611020159433357 }, Interval { lo: 0.006608461996454134, hi: 0.01620952378545946 }, Interval { lo: -0.007078949682276962, hi: -0.0007103672356136312 }], [Interval { lo: -0.0070239223036411644, hi: -1.7280469505227e-6 }, Interval { lo: -0.007530054657365377, hi: -0.0017258641184334932 }, Interval { lo: 0.010169866587643628, hi: 0.017954660093862904 }], [Interval { lo: 6.315051727275172, hi: 6.719840656903787 }, Interval { lo: 8.37728247932967, hi: 8.707698724965205 }, Interval { lo: 4.247830853080653, hi: 4.543431816774568 }]]
+metric node [[0.0, 0.5], [0.25, 0.5], [0.1484375, 0.15625]] margin=Ok(0.13435044741873714), columns=[[Interval { lo: -0.01787769925202952, hi: -0.008108174207823457 }, Interval { lo: 0.007613213564137754, hi: 0.01590568151029819 }, Interval { lo: -0.005953139754746751, hi: -0.0012467370240873343 }], [Interval { lo: -0.00688311636088963, hi: -0.00028333993245358344 }, Interval { lo: -0.007293416749987252, hi: -0.0018441830721225593 }, Interval { lo: 0.010194528724782494, hi: 0.017905335819585172 }], [Interval { lo: 6.323633667064206, hi: 6.715946826960486 }, Interval { lo: 8.387294491531385, hi: 8.70264445285201 }, Interval { lo: 4.2536109546692575, hi: 4.541160519164564 }]]
+metric node [[0.0, 0.5], [0.0, 0.25], [0.1484375, 0.15625]] margin=Ok(0.09707285883607421), columns=[[Interval { lo: -0.018023408717699765, hi: -0.007638252288727962 }, Interval { lo: 0.006873147774880892, hi: 0.015677174928829758 }, Interval { lo: -0.005117851618025931, hi: -0.0007402315158745812 }], [Interval { lo: -0.006776507193260304, hi: -0.00041841489068291727 }, Interval { lo: -0.007239302786701435, hi: -0.0019558989385840683 }, Interval { lo: 0.01077231431754114, hi: 0.01754027499882112 }], [Interval { lo: 6.334392426894484, hi: 6.719840656903787 }, Interval { lo: 8.40214165213332, hi: 8.707694525555436 }, Interval { lo: 4.25992339121903, hi: 4.5434269373331055 }]]
+metric node [[0.0, 0.5], [0.0, 0.5], [0.140625, 0.1484375]] margin=Ok(-0.03790621543639023), columns=[[Interval { lo: -0.01759290012512199, hi: -0.006444025963087735 }, Interval { lo: 0.006863469706427487, hi: 0.01665259961383697 }, Interval { lo: -0.006862863044932307, hi: -0.0005864944959027963 }], [Interval { lo: -0.006754155212270033, hi: 7.326832930003245e-5 }, Interval { lo: -0.007281026104593775, hi: -0.0014950918280471396 }, Interval { lo: 0.010274980020663656, hi: 0.01804668454349547 }], [Interval { lo: 6.639967083899984, hi: 7.026945784335579 }, Interval { lo: 8.11639803430503, hi: 8.47125923885869 }, Interval { lo: 3.981889363433344, hi: 4.296972997602088 }]]
+metric node [[0.0, 0.5], [0.25, 0.5], [0.140625, 0.1484375]] margin=Ok(0.14698062477826945), columns=[[Interval { lo: -0.017453472413145685, hi: -0.007894475721280061 }, Interval { lo: 0.007894046191780184, hi: 0.01637122498727731 }, Interval { lo: -0.005728140440903769, hi: -0.0011099867089386954 }], [Interval { lo: -0.006616714764258199, hi: -0.0002016125667236281 }, Interval { lo: -0.007036239355692276, hi: -0.001617485202497892 }, Interval { lo: 0.010297709594847207, hi: 0.01800122539512837 }], [Interval { lo: 6.649007564336898, hi: 7.022747314855261 }, Interval { lo: 8.12629216191186, hi: 8.466124514661104 }, Interval { lo: 3.9874968159779733, hi: 4.294730483819536 }]]
+metric node [[0.0, 0.5], [0.0, 0.25], [0.140625, 0.1484375]] margin=Ok(0.10187379803269943), columns=[[Interval { lo: -0.017592638735318113, hi: -0.007434081379468192 }, Interval { lo: 0.007138348955112378, hi: 0.016159475771766435 }, Interval { lo: -0.004886124270213407, hi: -0.0006113357038944927 }], [Interval { lo: -0.006514844658831052, hi: -0.0003292452115425739 }, Interval { lo: -0.006991247542717598, hi: -0.0017166246885375173 }, Interval { lo: 0.01088120680553874, hi: 0.017632401877427994 }], [Interval { lo: 6.660775315928157, hi: 7.026945784335579 }, Interval { lo: 8.141442100728877, hi: 8.471254763728703 }, Interval { lo: 3.9937550764723047, hi: 4.296967786103209 }]]
+closed spatial rational=false/Parameter: IdealVolumeReport { embedding_certified: false, regularity_certified: false, parameter_topology_preserved: false, cells: 100000, exact_work: 368, boxes: 6803, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: Some("ideal-volume-work-limit") }
+
+thread 'closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_units' (1858777) panicked at nurbs-core/tests/ideal_closed_spatial_volume.rs:151:13:
+IdealVolumeReport { embedding_certified: false, regularity_certified: false, parameter_topology_preserved: false, cells: 100000, exact_work: 368, boxes: 6803, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: Some("ideal-volume-work-limit") }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_units ... FAILED
+
+failures:
+
+failures:
+    closed_spatial_matrix_preserves_rational_caps_affine_laws_and_parameter_arc_units
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 9.56s
+
+error: test failed, to rerun pass `-p nurbs-core --test ideal_closed_spatial_volume`

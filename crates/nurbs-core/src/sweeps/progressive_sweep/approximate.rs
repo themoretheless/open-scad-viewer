@@ -176,6 +176,9 @@ impl MultiSweep<'_> {
         // work still consume the remaining aggregate budget.
         let first=&self.sweeps[0];
 
+        // Original inverse-length correspondence is shared for closed guided
+        // fields too. Their copied endpoint/phase displacement is still proved
+        // independently by each profile owner; no seam flag is cached here.
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
             &&first.orientation_guide.is_some_and(|g|!g.periodic)
             &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
@@ -200,6 +203,15 @@ impl MultiSweep<'_> {
             }else{None}
         }else{None};
         let mut cells=shared_length.as_ref().map_or(0,|report|report.cells);
+        let shared_chord=if let Some(length)=shared_length.as_ref().filter(|l|l.within_tolerance) {
+            if first.path.control_points.len()==first.path.degree+1
+                && !authored_error::original_line(first.path)
+                && (first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed
+                    && first.orientation_guide.is_none() && first.contact_point.is_none())) {
+                let global=authored_error::shared_global_chord(first.path,count,length.total.bounds,cell_limit-cells)?;
+                cells+=global.cells;Some(global)
+            }else {None}
+        }else {None};
         let shared_guide=if shared_guided&&shared_length.is_some()&&cells<cell_limit {
             let guide=first.orientation_guide.unwrap();
             check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
@@ -235,8 +247,8 @@ impl MultiSweep<'_> {
                     &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
                     "Shared RMF certificate requires identical original source and policy")?;
                 let remaining=cell_limit-cells;
-                let proof=rmf_transport::certify_original_rmf_transport_shared(first.path,first.options.normal,
-                    steps,remaining,path_is_closed(first.path)?)?;
+                let proof=rmf_transport::certify_original_rmf_transport_shared_for_spacing(first.path,first.options.normal,
+                    steps,remaining,path_is_closed(first.path)?,first.options.spacing)?;
                 cells+=proof.cells+proof.exact_work as usize;Some(proof)
         }else{None};
         let mut shared_pose=if (shared_rmf.is_some() || first.options.orientation==Orientation::CorrectedFrenet
@@ -253,7 +265,7 @@ impl MultiSweep<'_> {
         }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_pose.as_mut())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_pose.as_mut(),shared_chord.as_ref())?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(

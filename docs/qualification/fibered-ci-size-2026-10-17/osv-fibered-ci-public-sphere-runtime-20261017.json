@@ -1,0 +1,45 @@
+{
+  "schema": "original-implicit-sphere-wasm-runtime/1",
+  "wasmSha256": "a9acf6ee3df82642be029e3d9951ec06840e56a24d901eda83e6134ff0c2771f",
+  "wasmBytes": 12767518,
+  "cases": [
+    {
+      "name": "sphere-two-poles",
+      "passed": true,
+      "faces": 8,
+      "poleEdges": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongSourceRefused": true
+    },
+    {
+      "name": "sphere-nonbinary-radius",
+      "passed": true,
+      "faces": 8,
+      "poleEdges": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongSourceRefused": true
+    },
+    {
+      "name": "sphere-regular",
+      "passed": true,
+      "faces": 8,
+      "poleEdges": 0,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongSourceRefused": true
+    },
+    {
+      "name": "sphere-translated-poles",
+      "passed": true,
+      "faces": 8,
+      "poleEdges": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongSourceRefused": true
+    }
+  ],
+  "passed": true,
+  "scope": "Four specified original implicit sphere fixtures through private release WASM ABI; no public package, browser/UI or arbitrary loft/frame/cap qualification"
+}

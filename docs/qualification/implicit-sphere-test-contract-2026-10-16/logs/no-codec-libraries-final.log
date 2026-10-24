@@ -1,0 +1,96 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-affine-volume-atlas-20261016/crates/target/.../wgsl_export
+  |                                                                 ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Checking osv-math v0.1.0 (/private/tmp/osv-implicit-pole-g2-20261016/crates/math-core)
+    Checking geometry-ops v0.1.0 (/private/tmp/osv-implicit-pole-g2-20261016/crates/geometry-ops)
+    Checking brep-topology v0.1.0 (/private/tmp/osv-implicit-pole-g2-20261016/crates/brep-topology)
+    Checking planar-geometry v0.1.0 (/private/tmp/osv-implicit-pole-g2-20261016/crates/planar-geometry)
+warning: associated function `parse` is never used
+   --> brep-topology/src/persistent_naming.rs:198:8
+    |
+186 | impl ChangeKind {
+    | --------------- associated function in this implementation
+...
+198 |     fn parse(value: &str) -> Option<Self> {
+    |        ^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `brep-topology` (lib) generated 1 warning
+    Checking nurbs-core v0.1.0 (/private/tmp/osv-implicit-pole-g2-20261016/crates/nurbs-core)
+error[E0425]: cannot find function `binary_bezier_quadric_with_constant_products_identity` in crate `cad_predicates`
+   --> nurbs-core/src/analysis/implicit_quadric.rs:127:36
+    |
+127 |     let decision = cad_predicates::binary_bezier_quadric_with_constant_products_identity(
+    |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `cad_predicates`
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Options`, `Orientation`, `Spacing`, `Sweep`, and `constant_vector_law`
+ --> nurbs-core/src/sweeps/scalar.rs:2:32
+  |
+2 | use super::progressive_sweep::{Options, Orientation, Spacing, Sweep, constant_vector_law};
+  |                                ^^^^^^^  ^^^^^^^^^^^  ^^^^^^^  ^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `loft`
+ --> nurbs-core/src/sweeps/scalar.rs:7:24
+  |
+7 |     surface::{Surface, loft},
+  |                        ^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `nurbs-core` (lib) generated 8 warnings
+error: could not compile `nurbs-core` (lib) due to 1 previous error; 8 warnings emitted

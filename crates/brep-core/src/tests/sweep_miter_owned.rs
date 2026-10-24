@@ -78,8 +78,22 @@ fn complete_boundary_refines_after_cap_correction_and_keeps_shared_work() {
         options:progressive_miter::Options {normal:[1.,0.,0.],closed:false,miter_limit:4.,initial_steps:1,max_steps:16,max_deviation:2.},
         affine:Some((&axes,&center)),frames:Some((&axis,&normal)),guide:None,circle:None,
         caps:Some(CapCorrection {budget:Budget {quantum:2_f64.powi(-40),tolerance:2.,max_work:Some(1000000.)},authored_frame:false})};
+    let coarse=construct(&request,&limits()).unwrap();
+    assert_eq!(coarse.levels().len(),1);
+    let coarse_error=coarse.boundary().error_upper.unwrap();
+    let source_error=coarse.levels()[0].certified_error_upper.unwrap();
+    request.options.initial_steps=16;
+    let fine_error=construct(&request,&limits()).unwrap().boundary().error_upper.unwrap();
+    assert!(source_error<coarse_error && fine_error<coarse_error);
+    // Keep the intended accounting scenario when source enclosures tighten:
+    // the first source-wall level fits, its CORRECTED complete boundary does
+    // not, and the independently built fine complete boundary fits.
+    request.options.max_deviation=(source_error.max(fine_error)+coarse_error)*0.5;
+    request.options.initial_steps=1;
     let body=construct(&request,&limits()).unwrap();
     assert!(body.complete_boundary().is_some());
+    assert!(body.levels()[0].certified_error_upper.unwrap()<request.options.max_deviation);
+    assert!(body.boundary().error_upper.unwrap()<=request.options.max_deviation);
     assert!(body.levels().len()>1);
     assert!(!body.levels()[0].accepted);
     let rejected=body.levels().iter().find(|r|r.error_certificate_reason==Some("complete-boundary-refinement")).expect("The cap budget must cause additional refinement");

@@ -1,0 +1,6 @@
+
+thread 'main' (3673812) panicked at /private/tmp/osv-ideal-source-boundary-g2-20261016/docs/qualification/original-closed-boundary-g2-2026-10-16/probes/step_matrix.rs:13:9:
+assertion `left == right` failed: import-audit/certified: reason="affine-retained-binding-unproved" original=null binding={"certified":false,"exactWork":1873,"inspectedFaces":4,"reason":"affine-wall-coefficient-identity-unproved"}
+  left: Bool(false)
+ right: true
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

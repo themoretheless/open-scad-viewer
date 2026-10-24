@@ -1,0 +1,566 @@
+{
+  "schema": "implicit-sphere-test-contract-qualification/1",
+  "qualifiedCodeRevision": "5bb7320b22f280f55e38fbd363549addef003b85",
+  "inputsSha256": "c05e18ee41fc72e32b87e5789348a27d618c12d98d559211a1df781f47c18d2a",
+  "sourceGuardVerified": true,
+  "nativeCheckpointPassed": true,
+  "reusedLowerFeatureChecks": 0,
+  "reusedSameProductionDependencyDisjointGates": 6,
+  "originalSphereGlobalG2Qualified": true,
+  "previousRationalCapMatrixQualified": true,
+  "independentStepQualified": true,
+  "privateReleaseWasmRuntimeQualified": true,
+  "publicWasmRebuilt": false,
+  "browserQualified": false,
+  "semanticG1MatrixQualified": false,
+  "freshCiQualified": false,
+  "fullGoalComplete": false,
+  "checks": [
+    {
+      "name": "nurbs-domain-map",
+      "command": [
+        "node",
+        "scripts/map-nurbs-api.mjs",
+        "--check"
+      ],
+      "log": "logs/nurbs-domain-map-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 0.936,
+      "reused": false,
+      "testResults": []
+    },
+    {
+      "name": "algorithm-owner-audit",
+      "command": [
+        "node",
+        "scripts/audit-algorithm-owners.mjs",
+        "--check"
+      ],
+      "log": "logs/algorithm-owner-audit-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 3.483,
+      "reused": false,
+      "testResults": []
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 759.805,
+      "reused": false,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--test",
+        "smooth_closed_material_certificate",
+        "--test",
+        "smooth_closed_step_matrix",
+        "--test",
+        "rational_closed_material_certificate",
+        "--test",
+        "rational_closed_step_matrix",
+        "--test",
+        "implicit_sphere_source_certificate",
+        "--test",
+        "implicit_sphere_step_matrix",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 209.007,
+      "reused": false,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "independent-rational-cap-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-rational-filled-cap-step.py",
+        "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step",
+        "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-occt-report.json"
+      ],
+      "log": "logs/independent-rational-cap-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 7.263,
+      "reused": false,
+      "testResults": []
+    },
+    {
+      "name": "independent-implicit-sphere-step",
+      "command": [
+        "/private/tmp/osv-rational-occt-20261016/bin/python",
+        "scripts/verify-implicit-sphere-step.py",
+        "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-step",
+        "/private/tmp/osv-implicit-pole-g2-20261016/docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-occt-report.json"
+      ],
+      "log": "logs/independent-implicit-sphere-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 3.066,
+      "reused": false,
+      "testResults": []
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries-verified-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 0.226,
+      "reused": false,
+      "testResults": []
+    },
+    {
+      "name": "exact-predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib"
+      ],
+      "log": "logs/exact-predicates-verified-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 0.12,
+      "reused": false,
+      "testResults": [
+        {
+          "passed": 61,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 648.959,
+      "testResults": [
+        {
+          "passed": 1600,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "a632be260bafba6bb36fa5c24a70d549745cf5c36534deed16b74ccf0402e156",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume",
+        "--",
+        "--nocapture"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 476.181,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "37f7fd5bac69d2ae761151e51189845d3469f3cb0563017e8f8c5e4e80045633",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    },
+    {
+      "name": "regularity-and-g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_regularity",
+        "--test",
+        "surface_g2",
+        "--",
+        "--nocapture"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/regularity-and-g2-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 2.785,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "533efeb500050e9605cb69390c399d5d3a6fbbcaf037d7d056823ef66f9f2ae3",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 2525.687,
+      "testResults": [
+        {
+          "passed": 1114,
+          "failed": 0,
+          "ignored": 3
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "391031a77fcb4ea445824885a5d39cc09adf8f0bce032857904b36b0bd2f90c6",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 38.098,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "19da56750d002a18e7ac3dcb9132060165dd04a0b235bd5b197cb48f6aea5ec6",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    },
+    {
+      "name": "cad-step-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-step"
+      ],
+      "log": "../implicit-sphere-source-2026-10-16/logs/cad-step-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 82.764,
+      "testResults": [
+        {
+          "passed": 71,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "reused": true,
+      "verifiedDependencyDisjointTestOnlyPatch": true,
+      "logSha256": "692ff47cd1b0ba8e0524f17ae0ba7d5e995bd84927e12b6b5df9501a4bea2564",
+      "originalCodeRevision": "6476dc11c7091e42577541d46fe2dfe8f356177d"
+    }
+  ],
+  "initialCacheFailure": {
+    "name": "no-codec-libraries",
+    "command": [
+      "cargo",
+      "check",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "brep-core",
+      "-p",
+      "nurbs-intersect",
+      "-p",
+      "brep-intersect",
+      "--no-default-features"
+    ],
+    "log": "logs/no-codec-libraries-final.log",
+    "exitCode": 101,
+    "elapsedSeconds": 4.88,
+    "reused": false,
+    "testResults": [],
+    "logSha256": "4624e79627fd8356a632f8660e71f4ac4049caa9eb5c1d39664ed0c203a5d3a9",
+    "observedCause": "Cargo reused no-codec cad-predicates metadata whose dependency information omitted the new quadric module despite its unconditional source export",
+    "recovery": "cargo clean -p cad-predicates --profile dev; regenerate metadata and recheck; no source edits",
+    "cleanLog": "/private/tmp/osv-implicit-sphere-stale-predicate-cache-clean-20261016.log",
+    "preservedCleanLog": "logs/predicate-dev-cache-clean.log"
+  },
+  "regeneratedNoCodecMetadata": [
+    {
+      "configuration": "8b7185f4fe58a537",
+      "quadricDependencyPresent": true
+    }
+  ],
+  "predecessorSourceGuardVerified": false,
+  "predecessorGuardDifferenceReconciledAsExactReviewedTestOnlyPatch": true,
+  "reuseEvidence": [
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/native-inputs.json",
+      "sha256": "32d1cca317036e110397ea39fe3f684c25a7345cf16fc5450f929d9a670699df"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/summary.json",
+      "sha256": "7698d49ad622e530703facb5e0e3dc358c07fba3174da996b92deb9b7e880665"
+    }
+  ],
+  "originalSphereScope": "four specified original sphere STEP cases plus typed signed-chart/mutation/invalid-input/budget tests",
+  "previousRationalCapScope": "six specified original rational frame and filled annular cap fixtures",
+  "totalPassed": 3337,
+  "totalIgnored": 4,
+  "completionTool": {
+    "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/finish.py",
+    "sha256": "90d8e8db5ce2bf456d10a4e04853f5b8c5a59bb1c45413bf46b73c2cdd07dbcb"
+  },
+  "privateReleaseWasmScope": "four specified original implicit sphere and six original rational annular-cap fixtures; native construction/audit/STEP re-audit/refusal and sharp C0",
+  "privateWasmRuntimeInputCorrespondenceVerified": true,
+  "privateWasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a",
+  "privateWasmBytes": 18073723,
+  "privateWasmSharpC0Passed": true,
+  "privateWasmRuntimeReports": [
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime-report.json",
+      "sha256": "9e31ce246681749c3e270816a8bbca15ddc95a26f1e7f14f1544b1bced7a2791",
+      "cases": 4,
+      "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/rational-cap-wasm-runtime-report.json",
+      "sha256": "834ebf09e5fc5724aabdd74b7e6cc298f4d51ef47f6b0e2b2e0a0955f3fbe968",
+      "cases": 6,
+      "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a"
+    }
+  ],
+  "privateWasmRuntimeInputGuard": "wasm-runtime-inputs.json",
+  "supplementaryLogs": [
+    {
+      "path": "logs/predicate-dev-cache-clean.log",
+      "sha256": "1a175db7aca4b78579a7d36853849f0bb3b6a6615a50263f1c842db1aeef9b70"
+    },
+    {
+      "path": "logs/private-release-wasm-final.log",
+      "sha256": "af13d4e770790f055218181deefb5996d2fda51ec13b249dd9a1d5dd0d02d2e1"
+    },
+    {
+      "path": "logs/private-sphere-wasm-runtime-final.log",
+      "sha256": "1d2944b648337d4dc04fc722dcd9de1d6f7a20680165ce82c129906205ab61e2"
+    },
+    {
+      "path": "logs/private-rational-cap-wasm-runtime-final.log",
+      "sha256": "c1889910b16df2eb35d9c4b022e6fed254fa6c9b099079662dc6714192440fde"
+    },
+    {
+      "path": "logs/focused-sphere-signed-gauges-final.log",
+      "sha256": "a9b2299287c6ecf3ce92cadc435e2fd56a1388eaba668b3a75676e43993af24d"
+    }
+  ]
+}

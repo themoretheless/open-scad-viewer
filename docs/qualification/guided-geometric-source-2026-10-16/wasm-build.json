@@ -1,0 +1,26 @@
+{
+  "schema": "guided-geometric-private-wasm-build/1",
+  "sourceRevision": "f244f74eeb3f7367f96bf000362b7a7c32057d25",
+  "inputsSha256": "a576cd863c044bbc6f45a61d1e0de6eb8ea05fb06cfa9d2269f0be2fde19de9e",
+  "command": [
+    "cargo",
+    "+nightly-2026-09-16",
+    "build",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--release"
+  ],
+  "wasmSha256": "da91accffc08e36543a082b452b3148a2e5f026e146e91d389b1255b62000db3",
+  "wasmBytes": 18259556,
+  "artifact": "/private/tmp/osv-guided-geometric-private-artifact-20261016/geometry_wasm.wasm",
+  "buildExitCode": 0,
+  "sourceGuardVerified": true,
+  "runtimeQualified": false,
+  "publicPackageQualified": false,
+  "fullGoalComplete": false
+}

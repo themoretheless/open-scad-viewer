@@ -273,7 +273,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v9" => {
-            let (text, cert, report) = brep_core::export_step_v9(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v9(&field(&v, "model")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -293,7 +293,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v9" => {
-            let (model, cert, report) = brep_core::import_step_v9(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v9(&field::<String>(&v, "text")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,

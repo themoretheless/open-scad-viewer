@@ -1,4 +1,6 @@
 //! Serialization only; topology ownership and exact admission live in Rust kernels.
+mod complete;
+pub use complete::diagnose_complete;
 use super::{Result, Value, field};
 use brep_core::sweep_smoothness::{self, Axis, AxisReport};
 use nurbs_core::continuity::ProjectiveSeamCollectionReport;

@@ -422,3 +422,18 @@ mod periodic_basis_tests {
   assert_eq!(path,saved);
  }
 }
+
+/// Exact C0 of the ORIGINAL active basis, including nonclamped endpoints. Direction identity alone does not supply this.
+pub(super) fn certify_position(curve:&Curve,endpoints:bool,max_work:u64)->Result<Report>{
+    curve.validate()?;
+    check(max_work<=1000000 && curve.control_points.iter().all(|p|p.len()==3),"Invalid original position identity")?;
+    use cad_predicates::{AuthoredScalar,BezierIdentity,Limits,PredicateContext,SourceArena,ToleranceContext,rational_bspline_internal_jet_identity,rational_bspline_cartesian_endpoint_jet_identity};
+    let mut values=curve.control_points.iter().zip(&curve.weights).flat_map(|(p,w)|[p[0],p[1],p[2],*w]).collect::<Vec<_>>();
+    let start=values.len();values.extend_from_slice(&curve.knots);
+    let source=SourceArena::authored("original-bishop-position-identity",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).map_err(|e|crate::input(e.to_string()))?;
+    let controls=(0..curve.control_points.len()).map(|i|std::array::from_fn(|j|source.leaf(i*4+j).unwrap())).collect::<Vec<_>>();
+    let knots=(0..curve.knots.len()).map(|i|source.leaf(start+i).unwrap()).collect::<Vec<_>>();
+    let tol=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tol,Limits{max_work,..Limits::default()},None);
+    let proof=if endpoints {rational_bspline_cartesian_endpoint_jet_identity(&mut ctx,&controls,&knots,curve.degree,0)}else{rational_bspline_internal_jet_identity(&mut ctx,&controls,&knots,curve.degree,0)}.map_err(|e|crate::input(e.to_string()))?;
+    Ok(Report{certified:proof.outcome==BezierIdentity::Equal,exact_work:proof.work_used})
+}

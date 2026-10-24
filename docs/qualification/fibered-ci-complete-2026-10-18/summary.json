@@ -1,0 +1,53 @@
+{
+  "schema": "fibered-ci-complete-native-receipt/1",
+  "recordedAt": "2026-10-18",
+  "productionRustRevision": "cec378bb23e029fe8498b6c89fe1e1d3e8aa86c7",
+  "sourceBundleSha256": "8909f34576dd44096552a8c477a65ee1a34d1ecbb1585deb0f94fc321b09466d",
+  "sourceGuardVerified": true,
+  "nativeTotals": {
+    "passed": 5974,
+    "ignored": 5,
+    "failed": 0
+  },
+  "catalogCases": 5979,
+  "exactCatalogExecutionMatched": true,
+  "testProfileOptimizationLevel": 1,
+  "remainingElapsedSeconds": 569.874,
+  "fullLocalWorkspaceQualified": true,
+  "newHostedCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "qualificationClaim": "none",
+  "fullGoalComplete": false,
+  "records": [
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/REVIEW.md",
+      "sha256": "cd4e6d4a931700705117271cd64bdeee54774553068029758a53200b95db1796",
+      "byteLength": 1206
+    },
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/execution-cover.mjs",
+      "sha256": "0a576834a5642f428a6b262f5bbd9e2e4fbb5c17ee4e68fe4b28359745f605c7",
+      "byteLength": 2423
+    },
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/osv-fibered-ci-exact-execution-cover-20261018.json",
+      "sha256": "367faa840b972aa6c8f4721205b47668e58edc40bc32be3fdb1b73c57001dc48",
+      "byteLength": 1233
+    },
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/osv-fibered-ci-opt1-remaining-unsandboxed-20261017.json",
+      "sha256": "ef15a9aa1d9ecab983edff8454c3ead003e9d57689f8f9fe6950ce66ea7f7948",
+      "byteLength": 1164
+    },
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/osv-fibered-ci-opt1-remaining-unsandboxed-20261017.log",
+      "sha256": "a6da91a94bc68b0729d32e74385f954ba69323202da76fa07304abb87d845b92",
+      "byteLength": 634993
+    },
+    {
+      "path": "docs/qualification/fibered-ci-complete-2026-10-18/remaining-runner.py",
+      "sha256": "f7554c873c2e02682716e95b96485c857c3d5b717011cd7717fcda355a7fc0ef",
+      "byteLength": 2211
+    }
+  ]
+}
