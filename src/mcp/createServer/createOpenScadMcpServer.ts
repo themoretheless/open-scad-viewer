@@ -294,7 +294,7 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
             uri: artifactWire.resource_uri,
             name: artifact.fileName,
             mimeType: artifact.mimeType,
-            description: `Official OpenSCAD ${exported.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes)`,
+            description: `Official OpenSCAD ${exported.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes)`,
           },
         ],
       }
@@ -407,7 +407,7 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
             uri: artifactWire.resource_uri,
             name: artifact.fileName,
             mimeType: artifact.mimeType,
-            description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+            description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes); session-local`,
           },
         ],
       }
@@ -768,7 +768,7 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
             uri: artifactUri(artifact.id),
             name: artifact.fileName,
             mimeType: artifact.mimeType,
-            description: `${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes)`,
+            description: `${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes)`,
           },
         ],
       }
@@ -1167,7 +1167,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
       resources: (await store.listArtifacts(100)).map(artifact => ({
         uri: artifactUri(artifact.id),
         name: artifact.fileName,
-        description: `${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes)`,
+        description: `${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes)`,
         mimeType: artifact.mimeType,
       })),
     }),
@@ -1192,7 +1192,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
         resources: independentArtifacts.list().map(artifact => ({
           uri: independentArtifactUri(artifact.id),
           name: artifact.fileName,
-          description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+          description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes); session-local`,
           mimeType: artifact.mimeType,
         })),
       }),
@@ -1235,7 +1235,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
       resources: officialArtifacts.list().map(artifact => ({
         uri: officialArtifactUri(artifact.id),
         name: artifact.fileName,
-        description: `Official OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+        description: `Official OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString('en-US')} bytes); session-local`,
         mimeType: artifact.mimeType,
       })),
     }),

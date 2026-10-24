@@ -5,6 +5,8 @@ import {writeFile} from 'node:fs/promises'
 const port=4178,url=`http://127.0.0.1:${port}`
 const server=spawn('npm',['run','dev','--','--host','127.0.0.1','--port',String(port)],{
   cwd:process.cwd(),stdio:['ignore','pipe','pipe'],
+  // npm is npm.cmd on Windows, which Node only starts through a shell.
+  shell:process.platform==='win32',
 })
 let serverError=''
 server.stderr.on('data',chunk=>{serverError+=chunk})

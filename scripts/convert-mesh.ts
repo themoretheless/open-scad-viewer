@@ -106,10 +106,10 @@ async function main(): Promise<void> {
   await writeFile(outputPath, result.data)
   const { source } = result
   console.log(`${source.format.toUpperCase()} → ${format}: ${outputPath}`)
-  console.log(`  ${source.triangleCount.toLocaleString()} triangles, ${source.vertexCount.toLocaleString()} vertices`
-    + (source.sourceVertexCount !== source.vertexCount ? ` (welded from ${source.sourceVertexCount.toLocaleString()})` : '')
+  console.log(`  ${source.triangleCount.toLocaleString('en-US')} triangles, ${source.vertexCount.toLocaleString('en-US')} vertices`
+    + (source.sourceVertexCount !== source.vertexCount ? ` (welded from ${source.sourceVertexCount.toLocaleString('en-US')})` : '')
     + (source.degenerateTriangles ? `, ${source.degenerateTriangles} degenerate dropped` : '')
-    + `, ${result.data.byteLength.toLocaleString()} bytes`)
+    + `, ${result.data.byteLength.toLocaleString('en-US')} bytes`)
 }
 
 main().catch(error => {

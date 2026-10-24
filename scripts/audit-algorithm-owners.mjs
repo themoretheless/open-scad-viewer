@@ -1,6 +1,6 @@
 // Reproducible source census; ownership decisions live in the reviewed registry.
 import {readFileSync, readdirSync, writeFileSync} from 'node:fs'
-import {resolve, relative, dirname} from 'node:path'
+import {resolve, relative, dirname, sep} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {createHash} from 'node:crypto'
 import ts from 'typescript'
@@ -9,8 +9,8 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const registry=JSON.parse(readFileSync(resolve(root,'docs/design/algorithm-owners.json'),'utf8'))
 const rows=[]
 function walk(dir){
- for(const entry of readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
-  const absolute=resolve(dir,entry.name),file=relative(root,absolute)
+ for(const entry of readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en-US'))){
+  const absolute=resolve(dir,entry.name),file=relative(root,absolute).split(sep).join('/')
   if(entry.isDirectory()){walk(absolute);continue}
   if(!/\.(ts|vue|mjs)$/.test(file))continue
   const raw=readFileSync(absolute,'utf8')

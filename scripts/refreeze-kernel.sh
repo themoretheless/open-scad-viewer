@@ -6,6 +6,9 @@
 # Run `npm run build:geometry` first; pass --build to have this script run it.
 # Extra crate dirs to bind in the own-rust evidence may follow the purpose.
 set -euo pipefail
+# Frozen kernel bytes are recorded from the linux-x86_64 builder: rustc embeds host
+# path separators, so Windows/macOS builds differ. GNU sed/sha256sum are also required.
+[ "$(uname -s)" = Linux ] || { echo "refreeze-kernel.sh must run on Linux (the recorded linux-x86_64 builder); use WSL, a container or CI" >&2; exit 2; }
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 BUILD=0; if [ "${1:-}" = "--build" ]; then BUILD=1; shift; fi
 [ $# -ge 1 ] || { echo 'usage: refreeze-kernel.sh [--build] "<purpose>" [extra crate dirs...]' >&2; exit 2; }

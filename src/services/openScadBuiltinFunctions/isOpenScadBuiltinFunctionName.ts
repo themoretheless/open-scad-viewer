@@ -84,7 +84,7 @@ export function characterString(
   if (isRangeValue(value)) {
     const count = rangeItemCount(value)
     if (count >= MAX_CHR_RANGE_ITEMS) {
-      warn(context, 'chr', `range exceeds the ${MAX_CHR_RANGE_ITEMS.toLocaleString()}-item character limit`)
+      warn(context, 'chr', `range exceeds the ${MAX_CHR_RANGE_ITEMS.toLocaleString('en-US')}-item character limit`)
       return ''
     }
     // RangeType::numValues() reports one item when all three fields are equal,

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { deflateRawSync } from 'node:zlib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as runtimeContract from '../src/mcp/officialOpenScadRuntimePatch'
+import { fileSymlinksAvailable } from './support/symlinks'
 import {
   OFFICIAL_OPENSCAD_RUNTIME,
   createOfficialOpenScadRuntimeManifest,
@@ -238,7 +239,7 @@ describe('official OpenSCAD runtime setup', () => {
     })
   })
 
-  it('rejects unexpected manifest fields and symlinked runtime files', async () => {
+  it('rejects unexpected manifest fields', async () => {
     const cacheRoot = await temporaryDirectory()
     const installation = await writeVerifiedFixtureInstallation(cacheRoot)
     await writeFile(installation.manifestPath, `${JSON.stringify({ ...installation.manifest, runtimePath: '../escape.cjs' })}\n`)
@@ -246,8 +247,11 @@ describe('official OpenSCAD runtime setup', () => {
       cacheRoot,
       testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
     })).rejects.toThrow(/pinned runtime schema/)
+  })
 
-    await writeFile(installation.manifestPath, `${JSON.stringify(installation.manifest)}\n`)
+  it.skipIf(!fileSymlinksAvailable)('rejects symlinked runtime files', async () => {
+    const cacheRoot = await temporaryDirectory()
+    const installation = await writeVerifiedFixtureInstallation(cacheRoot)
     const target = join(await temporaryDirectory(), 'target.cjs')
     await writeFile(target, installation.patched)
     await rm(installation.runtimePath)

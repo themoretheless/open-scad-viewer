@@ -13,7 +13,7 @@ import { evalPreparedNodes, semanticSlot } from './evalPreparedNodes'
 import { openScadIndex, openScadMember, openScadTruthy, openScadUnary } from '../openScadValueSemantics'
 
 export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
-  if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+  if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
   if (depth >= MAX_EXPRESSION_DEPTH) evaluationError(ctx, expr.p, `Expression exceeds ${MAX_EXPRESSION_DEPTH} evaluated levels`)
   const evaluate = (child: Expr) => evalExpression(child, ctx, depth + 1)
   switch (expr.kind) {
@@ -66,7 +66,7 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       const forward = step > 0
       for (let value = start; forward ? value <= end + 1e-10 : value >= end - 1e-10; value += step) {
         values.push(canonicalNumber(value))
-        if (values.length > MAX_RANGE_ITEMS) evaluationError(ctx, expr.p, `Range exceeds ${MAX_RANGE_ITEMS.toLocaleString()} items`)
+        if (values.length > MAX_RANGE_ITEMS) evaluationError(ctx, expr.p, `Range exceeds ${MAX_RANGE_ITEMS.toLocaleString('en-US')} items`)
       }
       return registerArrayValue(values, ctx, expr.p)
     }
@@ -174,13 +174,13 @@ export function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalCont
         warning: message => stableWarning(ctx, expr.p, message, 'W_OPENSCAD_BUILTIN'),
         registerArray: (items, label) => {
           if (items.length > MAX_VALUE_ELEMENTS) {
-            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString('en-US')} elements`)
           }
           return registerArrayValue([...items] as Value[], ctx, expr.p, label)
         },
         registerString: (value, label) => {
           if (value.length > MAX_VALUE_ELEMENTS) {
-            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
+            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString('en-US')} characters`)
           }
           return registerStringValue(value, ctx, expr.p, label)
         },

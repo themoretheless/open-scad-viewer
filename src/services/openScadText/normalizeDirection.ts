@@ -73,7 +73,7 @@ export function flattenGlyph(
   if (commands.length > OPENSCAD_TEXT_MAX_PATH_COMMANDS) {
     return textError(
       'E_TEXT_PATH_LIMIT',
-      `text() glyph ${glyphId} exceeds ${OPENSCAD_TEXT_MAX_PATH_COMMANDS.toLocaleString()} path commands.`,
+      `text() glyph ${glyphId} exceeds ${OPENSCAD_TEXT_MAX_PATH_COMMANDS.toLocaleString('en-US')} path commands.`,
       { limit: OPENSCAD_TEXT_MAX_PATH_COMMANDS, actual: commands.length },
     )
   }
@@ -96,7 +96,7 @@ export function flattenGlyph(
     if (commandBudget > OPENSCAD_TEXT_MAX_VERTICES) {
       return textError(
         'E_TEXT_VERTEX_LIMIT',
-        `text() glyph ${glyphId} exceeds ${OPENSCAD_TEXT_MAX_VERTICES.toLocaleString()} flattened vertices.`,
+        `text() glyph ${glyphId} exceeds ${OPENSCAD_TEXT_MAX_VERTICES.toLocaleString('en-US')} flattened vertices.`,
         { limit: OPENSCAD_TEXT_MAX_VERTICES, actual: commandBudget },
       )
     }

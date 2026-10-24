@@ -570,7 +570,9 @@ describe('geometry Worker lifecycle', () => {
       options?: { shouldAbort?: () => boolean },
     ) => {
       for (let spins = 0; spins < 200; spins++) {
-        await new Promise(resolve => setTimeout(resolve, 0))
+        // setImmediate yields to the event loop like setTimeout(0), without the
+        // ~15.6 ms Windows timer granularity that would exceed vi.waitFor's budget.
+        await new Promise(resolve => setImmediate(resolve))
         if (options?.shouldAbort?.()) throw new AbortedError()
       }
       return {

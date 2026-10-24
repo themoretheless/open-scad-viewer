@@ -184,7 +184,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     if (expandedStatements > OPENSCAD_PROJECT_MAX_EXPANDED_STATEMENTS) {
       throw new OpenScadProjectCompileError(
         'E_PROJECT_EXPANSION_LIMIT',
-        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_EXPANDED_STATEMENTS.toLocaleString()} statements.`,
+        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_EXPANDED_STATEMENTS.toLocaleString('en-US')} statements.`,
         {
           path,
           metric: 'statements',
@@ -204,7 +204,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     if (dependencyExpansions > OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS) {
       throw new OpenScadProjectCompileError(
         'E_PROJECT_EXPANSION_LIMIT',
-        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS.toLocaleString()} dependency directives.`,
+        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS.toLocaleString('en-US')} dependency directives.`,
         {
           directive: directive.directive,
           importer,
@@ -236,7 +236,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     if (expandedSyntaxNodes > OPENSCAD_PROJECT_MAX_EXPANDED_SYNTAX_NODES) {
       throw new OpenScadProjectCompileError(
         'E_PROJECT_EXPANSION_LIMIT',
-        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_EXPANDED_SYNTAX_NODES.toLocaleString()} syntax nodes.`,
+        `OpenSCAD project expansion exceeds ${OPENSCAD_PROJECT_MAX_EXPANDED_SYNTAX_NODES.toLocaleString('en-US')} syntax nodes.`,
         {
           path,
           metric: 'syntax-nodes',

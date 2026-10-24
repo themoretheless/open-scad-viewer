@@ -50,7 +50,7 @@ export function materializeOpenScadRange(
     value += range.step
   ) {
     if (output.length >= context.maxRangeItems) {
-      context.warn(`Range exceeds ${context.maxRangeItems.toLocaleString()} items`)
+      context.warn(`Range exceeds ${context.maxRangeItems.toLocaleString('en-US')} items`)
       return []
     }
     output.push(value)

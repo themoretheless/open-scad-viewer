@@ -28,7 +28,7 @@ export function enforceDimensions(rows: number, columns: number): void {
   if (dimension > OPENSCAD_SURFACE_MAX_DIMENSION) {
     dataError(
       'E_SURFACE_DIMENSION_LIMIT',
-      `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString()} samples.`,
+      `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString('en-US')} samples.`,
       OPENSCAD_SURFACE_MAX_DIMENSION,
       dimension,
     )
@@ -37,7 +37,7 @@ export function enforceDimensions(rows: number, columns: number): void {
   if (!Number.isSafeInteger(pixels) || pixels > OPENSCAD_SURFACE_MAX_PIXELS) {
     dataError(
       'E_SURFACE_DIMENSION_LIMIT',
-      `surface() heightmap exceeds ${OPENSCAD_SURFACE_MAX_PIXELS.toLocaleString()} samples.`,
+      `surface() heightmap exceeds ${OPENSCAD_SURFACE_MAX_PIXELS.toLocaleString('en-US')} samples.`,
       OPENSCAD_SURFACE_MAX_PIXELS,
       pixels,
     )
@@ -46,7 +46,7 @@ export function enforceDimensions(rows: number, columns: number): void {
   if (!Number.isSafeInteger(triangles) || triangles > OPENSCAD_SURFACE_MAX_TRIANGLES) {
     dataError(
       'E_SURFACE_TRIANGLE_LIMIT',
-      `surface() heightmap would exceed ${OPENSCAD_SURFACE_MAX_TRIANGLES.toLocaleString()} triangles.`,
+      `surface() heightmap would exceed ${OPENSCAD_SURFACE_MAX_TRIANGLES.toLocaleString('en-US')} triangles.`,
       OPENSCAD_SURFACE_MAX_TRIANGLES,
       triangles,
     )
@@ -91,7 +91,7 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
     if (rows.length >= OPENSCAD_SURFACE_MAX_DIMENSION) {
       return dataError(
         'E_SURFACE_DIMENSION_LIMIT',
-        `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString()} samples.`,
+        `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString('en-US')} samples.`,
         OPENSCAD_SURFACE_MAX_DIMENSION,
         rows.length + 1,
       )
@@ -102,7 +102,7 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
       if (row.length >= OPENSCAD_SURFACE_MAX_DIMENSION) {
         return dataError(
           'E_SURFACE_DIMENSION_LIMIT',
-          `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString()} samples.`,
+          `surface() heightmap dimension exceeds ${OPENSCAD_SURFACE_MAX_DIMENSION.toLocaleString('en-US')} samples.`,
           OPENSCAD_SURFACE_MAX_DIMENSION,
           row.length + 1,
         )
@@ -119,7 +119,7 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
     if ((rows.length + 1) * row.length > OPENSCAD_SURFACE_MAX_PIXELS) {
       return dataError(
         'E_SURFACE_DIMENSION_LIMIT',
-        `surface() heightmap exceeds ${OPENSCAD_SURFACE_MAX_PIXELS.toLocaleString()} samples.`,
+        `surface() heightmap exceeds ${OPENSCAD_SURFACE_MAX_PIXELS.toLocaleString('en-US')} samples.`,
         OPENSCAD_SURFACE_MAX_PIXELS,
         (rows.length + 1) * row.length,
       )

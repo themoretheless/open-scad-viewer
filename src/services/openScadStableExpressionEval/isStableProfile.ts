@@ -33,7 +33,7 @@ export function registerArrayValue<T extends Value[]>(
     weight += valueWeight(item, ctx)
     depth = Math.max(depth, valueDepth(item, ctx) + 1)
     if (weight > MAX_EVALUATED_VALUE_UNITS) {
-      evaluationError(ctx, p, `${limitLabel} exceeds ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} units`)
+      evaluationError(ctx, p, `${limitLabel} exceeds ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} units`)
     }
   }
   if (depth > MAX_EXPRESSION_DEPTH) {
@@ -41,7 +41,7 @@ export function registerArrayValue<T extends Value[]>(
   }
   ctx.valueBudget.used += weight
   if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
-    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
+    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`)
   }
   ctx.valueWeights.set(value, weight)
   ctx.valueDepths.set(value, depth)
@@ -91,7 +91,7 @@ export function appendComprehensionValues(
   ctx: StableExpressionEvalContext,
 ): void {
   if (output.length + values.length > MAX_VALUE_ELEMENTS) {
-    evaluationError(ctx, expr.p, `List comprehension exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+    evaluationError(ctx, expr.p, `List comprehension exceeds ${MAX_VALUE_ELEMENTS.toLocaleString('en-US')} elements`)
   }
   output.push(...values)
 }

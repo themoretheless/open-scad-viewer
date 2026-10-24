@@ -239,7 +239,7 @@ export function poll(ctx: EvalContext): void {
 
 export function registerStringValue(value: string, ctx: EvalContext, position: number, label = 'Evaluation'): string {
   ctx.valueBudget.used += Math.max(1, value.length)
-  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) evaluationError(ctx, position, `${label} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
+  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) evaluationError(ctx, position, `${label} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`)
   return value
 }
 

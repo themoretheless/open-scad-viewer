@@ -93,6 +93,11 @@ function isServiceModule(specifier: string): boolean {
   return withoutQuery.split('/').includes('services')
 }
 
+/** Source path relative to the root with '/' separators on every platform. */
+function sourcePath(root: string, path: string): string {
+  return relative(root, path).split(sep).join('/')
+}
+
 function isWithin(root: string, candidate: string): boolean {
   const pathFromRoot = relative(root, candidate)
   return pathFromRoot === ''
@@ -159,12 +164,12 @@ describe('core mesh publication', () => {
     const sourceRoot = join(testDir, '..', 'src')
     const parserConsumers = sourceFiles(sourceRoot)
       .filter(path => moduleSpecifiers(path).some(isParserModule))
-      .map(path => relative(sourceRoot, path))
+      .map(path => sourcePath(sourceRoot, path))
       .sort()
     const coreServiceImports = sourceFiles(join(sourceRoot, 'core'))
       .flatMap(path => moduleSpecifiers(path)
         .filter(isServiceModule)
-        .map(specifier => `${relative(sourceRoot, path)} -> ${specifier}`))
+        .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`))
       .sort()
 
     expect(parserConsumers).toEqual([
@@ -183,7 +188,7 @@ describe('core mesh publication', () => {
       .filter(path => !isWithin(mcpRoot, path))
       .flatMap(path => moduleSpecifiers(path)
         .filter(specifier => isForbiddenBrowserImport(path, specifier, mcpRoot))
-        .map(specifier => `${relative(sourceRoot, path)} -> ${specifier}`))
+        .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`))
       .sort()
 
     expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), './mcp/createServer', mcpRoot)).toBe(true)

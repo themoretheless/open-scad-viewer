@@ -28,7 +28,7 @@ export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext)
       : null
     try {
       poll(ctx)
-      if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+      if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
       if (statement.type === 'assign') {
         ctx.builder.invocation(statement, ctx.parentOccurrence, ctx.pendingSlots)
         if (!isStableProfile(ctx)) ctx.env.set(statement.name, evalExpression(statement.value, ctx))
@@ -46,7 +46,7 @@ export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext)
         output.push(...shapes)
         if (background && shapes.length > 0) ctx.reduced.value = true
       }
-      if (output.length > MAX_SHAPES) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+      if (output.length > MAX_SHAPES) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
     } catch (error) {
       const capturable = error instanceof OpenSCADParseError
         || error instanceof LegacyBindingCompatibilityError
